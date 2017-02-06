@@ -3,13 +3,14 @@ using System.Linq;
 using System.Threading;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Operations.Databases;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5409 : RavenTestBase
+    public class RavenDB_5409 : RavenNewTestBase
     {
         private class Users_ByName : AbstractIndexCreationTask<User>
         {
@@ -42,7 +43,7 @@ namespace SlowTests.Issues
 
                 new Users_ByName().Execute(store);
 
-                var result = SpinWait.SpinUntil(() => store.DatabaseCommands.GetStatistics().Indexes[0].State == IndexState.Error, TimeSpan.FromSeconds(5));
+                var result = SpinWait.SpinUntil(() => store.Admin.Send(new GetStatisticsOperation()).Indexes[0].State == IndexState.Error, TimeSpan.FromSeconds(5));
 
                 Assert.True(result, "Index did not become errored.");
             }

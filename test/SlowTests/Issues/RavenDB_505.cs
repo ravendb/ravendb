@@ -1,11 +1,11 @@
 using FastTests;
-using Raven.Client.Indexing;
-
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_505 : RavenTestBase
+    public class RavenDB_505 : RavenNewTestBase
     {
         [Fact]
         public void CreateDeleteCreateIndex()
@@ -18,12 +18,10 @@ namespace SlowTests.Issues
                 };
                 for (int i = 0; i < 10; i++)
                 {
-                    store.DatabaseCommands.PutIndex("test", indexDefinition);
-                    store.DatabaseCommands.DeleteIndex("test");
+                    store.Admin.Send(new PutIndexOperation("test", indexDefinition));
+                    store.Admin.Send(new DeleteIndexOperation("test"));
                 }
             }
         }
-
-
     }
 }

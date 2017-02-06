@@ -8,22 +8,22 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Smuggler;
-using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Smuggler;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Utils;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RDBQA_11 : RavenTestBase
+    public class RDBQA_11 : RavenNewTestBase
     {
         private class Product
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
         }
 
         [Fact, Trait("Category", "Smuggler")]
@@ -46,9 +46,9 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenSession())
                     {
-                        var product1 = session.Load<Product>(1);
-                        var product2 = session.Load<Product>(2);
-                        var product3 = session.Load<Product>(3);
+                        var product1 = session.Load<Product>("products/1");
+                        var product2 = session.Load<Product>("products/2");
+                        var product3 = session.Load<Product>("products/3");
 
                         Assert.NotNull(product1);
                         Assert.NotNull(product2);
@@ -82,9 +82,9 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenSession())
                     {
-                        var product1 = session.Load<Product>(1);
-                        var product2 = session.Load<Product>(2);
-                        var product3 = session.Load<Product>(3);
+                        var product1 = session.Load<Product>("products/1");
+                        var product2 = session.Load<Product>("products/2");
+                        var product3 = session.Load<Product>("products/3");
 
                         Assert.NotNull(product1);
                         Assert.Null(product2);
@@ -121,9 +121,9 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenSession())
                     {
-                        var product1 = session.Load<Product>(1);
-                        var product2 = session.Load<Product>(2);
-                        var product3 = session.Load<Product>(3);
+                        var product1 = session.Load<Product>("products/1");
+                        var product2 = session.Load<Product>("products/2");
+                        var product3 = session.Load<Product>("products/3");
 
                         Assert.NotNull(product1);
                         Assert.Null(product2);
@@ -153,8 +153,8 @@ namespace SlowTests.Issues
                 session.Store(product2);
                 session.Store(product3);
 
-                session.Advanced.GetMetadataFor(product2)["Raven-Expiration-Date"] = new RavenJValue(past);
-                session.Advanced.GetMetadataFor(product3)["Raven-Expiration-Date"] = new RavenJValue(future);
+                session.Advanced.GetMetadataFor(product2)["Raven-Expiration-Date"] = past.GetDefaultRavenFormat(isUtc: true);
+                session.Advanced.GetMetadataFor(product3)["Raven-Expiration-Date"] = future.GetDefaultRavenFormat(isUtc: true);
 
                 session.SaveChanges();
             }

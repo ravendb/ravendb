@@ -1,11 +1,11 @@
 ﻿using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5927 : RavenTestBase
+    public class RavenDB_5927 : RavenNewTestBase
     {
         private class RavenConflictDocumentsTransformer : AbstractTransformerCreationTask
         {

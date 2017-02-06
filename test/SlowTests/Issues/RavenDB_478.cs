@@ -1,22 +1,21 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Client.Linq.Indexing;
-
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq.Indexing;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_478 : RavenTestBase
+    public class RavenDB_478 : RavenNewTestBase
     {
-        public class ProductContent
+        private class ProductContent
         {
             public string Slug { get; set; }
             public string Title { get; set; }
             public string Content { get; set; }
         }
-        public class Product
+        private class Product
         {
             public string ShortName { get; set; }
             public string Name { get; set; }
@@ -25,7 +24,7 @@ namespace SlowTests.Issues
             public string HomepageContent { get; set; }
         }
 
-        public class ContentSearchIndex : AbstractMultiMapIndexCreationTask<ContentSearchIndex.Result>
+        private class ContentSearchIndex : AbstractMultiMapIndexCreationTask<ContentSearchIndex.Result>
         {
             public class Result
             {
@@ -46,7 +45,7 @@ namespace SlowTests.Issues
                                                 Slug = product.ShortName.Boost(30),
                                                 Title = product.Name.Boost(25),
                                                 Content =
-                                            new string[] {product.Summary, product.Description, product.HomepageContent}.Boost(20)
+                                            new string[] { product.Summary, product.Description, product.HomepageContent }.Boost(20)
                                             });
 
 
@@ -59,7 +58,7 @@ namespace SlowTests.Issues
         [Fact]
         public void IndexWithBoost()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ContentSearchIndex().Execute(store);
             }

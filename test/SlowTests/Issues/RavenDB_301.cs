@@ -5,24 +5,22 @@
 // -----------------------------------------------------------------------
 using System.Linq;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_301 : RavenTestBase
+    public class RavenDB_301 : RavenNewTestBase
     {
         [Fact]
         public void CanUseTertiaryIncludes()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Index().Execute(store);
                 new IndexTransformer().Execute(store);
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Item
                     {
@@ -51,23 +49,23 @@ namespace SlowTests.Issues
             }
         }
 
-        public class Item
+        private class Item
         {
             public string Name { get; set; }
             public string Id { get; set; }
             public string Parent { get; set; }
         }
 
-        public class Index : AbstractIndexCreationTask<Item>
+        private class Index : AbstractIndexCreationTask<Item>
         {
             public Index()
             {
                 Map = items => from item in items
-                               select new {item.Name};
+                               select new { item.Name };
             }
         }
 
-        public class IndexTransformer : AbstractTransformerCreationTask<Item>
+        private class IndexTransformer : AbstractTransformerCreationTask<Item>
         {
             public IndexTransformer()
             {
@@ -75,10 +73,10 @@ namespace SlowTests.Issues
                                    from item in items
                                    let _ = Include(item.Parent)
                                    select new
-                                          {
-                                              Name = item.Name,
-                                              Parent = item.Parent
-                                          };
+                                   {
+                                       Name = item.Name,
+                                       Parent = item.Parent
+                                   };
             }
         }
     }

@@ -3,13 +3,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Operations
 {
-    public class AdminOperationExecuter
+    public partial class AdminOperationExecuter
     {
         private readonly DocumentStoreBase _store;
         private readonly string _databaseName;

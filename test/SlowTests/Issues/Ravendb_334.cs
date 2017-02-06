@@ -6,23 +6,21 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_334 : RavenTestBase
+    public class RavenDB_334 : RavenNewTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public DateTime DateTime { get; set; }
         }
 
-        class FooIndex : AbstractIndexCreationTask<Foo>
+        private class FooIndex : AbstractIndexCreationTask<Foo>
         {
             public class IndexedFoo
             {
@@ -34,11 +32,11 @@ namespace SlowTests.Issues
             {
                 Map = foos => from f in foos select new { f.Id };
 
-                Store(x=>x.DateTime, FieldStorage.Yes);
+                Store(x => x.DateTime, FieldStorage.Yes);
             }
         }
 
-        class FooTransformer : AbstractTransformerCreationTask<Foo>
+        private class FooTransformer : AbstractTransformerCreationTask<Foo>
         {
             public FooTransformer()
             {
@@ -51,7 +49,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CanGetUtcFromDate()
         {
-            using(var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new FooIndex().Execute(documentStore);
                 new FooTransformer().Execute(documentStore);
@@ -67,8 +65,7 @@ namespace SlowTests.Issues
 
                 using (var session = documentStore.OpenSession())
                 {
-
-                    var foo = session.Load<Foo>(1);
+                    var foo = session.Load<Foo>("foos/1");
 
                     var indexedFoo = session.Query<Foo, FooIndex>()
                         .Customize(c => c.WaitForNonStaleResults())

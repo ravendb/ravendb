@@ -6,11 +6,10 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Exceptions;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Compilation;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.NewClient.Client.Exceptions.Compilation;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -18,7 +17,7 @@ namespace SlowTests.Issues
     /// <remarks>
     /// Similar to RavenDB_783
     /// </remarks>
-    public class RavenDB_644 : RavenTestBase
+    public class RavenDB_644 : RavenNewTestBase
     {
         private class Item
         {
@@ -165,7 +164,7 @@ namespace SlowTests.Issues
                 {
                     using (var store = GetDocumentStore())
                     {
-                        store.DatabaseCommands.PutIndex("test", new Index().CreateIndexDefinition());
+                        store.Admin.Send(new PutIndexOperation("test", new Index().CreateIndexDefinition()));
                     }
                 });
 
@@ -180,18 +179,18 @@ namespace SlowTests.Issues
                     }
                 });
 
-            Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.Message);
+            Assert.Contains("Reduce cannot contain Count() methods in grouping.", exception.Message);
 
             exception = Assert.Throws<IndexCompilationException>(
                 () =>
                 {
                     using (var store = GetDocumentStore())
                     {
-                        store.DatabaseCommands.PutIndex("test", new FancyIndex().CreateIndexDefinition());
+                        store.Admin.Send(new PutIndexOperation("test", new FancyIndex().CreateIndexDefinition()));
                     }
                 });
 
-            Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.Message);
+            Assert.Contains("Reduce cannot contain Count() methods in grouping.", exception.Message);
         }
 
         [Fact]
@@ -202,14 +201,14 @@ namespace SlowTests.Issues
                 {
                     using (var store = GetDocumentStore())
                     {
-                        store.DatabaseCommands.PutIndex(
+                        store.Admin.Send(new PutIndexOperation(
                             "Index1",
                             new IndexDefinition
                             {
                                 Maps = { "from i in docs select new { Year = i.Year, Number = i.Number, Count = 0 }" },
                                 Reduce =
                                     "from r in results group r by new { r.Year, r.Number } into yearAndNumber select new { Year = yearAndNumber.Key.Year, Number = yearAndNumber.Key.Number, Count = yearAndNumber.Count() }"
-                            });
+                            }));
                     }
                 });
 
@@ -220,14 +219,14 @@ namespace SlowTests.Issues
                 {
                     using (var store = GetDocumentStore())
                     {
-                        store.DatabaseCommands.PutIndex(
+                        store.Admin.Send(new PutIndexOperation(
                             "Index1",
                             new IndexDefinition
                             {
                                 Maps = { "from i in items select new { Year = i.Year, Number = i.Number, Count = 0 }" },
                                 Reduce =
                                     "from r in records group r by new { r.Year, r.Number } into yearAndNumber select new { Year = yearAndNumber.Key.Year, Number = yearAndNumber.Key.Number, Count = yearAndNumber.Where(x => x.Number == 0).Select(x => yearAndNumber.Count()) }"
-                            });
+                            }));
                     }
                 });
 
@@ -244,7 +243,7 @@ namespace SlowTests.Issues
             var index = new ValidFancyIndex().CreateIndexDefinition();
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("test", index);
+                store.Admin.Send(new PutIndexOperation("test", index));
             }
         }
     }

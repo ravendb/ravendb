@@ -1,13 +1,12 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_422 : RavenTestBase
+    public class RavenDB_422 : RavenNewTestBase
     {
         [Fact]
         public void UsingStoreAllFields()
@@ -32,8 +31,8 @@ namespace SlowTests.Issues
                         .SelectFields<dynamic>("UN", "UE")
                         .Single();
 
-                    Assert.Equal("aye", r.UN);
-                    Assert.Equal("de", r.UE);
+                    Assert.Equal("aye", r.UN.ToString());
+                    Assert.Equal("de", r.UE.ToString());
                 }
             }
         }

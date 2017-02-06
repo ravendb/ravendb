@@ -7,14 +7,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RDoc_56 : RavenTestBase
+    public class RDoc_56 : RavenNewTestBase
     {
         private class Post
         {
@@ -216,7 +216,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void AssertIndexEntries(IDocumentStore store, string indexName, int expectedNumberOfResults)
+        private static void AssertIndexEntries(DocumentStore store, string indexName, int expectedNumberOfResults)
         {
             using (var session = store.OpenSession())
             {
@@ -224,9 +224,12 @@ namespace SlowTests.Issues
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
-                var arrayResult = store.DatabaseCommands.Query(indexName, new IndexQuery(store.Conventions), metadataOnly: false, indexEntriesOnly: true);
+                using (var commands = store.Commands())
+                {
+                    var arrayResult = commands.Query(indexName, new IndexQuery(store.Conventions), metadataOnly: false, indexEntriesOnly: true);
 
-                Assert.Equal(expectedNumberOfResults, arrayResult.Results.Count);
+                    Assert.Equal(expectedNumberOfResults, arrayResult.Results.Length);
+                }
             }
         }
     }
