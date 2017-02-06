@@ -64,10 +64,9 @@ namespace FastTests
                 hardDelete = false;
                 runInMemory = false;
             }
-
-            Server.Configuration.Replication.ReplicationMinimalHeartbeat = new TimeSetting(100,TimeUnit.Milliseconds);
-
+            
             var doc = MultiDatabase.CreateDatabaseDocument(name);
+            doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "10";
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";

@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.Replication
             sw.Stop();
 
             stats.EndSendingTime = DateTime.UtcNow;
-            _parent._parent.Stats.Add(stats);
+            _parent.ReplicationStats.Add(stats);
 
             _parent._lastSentDocumentEtag = _lastEtag;
 

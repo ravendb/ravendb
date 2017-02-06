@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Timer _reconnectAttemptTimer;
         internal int MinimalHeartbeatInterval;
 
-        internal readonly ReplicationStatistics Stats;
+        internal readonly ReplicationStatistics RepliactionStats;
 
         private readonly ConcurrentSet<OutgoingReplicationHandler> _outgoing =
             new ConcurrentSet<OutgoingReplicationHandler>();
@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Replication
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             MinimalHeartbeatInterval =
                (int) _database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
-            Stats = new ReplicationStatistics(this);
+            RepliactionStats = new ReplicationStatistics(this);
         }
 
         public IReadOnlyDictionary<ReplicationDestination, ConnectionShutdownInfo> OutgoingFailureInfo
@@ -429,7 +429,7 @@ namespace Raven.Server.Documents.Replication
                 resolverStats.EndTime = DateTime.UtcNow;
                 resolverStats.ConflictsLeft = ConflictsCount;
                 resolverStats.DefaultResolver = ReplicationDocument?.DefaultResolver;
-                Stats.Add(resolverStats);
+                RepliactionStats.Add(resolverStats);
             }
         }
 
@@ -500,18 +500,21 @@ namespace Raven.Server.Documents.Replication
             }
             ScriptConflictResolversCache = copy;
 
-            ResolveConflictsTask = Task.Run(() =>
+            if (_database.DocumentsStorage.ConflictsCount > 0)
             {
-                try
+                ResolveConflictsTask = Task.Run(() =>
                 {
-                    ResolveConflictsInBackground();
-                }
-                catch (Exception e)
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info("Failed to run automatic conflict resolution", e);
-                }
-            });
+                    try
+                    {
+                        ResolveConflictsInBackground();
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Failed to run automatic conflict resolution", e);
+                    }
+                });
+            }   
         }
 
         private void InitializeOutgoingReplications()
@@ -579,7 +582,7 @@ namespace Raven.Server.Documents.Replication
                     Source = instance.ConnectionInfo.SourceDatabaseId
                 };
 
-                Stats.Add(stats);
+                RepliactionStats.Add(stats);
 
                 IncomingReplicationHandler _;
                 _incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _);
@@ -608,7 +611,7 @@ namespace Raven.Server.Documents.Replication
                     Destination = instance.DestinationDbId
                 };
 
-                Stats.Add(stats);
+                RepliactionStats.Add(stats);
 
                 _outgoing.TryRemove(instance);
                 

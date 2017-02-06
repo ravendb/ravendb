@@ -43,7 +43,8 @@ namespace Raven.Server.Documents.Replication
         public long LastAcceptedDocumentEtag;
         internal long _lastSentIndexOrTransformerEtag;
 
-        internal ReplicationStatistics.OutgoingBatchStats Stats = new ReplicationStatistics.OutgoingBatchStats();
+        internal ReplicationStatistics.OutgoingBatchStats OutgoingStats = new ReplicationStatistics.OutgoingBatchStats();
+        internal ReplicationStatistics ReplicationStats;
 
         internal DateTime _lastDocumentSentTime;
         internal DateTime _lastIndexOrTransformerSentTime;
@@ -86,6 +87,7 @@ namespace Raven.Server.Documents.Replication
             _database.Changes.OnIndexChange += OnIndexChange;
             _database.Changes.OnTransformerChange += OnTransformerChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+            ReplicationStats = _parent.RepliactionStats;
         }
 
         public void Start()
@@ -218,13 +220,6 @@ namespace Raven.Server.Documents.Replication
                             //if this returns false, this means either timeout or canceled token is activated                    
                             while (WaitForChanges(_parent.MinimalHeartbeatInterval, _cts.Token) == false)
                             {
-                                Stats = new ReplicationStatistics.OutgoingBatchStats
-                                {
-                                    StartSendingTime = DateTime.UtcNow,
-                                    SentEtagMin = _lastSentDocumentEtag,
-                                    SentEtagMax = _lastSentDocumentEtag,
-                                    Destination = DestinationDbId
-                                };
                                 SendHeartbeat();
                             }
                             _waitForChanges.Reset();

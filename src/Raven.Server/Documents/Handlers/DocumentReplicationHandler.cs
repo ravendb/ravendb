@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/stats", "GET")]
         public Task GetRepliationStats()
         {
-            var stats = Database.DocumentReplicationLoader.Stats;
+            var stats = Database.DocumentReplicationLoader.RepliactionStats;
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

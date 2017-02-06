@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Replication
 
         public long LastHeartbeatTicks;
 
-        public ReplicationStatistics.IncomingBatchStats Stats = new ReplicationStatistics.IncomingBatchStats();
+        public ReplicationStatistics.IncomingBatchStats IncomingStats = new ReplicationStatistics.IncomingBatchStats();
 
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Replication
             {
                 _parent.UpdateReplicationDocumentWithResolver(resovlerId, resolverVersion);
             }
-            Stats = new ReplicationStatistics.IncomingBatchStats
+            IncomingStats = new ReplicationStatistics.IncomingBatchStats
             {
                 Status = ReplicationStatus.Received,
                 RecievedTime = DateTime.UtcNow,
@@ -307,8 +307,8 @@ namespace Raven.Server.Documents.Replication
                 DocumentsCount = itemCount
             };
             ReceiveSingleDocumentsBatch(documentsContext, itemCount, lastDocumentEtag);
-            Stats.DoneReplicateTime = DateTime.UtcNow;
-            _parent.Stats.Add(Stats);
+            IncomingStats.DoneReplicateTime = DateTime.UtcNow;
+            _parent.RepliactionStats.Add(IncomingStats);
             OnDocumentsReceived(this);
         }
 

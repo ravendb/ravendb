@@ -19,14 +19,9 @@ namespace Raven.Server.Documents.Replication
 {
     public enum ReplicationStatus
     {
-        Heartbeat,
         Sending,
         Received,
-        Accepted,
-        Rejected,
-        Failed,
-        Succeed,
-        Disabled
+        Failed
     }
 
     public class ReplicationStatistics
@@ -65,7 +60,7 @@ namespace Raven.Server.Documents.Replication
             DynamicJsonValue ToJson();
         }
 
-        public struct OutgoingBatchStats : IStatsEntry
+        public class OutgoingBatchStats : IStatsEntry
         {
             public string Destination ;
             public ReplicationStatus Status ;
@@ -92,7 +87,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public struct IncomingBatchStats : IStatsEntry
+        public class IncomingBatchStats : IStatsEntry
         {           
             public string Source ;
             public ReplicationStatus Status ;
@@ -117,32 +112,34 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public struct ResolverIterationStats : IStatsEntry
+        public class ResolverIterationStats : IStatsEntry
         {
             public DateTime StartTime;
             public DateTime EndTime;
             public long ConflictsLeft;
             public DatabaseResolver DefaultResolver;
-            private Dictionary<string, int> _resolvedBy;
+            internal Dictionary<string, int> ResolvedBy;
 
             public void AddResolvedBy(string by, int count)
             {
-                if (_resolvedBy == null)
+                if (ResolvedBy == null)
                 {
-                    _resolvedBy = new Dictionary<string, int>();
+                    ResolvedBy = new Dictionary<string, int>();
                 }
-                _resolvedBy[@by] = _resolvedBy.ContainsKey(@by) ? +count : count;
+                ResolvedBy[@by] = ResolvedBy.ContainsKey(@by) ? +count : count;
             }
 
             public DynamicJsonValue ToJson()
             {
+                var resolvedBy = new DynamicJsonValue();
+                ResolvedBy?.ForEach(kvp => resolvedBy[kvp.Key] = kvp.Value);
                 return new DynamicJsonValue
                 {
                     ["StartTime"] = StartTime,
                     ["EndTime"] = EndTime,
                     ["ConflictsLeft"] = ConflictsLeft,
                     ["DatabaseResolver"] = DefaultResolver?.ToJson(),
-                    ["ResolvedBy"] = _resolvedBy
+                    ["ResolvedBy"] = resolvedBy
                 };
             }
         }

@@ -47,14 +47,14 @@ namespace FastTests.Server.Replication
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             using (var store3 = GetDocumentStore(dbSuffixIdentifier: dbName3))
             {
+                SetupReplication(store1, store2, store3);
+
                 using (var s1 = store1.OpenSession())
                 {
                     s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
-
-                SetupReplication(store1, store2, store3);
-
+                
                 Assert.True(WaitForDocument(store2, "foo/bar"),store2.Identifier);
                 Assert.True(WaitForDocument(store3, "foo/bar"),store3.Identifier);
 
