@@ -32,6 +32,7 @@ namespace Raven.Server.Documents
                 : StorageEnvironmentOptions.ForPath(path.FullPath);
 
             options.SchemaVersion = 1;
+            options.ForceUsing32BitPager = db.Configuration.Storage.ForceUsing32BitPager;
 
             Environment = new StorageEnvironment(options);
             

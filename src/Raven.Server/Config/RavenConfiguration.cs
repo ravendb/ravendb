@@ -170,7 +170,7 @@ namespace Raven.Server.Config
             Encryption.UseSsl = serverConfiguration.Encryption.UseSsl;
             Encryption.UseFips = serverConfiguration.Encryption.UseFips;
 
-            Storage.AllowOn32Bits = serverConfiguration.Storage.AllowOn32Bits;
+            Storage.ForceUsing32BitPager = serverConfiguration.Storage.ForceUsing32BitPager;
         }
 
         public void SetSetting(string key, string value)

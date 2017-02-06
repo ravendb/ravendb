@@ -63,12 +63,10 @@ namespace Raven.Server.Config.Categories
         [LegacyConfigurationEntry("Raven/TransactionJournalsPath")]
         public PathSetting JournalsStoragePath { get; set; }
 
-        // TODO: We always uses voron
-        [Description("Whether to allow Voron to run in 32 bits process.")]
+        [Description("Use the 32 bits memory mapped pager, even when running in 64 bits")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Raven/Storage/AllowOn32Bits")]
-        [LegacyConfigurationEntry("Raven/Voron/AllowOn32Bits")]
-        public bool AllowOn32Bits { get; set; }
+        [ConfigurationEntry("Raven/Storage/ForceUsing32BitPager")]
+        public bool ForceUsing32BitPager { get; set; }
 
         [Description("How long transaction mode (Danger/Lazy) last before returning to Safe mode. Value in Minutes. Default one day. Zero for infinite time")]
         [DefaultValue(1440)]

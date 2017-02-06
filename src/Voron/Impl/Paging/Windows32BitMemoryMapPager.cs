@@ -19,7 +19,7 @@ using static Voron.Platform.Win32.Win32NativeMethods;
 
 namespace Voron.Impl.Paging
 {
-    public unsafe class SparseMemoryMappedPager : AbstractPager
+    public unsafe class Windows32BitMemoryMapPager : AbstractPager
     {
 
         public class TransactionState
@@ -48,7 +48,7 @@ namespace Voron.Impl.Paging
         private IntPtr _hFileMappingObject;
         private long _fileStreamLength;
 
-        public SparseMemoryMappedPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null,
+        public Windows32BitMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null,
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
             : base(options)
@@ -153,7 +153,7 @@ namespace Voron.Impl.Paging
             var distanceFromStart = (pageNumber % NumberOfPagesInAllocationGranularity);
             var allocationStartPosition = pageNumber - distanceFromStart;
 
-            var offset = new Win32MemoryMapPager.SplitValue { Value = (ulong)allocationStartPosition * (ulong)Constants.Storage.PageSize };
+            var offset = new WindowsMemoryMapPager.SplitValue { Value = (ulong)allocationStartPosition * (ulong)Constants.Storage.PageSize };
             var result = MapViewOfFileEx(_hFileMappingObject, _mmFileAccessType, offset.High,
                 offset.Low,
                 (UIntPtr)AllocationGranularity, null);
@@ -190,7 +190,7 @@ namespace Voron.Impl.Paging
 
         public override I4KbBatchWrites BatchWriter()
         {
-            return new SparseI4KbBatchWrites(this);
+            return new Windows32Bit4KbBatchWrites(this);
         }
 
         public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
@@ -247,7 +247,7 @@ namespace Voron.Impl.Paging
 
         private LoadedPage MapPages(TransactionState state, long startPage, long size)
         {
-            var offset = new Win32MemoryMapPager.SplitValue { Value = (ulong)startPage * (ulong)Constants.Storage.PageSize };
+            var offset = new WindowsMemoryMapPager.SplitValue { Value = (ulong)startPage * (ulong)Constants.Storage.PageSize };
 
             if ((long)offset.Value + size > _fileStreamLength)
             {
@@ -275,10 +275,10 @@ namespace Voron.Impl.Paging
         private TransactionState GetTransactionState(IPagerLevelTransactionState tx)
         {
             TransactionState transactionState;
-            if (tx.SparsePagerTransactionState == null)
+            if (tx.Windows32BitPagerTransactionState == null)
             {
                 transactionState = new TransactionState();
-                tx.SparsePagerTransactionState = new Dictionary<AbstractPager, TransactionState>
+                tx.Windows32BitPagerTransactionState = new Dictionary<AbstractPager, TransactionState>
                 {
                     {this, transactionState}
                 };
@@ -286,10 +286,10 @@ namespace Voron.Impl.Paging
                 return transactionState;
             }
 
-            if (tx.SparsePagerTransactionState.TryGetValue(this, out transactionState) == false)
+            if (tx.Windows32BitPagerTransactionState.TryGetValue(this, out transactionState) == false)
             {
                 transactionState = new TransactionState();
-                tx.SparsePagerTransactionState[this] = transactionState;
+                tx.Windows32BitPagerTransactionState[this] = transactionState;
             }
             return transactionState;
         }
@@ -313,24 +313,24 @@ namespace Voron.Impl.Paging
 
         private void TxOnOnDispose(IPagerLevelTransactionState lowLevelTransaction)
         {
-            if (lowLevelTransaction.SparsePagerTransactionState == null)
+            if (lowLevelTransaction.Windows32BitPagerTransactionState == null)
                 return;
-            foreach (var state in lowLevelTransaction.SparsePagerTransactionState.Values)
+            foreach (var state in lowLevelTransaction.Windows32BitPagerTransactionState.Values)
             {
                 foreach (var addr in state.AddressesToUnload)
                 {
                     UnmapViewOfFile((byte*)addr);
                 }
             }
-            lowLevelTransaction.SparsePagerTransactionState.Clear();
+            lowLevelTransaction.Windows32BitPagerTransactionState.Clear();
         }
 
-        private class SparseI4KbBatchWrites : I4KbBatchWrites
+        private class Windows32Bit4KbBatchWrites : I4KbBatchWrites
         {
-            private readonly SparseMemoryMappedPager _parent;
+            private readonly Windows32BitMemoryMapPager _parent;
             private readonly TransactionState _state = new TransactionState();
 
-            public SparseI4KbBatchWrites(SparseMemoryMappedPager parent)
+            public Windows32Bit4KbBatchWrites(Windows32BitMemoryMapPager parent)
             {
                 _parent = parent;
             }
