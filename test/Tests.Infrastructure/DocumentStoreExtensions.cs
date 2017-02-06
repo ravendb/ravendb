@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Commands;
@@ -18,20 +19,20 @@ namespace FastTests
 {
     public static class DocumentStoreExtensions
     {
-        public static DatabaseCommands Commands(this DocumentStore store, string databaseName = null)
+        public static DatabaseCommands Commands(this IDocumentStore store, string databaseName = null)
         {
             return new DatabaseCommands(store, databaseName);
         }
 
         public class DatabaseCommands : IDisposable
         {
-            private readonly DocumentStore _store;
+            private readonly IDocumentStore _store;
             public readonly RequestExecuter RequestExecuter;
 
             public readonly JsonOperationContext Context;
             private readonly IDisposable _returnContext;
 
-            public DatabaseCommands(DocumentStore store, string databaseName)
+            public DatabaseCommands(IDocumentStore store, string databaseName)
             {
                 if (store == null)
                     throw new ArgumentNullException(nameof(store));

@@ -1,17 +1,17 @@
 using System.Collections.Generic;
-using Raven.Abstractions.Indexing;
 
 using Xunit;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexing;
-using Lucene.Net.Analysis;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_10 : RavenTestBase
+    public class RavenDB_10 : RavenNewTestBase
     {
-        public class Item
+        private class Item
         {
             public string Text { get; set; }
             public int Age { get; set; }
@@ -29,7 +29,7 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
                 }
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var items = session.Query<Item>()
                         .Customize(x => x.WaitForNonStaleResults())
@@ -55,13 +55,13 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
                 }
-                var opt = new IndexFieldOptions {Analyzer = typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).AssemblyQualifiedName,Indexing = FieldIndexing.Analyzed };
+                var opt = new IndexFieldOptions { Analyzer = typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Analyzed };
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
-                    Maps = new HashSet<string>{ "from doc in docs select new { doc.Text }" },
+                    Maps = new HashSet<string> { "from doc in docs select new { doc.Text }" },
                     Fields = { { "Text", opt } },
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {

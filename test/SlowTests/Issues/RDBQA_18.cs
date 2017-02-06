@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RDBQA_18 : RavenTestBase
+    public class RDBQA_18 : RavenNewTestBase
     {
         [Fact]
         public void ShouldNotThrowNullReferenceException()

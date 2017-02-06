@@ -1,22 +1,25 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Linq;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDb6055 : RavenTestBase
+    public class RavenDb6055 : RavenNewTestBase
     {
-        public class User
+        private class User
         {
+#pragma warning disable 169,649
             public string FirstName;
             public string LastName;
+#pragma warning restore 169,649
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6285")]
         public async Task CreatingNewAutoIndexWillDeleteSmallerOnes()
         {
             using (var store = GetDocumentStore())
@@ -27,7 +30,7 @@ namespace SlowTests.Issues
                         .Where(x => x.FirstName == "Alex")
                         .ToListAsync();
 
-                    var indexes = await store.AsyncDatabaseCommands.GetIndexesAsync(0,25);
+                    var indexes = await store.Admin.SendAsync(new GetIndexesOperation(0, 25));
                     Assert.Equal(1, indexes.Length);
                     Assert.Equal("Auto/Users/ByFirstName", indexes[0].Name);
                 }
@@ -47,35 +50,35 @@ namespace SlowTests.Issues
 
                     await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(45)), tcs.Task);
 
-                    var indexes = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 25);
+                    var indexes = await store.Admin.SendAsync(new GetIndexesOperation(0, 25));
                     Assert.Equal("Auto/Users/ByFirstNameAndLastName", indexes[0].Name);
                 }
             }
         }
-    }
 
-    public class SetTaskOnIndexDelete : IObserver<IndexChange>
-    {
-        private readonly TaskCompletionSource<object> _tcs;
-
-        public SetTaskOnIndexDelete(TaskCompletionSource<object> tcs)
+        private class SetTaskOnIndexDelete : IObserver<IndexChange>
         {
-            _tcs = tcs;
-        }
+            private readonly TaskCompletionSource<object> _tcs;
 
-        public void OnCompleted()
-        {
-            
-        }
+            public SetTaskOnIndexDelete(TaskCompletionSource<object> tcs)
+            {
+                _tcs = tcs;
+            }
 
-        public void OnError(Exception error)
-        {
-        }
+            public void OnCompleted()
+            {
 
-        public void OnNext(IndexChange value)
-        {
-            if (value.Type == IndexChangeTypes.IndexRemoved)
-                _tcs.TrySetResult(value);
+            }
+
+            public void OnError(Exception error)
+            {
+            }
+
+            public void OnNext(IndexChange value)
+            {
+                if (value.Type == IndexChangeTypes.IndexRemoved)
+                    _tcs.TrySetResult(value);
+            }
         }
     }
 }

@@ -1,12 +1,12 @@
 ﻿using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class QueryCommaTest : RavenTestBase
+    public class QueryCommaTest : RavenNewTestBase
     {
         private class Employee
         {

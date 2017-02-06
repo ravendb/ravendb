@@ -9,13 +9,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDb4583 : RavenTestBase
+    public class RavenDb4583 : RavenNewTestBase
     {
         private static async Task CreateUsersAsync(IAsyncDocumentSession session)
         {

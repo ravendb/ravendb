@@ -4,15 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_421 : RavenTestBase
+    public class RavenDB_421 : RavenNewTestBase
     {
         private class Person
         {
@@ -112,7 +112,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task CanExecuteIndexWithoutNRE()
+        public void CanExecuteIndexWithoutNRE()
         {
             using (var store = GetDocumentStore())
             {
@@ -145,8 +145,7 @@ namespace SlowTests.Issues
                         .Where(x => x.PersonId == "people/1")
                         .ToList();
 
-                    var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
-                    Assert.Equal(0, stats.First(x => x.Name == familyMultiMapReduce.IndexName).Errors.Length);
+                    TestHelper.AssertNoIndexErrors(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -156,8 +155,7 @@ namespace SlowTests.Issues
                         .ProjectFromIndexFieldsInto<Family_MultiMap.Result>()
                         .ToList();
 
-                    var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
-                    Assert.Equal(0, stats.First(x => x.Name == familyMultiMap.IndexName).Errors.Length);
+                    TestHelper.AssertNoIndexErrors(store);
                 }
             }
         }

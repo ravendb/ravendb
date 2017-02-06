@@ -2,13 +2,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5435 : RavenTestBase
+    public class RavenDB_5435 : RavenNewTestBase
     {
         private class Users_ByName : AbstractIndexCreationTask<User>
         {
@@ -45,7 +46,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation = store.DatabaseCommands.Admin.CompactIndex(new Users_ByName().IndexName);
+                var operation = store.Admin.Send(new CompactIndexOperation(new Users_ByName().IndexName));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())

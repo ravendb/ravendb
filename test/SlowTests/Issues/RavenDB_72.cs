@@ -1,19 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_72 : RavenTestBase
+    public class RavenDB_72 : RavenNewTestBase
     {
         [Fact]
-        public async Task CanWork()
+        public void CanWork()
         {
             using (var store = GetDocumentStore())
             {
@@ -41,13 +41,12 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(users);
                 }
 
-                var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
-                Assert.Equal(0, stats[0].Errors.Length);
+                TestHelper.AssertNoIndexErrors(store);
             }
         }
 
         [Fact]
-        public async Task CanWork2()
+        public void CanWork2()
         {
             using (var store = GetDocumentStore())
             {
@@ -75,8 +74,7 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(users);
                 }
 
-                var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
-                Assert.Equal(0, stats[0].Errors.Length);
+                TestHelper.AssertNoIndexErrors(store);
             }
         }
 

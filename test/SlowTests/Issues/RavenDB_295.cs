@@ -4,17 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    using System.Collections.Generic;
-
-    public class RavenDB_295 : RavenTestBase
+    public class RavenDB_295 : RavenNewTestBase
     {
         [Fact(Skip = "Missing feature: Suggestions")]
         public void CanUpdateSuggestions()
@@ -27,27 +25,27 @@ namespace SlowTests.Issues
                     session.Store(new { Name = "darsy" });
                     session.SaveChanges();
                 }
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Maps = new HashSet<string> { "from doc in docs select new { doc.Name}"},
-                                                    Fields = new Dictionary<string, IndexFieldOptions>
-                                                    {
-                                                        {
-                                                            "Name",
-                                                            new IndexFieldOptions { Suggestions = true }
-                                                        }
-                                                    }
-                                                });
+                store.Admin.Send(new PutIndexOperation("test",
+                    new IndexDefinition
+                    {
+                        Maps = new HashSet<string> { "from doc in docs select new { doc.Name}" },
+                        Fields = new Dictionary<string, IndexFieldOptions>
+                        {
+                            {
+                                "Name",
+                                new IndexFieldOptions {Suggestions = true}
+                            }
+                        }
+                    }));
 
                 WaitForIndexing(store);
 
-                var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
-                {
-                    Field = "Name",
-                    Term = "orne"
-                });
-                Assert.Empty(suggestionQueryResult.Suggestions);
+                //var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
+                //{
+                //    Field = "Name",
+                //    Term = "orne"
+                //});
+                //Assert.Empty(suggestionQueryResult.Suggestions);
 
                 using (var session = store.OpenSession())
                 {
@@ -56,12 +54,12 @@ namespace SlowTests.Issues
                 }
                 WaitForIndexing(store);
 
-                suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
-                {
-                    Field = "Name",
-                    Term = "orne"
-                });
-                Assert.NotEmpty(suggestionQueryResult.Suggestions);
+                //suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
+                //{
+                //    Field = "Name",
+                //    Term = "orne"
+                //});
+                //Assert.NotEmpty(suggestionQueryResult.Suggestions);
             }
         }
 
@@ -77,26 +75,26 @@ namespace SlowTests.Issues
                     session.Store(new { Name = "darsy" });
                     session.SaveChanges();
                 }
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
-                    Maps = new HashSet<string> { "from doc in docs select new { doc.Name}"},
+                    Maps = new HashSet<string> { "from doc in docs select new { doc.Name}" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         {
                             "Name",
-                            new IndexFieldOptions { Suggestions = true }
+                            new IndexFieldOptions {Suggestions = true}
                         }
                     }
-                });
+                }));
 
                 WaitForIndexing(store);
 
-                var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
-                {
-                    Field = "Name",
-                    Term = "jhon"
-                });
-                Assert.NotEmpty(suggestionQueryResult.Suggestions);
+                //var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
+                //{
+                //    Field = "Name",
+                //    Term = "jhon"
+                //});
+                //Assert.NotEmpty(suggestionQueryResult.Suggestions);
             }
 
             using (var store = GetDocumentStore(path: dataDir))
@@ -108,19 +106,19 @@ namespace SlowTests.Issues
                 }
                 WaitForIndexing(store);
 
-                var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
-                {
-                    Field = "Name",
-                    Term = "jhon"
-                });
-                Assert.NotEmpty(suggestionQueryResult.Suggestions);
+                //var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
+                //{
+                //    Field = "Name",
+                //    Term = "jhon"
+                //});
+                //Assert.NotEmpty(suggestionQueryResult.Suggestions);
 
-                suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
-                {
-                    Field = "Name",
-                    Term = "orne"
-                });
-                Assert.NotEmpty(suggestionQueryResult.Suggestions);
+                //suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
+                //{
+                //    Field = "Name",
+                //    Term = "orne"
+                //});
+                //Assert.NotEmpty(suggestionQueryResult.Suggestions);
             }
         }
     }

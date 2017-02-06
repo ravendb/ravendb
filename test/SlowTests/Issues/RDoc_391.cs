@@ -4,20 +4,18 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Shard;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RDoc_391 : RavenTestBase
+    public class RDoc_391 : RavenNewTestBase
     {
         private class People_By_Name_Different : AbstractIndexCreationTask<Person>
         {
@@ -73,11 +71,11 @@ namespace SlowTests.Issues
                 var index = new People_By_Name_With_Scripts();
                 index.Execute(store);
                 WaitForIndexing(store);
-                var statsBefore = store.DatabaseCommands.GetStatistics();
+                var statsBefore = store.Admin.Send(new GetStatisticsOperation());
                 var indexStats = statsBefore.Indexes.First(x => x.Name == index.IndexName);
                 //var lastIndexedEtag = indexStats.LastIndexedEtag;
 
-                var statsAfter = store.DatabaseCommands.GetStatistics();
+                var statsAfter = store.Admin.Send(new GetStatisticsOperation());
                 indexStats = statsAfter.Indexes.First(x => x.Name == index.IndexName);
                 //Assert.Equal(lastIndexedEtag, indexStats.LastIndexedEtag);
             }
@@ -92,7 +90,7 @@ namespace SlowTests.Issues
                 //IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(People_By_Name_With_Scripts))), store);
 
                 var index = new People_By_Name_With_Scripts();
-                var indexDefinition = store.DatabaseCommands.GetIndex(index.IndexName);
+                var indexDefinition = store.Admin.Send(new GetIndexOperation(index.IndexName));
                 Assert.NotNull(indexDefinition);
 
                 using (var session = store.OpenSession())
@@ -115,7 +113,7 @@ namespace SlowTests.Issues
                 var index = new People_By_Name_With_Scripts();
                 index.Execute(store);
 
-                var indexDefinition = store.DatabaseCommands.GetIndex(index.IndexName);
+                var indexDefinition = store.Admin.Send(new GetIndexOperation(index.IndexName));
                 Assert.NotNull(indexDefinition);
 
                 using (var session = store.OpenSession())
@@ -135,18 +133,18 @@ namespace SlowTests.Issues
         {
             using (var store1 = GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults"))
             using (var store2 = GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults"))
-            using (var store = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
-                                                                          {
-                                                                              { "Shard1", store1 },
-                                                                              { "Shard2", store2 },
-                                                                          })))
+            //using (var store = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
+            //                                                              {
+            //                                                                  { "Shard1", store1 },
+            //                                                                  { "Shard2", store2 },
+            //                                                              })))
             {
                 //IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(People_By_Name_With_Scripts))), store);
 
                 var index = new People_By_Name_With_Scripts();
-                var indexDefinition = store1.DatabaseCommands.GetIndex(index.IndexName);
+                var indexDefinition = store1.Admin.Send(new GetIndexOperation(index.IndexName));
                 Assert.NotNull(indexDefinition);
-                indexDefinition = store2.DatabaseCommands.GetIndex(index.IndexName);
+                indexDefinition = store2.Admin.Send(new GetIndexOperation(index.IndexName));
                 Assert.NotNull(indexDefinition);
 
                 using (var session = store1.OpenSession())
@@ -176,18 +174,18 @@ namespace SlowTests.Issues
         {
             using (var store1 = GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults"))
             using (var store2 = GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults"))
-            using (var store = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
-                                                                          {
-                                                                              { "Shard1", store1 },
-                                                                              { "Shard2", store2 },
-                                                                          })))
+            //using (var store = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
+            //                                                              {
+            //                                                                  { "Shard1", store1 },
+            //                                                                  { "Shard2", store2 },
+            //                                                              })))
             {
                 var index = new People_By_Name_With_Scripts();
-                index.Execute(store);
+                //index.Execute(store);
 
-                var indexDefinition = store1.DatabaseCommands.GetIndex(index.IndexName);
+                var indexDefinition = store1.Admin.Send(new GetIndexOperation(index.IndexName));
                 Assert.NotNull(indexDefinition);
-                indexDefinition = store2.DatabaseCommands.GetIndex(index.IndexName);
+                indexDefinition = store2.Admin.Send(new GetIndexOperation(index.IndexName));
                 Assert.NotNull(indexDefinition);
 
                 using (var session = store1.OpenSession())
@@ -232,15 +230,15 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.DatabaseCommands.GetStatistics();
+                var stats = store.Admin.Send(new GetStatisticsOperation());
                 var indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
                 //Assert.True(EtagUtil.IsGreaterThan(indexStats.LastIndexedEtag, Etag.Empty));
 
-                store.DatabaseCommands.Admin.StopIndexing();
+                store.Admin.Send(new StopIndexingOperation());
 
                 index.Execute(store);
 
-                stats = store.DatabaseCommands.GetStatistics();
+                stats = store.Admin.Send(new GetStatisticsOperation());
                 indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
                 //Assert.True(indexStats.LastIndexedEtag.Equals(Etag.Empty));
             }
@@ -264,19 +262,22 @@ namespace SlowTests.Issues
                 new People_By_Name().Execute(store);
                 var index = new People_By_Name_With_Scripts();
 
-                store.DatabaseCommands.Put(ScriptedIndexResults.IdPrefix + index.IndexName, null, new RavenJObject(), new RavenJObject());
+                using (var commands = store.Commands())
+                {
+                    commands.Put(ScriptedIndexResults.IdPrefix + index.IndexName, null, new { }, null);
+                }
 
                 WaitForIndexing(store);
 
-                var stats = store.DatabaseCommands.GetStatistics();
+                var stats = store.Admin.Send(new GetStatisticsOperation());
                 var indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
                 //Assert.True(EtagUtil.IsGreaterThan(indexStats.LastIndexedEtag, Etag.Empty));
 
-                store.DatabaseCommands.Admin.StopIndexing();
+                store.Admin.Send(new StopIndexingOperation());
 
                 index.Execute(store);
 
-                stats = store.DatabaseCommands.GetStatistics();
+                stats = store.Admin.Send(new GetStatisticsOperation());
                 indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
                 //Assert.True(indexStats.LastIndexedEtag.Equals(Etag.Empty));
             }
@@ -303,16 +304,16 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.DatabaseCommands.GetStatistics();
+                var stats = store.Admin.Send(new GetStatisticsOperation());
                 var indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
                 //var lastIndexedEtag = indexStats.LastIndexedEtag;
                 //Assert.True(EtagUtil.IsGreaterThan(lastIndexedEtag, Etag.Empty));
 
-                store.DatabaseCommands.Admin.StopIndexing();
+                store.Admin.Send(new StopIndexingOperation());
 
                 index.Execute(store);
 
-                stats = store.DatabaseCommands.GetStatistics();
+                stats = store.Admin.Send(new GetStatisticsOperation());
                 indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
                 //Assert.True(indexStats.LastIndexedEtag.Equals(lastIndexedEtag) ||
                 //    EtagUtil.IsGreaterThan(indexStats.LastIndexedEtag, lastIndexedEtag));
