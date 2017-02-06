@@ -30,12 +30,15 @@ namespace Sparrow.Json
 
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(type);
-
-          //  _types = parent._mem + pos + arraySizeOffset + _count * _currentOffsetSize;
         }
 
         public byte* DataStart => _dataStart;
         public int Length => _count;
+
+        public BlittableJsonToken GetArrayType()
+        {
+            return (BlittableJsonToken)(*(_metadataPtr + _currentOffsetSize)) & BlittableJsonReaderBase.TypesMask;
+        }
 
         public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
 
