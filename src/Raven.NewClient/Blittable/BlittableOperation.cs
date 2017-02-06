@@ -104,7 +104,8 @@ namespace Raven.NewClient.Client.Blittable
                         if ((newArray == null) || (oldArray == null))
                             throw new InvalidDataException("Invalid blittable");
 
-                        if (!(newArray.Except(oldArray).Any()))
+                        var changed = CompareBlittableArray(newArray, oldArray);
+                        if (!(changed))
                             break;
 
                         if (changes == null)
@@ -114,10 +115,10 @@ namespace Raven.NewClient.Client.Blittable
                         break;
                     case BlittableJsonToken.StartObject:
                     {
-                        var changed = CompareBlittable(id, oldProp.Value as BlittableJsonReaderObject,
+                        changed = CompareBlittable(id, oldProp.Value as BlittableJsonReaderObject,
                             newProp.Value as BlittableJsonReaderObject, changes, docChanges);
                         if ( (changes == null) && (changed))
-                            return changed;
+                            return true;
                         break;
                     }
                     default:
@@ -129,6 +130,43 @@ namespace Raven.NewClient.Client.Blittable
 
             changes[id] = docChanges.ToArray();
             return true;
+        }
+
+        private static bool CompareBlittableArray(BlittableJsonReaderArray newArray, BlittableJsonReaderArray oldArray)
+        {
+            if (newArray.Length != oldArray.Length)
+                return true;
+            var type = newArray.GetArrayType();
+            switch (type)
+            {
+                case BlittableJsonToken.StartObject:
+                    foreach (var item in newArray.Items)
+                    {
+                        return oldArray.Items.Select(oldItem => 
+                        CompareBlittable("", (BlittableJsonReaderObject) item, (BlittableJsonReaderObject) oldItem, null, null))
+                        .All(change => change);
+                    }
+                    break;
+                case BlittableJsonToken.StartArray:
+                    foreach (var item in newArray.Items)
+                    {
+                        return oldArray.Items.Select(oldItem => 
+                        CompareBlittableArray((BlittableJsonReaderArray) item, (BlittableJsonReaderArray) oldItem))
+                        .All(change => change);
+                    }
+                    break;
+                case BlittableJsonToken.Integer:
+                case BlittableJsonToken.Float:
+                case BlittableJsonToken.String:
+                case BlittableJsonToken.CompressedString:
+                case BlittableJsonToken.Boolean:
+                    return (!(!(newArray.Except(oldArray).Any()) && newArray.Length == oldArray.Length));
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            return false;
+
         }
 
         private static void NewChange(string name, object newValue, object oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
