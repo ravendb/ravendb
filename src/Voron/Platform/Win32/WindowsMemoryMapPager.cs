@@ -22,7 +22,7 @@ using static Voron.Platform.Win32.Win32NativeMethods;
 
 namespace Voron.Platform.Win32
 {
-    public unsafe class Win32MemoryMapPager : AbstractPager
+    public unsafe class WindowsMemoryMapPager : AbstractPager
     {
         public readonly long AllocationGranularity;
         private long _totalAllocationSize;
@@ -48,7 +48,7 @@ namespace Voron.Platform.Win32
             public uint High;
         }
 
-        public Win32MemoryMapPager(StorageEnvironmentOptions options,string file,
+        public WindowsMemoryMapPager(StorageEnvironmentOptions options,string file,
             long? initialFileSize = null,
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,

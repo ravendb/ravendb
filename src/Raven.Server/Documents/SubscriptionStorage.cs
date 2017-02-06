@@ -46,6 +46,8 @@ namespace Raven.Server.Documents
 
             options.SchemaVersion = 1;
             options.TransactionsMode = TransactionsMode.Lazy;
+            options.ForceUsing32BitPager = db.Configuration.Storage.ForceUsing32BitPager;
+
             _environment = new StorageEnvironment(options);
             var databaseName = db.Name;
             _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling("Subscriptions", databaseName);

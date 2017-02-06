@@ -22,7 +22,7 @@ namespace Voron.Impl
 {
     public interface IPagerLevelTransactionState : IDisposable
     {
-        Dictionary<AbstractPager, SparseMemoryMappedPager.TransactionState> SparsePagerTransactionState { get; set; }
+        Dictionary<AbstractPager, Windows32BitMemoryMapPager.TransactionState> Windows32BitPagerTransactionState { get; set; }
         event Action<IPagerLevelTransactionState> OnDispose;
         void EnsurePagerStateReference(PagerState state);
         StorageEnvironment Environment { get; }
@@ -46,7 +46,7 @@ namespace Voron.Impl
         private readonly WriteAheadJournal _journal;
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
-        Dictionary<AbstractPager, SparseMemoryMappedPager.TransactionState> IPagerLevelTransactionState.SparsePagerTransactionState
+        Dictionary<AbstractPager, Windows32BitMemoryMapPager.TransactionState> IPagerLevelTransactionState.Windows32BitPagerTransactionState
         {
             get;
             set;
