@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.Replication
             {
                 Status = ReplicationStatus.Received,
                 RecievedTime = DateTime.UtcNow,
-                Source = documentsContext.GetLazyString(ConnectionInfo.SourceDatabaseId),
+                Source = FromToString,
                 RecievedEtag = lastDocumentEtag,
                 DocumentsCount = itemCount
             };
