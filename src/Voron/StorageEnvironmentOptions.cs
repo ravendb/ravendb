@@ -476,6 +476,11 @@ namespace Voron
                 var path = Path.Combine(_journalPath, name);
                 if (File.Exists(path) == false)
                     throw new InvalidOperationException("No such journal " + path);
+                if (new FileInfo(path).Length == 0)
+                {
+                    File.WriteAllBytes(path, new byte[64 * 1024]);
+                }
+
                 if (RunningOnPosix)
                     return new PosixMemoryMapPager(this, path);
                 var win32MemoryMapPager = new Win32MemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
