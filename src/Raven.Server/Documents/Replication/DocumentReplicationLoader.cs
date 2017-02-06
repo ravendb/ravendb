@@ -34,6 +34,8 @@ namespace Raven.Server.Documents.Replication
         private readonly Timer _reconnectAttemptTimer;
         internal int MinimalHeartbeatInterval;
 
+        internal readonly ReplicationStatistics Stats;
+
         private readonly ConcurrentSet<OutgoingReplicationHandler> _outgoing =
             new ConcurrentSet<OutgoingReplicationHandler>();
 
@@ -93,18 +95,15 @@ namespace Raven.Server.Documents.Replication
         internal ReplicationDocument ReplicationDocument;
         private int _numberOfSiblings;
 
-        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo)
-            ;
-
+        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
         public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
-
         public IEnumerable<OutgoingReplicationHandler> OutgoingHandlers => _outgoing;
         public IEnumerable<IncomingReplicationHandler> IncomingHandlers => _incoming.Values;
 
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks =
             new ConcurrentQueue<TaskCompletionSource<object>>();
 
-        private Task _resolveConflictsTask = Task.CompletedTask;
+        public Task ResolveConflictsTask = Task.CompletedTask;
 
         public DocumentReplicationLoader(DocumentDatabase database)
         {
@@ -113,8 +112,8 @@ namespace Raven.Server.Documents.Replication
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             MinimalHeartbeatInterval =
-                _database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.Milliseconds;
-
+               (int) _database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
+            Stats = new ReplicationStatistics(this);
         }
 
         public IReadOnlyDictionary<ReplicationDestination, ConnectionShutdownInfo> OutgoingFailureInfo
@@ -368,6 +367,7 @@ namespace Raven.Server.Documents.Replication
 
         private void ResolveConflictsInBackground()
         {
+            var resolverStats = new ReplicationStatistics.ResolverIterationStats();
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
@@ -375,6 +375,7 @@ namespace Raven.Server.Documents.Replication
                 Slice.From(context.Allocator, string.Empty, out lastKey);
 
                 bool hasConflicts = true;
+                resolverStats.StartTime = DateTime.UtcNow;
                 while (hasConflicts && !_cts.IsCancellationRequested)
                 {
                     try
@@ -402,14 +403,13 @@ namespace Raven.Server.Documents.Replication
                                     hasConflicts = true;
                                     break;
                                 }
-
+                        
                                 var conflicts = _database.DocumentsStorage.GetAllConflictsBySameKeyAfter(context,
-                                    ref lastKey);
+                                    ref lastKey);                              
                                 if (conflicts.Count == 0)
                                     break;
-                                if (TryResolveConflict(context, conflicts) == false)
+                                if (TryResolveConflict(context, conflicts, resolverStats) == false)
                                     continue;
-
                                 hasConflicts = true;
                             }
 
@@ -426,10 +426,16 @@ namespace Raven.Server.Documents.Replication
                             lastKey.Release(context.Allocator);
                     }
                 }
+                resolverStats.EndTime = DateTime.UtcNow;
+                resolverStats.ConflictsLeft = ConflictsCount;
+                resolverStats.DefaultResolver = ReplicationDocument?.DefaultResolver;
+                Stats.Add(resolverStats);
             }
         }
 
-        private bool TryResolveConflict(DocumentsOperationContext context, List<DocumentConflict> conflictList)
+        public long ConflictsCount => _database.DocumentsStorage.ConflictsCount;
+
+        private bool TryResolveConflict(DocumentsOperationContext context, List<DocumentConflict> conflictList, ReplicationStatistics.ResolverIterationStats stats)
         {
             var collection = conflictList[0].Collection;
 
@@ -443,7 +449,11 @@ namespace Raven.Server.Documents.Replication
                     conflictList,
                     collection,
                     hasLocalTombstone: false))
+                {
+                    stats.AddResolvedBy(collection + " Script", conflictList.Count);
                     return true;
+                }
+                   
             }
 
             if (_database.DocumentsStorage.TryResolveUsingDefaultResolverInternal(
@@ -451,11 +461,15 @@ namespace Raven.Server.Documents.Replication
                 ReplicationDocument.DefaultResolver,
                 conflictList,
                 hasTombstoneInStorage: false))
+            {
+                stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
                 return true;
-
+            }
+                
             if (ReplicationDocument.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
             {
                 _database.DocumentsStorage.ResolveToLatest(context, conflictList, false);
+                stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                 return true;
             }
 
@@ -486,7 +500,7 @@ namespace Raven.Server.Documents.Replication
             }
             ScriptConflictResolversCache = copy;
 
-            _resolveConflictsTask = Task.Run(() =>
+            ResolveConflictsTask = Task.Run(() =>
             {
                 try
                 {
@@ -557,6 +571,15 @@ namespace Raven.Server.Documents.Replication
         {
             using (instance)
             {
+                var stats = new ReplicationStatistics.IncomingBatchStats
+                {
+                    Status = ReplicationStatus.Failed,
+                    Message = e.Message,
+                    RecievedTime = DateTime.UtcNow,
+                    Source = instance.ConnectionInfo.SourceDatabaseId
+                };
+
+                Stats.Add(stats);
 
                 IncomingReplicationHandler _;
                 _incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _);
@@ -576,6 +599,16 @@ namespace Raven.Server.Documents.Replication
             {
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+
+                var stats = new ReplicationStatistics.OutgoingBatchStats
+                {
+                    Status = ReplicationStatus.Failed,
+                    Message = e.Message,
+                    StartSendingTime = DateTime.UtcNow,
+                    Destination = instance.DestinationDbId
+                };
+
+                Stats.Add(stats);
 
                 _outgoing.TryRemove(instance);
                 
@@ -770,7 +803,7 @@ namespace Raven.Server.Documents.Replication
 
             _database.Changes.OnSystemDocumentChange -= OnSystemDocumentChange;
 
-            ea.Execute(() => _resolveConflictsTask.Wait());
+            ea.Execute(() => ResolveConflictsTask.Wait());
 
             if (_log.IsInfoEnabled)
                 _log.Info("Closing and disposing document replication connections.");

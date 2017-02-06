@@ -6,6 +6,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Extensions;
 using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Handlers
@@ -75,6 +76,33 @@ namespace Raven.Server.Documents.Handlers
 
                 return Task.CompletedTask;
             }
+        }
+
+        [RavenAction("/databases/*/replication/stats", "GET")]
+        public Task GetRepliationStats()
+        {
+            var stats = Database.DocumentReplicationLoader.Stats;
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var incomingStats = new DynamicJsonArray();
+                var outgoingStats = new DynamicJsonArray();
+                var resovlerStats = new DynamicJsonArray();
+
+                stats.IncomingStats.ForEach(e => incomingStats.Add(e.ToJson()));
+                stats.OutgoingStats.ForEach(e => outgoingStats.Add(e.ToJson()));
+                stats.ResolverStats.ForEach(e => resovlerStats.Add(e.ToJson()));
+                
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["LiveStats"] = stats.LiveStats(),
+                    ["IncomingStats"] = incomingStats,
+                    ["OutgoingStats"] = outgoingStats,
+                    ["ResovlerStats"] = resovlerStats
+                });
+            }
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/replication/topology", "GET")]

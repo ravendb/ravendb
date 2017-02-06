@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.Replication
 
         public long LastHeartbeatTicks;
 
+        public ReplicationStatistics.IncomingBatchStats Stats = new ReplicationStatistics.IncomingBatchStats();
+
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
@@ -213,7 +215,7 @@ namespace Raven.Server.Documents.Replication
                         out _lastIndexOrTransformerEtag))
                     throw new InvalidOperationException(
                         "Expected LastIndexOrTransformerEtag property in the replication message, but didn't find it..");
-
+                
                 switch (messageType)
                 {
                     case ReplicationMessageType.Documents:
@@ -296,9 +298,17 @@ namespace Raven.Server.Documents.Replication
             {
                 _parent.UpdateReplicationDocumentWithResolver(resovlerId, resolverVersion);
             }
-
+            Stats = new ReplicationStatistics.IncomingBatchStats
+            {
+                Status = ReplicationStatus.Received,
+                RecievedTime = DateTime.UtcNow,
+                Source = documentsContext.GetLazyString(ConnectionInfo.SourceDatabaseId),
+                RecievedEtag = lastDocumentEtag,
+                DocumentsCount = itemCount
+            };
             ReceiveSingleDocumentsBatch(documentsContext, itemCount, lastDocumentEtag);
-
+            Stats.DoneReplicateTime = DateTime.UtcNow;
+            _parent.Stats.Add(Stats);
             OnDocumentsReceived(this);
         }
 
