@@ -78,7 +78,7 @@ namespace Raven.Server.Config
             AddJsonConfigurationVariables();
 
             Settings = _configBuilder.Build();
-            Core = new CoreConfiguration(this);
+            Core = new CoreConfiguration();
 
             Replication = new ReplicationConfiguration();
             SqlReplication = new SqlReplicationConfiguration();
