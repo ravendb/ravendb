@@ -39,10 +39,7 @@ class resources extends viewModelBase {
     allCheckedResourcesDisabled: KnockoutComputed<boolean>;
 
     spinners = {
-        globalToggleDisable: ko.observable<boolean>(false),
-        itemTakedowns: ko.observableArray<string>([]),
-        disableIndexing: ko.observableArray<string>([]), //TODO: bind on UI
-        toggleRejectMode: ko.observableArray<string>([]) //TODO: bind on UI
+        globalToggleDisable: ko.observable<boolean>(false)
     }
 
     private static compactView = ko.observable<boolean>(false);
@@ -291,14 +288,14 @@ class resources extends viewModelBase {
 
         disableDatabaseToggleViewModel.result.done(result => {
             if (result.can) {
-                this.spinners.itemTakedowns.push(rs.qualifiedName);
+                rsInfo.inProgressAction(disable ? "Disabling..." : "Enabling...");
 
                 new disableResourceToggleCommand([rs], disable)
                     .execute()
                     .done(disableResult => {
                         disableResult.forEach(x => this.onResourceDisabled(x));
                     })
-                    .always(() => this.spinners.itemTakedowns.remove(rs.qualifiedName));
+                    .always(() => rsInfo.inProgressAction(null));
             }
         });
 
@@ -327,7 +324,7 @@ class resources extends viewModelBase {
         this.confirmationMessage("Are you sure?", message + " indexing?")
             .done(result => {
                 if (result.can) {
-                    this.spinners.disableIndexing.push(db.qualifiedName);
+                    db.inProgressAction(enableIndexing ? "Enabling..." : "Disabling...");
 
                     new toggleDisableIndexingCommand(enableIndexing, db)
                         .execute()
@@ -335,7 +332,7 @@ class resources extends viewModelBase {
                             db.indexingDisabled(!enableIndexing);
                             db.indexingPaused(false);
                         })
-                        .always(() => this.spinners.disableIndexing.remove(db.qualifiedName));
+                        .always(() => db.inProgressAction(null));
                 }
             });
     }
@@ -347,12 +344,12 @@ class resources extends viewModelBase {
         this.confirmationMessage("Are you sure?", message + " indexing?")
             .done(result => {
                 if (result.can) {
-                    this.spinners.disableIndexing.push(db.qualifiedName);
+                    db.inProgressAction(pauseIndexing ? "Resuming..." : "Pausing...");
 
                     new togglePauseIndexingCommand(pauseIndexing, db.asResource())
                         .execute()
                         .done(() => db.indexingPaused(!pauseIndexing))
-                        .always(() => this.spinners.disableIndexing.remove(db.qualifiedName));
+                        .always(() => db.inProgressAction(null));
                 }
             });
     }

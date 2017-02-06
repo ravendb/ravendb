@@ -37,6 +37,8 @@ abstract class resourceInfo {
     canNavigateToResource: KnockoutComputed<boolean>;
     isCurrentlyActiveResource: KnockoutComputed<boolean>;
 
+    inProgressAction = ko.observable<string>();
+
     static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };
     }
@@ -166,8 +168,8 @@ abstract class resourceInfo {
 
         this.isLoading = ko.pureComputed(() => {
             return this.isCurrentlyActiveResource() &&
-                this.online() === false &&
-                this.disabled() === false;
+                !this.online() &&
+                !this.disabled();
         });
     }
 }
