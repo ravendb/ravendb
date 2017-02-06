@@ -58,13 +58,14 @@ class statusDebugExplainReplication extends viewModelBase {
 
     fetchDocSearchResults(query: string) {
         if (query.length >= 2) {
+            /* TODO
             new getDocumentsMetadataByIDPrefixCommand(query, 10, this.activeDatabase())
                 .execute()
                 .done((results: queryResultDto<string>) => {
                     if (this.documentId() === query) {
                         this.documentIdSearchResults(results.Results);
                     }
-                });
+                });*/
         } else if (query.length == 0) {
             this.documentIdSearchResults.removeAll();
         }

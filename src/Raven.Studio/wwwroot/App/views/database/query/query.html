@@ -98,20 +98,14 @@
                             </div>
                         </div>
 
-                        <!-- TODO: 
-                            
-                            completer:queryCompleter, 
-                            , completerHostObject: $root
-
-                            -->
                         <pre class="form-control editor query-source"
-                              data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/lucene', hasFocus: queryTextHasFocus }"></pre>
+                              data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/lucene', hasFocus: queryTextHasFocus, completer:queryCompleter, completerHostObject: $root }"></pre>
                         <div class="add-filter" data-bind="dropdownPanel: true">
                             <div data-bind="template: { name: 'filter-template' }"></div>
                         </div>
                     </div>
                     <div class="query-controls">
-                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: runQuery, class: { 'btn-spinner': isLoading }">
+                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: runQuery, css: { 'btn-spinner': isLoading }">
                             <i class="icon-play2 icon-lg"></i><br />
                             <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                         </button>
@@ -271,13 +265,14 @@
                     <label for="" class="col-sm-4 col-md-3 control-label">Field</label>
                     <div class="col-sm-8 col-md-9">
                         <div class="dropdown btn-block">
-                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-bind="enable: $root.indexFields().length">
+                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-bind="enable: $root.addFilterEnabled">
                                 <span data-bind="text: searchField() || 'Select field'"></span>
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" data-bind="foreach: $root.indexFields">
                                 <li><a href="#" data-bind="text: $data, click: _.partial($parent.searchField, $data)"></a></li>
                             </ul>
+                            <span class="help-block" data-bind="validationMessage: searchField"></span>
                         </div>
                     </div>
                 </div>
@@ -285,15 +280,15 @@
                     <label class="col-sm-4 col-md-3 control-label">Type</label>
                     <div class="col-sm-8 col-md-9">
                         <div class="radio radio-inline">
-                            <input type="radio" id="fieldTypeString" value="string" name="fieldType" data-bind="checked: type">
+                            <input type="radio" id="fieldTypeString" value="string" name="fieldType" data-bind="checked: type, enable: $root.addFilterEnabled">
                             <label for="fieldTypeString">String</label>
                         </div>
                         <div class="radio radio-inline">
-                            <input type="radio" id="fieldTypeRange" value="range" name="fieldType" data-bind="checked: type">
+                            <input type="radio" id="fieldTypeRange" value="range" name="fieldType" data-bind="checked: type, enable: $root.addFilterEnabled">
                             <label for="fieldTypeRange">Range</label>
                         </div>
                         <div class="radio radio-inline">
-                            <input type="radio" id="fieldTypeIn" value="in" name="fieldType" data-bind="checked: type">
+                            <input type="radio" id="fieldTypeIn" value="in" name="fieldType" data-bind="checked: type, enable: $root.addFilterEnabled">
                             <label for="fieldTypeIn">In</label>
                         </div>
                     </div>
@@ -302,7 +297,7 @@
                     <label for="" class="col-sm-4 col-md-3 control-label">Search type</label>
                     <div class="col-sm-8 col-md-9">
                         <div class="dropdown btn-block">
-                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            <button class="btn btn-block dropdown-toggle text-left" data-bind="enable: $root.addFilterEnabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                 <span data-bind="text: searchType"></span>
                                 <span class="caret"></span>
                             </button>
@@ -315,7 +310,7 @@
                 <div class="form-group" data-bind="visible: $root.isStringFilter, validationElement: value">
                     <label for="valueInput" class="col-sm-4 col-md-3 control-label">Value</label>
                     <div class="col-sm-8 col-md-9">
-                        <input type="text" id="valueInput" class="form-control" data-bind="textInput: value" />
+                        <input type="text" id="valueInput" class="form-control" data-bind="textInput: value, enable: $root.addFilterEnabled" />
                     </div>
                 </div>
                 <div class="form-group" data-bind="visible: $root.isRangeFilter">
@@ -378,7 +373,7 @@
         </div>
         <div class="col-sm-3 flex-bottom">
             <div class="form-group">
-                <button class="btn btn-primary btn-block" data-bind="click: $root.addFilter">
+                <button class="btn btn-primary btn-block" data-bind="click: $root.addFilter, enable: $root.addFilterEnabled">
                     <i class="icon-plus"></i>
                     <span>Add</span>
                 </button>

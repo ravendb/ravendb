@@ -138,13 +138,14 @@ class editSqlReplication extends viewModelBase {
         $.when(this.fetchSqlReplicationToEdit(replicationToLoadName), this.fetchCollections(this.activeDatabase()))
             .done(() => {
                 this.editedReplication().collections = this.collections;
+                /* TODO:
                 new getDocumentsMetadataByIDPrefixCommand(editSqlReplication.sqlReplicationDocumentPrefix, 256, this.activeDatabase())
                     .execute()
                     .done((results: queryResultDto<string>) => {
                         this.loadedSqlReplications = results.Results;
                         loadDeferred.resolve();
                     }).
-                    fail(() => loadDeferred.reject());
+                    fail(() => loadDeferred.reject());*/
             })
             .fail(() => {
                 loadDeferred.reject();

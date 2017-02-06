@@ -10,9 +10,7 @@ interface documentDto extends metadataAwareDto {
 interface conflictsInfoDto extends Raven.Client.Data.Queries.QueryResult<conflictDto> {
 }
 
-interface metadataAwareDto {
-    '@metadata'?: documentMetadataDto;
-}
+
 
 interface logNotificationDto {
     Level: string;
@@ -28,16 +26,6 @@ interface logNotificationDto {
     InnerRequestsCount?: number;
     QueryTimings: any;
 
-}
-
-interface documentMetadataDto {
-    '@collection'?: string;
-    'Raven-Clr-Type'?: string;
-    'Non-Authoritative-Information'?: boolean;
-    '@id'?: string;
-    'Temp-Index-Score'?: number;
-    '@last-modified'?: string;
-    '@etag'?: number;
 }
 
 interface databaseStatisticsDto {
