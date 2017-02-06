@@ -97,4 +97,3 @@ paths.releaseTargetContent = path.join(paths.releaseTarget, 'Content');
 paths.releaseTargetContentCss = path.join(paths.releaseTargetContent, 'css');
 
 module.exports = paths;
-    

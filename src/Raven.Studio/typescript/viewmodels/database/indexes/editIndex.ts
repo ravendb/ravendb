@@ -196,8 +196,9 @@ class editIndex extends viewModelBase {
             .done((databaseDocument: document) => {
                 const settings = (<any>databaseDocument)["Settings"] as dictionary<string>;
                 const indexStoragePath = settings[configuration.indexing.storagePath];
-                //TODO: don't use .string here: but additionalIndexStoragePaths - waiting for RavenDB-5665)
-                const additionalPaths = settings[configuration.indexing.string] ? settings[configuration.indexing.string].split(";") : [];
+                const additionalPaths = settings[configuration.indexing.additionalStoragePaths]
+                    ? settings[configuration.indexing.additionalStoragePaths].split(";")
+                    : [];
                 this.additionalStoragePaths(additionalPaths);
                 this.defaultIndexPath(indexStoragePath || editIndex.DefaultIndexStoragePath);
             })
