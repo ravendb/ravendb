@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes
             Slice.From(StorageEnvironment.LabelsContext, "Definition", ByteStringType.Immutable, out DefinitionSlice);
         }
 
-        public string Name { get; }
+        public string Name { get; set; }
 
         public string[] Collections { get; }
 

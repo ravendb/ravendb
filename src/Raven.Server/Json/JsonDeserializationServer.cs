@@ -77,5 +77,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, License> License = GenerateJsonDeserializationRoutine<License>();
 
         public static readonly Func<BlittableJsonReaderObject, UserRegistrationInfo> UserRegistrationInfo = GenerateJsonDeserializationRoutine<UserRegistrationInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, IndexToAdd> IndexToAdd = GenerateJsonDeserializationRoutine<IndexToAdd>();
+
     }
 }
