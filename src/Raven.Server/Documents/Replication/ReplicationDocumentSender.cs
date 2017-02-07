@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Replication
                 StartSendingTime = DateTime.UtcNow,
                 SentEtagMin = _parent._lastSentDocumentEtag + 1,
                 SentEtagMax = _lastEtag,
-                Destination = documentsContext.GetLazyString(_parent.DestinationDbId)
+                Destination = _parent.FromToString
             };
             var sw = Stopwatch.StartNew();
             var defaultResolver = _parent._parent.ReplicationDocument?.DefaultResolver;

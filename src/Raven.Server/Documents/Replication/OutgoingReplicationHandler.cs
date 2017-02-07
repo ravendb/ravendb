@@ -408,8 +408,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}"
-            ;
+        public string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}";
 
         public ReplicationDestination Destination => _destination;
 

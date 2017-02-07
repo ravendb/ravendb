@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Replication
             public long LastEtag;
         }
 
-        private readonly ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination> _lastSendEtagPerDestination = 
+        private readonly ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination> _lastSendEtagPerDestination =
             new ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination>();
 
         public long MinimalEtagForReplication
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Replication
             {
                 var replicationDocument = ReplicationDocument;// thread safe copy
 
-                if(replicationDocument?.Destinations == null || replicationDocument.Destinations.Count == 0)
+                if (replicationDocument?.Destinations == null || replicationDocument.Destinations.Count == 0)
                     return long.MaxValue;
 
                 if (replicationDocument.Destinations.Count != _lastSendEtagPerDestination.Count)
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Replication
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             MinimalHeartbeatInterval =
-               (int) _database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
+               (int)_database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
             RepliactionStats = new ReplicationStatistics(this);
         }
 
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Replication
 
                 var incomingConnectionRejectionInfos = _incomingRejectionStats.GetOrAdd(connectionInfo,
                     _ => new ConcurrentQueue<IncomingConnectionRejectionInfo>());
-                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo {Reason = e.ToString()});
+                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo { Reason = e.ToString() });
 
                 try
                 {
@@ -362,7 +362,7 @@ namespace Raven.Server.Documents.Replication
 
             InitializeOutgoingReplications();
             InitializeResolvers();
-            
+
         }
 
         private void ResolveConflictsInBackground()
@@ -377,77 +377,73 @@ namespace Raven.Server.Documents.Replication
 
                 try
                 {
-                bool hasConflicts = true;
-                resolverStats.StartTime = DateTime.UtcNow;
+                    bool hasConflicts = true;
+                    resolverStats.StartTime = DateTime.UtcNow;
                     var timeout = 150;
                     if (Debugger.IsAttached)
                         timeout *= 10;
-                while (hasConflicts && !_cts.IsCancellationRequested)
-                {
-                    try
+                    while (hasConflicts && !_cts.IsCancellationRequested)
                     {
-                        var sp = Stopwatch.StartNew();
-                        DocumentsTransaction tx = null;
                         try
                         {
+                            var sp = Stopwatch.StartNew();
+                            DocumentsTransaction tx = null;
                             try
                             {
-                                tx = context.OpenWriteTransaction();
-                            }
-                            catch (TimeoutException)
-                            {
-                                continue;
-                            }
-                            hasConflicts = false;
-                            while (!_cts.IsCancellationRequested)
-                            {
-                                    if (sp.ElapsedMilliseconds > timeout)
+                                try
                                 {
-                                    // we must release the write transaction to avoid
-                                    // completely blocking all other operations.
-                                    // This is a background task that we can leave later
-                                    hasConflicts = true;
-                                    break;
+                                    tx = context.OpenWriteTransaction();
                                 }
-                        
-                                var conflicts = _database.DocumentsStorage.GetAllConflictsBySameKeyAfter(context,
-<<<<<<< .mine
-                                    ref lastKey);                              
-=======
-                                        ref lastKey);
->>>>>>> .theirs
-                                if (conflicts.Count == 0)
-                                    break;
-                                if (TryResolveConflict(context, conflicts, resolverStats) == false)
+                                catch (TimeoutException)
+                                {
                                     continue;
-                                hasConflicts = true;
-                            }
+                                }
+                                hasConflicts = false;
+                                while (!_cts.IsCancellationRequested)
+                                {
+                                    if (sp.ElapsedMilliseconds > timeout)
+                                    {
+                                        // we must release the write transaction to avoid
+                                        // completely blocking all other operations.
+                                        // This is a background task that we can leave later
+                                        hasConflicts = true;
+                                        break;
+                                    }
 
-                            tx.Commit();
+                                    var conflicts = _database.DocumentsStorage.GetAllConflictsBySameKeyAfter(context,
+                                            ref lastKey);
+                                    if (conflicts.Count == 0)
+                                        break;
+                                    if (TryResolveConflict(context, conflicts, resolverStats) == false)
+                                        continue;
+                                    hasConflicts = true;
+                                }
+
+                                tx.Commit();
+                            }
+                            finally
+                            {
+                                tx?.Dispose();
+                            }
                         }
                         finally
                         {
-                            tx?.Dispose();
-                        }
-                    }
-                    finally
-                    {
-                        if (lastKey.HasValue)
-                            lastKey.Release(context.Allocator);
+                            if (lastKey.HasValue)
+                                lastKey.Release(context.Allocator);
 
                             Slice.From(context.Allocator, string.Empty, out lastKey);
+                        }
                     }
+                    resolverStats.EndTime = DateTime.UtcNow;
+                    resolverStats.ConflictsLeft = ConflictsCount;
+                    resolverStats.DefaultResolver = ReplicationDocument?.DefaultResolver;
+                    RepliactionStats.Add(resolverStats);
                 }
-                resolverStats.EndTime = DateTime.UtcNow;
-                resolverStats.ConflictsLeft = ConflictsCount;
-                resolverStats.DefaultResolver = ReplicationDocument?.DefaultResolver;
-                RepliactionStats.Add(resolverStats);
-            }
                 finally
                 {
                     if (lastKey.HasValue)
                         lastKey.Release(context.Allocator);
-        }
+                }
             }
         }
 
@@ -471,7 +467,7 @@ namespace Raven.Server.Documents.Replication
                     stats.AddResolvedBy(collection + " Script", conflictList.Count);
                     return true;
                 }
-                   
+
             }
 
             if (_database.DocumentsStorage.TryResolveUsingDefaultResolverInternal(
@@ -483,7 +479,7 @@ namespace Raven.Server.Documents.Replication
                 stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
                 return true;
             }
-                
+
             if (ReplicationDocument.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
             {
                 _database.DocumentsStorage.ResolveToLatest(context, conflictList, false);
@@ -532,7 +528,7 @@ namespace Raven.Server.Documents.Replication
                             _log.Info("Failed to run automatic conflict resolution", e);
                     }
                 });
-            }   
+            }
         }
 
         private void InitializeOutgoingReplications()
@@ -570,7 +566,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             _numberOfSiblings = countOfDestinations;
-            
+
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
         }
@@ -597,7 +593,8 @@ namespace Raven.Server.Documents.Replication
                     Status = ReplicationStatus.Failed,
                     Message = e.Message,
                     RecievedTime = DateTime.UtcNow,
-                    Source = instance.ConnectionInfo.SourceDatabaseId
+                    Source = instance.FromToString,
+                    Exception = e.ToString()
                 };
 
                 RepliactionStats.Add(stats);
@@ -626,13 +623,14 @@ namespace Raven.Server.Documents.Replication
                     Status = ReplicationStatus.Failed,
                     Message = e.Message,
                     StartSendingTime = DateTime.UtcNow,
-                    Destination = instance.DestinationDbId
+                    Destination = instance.Destination.ToString(),
+                    Exception = e.ToString()
                 };
 
                 RepliactionStats.Add(stats);
 
                 _outgoing.TryRemove(instance);
-                
+
                 ConnectionShutdownInfo failureInfo;
                 if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
                     return;
@@ -717,7 +715,7 @@ namespace Raven.Server.Documents.Replication
             InitializeOutgoingReplications();
 
             InitializeResolvers();
-            
+
             if (_log.IsInfoEnabled)
                 _log.Info($"Replication configuration was changed: {change.Key}");
         }
@@ -840,7 +838,7 @@ namespace Raven.Server.Documents.Replication
             ea.ThrowIfNeeded();
         }
 
-       
+
         public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             var minEtag = MinimalEtagForReplication;
@@ -874,7 +872,7 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-               tooManyTombstones = _database.DocumentsStorage.HasMoreOfTombstonesAfter(context, minEtag, maxTombstones);
+                tooManyTombstones = _database.DocumentsStorage.HasMoreOfTombstonesAfter(context, minEtag, maxTombstones);
             }
 
             if (!tooManyTombstones)
@@ -894,7 +892,7 @@ namespace Raven.Server.Documents.Replication
 
             return result;
         }
-    
+
         public class IncomingConnectionRejectionInfo
         {
             public string Reason { get; set; }

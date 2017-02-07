@@ -90,10 +90,21 @@ namespace Raven.Server.Documents.Handlers
                 var outgoingStats = new DynamicJsonArray();
                 var resovlerStats = new DynamicJsonArray();
 
-                stats.IncomingStats.ForEach(e => incomingStats.Add(e.ToJson()));
-                stats.OutgoingStats.ForEach(e => outgoingStats.Add(e.ToJson()));
-                stats.ResolverStats.ForEach(e => resovlerStats.Add(e.ToJson()));
-                
+                foreach (var e in stats.IncomingStats)
+                {
+                    incomingStats.Add(e.ToJson());
+                }
+
+                foreach (var e in stats.OutgoingStats)
+                {
+                    outgoingStats.Add(e.ToJson());
+                }
+
+                foreach (var e in stats.ResolverStats)
+                {
+                    resovlerStats.Add(e.ToJson());
+                }
+
                 context.Write(writer, new DynamicJsonValue
                 {
                     ["LiveStats"] = stats.LiveStats(),
