@@ -665,7 +665,7 @@ namespace Raven.Server.Documents
             return Tuple.Create<Document, DocumentTombstone>(null, TableValueToTombstone(context, ref tvr));
         }
 
-        public Document Get(DocumentsOperationContext context, string key)
+        public Document Get(DocumentsOperationContext context, string key, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
@@ -675,18 +675,18 @@ namespace Raven.Server.Documents
             Slice loweredKey;
             using (DocumentKeyWorker.GetSliceFromKey(context, key, out loweredKey))
             {
-                return Get(context, loweredKey);
+                return Get(context, loweredKey, throwOnConflict);
             }
         }
 
-        public Document Get(DocumentsOperationContext context, Slice loweredKey)
+        public Document Get(DocumentsOperationContext context, Slice loweredKey, bool throwOnConflict = true)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             TableValueReader tvr;
             if (table.ReadByKey(loweredKey, out tvr) == false)
             {
-                if (_hasConflicts != 0)
+                if (_hasConflicts != 0 && throwOnConflict)
                     ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return null;
             }
@@ -1477,9 +1477,25 @@ namespace Raven.Server.Documents
             // we are saving it
             using (var clone = conflict.Doc.Clone(ctx))
             {
+                // handle the case where we resolve a conflict for a document from a different collection
+                DeleteDocumentFromDifferentCollectionIfNeeded(ctx, conflict);
+
                 ReplicationUtils.EnsureCollectionTag(clone, conflict.Collection);
                 Put(ctx, conflict.LoweredKey, null, clone, null, conflict.ChangeVector);
             }
+        }
+
+        private void DeleteDocumentFromDifferentCollectionIfNeeded(DocumentsOperationContext ctx, DocumentConflict conflict)
+        {
+            var oldVersion = Get(ctx, conflict.LoweredKey, throwOnConflict: false);
+            if (oldVersion == null)
+                return;
+
+            var oldVersionCollectionName = CollectionName.GetCollectionName(oldVersion.Data);
+            if (oldVersionCollectionName.Equals(conflict.Collection, StringComparison.CurrentCultureIgnoreCase))
+                return;
+
+            DeleteWithoutCreatingTombstone(ctx, oldVersionCollectionName, oldVersion.StorageId, isTombstone: false);
         }
 
         public bool TryResolveConflictByScriptInternal(
@@ -1921,7 +1937,7 @@ namespace Raven.Server.Documents
         {
             throw new InvalidOperationException(
                 $"Changing '{key}' from '{oldCollectionName.Name}' to '{collectionName.Name}' via update is not supported.{System.Environment.NewLine}" +
-                $"Delete the document and recreate the document {key}.");
+                $"Delete it and recreate the document {key}.");
         }
 
         private static void ThrowConcurrentException(string key, long? expectedEtag, long oldEtag)
