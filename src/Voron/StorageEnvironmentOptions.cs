@@ -77,8 +77,15 @@ namespace Voron
             {
                 if (value > MaxLogFileSize)
                     MaxLogFileSize = value;
+                if(value <= 0)
+                    ThrowInitialLogFileSizeOutOfRange();
                 _initialLogFileSize = value;
             }
+        }
+
+        private static void ThrowInitialLogFileSizeOutOfRange()
+        {
+            throw new ArgumentOutOfRangeException("InitialLogFileSize", "The initial log for the Voron must be above zero");
         }
 
         public int PageSize => Constants.Storage.PageSize;
@@ -483,8 +490,15 @@ namespace Voron
             {
                 var name = JournalName(journalNumber);
                 var path = Path.Combine(_journalPath, name);
-                if (File.Exists(path) == false)
+                var fileInfo = new FileInfo(path);
+                if (fileInfo.Exists == false)
                     throw new InvalidOperationException("No such journal " + path);
+
+                if (fileInfo.Length < InitialLogFileSize)
+                {
+                    EnsureMinimumSize(fileInfo, path);
+                }
+
                 if (RunningOnPosix)
                     return new PosixMemoryMapPager(this, path);
 
@@ -496,6 +510,23 @@ namespace Voron
                     fileAttributes: Win32NativeFileAttributes.SequentialScan);
                 windowsMemoryMapPager.TryPrefetchingWholeFile();
                 return windowsMemoryMapPager;
+            }
+
+            private void EnsureMinimumSize(FileInfo fileInfo, string path)
+            {
+                try
+                {
+                    using (var stream = fileInfo.Open(FileMode.OpenOrCreate))
+                    {
+                        stream.SetLength(InitialLogFileSize);
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException(
+                        "Journal file " + path + " could not be opened because it's size is too small and we couldn't increase it",
+                        e);
+                }
             }
         }
 
