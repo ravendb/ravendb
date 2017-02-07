@@ -81,7 +81,6 @@ namespace Raven.Server.Documents
 
                     MergeTransactionsOnce();
                 }
-
             }
             catch (OperationCanceledException)
             {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Transformers;
@@ -17,21 +18,28 @@ namespace Raven.Server.Documents.Indexes.Static
     /// </summary>
     public static class IndexAndTransformerCompilationCache
     {
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>> IndexCache = new ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>>();
+        public static readonly ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>> IndexCache = new ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>>();
 
         private static readonly ConcurrentDictionary<CacheKey, Lazy<TransformerBase>> TransformerCache = new ConcurrentDictionary<CacheKey, Lazy<TransformerBase>>();
 
-        public static StaticIndexBase GetIndexInstance(IndexDefinition definition)
+        public static StaticIndexBase GetIndexInstance(IndexDefinition definition, out string[] collections)
         {
             var list = new List<string>();
             list.AddRange(definition.Maps);
             if (definition.Reduce != null)
                 list.Add(definition.Reduce);
 
-            var key = new CacheKey(list);
+            var key = new CacheKey(list)
+            {
+                OutputReduceToCollection = definition.OutputReduceToCollection,
+                IndexName = definition.Name,
+            };
             Func<StaticIndexBase> createIndex = () => IndexAndTransformerCompiler.Compile(definition);
             var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(createIndex));
-            return result.Value;
+
+            var staticIndexBase = result.Value;
+            collections = key.Collections = staticIndexBase.Maps.Keys.ToArray();
+            return staticIndexBase;
         }
 
         public static TransformerBase GetTransformerInstance(TransformerDefinition definition)
@@ -47,10 +55,14 @@ namespace Raven.Server.Documents.Indexes.Static
             return result.Value;
         }
 
-        private class CacheKey : IEquatable<CacheKey>
+        public class CacheKey : IEquatable<CacheKey>
         {
             private readonly int _hash;
             private readonly List<string> _items;
+
+            public string OutputReduceToCollection;
+            public string IndexName;
+            public string[] Collections;
 
             public unsafe CacheKey(List<string> items)
             {

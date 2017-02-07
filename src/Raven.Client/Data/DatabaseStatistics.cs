@@ -80,7 +80,7 @@ namespace Raven.Client.Data
 
         public DateTime? LastIndexingTime { get; set; }
 
-        public string OutputReduceResultsToCollectionName { get; set; }
+        public string OutputReduceToCollection { get; set; }
     }
 
     public class TriggerInfo

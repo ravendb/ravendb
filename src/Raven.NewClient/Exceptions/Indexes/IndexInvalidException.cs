@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace Raven.Server.Exceptions
+namespace Raven.NewClient.Client.Exceptions.Indexes
 {
-    public class IndexInvalidException : Exception
+    public class IndexInvalidException : RavenException
     {
         public IndexInvalidException()
         {

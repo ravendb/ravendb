@@ -41,7 +41,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public IndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
             : base(index.Definition.Name, LoggingSource.Instance.GetLogger<IndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
         {
-            var indexName = index.Definition.Name;
             _converter = converter;
             _documentDatabase = index._indexStorage.DocumentDatabase;
 
@@ -71,18 +70,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             var mapReduceIndex = index as MapReduceIndex;
-            var outputReduceResultsToCollectionName = mapReduceIndex?.Definition.OutputReduceResultsToCollectionName;
-            if (string.IsNullOrWhiteSpace(outputReduceResultsToCollectionName) == false)
+            var outputReduceToCollection = mapReduceIndex?.Definition.OutputReduceToCollection;
+            if (string.IsNullOrWhiteSpace(outputReduceToCollection) == false)
             {
-                _outputDocumntsFromReduceIndexCommand = new OutputDocumntsFromReduceIndexCommand(_documentDatabase, outputReduceResultsToCollectionName);
-                if (index.Collections.Contains(Constants.Indexing.AllDocumentsCollection))
-                {
-                    throw new IndexInvalidException($"Cannot output documents from {indexName} to the '{outputReduceResultsToCollectionName}' collection because this index consume all documents.");
-                }
-                if(index.Collections.Contains(outputReduceResultsToCollectionName))
-                {
-                    throw new IndexInvalidException($"Cannot output documents from {indexName} to the '{outputReduceResultsToCollectionName}' collection because we consume this collection in map of the index itself.");
-                }
+                _outputDocumntsFromReduceIndexCommand = new OutputDocumntsFromReduceIndexCommand(_documentDatabase, outputReduceToCollection);
             }
         }
 
@@ -112,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                     "Save Reduce Index Output",
                                     "Failed to save output documnts of reduce index to disk",
                                     AlertType.ErrorSavingReduceOutputDocuments,
-                                    AlertSeverity.Error,
+                                    NotificationSeverity.Error,
                                     key: _indexName,
                                     details: new ExceptionDetails(e)));
                             }
@@ -135,10 +126,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             private readonly string _outputReduceResultsToCollectionName;
             private readonly DocumentConvention documentConvention = new DocumentConvention();
 
-            public OutputDocumntsFromReduceIndexCommand(DocumentDatabase database, string outputReduceResultsToCollectionName)
+            public OutputDocumntsFromReduceIndexCommand(DocumentDatabase database, string outputReduceToCollection)
             {
                 _database = database;
-                _outputReduceResultsToCollectionName = outputReduceResultsToCollectionName;
+                _outputReduceResultsToCollectionName = outputReduceToCollection;
             }
 
             public class OutputReduceDocument

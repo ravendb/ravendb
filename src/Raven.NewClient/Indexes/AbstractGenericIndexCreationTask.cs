@@ -121,7 +121,7 @@ namespace Raven.NewClient.Client.Indexes
         /// <summary>
         /// If not null than each reduce result will be created as a document in the specified collection name.
         /// </summary>
-        protected string OutputReduceResultsToCollectionName { get; set; }
+        protected string OutputReduceToCollection { get; set; }
 
         /// <summary>
         /// Register a field to be indexed

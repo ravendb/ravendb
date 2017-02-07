@@ -127,7 +127,7 @@ namespace Raven.NewClient.Client.Indexes
         /// <summary>
         /// If not null than each reduce result will be created as a document in the specified collection name.
         /// </summary>
-        public string OutputReduceResultsToCollectionName { get; set; }
+        public string OutputReduceToCollection { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
@@ -170,7 +170,7 @@ namespace Raven.NewClient.Client.Indexes
                 {
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
                     LockMode = LockMode,
-                    OutputReduceResultsToCollectionName = OutputReduceResultsToCollectionName
+                    OutputReduceToCollection = OutputReduceToCollection
                 };
 
                 var indexes = ConvertToStringDictionary(Indexes);

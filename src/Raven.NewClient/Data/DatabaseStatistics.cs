@@ -77,7 +77,7 @@ namespace Raven.NewClient.Client.Data
 
         public IndexType Type { get; set; }
 
-        public string OutputReduceResultsToCollectionName { get; set; }
+        public string OutputReduceToCollection { get; set; }
     }
 
     public class TriggerInfo

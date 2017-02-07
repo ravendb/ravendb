@@ -117,7 +117,7 @@ namespace Raven.NewClient.Client.Indexing
             if (configurationEquals == false)
                 result |= IndexDefinitionCompareDifferences.Configuration;
 
-            // TODO: What should we do here with OutputReduceResultsToCollectionName?
+            // TODO: What should we do here with OutputReduceToCollection?
 
             return result;
         }
@@ -339,7 +339,7 @@ namespace Raven.NewClient.Client.Indexing
         /// <summary>
         /// If not null than each reduce result will be created as a document in the specified collection name.
         /// </summary>
-        public string OutputReduceResultsToCollectionName { get; set; }
+        public string OutputReduceToCollection { get; set; }
 
         public override string ToString()
         {

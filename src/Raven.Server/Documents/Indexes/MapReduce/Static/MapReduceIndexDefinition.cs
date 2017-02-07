@@ -8,15 +8,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
     public class MapReduceIndexDefinition : MapIndexDefinition
     {
         public MapReduceIndexDefinition(IndexDefinition definition, string[] collections, string[] outputFields,
-            string[] groupByFields, bool hasDynamicFields, string outputReduceResultsToCollectionName)
+            string[] groupByFields, bool hasDynamicFields)
             : base(definition, collections, outputFields, hasDynamicFields)
         {
             GroupByFields = new HashSet<string>(groupByFields, StringComparer.Ordinal);
-            OutputReduceResultsToCollectionName = outputReduceResultsToCollectionName;
+            OutputReduceToCollection = definition.OutputReduceToCollection;
         }
 
         public HashSet<string> GroupByFields { get; private set; }
         public HashSet<string> GroupByFieldsa { get; private set; }
-        public string OutputReduceResultsToCollectionName { get; private set; }
+        public string OutputReduceToCollection { get; private set; }
     }
 }

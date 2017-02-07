@@ -1982,7 +1982,6 @@ namespace Raven.Server.Documents
 
                 if (collectionName.IsSystem == false)
                 {
-
                     _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context,
                         keySlice, document);
                 }

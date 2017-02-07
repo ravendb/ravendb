@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers
                         LockMode = index.Definition.LockMode,
                         Type = index.Type,
                         LastIndexingTime = index.LastIndexingTime,
-                        OutputReduceResultsToCollectionName = (index.Definition as MapReduceIndexDefinition)?.OutputReduceResultsToCollectionName
+                        OutputReduceToCollection = (index.Definition as MapReduceIndexDefinition)?.OutputReduceToCollection
                     };
 
                     if (stats.LastIndexingTime.HasValue)

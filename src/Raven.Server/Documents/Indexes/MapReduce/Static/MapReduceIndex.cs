@@ -1,8 +1,11 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.NewClient.Client.Exceptions.Indexes;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -48,11 +51,74 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = CreateIndexInstance(indexId, definition);
+            ValidateReduceResultsCollectionName(instance, documentDatabase);
+
             instance.Initialize(documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
                 documentDatabase.Configuration.PerformanceHints);
 
             return instance;
+        }
+
+        private static void ValidateReduceResultsCollectionName(MapReduceIndex index, DocumentDatabase documentDatabase)
+        {
+            var outputReduceToCollection = index.Definition.OutputReduceToCollection;
+
+            if (index.Collections.Contains(Constants.Indexing.AllDocumentsCollection, new StringEqualityComparer()))
+            {
+                throw new IndexInvalidException($"Cannot output documents from index ({index.Name}) to the collection name ({outputReduceToCollection}) because the index is mapping all documents and this will result in an infinite loop.");
+            }
+            if (index.Collections.Contains(outputReduceToCollection, new StringEqualityComparer()))
+            {
+                throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) cannot be used as this index ({index.Name}) is mapping this collection and this will result in an infinite loop.");
+            }
+
+            var indexes = IndexAndTransformerCompilationCache.IndexCache.Where(pair => string.IsNullOrWhiteSpace(pair.Key.OutputReduceToCollection) == false &&
+                                                                                       pair.Key.IndexName != index.Definition.Name).ToList();
+            foreach (var pair in indexes)
+            {
+                var otherIndex = pair.Key;
+                if (otherIndex.OutputReduceToCollection.Equals(outputReduceToCollection, StringComparison.OrdinalIgnoreCase))
+                    throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) which will be used to output documents results should be unique to only one index but it is already used by another index ({otherIndex.IndexName}).");
+            }
+
+            foreach (var pair in indexes)
+            {
+                var otherIndex = pair.Key;
+                string description;
+                if (otherIndex.Collections.Contains(outputReduceToCollection, new StringEqualityComparer()) &&
+                    CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, index.Collections.ToArray() /* todo:*/, indexes, out description))
+                {
+                    description += Environment.NewLine + $"--> {index.Name}: {string.Join(",", index.Collections)} => *{outputReduceToCollection}*";
+                    throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) cannot be used to output documents results as it is consumed by other index that will also output results which will lead to an infinite loop:" + Environment.NewLine + description);
+                }
+            }
+        }
+
+        private static bool CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(
+            IndexAndTransformerCompilationCache.CacheKey otherIndex, string[] indexCollections, 
+            List<KeyValuePair<IndexAndTransformerCompilationCache.CacheKey, Lazy<StaticIndexBase>>> indexes, out string errorMessage)
+        {
+            errorMessage = $"{otherIndex.IndexName}: {string.Join(",", otherIndex.Collections)} => {otherIndex.OutputReduceToCollection}";
+
+            if (string.IsNullOrWhiteSpace(otherIndex.OutputReduceToCollection))
+                return false;
+
+            if (indexCollections.Contains(otherIndex.OutputReduceToCollection))
+                return true;
+
+            foreach (var index in indexes.Where(pair => pair.Key.Collections.Contains(otherIndex.OutputReduceToCollection, new StringEqualityComparer())))
+            {
+                string a;
+                var aa = CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(index.Key, indexCollections, indexes, out a);
+                errorMessage += Environment.NewLine + a;
+                if (aa)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static Index Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
@@ -73,16 +139,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var staticIndex = staticMapIndex._compiled;
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, 
-                staticIndex.GroupByFields, staticIndex.HasDynamicFields, definition.OutputReduceResultsToCollectionName);
+                staticIndex.GroupByFields, staticIndex.HasDynamicFields);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
         private static MapReduceIndex CreateIndexInstance(int indexId, IndexDefinition definition)
         {
-            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
+            string[] collections;
+            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition, out collections);
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, 
-                staticIndex.GroupByFields, staticIndex.HasDynamicFields, definition.OutputReduceResultsToCollectionName);
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, collections, staticIndex.OutputFields, 
+                staticIndex.GroupByFields, staticIndex.HasDynamicFields);
             var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
 
             return instance;
