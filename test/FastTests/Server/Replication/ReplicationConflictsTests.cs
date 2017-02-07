@@ -27,6 +27,8 @@ namespace FastTests.Server.Replication
 
         private class New_User: User { }
 
+        private class New_User2: User { }
+
         [Fact]
         public void All_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
         {
@@ -564,6 +566,101 @@ namespace FastTests.Server.Replication
                 }, "New_Users");
 
                 Assert.Equal("New_Users", newCollection);
+            }
+        }
+
+        [Fact]
+        public void Conflict_should_be_resolved_for_document_in_different_collections_after_setting_new_resolution()
+        {
+            const string dbName1 = "FooBar-1";
+            const string dbName2 = "FooBar-2";
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            {
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User { Name = "test1" }, "foo/bar");
+                    s2.SaveChanges();
+                }
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new New_User { Name = "test1" }, "foo/bar");
+                    s1.SaveChanges();
+                }
+
+                SetupReplication(store1, store2);
+
+                WaitUntilHasConflict(store2, "foo/bar", 2);
+
+                SetReplicationConflictResolution(store2, StraightforwardConflictResolution.ResolveToLatest);
+
+                var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Count, 0);
+                Assert.Equal(count, 0);
+
+                var newCollection = WaitForValue(() =>
+                {
+                    using (var s2 = store2.OpenSession())
+                    {
+                        var metadata = s2.Advanced.GetMetadataFor(s2.Load<User>("foo/bar"));
+                        string collection;
+                        metadata.TryGetValue(Raven.Abstractions.Data.Constants.Metadata.Collection, out collection);
+                        return collection;
+                    }
+                }, "New_Users");
+
+                Assert.Equal("New_Users", newCollection);
+            }
+        }
+
+        [Fact]
+        public void Conflict_should_be_resolved_for_document_in_different_collections_after_saving_in_new_collection()
+        {
+            const string dbName1 = "FooBar-1";
+            const string dbName2 = "FooBar-2";
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            {
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User { Name = "test1" }, "foo/bar");
+                    s2.SaveChanges();
+                }
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new New_User { Name = "test1" }, "foo/bar");
+                    s1.SaveChanges();
+                }
+
+                SetupReplication(store1, store2);
+
+                WaitUntilHasConflict(store2, "foo/bar", 2);
+
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new New_User2 { Name = "test2" }, "foo/bar");
+                    s2.SaveChanges();
+                }
+
+                var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Count, 0);
+                Assert.Equal(count, 0);
+
+                New_User2 newDoc = null;
+                var newCollection = WaitForValue(() =>
+                {
+                    using (var s2 = store2.OpenSession())
+                    {
+                        newDoc = s2.Load<New_User2>("foo/bar");
+                        var metadata = s2.Advanced.GetMetadataFor(newDoc);
+                        string collection;
+                        metadata.TryGetValue(Raven.Abstractions.Data.Constants.Metadata.Collection, out collection);
+                        return collection;
+                    }
+                }, "New_User2s");
+
+                Assert.Equal("New_User2s", newCollection);
+                Assert.Equal("test2", newDoc.Name);
             }
         }
 
