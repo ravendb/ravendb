@@ -2,13 +2,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4011 : RavenTestBase
+    public class RavenDB_4011 : RavenNewTestBase
     {
         private class Entity
         {
@@ -49,7 +51,7 @@ namespace SlowTests.Issues
                                           }
                     };
 
-                    store.DatabaseCommands.PutIndex("TestIndex/Numer" + i, builder.ToIndexDefinition(store.Conventions));
+                    store.Admin.Send(new PutIndexOperation("TestIndex/Numer" + i, builder.ToIndexDefinition(store.Conventions)));
                 }
 
                 WaitForIndexing(store);
@@ -63,11 +65,11 @@ namespace SlowTests.Issues
 
         private static async Task LoopResetIndex(IDocumentSession session)
         {
-            for (int i = 0; i < 2; i++)
+            for (var i = 0; i < 2; i++)
             {
-                var indexNames = session.Advanced.DocumentStore.DatabaseCommands.GetIndexNames(0, 999);
+                var indexNames = session.Advanced.DocumentStore.Admin.Send(new GetIndexNamesOperation(0, 999));
                 var cancellation = new CancellationToken();
-                await Task.WhenAll(indexNames.Select(t => session.Advanced.DocumentStore.AsyncDatabaseCommands.ResetIndexAsync(t, cancellation)).ToArray());
+                await Task.WhenAll(indexNames.Select(t => session.Advanced.DocumentStore.Admin.SendAsync(new ResetIndexOperation(t), cancellation)).ToArray());
             }
         }
     }

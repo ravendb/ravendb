@@ -38,9 +38,13 @@ namespace Raven.NewClient.Extensions
             return etag;
         }
 
-        private static void InvalidMissingEtag()
+        public static DateTime GetLastModified(this BlittableJsonReaderObject metadata)
         {
-            throw new InvalidOperationException($"Metadata does not contain '{Constants.Metadata.Etag}' field.");
+            DateTime lastModified;
+            if (metadata.TryGet(Constants.Metadata.LastModified, out lastModified) == false)
+                InvalidMissingLastModified();
+
+            return lastModified;
         }
 
         public static bool TryGetEtag(this BlittableJsonReaderObject metadata, out long etag)
@@ -59,6 +63,16 @@ namespace Raven.NewClient.Extensions
             }
 
             return long.TryParse(etagAsObject.ToString(), out etag);
+        }
+
+        private static void InvalidMissingEtag()
+        {
+            throw new InvalidOperationException($"Metadata does not contain '{Constants.Metadata.Etag}' field.");
+        }
+
+        private static void InvalidMissingLastModified()
+        {
+            throw new InvalidOperationException($"Metadata does not contain '{Constants.Metadata.LastModified}' field.");
         }
     }
 }

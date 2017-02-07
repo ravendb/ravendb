@@ -1,17 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3460 : RavenTestBase
+    public class RavenDB_3460 : RavenNewTestBase
     {
         private class User
         {
@@ -21,17 +18,18 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task SingleEncodingInHttpQueryShouldWork()
+        public void SingleEncodingInHttpQueryShouldWork()
         {
             using (var store = GetDocumentStore())
             {
                 var customers = SetupAndGetCustomers(store);
                 Assert.NotEmpty(customers);
 
-                var url = string.Format("{0}/databases/{1}/queries/CustomersIndex?query=Number%3A1", store.Url, store.DefaultDatabase);
-                var json = await GetResults(url);
-
-                Assert.NotEmpty(json.Values());
+                using (var commands = store.Commands())
+                {
+                    var result = commands.Query("CustomersIndex", new IndexQuery(store.Conventions) { Query = "Number:1" });
+                    Assert.NotEmpty(result.Results);
+                }
             }
         }
 
@@ -64,17 +62,18 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task DoubleEncodingInHttpQueryShouldWork()
+        public void DoubleEncodingInHttpQueryShouldWork()
         {
             using (var store = GetDocumentStore())
             {
                 var customers = SetupAndGetCustomers(store);
                 Assert.NotEmpty(customers);
 
-                var url = string.Format("{0}/databases/{1}/queries/CustomersIndex?query=Number%253A1", store.Url, store.DefaultDatabase);
-                var json = await GetResults(url);
-
-                Assert.NotEmpty(json.Values());
+                using (var commands = store.Commands())
+                {
+                    var result = commands.Query("CustomersIndex", new IndexQuery(store.Conventions) { Query = "Number%3A1" });
+                    Assert.NotEmpty(result.Results);
+                }
             }
         }
 
@@ -97,34 +96,6 @@ namespace SlowTests.Issues
 
                 return customers;
             }
-        }
-
-        private static async Task<RavenJToken> GetResults(string url)
-        {
-            var request = WebRequest.Create(url);
-
-            using (var response = await request.GetResponseAsync())
-            {
-                using (var stream = response.GetResponseStream())
-                {
-                    if (stream != null)
-                    {
-                        var bytes = new byte[10000];
-
-                        stream.Read(bytes, 0, 10000);
-
-                        var data = Encoding.UTF8.GetString(bytes);
-
-                        var o = RavenJObject.Parse(data);
-
-                        var results = o["Results"];
-
-                        return results;
-                    }
-                }
-            }
-
-            return null;
         }
 
         private class Customer

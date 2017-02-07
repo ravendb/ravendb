@@ -6,12 +6,14 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexing;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4221 : RavenTestBase
+    public class RavenDB_4221 : RavenNewTestBase
     {
         [Fact]
         public void DisabledIndexIsUpdatedAfterSettingPriority()
@@ -19,16 +21,16 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var indexName = "test";
-                store.DatabaseCommands.PutIndex(indexName, new IndexDefinition
+                store.Admin.Send(new PutIndexOperation(indexName, new IndexDefinition
                 {
                     Name = indexName,
                     Maps = { @"from doc in docs.Orders
 select new{
 doc.Name
 }" }
-                });
+                }));
 
-                store.DatabaseCommands.Admin.DisableIndex(indexName);
+                store.Admin.Send(new DisableIndexOperation(indexName));
 
                 using (var session = store.OpenSession())
                 {
@@ -46,10 +48,10 @@ doc.Name
                     Assert.Equal(0, result.Count);
                 }
 
-                var stats = store.DatabaseCommands.GetStatistics();
+                var stats = store.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
 
-                store.DatabaseCommands.Admin.EnableIndex(indexName);
+                store.Admin.Send(new EnableIndexOperation(indexName));
 
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
@@ -58,7 +60,7 @@ doc.Name
                     Assert.Equal(1, result.Count);
                 }
 
-                stats = store.DatabaseCommands.GetStatistics();
+                stats = store.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
             }
         }

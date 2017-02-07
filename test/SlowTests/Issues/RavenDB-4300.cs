@@ -6,15 +6,15 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Util;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Util;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4300 : RavenTestBase
+    public class RavenDB_4300 : RavenNewTestBase
     {
         // The search text must 
         //    (1) contain a space
@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<ExampleIndex.ReduceResult, ExampleIndex>();
-                    query.Customize(c => c.WaitForNonStaleResultsAsOfLastWrite());
+                    query.Customize(c => c.WaitForNonStaleResults());
                     var results =
                         query.Where(x => x.Name == RavenQuery.Escape(SearchText, false, false))
                             .As<Example>()
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<ExampleIndex.ReduceResult, ExampleIndex>();
-                    query.Customize(c => c.WaitForNonStaleResultsAsOfLastWrite());
+                    query.Customize(c => c.WaitForNonStaleResults());
                     var results =
                         query.Where(x => x.Name == SearchText)
                             .As<Example>()

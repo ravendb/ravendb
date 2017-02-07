@@ -6,12 +6,13 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4446 : RavenTestBase
+    public class RavenDB_4446 : RavenNewTestBase
     {
         [Fact]
         public void can_index_collections_larger_than_32768()
@@ -32,7 +33,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(40000, stats.EntriesCount);
             }
         }
@@ -56,7 +57,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(30000, stats.EntriesCount);
             }
         }

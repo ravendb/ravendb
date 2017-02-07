@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Raven.Abstractions.Extensions;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDb3973 : RavenTestBase
+    public class RavenDb3973 : RavenNewTestBase
     {
         [Fact]
         public void VerifyNegateQueryOptimization()
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void TheIssueQuery(Raven.Client.IDocumentSession session)
+        private static void TheIssueQuery(IDocumentSession session)
         {
             var expressions = new List<Tuple<Expression<Func<Entity3973, bool>>,
                 Func<List<Entity3973>, bool>, // Expected results from DB - true if problem

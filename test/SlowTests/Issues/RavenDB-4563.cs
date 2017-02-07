@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4563 : RavenTestBase
+    public class RavenDB_4563 : RavenNewTestBase
     {
         [Fact(Skip = "RavenDB-5981")]
         public void bulk_insert_throws_when_server_is_down()

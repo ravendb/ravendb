@@ -1,12 +1,12 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4877 : RavenTestBase
+    public class RavenDB_4877 : RavenNewTestBase
     {
         private class User
         {

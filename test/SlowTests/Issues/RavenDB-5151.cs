@@ -1,11 +1,11 @@
 ﻿using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5151 : RavenTestBase
+    public class RavenDB_5151 : RavenNewTestBase
     {
         [Fact]
         public void CanDoPrefixQueryOnAnalyzedFields()
