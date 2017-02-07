@@ -22,6 +22,8 @@ namespace FastTests.Server.Replication
             public int Age { get; set; }
         }
 
+        private class New_User: User { }
+
         [Fact]
         public void All_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
         {
@@ -497,7 +499,32 @@ namespace FastTests.Server.Replication
             }
         }
 
+        [Fact]
+        public void Conflict_should_be_created_for_document_in_different_collection()
+        {
+            const string dbName1 = "FooBar-1";
+            const string dbName2 = "FooBar-2";
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User { Name = "test1" }, "foo/bar");
+                    s1.SaveChanges();
+                }
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new New_User { Name = "test1" }, "foo/bar");
+                    s2.SaveChanges();
+                }
 
+                SetupReplication(store1, store2);
+
+                var conflicts = WaitUntilHasConflict(store2, "foo/bar", 2);
+
+                Assert.Equal(2, conflicts["foo/bar"].Count);
+            }
+        }
 
         private class UserIndex : AbstractIndexCreationTask<User>
         {
