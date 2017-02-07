@@ -665,7 +665,7 @@ namespace Raven.Server.Documents
             return Tuple.Create<Document, DocumentTombstone>(null, TableValueToTombstone(context, ref tvr));
         }
 
-        public Document Get(DocumentsOperationContext context, string key, bool throwOnConflict = true)
+        public Document Get(DocumentsOperationContext context, string key)
         {
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
@@ -675,18 +675,18 @@ namespace Raven.Server.Documents
             Slice loweredKey;
             using (DocumentKeyWorker.GetSliceFromKey(context, key, out loweredKey))
             {
-                return Get(context, loweredKey, throwOnConflict);
+                return Get(context, loweredKey);
             }
         }
 
-        public Document Get(DocumentsOperationContext context, Slice loweredKey, bool throwOnConflict = true)
+        public Document Get(DocumentsOperationContext context, Slice loweredKey)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             TableValueReader tvr;
             if (table.ReadByKey(loweredKey, out tvr) == false)
             {
-                if (_hasConflicts != 0 && throwOnConflict)
+                if (_hasConflicts != 0)
                     ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return null;
             }
@@ -1487,7 +1487,15 @@ namespace Raven.Server.Documents
 
         private void DeleteDocumentFromDifferentCollectionIfNeeded(DocumentsOperationContext ctx, DocumentConflict conflict)
         {
-            var oldVersion = Get(ctx, conflict.LoweredKey, throwOnConflict: false);
+            Document oldVersion;
+            try
+            {
+                oldVersion = Get(ctx, conflict.LoweredKey);
+            }
+            catch (DocumentConflictException )
+            {
+                return;// if already conflicted, don't need to do anything
+            }
             if (oldVersion == null)
                 return;
 
