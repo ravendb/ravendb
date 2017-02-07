@@ -90,7 +90,7 @@ namespace Voron
         public bool OwnsPagers { get; set; }
 
         public bool ManualFlushing { get; set; }
-
+    
         public bool IncrementalBackupEnabled { get; set; }
 
         public abstract AbstractPager DataPager { get; }
@@ -476,8 +476,13 @@ namespace Voron
                 var path = Path.Combine(_journalPath, name);
                 if (File.Exists(path) == false)
                     throw new InvalidOperationException("No such journal " + path);
+
                 if (RunningOnPosix)
+                {
+                    PosixHelper.ResizeZeroLengthFile(path, 64*1024L);
                     return new PosixMemoryMapPager(this, path);
+                }
+                Win32NativeFileMethods.ResizeZeroLengthFile(path, 64*1024L);
                 var win32MemoryMapPager = new Win32MemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
                     fileAttributes: Win32NativeFileAttributes.SequentialScan);
                 win32MemoryMapPager.TryPrefetchingWholeFile();
