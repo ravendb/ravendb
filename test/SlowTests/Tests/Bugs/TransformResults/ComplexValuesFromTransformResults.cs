@@ -1,13 +1,14 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Tests.Bugs.TransformResults
 {
-    public class ComplexValuesFromTransformResults : RavenTestBase
+    public class ComplexValuesFromTransformResults : RavenNewTestBase
     {
         [Fact]
         public void CanCreateQueriesWithNestedSelected()
@@ -163,83 +164,16 @@ namespace SlowTests.Tests.Bugs.TransformResults
             }
         }
 
-        [Fact]
-        public void write_then_read_from_complex_entity_types_with_Guids_as_keys()
-        {
-            using (var documentStore = GetDocumentStore())
-            {
-                documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
-
-                new Answers_ByAnswerEntity2().Execute(documentStore);
-                new Answers_ByAnswerEntityTransformer2().Execute(documentStore);
-                Guid questionId = Guid.NewGuid();
-                Guid answerId = Guid.NewGuid();
-
-                using (IDocumentSession session = documentStore.OpenSession())
-                {
-                    var user = new User { Id = @"user/222", DisplayName = "John Doe" };
-                    session.Store(user);
-
-                    var question = new Question2
-                    {
-                        Id = questionId,
-                        Title = "How to do this in RavenDb?",
-                        Content = "I'm trying to find how to model documents for better DDD support.",
-                        UserId = @"user/222"
-                    };
-                    session.Store(question);
-
-
-                    var answer = new AnswerEntity2
-                    {
-                        Id = answerId,
-                        Question = question,
-                        Content = "This is doable",
-                        UserId = user.Id
-                    };
-
-                    //session.Store(new Answer2
-                    //{
-                    //    Id = answer.Id,
-                    //    UserId = answer.UserId,
-                    //    QuestionId = answer.Question.Id,
-                    //    Content = answer.Content
-                    //}
-                    session.Store(new Answer2
-                    {
-                        Id = answerId,
-                        UserId = user.Id,
-                        QuestionId = question.Id,
-                        Content = "This is doable"
-                    });
-
-                    session.SaveChanges();
-                }
-                using (IDocumentSession session = documentStore.OpenSession())
-                {
-                    AnswerEntity2 answerInfo = session.Query<Answer2, Answers_ByAnswerEntity2>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                        .Where(x => x.Id == answerId)
-                        .TransformWith<Answers_ByAnswerEntityTransformer2, AnswerEntity2>()
-                        .SingleOrDefault();
-                    Assert.NotNull(answerInfo);
-                    Assert.NotNull(answerInfo.Question);
-                }
-            }
-        }
-
         [Fact(Skip = "RavenDB-5278")]
         public void write_then_read_answer_with_votes()
         {
             using (var documentStore = GetDocumentStore())
             {
-                documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
-
                 new Answers_ByAnswerEntity2().Execute(documentStore);
                 new Answers_ByAnswerEntityTransformer2().Execute(documentStore);
 
-                Guid questionId = Guid.NewGuid();
-                Guid answerId = Guid.NewGuid();
+                var questionId = Guid.NewGuid().ToString();
+                var answerId = Guid.NewGuid().ToString();
 
                 using (IDocumentSession session = documentStore.OpenSession())
                 {
@@ -265,7 +199,7 @@ namespace SlowTests.Tests.Bugs.TransformResults
                         {
                             new AnswerVote2
                             {
-                                Id = Guid.NewGuid(),
+                                Id = Guid.NewGuid().ToString(),
                                 QuestionId = questionId,
                                 AnswerId = answerId,
                                 Delta = 2

@@ -41,7 +41,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="path">The path.</param>
         /// <returns></returns>
-        public AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, object>> path)
+        public AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, string>> path)
         {
             return Include(path.ToPropertyPath());
         }
@@ -50,7 +50,26 @@ namespace Raven.NewClient.Client.Document
         /// Includes the specified path.
         /// </summary>
         /// <param name="path">The path.</param>
-        public AsyncMultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
+        public AsyncMultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, string>> path)
+        {
+            return Include(path.ToPropertyPath(), typeof(TInclude));
+        }
+
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns></returns>
+        public AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            return Include(path.ToPropertyPath());
+        }
+
+        /// <summary>
+        /// Includes the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public AsyncMultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return Include(path.ToPropertyPath(), typeof(TInclude));
         }

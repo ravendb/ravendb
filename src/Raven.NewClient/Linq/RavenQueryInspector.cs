@@ -44,7 +44,7 @@ namespace Raven.NewClient.Client.Linq
         /// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
         /// </summary>
         public void Init(
-            IRavenQueryProvider provider, 
+            IRavenQueryProvider provider,
             RavenQueryStatistics queryStats,
             RavenQueryHighlightings highlightings,
             string indexName,
@@ -135,8 +135,8 @@ namespace Raven.NewClient.Client.Linq
             var res = (IRavenQueryable<TResult>)this.As<TResult>();
             res.OriginalQueryType = res.OriginalQueryType ?? typeof(T);
             var p = res.Provider as IRavenQueryProvider;
-            if (null != p) 
-                p.OriginalQueryType= res.OriginalQueryType;            
+            if (null != p)
+                p.OriginalQueryType = res.OriginalQueryType;
             return res;
         }
 
@@ -204,7 +204,7 @@ namespace Raven.NewClient.Client.Linq
                 fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
             return fields + query;
         }
- 
+
         public IndexQuery GetIndexQuery(bool isAsync = true)
         {
             RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
@@ -222,10 +222,7 @@ namespace Raven.NewClient.Client.Linq
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize, q.Conventions);
 
-            var command = new GetFacetsCommand()
-            {
-                Query = query
-            };
+            var command = new GetFacetsCommand(session.Context, query);
             session.RequestExecuter.Execute(command, session.Context);
             return command.Result;
         }
@@ -234,38 +231,28 @@ namespace Raven.NewClient.Client.Linq
         {
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize, q.Conventions);
-            var command = new GetFacetsCommand()
-            {
-                Query = query,
-                Context = session.Context
-            };
+            var command = new GetFacetsCommand(session.Context, query);
             session.RequestExecuter.Execute(command, session.Context);
             return command.Result;
         }
 
-        public virtual async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
+        public virtual async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize, q.Conventions);
 
-            var command = new GetFacetsCommand()
-            {
-                Query = query
-            };
+            var command = new GetFacetsCommand(session.Context, query);
             await session.RequestExecuter.ExecuteAsync(command, session.Context, token).ConfigureAwait(false);
 
             return command.Result;
         }
 
-        public virtual async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
+        public virtual async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
             var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize, q.Conventions);
 
-            var command = new GetFacetsCommand()
-            {
-                Query = query
-            };
+            var command = new GetFacetsCommand(session.Context, query);
             await session.RequestExecuter.ExecuteAsync(command, session.Context, token).ConfigureAwait(false);
 
             return command.Result;
@@ -273,7 +260,7 @@ namespace Raven.NewClient.Client.Linq
 
         private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
         {
-            return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null,null, indexName,
+            return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, null, indexName,
                                                       new HashSet<string>(), new List<RenamedField>(), isMapReduce,
                                                       provider.ResultTransformer, provider.TransformerParameters, OriginalQueryType);
         }
@@ -285,7 +272,7 @@ namespace Raven.NewClient.Client.Linq
         {
             get
             {
-                var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null,null,indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce,
+                var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce,
                     provider.ResultTransformer, provider.TransformerParameters, OriginalQueryType);
                 var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
                 return ((IRavenQueryInspector)documentQuery).IndexQueried;
@@ -299,7 +286,7 @@ namespace Raven.NewClient.Client.Linq
         {
             get
             {
-                var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null,null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce,
+                var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce,
                     provider.ResultTransformer, provider.TransformerParameters, OriginalQueryType);
                 var documentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
                 return ((IRavenQueryInspector)documentQuery).IndexQueried;
@@ -323,13 +310,13 @@ namespace Raven.NewClient.Client.Linq
                 new List<RenamedField>(), isMapReduce, provider.ResultTransformer, provider.TransformerParameters, OriginalQueryType);
             if (isAsync)
                 if (isAsync)
-            {
-                var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
-                return ((IRavenQueryInspector)asyncDocumentQuery).GetLastEqualityTerm(true);
-            }
+                {
+                    var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
+                    return ((IRavenQueryInspector)asyncDocumentQuery).GetLastEqualityTerm(true);
+                }
 
             var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
-            return ((IRavenQueryInspector) documentQuery).GetLastEqualityTerm();
+            return ((IRavenQueryInspector)documentQuery).GetLastEqualityTerm();
         }
 
         /// <summary>

@@ -48,10 +48,7 @@ namespace Raven.NewClient.Client.Commands
                 path = indexQuery.GetIndexQueryUrl(index, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false);
             }
 
-            return new StreamCommand()
-            {
-                Url = path,
-            };
+            return new StreamCommand(path, string.IsNullOrWhiteSpace(indexQuery.Transformer) == false);
         }
 
         public StreamCommand CreateRequest(long? fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
@@ -114,10 +111,7 @@ namespace Raven.NewClient.Client.Commands
             if (nextPage)
                 sb.Append("next-page=true").Append("&");
 
-            return new StreamCommand()
-            {
-                Url = sb.ToString(),
-            };
+            return new StreamCommand(sb.ToString(), string.IsNullOrWhiteSpace(transformer) == false);
         }
 
         private static void ReadNextToken(Stream stream, UnmanagedJsonParser parser, JsonOperationContext.ManagedPinnedBuffer buffer)

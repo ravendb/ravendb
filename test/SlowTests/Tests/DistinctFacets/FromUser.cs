@@ -7,15 +7,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.DistinctFacets
 {
-    public class FromUser : RavenTestBase
+    public class FromUser : RavenNewTestBase
     {
         [Fact]
         public void ShouldFacetsWork()

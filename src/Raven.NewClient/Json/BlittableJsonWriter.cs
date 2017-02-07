@@ -166,7 +166,7 @@ namespace Raven.NewClient.Client.Json
 
         public override void WriteValue(decimal value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue((float)value);
+            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(DateTime value)

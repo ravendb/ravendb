@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
@@ -59,7 +60,24 @@ namespace Voron.Platform.Win32
             var length = new FileInfo(filename).Length;
             if (length < journalSize)
             {
-                Win32NativeFileMethods.SetFileLength(_handle, journalSize);
+                try
+                {
+                    Win32NativeFileMethods.SetFileLength(_handle, journalSize);
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        _handle?.Dispose();
+                        _handle = null;
+                        File.Delete(_filename);
+                    }
+                    catch (Exception)
+                    {
+                        // there's nothing we can do about it
+                    }
+                    throw new IOException("When SetFileLength file " + filename + " to " + journalSize, ex);
+                }
                 length = journalSize;
             }
 

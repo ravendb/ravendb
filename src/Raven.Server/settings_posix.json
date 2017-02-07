@@ -1,5 +1,4 @@
 ﻿{
   "Raven/ServerUrl": "http://0.0.0.0:8080",
-  "Raven/DataDir": "Databases/System",
   "Raven/RunInMemory": false
 }

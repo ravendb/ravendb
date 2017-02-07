@@ -1,5 +1,5 @@
 using System.Linq;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 
 namespace SlowTests.Tests.Bugs.TransformResults
 {

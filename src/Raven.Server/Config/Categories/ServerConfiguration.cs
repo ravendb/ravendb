@@ -5,6 +5,7 @@ using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Config.Categories
 {
@@ -118,9 +119,9 @@ namespace Raven.Server.Config.Categories
             }
         }
 
-        public override void Initialize(IConfigurationRoot settings)
+        public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
-            base.Initialize(settings);
+            base.Initialize(settings, serverWideSettings, type, resourceName);
 
             AccessControlAllowOrigin = string.IsNullOrEmpty(AccessControlAllowOriginStringValue) ? new HashSet<string>() : new HashSet<string>(AccessControlAllowOriginStringValue.Split());
         }

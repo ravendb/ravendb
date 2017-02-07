@@ -35,7 +35,16 @@ namespace Raven.NewClient.Client.Document.Batches
         /// Includes the specified path.
         /// </summary>
         /// <param name="path">The path.</param>
-        public ILazyLoaderWithInclude<T> Include(Expression<Func<T, object>> path)
+        public ILazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path)
+        {
+            return Include(path.ToPropertyPath());
+        }
+
+        /// <summary>
+        /// Includes the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public ILazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path)
         {
             return Include(path.ToPropertyPath());
         }
@@ -128,7 +137,17 @@ namespace Raven.NewClient.Client.Document.Batches
         /// Includes the specified path.
         /// </summary>
         /// <param name="path">The path.</param>
-        public IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, object>> path)
+        public IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path)
+        {
+            return Include(path.ToPropertyPath());
+        }
+
+
+        /// <summary>
+        /// Includes the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path)
         {
             return Include(path.ToPropertyPath());
         }

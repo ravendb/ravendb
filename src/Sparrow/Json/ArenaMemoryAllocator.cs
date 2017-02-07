@@ -80,7 +80,8 @@ namespace Sparrow.Json
         {
             if (_isDisposed)
                 ThrowAlreadyDisposedException();
-
+            if(_ptrStart == null)
+                ThrowInvalidAllocateFromResetWithoutRenew();
 
 #if MEM_GUARD
             var allocation = new AllocatedMemoryData
@@ -111,6 +112,11 @@ namespace Sparrow.Json
 #endif
             
             return allocation;
+        }
+
+        private static void ThrowInvalidAllocateFromResetWithoutRenew()
+        {
+            throw new InvalidOperationException("Attempt to allocate from reset arena without calling renew");
         }
 
         private void ThrowAlreadyDisposedException()

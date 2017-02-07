@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
@@ -110,7 +111,7 @@ namespace Raven.Server.Web.System
             if (data.TryGet("Settings", out settings))
             {
                 bool indexingDisable;
-                if (settings.TryGet(Constants.Configuration.RavenIndexingDisable, out indexingDisable) &&
+                if (settings.TryGet(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out indexingDisable) &&
                     indexingDisable)
                     indexingStatus = "Disabled";
             }

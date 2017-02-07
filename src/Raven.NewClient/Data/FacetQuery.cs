@@ -61,7 +61,7 @@ namespace Raven.NewClient.Client.Data
             if (_facetsAsDynamicJsonArray == null)
                 _facetsAsDynamicJsonArray = SerializeFacetsToDynamicJsonArray(Facets);
 
-            return  HttpMethod.Post;
+            return HttpMethod.Post;
         }
 
         public DynamicJsonArray GetFacetsAsJson()
@@ -153,7 +153,7 @@ namespace Raven.NewClient.Client.Data
         }
 #endif
 
-        public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets,  int start, int? pageSize, DocumentConvention conventions)
+        public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets, int start, int? pageSize, DocumentConvention conventions)
         {
             var result = new FacetQuery(conventions)
             {
@@ -178,32 +178,14 @@ namespace Raven.NewClient.Client.Data
             return result;
         }
 
-        private static DynamicJsonArray SerializeFacetsToDynamicJsonArray(IReadOnlyList<Facet> facets)
+        private static DynamicJsonArray SerializeFacetsToDynamicJsonArray(IEnumerable<Facet> facets)
         {
-            var dynamicJsonArray = new DynamicJsonArray();
+            var array = new DynamicJsonArray();
 
             foreach (var facet in facets)
-            {
-                var rangelist = new DynamicJsonArray();
-                foreach (var range in facet.Ranges)
-                {
-                    rangelist.Add(range);
-                }
-                dynamicJsonArray.Add(new DynamicJsonValue()
-                {
-                    ["Mode"] = facet.Mode.ToString(),
-                    ["Aggregation"] = facet.Aggregation.ToString(),
-                    ["AggregationField"] = facet.AggregationField,
-                    ["AggregationType"] = facet.AggregationType,
-                    ["Name"] = facet.Name,
-                    ["DisplayName"] = facet.DisplayName,
-                    ["MaxResults"] = facet.MaxResults,
-                    ["TermSortMode"] = facet.TermSortMode.ToString(),
-                    ["IncludeRemainingTerms"] = facet.IncludeRemainingTerms,
-                    ["Ranges"] = rangelist
-                });
-            }
-            return dynamicJsonArray;
+                array.Add(facet.ToJson());
+
+            return array;
         }
     }
 }

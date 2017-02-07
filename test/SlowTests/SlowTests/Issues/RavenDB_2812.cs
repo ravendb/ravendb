@@ -3,15 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Indexing;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_2812 : RavenTestBase
+    public class RavenDB_2812 : RavenNewTestBase
     {
         private class User
         {
@@ -36,12 +35,12 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6274")]
         public async Task ShouldProperlyPageResults()
         {
             var store = GetDocumentStore();
 
-           new UsersAndFiendsIndex().Execute(store);
+            new UsersAndFiendsIndex().Execute(store);
 
             using (var bulk = store.BulkInsert())
             {
@@ -83,12 +82,12 @@ namespace SlowTests.SlowTests.Issues
                     var stats = new RavenQueryStatistics();
 
                     var results = session
-                    .Query<User, UsersAndFiendsIndex>()
-                    .Statistics(out stats)
-                    .Skip((page * pageSize) + skippedResults)
-                    .Take(pageSize)
-                    .Distinct()
-                    .ToList();
+                        .Query<User, UsersAndFiendsIndex>()
+                        .Statistics(out stats)
+                        .Skip((page * pageSize) + skippedResults)
+                        .Take(pageSize)
+                        .Distinct()
+                        .ToList();
 
                     skippedResults += stats.SkippedResults;
 

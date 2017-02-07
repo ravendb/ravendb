@@ -9,13 +9,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Server.Config;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_1280_ReOpen : RavenTestBase
+    public class RavenDB_1280_ReOpen : RavenNewTestBase
     {
         [Fact]
         public void Can_Index_With_Missing_LoadDocument_References()
@@ -41,7 +40,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        public class EmailIndex : AbstractIndexCreationTask<EmailDocument, EmailIndexDoc>
+        private class EmailIndex : AbstractIndexCreationTask<EmailDocument, EmailIndexDoc>
         {
             public EmailIndex()
             {
@@ -57,7 +56,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        public class EmailDocument
+        private class EmailDocument
         {
             public string Id { get; set; }
             public string To { get; set; }
@@ -65,13 +64,13 @@ namespace SlowTests.SlowTests.Issues
             public string Subject { get; set; }
         }
 
-        public class EmailText
+        private class EmailText
         {
             public string Id { get; set; }
             public string Body { get; set; }
         }
 
-        public class EmailIndexDoc
+        private class EmailIndexDoc
         {
             public string Id { get; set; }
             public string To { get; set; }

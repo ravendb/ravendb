@@ -282,7 +282,19 @@ namespace Voron
                     return new Win32FileJournalWriter(this, path, journalSize);
                 }));
 
-                if (result.Value.Disposed)
+                var createJournal = false;
+                try
+                {
+                    createJournal = result.Value.Disposed;
+                }
+                catch
+                {
+                    Lazy<IJournalWriter> _;
+                    _journals.TryRemove(name, out _);
+                    throw;
+                }
+
+                if (createJournal)
                 {
                     var newWriter = new Lazy<IJournalWriter>(() =>
                     {

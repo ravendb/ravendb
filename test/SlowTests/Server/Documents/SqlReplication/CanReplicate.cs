@@ -14,16 +14,16 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Document;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Document;
 using Raven.Server.Documents.SqlReplication;
 using Sparrow.Platform;
 using Xunit;
 
 namespace SlowTests.Server.Documents.SqlReplication
 {
-    public class CanReplicate : RavenTestBase
+    public class CanReplicate : RavenNewTestBase
     {
         private static readonly Lazy<string> _masterDatabaseConnection = new Lazy<string>(() =>
         {
@@ -411,7 +411,7 @@ replicateToOrders(orderData);");
                 eventSlim.Reset();
                 using (var session = store.OpenAsyncSession())
                 {
-                    var order = await session.LoadAsync<Order>(1);
+                    var order = await session.LoadAsync<Order>("orders/1");
                     order.OrderLines.Clear();
                     await session.SaveChangesAsync();
                 }
@@ -473,7 +473,7 @@ replicateToOrders(orderData);");
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var order = await session.LoadAsync<Order>(1);
+                    var order = await session.LoadAsync<Order>("orders/1");
                     order.OrderLines.Clear();
                     await session.SaveChangesAsync();
                 }
@@ -519,7 +519,8 @@ replicateToOrders(orderData);");
 
                 eventSlim.Reset();
 
-                await store.AsyncDatabaseCommands.DeleteAsync("orders/1", null);
+                using (var commands = store.Commands())
+                    await commands.DeleteAsync("orders/1", null);
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
                 AssertCounts(0, 0, store);
@@ -605,17 +606,17 @@ replicateToOrders(orderData);");
                 string str = string.Format("{0}/admin/logs/watch", store.Url.Replace("http", "ws"));
                 StringBuilder sb = new StringBuilder();
                 await client.ConnectAsync(new Uri(str), CancellationToken.None);
-                var task = Task.Run((Func<Task>) (async () =>
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
-                    while (client.State == WebSocketState.Open)
-                    {
-                        var value = await ReadFromWebSocket(buffer, client);
-                        sb.AppendLine(value);
-                        if (value.Contains("skipping document: orders/1"))
-                            return;
-                    }
-                }));
+                var task = Task.Run((Func<Task>)(async () =>
+               {
+                   ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
+                   while (client.State == WebSocketState.Open)
+                   {
+                       var value = await ReadFromWebSocket(buffer, client);
+                       sb.AppendLine(value);
+                       if (value.Contains("skipping document: orders/1"))
+                           return;
+                   }
+               }));
                 await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
 
@@ -707,19 +708,19 @@ var nameArr = this.StepName.split('.');");
             return _masterDatabaseConnection.Value + $";Initial Catalog=SqlReplication-{store.DefaultDatabase};";
         }
 
-        public class Order
+        private class Order
         {
             public Address Address { get; set; }
             public string Id { get; set; }
             public List<OrderLine> OrderLines { get; set; }
         }
 
-        public class Address
+        private class Address
         {
             public string City { get; set; }
         }
 
-        public class OrderLine
+        private class OrderLine
         {
             public string Product { get; set; }
             public int Quantity { get; set; }
@@ -727,5 +728,5 @@ var nameArr = this.StepName.split('.');");
         }
     }
 
-    
+
 }

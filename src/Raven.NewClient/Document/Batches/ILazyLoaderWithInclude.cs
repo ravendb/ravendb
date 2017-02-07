@@ -21,7 +21,13 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     Begin a load while including the specified path
         /// </summary>
         /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
-        ILazyLoaderWithInclude<T> Include(Expression<Func<T, object>> path);
+        ILazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path);
+
+        /// <summary>
+        ///     Begin a load while including the specified path
+        /// </summary>
+        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        ILazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids.
@@ -72,7 +78,13 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     Begin a load while including the specified path
         /// </summary>
         /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
-        IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, object>> path);
+        IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path);
+
+        /// <summary>
+        ///     Begin a load while including the specified path
+        /// </summary>
+        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids.

@@ -35,5 +35,10 @@ namespace Raven.NewClient.Abstractions.Data
             Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
+
+        public DatabaseDocument(string id) : this()
+        {
+            Id = id;
+        }
     }
 }

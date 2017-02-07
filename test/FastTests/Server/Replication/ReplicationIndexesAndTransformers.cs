@@ -744,8 +744,8 @@ namespace FastTests.Server.Replication
                     }
                 }
 
-                indexesPath = databaseStore.Configuration.Indexing.StoragePath;
-                databasePath = databaseStore.Configuration.Core.DataDirectory;
+                indexesPath = databaseStore.Configuration.Indexing.StoragePath.FullPath;
+                databasePath = databaseStore.Configuration.Core.DataDirectory.FullPath;
                 foreach (var indexFolder in Directory.GetDirectories(indexesPath))
                     IOExtensions.DeleteDirectory(indexFolder);
 

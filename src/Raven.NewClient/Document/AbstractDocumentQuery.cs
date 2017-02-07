@@ -262,13 +262,13 @@ namespace Raven.NewClient.Client.Document
                                      string[] projectionFields,
                                      bool isMapReduce)
         {
-            
+
             this.projectionFields = projectionFields;
             this.fieldsToFetch = fieldsToFetch;
             this.isMapReduce = isMapReduce;
             this.indexName = indexName;
             this.theSession = theSession;
-            
+
             AfterQueryExecuted(UpdateStatsAndHighlightings);
 
             conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
@@ -569,11 +569,7 @@ namespace Raven.NewClient.Client.Document
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
 
-            var command = new GetFacetsCommand()
-            {
-                Query = query,
-                Context = theSession.Context
-            };
+            var command = new GetFacetsCommand(theSession.Context, query);
             theSession.RequestExecuter.Execute(command, theSession.Context);
             return command.Result;
         }
@@ -583,11 +579,7 @@ namespace Raven.NewClient.Client.Document
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
 
-            var command = new GetFacetsCommand()
-            {
-                Query = query,
-                Context = theSession.Context
-            };
+            var command = new GetFacetsCommand(theSession.Context, query);
             theSession.RequestExecuter.Execute(command, theSession.Context);
             return command.Result;
         }
@@ -597,10 +589,7 @@ namespace Raven.NewClient.Client.Document
             var q = GetIndexQuery(true);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
 
-            var command = new GetFacetsCommand()
-            {
-                Query = query
-            };
+            var command = new GetFacetsCommand(theSession.Context, query);
             await theSession.RequestExecuter.ExecuteAsync(command, theSession.Context, token).ConfigureAwait(false);
 
             return command.Result;
@@ -611,10 +600,7 @@ namespace Raven.NewClient.Client.Document
             var q = GetIndexQuery(true);
             var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
 
-            var command = new GetFacetsCommand()
-            {
-                Query = query
-            };
+            var command = new GetFacetsCommand(theSession.Context, query);
             await theSession.RequestExecuter.ExecuteAsync(command, theSession.Context, token).ConfigureAwait(false);
 
             return command.Result;
@@ -1607,7 +1593,7 @@ If you really want to do in memory filtering on the data returned from the query
             WaitForNonStaleResultsAsOfNow(waitTimeout);
             return this;
         }
-        
+
         /// <summary>
         /// Instructs the query to wait for non stale results as of the cutoff etag.
         /// </summary>
@@ -1668,7 +1654,7 @@ If you really want to do in memory filtering on the data returned from the query
             timeout = waitTimeout;
             cutoffEtag = cutOffEtag;
         }
-        
+
         /// <summary>
         ///   EXPERT ONLY: Instructs the query to wait for non stale results.
         ///   This shouldn't be used outside of unit tests unless you are well aware of the implications

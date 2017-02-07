@@ -9,13 +9,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Client;
-using Raven.Client.Data;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Operations.Databases.Documents;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_2134 : RavenTestBase
+    public class RavenDB_2134 : RavenNewTestBase
     {
         [Fact]
         public async Task ShouldWork()
@@ -39,16 +40,16 @@ namespace SlowTests.SlowTests.Issues
                     }
                 }
 
-                WaitForIndexing(store,timeout: TimeSpan.FromMinutes(1));
+                WaitForIndexing(store,timeout: TimeSpan.FromMinutes(2));
                 var queryToDelete = new IndexQuery(store.Conventions)
                 {
                     Query = string.Empty
                 };
 
-                var operation = store.DatabaseCommands.DeleteByIndex(stats.IndexName, queryToDelete);
-                operation.WaitForCompletion(TimeSpan.FromMinutes(1));
+                var operation = store.Operations.Send(new DeleteByIndexOperation(stats.IndexName, queryToDelete));
+                operation.WaitForCompletion(TimeSpan.FromMinutes(2));
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(1));
+                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(2));
 
                 using (var session = store.OpenSession())
                 {

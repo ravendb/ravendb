@@ -25,9 +25,11 @@ namespace Raven.Server.Documents
 
         public ConfigurationStorage(DocumentDatabase db)
         {
+            var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
+
             var options = db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(Path.Combine(db.Configuration.Core.DataDirectory, "Configuration"))
-                : StorageEnvironmentOptions.ForPath(Path.Combine(db.Configuration.Core.DataDirectory, "Configuration"));
+                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath)
+                : StorageEnvironmentOptions.ForPath(path.FullPath);
 
             options.SchemaVersion = 1;
 

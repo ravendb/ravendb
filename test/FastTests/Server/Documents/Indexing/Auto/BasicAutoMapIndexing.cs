@@ -170,7 +170,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             var index1 =
                 database.IndexStore.CreateIndex(
                     new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
-            var path1 = Path.Combine(database.Configuration.Indexing.StoragePath,
+            var path1 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                 database.IndexStore.GetIndex(index1).GetIndexNameSafeForFileSystem());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -179,7 +179,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             var index2 =
                 database.IndexStore.CreateIndex(
                     new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
-            var path2 = Path.Combine(database.Configuration.Indexing.StoragePath,
+            var path2 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                 database.IndexStore.GetIndex(index2).GetIndexNameSafeForFileSystem());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -224,7 +224,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
 
 
-            var path1 = Path.Combine(database.Configuration.Indexing.StoragePath,
+            var path1 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                 database.IndexStore.GetIndex(index1).GetIndexNameSafeForFileSystem());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -233,7 +233,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             var index2 =
                 database.IndexStore.CreateIndex(
                     new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
-            var path2 = Path.Combine(database.Configuration.Indexing.StoragePath,
+            var path2 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                 database.IndexStore.GetIndex(index2).GetIndexNameSafeForFileSystem());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -242,7 +242,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
 
             var index3 = database.IndexStore.ResetIndex(index1);
-            var path3 = Path.Combine(database.Configuration.Indexing.StoragePath,
+            var path3 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                 database.IndexStore.GetIndex(index3).GetIndexNameSafeForFileSystem());
 
             Assert.NotEqual(index3, index1);
@@ -256,7 +256,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             Assert.Equal(2, indexes.Count);
 
             var index4 = database.IndexStore.ResetIndex(index2);
-            var path4 = Path.Combine(database.Configuration.Indexing.StoragePath,
+            var path4 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                 database.IndexStore.GetIndex(index4).GetIndexNameSafeForFileSystem());
 
             Assert.NotEqual(index4, index2);
@@ -1099,7 +1099,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index = database.IndexStore.GetIndex(1);
                 indexName = index.Name;
 
-                indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath,
+                indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                     index.GetIndexNameSafeForFileSystem());
             }
 
@@ -1123,15 +1123,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public void CanDeleteFaultyIndex()
         {
-            var name = Guid.NewGuid().ToString();
             var path = NewDataPath();
             string indexStoragePath;
             string indexSafeName;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
-            {
-                configuration.DatabaseName = name;
-            }))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 var name1 = new IndexField
                 {
@@ -1145,7 +1141,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index = database.IndexStore.GetIndex(1);
                 indexSafeName = index.GetIndexNameSafeForFileSystem();
 
-                indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath,
+                indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                     index.GetIndexNameSafeForFileSystem());
             }
 
@@ -1155,7 +1151,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
             {
-                configuration.DatabaseName = name;
                 configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
             }))
             {
@@ -1183,7 +1178,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public void CanDeleteFaultyIndexWithNonDefaultPath()
         {
-            var name = Guid.NewGuid().ToString();
             var path = NewDataPath();
             var additionalPath = NewDataPath();
             string indexStoragePath;
@@ -1191,7 +1185,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
             {
-                configuration.DatabaseName = name;
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), additionalPath);
             }))
             {
@@ -1208,7 +1201,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index = database.IndexStore.GetIndex(1);
                 indexSafeName = index.GetIndexNameSafeForFileSystem();
 
-                indexStoragePath = Path.Combine(index.Configuration.StoragePath, index.GetIndexNameSafeForFileSystem());
+                indexStoragePath = Path.Combine(index.Configuration.StoragePath.FullPath, index.GetIndexNameSafeForFileSystem());
             }
 
             Assert.True(Directory.Exists(indexStoragePath));
@@ -1217,7 +1210,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
             {
-                configuration.DatabaseName = name;
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), additionalPath);
                 configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
             }))

@@ -170,15 +170,12 @@ namespace Raven.Server.Documents.Indexes
             var name = Path.GetDirectoryName(path);
             var indexPath = path;
 
-            var indexTempPath = documentDatabase.Configuration.Indexing.TempPath != null
-                ? Path.Combine(documentDatabase.Configuration.Indexing.TempPath, name)
-                : null;
+            var indexTempPath =
+                documentDatabase.Configuration.Indexing.TempPath?.Combine(name);
 
-            var journalPath = documentDatabase.Configuration.Indexing.JournalsStoragePath != null
-                ? Path.Combine(documentDatabase.Configuration.Indexing.JournalsStoragePath, name)
-                : null;
+            var journalPath = documentDatabase.Configuration.Indexing.JournalsStoragePath?.Combine(name);
 
-            var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath, journalPath);
+            var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath?.FullPath, journalPath?.FullPath);
             try
             {
                 options.SchemaVersion = 1;
@@ -281,19 +278,15 @@ namespace Raven.Server.Documents.Indexes
 
                 var name = GetIndexNameSafeForFileSystem();
 
-                var indexPath = Path.Combine(configuration.StoragePath, name);
+                var indexPath = configuration.StoragePath.Combine(name);
 
-                var indexTempPath = configuration.TempPath != null
-                    ? Path.Combine(configuration.TempPath, name)
-                    : null;
+                var indexTempPath = configuration.TempPath?.Combine(name);
 
-                var journalPath = configuration.JournalsStoragePath != null
-                    ? Path.Combine(configuration.JournalsStoragePath, name)
-                    : null;
+                var journalPath = configuration.JournalsStoragePath?.Combine(name);
 
                 var options = configuration.RunInMemory
-                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath, indexTempPath)
-                    : StorageEnvironmentOptions.ForPath(indexPath, indexTempPath, journalPath);
+                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath)
+                    : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath);
 
                 options.SchemaVersion = 1;
                 try
@@ -1327,24 +1320,20 @@ namespace Raven.Server.Documents.Indexes
 
             var name = GetIndexNameSafeForFileSystem();
 
-            var indexPath = Path.Combine(Configuration.StoragePath, GetIndexNameSafeForFileSystem());
+            var indexPath = Configuration.StoragePath.Combine(GetIndexNameSafeForFileSystem());
 
-            var indexTempPath = Configuration.TempPath != null
-                ? Path.Combine(Configuration.TempPath, name)
-                : null;
+            var indexTempPath = Configuration.TempPath?.Combine(name);
 
-            var journalPath = Configuration.JournalsStoragePath != null
-                ? Path.Combine(Configuration.JournalsStoragePath, name)
-                : null;
+            var journalPath = Configuration.JournalsStoragePath?.Combine(name);
 
             var totalSize = 0L;
             foreach (var mapping in NativeMemory.FileMapping)
             {
                 var directory = Path.GetDirectoryName(mapping.Key);
 
-                var isIndexPath = string.Equals(indexPath, directory, StringComparison.OrdinalIgnoreCase);
-                var isTempPath = indexTempPath != null && string.Equals(indexTempPath, directory, StringComparison.OrdinalIgnoreCase);
-                var isJournalPath = journalPath != null && string.Equals(journalPath, directory, StringComparison.OrdinalIgnoreCase);
+                var isIndexPath = string.Equals(indexPath.FullPath, directory, StringComparison.OrdinalIgnoreCase);
+                var isTempPath = indexTempPath != null && string.Equals(indexTempPath.FullPath, directory, StringComparison.OrdinalIgnoreCase);
+                var isJournalPath = journalPath != null && string.Equals(journalPath.FullPath, directory, StringComparison.OrdinalIgnoreCase);
 
                 if (isIndexPath || isTempPath || isJournalPath)
                 {
@@ -2085,7 +2074,7 @@ namespace Raven.Server.Documents.Indexes
                 _isCompactionInProgress = true;
                 progress.Message = null;
 
-                string compactPath = null;
+                PathSetting compactPath = null;
 
                 try
                 {
@@ -2097,10 +2086,9 @@ namespace Raven.Server.Documents.Indexes
 
                     Dispose();
 
-                    compactPath = Path.Combine(Configuration.StoragePath,
-                        GetIndexNameSafeForFileSystem() + "_Compact");
+                    compactPath = Configuration.StoragePath.Combine(GetIndexNameSafeForFileSystem() + "_Compact");
 
-                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath))
+                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath.FullPath))
                     {
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {
@@ -2112,7 +2100,7 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     IOExtensions.DeleteDirectory(environmentOptions.BasePath);
-                    IOExtensions.MoveDirectory(compactPath, environmentOptions.BasePath);
+                    IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath);
 
                     _initialized = false;
                     _disposed = false;
@@ -2127,7 +2115,7 @@ namespace Raven.Server.Documents.Indexes
                 finally
                 {
                     if (compactPath != null)
-                        IOExtensions.DeleteDirectory(compactPath);
+                        IOExtensions.DeleteDirectory(compactPath.FullPath);
 
                     _isCompactionInProgress = false;
                 }
