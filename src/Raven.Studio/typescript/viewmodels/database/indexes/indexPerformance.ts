@@ -810,26 +810,26 @@ class metrics extends viewModelBase {
             if (element.CommitDetails) {   
                 let commitDetails: string;
                 commitDetails = `<br/>*** Commit details ***<br/>`;
-                commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages}<br/>`;
-                commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOfPagesWrittenToDisk}`;
+                commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages.toLocaleString()}<br/>`;
+                commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOfPagesWrittenToDisk.toLocaleString()}`;
                 tooltipHtml += commitDetails;
             }
             if (element.MapDetails) {
                 let mapDetails: string;
                 mapDetails = `<br/>*** Map details ***<br/>`;
-                mapDetails += `Allocation budget: ${element.MapDetails.AllocationBudget}<br/>`;
+                mapDetails += `Allocation budget: ${element.MapDetails.AllocationBudget.toLocaleString()}<br/>`;
                 mapDetails += `Batch complete reason: ${element.MapDetails.BatchCompleteReason}<br/>`;
-                mapDetails += `Currently allocated: ${element.MapDetails.CurrentlyAllocated}<br/>`;
-                mapDetails += `Process private memory: ${element.MapDetails.ProcessPrivateMemory}<br/>`;
-                mapDetails += `Process working set: ${element.MapDetails.ProcessWorkingSet}`;
+                mapDetails += `Currently allocated: ${element.MapDetails.CurrentlyAllocated.toLocaleString()}<br/>`;
+                mapDetails += `Process private memory: ${element.MapDetails.ProcessPrivateMemory.toLocaleString()}<br/>`;
+                mapDetails += `Process working set: ${element.MapDetails.ProcessWorkingSet.toLocaleString()}`;
                 tooltipHtml += mapDetails;
             }
             if (element.ReduceDetails) {
                 let reduceDetails: string;
                 reduceDetails = `<br/>*** Reduce details ***<br/>`;
-                reduceDetails += `Compressed leaves: ${element.ReduceDetails.NumberOfCompressedLeafs}<br/>`;
-                reduceDetails += `Modified branches: ${element.ReduceDetails.NumberOfModifiedBranches}<br/>`;
-                reduceDetails += `Modified leaves: ${element.ReduceDetails.NumberOfModifiedLeafs}`;
+                reduceDetails += `Compressed leaves: ${element.ReduceDetails.NumberOfCompressedLeafs.toLocaleString()}<br/>`;
+                reduceDetails += `Modified branches: ${element.ReduceDetails.NumberOfModifiedBranches.toLocaleString()}<br/>`;
+                reduceDetails += `Modified leaves: ${element.ReduceDetails.NumberOfModifiedLeafs.toLocaleString()}`;
                 tooltipHtml += reduceDetails;
             }           
 
