@@ -208,6 +208,7 @@ class metrics extends viewModelBase {
     private canvas: d3.Selection<any>;
     private svg: d3.Selection<any>; // spans to canvas size (to provide brush + zoom/pan features)
     private brush: d3.svg.Brush<number>;
+    private brushAndZoomCallbacksDisabled = false;
     private xBrushNumericScale: d3.scale.Linear<number, number>;
     private xBrushTimeScale: d3.time.Scale<number, number>;
     private yBrushValueScale: d3.scale.Linear<number, number>;
@@ -225,6 +226,8 @@ class metrics extends viewModelBase {
 
     private dialogVisible = false;
     private canExpandAll: KnockoutComputed<boolean>;
+
+    hasAnyData = ko.observable<boolean>(false);
 
     private static readonly openedTrackHeight = metrics.openedTrackPadding
         + (metrics.maxRecursion + 1) * metrics.trackHeight
@@ -365,10 +368,7 @@ class metrics extends viewModelBase {
     }
 
     private draw() {
-        if (this.data.length === 0) {
-            //TODO: show no data section
-            return;
-        }
+        this.hasAnyData(this.data.length > 0);
 
         this.prepareBrushSection();
         this.prepareMainSection();
@@ -382,10 +382,21 @@ class metrics extends viewModelBase {
     }
 
     private prepareBrushSection() {
-        const timeRanges = this.extractTimeRanges(); 
-        const aggregatedRanges = new rangeAggregator(timeRanges);
-        const workData = aggregatedRanges.aggregate();
-        const maxConcurrentIndexes = aggregatedRanges.maxConcurrentIndexes;
+        let timeRanges = this.extractTimeRanges(); 
+
+        let maxConcurrentIndexes: number;
+        let workData: indexesWorkData[];
+
+        if (timeRanges.length === 0) {
+            // no data - create fake scale
+            timeRanges = [[new Date(), new Date()]];
+            maxConcurrentIndexes = 1;
+            workData = [];
+        } else {
+            const aggregatedRanges = new rangeAggregator(timeRanges);
+            workData = aggregatedRanges.aggregate();
+            maxConcurrentIndexes = aggregatedRanges.maxConcurrentIndexes;
+        }
 
         this.brushSection = document.createElement("canvas");
         this.brushSection.width = this.totalWidth;
@@ -393,7 +404,7 @@ class metrics extends viewModelBase {
 
         this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
-        
+
         this.yBrushValueScale = d3.scale.linear()
             .domain([0, maxConcurrentIndexes])
             .range([0, metrics.brushSectionIndexesWorkHeight]); 
@@ -562,17 +573,21 @@ class metrics extends viewModelBase {
     }
 
     private onZoom() {
-        this.brush.extent(this.xNumericScale.domain() as [number, number]);
-        this.brushContainer
-            .call(this.brush);
+        if (!this.brushAndZoomCallbacksDisabled) {
+            this.brush.extent(this.xNumericScale.domain() as [number, number]);
+            this.brushContainer
+                .call(this.brush);
 
-        this.drawMainSection();
+            this.drawMainSection();
+        }
     }
 
     private onBrush() {
-        this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
-        this.zoom.x(this.xNumericScale);
-        this.drawMainSection();
+        if (!this.brushAndZoomCallbacksDisabled) {
+            this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
+            this.zoom.x(this.xNumericScale);
+            this.drawMainSection();
+        }
     }
 
     private extractTimeRanges(): Array<[Date, Date]> {
@@ -788,10 +803,6 @@ class metrics extends viewModelBase {
         this.drawMainSection();
     }
 
-    /*
-     * Called by hitTest class on mouse move    
-     */
-    
     private handleGapTooltip(element: IndexingPerformanceGap, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
@@ -887,25 +898,38 @@ class metrics extends viewModelBase {
         this.importFileName(fileInput.files[0].name);
 
         // Must clear the filePicker element value so that user will be able to import the -same- file after closing the imported view...
-        let $input = $("#importFilePicker");
+        const $input = $("#importFilePicker");
         $input.val(null);
     }
 
     private dataImported(result: string) {
         this.data = JSON.parse(result);
-        this.expandedTracks([]);
+        this.resetGraphData();
         this.draw();
         this.isImport(true);
-        this.searchText("");
     }
 
     closeImport() {      
         this.getIndexesPerformanceData().done(() => {
-            this.expandedTracks([]);
+            this.resetGraphData();
             this.draw();
             this.isImport(false);
-            this.searchText("");
         });
+    }
+
+    private resetGraphData() {
+        this.brushAndZoomCallbacksDisabled = true;
+
+        this.xNumericScale.domain([0, this.totalWidth]);
+        this.zoom.x(this.xNumericScale);
+        
+        this.brush.clear();
+        this.brushContainer.call(this.brush);
+
+        this.brushAndZoomCallbacksDisabled = false;
+
+        this.expandedTracks([]);
+        this.searchText("");
     }
 
     private getIndexesPerformanceData(): JQueryPromise<Raven.Client.Data.Indexes.IndexPerformanceStats[]> {
@@ -919,8 +943,7 @@ class metrics extends viewModelBase {
 
         if (this.isImport()) {           
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));                    
-        }
-        else {
+        } else {
             exportFileName = `indexPerf of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
         }
 
