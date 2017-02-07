@@ -373,15 +373,15 @@ namespace Voron.Impl.Backup
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
                             toDispose.Add(recoveryPager);
 
-                            using (
-                                var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, 0,
-                                    lastTxHeader))
+                            var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, 0,
+                                lastTxHeader);
+                            toDispose.Add(reader);
+
+                            while (reader.ReadOneTransactionToDataFile(env.Options))
                             {
-                                while (reader.ReadOneTransactionToDataFile(env.Options))
-                                {
-                                    lastTxHeader = reader.LastTransactionHeader;
-                                }
+                                lastTxHeader = reader.LastTransactionHeader;
                             }
+                            
                             break;
 
                         default:
