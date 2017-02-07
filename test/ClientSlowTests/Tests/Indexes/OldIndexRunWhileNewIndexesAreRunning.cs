@@ -1,0 +1,98 @@
+// -----------------------------------------------------------------------
+//  <copyright file="OldIndexRunWhileNewIndexesAreRunning.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+
+using System.Linq;
+using System.Threading;
+using FastTests;
+using FastTests.Server.Basic.Entities;
+using Xunit;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
+
+namespace NewClientTests.NewClient.Tests.Indexes
+{
+    public class OldIndexRunWhileNewIndexesAreRunning : RavenNewTestBase
+    {
+        [Fact]
+        public void OneBigSave()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 1024 * 6; i++)
+                    {
+                        session.Store(new User { });
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var usersCount = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count();
+
+                    Assert.Equal(1024 * 6, usersCount);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldWork()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 1024 * 6; i++)
+                    {
+                        session.Store(new User { });
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var usersCount = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count();
+
+                    Assert.Equal(1024 * 6, usersCount);
+                }
+                var putIndexOp = new PutIndexOperation("test", new IndexDefinition
+                {
+                    Maps = {"from user in docs.Users select new { user.Name }"}
+                });
+               
+                store.Admin.Send(putIndexOp);
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.MaxNumberOfRequestsPerSession = 1000;
+                    while (true) // we have to wait until we _start_ indexing
+                    {
+                        var objects = session.Advanced.DocumentQuery<object>("test").Take(1).ToList();
+                        if (objects.Count > 0)
+                            break;
+                        Thread.Sleep(10);
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+
+                    var usersCount = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count();
+
+                    Assert.Equal(1024 * 6 + 1, usersCount);
+                }
+            }
+        }
+    }
+}
