@@ -209,5 +209,31 @@ namespace Voron.Platform.Posix
             }
             dirsToCreate.ForEach(x => Directory.CreateDirectory(x));
         }
+
+        public static void ResizeZeroLengthFile(string file, long l)
+        {
+            if (new FileInfo(file).Length != 0)
+                return;
+
+            var fd = -1;
+            try
+            {
+                fd = Syscall.open(file, OpenFlags.O_WRONLY | OpenFlags.O_CREAT,
+                    FilePermissions.S_IWUSR);
+
+                if (fd == -1)
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    ThrowLastError(err, "when opening " + file);
+                }
+
+                AllocateFileSpace(fd, (ulong)l, file);
+            }
+            finally
+            {
+                if (fd != -1)
+                    Syscall.close(fd);
+            }
+        }
     }
 }

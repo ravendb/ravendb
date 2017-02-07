@@ -166,6 +166,35 @@ namespace Voron.Platform.Win32
                 throw exception;
             }
         }
+
+        public static void ResizeZeroLengthFile(string file, long size)
+        {
+            if (new FileInfo(file).Length != 0)
+                return;
+
+            SafeFileHandle handle = null;
+            try
+            {
+                handle = Win32NativeFileMethods.CreateFile(file,
+                    Win32NativeFileAccess.GenericWrite,
+                    Win32NativeFileShare.None, IntPtr.Zero,
+                    Win32NativeFileCreationDisposition.OpenAlways, Win32NativeFileAttributes.Normal, IntPtr.Zero);
+
+                if (handle.IsInvalid)
+                {
+                    int lastWin32ErrorCode = Marshal.GetLastWin32Error();
+                    throw new IOException(
+                        "Failed to open file storage in order to resize zero lengthed journal for " + file,
+                        new Win32Exception(lastWin32ErrorCode));
+                }
+
+                SetFileLength(handle, size);
+            }
+            finally
+            {
+                handle?.Dispose();
+            }
+        }
     }
 
     public enum Win32NativeFileErrors
