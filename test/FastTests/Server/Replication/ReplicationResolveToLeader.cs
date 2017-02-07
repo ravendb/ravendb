@@ -206,7 +206,7 @@ namespace FastTests.Server.Replication
                     Version = 1
                 }
             }, store2);
-
+            
             using (var session = store2.OpenSession())
             {
                 session.Store(new User { Name = "NewKarmel" }, "foo/bar");
@@ -217,7 +217,6 @@ namespace FastTests.Server.Replication
                 session.Store(new User { Name = "NewOren" }, "foo/bar");
                 session.SaveChanges();
             }
-
             Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar")["foo/bar"].Count);
         }
 

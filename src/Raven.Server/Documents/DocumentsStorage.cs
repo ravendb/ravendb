@@ -205,6 +205,7 @@ namespace Raven.Server.Documents
         private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         private long _hasConflicts;
+        public long ConflictsCount => _hasConflicts;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {

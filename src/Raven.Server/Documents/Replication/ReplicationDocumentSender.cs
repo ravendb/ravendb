@@ -200,6 +200,7 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     _parent.CancellationToken.ThrowIfCancellationRequested();
+                    
                     try
                     {
                         SendDocumentsBatch(documentsContext);
@@ -252,6 +253,15 @@ namespace Raven.Server.Documents.Replication
                 _log.Info(
                     $"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
 
+            var stats = new ReplicationStatistics.OutgoingBatchStats
+            {
+                Status = ReplicationStatus.Sending,
+                DocumentsCount = _orderedReplicaItems.Count,
+                StartSendingTime = DateTime.UtcNow,
+                SentEtagMin = _parent._lastSentDocumentEtag + 1,
+                SentEtagMax = _lastEtag,
+                Destination = documentsContext.GetLazyString(_parent.DestinationDbId)
+            };
             var sw = Stopwatch.StartNew();
             var defaultResolver = _parent._parent.ReplicationDocument?.DefaultResolver;
             var headerJson = new DynamicJsonValue
@@ -264,7 +274,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageHeader.ResolverVersion)] = defaultResolver?.Version
             };
 
-            _parent.WriteToServer(headerJson);
+            _parent.WriteToServer(headerJson);            
             foreach (var item in _orderedReplicaItems)
             {
                 WriteDocumentToServer(item.Value);
@@ -275,6 +285,9 @@ namespace Raven.Server.Documents.Replication
             _stream.Flush();
             sw.Stop();
 
+            stats.EndSendingTime = DateTime.UtcNow;
+            _parent.ReplicationStats.Add(stats);
+
             _parent._lastSentDocumentEtag = _lastEtag;
 
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
@@ -282,7 +295,8 @@ namespace Raven.Server.Documents.Replication
                     $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
-            _parent.HandleServerResponse();
+            _parent.HandleServerResponse();            
+            
         }
 
         private unsafe void WriteDocumentToServer(ReplicationBatchDocumentItem item)

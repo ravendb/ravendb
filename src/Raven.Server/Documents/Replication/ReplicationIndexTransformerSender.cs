@@ -37,12 +37,12 @@ namespace Raven.Server.Documents.Replication
         public void ExecuteReplicationOnce()
         {
             _orderedReplicaItems.Clear();
-            try
+            var sp = Stopwatch.StartNew();
+            var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
+            TransactionOperationContext configurationContext;
+            using (_parent._database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
             {
-                var sp = Stopwatch.StartNew();
-                var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
-                TransactionOperationContext configurationContext;
-                using (_parent._database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
+                try
                 {
                     while (sp.ElapsedMilliseconds < timeout)
                     {
@@ -157,14 +157,14 @@ namespace Raven.Server.Documents.Replication
                         throw;
                     }
                 }
-            }
-            finally
-            {
-                //release memory at the end of the operation
-                foreach (var item in _orderedReplicaItems)
-                    item.Value.Definition.Dispose();
+                finally
+                {
+                    //release memory at the end of the operation
+                    foreach (var item in _orderedReplicaItems)
+                        item.Value.Definition.Dispose();
 
-                _orderedReplicaItems.Clear();
+                    _orderedReplicaItems.Clear();
+                }
             }
         }
 
