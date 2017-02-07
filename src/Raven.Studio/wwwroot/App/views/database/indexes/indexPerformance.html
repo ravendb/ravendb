@@ -34,12 +34,12 @@
 
 <div class="form-inline toolbar" role="form">
     <div class="input-group">
-        <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText" />
+        <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText, enable: hasAnyData" />
     </div>
 
-    <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll" title="Expand all indexes performance details"><span>Expand all</span></button>
-    <button class="btn btn-default" data-bind="click: collapseAll, visible: !canExpandAll()" title="Collapse all indexes performance details"><span>Collapse all</span></button>
-    <button class="btn btn-default" data-bind="click: exportAsJson" title="Export current performance graph to a file">
+    <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll, enable: hasAnyData" title="Expand all indexes performance details"><span>Expand all</span></button>
+    <button class="btn btn-default" data-bind="click: collapseAll, visible: !canExpandAll(), enable: hasAnyData" title="Collapse all indexes performance details"><span>Collapse all</span></button>
+    <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData" title="Export current performance graph to a file">
         <i class="icon-export"></i><span>Export</span>
     </button>
     <button class="btn btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database performance graph">
@@ -54,7 +54,16 @@
     </div>
 </div>
 
-<section id="indexingPerformance" style="position: relative">
+<div data-bind="visible: !hasAnyData()">
+    <div class="row">
+        <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+            <i class="icon-xl icon-empty-set text-muted"></i>
+            <h2 class="text-center">Nothing to display.</h2>
+        </div>
+    </div>
+</div>
+
+<section id="indexingPerformance" style="position: relative" data-bind="visible: hasAnyData">
     <section id="metricsContainer">
         <div class="tooltip" style="opacity: 0">
         </div>
