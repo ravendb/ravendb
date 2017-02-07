@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 
@@ -14,7 +14,7 @@ namespace Raven.Abstractions.Logging
 {
     public static class LogContext
     {
-        private static readonly Raven.Abstractions.Threading.ThreadLocal<string> resourceName = new Raven.Abstractions.Threading.ThreadLocal<string>();
+        private static readonly ThreadLocal<string> resourceName = new ThreadLocal<string>();
 
         public static IDisposable WithResource(string resourceName)
         {

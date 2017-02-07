@@ -8,13 +8,12 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Bundles.Encryption.Settings;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Bundles.Encryption
 {
     public class Codec
     {
-        private static readonly Raven.Abstractions.Threading.ThreadLocal<RNGCryptoServiceProvider> LocalRNG = new Raven.Abstractions.Threading.ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
+        private static readonly ThreadLocal<RNGCryptoServiceProvider> LocalRNG = new ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
 
         private readonly EncryptionSettings encryptionSettings;
         private Tuple<byte[], byte[]> encryptionStartingKeyAndIV;

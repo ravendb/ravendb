@@ -10,7 +10,7 @@ namespace Raven.Database.Plugins
 {
     [InheritedExport]
     [Obsolete("Use RavenFS instead.")]
-    public abstract class AbstractAttachmentDeleteTrigger : IRequiresDocumentDatabaseInitialization
+    public abstract class AbstractAttachmentDeleteTrigger : IRequiresDocumentDatabaseInitialization, IDisposable
     {
         /// <summary>
         ///  Ask the trigger whatever the DELETE should be vetoed.
@@ -81,5 +81,9 @@ namespace Raven.Database.Plugins
         }
 
         public DocumentDatabase Database { get; set; }
+        public virtual void Dispose()
+        {
+            //no-op
+        }
     }
 }

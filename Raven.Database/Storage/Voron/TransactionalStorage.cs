@@ -46,8 +46,8 @@ namespace Raven.Storage.Voron
 
         private readonly ConcurrentSet<WeakReference<ITransactionalStorageNotificationHandler>> lowMemoryHandlers = new ConcurrentSet<WeakReference<ITransactionalStorageNotificationHandler>>();
 
-        private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
-        private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
+        private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+        private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
 
         private volatile bool disposed;
         private readonly DisposableAction exitLockDisposable;
@@ -102,6 +102,7 @@ namespace Raven.Storage.Voron
                 var exceptionAggregator = new ExceptionAggregator("Could not properly dispose TransactionalStorage");
 
                 exceptionAggregator.Execute(() => current.Dispose());
+                exceptionAggregator.Execute(() => disableBatchNesting.Dispose());
 
                 if (documentCacher != null)
                     exceptionAggregator.Execute(documentCacher.Dispose);

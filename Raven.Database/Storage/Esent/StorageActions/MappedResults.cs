@@ -25,7 +25,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 {
     public partial class DocumentStorageActions : IMappedResultsStorageAction
     {
-        private static readonly Raven.Abstractions.Threading.ThreadLocal<IHashEncryptor> localSha1 = new Raven.Abstractions.Threading.ThreadLocal<IHashEncryptor>(() => Encryptor.Current.CreateHash());
+        private static readonly ThreadLocal<IHashEncryptor> localSha1 = new ThreadLocal<IHashEncryptor>(() => Encryptor.Current.CreateHash());
         private readonly ConcurrentDictionary<int, RemainingReductionPerLevel> scheduledReductionsPerViewAndLevel;
         public static byte[] HashReduceKey(string reduceKey)
         {

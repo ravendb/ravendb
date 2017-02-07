@@ -7,13 +7,12 @@ using System;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
-
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Impl;
 using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
-using Raven.Abstractions.Threading;
+
 
 namespace Raven.Bundles.Replication.Triggers
 {
@@ -28,7 +27,7 @@ namespace Raven.Bundles.Replication.Triggers
     [InheritedExport(typeof(AbstractDeleteTrigger))]
     public class VirtualDeleteAndRemoveConflictsTrigger : AbstractDeleteTrigger
     {
-        readonly Raven.Abstractions.Threading.ThreadLocal<RavenJArray> deletedHistory = new Raven.Abstractions.Threading.ThreadLocal<RavenJArray>();
+        readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
 
         public override void OnDelete(string key, TransactionInformation transactionInformation)
         {
@@ -152,6 +151,12 @@ namespace Raven.Bundles.Replication.Triggers
             }
 
             return true;
+        }
+
+        public override void Dispose()
+        {
+            deletedHistory.Dispose();
+            base.Dispose();
         }
     }
 }

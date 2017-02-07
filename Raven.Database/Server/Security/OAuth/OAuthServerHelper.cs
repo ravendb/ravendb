@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Server.Security.OAuth
 {
@@ -16,9 +15,9 @@ namespace Raven.Database.Server.Security.OAuth
     {
         private const int RsaKeySize = 2048;
 
-        private static readonly Raven.Abstractions.Threading.ThreadLocal<RNGCryptoServiceProvider> rng = new Raven.Abstractions.Threading.ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
-        private static readonly Raven.Abstractions.Threading.ThreadLocal<IAsymmetricalEncryptor> rsa;
-        private static readonly Raven.Abstractions.Threading.ThreadLocal<ISymmetricalEncryptor> aes;
+        private static readonly ThreadLocal<RNGCryptoServiceProvider> rng = new ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
+        private static readonly ThreadLocal<IAsymmetricalEncryptor> rsa;
+        private static readonly ThreadLocal<ISymmetricalEncryptor> aes;
 
         private static readonly string rsaExponent;
         private static readonly string rsaModulus;
@@ -39,14 +38,14 @@ namespace Raven.Database.Server.Security.OAuth
                 aesKeyAndIV = Tuple.Create(aesKeyGen.Key, aesKeyGen.IV);
             }
 
-            rsa = new Raven.Abstractions.Threading.ThreadLocal<IAsymmetricalEncryptor>(() =>
+            rsa = new ThreadLocal<IAsymmetricalEncryptor>(() =>
             {
                 var result = Encryptor.Current.CreateAsymmetrical();
                 result.ImportParameters(privateRsaParameters);
                 return result;
             });
 
-            aes = new Raven.Abstractions.Threading.ThreadLocal<ISymmetricalEncryptor>(() =>
+            aes = new ThreadLocal<ISymmetricalEncryptor>(() =>
             {
                 var result = Encryptor.Current.CreateSymmetrical();
                 result.Key = aesKeyAndIV.Item1;

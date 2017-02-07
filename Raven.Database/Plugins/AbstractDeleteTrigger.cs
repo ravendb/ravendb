@@ -11,7 +11,7 @@ using Raven.Json.Linq;
 namespace Raven.Database.Plugins
 {
     [InheritedExport]
-    public abstract class AbstractDeleteTrigger : IRequiresDocumentDatabaseInitialization
+    public abstract class AbstractDeleteTrigger : IRequiresDocumentDatabaseInitialization, IDisposable
     {
         /// <summary>
         ///  Ask the trigger whatever the DELETE should be vetoed.
@@ -95,5 +95,9 @@ namespace Raven.Database.Plugins
         }
 
         public DocumentDatabase Database { get; set; }
+        public virtual void Dispose()
+        {
+            //no-op
+        }
     }
 }

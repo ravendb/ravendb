@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Threading;
 // using Microsoft.VisualBasic.Logging;
 using Raven.Abstractions.Data;
 using Raven.Database.Impl;
@@ -19,8 +20,8 @@ namespace Raven.Bundles.Versioning.Triggers
     [ExportMetadata("Bundle", "Versioning")]
     public class VersioningDeleteTrigger : AbstractDeleteTrigger
     {
-        readonly Raven.Abstractions.Threading.ThreadLocal<Dictionary<string, RavenJObject>> versionInformer 
-            = new Raven.Abstractions.Threading.ThreadLocal<Dictionary<string, RavenJObject>>(() => new Dictionary<string, RavenJObject>());
+        readonly ThreadLocal<Dictionary<string, RavenJObject>> versionInformer 
+            = new ThreadLocal<Dictionary<string, RavenJObject>>(() => new Dictionary<string, RavenJObject>());
 
         public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
         {
@@ -78,6 +79,12 @@ namespace Raven.Bundles.Versioning.Triggers
                     }
                 });
             }
+        }
+
+        public override void Dispose()
+        {
+            versionInformer.Dispose();
+            base.Dispose();
         }
     }
 }

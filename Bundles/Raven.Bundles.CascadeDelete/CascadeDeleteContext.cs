@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Data;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Bundles.CascadeDelete
 {
@@ -20,10 +19,10 @@ namespace Raven.Bundles.CascadeDelete
     /// </summary>
     public static class CascadeDeleteContext
     {
-        private static readonly Raven.Abstractions.Threading.ThreadLocal<bool> CurrentlyInContext = new Raven.Abstractions.Threading.ThreadLocal<bool>();
+        private static readonly ThreadLocal<bool> CurrentlyInContext = new ThreadLocal<bool>();
 
-        private static readonly Raven.Abstractions.Threading.ThreadLocal<HashSet<string>> DeletedDocuments =
-            new Raven.Abstractions.Threading.ThreadLocal<HashSet<string>>(() => new HashSet<string>(StringComparer.InvariantCultureIgnoreCase));
+        private static readonly ThreadLocal<HashSet<string>> DeletedDocuments =
+            new ThreadLocal<HashSet<string>>(() => new HashSet<string>(StringComparer.InvariantCultureIgnoreCase));
 
         public static bool IsInCascadeDeleteContext
         {
