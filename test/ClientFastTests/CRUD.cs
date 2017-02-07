@@ -114,6 +114,102 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
+        public void CRUD_Operations_With_Array_In_Object_2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    var family = new Family()
+                    {
+                        Names = new[] { "Hibernating Rhinos", "RavenDB" }
+                    };
+                    newSession.Store(family, "family/1");
+                    newSession.SaveChanges();
+
+                    var newFamily = newSession.Load<Family>("family/1");
+                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+                    newSession.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
+        public void CRUD_Operations_With_Array_In_Object_3()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    var family = new Family()
+                    {
+                        Names = new[] { "Hibernating Rhinos", "RavenDB" }
+                    };
+                    newSession.Store(family, "family/1");
+                    newSession.SaveChanges();
+
+                    var newFamily = newSession.Load<Family>("family/1");
+                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+                    newFamily.Names = new[] { "RavenDB" };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
+                    newSession.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
+        public void CRUD_Operations_With_Array_In_Object_4()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    var family = new Family()
+                    {
+                        Names = new[] { "Hibernating Rhinos", "RavenDB" }
+                    };
+                    newSession.Store(family, "family/1");
+                    newSession.SaveChanges();
+
+                    var newFamily = newSession.Load<Family>("family/1");
+                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos", "Toli", "Mitzi", "Boki" };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
+                    newSession.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
+        public void CRUD_Operations_With_Array_In_Object_6()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    var family = new Family()
+                    {
+                        Names = new[] { "Hibernating Rhinos", "RavenDB" }
+                    };
+                    newSession.Store(family, "family/1");
+                    newSession.SaveChanges();
+
+                    var newFamily = newSession.Load<Family>("family/1");
+                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+                    newFamily.Names = new[] { "RavenDB", "Toli" };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
+                    newSession.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
         public void CRUD_Operations_With_Null()
         {
             using (var store = GetDocumentStore())
@@ -157,6 +253,139 @@ namespace NewClientTests.NewClient
         public class Family
         {
             public string[] Names { get; set; }
+        }
+
+        public class FamilyMembers
+        {
+            public member[] Members { get; set; }
+        }
+        public class member
+        {
+            public string Name { get; set; }
+            public int Age { get; set; }
+        }
+
+        [Fact]
+        public void CRUD_Operations_With_Array_of_objects()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    var family = new FamilyMembers()
+                    {
+                        Members = new [] {
+                            new member()
+                            {
+                                Name = "Hibernating Rhinos",
+                                Age = 8
+                            },
+                            new member()
+                            {
+                                Name = "RavenDB",
+                                Age = 4
+                            }
+                        }
+                    };
+                    newSession.Store(family, "family/1");
+                    newSession.SaveChanges();
+
+                    var newFamily = newSession.Load<FamilyMembers>("family/1");
+                    newFamily.Members = new[]
+                    {
+                        new member()
+                        {
+                            Name = "RavenDB",
+                            Age = 4
+                        },
+                        new member()
+                        {
+                            Name = "Hibernating Rhinos",
+                            Age = 8
+                        }
+                    };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+                    newFamily.Members = new[]
+                    {
+                        new member()
+                        {
+                            Name = "Toli",
+                            Age = 5
+                        },
+                        new member()
+                        {
+                            Name = "Boki",
+                            Age = 15
+                        }
+                    };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
+                    newSession.SaveChanges();
+                }
+            }
+        }
+
+        public class Arr1
+        {
+            public string[] str { get; set; }
+        }
+
+        public class Arr2
+        {
+            public Arr1[] arr1 { get; set; }
+        }
+
+        [Fact]
+        public void CRUD_Operations_With_Array_of_Arrays()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    var arr = new Arr2()
+                    {
+                        arr1 = new Arr1[]
+                        {
+                            new Arr1()
+                            {
+                                str = new [] {"a", "b"}
+                            },
+                            new Arr1()
+                            {
+                                str = new [] {"c", "d"}
+                            }
+                        } 
+                    };
+                    newSession.Store(arr, "arr/1");
+                    newSession.SaveChanges();
+
+                    var newArr = newSession.Load<Arr2>("arr/1");
+                    newArr.arr1 = new Arr1[]
+                        {
+                            new Arr1()
+                            {
+                                str = new [] {"d", "c"}
+                            },
+                            new Arr1()
+                            {
+                                str = new [] {"a", "b"}
+                            }
+                       };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+                    newArr.arr1 = new Arr1[]
+                        {
+                            new Arr1()
+                            {
+                                str = new [] {"q", "w"}
+                            },
+                            new Arr1()
+                            {
+                                str = new [] {"a", "b"}
+                            }
+                       };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
+                    newSession.SaveChanges();
+                }
+            }
         }
     }
 }

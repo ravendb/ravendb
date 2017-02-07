@@ -618,16 +618,17 @@ class metrics extends viewModelBase {
             }
 
             context.save();
+            try {
+                context.beginPath();
+                context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+                context.clip();
 
-            context.beginPath();
-            context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
-            context.clip();
-
-            this.drawTracks(context, xScale);
-            this.drawIndexNames(context);
-            this.drawGaps(context, xScale);
-
-            context.restore();
+                this.drawTracks(context, xScale);
+                this.drawIndexNames(context);
+                this.drawGaps(context, xScale);
+            } finally {
+                context.restore();
+            }
         } finally {
             context.restore();
         }
@@ -810,26 +811,26 @@ class metrics extends viewModelBase {
             if (element.CommitDetails) {   
                 let commitDetails: string;
                 commitDetails = `<br/>*** Commit details ***<br/>`;
-                commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages}<br/>`;
-                commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOfPagesWrittenToDisk}`;
+                commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages.toLocaleString()}<br/>`;
+                commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOfPagesWrittenToDisk.toLocaleString()}`;
                 tooltipHtml += commitDetails;
             }
             if (element.MapDetails) {
                 let mapDetails: string;
                 mapDetails = `<br/>*** Map details ***<br/>`;
-                mapDetails += `Allocation budget: ${element.MapDetails.AllocationBudget}<br/>`;
+                mapDetails += `Allocation budget: ${element.MapDetails.AllocationBudget.toLocaleString()}<br/>`;
                 mapDetails += `Batch complete reason: ${element.MapDetails.BatchCompleteReason}<br/>`;
-                mapDetails += `Currently allocated: ${element.MapDetails.CurrentlyAllocated}<br/>`;
-                mapDetails += `Process private memory: ${element.MapDetails.ProcessPrivateMemory}<br/>`;
-                mapDetails += `Process working set: ${element.MapDetails.ProcessWorkingSet}`;
+                mapDetails += `Currently allocated: ${generalUtils.formatBytesToSize(element.MapDetails.CurrentlyAllocated)} <br/>`;
+                mapDetails += `Process private memory: ${generalUtils.formatBytesToSize(element.MapDetails.ProcessPrivateMemory)}<br/>`;
+                mapDetails += `Process working set: ${generalUtils.formatBytesToSize(element.MapDetails.ProcessWorkingSet)}`;
                 tooltipHtml += mapDetails;
             }
             if (element.ReduceDetails) {
                 let reduceDetails: string;
                 reduceDetails = `<br/>*** Reduce details ***<br/>`;
-                reduceDetails += `Compressed leaves: ${element.ReduceDetails.NumberOfCompressedLeafs}<br/>`;
-                reduceDetails += `Modified branches: ${element.ReduceDetails.NumberOfModifiedBranches}<br/>`;
-                reduceDetails += `Modified leaves: ${element.ReduceDetails.NumberOfModifiedLeafs}`;
+                reduceDetails += `Compressed leaves: ${element.ReduceDetails.NumberOfCompressedLeafs.toLocaleString()}<br/>`;
+                reduceDetails += `Modified branches: ${element.ReduceDetails.NumberOfModifiedBranches.toLocaleString()}<br/>`;
+                reduceDetails += `Modified leaves: ${element.ReduceDetails.NumberOfModifiedLeafs.toLocaleString()}`;
                 tooltipHtml += reduceDetails;
             }           
 

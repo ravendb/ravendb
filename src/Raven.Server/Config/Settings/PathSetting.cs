@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using Raven.Server.ServerWide;
 using Sparrow.Platform;
 using Voron.Platform.Posix;
@@ -71,22 +70,6 @@ namespace Raven.Server.Config.Settings
             }
 
             return Combine(workingDirectory);
-        }
-
-        public PathSetting ApplyParentPath(PathSetting parent)
-        {
-            if (Path.IsPathRooted(_path))
-                return this;
-
-            if (parent == null)
-                return this;
-
-            var path = Environment.ExpandEnvironmentVariables(parent._path);
-
-            if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
-                return this;
-
-            return parent.Combine(this);
         }
 
         private static string EnsureResourceInfo(string path, ResourceType type, string name)
