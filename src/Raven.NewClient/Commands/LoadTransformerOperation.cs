@@ -85,7 +85,7 @@ namespace Raven.NewClient.Client.Commands
                 return empty;
             }
 
-            return TransformerHelper.ParseResultsForLoadOperation<T>(_session, result);
+            return TransformerHelper.ParseResultsForLoadOperation<T>(_session, result, _idsToCheckOnServer);
         }
 
         public void SetResult(GetDocumentResult result)
