@@ -29,7 +29,6 @@ using Raven.Database.Impl;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
-using Raven.Abstractions.Threading;
 using Raven.Abstractions;
 using Raven.Database.Common;
 
@@ -52,7 +51,7 @@ namespace Raven.Database.FileSystem
         private readonly TransportState transportState;
         private readonly MetricsCountersManager metricsCounters;
 
-        private readonly Raven.Abstractions.Threading.ThreadLocal<bool> disableAllTriggers = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
+        private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 
         private volatile bool disposed;
 
@@ -440,6 +439,8 @@ namespace Raven.Database.FileSystem
 
             if (Files != null)
                 exceptionAggregator.Execute(Files.Dispose);
+
+            exceptionAggregator.Execute(disableAllTriggers.Dispose);
 
             exceptionAggregator.ThrowIfNeeded();
         }

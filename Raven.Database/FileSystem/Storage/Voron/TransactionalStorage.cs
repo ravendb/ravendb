@@ -45,8 +45,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         private readonly NameValueCollection settings;
 
-        private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
-        private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
+        private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+        private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
 
         private volatile bool disposed;
 
@@ -91,6 +91,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
                 if (bufferPool != null)
                     bufferPool.Dispose();
+                current.Dispose();
+                disableBatchNesting.Dispose();
             }
             finally
             {

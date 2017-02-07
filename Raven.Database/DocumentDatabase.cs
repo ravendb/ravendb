@@ -28,6 +28,7 @@ using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.MiniMetrics;
+using Raven.Bundles.Replication.Triggers;
 using Raven.Database.Actions;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
@@ -61,7 +62,7 @@ namespace Raven.Database
 
         private readonly TaskScheduler backgroundTaskScheduler;
 
-        private readonly Raven.Abstractions.Threading.ThreadLocal<bool> disableAllTriggers = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
+        private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 
         private readonly object idleLocker = new object();
 
@@ -1020,6 +1021,15 @@ namespace Raven.Database
 
             if (TimerManager != null)
                 exceptionAggregator.Execute(TimerManager.Dispose);
+
+            if (AttachmentDeleteTriggers!= null && AttachmentDeleteTriggers.Count>0)
+                exceptionAggregator.Execute(()=>AttachmentDeleteTriggers.Apply(x=>x.Dispose()));
+            
+            if (DeleteTriggers!= null && DeleteTriggers.Count>0)
+                exceptionAggregator.Execute(()=>DeleteTriggers.Apply(x=>x.Dispose()));
+
+            if (inFlightTransactionalState!= null)
+                exceptionAggregator.Execute(inFlightTransactionalState.Dispose);
 
             try
             {

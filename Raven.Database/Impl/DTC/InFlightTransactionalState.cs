@@ -18,11 +18,10 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using System.Linq;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Impl.DTC
 {
-    public abstract class InFlightTransactionalState
+    public abstract class InFlightTransactionalState:IDisposable
     {
         protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -128,7 +127,7 @@ namespace Raven.Database.Impl.DTC
             }
         }
 
-        protected readonly Raven.Abstractions.Threading.ThreadLocal<string> currentlyCommittingTransaction = new Raven.Abstractions.Threading.ThreadLocal<string>();
+        protected readonly ThreadLocal<string> currentlyCommittingTransaction = new ThreadLocal<string>();
 
         public abstract void Commit(string id);
 
@@ -382,6 +381,11 @@ namespace Raven.Database.Impl.DTC
                 AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
             }
             return true;
+        }
+
+        public void Dispose()
+        {
+            this.currentlyCommittingTransaction.Dispose();
         }
     }
 }

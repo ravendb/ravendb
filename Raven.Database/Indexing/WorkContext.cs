@@ -51,7 +51,7 @@ namespace Raven.Database.Indexing
         private int workCounter;
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
-        private readonly Abstractions.Threading.ThreadLocal<Stack<List<Func<string>>>> shouldNotifyOnWork = new Abstractions.Threading.ThreadLocal<Stack<List<Func<string>>>>(() =>
+        private readonly ThreadLocal<Stack<List<Func<string>>>> shouldNotifyOnWork = new ThreadLocal<Stack<List<Func<string>>>>(() =>
         {
             var stack = new Stack<List<Func<string>>>();
             stack.Push(new List<Func<string>>());

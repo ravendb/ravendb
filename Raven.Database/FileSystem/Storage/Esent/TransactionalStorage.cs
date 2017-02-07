@@ -30,7 +30,6 @@ using Raven.Database.FileSystem.Storage.Esent.Backup;
 using Raven.Database.FileSystem.Storage.Esent.Schema;
 using Raven.Database.Util;
 using BackupOperation = Raven.Database.FileSystem.Storage.Esent.Backup.BackupOperation;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Database.FileSystem.Storage.Esent
 {
@@ -39,8 +38,8 @@ namespace Raven.Database.FileSystem.Storage.Esent
         private readonly InMemoryRavenConfiguration configuration;
 
         private OrderedPartCollection<AbstractFileCodec> fileCodecs;
-        private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
-        private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
+        private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+        private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
         private readonly string database;
         private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
         private readonly string path;
@@ -125,6 +124,9 @@ namespace Raven.Database.FileSystem.Storage.Esent
                         log.FatalException("Even ungraceful shutdown was unsuccessful, restarting the server process may be required", e2);
                     }
                 }
+
+                current.Dispose();
+                disableBatchNesting.Dispose();
             }
             finally
             {

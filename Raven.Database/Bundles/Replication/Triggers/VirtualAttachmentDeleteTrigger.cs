@@ -13,7 +13,7 @@ using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
-using Raven.Abstractions.Threading;
+
 
 namespace Raven.Bundles.Replication.Triggers
 {
@@ -31,7 +31,7 @@ namespace Raven.Bundles.Replication.Triggers
     [Obsolete("Use RavenFS instead.")]
     public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
     {
-        readonly Raven.Abstractions.Threading.ThreadLocal<RavenJArray> deletedHistory = new Raven.Abstractions.Threading.ThreadLocal<RavenJArray>();
+        readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
     
         public override void OnDelete(string key)
         {
@@ -119,6 +119,12 @@ namespace Raven.Bundles.Replication.Triggers
             var conflict = attachment.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
 
             return conflict != null && conflict.Value<bool>();
+        }
+
+        public override void Dispose()
+        {
+            this.deletedHistory.Dispose();
+            base.Dispose();
         }
     }
 }
