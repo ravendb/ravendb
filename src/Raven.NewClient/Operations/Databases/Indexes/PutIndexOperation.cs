@@ -56,14 +56,23 @@ namespace Raven.NewClient.Operations.Databases.Indexes
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes?name=" + Uri.EscapeUriString(_indexName);
+                url = $"{node.Url}/databases/{node.Database}/index";
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        _context.Write(stream, _indexDefinition);
+                            using (var writer = new BlittableJsonTextWriter(_context, stream))
+                            {
+                                writer.WriteStartObject();
+                                writer.WritePropertyName("Name");
+                                writer.WriteString(_indexName);
+                                writer.WriteComma();
+                                writer.WritePropertyName("Definition");
+                                writer.WriteObject(_indexDefinition);
+                                writer.WriteEndObject();
+                             }
                     })
                 };
 
