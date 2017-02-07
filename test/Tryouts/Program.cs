@@ -54,9 +54,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new CanReplicate())
+                using (var a = new FastTests.Server.Replication.ReplicationResolveConflictsOnConfigurationChange())
                 {
-                    a.ReplicateMultipleBatches().Wait();
+                    a.ResolveManyConflicts();
                 }
             }
         }
