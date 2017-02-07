@@ -77,6 +77,7 @@ namespace Raven.Server.Documents.Replication
                                 ChangeVector = docsItCurrent.ChangeVector,
                                 Data = docsItCurrent.Data,
                                 Key = docsItCurrent.Key,
+                                Flags = docsItCurrent.Flags,
                                 TransactionMarker = docsItCurrent.TransactionMarker,
                                 LastModifiedTicks = docsItCurrent.LastModified.Ticks,
                             };
@@ -225,6 +226,14 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe void AddReplicationItemToBatch(ReplicationBatchDocumentItem item)
         {
+            if (item.Flags.HasFlag(DocumentFlags.Artificial))
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"Skipping replication of {item.Key} because it is an artificial document");
+                }
+                return;
+            }
             if (CollectionName.IsSystemDocument(item.Key.Buffer, item.Key.Size))
             {
                 if (_log.IsInfoEnabled)

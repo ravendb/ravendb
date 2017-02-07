@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Exceptions.Indexes;
 using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Operations.Databases.Collections;
+using Raven.NewClient.Client.Replication;
+using Raven.Server.Documents;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce
@@ -223,6 +227,52 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
                 OutputReduceToCollection = "Invoices";
             }
+        }
+    }
+
+    public class RavenDB_4323_Replication : ReplicationTestsBase
+    {
+        [Fact]
+        public async Task ReduceOutputShouldNotBeReplicated()
+        {
+            var date = DateTime.Today;
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                SetupReplication(store1, store2);
+                await store1.ExecuteIndexAsync(new RavenDB_4323.DailyInvoicesIndex());
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new RavenDB_4323.Invoice { Amount = 1, IssuedAt = date.AddHours(i * 6) });
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForIndexing(store1);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new RavenDB_4323.Invoice { Amount = 1, IssuedAt = date.AddYears(30) }, "marker");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForDocument(store2, "marker");
+
+                var collectionStatistics = await store2.Admin.SendAsync(new GetCollectionStatisticsOperation());
+                Assert.Equal(2, collectionStatistics.Collections.Count);
+                Assert.False(collectionStatistics.Collections.ContainsKey("DailyInvoices"));
+                Assert.True(collectionStatistics.Collections.ContainsKey(CollectionName.SystemCollection));
+                Assert.True(collectionStatistics.Collections.ContainsKey("Invoices"));
+                Assert.Equal(32, collectionStatistics.CountOfDocuments);
+            }
+        }
+
+        protected override void ModifyReplicationDestination(ReplicationDestination replicationDestination)
+        {
+            replicationDestination.SkipIndexReplication = true;
         }
     }
 }

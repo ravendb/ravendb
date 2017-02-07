@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Replication
         public BlittableJsonReaderObject Data;
         public long Etag;
         public LazyStringValue Collection;
+        public DocumentFlags Flags;
         public short TransactionMarker;
         public long LastModifiedTicks;
     }

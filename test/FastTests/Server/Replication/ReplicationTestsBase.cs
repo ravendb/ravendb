@@ -349,7 +349,7 @@ namespace FastTests.Server.Replication
         }
 
 
-        protected static void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
+        protected void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
             SetupReplication(fromStore, 
                 new ReplicationDocument
@@ -359,23 +359,30 @@ namespace FastTests.Server.Replication
                 toStores);
         }
 
-        protected static void SetupReplication(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
+        protected void SetupReplication(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
         {
             using (var session = fromStore.OpenSession())
             {
                 var destinations = new List<ReplicationDestination>();
                 foreach (var store in toStores)
-                    destinations.Add(
-                        new ReplicationDestination
-                        {
-                            Database = store.DefaultDatabase,
-                            Url = store.Url,
-                        });
-                
+                {
+                    var replicationDestination = new ReplicationDestination
+                    {
+                        Database = store.DefaultDatabase,
+                        Url = store.Url
+                    };
+                    ModifyReplicationDestination(replicationDestination);
+                    destinations.Add(replicationDestination);
+                }
+
                 configOptions.Destinations = destinations;
                 session.Store(configOptions, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
+        }
+
+        protected virtual void ModifyReplicationDestination(ReplicationDestination replicationDestination)
+        {
         }
 
         protected static void SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationDestination[] toDestinations)
