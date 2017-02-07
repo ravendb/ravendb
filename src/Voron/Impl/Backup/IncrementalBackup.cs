@@ -11,6 +11,9 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
+using Sparrow.Json;
+using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -271,7 +274,7 @@ namespace Voron.Impl.Backup
             }
         }
 
-        public void Restore(string outPath, IEnumerable<string> backupPaths)
+        public void Restore(string outPath, IEnumerable<string> backupPaths, Action<StorageEnvironmentOptions> configure = null)
         {
             foreach (var backupPath in backupPaths)
             {
@@ -284,6 +287,7 @@ namespace Voron.Impl.Backup
                         using (var options = StorageEnvironmentOptions.ForPath(Path.Combine(outPath, dir.Key)))
                         {
                             options.ManualFlushing = true;
+                            configure?.Invoke(options);
                             using (var env = new StorageEnvironment(options))
                             {
                                 Restore(env, dir);

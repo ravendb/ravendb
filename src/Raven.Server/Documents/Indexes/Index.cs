@@ -179,6 +179,7 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 options.SchemaVersion = 1;
+                options.ForceUsing32BitPager = documentDatabase.Configuration.Storage.ForceUsing32BitPager;
 
                 environment = new StorageEnvironment(options);
 
@@ -289,6 +290,8 @@ namespace Raven.Server.Documents.Indexes
                     : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath);
 
                 options.SchemaVersion = 1;
+                options.ForceUsing32BitPager = documentDatabase.Configuration.Storage.ForceUsing32BitPager;
+
                 try
                 {
                     Initialize(new StorageEnvironment(options), documentDatabase, configuration, performanceHints);
@@ -2081,6 +2084,7 @@ namespace Raven.Server.Documents.Indexes
                     var environmentOptions =
                         (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
                     var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath);
+                    srcOptions.ForceUsing32BitPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitPager;
 
                     var wasRunning = _indexingThread != null;
 
@@ -2090,6 +2094,8 @@ namespace Raven.Server.Documents.Indexes
 
                     using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath.FullPath))
                     {
+                        compactOptions.ForceUsing32BitPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitPager;
+
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {
                             progress.Processed = progressReport.GlobalProgress;

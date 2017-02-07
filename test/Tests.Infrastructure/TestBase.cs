@@ -112,7 +112,6 @@ namespace FastTests
             configuration.Core.RunInMemory = true;
             configuration.Core.DataDirectory = configuration.Core.DataDirectory.Combine($"Tests{Interlocked.Increment(ref _serverCounter)}");
             configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
-            configuration.Storage.AllowOn32Bits = true;
 
             IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
