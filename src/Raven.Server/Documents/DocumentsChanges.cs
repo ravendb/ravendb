@@ -2,12 +2,16 @@
 using System.Collections.Concurrent;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
+using Raven.Server.Documents.Expiration;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
     public class DocumentsChanges
     {
+        
         public readonly ConcurrentDictionary<long, ChangesClientConnection> Connections = new ConcurrentDictionary<long, ChangesClientConnection>();
+        private Logger _logger;
 
         public event Action<DocumentChange> OnSystemDocumentChange;
 
@@ -19,12 +23,26 @@ namespace Raven.Server.Documents
 
         public event Action<OperationStatusChanged> OnOperationStatusChange;
 
+        public DocumentsChanges(string databaseName)
+        {
+            _logger = LoggingSource.Instance.GetLogger<DocumentChange>(databaseName);
+        }
         public void RaiseNotifications(IndexChange indexChange)
         {
             OnIndexChange?.Invoke(indexChange);
 
             foreach (var connection in Connections)
-                connection.Value.SendIndexChanges(indexChange);
+            {
+                try
+                {
+                    if (connection.Value.IsDisposed == false)
+                        connection.Value.SendIndexChanges(indexChange);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Operations("Failed to notify about index change",ex);
+                }
+            }
         }
 
         public void RaiseNotifications(TransformerChange transformerChange)
@@ -32,7 +50,17 @@ namespace Raven.Server.Documents
             OnTransformerChange?.Invoke(transformerChange);
 
             foreach (var connection in Connections)
-                connection.Value.SendTransformerChanges(transformerChange);
+            {
+                try
+                {
+                    if (connection.Value.IsDisposed==false)
+                        connection.Value.SendTransformerChanges(transformerChange);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Operations("Failed to notify about transformer change", ex);
+                }
+            }
         }
 
         public void RaiseSystemNotifications(DocumentChange documentChange)
@@ -40,7 +68,17 @@ namespace Raven.Server.Documents
             OnSystemDocumentChange?.Invoke(documentChange);
 
             foreach (var connection in Connections)
-                connection.Value.SendDocumentChanges(documentChange);
+            {
+                try
+                {
+                    if (connection.Value.IsDisposed)
+                        connection.Value.SendDocumentChanges(documentChange);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Operations("Failed to notify about system document change", ex);
+                }
+            }
         }
 
         public void RaiseNotifications(DocumentChange documentChange)
@@ -49,8 +87,15 @@ namespace Raven.Server.Documents
 
             foreach (var connection in Connections)
             {
-                if (connection.Value.IsDisposed == false)
-                    connection.Value.SendDocumentChanges(documentChange);
+                try
+                {
+                    if (connection.Value.IsDisposed == false)
+                        connection.Value.SendDocumentChanges(documentChange);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Operations("Failed to notify about document change", ex);
+                }
             }
                 
         }
@@ -61,7 +106,17 @@ namespace Raven.Server.Documents
 
             foreach (var connection in Connections)
             {
-                connection.Value.SendOperationStatusChangeNotification(operationStatusChange);
+
+                try
+                {
+                    if (connection.Value.IsDisposed==false)
+                        connection.Value.SendOperationStatusChangeNotification(operationStatusChange);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Operations("Failed to notify about operation status change", ex);
+
+                }
             }
         }
 

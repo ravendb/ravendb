@@ -391,36 +391,41 @@ namespace Raven.Server.Documents
 
         private async Task<DynamicJsonValue> GetNextMessage(bool throttleConnection)
         {
-            while (true)
+            try
             {
-                var nextMessage = await _sendQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
-                if (nextMessage.Item1 == false)
+                while (true)
                 {
-                    var dynamicJsonValue = _skippedMessage;
-                    _skippedMessage = null;
-                    return dynamicJsonValue;
-                }
-                var msg = nextMessage.Item2;
-                if (throttleConnection && msg.AllowSkip)
-                {
-                    if (DateTime.UtcNow - _lastSendMessage < TimeSpan.FromSeconds(5))
+                    var nextMessage = await _sendQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
+                    if (nextMessage.Item1 == false)
                     {
-                        _skippedMessage = msg.ValueToSend;
-                        continue;
+                        var dynamicJsonValue = _skippedMessage;
+                        _skippedMessage = null;
+                        return dynamicJsonValue;
                     }
+                    var msg = nextMessage.Item2;
+                    if (throttleConnection && msg.AllowSkip)
+                    {
+                        if (DateTime.UtcNow - _lastSendMessage < TimeSpan.FromSeconds(5))
+                        {
+                            _skippedMessage = msg.ValueToSend;
+                            continue;
+                        }
+                    }
+                    _skippedMessage = null;
+                    _lastSendMessage = DateTime.UtcNow;
+                    return msg.ValueToSend;
                 }
-                _skippedMessage = null;
-                _lastSendMessage = DateTime.UtcNow;
-                return msg.ValueToSend;
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
-
-        private long _isDisposed;
-        public bool IsDisposed => Interlocked.Read(ref _isDisposed) == 1;
+        
+        public bool IsDisposed => _disposeToken.IsCancellationRequested;
 
         public void Dispose()
         {
-            Interlocked.Exchange(ref _isDisposed, 1);
             _disposeToken.Cancel();
             _sendQueue.Dispose();
         }
