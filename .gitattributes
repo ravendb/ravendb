@@ -35,6 +35,7 @@
 *.xunit    text eol=crlf
 *.java     text eol=lf
 *.sh       text eol=lf
+scripts/raspberry-pi/ravendbd    text eol=lf
 
 *.bmp binary
 *.gif binary
