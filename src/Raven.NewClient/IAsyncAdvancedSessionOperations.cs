@@ -135,7 +135,7 @@ namespace Raven.NewClient.Client.Document
         ///     null)
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null, string skipAfter = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new();
+        Task<Dictionary<string, TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null, string skipAfter = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new();
 
         /// <summary>
         ///     Updates entity with latest changes from server

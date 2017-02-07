@@ -45,11 +45,11 @@ namespace NewClientTests.NewClient.ResultsTransformer
                     session.SaveChanges();
                     WaitForIndexing(store);
 
-                    var fooTokens = session.Advanced.LoadStartingWith<Token_Id, string>("Token/foo").OrderBy(x => x).ToArray();
+                    var fooTokens = session.Advanced.LoadStartingWith<Token_Id, string>("Token/foo").OrderBy(x => x.Value).ToArray();
 
                     var fromQuery = session.Query<Token>().TransformWith<Token_Id, string>().ToArray().OrderBy(x => x).ToArray();
 
-                    Assert.Equal(fooTokens, fromQuery, StringComparer.OrdinalIgnoreCase);
+                    Assert.Equal(fooTokens.Select(x => x.Value), fromQuery, StringComparer.OrdinalIgnoreCase);
 
                     Assert.Equal(token2.Id, session.Load<Token_Id, string>(token2.Id));
 
@@ -88,11 +88,11 @@ namespace NewClientTests.NewClient.ResultsTransformer
                     await session.SaveChangesAsync();
                     WaitForIndexing(store);
                     
-                    var fooTokens = (await session.Advanced.LoadStartingWithAsync<Token_Id, string>("Token/foo")).OrderBy(x => x).ToArray();
+                    var fooTokens = (await session.Advanced.LoadStartingWithAsync<Token_Id, string>("Token/foo")).OrderBy(x => x.Value).ToArray();
 
                     var fromQuery = (await session.Query<Token>().TransformWith<Token_Id, string>().ToListAsync()).OrderBy(x => x).ToArray();
 
-                    Assert.Equal(fooTokens, fromQuery, StringComparer.OrdinalIgnoreCase);
+                    Assert.Equal(fooTokens.Select(x => x.Value), fromQuery, StringComparer.OrdinalIgnoreCase);
 
                 }
             }

@@ -240,8 +240,8 @@ namespace NewClientTests.NewClient
                 using (var session = store.OpenAsyncSession())
                 {
                     var items = await session.LoadAsync<ItemsTransformer, Item>(new[] { "items/1", "items/2" });
-                    Assert.Equal(1 * 3, items[0].Position);
-                    Assert.Equal(2 * 3, items[1].Position);
+                    Assert.Equal(1 * 3, items["items/1"].Position);
+                    Assert.Equal(2 * 3, items["items/2"].Position);
                 }
             }
         }
@@ -263,8 +263,8 @@ namespace NewClientTests.NewClient
                 using (var session = store.OpenAsyncSession())
                 {
                     var items = await session.LoadAsync<Item>(new[] { "items/1", "items/2" }, typeof(ItemsTransformer));
-                    Assert.Equal(1 * 3, items[0].Position);
-                    Assert.Equal(2 * 3, items[1].Position);
+                    Assert.Equal(1 * 3, items["items/1"].Position);
+                    Assert.Equal(2 * 3, items["items/2"].Position);
                 }
             }
         }

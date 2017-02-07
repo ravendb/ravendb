@@ -81,31 +81,30 @@ namespace Raven.NewClient.Client.Commands.Lazy
 
             _pagingInformation?.Fill(_start, _pageSize, getDocumentResult.NextPageStart);
 
-            var finalResults = new List<T>();
+            var finalResults = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
             foreach (BlittableJsonReaderObject document in getDocumentResult.Results)
             {
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
                 _sessionOperations.DocumentsById.Add(newDocumentInfo);
                 if (newDocumentInfo.Id == null)
-                {
-                    finalResults.Add(default(T));
-                    continue;
-                }
+                    continue; // is this possible?
+
                 if (_sessionOperations.IsDeleted(newDocumentInfo.Id))
                 {
-                    finalResults.Add(default(T));
+                    finalResults[newDocumentInfo.Id] = default(T);
                     continue;
                 }
                 DocumentInfo doc;
                 if (_sessionOperations.DocumentsById.TryGetValue(newDocumentInfo.Id, out doc))
                 {
-                    finalResults.Add(_sessionOperations.TrackEntity<T>(doc));
+                    finalResults[newDocumentInfo.Id] = _sessionOperations.TrackEntity<T>(doc);
                     continue;
                 }
 
-                finalResults.Add(default(T));
+                finalResults[newDocumentInfo.Id] = default(T);
             }
-            Result = finalResults.ToArray();
+
+            Result = finalResults;
         }
     }
 }

@@ -20,8 +20,8 @@ namespace Raven.NewClient.Client.Document
 
         Dictionary<string, T> LoadInternal<T>(string[] ids);
         Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes);
-        T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, object> transformerParameters = null);
-        T[] LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters = null);
+        Dictionary<string, T> LoadInternal<T>(string[] ids, string transformer, Dictionary<string, object> transformerParameters = null);
+        Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters = null);
         Lazy<Dictionary<string, T>> LazyLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval);
     }
 }

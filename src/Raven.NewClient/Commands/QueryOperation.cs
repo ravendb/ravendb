@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
@@ -125,26 +124,25 @@ namespace Raven.NewClient.Client.Commands
             }
 
             var usedTransformer = string.IsNullOrEmpty(_indexQuery.Transformer) == false;
-            var list = new List<T>();
-            foreach (BlittableJsonReaderObject document in queryResult.Results)
+            List<T> list;
+            if (usedTransformer)
             {
-                if (usedTransformer)
+                list = TransformerHelper.ParseResultsForQueryOperation<T>(_session, queryResult)
+                    .Select(x => x.Value)
+                    .ToList();
+            }
+            else
+            {
+                list = new List<T>();
+                foreach (BlittableJsonReaderObject document in queryResult.Results)
                 {
-                    BlittableJsonReaderArray values;
-                    if (document.TryGet(Constants.Json.Fields.Values, out values) == false)
-                        throw new InvalidOperationException("Transformed document must have a $values property");
+                    var metadata = document.GetMetadata();
 
-                    list.AddRange(TransformerHelpers.ParseValuesFromBlittableArray<T>(_session, values));
+                    string id;
+                    metadata.TryGetId(out id);
 
-                    continue;
+                    list.Add(Deserialize<T>(id, document, metadata, _projectionFields, _disableEntitiesTracking, _session));
                 }
-
-                var metadata = document.GetMetadata();
-
-                string id;
-                metadata.TryGetId(out id);
-
-                list.Add(Deserialize<T>(id, document, metadata, _projectionFields, _disableEntitiesTracking, _session));
             }
 
             if (_disableEntitiesTracking == false)

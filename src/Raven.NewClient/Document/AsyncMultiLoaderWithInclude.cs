@@ -108,7 +108,7 @@ namespace Raven.NewClient.Client.Document
         /// Initializes a new instance of the <see cref="AsyncMultiLoaderWithInclude{T}"/> class.
         /// </summary>
         /// <param name="session">The session.</param>
-        public AsyncMultiLoaderWithInclude(IAsyncDocumentSessionImpl session)
+        internal AsyncMultiLoaderWithInclude(IAsyncDocumentSessionImpl session)
         {
             this.session = session;
         }

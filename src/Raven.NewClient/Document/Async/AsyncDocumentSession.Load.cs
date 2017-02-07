@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Indexes;
-
 
 namespace Raven.NewClient.Client.Document.Async
 {
@@ -18,10 +17,15 @@ namespace Raven.NewClient.Client.Document.Async
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             var result = await LoadAsync<TTransformer, TResult>(new[] { id }.AsEnumerable(), configure, token).ConfigureAwait(false);
-            return result.FirstOrDefault();
+            if (result.Count == 0)
+                return default(TResult);
+
+            Debug.Assert(result.Count == 1);
+
+            return result[id];
         }
 
-        public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids,
+        public async Task<Dictionary<string, TResult>> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids,
             Action<ILoadConfiguration> configure = null, CancellationToken token = new CancellationToken())
             where TTransformer : AbstractTransformerCreationTask, new()
         {
@@ -41,10 +45,15 @@ namespace Raven.NewClient.Client.Document.Async
             configure?.Invoke(configuration);
 
             var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
-            return result.FirstOrDefault();
+            if (result.Count == 0)
+                return default(TResult);
+
+            Debug.Assert(result.Count == 1);
+
+            return result[id];
         }
 
-        public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer,
+        public async Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, string transformer,
             Action<ILoadConfiguration> configure = null,
             CancellationToken token = new CancellationToken())
         {
@@ -64,10 +73,15 @@ namespace Raven.NewClient.Client.Document.Async
             var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
             var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
-            return result.FirstOrDefault();
+            if (result.Count == 0)
+                return default(TResult);
+
+            Debug.Assert(result.Count == 1);
+
+            return result[id];
         }
 
-        public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType,
+        public async Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType,
             Action<ILoadConfiguration> configure = null,
             CancellationToken token = new CancellationToken())
         {
@@ -133,13 +147,13 @@ namespace Raven.NewClient.Client.Document.Async
             return loadOeration.GetDocuments<T>();
         }
 
-        public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, string[] includes, string transformer,
+        public async Task<Dictionary<string, T>> LoadUsingTransformerInternalAsync<T>(string[] ids, string[] includes, string transformer,
             Dictionary<string, object> transformerParameters = null, CancellationToken token = new CancellationToken())
         {
             if (transformer == null)
-                throw new ArgumentNullException("transformer");
+                throw new ArgumentNullException(nameof(transformer));
             if (ids.Length == 0)
-                return new T[0];
+                return new Dictionary<string, T>();
 
             var loadTransformerOeration = new LoadTransformerOperation(this);
             loadTransformerOeration.ByIds(ids);
@@ -156,7 +170,7 @@ namespace Raven.NewClient.Client.Document.Async
             return loadTransformerOeration.GetTransformedDocuments<T>(command?.Result);
         }
 
-        public async Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix,
+        public async Task<Dictionary<string, TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix,
             string matches = null, int start = 0,
             int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null,
             Action<ILoadConfiguration> configure = null,

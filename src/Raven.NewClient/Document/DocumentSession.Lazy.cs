@@ -130,12 +130,12 @@ namespace Raven.NewClient.Client.Document
             return AddLazyOperation(lazyLoadOperation, onEval);
         }
 
-        Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+        Lazy<Dictionary<string, TResult>> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure, Action<TResult> onEval)
         {
             return Lazily.Load(ids, typeof(TTransformer), configure, onEval);
         }
 
-        Lazy<TResult[]> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+        Lazy<Dictionary<string, TResult>> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
         {
             var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
@@ -152,14 +152,14 @@ namespace Raven.NewClient.Client.Document
                 new LoadTransformerOperation(this),
                 singleResult: false);
 
-            return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
+            return AddLazyOperation<Dictionary<string, TResult>>(lazyLoadOperation, null);
         }
 
-        Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
+        Lazy<Dictionary<string, TResult>> ILazySessionOperations.LoadStartingWith<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
         {
-            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
+            var operation = new LazyStartsWithOperation<TResult>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
-            return AddLazyOperation<T[]>(operation, null);
+            return AddLazyOperation<Dictionary<string, TResult>>(operation, null);
         }
 
         Lazy<List<TResult>> ILazySessionOperations.MoreLikeThis<TResult>(MoreLikeThisQuery query)

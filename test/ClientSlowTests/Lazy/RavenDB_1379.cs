@@ -47,7 +47,7 @@ namespace NewClientTests.NewClient
                         .Value
                         .ToList();
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(4, foundDocKeys.Count);
                     Assert.Contains("FooBar1", foundDocKeys);
@@ -63,7 +63,7 @@ namespace NewClientTests.NewClient
                         .Value
                         .ToList();
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(4, foundDocKeys.Count);
                     Assert.Contains("FooBar21", foundDocKeys);
@@ -79,7 +79,7 @@ namespace NewClientTests.NewClient
                         .Value
                         .ToList();
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(1, foundDocKeys.Count);
                     Assert.Contains("FooBar8", foundDocKeys);
@@ -124,7 +124,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal(0, pagingInformation.Start);
                     Assert.Equal(4, pagingInformation.NextPageStart);
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(4, foundDocKeys.Count);
                     Assert.Contains("FooBar1", foundDocKeys);
@@ -144,7 +144,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal(4, pagingInformation.Start);
                     Assert.Equal(8, pagingInformation.NextPageStart);
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(4, foundDocKeys.Count);
                     Assert.Contains("FooBar21", foundDocKeys);
@@ -164,7 +164,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal(8, pagingInformation.Start);
                     Assert.Equal(8, pagingInformation.NextPageStart);
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(1, foundDocKeys.Count);
                     Assert.Contains("FooBar8", foundDocKeys);
@@ -209,7 +209,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal(2, pagingInformation.PageSize);
                     Assert.Equal(6, pagingInformation.NextPageStart);
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(2, foundDocKeys.Count);
                     Assert.Contains("FooBar21", foundDocKeys);
@@ -227,7 +227,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal(2, pagingInformation.PageSize);
                     Assert.Equal(8, pagingInformation.NextPageStart);
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(2, foundDocKeys.Count);
                     Assert.Contains("FooBar5", foundDocKeys);
@@ -245,7 +245,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal(2, pagingInformation.PageSize);
                     Assert.Equal(8, pagingInformation.NextPageStart);
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(1, foundDocKeys.Count);
                     Assert.Contains("FooBar8", foundDocKeys);
@@ -291,7 +291,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal(2, pagingInformation.PageSize);
                     Assert.Equal(2, pagingInformation.NextPageStart);
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(2, foundDocKeys.Count);
                     Assert.Contains("FooBar1", foundDocKeys);
@@ -309,7 +309,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal(1, pagingInformation.PageSize);
                     Assert.Equal(3, pagingInformation.NextPageStart);
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(1, foundDocKeys.Count);
                     Assert.Contains("FooBar111", foundDocKeys);
@@ -326,7 +326,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal(10, pagingInformation.PageSize);
                     Assert.Equal(3, pagingInformation.NextPageStart);
 
-                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
+                    var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
                     Assert.Equal(1, foundDocKeys.Count);
                     Assert.Contains("FooBar12", foundDocKeys);

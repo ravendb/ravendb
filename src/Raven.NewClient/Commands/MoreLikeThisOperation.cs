@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
+using System.Linq;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Extensions;
@@ -54,26 +54,25 @@ namespace Raven.NewClient.Client.Commands
             }
 
             var usedTransformer = string.IsNullOrEmpty(_query.Transformer) == false;
-            var list = new List<T>();
-            foreach (BlittableJsonReaderObject document in _result.Results)
+            List<T> list;
+            if (usedTransformer)
             {
-                if (usedTransformer)
+                list = TransformerHelper.ParseResultsForQueryOperation<T>(_session, _result)
+                    .Select(x => x.Value)
+                    .ToList();
+            }
+            else
+            {
+                list = new List<T>();
+                foreach (BlittableJsonReaderObject document in _result.Results)
                 {
-                    BlittableJsonReaderArray values;
-                    if (document.TryGet(Constants.Json.Fields.Values, out values) == false)
-                        throw new InvalidOperationException("Transformed document must have a $values property");
+                    var metadata = document.GetMetadata();
 
-                    list.AddRange(TransformerHelpers.ParseValuesFromBlittableArray<T>(_session, values));
+                    string id;
+                    metadata.TryGetId(out id);
 
-                    continue;
+                    list.Add(QueryOperation.Deserialize<T>(id, document, metadata, projectionFields: null, disableEntitiesTracking: false, session: _session));
                 }
-
-                var metadata = document.GetMetadata();
-
-                string id;
-                metadata.TryGetId(out id);
-
-                list.Add(QueryOperation.Deserialize<T>(id, document, metadata, projectionFields: null, disableEntitiesTracking: false, session: _session));
             }
 
             _session.RegisterMissingIncludes(_result.Results, _query.Includes);

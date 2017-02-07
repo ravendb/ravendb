@@ -41,7 +41,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var docs = session.Advanced.LoadStartingWith<TestDocumentTransformer, TestDocumentTransformer.Output>("test/", start: 0, pageSize: 1024).ToList();
+                    var docs = session.Advanced.LoadStartingWith<TestDocumentTransformer, TestDocumentTransformer.Output>("test/", start: 0, pageSize: 1024).Select(x => x.Value).ToList();
                     Assert.Equal(2, docs.Count);
                     Assert.True(docs[0].ValueFormatted.StartsWith("Formatted Value is 1"));
                     Assert.True(docs[1].ValueFormatted.StartsWith("Formatted Value is 2"));
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var docs = session.Advanced.LoadStartingWith<TestDocumentTransformer2, TestDocumentTransformer2.Output>("test/", start: 0, pageSize: 1024).ToList();
+                    var docs = session.Advanced.LoadStartingWith<TestDocumentTransformer2, TestDocumentTransformer2.Output>("test/", start: 0, pageSize: 1024).Select(x => x.Value).ToList();
                     Assert.Equal(2, docs.Count);
                     Assert.True(docs[0].ValueFormatted.StartsWith("Formatted Value is 1"));
                     Assert.True(docs[1].ValueFormatted.StartsWith("Formatted Value is 2"));
