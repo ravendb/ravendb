@@ -34,7 +34,7 @@ namespace FastTests.Server.Documents
                     });
 
                     Assert.Contains("Changing 'users/1' from 'Users' to 'UserAddresses' via update is not supported." + Environment.NewLine
-                                    + "Delete the document and recreate the document users/1.", exception.Message);
+                                    + "Delete it and recreate the document users/1.", exception.Message);
                 }
             }
         }
