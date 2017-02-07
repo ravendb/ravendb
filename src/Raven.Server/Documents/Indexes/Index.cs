@@ -17,6 +17,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
+using Raven.NewClient.Client.Exceptions.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
@@ -718,10 +719,6 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 HandleAnalyzerErrors(scope, iae);
                             }
-                            catch (IndexInvalidException iie)
-                            {
-                                HandleIndexInvalid(scope, iie);
-                            }
                             catch (OperationCanceledException)
                             {
                                 return;
@@ -911,17 +908,6 @@ namespace Raven.Server.Documents.Indexes
 
             // TODO we should create notification here?
             _errorStateReason = $"State was changed due to excessive number of write errors ({writeErrors}).";
-            SetState(IndexState.Error);
-        }
-
-        private void HandleIndexInvalid(IndexingStatsScope stats, Exception e)
-        {
-            stats.AddInvalidError(e);
-
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Index invalid: '{Name}' ({IndexId}).", e);
-
-            _errorStateReason = $"The index is invalid with message '{e.Message}'";
             SetState(IndexState.Error);
         }
 
