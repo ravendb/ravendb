@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private IndexingStatsScope _statsInstance;
         private IndexWriteOperationStats _stats = new IndexWriteOperationStats();
-        private readonly OutputDocumntsFromReduceIndexCommand _outputDocumntsFromReduceIndexCommand;
+        private readonly OutputReduceToCollectionCommand _outputReduceToCollectionCommand;
 
         public IndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
             : base(index.Definition.Name, LoggingSource.Instance.GetLogger<IndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var outputReduceToCollection = mapReduceIndex?.Definition.OutputReduceToCollection;
             if (string.IsNullOrWhiteSpace(outputReduceToCollection) == false)
             {
-                _outputDocumntsFromReduceIndexCommand = new OutputDocumntsFromReduceIndexCommand(_documentDatabase, outputReduceToCollection);
+                _outputReduceToCollectionCommand = new OutputReduceToCollectionCommand(_documentDatabase, outputReduceToCollection);
             }
         }
 
@@ -83,15 +83,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 if (_writer != null) // TODO && _persistance._indexWriter.RamSizeInBytes() >= long.MaxValue)
                 {
-                    if (_outputDocumntsFromReduceIndexCommand == null)
+                    if (_outputReduceToCollectionCommand == null)
                     {
                         _writer.Commit(); // just make sure changes are flushed to disk
                     }
                     else
                     {
-                        using (_stats.SaveOutputDocuments.Start())
+                        using (_stats.SaveOutputDocumentsStats.Start())
                         {
-                            var enqueue = _documentDatabase.TxMerger.Enqueue(_outputDocumntsFromReduceIndexCommand);
+                            var enqueue = _documentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
                             _writer.Commit(); // just make sure changes are flushed to disk
                             try
                             {
@@ -120,16 +120,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public class OutputDocumntsFromReduceIndexCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public class OutputReduceToCollectionCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
-            private readonly string _outputReduceResultsToCollectionName;
-            private readonly DocumentConvention documentConvention = new DocumentConvention();
+            private readonly string _outputReduceToCollection;
+            private readonly DocumentConvention _documentConvention = new DocumentConvention();
+            private readonly EntityToBlittable _entityToBlittable = new EntityToBlittable(null);
+            public readonly List<OutputReduceDocument> ReduceDocuments = new List<OutputReduceDocument>();
 
-            public OutputDocumntsFromReduceIndexCommand(DocumentDatabase database, string outputReduceToCollection)
+            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection)
             {
                 _database = database;
-                _outputReduceResultsToCollectionName = outputReduceToCollection;
+                _outputReduceToCollection = outputReduceToCollection;
             }
 
             public class OutputReduceDocument
@@ -139,14 +141,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 public object Document;
             }
 
-            public readonly List<OutputReduceDocument> ReduceDocuments = new List<OutputReduceDocument>();
-            public readonly EntityToBlittable EntityToBlittable = new EntityToBlittable(null);
-
             public override void Execute(DocumentsOperationContext context)
             {
                 foreach (var reduceDocument in ReduceDocuments)
                 {
-                    var id = _outputReduceResultsToCollectionName + "/" + reduceDocument.ReduceKeyHash;
+                    var id = _outputReduceToCollection + "/" + reduceDocument.ReduceKeyHash;
 
                     if (reduceDocument.IsDelete)
                     {
@@ -157,11 +156,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var documentInfo = new DocumentInfo
                     {
                         Id = id,
-                        Collection = _outputReduceResultsToCollectionName
+                        Collection = _outputReduceToCollection
                     };
-                    using (var document = EntityToBlittable.ConvertEntityToBlittable(reduceDocument.Document, documentConvention, context, documentInfo))
+                    using (var document = _entityToBlittable.ConvertEntityToBlittable(reduceDocument.Document, _documentConvention, context, documentInfo))
                     {
-                        _database.DocumentsStorage.Put(context, id, null, document, flags: DocumentFlags.Artificial);
+                        _database.DocumentsStorage.Put(context, id, null, document);
                         context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(id, document.Size);
                     }
                 }
@@ -190,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Indexed document for '{_indexName}'. Key: {key}. Output: {_converter.Document}.");
 
-                _outputDocumntsFromReduceIndexCommand?.ReduceDocuments.Add(new OutputDocumntsFromReduceIndexCommand.OutputReduceDocument
+                _outputReduceToCollectionCommand?.ReduceDocuments.Add(new OutputReduceToCollectionCommand.OutputReduceDocument
                 {
                     ReduceKeyHash = key,
                     Document = document
@@ -213,7 +212,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Deleted document for '{_indexName}'. Key: {key}.");
 
-            _outputDocumntsFromReduceIndexCommand?.ReduceDocuments.Add(new OutputDocumntsFromReduceIndexCommand.OutputReduceDocument
+            _outputReduceToCollectionCommand?.ReduceDocuments.Add(new OutputReduceToCollectionCommand.OutputReduceDocument
             {
                 IsDelete = true,
                 ReduceKeyHash = key,
@@ -230,7 +229,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
 
-            _outputDocumntsFromReduceIndexCommand?.ReduceDocuments.Add(new OutputDocumntsFromReduceIndexCommand.OutputReduceDocument
+            _outputReduceToCollectionCommand?.ReduceDocuments.Add(new OutputReduceToCollectionCommand.OutputReduceDocument
             {
                 IsDelete = true,
                 ReduceKeyHash = reduceKeyHash,
@@ -248,7 +247,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _stats.DeleteStats = stats.For(IndexingOperation.Lucene.Delete, start: false);
             _stats.AddStats = stats.For(IndexingOperation.Lucene.AddDocument, start: false);
             _stats.ConvertStats = stats.For(IndexingOperation.Lucene.Convert, start: false);
-            _stats.SaveOutputDocuments = stats.For(IndexingOperation.Reduce.SaveOutputDocuments, start: false);
+            _stats.SaveOutputDocumentsStats = stats.For(IndexingOperation.Reduce.SaveOutputDocuments, start: false);
         }
 
         private class IndexWriteOperationStats
@@ -256,7 +255,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public IndexingStatsScope DeleteStats;
             public IndexingStatsScope ConvertStats;
             public IndexingStatsScope AddStats;
-            public IndexingStatsScope SaveOutputDocuments;
+            public IndexingStatsScope SaveOutputDocumentsStats;
         }
     }
 }
