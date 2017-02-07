@@ -228,12 +228,12 @@ class aceEditorBindingHandler {
             }
         }
 
-        // In the event of keyup or lose focus, push the value into the observable.
         const aceFocusElement = ".ace_text-input";
-        $(element).on('keyup', aceFocusElement, () => {
+        aceEditor.on('change', () => {
             code(aceEditor.getSession().getValue());
             this.alterHeight(element, aceEditor);
         });
+
         $(element).on('focus', aceFocusElement, () => aceEditorBindingHandler.currentEditor = aceEditor);
 
         // Initialize ace resizeble text box
