@@ -57,9 +57,7 @@ namespace Raven.NewClient.Client.Commands
             List<T> list;
             if (usedTransformer)
             {
-                list = TransformerHelper.ParseResultsForQueryOperation<T>(_session, _result)
-                    .Select(x => x.Value)
-                    .ToList();
+                list = TransformerHelper.ParseResultsForQueryOperation<T>(_session, _result).ToList();
             }
             else
             {
