@@ -64,11 +64,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             var outputReduceToCollection = index.Definition.OutputReduceToCollection;
 
-            if (index.Collections.Contains(Constants.Indexing.AllDocumentsCollection, new StringEqualityComparer()))
+            if (index.Collections.Contains(Constants.Indexing.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase))
             {
                 throw new IndexInvalidException($"Cannot output documents from index ({index.Name}) to the collection name ({outputReduceToCollection}) because the index is mapping all documents and this will result in an infinite loop.");
             }
-            if (index.Collections.Contains(outputReduceToCollection, new StringEqualityComparer()))
+            if (index.Collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase))
             {
                 throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) cannot be used as this index ({index.Name}) is mapping this collection and this will result in an infinite loop.");
             }
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 var otherIndex = pair.Key;
                 string description;
-                if (otherIndex.Collections.Contains(outputReduceToCollection, new StringEqualityComparer()) &&
+                if (otherIndex.Collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase) &&
                     CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, index.Collections.ToArray() /* todo:*/, indexes, out description))
                 {
                     description += Environment.NewLine + $"--> {index.Name}: {string.Join(",", index.Collections)} => *{outputReduceToCollection}*";
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (indexCollections.Contains(otherIndex.OutputReduceToCollection))
                 return true;
 
-            foreach (var index in indexes.Where(pair => pair.Key.Collections.Contains(otherIndex.OutputReduceToCollection, new StringEqualityComparer())))
+            foreach (var index in indexes.Where(pair => pair.Key.Collections.Contains(otherIndex.OutputReduceToCollection, StringComparer.OrdinalIgnoreCase)))
             {
                 string a;
                 var aa = CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(index.Key, indexCollections, indexes, out a);
