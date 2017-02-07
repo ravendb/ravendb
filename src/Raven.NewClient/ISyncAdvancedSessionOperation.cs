@@ -100,7 +100,7 @@ namespace Raven.NewClient.Client.Document
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
-        TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null, string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new();
+        Dictionary<string, TResult> LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null, string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new();
 
         /// <summary>
         ///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.

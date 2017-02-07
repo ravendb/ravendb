@@ -56,7 +56,7 @@ namespace Raven.NewClient.Client.Document
             var etag = metadata.GetEtag();
             var id = metadata.GetId();
 
-            foreach (var value in TransformerHelpers.ParseValuesFromBlittableArray<T>(this, values))
+            foreach (var value in TransformerHelper.ParseResultsForStreamOperation<T>(this, values))
             {
                 yield return new StreamResult<T>
                 {

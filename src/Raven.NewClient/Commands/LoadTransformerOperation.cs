@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.NewClient.Client.Document;
@@ -75,26 +74,18 @@ namespace Raven.NewClient.Client.Commands
             _transformerParameters = transformerParameters;
         }
         
-        public T[] GetTransformedDocuments<T>(GetDocumentResult result)
+        public Dictionary<string, T> GetTransformedDocuments<T>(GetDocumentResult result)
         {
             if (result == null)
-                return new T[_ids.Length];
-
-            if (typeof(T).IsArray)
             {
-                return TransformerHelpers.ParseResultsArray<T>(_session, result);
+                var empty = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+                foreach (var id in _idsToCheckOnServer)
+                    empty[id] = default(T);
+
+                return empty;
             }
 
-            var items = TransformerHelpers.ParseResults<T>(_session, result).ToArray();
-
-            if (items.Length > _ids.Length)
-            {
-                throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
-                    _transformer,
-                    typeof(T).Name));
-            }
-
-            return items;
+            return TransformerHelper.ParseResultsForLoadOperation<T>(_session, result);
         }
 
         public void SetResult(GetDocumentResult result)

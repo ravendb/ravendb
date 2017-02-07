@@ -94,20 +94,20 @@ namespace SlowTests.Core.Indexing
                 {
                     var results1 = session.Load<Companies_NameTransformer.Result>(new[] { "companies/1", "companies/2" }, typeof(Companies_NameTransformer));
 
-                    Assert.Equal(2, results1.Length);
-                    Assert.Equal("Amazing", results1[0].Name);
-                    Assert.Equal("Brilliant", results1[1].Name);
+                    Assert.Equal(2, results1.Count);
+                    Assert.Equal("Amazing", results1["companies/1"].Name);
+                    Assert.Equal("Brilliant", results1["companies/2"].Name);
 
                     var results2 = session.Load<Companies_ContactsTransformer.Result[]>(new[] { "companies/1", "companies/2" }, typeof(Companies_ContactsTransformer));
 
-                    Assert.Equal(2, results2.Length);
+                    Assert.Equal(2, results2.Count);
 
-                    Assert.Equal(2, results2[0].Length);
-                    Assert.Equal("email1@email.com", results2[0][0].Email);
-                    Assert.Equal("email2@email.com", results2[0][1].Email);
+                    Assert.Equal(2, results2["companies/1"].Length);
+                    Assert.Equal("email1@email.com", results2["companies/1"][0].Email);
+                    Assert.Equal("email2@email.com", results2["companies/1"][1].Email);
 
-                    Assert.Equal(1, results2[1].Length);
-                    Assert.Equal("email3@email.com", results2[1][0].Email);
+                    Assert.Equal(1, results2["companies/2"].Length);
+                    Assert.Equal("email3@email.com", results2["companies/2"][0].Email);
                 }
             }
         }
@@ -164,13 +164,13 @@ namespace SlowTests.Core.Indexing
 
                     var results = session.Load<CompanyEmployeesTransformer.Result>(new[] { "companies/1", "companies/2" }, typeof(CompanyEmployeesTransformer));
 
-                    Assert.Equal(2, results.Length);
+                    Assert.Equal(2, results.Count);
 
-                    Assert.True(results[0].Employees.SequenceEqual(new[] { "John", "Bob" }));
-                    Assert.Equal("Amazing", results[0].Name);
+                    Assert.True(results["companies/1"].Employees.SequenceEqual(new[] { "John", "Bob" }));
+                    Assert.Equal("Amazing", results["companies/1"].Name);
 
-                    Assert.True(results[1].Employees.SequenceEqual(new[] { "Bob" }));
-                    Assert.Equal("Brilliant", results[1].Name);
+                    Assert.True(results["companies/2"].Employees.SequenceEqual(new[] { "Bob" }));
+                    Assert.Equal("Brilliant", results["companies/2"].Name);
                 }
             }
         }

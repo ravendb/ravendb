@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 
@@ -67,8 +66,8 @@ namespace NewClientTests.NewClient
 
                     var value2 = lazy2.Value;
 
-                    Assert.Equal("John15", value2[0].FirstName);
-                    Assert.Equal("Alfred15", value2[1].FirstName);
+                    Assert.Equal("John15", value2["people/1"].FirstName);
+                    Assert.Equal("Alfred15", value2["people/2"].FirstName);
                 }
             }
         }

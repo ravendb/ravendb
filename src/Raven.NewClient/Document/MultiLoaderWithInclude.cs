@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 
 namespace Raven.NewClient.Client.Document
@@ -148,10 +148,16 @@ namespace Raven.NewClient.Client.Document
             var configuration = new RavenLoadConfiguration();
             configure?.Invoke(configuration);
 
-            return session.LoadInternal<TResult>(new[] { id }, includes.ToArray(), transformer, configuration.TransformerParameters).FirstOrDefault();
+            var result = session.LoadInternal<TResult>(new[] { id }, includes.ToArray(), transformer, configuration.TransformerParameters);
+            if (result.Count == 0)
+                return default(TResult);
+
+            Debug.Assert(result.Count == 1);
+
+            return result[id];
         }
 
-        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null)
+        public Dictionary<string, TResult> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null)
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             var transformer = new TTransformer().TransformerName;

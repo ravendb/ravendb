@@ -1170,8 +1170,14 @@ more responsive application.
                 return resultsArray[0];
 
             var resultsDictionary = result as Dictionary<string, T>;
-            if (resultsDictionary != null && resultsDictionary.Count > 0)
-                return resultsDictionary.Values.FirstOrDefault();
+            if (resultsDictionary != null)
+            {
+                if (resultsDictionary.Count == 0)
+                    return default(T);
+
+                if (resultsDictionary.Count == 1)
+                    return resultsDictionary.Values.FirstOrDefault();
+            }
 
             throw new InvalidCastException($"Unable to cast {result.GetType().Name} to {typeof(T).Name}");
         }

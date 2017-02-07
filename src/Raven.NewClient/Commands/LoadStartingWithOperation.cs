@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Json.Utilities;
 using Sparrow.Json;
@@ -32,7 +31,7 @@ namespace Raven.NewClient.Client.Commands
         }
 
         public GetDocumentCommand CreateRequest()
-        {        
+        {
             _session.IncrementRequestCount();
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Requesting documents with ids starting with '{_startWith}' from {_session.StoreIdentifier}");
@@ -114,19 +113,12 @@ namespace Raven.NewClient.Client.Commands
             return default(T);
         }
 
-        public T[] GetTransformedDocuments<T>(GetDocumentResult result)
+        public Dictionary<string, T> GetTransformedDocuments<T>(GetDocumentResult result)
         {
             if (result == null)
                 return null;
 
-            if (typeof(T).IsArray)
-            {
-                return TransformerHelpers.ParseResultsArray<T>(_session, result);
-            }
-
-            var items = TransformerHelpers.ParseResults<T>(_session, result).ToArray();
-
-            return items;
+            return TransformerHelper.ParseResultsForLoadOperation<T>(_session, result);
         }
     }
 }

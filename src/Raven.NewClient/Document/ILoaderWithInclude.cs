@@ -112,6 +112,6 @@ namespace Raven.NewClient.Client.Document
         /// <param name="ids">The id.</param>
         /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
         /// <returns></returns>
-        TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
+        Dictionary<string, TResult> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
     }
 }

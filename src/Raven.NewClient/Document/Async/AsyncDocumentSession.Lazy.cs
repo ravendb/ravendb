@@ -172,7 +172,7 @@ namespace Raven.NewClient.Client.Document.Async
         {
             return Lazily.LoadAsync(id, (Action<T>)null, token);
         }
-        
+
         /// <summary>
         /// Loads the specified ids and a function to call when it is evaluated
         /// </summary>
@@ -206,13 +206,13 @@ namespace Raven.NewClient.Client.Document.Async
             return AddLazyOperation(lazyOp, onEval, token);
         }
 
-        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize,
+        Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize,
             string exclude, RavenPagingInformation pagingInformation, string skipAfter,
             CancellationToken token)
         {
             var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
-            return AddLazyOperation<T[]>(operation, null, token);
+            return AddLazyOperation<Dictionary<string, T>>(operation, null, token);
         }
 
         Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null,
@@ -239,6 +239,30 @@ namespace Raven.NewClient.Client.Document.Async
                 singleResult: true);
 
             return AddLazyOperation(lazyLoadOperation, onEval, token);
+        }
+
+        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null, CancellationToken token = new CancellationToken()) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            return Lazily.LoadAsync(ids, typeof(TTransformer), configure, onEval, token);
+        }
+
+        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null, CancellationToken token = new CancellationToken())
+        {
+            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+            var configuration = new RavenLoadConfiguration();
+            configure?.Invoke(configuration);
+
+            var idsArray = ids.ToArray();
+
+            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
+                idsArray,
+                transformer,
+                configuration.TransformerParameters,
+                new LoadTransformerOperation(this),
+                singleResult: false);
+
+            return AddLazyOperation<Dictionary<string, TResult>>(lazyLoadOperation, null);
         }
     }
 }

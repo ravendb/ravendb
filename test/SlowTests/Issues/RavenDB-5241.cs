@@ -6,12 +6,12 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5241 : RavenTestBase
+    public class RavenDB_5241 : RavenNewTestBase
     {
         [Fact]
         public void loading_documents_with_transformer_duplicate_ids()
@@ -37,25 +37,10 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var docs = session.Load<TestDocumentTransformer, TestDocumentTransformer.Output>(
-                        new[] { document1Id, document1Id, document2Id, document1Id, document2Id });
-                    for (int i = 0; i < docs.Length; i++)
-                    {
-                        var output = docs[i];
-                        Assert.NotNull(output);
-                        switch (i)
-                        {
-                            case 0:
-                            case 1:
-                            case 3:
-                                Assert.Equal(1, output.Value);
-                                break;
-                            case 2:
-                            case 4:
-                                Assert.Equal(2, output.Value);
-                                break;
-                        }
-                    }
+                    var docs = session.Load<TestDocumentTransformer, TestDocumentTransformer.Output>(new[] { document1Id, document1Id, document2Id, document1Id, document2Id });
+                    Assert.Equal(2, docs.Count);
+                    Assert.Equal(1, docs[document1Id].Value);
+                    Assert.Equal(2, docs[document2Id].Value);
                 }
             }
         }
@@ -86,30 +71,11 @@ namespace SlowTests.Issues
                 {
                     var docs = session.Load<TestDocumentTransformer, TestDocumentTransformer.Output>(
                         new[] { document1Id, document1Id, "no_document", document2Id, document1Id, document2Id });
-                    for (int i = 0; i < docs.Length; i++)
-                    {
-                        var output = docs[i];
-                        if (i == 2)
-                        {
-                            Assert.Null(output);
-                            continue;
-                        }
 
-                        Assert.NotNull(output);
-
-                        switch (i)
-                        {
-                            case 0:
-                            case 1:
-                            case 4:
-                                Assert.Equal(1, output.Value);
-                                break;
-                            case 3:
-                            case 5:
-                                Assert.Equal(2, output.Value);
-                                break;
-                        }
-                    }
+                    Assert.Equal(3, docs.Count);
+                    Assert.Equal(1, docs[document1Id].Value);
+                    Assert.Equal(2, docs[document2Id].Value);
+                    Assert.Null(docs["no_document"]);
                 }
             }
         }
