@@ -24,7 +24,13 @@ class importDatabaseCommand extends commandBase {
         const formData = new FormData();
         const args = this.model.toDto();
 
-        formData.append("importOptions", JSON.stringify(args));
+        formData.append("importOptions", JSON.stringify(args, (key, value) => {
+            if (key === "TransformScript" && value === "") {
+                return undefined;
+            }
+            return value;
+        }));
+
         formData.append("file", this.file);
 
         return this.post(url, formData, this.db, ajaxOptions, 0)

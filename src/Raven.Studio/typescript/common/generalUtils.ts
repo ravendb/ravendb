@@ -60,6 +60,10 @@ class genUtils {
         }));
     }
 
+    static escapeForShell(input: string) {
+        return '"' + input.replace(/[\r\n]/g, "").replace(/(["\\])/g, '\\$1') + '"';
+    }
+
     static formatTimeSpan(input: string) {
         return genUtils.formatDuration(moment.duration(input));
     }
