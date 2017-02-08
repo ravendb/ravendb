@@ -32,10 +32,10 @@ namespace SlowTests.Core.Subscriptions
 
                 var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria("Users"));
 
-                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(id)
-                {
-                    MaxDocsPerBatch = 31
-                }))
+                using (var subscription = store.AsyncSubscriptions.Open(
+                    new SubscriptionConnectionOptions(id){
+                        MaxDocsPerBatch = 31
+                    }))
                 {
                     var docs = new List<dynamic>();
 

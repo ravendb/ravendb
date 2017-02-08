@@ -255,6 +255,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     ["Exception"] = connection.ConnectionException.ToString()
                                 });
 
+
                             }
                             catch
                             {
