@@ -9,12 +9,14 @@ namespace Raven.Server.Config.Settings
 {
     public class PathSetting
     {
+        private readonly PathSetting _baseDataDir;
         private readonly string _path;
 
         private string _fullPath;
 
-        public PathSetting(string path)
+        public PathSetting(string path, string baseDataDir = null)
         {
+            _baseDataDir = baseDataDir != null ? new PathSetting(baseDataDir) : null;
             _path = HandleAppDriveIfAbsolutePath(path);
         }
 
@@ -23,12 +25,7 @@ namespace Raven.Server.Config.Settings
             _path = HandleAppDriveIfAbsolutePath(EnsureResourceInfo(path, type, resourceName));
         }
 
-        public PathSetting(PathSetting path)
-        {
-            _path = path._path;
-        }
-
-        public string FullPath => _fullPath ?? (_fullPath =  ToFullPath(_path));
+        public string FullPath => _fullPath ?? (_fullPath =  ToFullPath());
 
         public PathSetting Combine(string path)
         {
@@ -40,14 +37,16 @@ namespace Raven.Server.Config.Settings
             return new PathSetting(Path.Combine(_path, path._path));
         }
 
-        public static string ToFullPath(string path)
+        public string ToFullPath()
         {
-            path = Environment.ExpandEnvironmentVariables(path);
+            var path = Environment.ExpandEnvironmentVariables(_path);
 
             if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
-                path = Path.Combine(AppContext.BaseDirectory, path.Substring(2));
+                path = Path.Combine(_baseDataDir?.FullPath ?? AppContext.BaseDirectory, path.Substring(2));
 
-            var result = Path.IsPathRooted(path) ? path : Path.Combine(AppContext.BaseDirectory, path);
+            var result = Path.IsPathRooted(path)
+                ? path
+                : Path.Combine(_baseDataDir?.FullPath ?? AppContext.BaseDirectory, path);
 
             if (PlatformDetails.RunningOnPosix)
                 return PosixHelper.FixLinuxPath(result);

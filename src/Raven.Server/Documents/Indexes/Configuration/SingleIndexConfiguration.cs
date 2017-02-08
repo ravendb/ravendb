@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.Indexes.Configuration
                 key =>
                     new SettingValue(clientConfiguration.GetValue(key) ?? databaseConfiguration.GetSetting(key),
                         databaseConfiguration.GetServerWideSetting(key)),
+                databaseConfiguration.GetServerWideSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory)),
                 databaseConfiguration.ResourceType, 
                 databaseConfiguration.ResourceName, 
                 throwIfThereIsNoSetMethod: false);
