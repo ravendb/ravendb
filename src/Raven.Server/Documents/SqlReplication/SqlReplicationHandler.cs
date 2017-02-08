@@ -94,8 +94,8 @@ namespace Raven.Server.Documents.SqlReplication
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad Request
 
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Error occured during sql replication connection test", ex);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Error occured during sql replication connection test", ex);
 
                 JsonOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))

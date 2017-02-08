@@ -90,7 +90,7 @@ namespace SlowTests.Issues
                 }
                 WaitForIndexing(store);
 
-                new Orders_All_Changed().SideBySideExecute(store, replaceTimeUtc: DateTime.Now.AddDays(3));
+                new Orders_All_Changed().SideBySideExecute(store);
                 new Orders_All_Changed2().SideBySideExecute(store);
             }
         }
@@ -116,7 +116,7 @@ namespace SlowTests.Issues
                 }
                 WaitForIndexing(store);
 
-                await new Orders_All_Changed().SideBySideExecuteAsync(store, replaceTimeUtc: DateTime.Now.AddDays(3)).ConfigureAwait(false);
+                await new Orders_All_Changed().SideBySideExecuteAsync(store).ConfigureAwait(false);
                 await new Orders_All_Changed2().SideBySideExecuteAsync(store).ConfigureAwait(false);
             }
         }
