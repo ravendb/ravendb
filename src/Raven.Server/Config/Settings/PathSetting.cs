@@ -9,6 +9,8 @@ namespace Raven.Server.Config.Settings
 {
     public class PathSetting
     {
+        public static PathSetting BaseDataDir { get; set; }
+
         private readonly string _path;
 
         private string _fullPath;
@@ -45,9 +47,11 @@ namespace Raven.Server.Config.Settings
             path = Environment.ExpandEnvironmentVariables(path);
 
             if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
-                path = Path.Combine(AppContext.BaseDirectory, path.Substring(2));
+                path = Path.Combine(BaseDataDir?.FullPath ?? AppContext.BaseDirectory, path.Substring(2));
 
-            var result = Path.IsPathRooted(path) ? path : Path.Combine(AppContext.BaseDirectory, path);
+            var result = Path.IsPathRooted(path)
+                ? path
+                : Path.Combine(BaseDataDir?.FullPath ?? AppContext.BaseDirectory, path);
 
             if (PlatformDetails.RunningOnPosix)
                 return PosixHelper.FixLinuxPath(result);
