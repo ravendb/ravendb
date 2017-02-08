@@ -112,9 +112,8 @@ namespace SubscriptionsBenchmark
                 }
 
 
-                using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
+                using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(_subscriptionId.Value)
                 {
-                    SubscriptionId = _subscriptionId.Value,
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 }))
                 {

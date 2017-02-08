@@ -42,9 +42,8 @@ namespace Raven.Tests.Issues
 
                     var users = new List<RavenJObject>();
 
-                    using (var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()))
+                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(id)))
                     {
-
                         var docs = new BlockingCollection<RavenJObject>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
@@ -117,7 +116,7 @@ namespace Raven.Tests.Issues
 
                     var users = new List<User>();
 
-                    using (var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()))
+                    using (var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(id)))
                     {
 
                         var docs = new BlockingCollection<User>();
@@ -193,7 +192,7 @@ namespace Raven.Tests.Issues
 
                     var users = new List<RavenJObject>();
 
-                    using (var subscription = store.Subscriptions.Open(subscriptionId, new SubscriptionConnectionOptions()))
+                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                     {
 
                         var docs = new BlockingCollection<RavenJObject>();
@@ -237,9 +236,9 @@ namespace Raven.Tests.Issues
                         Assert.Equal(34, age);
                     }
                 }
-                using (var subscription = store.Subscriptions.Open(subscriptionId, new SubscriptionConnectionOptions()))
+                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                 {
-                    var docs = new BlockingCollection<RavenJObject>();
+                    var docs = new BlockingCollection<dynamic>();
 
                     subscription.Subscribe(o => docs.Add(o));
 

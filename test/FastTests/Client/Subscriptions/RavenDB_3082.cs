@@ -60,12 +60,7 @@ namespace FastTests.Client.Subscriptions
 
                 var id = await store.AsyncSubscriptions.CreateAsync(criteria);
 
-                using (
-                    var subscription =
-                        store.AsyncSubscriptions.Open<PersonWithAddress>(new SubscriptionConnectionOptions
-                        {
-                            SubscriptionId = id
-                        }))
+                using (var subscription = store.AsyncSubscriptions.Open<PersonWithAddress>(new SubscriptionConnectionOptions(id)))
                 {
 
                     var users = new BlockingCollection<PersonWithAddress>();
