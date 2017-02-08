@@ -342,6 +342,7 @@ namespace Voron.Impl.Backup
             try
             {
                 TransactionHeader* lastTxHeader = null;
+                var lastTxHeaderStackLocation = stackalloc TransactionHeader[1];
 
                 long journalNumber = -1;
                 foreach (var entry in entries)
@@ -382,8 +383,8 @@ namespace Voron.Impl.Backup
                                 }
                                 if (lastTxHeader != null)
                                 {
-                                    TransactionHeader lastTxHeaderStruct = *lastTxHeader;
-                                    lastTxHeader = &lastTxHeaderStruct;
+                                    *lastTxHeaderStackLocation = *lastTxHeader;
+                                    lastTxHeader = lastTxHeaderStackLocation;
                                 }
                             }
                             
