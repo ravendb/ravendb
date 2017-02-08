@@ -43,8 +43,7 @@ namespace SlowTests.MailingList
                                                 .Select(x => new
                                                 {
                                                     ProductionId = (string)null,
-                                                    CgcId =
-                                                                Guid.Parse(x.Id.ToString().Replace("cgcs/", "")),
+                                                    CgcId = x.Id,
                                                     CgcName = x.Name,
                                                     ProductionName = (string)null,
                                                 }));
@@ -52,9 +51,7 @@ namespace SlowTests.MailingList
                 AddMap<Production>(enumerable => enumerable
                                                         .Select(x => new
                                                         {
-                                                            ProductionId =
-                                                                        Guid.Parse(x.Id.ToString().Replace(
-                                                                            "productions/", "")),
+                                                            ProductionId = x.Id,
                                                             x.CgcId,
                                                             CgcName = (string)null,
                                                             ProductionName = x.Name,
