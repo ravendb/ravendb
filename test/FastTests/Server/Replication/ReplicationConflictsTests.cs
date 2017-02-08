@@ -429,40 +429,6 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
-        public void Conflict_then_delete_request_will_return_409_and_conflict_data()
-        {
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
-            {
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Store(new User { Name = "test" }, "foo/bar");
-                    s1.SaveChanges();
-                }
-
-                using (var s2 = store2.OpenSession())
-                {
-                    s2.Store(new User { Name = "test2" }, "foo/bar");
-                    s2.SaveChanges();
-                }
-
-                SetupReplication(store1, store2);
-
-                WaitUntilHasConflict(store2, "foo/bar");
-
-                using (var session = store2.OpenSession())
-                {
-                    var exception = Assert.Throws<DocumentConflictException>(() =>
-                    {
-                        session.Delete("foo/bar");
-                        session.SaveChanges();
-                    });
-                    Assert409Response(exception);
-                }
-            }
-        }
-
         private static void Assert409Response(DocumentConflictException e)
         {
             Assert.NotNull(e);

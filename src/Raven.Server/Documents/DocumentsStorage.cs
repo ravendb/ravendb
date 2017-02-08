@@ -204,8 +204,8 @@ namespace Raven.Server.Documents
         public DocumentsContextPool ContextPool;
         private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
-        private long _hasConflicts;
-        public long ConflictsCount => _hasConflicts;
+        private long _conflictCount;
+        public long ConflictsCount => _conflictCount;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -293,7 +293,7 @@ namespace Raven.Server.Documents
                     ConflictsSchema.Create(tx, "Conflicts", 32);
                     CollectionsSchema.Create(tx, "Collections", 32);
 
-                    _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries;
+                    _conflictCount = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries;
 
                     _lastEtag = ReadLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
@@ -687,8 +687,8 @@ namespace Raven.Server.Documents
             TableValueReader tvr;
             if (table.ReadByKey(loweredKey, out tvr) == false)
             {
-                if (_hasConflicts != 0)
-                    ThrowDocumentConflictIfNeeded(context, loweredKey);
+                if (_conflictCount > 0)
+                    ThrowOnDocumentConflict(context, loweredKey);
                 return null;
             }
 
@@ -981,20 +981,32 @@ namespace Raven.Server.Documents
             long? lastModifiedTicks = null,
             ChangeVectorEntry[] changeVector = null)
         {
-            var result = GetDocumentOrTombstone(context, loweredKey);
+            var result = GetDocumentOrTombstone(context, loweredKey,throwOnConflict:false);
             if (result.Item2 != null)
                 return null; //NOP, already deleted
 
             var doc = result.Item1;
+            long etag;
+            CollectionName collectionName;
             if (doc == null)
             {
+                if (_conflictCount > 0) //no tombstone and no document. perhaps we have a conflict?
+                {
+                    var conflicts = GetConflictsFor(context, loweredKey);
+                    if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
+                    {
+                        collectionName = ResolveConflictAndAddTombstone(context, loweredKey, changeVector, conflicts, out etag);
+                        return new DeleteOperationResult
+                        {
+                            Collection = collectionName,
+                            Etag = etag
+                        };
+                    }
+                }
+
                 if (expectedEtag != null)
                     throw new ConcurrencyException(
                         $"Document {loweredKey} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
-
-                if (_hasConflicts != 0)
-                    ThrowDocumentConflictIfNeeded(context, loweredKey);
-                return null;
             }
 
             if (expectedEtag != null && doc.Etag != expectedEtag)
@@ -1009,7 +1021,7 @@ namespace Raven.Server.Documents
 
             EnsureLastEtagIsPersisted(context, doc.Etag);
 
-            var collectionName = ExtractCollectionName(context, loweredKey, doc.Data);
+            collectionName = ExtractCollectionName(context, loweredKey, doc.Data);
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             int size;
@@ -1022,7 +1034,7 @@ namespace Raven.Server.Documents
             int keySize;
             var keyPtr = tvr.Read(2, out keySize);
 
-            var etag = CreateTombstone(context,
+            etag = CreateTombstone(context,
                 lowerKey,
                 lowerSize,
                 keyPtr,
@@ -1055,8 +1067,59 @@ namespace Raven.Server.Documents
             };
         }
 
+        private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context, Slice loweredKey,
+            ChangeVectorEntry[] changeVector, IReadOnlyList<DocumentConflict> conflicts, out long etag)
+        {
+            ChangeVectorEntry[] mergedChangeVector;
+            var indexOfLargestEtag = FindIndexOfLargestEtagAndMergeChangeVectors(conflicts,out mergedChangeVector);
+            var latestConflict = conflicts[indexOfLargestEtag];            
 
-        private static void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, Slice loweredKey)
+            var collectionName = new CollectionName(latestConflict.Collection);
+            
+            //note that CreateTombstone is also deleting conflicts
+            etag = CreateTombstone(context,
+                loweredKey.Content.Ptr,
+                loweredKey.Size,
+                latestConflict.Key.Buffer,
+                latestConflict.Key.Size,
+                latestConflict.Etag,
+                collectionName,
+                mergedChangeVector,
+                latestConflict.LastModified.Ticks,
+                changeVector);
+
+            return collectionName;
+        }
+
+        private static int FindIndexOfLargestEtagAndMergeChangeVectors(IReadOnlyList<DocumentConflict> conflicts,out ChangeVectorEntry[] mergedChangeVectorEntries)
+        {
+            mergedChangeVectorEntries = null;
+            bool firstTime = true;
+
+            int indexOfLargestEtag = 0;
+            long largestEtag = 0;
+            for (var i = 0; i < conflicts.Count; i++)
+            {
+                var conflict = conflicts[i];
+                if (conflict.Etag > largestEtag)
+                {
+                    largestEtag = conflict.Etag;
+                    indexOfLargestEtag = i;
+                }
+
+                if (firstTime)
+                {
+                    mergedChangeVectorEntries = conflict.ChangeVector;
+                    firstTime = false;
+                    continue;
+                }
+                mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, conflict.ChangeVector);
+            }
+
+            return indexOfLargestEtag;
+        }
+
+        private static void ThrowOnDocumentConflict(DocumentsOperationContext context, Slice loweredKey)
         {
             var conflicts = GetConflictsFor(context, loweredKey);
             if (conflicts.Count > 0)
@@ -1065,8 +1128,13 @@ namespace Raven.Server.Documents
                 foreach (var conflict in conflicts)
                     changeVectors.Add(conflict.ChangeVector);
 
-                throw new DocumentConflictException(loweredKey.ToString(), changeVectors);
+                ThrowDocumentConflictException(loweredKey, changeVectors);
             }
+        }
+
+        private static void ThrowDocumentConflictException(Slice loweredKey, List<ChangeVectorEntry[]> changeVectors)
+        {
+            throw new DocumentConflictException(loweredKey.ToString(), changeVectors);
         }
 
         public long GenerateNextEtag()
@@ -1102,8 +1170,8 @@ namespace Raven.Server.Documents
             Slice loweredKey;
             using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
             {
-                if (_hasConflicts != 0)
-                    ThrowDocumentConflictIfNeeded(context, loweredKey);
+                if (_conflictCount != 0)
+                    ThrowOnDocumentConflict(context, loweredKey);
 
                 var result = GetDocumentOrTombstone(context, loweredKey);
                 if (result.Item2 != null) //already have a tombstone -> need to update the change vector
@@ -1229,9 +1297,8 @@ namespace Raven.Server.Documents
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string key)
         {
-            if (_hasConflicts == 0)
+            if (_conflictCount == 0)
                 return;
-
 
             byte* lowerKey;
             int lowerSize;
@@ -1246,12 +1313,14 @@ namespace Raven.Server.Documents
             }
         }
 
-
         public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(DocumentsOperationContext context, Slice loweredKey)
         {
+            var list = new List<ChangeVectorEntry[]>();
+            if (_conflictCount == 0)
+                return list;
+
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
 
-            var list = new List<ChangeVectorEntry[]>();
             bool deleted = true;
             while (deleted)
             {
@@ -1294,7 +1363,7 @@ namespace Raven.Server.Documents
                 var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
                 tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
                 {
-                    Interlocked.Add(ref _hasConflicts, -listCount);
+                    Interlocked.Add(ref _conflictCount, -listCount);
                 };
             }
             return list;
@@ -1302,6 +1371,9 @@ namespace Raven.Server.Documents
 
         public void DeleteConflictsFor(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
         {
+            if (_conflictCount == 0)
+                return;
+
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -1314,7 +1386,7 @@ namespace Raven.Server.Documents
                         var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
                         tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
                         {
-                            Interlocked.Decrement(ref _hasConflicts);
+                            Interlocked.Decrement(ref _conflictCount);
                         };
                     }
                 }
@@ -1377,7 +1449,7 @@ namespace Raven.Server.Documents
 
         public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string key)
         {
-            if (_hasConflicts == 0)
+            if (_conflictCount == 0)
                 return ImmutableAppendOnlyList<DocumentConflict>.Empty;
 
             byte* lowerKey;
@@ -1636,7 +1708,7 @@ namespace Raven.Server.Documents
                         {lazyCollectionName.Buffer, lazyCollectionName.Size},
                         existingDoc.LastModified.Ticks
                     });
-                    Interlocked.Increment(ref _hasConflicts);
+                    Interlocked.Increment(ref _conflictCount);
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
                     EnsureLastEtagIsPersisted(context, existingDoc.Etag);
@@ -1664,7 +1736,7 @@ namespace Raven.Server.Documents
                         {existingTombstone.Collection.Buffer, existingTombstone.Collection.Size},
                         existingTombstone.LastModified.Ticks
                     });
-                    Interlocked.Increment(ref _hasConflicts);
+                    Interlocked.Increment(ref _conflictCount);
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
                     EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
@@ -1733,7 +1805,7 @@ namespace Raven.Server.Documents
                         docPositions.LastModifiedTicks
                     };
 
-                    Interlocked.Increment(ref _hasConflicts);
+                    Interlocked.Increment(ref _conflictCount);
                     conflictsTable.Set(tvb);
                 }
 
@@ -1833,7 +1905,7 @@ namespace Raven.Server.Documents
             int keySize;
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            if (_hasConflicts != 0)
+            if (_conflictCount != 0)
                 changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
 
             // delete a tombstone if it exists, if it known that it is a new key, no need, so we can skip it
@@ -1973,10 +2045,10 @@ namespace Raven.Server.Documents
                 }
                 mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, conflict.ChangeVector);
             }
+
             //We had conflicts need to delete them
             if (mergedChangeVectorEntries != null)
             {
-
                 DeleteConflictsFor(context, key);
                 if (documentChangeVector != null)
                     mergedChangeVectorEntries =  ReplicationUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
@@ -2030,7 +2102,7 @@ namespace Raven.Server.Documents
             long newEtag,
             ChangeVectorEntry[] existing = null)
         {
-            if (_hasConflicts == 0)
+            if (_conflictCount == 0)
                 return MergeVectorsWithoutConflicts(newEtag, existing);
 
             var conflictChangeVectors = DeleteConflictsFor(context, loweredKey);
