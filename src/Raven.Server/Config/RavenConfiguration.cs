@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -108,6 +109,7 @@ namespace Raven.Server.Config
             if (PlatformDetails.RunningOnPosix)
                 platformPostfix = "posix";
 
+            _configBuilder.SetBasePath(Directory.GetCurrentDirectory());
             _configBuilder.AddJsonFile($"settings_{platformPostfix}.json", optional: true);
         }
 
