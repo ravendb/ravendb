@@ -44,13 +44,12 @@ namespace SlowTests.MailingList
                             .ToList();
                     });
 
-                    Assert.Equal("Query failed. See inner exception for details.", e.Message);
                     Assert.Contains("The field 'Surname' is not indexed, cannot sort on fields that are not indexed", e.InnerException.Message);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var e = Assert.Throws<InvalidOperationException>(() =>
+                    var e = Assert.Throws<RavenException>(() =>
                     {
                         var results = session.Advanced.DocumentQuery<Person, PersonIndex>()
                            .WaitForNonStaleResultsAsOfNow()
@@ -58,7 +57,6 @@ namespace SlowTests.MailingList
                            .ToList();
                     });
 
-                    Assert.Equal("Query failed. See inner exception for details.", e.Message);
                     Assert.Contains("The field 'Surname' is not indexed, cannot sort on fields that are not indexed", e.InnerException.Message);
                 }
             }

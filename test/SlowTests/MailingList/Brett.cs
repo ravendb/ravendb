@@ -17,7 +17,7 @@ namespace SlowTests.MailingList
 {
     public class Brett : RavenNewTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6124")]
         public void TestMultiMap()
         {
             Guid accountId = Guid.NewGuid();

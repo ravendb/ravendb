@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
@@ -31,8 +31,8 @@ namespace SlowTests.MailingList
         {
             [Raven.Imports.Newtonsoft.Json.Sample.JsonProperty("EmailAddress")]
             public string Email { get; set; }
-        
-            [Raven.Imports.Newtonsoft.Json.JsonProperty("ZipCode")]
+
+            [JsonProperty("ZipCode")]
             public string Postcode { get; set; }
         }
 
@@ -47,11 +47,11 @@ namespace SlowTests.MailingList
             public StudentDtos_ByEmailDomain()
             {
                 Map = studentDtos => from studentDto in studentDtos
-                                  select new Result
-                                  {
-                                      Email = studentDto.Email,
-                                      Postcode = studentDto.Postcode
-                                  };
+                                     select new Result
+                                     {
+                                         Email = studentDto.Email,
+                                         Postcode = studentDto.Postcode
+                                     };
             }
         }
 

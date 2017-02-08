@@ -8,6 +8,7 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.NewClient.Client.Json;
+using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -84,7 +85,14 @@ namespace SlowTests.MailingList
 
                         var carLots = queryResult
                             .Results
-                            .Select(x => deserializer.Deserialize<CarLot>(new BlittableJsonReader()))
+                            .Select(x =>
+                            {
+                                using (var reader = new BlittableJsonReader())
+                                {
+                                    reader.Init((BlittableJsonReaderObject)x);
+                                    return deserializer.Deserialize<CarLot>(reader);
+                                }
+                            })
                             .ToArray();
 
                         foreach (var carLot in carLots)

@@ -142,14 +142,13 @@ namespace SlowTests.MailingList
         {
             var sections = new[]
             {
-                new Section {Id = 1.ToString(), Name = "TV Articles", Slug = "tv-articles"},
-                new Section {Id = 2.ToString(), Name = "General Articles", Slug = "general"}
+                new Section {Name = "TV Articles", Slug = "tv-articles"},
+                new Section {Name = "General Articles", Slug = "general"}
             };
             var articles = new[]
             {
-                new Article
-                {Id = 1.ToString(), Title = "How to fix your TV", Description = "How to", Sections = new[] {"Sections/1", "Sections/2"}},
-                new Article {Id = 2.ToString(), Title = "How to do something", Description = "How to", Sections = new[] {"Sections/2"}}
+                new Article {Title = "How to fix your TV", Description = "How to", Sections = new[] {"Sections/1", "Sections/2"}},
+                new Article {Title = "How to do something", Description = "How to", Sections = new[] {"Sections/2"}}
             };
             foreach (var section in sections) session.Store(section);
             foreach (var article in articles) session.Store(article);

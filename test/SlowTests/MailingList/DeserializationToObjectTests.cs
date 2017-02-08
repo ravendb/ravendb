@@ -7,7 +7,7 @@ namespace SlowTests.MailingList
 {
     public class DeserializationToObjectTests : RavenNewTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6124")]
         public void Query_GivenDbWithComplexObjects_ShouldDeserializePropertiesToOriginalType()
         {
             // Arrange

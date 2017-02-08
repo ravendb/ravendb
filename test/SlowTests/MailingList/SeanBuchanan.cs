@@ -77,28 +77,29 @@ namespace SlowTests.MailingList
                 //Write the test data to the database.
                 using (var session = store.OpenSession())
                 {
-                    var skill1 = new Skill { Id = 1.ToString(), Name = "C#" };
-                    var skill2 = new Skill { Id = 2.ToString(), Name = "SQL" };
-                    var consultant1 = new Consultant { Id = 1.ToString(), Name = "Subha", YearsOfService = 6 };
-                    var consultant2 = new Consultant { Id = 2.ToString(), Name = "Tom", YearsOfService = 5 };
-                    var proficiency1 = new Proficiency
-                    {
-                        Id = 1.ToString(),
-                        Consultant = consultant1,
-                        Skill = skill1,
-                        SkillLevel = "Expert"
-                    };
+                    var skill1 = new Skill { Name = "C#" };
+                    var skill2 = new Skill { Name = "SQL" };
+                    var consultant1 = new Consultant { Name = "Subha", YearsOfService = 6 };
+                    var consultant2 = new Consultant { Name = "Tom", YearsOfService = 5 };
 
                     session.Store(skill1);
                     session.Store(skill2);
                     session.Store(consultant1);
                     session.Store(consultant2);
+
+                    var proficiency1 = new Proficiency
+                    {
+                        Consultant = consultant1,
+                        Skill = skill1,
+                        SkillLevel = "Expert"
+                    };
+
                     session.Store(proficiency1);
                     session.SaveChanges();
 
                     var proficiencies = session.Query<Proficiency, Proficiencies_ConsultantId>()
                                                .Customize(o => o.WaitForNonStaleResults())
-                                               .Where(o => o.Consultant.Id == 1.ToString())
+                                               .Where(o => o.Consultant.Id == consultant1.Id)
                                                .ToList();
 
                     Assert.Equal("Subha", proficiencies.Single().Consultant.Name);
@@ -121,7 +122,7 @@ namespace SlowTests.MailingList
                     //yet, I expect the consultant name to still be "Subha."
                     var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
                                       .Customize(o => o.WaitForNonStaleResults())
-                                      .Where(o => o.Consultant.Id == 1.ToString())
+                                      .Where(o => o.Consultant.Id == consultant1.Id)
                                       .ToList();
 
                     Assert.Equal("Subha", proficiencies.Single().Consultant.Name);
@@ -132,7 +133,7 @@ namespace SlowTests.MailingList
                 store.Operations.Send(new PatchByIndexOperation("Proficiencies/ConsultantId",
                     new IndexQuery(store.Conventions)
                     {
-                        Query = "Consultant_Id:1"
+                        Query = "Consultant_Id:consultants/1"
                     },
                     new PatchRequest
                     {
@@ -146,7 +147,7 @@ namespace SlowTests.MailingList
                     //Block2
                     var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
                                                .Customize(o => o.WaitForNonStaleResults())
-                                               .Where(o => o.Consultant.Id == 1.ToString())
+                                               .Where(o => o.Consultant.Id == "consultants/1")
                                                .ToList();
 
                     Assert.Equal("Subhashini", proficiencies.Single().Consultant.Name);

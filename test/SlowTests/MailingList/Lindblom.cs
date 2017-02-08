@@ -13,7 +13,7 @@ namespace SlowTests.MailingList
 {
     public class Lindblom : RavenNewTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6124")]
         public void Test()
         {
             // Arrange

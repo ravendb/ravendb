@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
             public string ImportantProperty { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6124")]
         public void WithCustomizedTagNameAndIdentityProperty()
         {
             var id = string.Empty;
