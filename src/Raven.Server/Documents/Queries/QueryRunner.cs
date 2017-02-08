@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Queries
                 FacetSetup facetSetup;
                 using (_documentsContext.OpenReadTransaction())
                 {
-                    var facetSetupAsJson = _database.DocumentsStorage.Get(_documentsContext, query.FacetSetupDoc);
+                    var facetSetupAsJson = _database.DocumentsStorage.Get(_documentsContext, query.FacetSetupDoc,true);
                     if (facetSetupAsJson == null)
                         throw new DocumentDoesNotExistException(query.FacetSetupDoc);
 
