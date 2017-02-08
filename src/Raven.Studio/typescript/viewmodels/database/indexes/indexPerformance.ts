@@ -829,7 +829,7 @@ class metrics extends viewModelBase {
             if (element.MapDetails) {
                 let mapDetails: string;
                 mapDetails = `<br/>*** Map details ***<br/>`;
-                mapDetails += `Allocation budget: ${element.MapDetails.AllocationBudget.toLocaleString()}<br/>`;
+                mapDetails += `Allocation budget: ${generalUtils.formatBytesToSize(element.MapDetails.AllocationBudget)}<br/>`;
                 mapDetails += `Batch complete reason: ${element.MapDetails.BatchCompleteReason}<br/>`;
                 mapDetails += `Currently allocated: ${generalUtils.formatBytesToSize(element.MapDetails.CurrentlyAllocated)} <br/>`;
                 mapDetails += `Process private memory: ${generalUtils.formatBytesToSize(element.MapDetails.ProcessPrivateMemory)}<br/>`;

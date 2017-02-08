@@ -36,6 +36,27 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
+        public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexPerformanceStats[] stats)
+        {
+            writer.WriteArray(context, stats, (w, c, stat) =>
+            {
+                w.WriteStartObject();
+
+                w.WritePropertyName(nameof(stat.IndexName));
+                w.WriteString(stat.IndexName);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(stat.IndexId));
+                w.WriteInteger(stat.IndexId);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(stat.Performance));
+                w.WriteArray(c, stat.Performance, (wp, cp, performance) => { wp.WriteIndexingPerformanceStats(context, performance); });
+
+                w.WriteEndObject();
+            });
+        }
+
         public static void WriteChangeVectorEntry(this BlittableJsonTextWriter writer, JsonOperationContext context, ChangeVectorEntry entry)
         {
             writer.WriteStartObject();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
@@ -15,6 +16,7 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Indexing;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -26,6 +28,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
+        private static readonly ArraySegment<byte> Heartbeat = new ArraySegment<byte>(new[] { (byte)'\r', (byte)'\n' });
+
         [RavenAction("/databases/*/index", "PUT")]
         public async Task PutIndex()
         {
@@ -711,7 +715,7 @@ namespace Raven.Server.Documents.Handlers
                     if (createdTimestamp > baseLine)
                         baseLine = createdTimestamp;
 
-                    var lastBatch = index.GetIndexingPerformance(0)
+                    var lastBatch = index.GetIndexingPerformance()
                                     .LastOrDefault(x => x.Completed != null)
                                     ?.Completed ?? DateTime.UtcNow;
 
@@ -732,14 +736,12 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/performance", "GET")]
         public Task Performance()
         {
-            var from = GetIntValueQueryString("from", required: false) ?? 0;
-
             var stats = GetIndexesToReportOn()
                 .Select(x => new IndexPerformanceStats
                 {
                     IndexName = x.Name,
                     IndexId = x.IndexId,
-                    Performance = x.GetIndexingPerformance(from)
+                    Performance = x.GetIndexingPerformance()
                 })
                 .ToArray();
 
@@ -747,30 +749,53 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteArray(context, stats, (w, c, stat) =>
-                {
-                    w.WriteStartObject();
-
-                    w.WritePropertyName(nameof(stat.IndexName));
-                    w.WriteString(stat.IndexName);
-                    w.WriteComma();
-
-                    w.WritePropertyName(nameof(stat.IndexId));
-                    w.WriteInteger(stat.IndexId);
-                    w.WriteComma();
-
-                    w.WritePropertyName(nameof(stat.Performance));
-                    w.WriteArray(c, stat.Performance, (wp, cp, performance) =>
-                    {
-                        wp.WriteIndexingPerformanceStats(context, performance);
-                    });
-
-                    w.WriteEndObject();
-
-                });
+                writer.WritePerformanceStats(context, stats);
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/performance/live", "GET", SkipUsagesCount = true)]
+        public async Task PerformanceLive()
+        {
+            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                var indexes = GetIndexesToReportOn().ToArray();
+
+                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
+                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
+
+                using (var ms = new MemoryStream())
+                using (var collector = new LiveIndexingPerformanceCollector(Database.Changes, Database.DatabaseShutdown, indexes))
+                {
+                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
+                            break;
+
+                        var tuple = await collector.Queue.TryDequeueAsync(TimeSpan.FromSeconds(4));
+                        if (tuple.Item1 == false)
+                        {
+                            await webSocket.SendAsync(Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                            continue;
+                        }
+
+                        ms.SetLength(0);
+
+                        JsonOperationContext context;
+                        using (ContextPool.AllocateOperationContext(out context))
+                        using (var writer = new BlittableJsonTextWriter(context, ms))
+                        {
+                            writer.WritePerformanceStats(context, tuple.Item2);
+                        }
+
+                        ArraySegment<byte> bytes;
+                        ms.TryGetBuffer(out bytes);
+
+                        await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                    }
+                }
+            }
         }
 
 

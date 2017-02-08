@@ -50,8 +50,7 @@ namespace Raven.Server.NotificationCenter
                         // we use this to detect client-initialized closure
                         if (receive.IsCompleted)
                         {
-                            if (_webSocket.CloseStatus == WebSocketCloseStatus.NormalClosure)
-                                break;
+                            break;
                         }
 
                         var tuple = await asyncQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));

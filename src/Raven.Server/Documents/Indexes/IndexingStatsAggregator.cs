@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Exceptions;
 
@@ -39,6 +38,8 @@ namespace Raven.Server.Documents.Indexes
             
             _stats = new IndexingRunStats();
         }
+
+        public bool Completed => _completed;
 
         public DateTime StartTime { get; }
 
@@ -110,6 +111,7 @@ namespace Raven.Server.Documents.Indexes
         {
             return new IndexingPerformanceStats(_scope.Duration)
             {
+                Id = Id,
                 Started = StartTime,
                 Completed = completed ? StartTime.Add(_scope.Duration) : (DateTime?)null,
                 Details = _scope.ToIndexingPerformanceOperation("Indexing"),
