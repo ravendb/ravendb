@@ -21,6 +21,7 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Extensions;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -28,8 +29,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
-        private static readonly ArraySegment<byte> Heartbeat = new ArraySegment<byte>(new[] { (byte)'\r', (byte)'\n' });
-
         [RavenAction("/databases/*/index", "PUT")]
         public async Task PutIndex()
         {
@@ -776,7 +775,7 @@ namespace Raven.Server.Documents.Handlers
                         var tuple = await collector.Queue.TryDequeueAsync(TimeSpan.FromSeconds(4));
                         if (tuple.Item1 == false)
                         {
-                            await webSocket.SendAsync(Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                            await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
                             continue;
                         }
 
