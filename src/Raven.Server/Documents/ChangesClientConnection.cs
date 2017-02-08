@@ -356,13 +356,8 @@ namespace Raven.Server.Documents
                             do
                             {
                                 var value = await GetNextMessage(throttleConnection);
-                                if (_disposeToken.IsCancellationRequested)
+                                if (value == null || _disposeToken.IsCancellationRequested)
                                     break;
-
-                                if (value == null)
-                                {
-                                    break;
-                                }
 
                                 context.Write(writer, value);
                                 writer.WriteNewLine();
@@ -370,6 +365,10 @@ namespace Raven.Server.Documents
                                     break;
                             } while (_sendQueue.Count > 0 && sp.Elapsed < TimeSpan.FromSeconds(5));
                         }
+
+                        if (_disposeToken.IsCancellationRequested)
+                            break;
+
                         if (ms.Length == 0)
                         {
                             // ensure that we send _something_ over the network, to keep the 
@@ -422,7 +421,11 @@ namespace Raven.Server.Documents
         {
             Interlocked.Exchange(ref _isDisposed, 1);
             _disposeToken.Cancel();
-            _sendQueue.Dispose();
+            _sendQueue.Enqueue(new ChangeValue
+            {
+                AllowSkip = false,
+                ValueToSend = null
+            });
         }
 
         public void Confirm(int commandId)
