@@ -10,6 +10,7 @@ using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client;
 using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Documents;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient.Client.Indexing
 {

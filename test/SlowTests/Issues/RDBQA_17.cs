@@ -7,6 +7,7 @@
 using FastTests;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Operations.Databases.Transformers;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

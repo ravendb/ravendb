@@ -8,6 +8,7 @@ using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

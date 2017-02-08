@@ -11,6 +11,7 @@ using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy

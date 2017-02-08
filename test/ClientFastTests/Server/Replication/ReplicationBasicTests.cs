@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Linq;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient.Server.Replication
@@ -328,7 +329,7 @@ namespace NewClientTests.NewClient.Server.Replication
                     Assert.NotNull(user);
                 }
 
-                DeleteReplication(store1, store2);
+                SetupReplication(store1);
 
                 using (var session = store1.OpenSession())
                 {

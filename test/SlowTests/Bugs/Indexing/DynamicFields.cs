@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Lucene.Net.Documents;
 using Raven.NewClient.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing

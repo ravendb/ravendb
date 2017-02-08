@@ -6,6 +6,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Replication;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Replication

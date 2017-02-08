@@ -9,6 +9,7 @@ using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Core.Utils.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 using Camera = SlowTests.Core.Utils.Entities.Camera;

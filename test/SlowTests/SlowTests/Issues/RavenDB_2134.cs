@@ -12,6 +12,7 @@ using FastTests.Server.Basic.Entities;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Operations.Databases.Documents;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues

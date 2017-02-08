@@ -6,6 +6,7 @@ using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.SlowTests.Indexes

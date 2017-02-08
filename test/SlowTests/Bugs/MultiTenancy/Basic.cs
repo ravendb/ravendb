@@ -10,6 +10,7 @@ using FastTests;
 using System.Linq;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Operations.Databases;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy

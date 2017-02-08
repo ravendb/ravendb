@@ -10,6 +10,7 @@ using Raven.Client.Changes;
 using Raven.Client.Document;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Documents.Notifications

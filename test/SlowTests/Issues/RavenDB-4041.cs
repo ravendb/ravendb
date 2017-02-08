@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

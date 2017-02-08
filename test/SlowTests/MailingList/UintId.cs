@@ -10,6 +10,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Converters;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

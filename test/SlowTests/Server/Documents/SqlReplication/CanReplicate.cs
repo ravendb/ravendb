@@ -19,6 +19,7 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Document;
 using Raven.Server.Documents.SqlReplication;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.SqlReplication

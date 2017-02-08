@@ -6,6 +6,7 @@
 
 using FastTests;
 using Raven.Client;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

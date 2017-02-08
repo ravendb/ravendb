@@ -12,6 +12,7 @@ using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation.Cultures;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

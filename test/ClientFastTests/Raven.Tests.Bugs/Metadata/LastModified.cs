@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Abstractions.Data;
 using Raven.NewClient.Abstractions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata

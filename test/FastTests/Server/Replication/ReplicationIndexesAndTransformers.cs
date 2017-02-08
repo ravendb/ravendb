@@ -13,6 +13,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Replication

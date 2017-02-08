@@ -11,6 +11,7 @@ using Raven.NewClient.Client.Indexes;
 using Xunit;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Data;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient
 {

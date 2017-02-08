@@ -7,6 +7,7 @@ using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient
 {

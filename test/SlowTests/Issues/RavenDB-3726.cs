@@ -8,6 +8,7 @@ using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Raven.Client.Indexing;
 using Raven.Client.Shard;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

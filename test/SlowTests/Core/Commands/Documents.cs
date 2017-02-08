@@ -16,6 +16,7 @@ using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Extensions;
 using Raven.NewClient.Operations.Databases.Documents;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;

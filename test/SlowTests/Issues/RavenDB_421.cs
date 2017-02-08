@@ -8,6 +8,7 @@ using FastTests;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

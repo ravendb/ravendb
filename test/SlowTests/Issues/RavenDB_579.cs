@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

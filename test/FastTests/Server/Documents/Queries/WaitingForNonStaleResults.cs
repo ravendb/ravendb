@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries

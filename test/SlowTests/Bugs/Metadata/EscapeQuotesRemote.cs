@@ -8,6 +8,7 @@ using FastTests;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Operations.Databases;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Bugs.Metadata

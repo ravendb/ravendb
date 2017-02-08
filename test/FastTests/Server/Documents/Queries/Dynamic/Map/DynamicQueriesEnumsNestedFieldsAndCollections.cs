@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map

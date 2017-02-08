@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.NestedIndexing

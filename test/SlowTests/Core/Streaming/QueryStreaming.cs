@@ -7,7 +7,7 @@
 using FastTests;
 
 using SlowTests.Core.Utils.Indexes;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;

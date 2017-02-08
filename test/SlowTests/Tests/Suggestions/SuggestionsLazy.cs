@@ -11,6 +11,7 @@ using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Suggestions

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList.Everett

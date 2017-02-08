@@ -3,6 +3,7 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Issues

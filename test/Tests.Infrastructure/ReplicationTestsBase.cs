@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
+using FastTests;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
@@ -15,7 +16,7 @@ using Raven.NewClient.Client.Replication.Messages;
 using Sparrow.Json;
 using Xunit;
 
-namespace FastTests.Server.Replication
+namespace Tests.Infrastructure
 {
     public class ReplicationTestsBase : RavenNewTestBase
     {
@@ -290,7 +291,7 @@ namespace FastTests.Server.Replication
             return default(T);
         }
 
-        protected static void SetReplicationConflictResolution(DocumentStore store,
+        protected void SetReplicationConflictResolution(DocumentStore store,
             StraightforwardConflictResolution conflictResolution)
         {
             using (var session = store.OpenSession())
@@ -299,13 +300,14 @@ namespace FastTests.Server.Replication
                 session.Store(new ReplicationDocument
                 {
                     Destinations = destinations,
-                    DocumentConflictResolution = conflictResolution
+                    DocumentConflictResolution = conflictResolution,
+                    Source = GetDocumentDatabaseInstanceFor(this,store).Result.DbId.ToString()
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }
 
-        protected static void SetupReplication(DocumentStore fromStore, StraightforwardConflictResolution builtinConflictResolution = StraightforwardConflictResolution.None, params DocumentStore[] toStores)
+        protected void SetupReplication(DocumentStore fromStore, StraightforwardConflictResolution builtinConflictResolution = StraightforwardConflictResolution.None, params DocumentStore[] toStores)
         {
             using (var session = fromStore.OpenSession())
             {
@@ -320,6 +322,7 @@ namespace FastTests.Server.Replication
                         });
                 session.Store(new ReplicationDocument
                 {
+                    Source = GetDocumentDatabaseInstanceFor(this, fromStore).Result.DbId.ToString(),
                     Destinations = destinations,
                     DocumentConflictResolution = builtinConflictResolution
                 }, Constants.Replication.DocumentReplicationConfiguration);
@@ -327,7 +330,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected static void SetupReplication(DocumentStore fromStore, Dictionary<string,string> etlScripts, params DocumentStore[] toStores)
+        protected void SetupReplication(DocumentStore fromStore, Dictionary<string,string> etlScripts, params DocumentStore[] toStores)
         {
             using (var session = fromStore.OpenSession())
             {
@@ -342,6 +345,7 @@ namespace FastTests.Server.Replication
                         });
                 session.Store(new ReplicationDocument
                 {
+                    Source = GetDocumentDatabaseInstanceFor(this, fromStore).Result.DbId.ToString(),
                     Destinations = destinations
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
@@ -349,7 +353,7 @@ namespace FastTests.Server.Replication
         }
 
 
-        protected static void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
+        protected void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
             SetupReplication(fromStore, 
                 new ReplicationDocument
@@ -359,7 +363,7 @@ namespace FastTests.Server.Replication
                 toStores);
         }
 
-        protected static void SetupReplication(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
+        protected void SetupReplication(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
         {
             using (var session = fromStore.OpenSession())
             {
@@ -371,25 +375,87 @@ namespace FastTests.Server.Replication
                             Database = store.DefaultDatabase,
                             Url = store.Url,
                         });
-                
+                configOptions.Source = GetDocumentDatabaseInstanceFor(this, fromStore).Result.DbId.ToString();
                 configOptions.Destinations = destinations;
                 session.Store(configOptions, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }
 
-        protected static void SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationDestination[] toDestinations)
+        protected void SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationDestination[] toDestinations)
         {
             using (var session = fromStore.OpenSession())
             {
                 session.Store(new ReplicationDocument
                 {
+                    Source = GetDocumentDatabaseInstanceFor(this, fromStore).Result.DbId.ToString(),
                     Destinations = toDestinations.ToList()
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }
 
+        /// <summary>
+        /// Enable or Disable one destination from the store (Enable by default)
+        /// </summary>
+        /// <param name="fromStore">The store to remove destination</param>
+        /// <param name="enabledOrDisabledStoreDestination">The store that going to remove from the fromStore</param>
+        /// <param name="disable">If disable is true then we disable the destination enable if true</param>
+        protected void EnableOrDisableReplication(DocumentStore fromStore, DocumentStore enabledOrDisabledStoreDestination, bool disable = false)
+        {
+            ReplicationDocument replicationConfigDocument;
+
+            using (var session = fromStore.OpenSession())
+            {
+                replicationConfigDocument =
+                    session.Load<ReplicationDocument>(Constants.Replication.DocumentReplicationConfiguration);
+
+                if (replicationConfigDocument == null)
+                    return;
+
+                session.Delete(replicationConfigDocument);
+                session.SaveChanges();
+            }
+
+            using (var session = fromStore.OpenSession())
+            {
+                foreach (var destination in replicationConfigDocument.Destinations)
+                {
+                    if (destination.Database.Equals(enabledOrDisabledStoreDestination.DefaultDatabase))
+                        destination.Disabled = disable;
+                }
+
+                session.Store(replicationConfigDocument);
+                session.SaveChanges();
+            }
+        }
+
+        protected void DeleteReplication(DocumentStore fromStore, DocumentStore deletedStoreDestination)
+        {
+            ReplicationDocument replicationConfigDocument;
+
+            using (var session = fromStore.OpenSession())
+            {
+                replicationConfigDocument =
+                    session.Load<ReplicationDocument>(Constants.Replication.DocumentReplicationConfiguration);
+
+                if (replicationConfigDocument == null)
+                    return;
+
+                session.Delete(replicationConfigDocument);
+                session.SaveChanges();
+            }
+
+            using (var session = fromStore.OpenSession())
+            {
+
+                replicationConfigDocument.Destinations.RemoveAll(
+                    x => x.Database == deletedStoreDestination.DefaultDatabase);
+
+                session.Store(replicationConfigDocument);
+                session.SaveChanges();
+            }
+        }
 
         private class GetConncectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>
         {

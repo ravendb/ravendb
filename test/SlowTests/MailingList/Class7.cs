@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

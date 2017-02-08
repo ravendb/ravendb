@@ -10,6 +10,7 @@ using Raven.NewClient.Client.Exceptions.Compilation;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

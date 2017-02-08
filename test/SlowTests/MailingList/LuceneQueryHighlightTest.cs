@@ -4,6 +4,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using SlowTests.Utils.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

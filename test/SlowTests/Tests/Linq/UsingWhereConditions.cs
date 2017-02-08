@@ -11,6 +11,7 @@ using Raven.NewClient.Abstractions;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 /*

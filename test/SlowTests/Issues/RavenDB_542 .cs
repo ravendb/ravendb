@@ -5,6 +5,7 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Operations.Databases.Documents;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

@@ -14,6 +14,7 @@ using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.NewClient.Client.Document;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient
 {

@@ -3,6 +3,7 @@ using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Issues

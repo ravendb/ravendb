@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 
 namespace FastTests.Issues
 {

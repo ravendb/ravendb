@@ -6,6 +6,8 @@ using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 using Raven.NewClient.Client.Linq;
+using Tests.Infrastructure;
+
 namespace NewClientTests.NewClient.ResultsTransformer
 {
     public class StronglyTypedResultsTransformer : RavenNewTestBase

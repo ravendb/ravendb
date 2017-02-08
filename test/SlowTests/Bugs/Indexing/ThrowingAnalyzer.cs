@@ -15,6 +15,7 @@ using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {

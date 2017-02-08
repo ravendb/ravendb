@@ -2,6 +2,7 @@ using System.Linq;
 using FastTests;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Bugs.Errors

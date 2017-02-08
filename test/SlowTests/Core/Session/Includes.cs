@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using Address = SlowTests.Core.Utils.Entities.Address;

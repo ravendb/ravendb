@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.NewClient.Client.Indexes;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes

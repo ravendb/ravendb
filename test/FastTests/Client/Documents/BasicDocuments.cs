@@ -6,6 +6,7 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Client.Documents

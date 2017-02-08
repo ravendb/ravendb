@@ -15,6 +15,7 @@ using Raven.NewClient.Client;
 using Raven.NewClient.Client.Smuggler;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

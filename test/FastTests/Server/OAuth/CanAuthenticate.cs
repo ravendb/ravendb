@@ -14,6 +14,7 @@ using Raven.NewClient.Client.Exceptions.Security;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Operations.Databases.ApiKeys;
 using Raven.Server.Config.Attributes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.OAuth

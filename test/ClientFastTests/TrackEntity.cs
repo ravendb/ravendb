@@ -3,6 +3,7 @@ using FastTests;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Exceptions.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient

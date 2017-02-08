@@ -5,6 +5,7 @@ using FastTests;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Commands;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;

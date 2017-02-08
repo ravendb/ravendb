@@ -7,6 +7,7 @@ using Raven.NewClient.Client.Indexes;
 using Xunit;
 using Raven.NewClient.Client.Commands;
 using Sparrow.Json;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient.FastTests.BulkInsert
 {

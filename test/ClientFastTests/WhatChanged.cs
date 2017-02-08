@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.NewClient.Abstractions.Data;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient

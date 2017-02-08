@@ -7,6 +7,7 @@
 using System;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

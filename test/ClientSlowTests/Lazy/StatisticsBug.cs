@@ -4,6 +4,7 @@ using FastTests;
 using Xunit;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient
 {

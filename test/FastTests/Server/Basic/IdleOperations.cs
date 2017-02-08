@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Operations.Databases;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Basic

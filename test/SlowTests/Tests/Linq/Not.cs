@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 using System.Linq;
+using Tests.Infrastructure;
 
 namespace SlowTests.Tests.Linq
 {

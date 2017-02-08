@@ -12,7 +12,7 @@ using FastTests;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Exceptions.Session;
 using SlowTests.Core.Utils.Transformers;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using Address = SlowTests.Core.Utils.Entities.Address;

@@ -10,6 +10,7 @@ using System.Linq;
 using FastTests;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

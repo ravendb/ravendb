@@ -4,6 +4,7 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions.Patching;
 using Raven.NewClient.Operations.Databases.Documents;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Core.ScriptedPatching

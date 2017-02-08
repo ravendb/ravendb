@@ -2,6 +2,7 @@
 using FastTests.Server.Basic.Entities;
 using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Documents;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Basic

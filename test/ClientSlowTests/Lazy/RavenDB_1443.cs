@@ -9,6 +9,7 @@ using Raven.NewClient.Client.Indexes;
 using Xunit;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient
 {

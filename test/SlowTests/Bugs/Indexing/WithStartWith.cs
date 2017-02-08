@@ -3,6 +3,7 @@ using Xunit;
 using System.Linq;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {

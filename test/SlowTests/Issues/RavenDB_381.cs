@@ -6,6 +6,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.NewClient.Abstractions.Util;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

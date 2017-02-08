@@ -3,6 +3,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using FastTests.Server.Basic.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

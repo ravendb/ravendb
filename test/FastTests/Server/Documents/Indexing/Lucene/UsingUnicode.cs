@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.NewClient.Client;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Lucene

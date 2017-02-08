@@ -9,6 +9,7 @@ using System.Linq;
 
 using FastTests;
 using Newtonsoft.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Queries

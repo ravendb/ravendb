@@ -1,5 +1,6 @@
 using System.Dynamic;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Bugs.Async

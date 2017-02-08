@@ -6,6 +6,7 @@ using FastTests;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.MultiGet

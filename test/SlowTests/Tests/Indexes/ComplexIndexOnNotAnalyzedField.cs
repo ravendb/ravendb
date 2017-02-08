@@ -14,6 +14,7 @@ using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes

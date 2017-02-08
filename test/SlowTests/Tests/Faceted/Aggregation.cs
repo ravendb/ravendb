@@ -13,6 +13,7 @@ using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
 using SlowTests.Core.Utils.Entities.Faceted;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted

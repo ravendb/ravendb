@@ -6,6 +6,7 @@ using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient

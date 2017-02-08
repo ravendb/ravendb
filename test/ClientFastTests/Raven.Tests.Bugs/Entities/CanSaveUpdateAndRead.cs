@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Entities

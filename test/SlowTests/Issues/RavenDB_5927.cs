@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

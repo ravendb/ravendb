@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Replication;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Replication

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Bugs.Metadata

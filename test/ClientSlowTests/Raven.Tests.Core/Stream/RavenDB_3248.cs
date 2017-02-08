@@ -14,6 +14,7 @@ using FastTests;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Sparrow.Json;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 {

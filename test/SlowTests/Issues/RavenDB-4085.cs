@@ -13,6 +13,7 @@ using Raven.Client.Linq;
 using Raven.Client.Smuggler;
 using Raven.Json.Linq;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

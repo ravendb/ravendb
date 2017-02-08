@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using FastTests;
 using NewClientTests;
 using Raven.NewClient.Client.Exceptions;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;

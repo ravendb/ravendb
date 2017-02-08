@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Json.Linq;
+using FastTests;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Commands;
@@ -16,16 +16,14 @@ using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Web.System;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace FastTests
+namespace Tests.Infrastructure
 {
     public class RavenNewTestBase : TestBase
     {
@@ -36,6 +34,11 @@ namespace FastTests
         protected Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(DocumentStore store)
         {
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+        }
+
+        protected static Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(RavenNewTestBase testBase, DocumentStore store)
+        {
+            return testBase.Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
         }
 
         protected virtual DocumentStore GetDocumentStore(

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Operations.Databases.ApiKeys;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Client.Queries

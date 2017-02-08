@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Raven.NewClient.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Client.Queries

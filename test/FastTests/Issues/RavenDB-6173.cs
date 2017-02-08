@@ -5,6 +5,7 @@ using FastTests.Server.Replication;
 using Raven.Abstractions.Replication;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Replication.Messages;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Issues

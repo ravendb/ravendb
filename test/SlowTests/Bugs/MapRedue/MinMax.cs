@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Bugs.MapRedue

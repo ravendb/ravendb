@@ -12,6 +12,7 @@ using Raven.NewClient.Client;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted

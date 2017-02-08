@@ -9,6 +9,7 @@ using Xunit;
 using System;
 using SlowTests.Core.Utils.Entities;
 using Raven.NewClient.Client;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient
 {

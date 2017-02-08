@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient

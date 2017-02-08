@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.NewClient.Abstractions.Data;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 {

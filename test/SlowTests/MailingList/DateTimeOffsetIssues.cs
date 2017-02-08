@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Json.Linq;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

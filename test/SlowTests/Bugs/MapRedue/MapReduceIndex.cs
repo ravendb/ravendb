@@ -10,6 +10,7 @@ using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
 using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Documents;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Bugs.MapRedue

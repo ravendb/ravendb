@@ -5,6 +5,7 @@ using Raven.NewClient.Client.Data.Commands;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Exceptions;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;

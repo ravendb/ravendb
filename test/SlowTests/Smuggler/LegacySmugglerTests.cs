@@ -6,6 +6,7 @@ using Raven.NewClient.Client.Operations.Databases.Collections;
 using Raven.NewClient.Client.Smuggler;
 using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Smuggler

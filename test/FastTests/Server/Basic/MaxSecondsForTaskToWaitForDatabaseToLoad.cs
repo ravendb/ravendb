@@ -2,6 +2,7 @@
 using System.Threading;
 using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Config.Settings;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Basic

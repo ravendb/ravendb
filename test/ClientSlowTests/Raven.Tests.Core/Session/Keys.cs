@@ -3,6 +3,7 @@ using FastTests;
 using NewClientTests;
 using Raven.NewClient.Abstractions.Util;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Imports.Newtonsoft.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

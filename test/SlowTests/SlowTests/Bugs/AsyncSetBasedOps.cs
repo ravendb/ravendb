@@ -12,6 +12,7 @@ using Raven.NewClient.Client;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Operations.Databases.Documents;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs

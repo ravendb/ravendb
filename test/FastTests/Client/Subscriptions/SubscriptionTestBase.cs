@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.NewClient.Client.Document;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Subscriptions
 {

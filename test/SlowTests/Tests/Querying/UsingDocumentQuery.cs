@@ -10,6 +10,7 @@ using System.Linq;
 using FastTests;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Document;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Querying

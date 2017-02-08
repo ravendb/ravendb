@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

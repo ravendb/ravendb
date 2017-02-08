@@ -12,6 +12,7 @@ using Raven.NewClient.Client.Replication;
 using Raven.NewClient.Operations.Databases.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Replication;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Replication

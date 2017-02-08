@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -18,7 +17,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 
-namespace FastTests
+namespace Tests.Infrastructure
 {
     public abstract class TestBase : LinuxRaceConditionWorkAround, IDisposable
     {

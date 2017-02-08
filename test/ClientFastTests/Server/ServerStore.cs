@@ -8,6 +8,7 @@ using Raven.NewClient.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient.Server.Basic

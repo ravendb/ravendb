@@ -4,6 +4,7 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Linq;
 using Raven.NewClient.Operations.Databases.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

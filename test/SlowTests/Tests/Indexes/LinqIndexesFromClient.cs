@@ -21,6 +21,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes

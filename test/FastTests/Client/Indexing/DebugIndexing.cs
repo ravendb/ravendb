@@ -14,7 +14,7 @@ using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.ServerWide;
 
 using Sparrow;
-
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Client.Indexing

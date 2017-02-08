@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Imports.Newtonsoft.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

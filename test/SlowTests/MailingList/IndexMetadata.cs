@@ -4,6 +4,7 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

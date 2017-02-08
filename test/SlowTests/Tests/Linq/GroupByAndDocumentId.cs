@@ -11,6 +11,7 @@ using FastTests;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 
 namespace SlowTests.Tests.Linq
 {

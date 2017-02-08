@@ -11,6 +11,7 @@ using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Collections;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {

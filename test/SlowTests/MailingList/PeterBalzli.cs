@@ -12,6 +12,7 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

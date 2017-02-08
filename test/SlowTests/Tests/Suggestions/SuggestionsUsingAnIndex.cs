@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.NewClient.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Suggestions

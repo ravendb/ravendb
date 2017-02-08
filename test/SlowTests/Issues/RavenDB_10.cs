@@ -6,6 +6,7 @@ using FastTests;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {

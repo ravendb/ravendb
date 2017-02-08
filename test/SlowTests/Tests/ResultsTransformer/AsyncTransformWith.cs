@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.ResultsTransformer

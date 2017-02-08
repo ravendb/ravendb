@@ -1,4 +1,5 @@
 ﻿using System;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Replication

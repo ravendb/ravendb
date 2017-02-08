@@ -9,6 +9,7 @@ using Xunit;
 using System.Linq;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {

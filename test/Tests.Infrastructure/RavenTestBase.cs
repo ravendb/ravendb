@@ -19,7 +19,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 
-namespace FastTests
+namespace Tests.Infrastructure
 {
     public class RavenTestBase : TestBase
     {

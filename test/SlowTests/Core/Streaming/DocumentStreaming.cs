@@ -6,7 +6,7 @@
 
 using System.Collections.Generic;
 using FastTests;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;

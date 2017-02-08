@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Linq;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

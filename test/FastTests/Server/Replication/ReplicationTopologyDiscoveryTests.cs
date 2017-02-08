@@ -7,6 +7,7 @@ using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Replication;
 using Raven.NewClient.Client.Replication.Messages;
 using Raven.Server.Config.Settings;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Replication

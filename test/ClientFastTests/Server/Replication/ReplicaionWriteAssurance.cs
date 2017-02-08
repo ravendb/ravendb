@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient.Server.Replication

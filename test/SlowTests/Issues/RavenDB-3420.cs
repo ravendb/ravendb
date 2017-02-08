@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

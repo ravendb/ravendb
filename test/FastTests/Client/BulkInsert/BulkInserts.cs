@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Client.BulkInsert

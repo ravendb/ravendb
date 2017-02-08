@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs

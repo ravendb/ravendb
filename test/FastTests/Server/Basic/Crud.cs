@@ -4,6 +4,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Basic

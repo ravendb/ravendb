@@ -17,6 +17,7 @@ using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Core.Utils.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;

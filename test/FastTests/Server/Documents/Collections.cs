@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Operations.Databases.Collections;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Documents

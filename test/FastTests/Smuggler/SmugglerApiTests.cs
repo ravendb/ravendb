@@ -12,6 +12,7 @@ using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Smuggler;
 using Raven.NewClient.Operations.Databases;
 using Raven.Server.Documents.Expiration;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Smuggler

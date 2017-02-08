@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Tests.Infrastructure;
+using Xunit;
 
 namespace FastTests.Issues
 {

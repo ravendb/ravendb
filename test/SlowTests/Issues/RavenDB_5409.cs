@@ -6,6 +6,7 @@ using FastTests.Server.Basic.Entities;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Operations.Databases;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

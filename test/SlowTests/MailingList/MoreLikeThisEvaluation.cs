@@ -8,6 +8,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

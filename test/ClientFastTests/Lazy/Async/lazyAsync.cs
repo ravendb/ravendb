@@ -7,6 +7,7 @@ using Raven.NewClient.Abstractions.Indexing;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.NewClient.Client.Indexes;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient
 {

@@ -14,6 +14,7 @@ using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.MailingList

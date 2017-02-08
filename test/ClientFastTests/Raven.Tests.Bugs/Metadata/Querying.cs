@@ -2,6 +2,7 @@
 using Xunit;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
 {

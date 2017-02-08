@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Document;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Client.Documents

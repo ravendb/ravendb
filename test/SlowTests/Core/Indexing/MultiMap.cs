@@ -3,7 +3,7 @@ using System.Linq;
 using FastTests;
 
 using SlowTests.Core.Utils.Indexes;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;

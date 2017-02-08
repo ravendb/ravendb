@@ -6,6 +6,7 @@
 
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata

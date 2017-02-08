@@ -5,6 +5,7 @@ using FastTests.Server.Documents.Notifications;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Operations.Databases;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests

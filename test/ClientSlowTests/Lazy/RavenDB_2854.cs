@@ -12,6 +12,7 @@ using SlowTests.Core.Utils.Entities;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document.Async;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient
 {

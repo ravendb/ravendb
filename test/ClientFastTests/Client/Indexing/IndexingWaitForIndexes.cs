@@ -6,6 +6,7 @@ using NewClientTests.NewClient.Subscriptions;
 using Raven.Client.Data.Indexes;
 using Raven.NewClient.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient.Client.Indexing

@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Data;
 using Raven.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 // ReSharper disable MemberCanBePrivate.Local

@@ -12,6 +12,7 @@ using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Documents;
 using Raven.NewClient.Operations.Databases.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Documents.Patching

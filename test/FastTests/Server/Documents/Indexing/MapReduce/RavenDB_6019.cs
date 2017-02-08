@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Raven.NewClient.Client.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce

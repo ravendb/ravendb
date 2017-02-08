@@ -8,6 +8,7 @@ using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Exceptions.Session;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Transformers;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Session

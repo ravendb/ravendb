@@ -12,6 +12,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 using System.Linq;
 using Raven.Client.Linq;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {

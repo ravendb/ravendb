@@ -16,6 +16,7 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Linq.Indexing;
 using Raven.NewClient.Operations.Databases.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 {

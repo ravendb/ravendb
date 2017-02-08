@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Versioning;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Basic

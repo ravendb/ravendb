@@ -2,7 +2,7 @@ using FastTests;
 using Raven.NewClient.Client.Data.Queries;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using Address = SlowTests.Core.Utils.Entities.Address;

@@ -5,6 +5,7 @@ using FastTests;
 using FastTests.Subscriptions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient.Subscriptions

@@ -8,6 +8,7 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using SlowTests.Utils.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 using Enumerable = System.Linq.Enumerable;
 

@@ -6,6 +6,7 @@ using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Document;
 using Sparrow.Json;
+using Tests.Infrastructure;
 
 namespace FastTests.Client
 {

@@ -12,6 +12,7 @@ using FastTests;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient
 {

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using FastTests.Server.Basic.Entities;
 using Raven.NewClient.Client.Replication;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Replication

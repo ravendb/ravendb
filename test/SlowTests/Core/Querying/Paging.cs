@@ -8,6 +8,7 @@ using System.Linq;
 
 using FastTests;
 using Raven.NewClient.Client;
+using Tests.Infrastructure;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;

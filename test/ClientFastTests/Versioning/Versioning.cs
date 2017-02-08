@@ -10,6 +10,7 @@ using Raven.Tests.Core.Utils.Entities;
 using System.Linq;
 using FastTests;
 using Raven.NewClient.Client.Exceptions.Versioning;
+using Tests.Infrastructure;
 
 namespace NewClientTests.NewClient.FastTests.Versioning
 {

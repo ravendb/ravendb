@@ -1,5 +1,6 @@
 ﻿using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries.Parse;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Basic

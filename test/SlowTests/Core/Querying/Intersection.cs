@@ -4,7 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.NewClient.Client;
 using SlowTests.Core.Utils.Indexes;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using TShirt = SlowTests.Core.Utils.Entities.TShirt;

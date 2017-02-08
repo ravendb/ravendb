@@ -5,6 +5,7 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace NewClientTests.NewClient.FastTests.Patching

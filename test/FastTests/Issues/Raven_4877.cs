@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Issues
