@@ -149,6 +149,12 @@ namespace Voron
             IoMetrics = new IoMetrics(256, 256);
 
             _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(tempPath);
+
+            var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitPager");
+
+            bool result;
+            if (bool.TryParse(shouldForceEnvVar, out result))
+                ForceUsing32BitPager = result;
         }
 
 
