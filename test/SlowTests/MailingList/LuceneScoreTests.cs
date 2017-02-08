@@ -6,15 +6,15 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
 using Raven.Client.Exceptions;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LuceneScoreTests : RavenTestBase
+    public class LuceneScoreTests : RavenNewTestBase
     {
         private class Book
         {
@@ -110,7 +110,7 @@ namespace SlowTests.MailingList
                         session.Advanced.DocumentQuery<Book, BooksSearch>().Where("Text: wire each time").WaitForNonStaleResultsAsOfNow().
                             ToList();
                     var scores = from result in results
-                                 select session.Advanced.GetMetadataFor(result).Value<string>(Constants.Metadata.IndexScore);
+                                 select session.Advanced.GetMetadataFor(result)[Constants.Metadata.IndexScore];
                     Assert.False(string.IsNullOrWhiteSpace(scores.First()));
                 }
             }

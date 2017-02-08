@@ -6,12 +6,12 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformersAndEtags : RavenTestBase
+    public class TransformersAndEtags : RavenNewTestBase
     {
         private class Company
         {
@@ -62,7 +62,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    session.Load<Company>(1).Name = "C";
+                    session.Load<Company>("companies/1").Name = "C";
                     session.SaveChanges();
                 }
 

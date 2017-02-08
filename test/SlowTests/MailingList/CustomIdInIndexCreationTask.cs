@@ -6,13 +6,14 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CustomIdInIndexCreationTask : RavenTestBase
+    public class CustomIdInIndexCreationTask : RavenNewTestBase
     {
         private class Task
         {
@@ -64,7 +65,7 @@ namespace SlowTests.MailingList
                 store.Conventions.FindIdentityProperty = info => info.Name == "id";
                 new Task_Index().Execute(store);
 
-                var indexDefinition = store.DatabaseCommands.GetIndex("Task/Index");
+                var indexDefinition = store.Admin.Send(new GetIndexOperation("Task/Index"));
                 Assert.Contains("__document_id", indexDefinition.Maps.First());
             }
         }

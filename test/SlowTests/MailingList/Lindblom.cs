@@ -6,12 +6,12 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Lindblom : RavenTestBase
+    public class Lindblom : RavenNewTestBase
     {
         [Fact]
         public void Test()

@@ -1,21 +1,24 @@
 using FastTests;
-using Raven.Client.Data;
+using Raven.NewClient.Client.Data;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WildCardQuery : RavenTestBase
+    public class WildCardQuery : RavenNewTestBase
     {
-         [Fact]
-         public void CanQuery()
-         {
-             using(var store = GetDocumentStore())
-             {
-                 store.DatabaseCommands.Query("dynamic", new IndexQuery(store.Conventions)
-                 {
-                     Query = "PortalId:0 AND Query:(*) QueryBoosted:(*)"
-                 });
-             }
-         }
+        [Fact]
+        public void CanQuery()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var commands = store.Commands())
+                {
+                    commands.Query("dynamic", new IndexQuery(store.Conventions)
+                    {
+                        Query = "PortalId:0 AND Query:(*) QueryBoosted:(*)"
+                    });
+                }
+            }
+        }
     }
 }

@@ -2,12 +2,12 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class MultiMapIndexWithDynamicFieldsTests : RavenTestBase
+    public class MultiMapIndexWithDynamicFieldsTests : RavenNewTestBase
     {
         [Fact]
         public void CanSortDynamically()

@@ -3,7 +3,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Kwoodard : RavenTestBase
+    public class Kwoodard : RavenNewTestBase
     {
         [Fact]
         public void CanSetUseOptimisticConcurrencyGlobally()

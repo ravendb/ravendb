@@ -2,12 +2,13 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IndexWithWhere : RavenTestBase
+    public class IndexWithWhere : RavenNewTestBase
     {
         private class Document
         {
@@ -47,7 +48,7 @@ namespace SlowTests.MailingList
                 store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new Index_ByDescriptionAndTitle().Execute(store);
 
-                var indexDefinition = store.DatabaseCommands.GetIndex("Index/ByDescriptionAndTitle");
+                var indexDefinition = store.Admin.Send(new GetIndexOperation("Index/ByDescriptionAndTitle"));
                 Assert.Equal(@"docs.Documents.Where(doc => doc.Title == ""dfsdfsfd"").Select(doc => new {
     Description = doc.Description,
     Title = doc.Title
@@ -63,7 +64,7 @@ namespace SlowTests.MailingList
                 store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new Index_ByDescriptionAndTitle2().Execute(store);
 
-                var indexDefinition = store.DatabaseCommands.GetIndex("Index/ByDescriptionAndTitle2");
+                var indexDefinition = store.Admin.Send(new GetIndexOperation("Index/ByDescriptionAndTitle2"));
                 Assert.Equal(@"docs.Documents.Where(doc => doc.IsDeleted == false).Select(doc => new {
     Description = doc.Description,
     Title = doc.Title

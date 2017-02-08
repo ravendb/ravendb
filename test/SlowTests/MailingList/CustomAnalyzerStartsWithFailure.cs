@@ -3,14 +3,15 @@ using System.Threading.Tasks;
 using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CustomAnalyzerStartsWithFailure : RavenTestBase
+    public class CustomAnalyzerStartsWithFailure : RavenNewTestBase
     {
         public void Fill(IDocumentStore store)
         {
@@ -54,7 +55,6 @@ namespace SlowTests.MailingList
                 Fill(store);
                 using (IDocumentSession session = store.OpenSession())
                 {
-                    WaitForUserToContinueTheTest(store);
                     // Test 2
                     // Using ".StartsWith("Rogério")" is expected to bring same result from test1, but fails
                     var results2 = session.Query<Customer, CustomerByName>()

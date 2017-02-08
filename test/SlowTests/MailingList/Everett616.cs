@@ -1,23 +1,25 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Indexing;
 using Raven.Json.Linq;
+using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Everett616 : RavenTestBase
+    public class Everett616 : RavenNewTestBase
     {
         [Fact]
         public void CanIndexWithNoErrors_DatetimeOffset()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("test/1", null,
-                                           RavenJObject.Parse(
-                                            @"{
+                using (var commands = store.Commands())
+                {
+                    var json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 90,
@@ -31,15 +33,11 @@ namespace SlowTests.MailingList
   'LastSavedDate': '2011-12-12T08:47:44.1643945-05:00',
   'LastSavedUser': 'NLWEB$/NETLABELS (NLWEB)',
   'SourceId': '00000000-0000-0000-0000-000000000000'
-}"),
-                                           new RavenJObject
-                                           {
-                                            {Constants.Metadata.Collection, "ClickAllocations"}
-                                           });
+}");
 
-                store.DatabaseCommands.Put("test/2", null,
-                                       RavenJObject.Parse(
-                                        @"{
+                    commands.Put("test/1", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "ClickAllocations" } });
+
+                    json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 20,
@@ -53,14 +51,12 @@ namespace SlowTests.MailingList
   'LastSavedDate': '2012-02-28T16:05:19.3609910',
   'LastSavedUser': 'NLWEB$/NETLABELS (NLWEB)',
   'SourceId': '00000000-0000-0000-0000-000000000000'
-}"),
-                                       new RavenJObject
-                                           {
-                                            {Constants.Metadata.Collection, "ClickAllocations"}
-                                           });
+}");
 
+                    commands.Put("test/2", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "ClickAllocations" } });
+                }
 
-                store.DatabaseCommands.PutIndex("test",
+                store.Admin.Send(new PutIndexOperation("test",
                                                 new IndexDefinition
                                                 {
                                                     Maps = {
@@ -72,7 +68,7 @@ namespace SlowTests.MailingList
     .GroupBy(result => result.AccountId)
     .Select(a => new {a = a, clickAllocation = a.OrderByDescending(x => x.Date).FirstOrDefault()})
     .Select(__h__TransparentIdentifier0 => new {AccountId = __h__TransparentIdentifier0.clickAllocation.AccountId, Date = __h__TransparentIdentifier0.clickAllocation.Date, Id = __h__TransparentIdentifier0.clickAllocation.Id, Key = __h__TransparentIdentifier0.clickAllocation.Key, LastSavedDate = __h__TransparentIdentifier0.clickAllocation.LastSavedDate, LastSavedUser = __h__TransparentIdentifier0.clickAllocation.LastSavedUser, OrderNumber = __h__TransparentIdentifier0.clickAllocation.OrderNumber, PurchaseDate = __h__TransparentIdentifier0.clickAllocation.PurchaseDate, PurchaseOrderNumber = __h__TransparentIdentifier0.clickAllocation.PurchaseOrderNumber, Quantity = __h__TransparentIdentifier0.clickAllocation.Quantity, ReorderQuantity = __h__TransparentIdentifier0.clickAllocation.ReorderQuantity, Type = __h__TransparentIdentifier0.clickAllocation.Type})"
-                                                });
+                                                }));
 
                 WaitForIndexing(store);
                 TestHelper.AssertNoIndexErrors(store);
@@ -84,9 +80,9 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("test/1", null,
-                                           RavenJObject.Parse(
-                                            @"{
+                using (var commands = store.Commands())
+                {
+                    var json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 90,
@@ -100,15 +96,11 @@ namespace SlowTests.MailingList
   'LastSavedDate': '2011-12-12T08:47:44.1643945-05:00',
   'LastSavedUser': 'NLWEB$/NETLABELS (NLWEB)',
   'SourceId': '00000000-0000-0000-0000-000000000000'
-}"),
-                                           new RavenJObject
-                                           {
-                                            {Constants.Metadata.Collection, "ClickAllocations"}
-                                           });
+}");
 
-                store.DatabaseCommands.Put("test/2", null,
-                                       RavenJObject.Parse(
-                                        @"{
+                    commands.Put("test/1", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "ClickAllocations" } });
+
+                    json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 20,
@@ -122,14 +114,12 @@ namespace SlowTests.MailingList
   'LastSavedDate': '2012-02-28T16:05:19.3609910',
   'LastSavedUser': 'NLWEB$/NETLABELS (NLWEB)',
   'SourceId': '00000000-0000-0000-0000-000000000000'
-}"),
-                                       new RavenJObject
-                                           {
-                                            {Constants.Metadata.Collection, "ClickAllocations"}
-                                           });
+}");
 
+                    commands.Put("test/2", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "ClickAllocations" } });
+                }
 
-                store.DatabaseCommands.PutIndex("test",
+                store.Admin.Send(new PutIndexOperation("test",
                                                 new IndexDefinition
                                                 {
                                                     Maps = {
@@ -141,7 +131,7 @@ namespace SlowTests.MailingList
     .GroupBy(result => result.AccountId)
     .Select(a => new {a = a, clickAllocation = a.OrderByDescending(x => x.Date).FirstOrDefault()})
     .Select(__h__TransparentIdentifier0 => new {AccountId = __h__TransparentIdentifier0.clickAllocation.AccountId, Date = __h__TransparentIdentifier0.clickAllocation.Date, Id = __h__TransparentIdentifier0.clickAllocation.Id, Key = __h__TransparentIdentifier0.clickAllocation.Key, LastSavedDate = __h__TransparentIdentifier0.clickAllocation.LastSavedDate, LastSavedUser = __h__TransparentIdentifier0.clickAllocation.LastSavedUser, OrderNumber = __h__TransparentIdentifier0.clickAllocation.OrderNumber, PurchaseDate = __h__TransparentIdentifier0.clickAllocation.PurchaseDate, PurchaseOrderNumber = __h__TransparentIdentifier0.clickAllocation.PurchaseOrderNumber, Quantity = __h__TransparentIdentifier0.clickAllocation.Quantity, ReorderQuantity = __h__TransparentIdentifier0.clickAllocation.ReorderQuantity, Type = __h__TransparentIdentifier0.clickAllocation.Type})"
-                                                });
+                                                }));
 
                 WaitForIndexing(store);
                 TestHelper.AssertNoIndexErrors(store);

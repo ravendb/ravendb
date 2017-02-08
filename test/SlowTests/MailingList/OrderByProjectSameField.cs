@@ -11,14 +11,15 @@ using System.Diagnostics;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class OrderByProjectSameField : RavenTestBase
+    public class OrderByProjectSameField : RavenNewTestBase
     {
         private class CategoryIndex : AbstractMultiMapIndexCreationTask<CategoryIndexResult>
         {

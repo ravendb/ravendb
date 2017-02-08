@@ -9,14 +9,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ZNS2 : RavenTestBase
+    public class ZNS2 : RavenNewTestBase
     {
         private class TestItem
         {
@@ -51,7 +52,7 @@ namespace SlowTests.MailingList
             {
                 //Create an index
                 store.Initialize();
-                store.DatabaseCommands.PutIndex("TestItemsIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("TestItemsIndex", new IndexDefinition
                 {
                     Name = "TestItemsIndex",
                     Maps = { @"from item in docs.TestItems
@@ -61,7 +62,7 @@ namespace SlowTests.MailingList
                     {
                         { "EventDate", new IndexFieldOptions { Storage = FieldStorage.No }}
                     }
-                }, true);
+                }));
 
                 //Insert some events at random dates
                 var size = 50;

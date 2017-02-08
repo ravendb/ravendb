@@ -7,12 +7,12 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RacielRod : RavenTestBase
+    public class RacielRod : RavenNewTestBase
     {
         private class Activity
         {

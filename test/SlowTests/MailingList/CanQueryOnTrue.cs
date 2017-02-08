@@ -8,12 +8,12 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanQueryOnTrue : RavenTestBase
+    public class CanQueryOnTrue : RavenNewTestBase
     {
         private class Item
         {

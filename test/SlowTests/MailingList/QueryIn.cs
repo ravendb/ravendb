@@ -7,14 +7,15 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Client.Linq;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class QueryIn : RavenTestBase
+    public class QueryIn : RavenNewTestBase
     {
         [Fact]
         public void ShouldWork()
@@ -37,7 +38,7 @@ namespace SlowTests.MailingList
                     }
                 }
 
-                store.DatabaseCommands.PutIndex("TestIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("TestIndex", new IndexDefinition
                 {
                     Maps = {
                         @"docs.MyEntities.Select(entity => new {
@@ -49,20 +50,20 @@ namespace SlowTests.MailingList
                     {
                         { "Text", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
                     }
-                });
-
-                WaitForUserToContinueTheTest(store);
+                }));
 
                 using (var session = store.OpenSession())
                 {
                     Assert.NotEmpty(session
                                         .Query<MyEntity>("TestIndex")
                                         .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
-                                        .Where(x => x.ImageId.In(new[] { 67, 66, 78, 99, 700, 6 })));
+                                        .Where(x => x.ImageId.In(new[] { 67, 66, 78, 99, 700, 6 }))
+                                        .Take(1024));
                     Assert.NotEmpty(session
                                             .Query<MyEntity>("TestIndex")
                                             .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
-                                            .Where(x => x.ImageId.In(new[] { 67, 23, 66, 78, 99, 700, 6 })));
+                                            .Where(x => x.ImageId.In(new[] { 67, 23, 66, 78, 99, 700, 6 }))
+                                            .Take(1024));
                 }
             }
         }

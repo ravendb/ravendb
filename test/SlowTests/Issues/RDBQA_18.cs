@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.Client.Document;
+using Raven.NewClient.Client.Document;
 using Xunit;
 
 namespace SlowTests.Issues

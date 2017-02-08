@@ -1,15 +1,15 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Nick : RavenTestBase
+    public class Nick : RavenNewTestBase
     {
         [Flags]
         private enum MyEnum
@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<MyIndex.Result, MyIndex>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.IsSecond)
                         .As<Entity>()
                         .ToList();

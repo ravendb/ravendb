@@ -6,12 +6,12 @@
 
 using FastTests;
 using Xunit;
-using Raven.Client;
+using Raven.NewClient.Client;
 using System.Linq;
 
 namespace SlowTests.MailingList
 {
-    public class Vicente : RavenTestBase
+    public class Vicente : RavenNewTestBase
     {
         public const string query =
             @"CTOTurning a dream into a web :)

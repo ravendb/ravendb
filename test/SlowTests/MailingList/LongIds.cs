@@ -7,12 +7,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LongIds : RavenTestBase
+    public class LongIds : RavenNewTestBase
     {
         [Fact]
         public void Embedded()

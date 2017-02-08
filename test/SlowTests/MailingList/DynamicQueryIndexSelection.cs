@@ -1,14 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Client.Linq;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DynamicQueryIndexSelection : RavenTestBase
+    public class DynamicQueryIndexSelection : RavenNewTestBase
     {
         [Fact]
         public void DynamicQueryWillChooseStaticIndex()
@@ -68,7 +69,7 @@ namespace SlowTests.MailingList
 
                     session.SaveChanges();
 
-                    store.DatabaseCommands.PutIndex("Foos/TestDynamicQueries", new IndexDefinition()
+                    store.Admin.Send(new PutIndexOperation("Foos/TestDynamicQueries", new IndexDefinition()
                     {
                         Maps =
                         {
@@ -84,7 +85,7 @@ namespace SlowTests.MailingList
                                     Bar = doc.Bar
                                 }"
                         }
-                    }, true);
+                    }));
 
                     RavenQueryStatistics stats;
 

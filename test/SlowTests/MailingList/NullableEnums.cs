@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class NullableEnums : RavenTestBase
+    public class NullableEnums : RavenNewTestBase
     {
         #region MonitorCategory enum
 

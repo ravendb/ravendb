@@ -2,14 +2,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey
 {
-    public class spokeypokey : RavenTestBase
+    public class spokeypokey : RavenNewTestBase
     {
         private class BarnIndex : AbstractIndexCreationTask<Barn, Barn>
         {

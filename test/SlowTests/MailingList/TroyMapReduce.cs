@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TroyMapReduce : RavenTestBase
+    public class TroyMapReduce : RavenNewTestBase
     {
         private Guid _appKey;
         private Guid _privateKey;

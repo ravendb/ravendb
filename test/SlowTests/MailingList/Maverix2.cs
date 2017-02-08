@@ -7,16 +7,14 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
-using Raven.Server.Config;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Maverix2 : RavenTestBase
+    public class Maverix2 : RavenNewTestBase
     {
         private readonly string _path;
 
@@ -29,7 +27,6 @@ namespace SlowTests.MailingList
         {
             var store = GetDocumentStore(path: _path);
 
-            store.RegisterListener(new NonStaleQueryListener());
             store.Initialize();
 
             new TemplateTests_Search().Execute(store);
@@ -51,7 +48,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Equal(1, session.Query<TemplateTests_Search.ReduceResult, TemplateTests_Search>().Count());
+                    Assert.Equal(1, session.Query<TemplateTests_Search.ReduceResult, TemplateTests_Search>().Customize(x => x.WaitForNonStaleResults()).Count());
                 }
             }
         }
@@ -70,7 +67,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Equal(1, session.Query<TemplateTests_Search.ReduceResult, TemplateTests_Search>().Count());
+                    Assert.Equal(1, session.Query<TemplateTests_Search.ReduceResult, TemplateTests_Search>().Customize(x => x.WaitForNonStaleResults()).Count());
                 }
             }
 
@@ -78,24 +75,15 @@ namespace SlowTests.MailingList
             {
                 using (var session = store.OpenSession())
                 {
-                    Assert.Equal(1, session.Query<TemplateTests_Search.ReduceResult, TemplateTests_Search>().Count());
+                    Assert.Equal(1, session.Query<TemplateTests_Search.ReduceResult, TemplateTests_Search>().Customize(x => x.WaitForNonStaleResults()).Count());
                 }
             }
 
         }
 
-        private class NonStaleQueryListener : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization customization)
-            {
-                customization.WaitForNonStaleResults();
-            }
-        }
-
-
         private class TemplateTest
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public int masterId { get; set; }
             public string category { get; set; }
             public string name { get; set; }

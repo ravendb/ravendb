@@ -1,15 +1,14 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AddMapForAllTest : RavenTestBase
+    public class AddMapForAllTest : RavenNewTestBase
     {
         // Parent class whose children will be indexed.
         private abstract class Animal

@@ -1,11 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LoadAllStartingWith : RavenTestBase
+    public class LoadAllStartingWith : RavenNewTestBase
     {
         private class Abc
         {

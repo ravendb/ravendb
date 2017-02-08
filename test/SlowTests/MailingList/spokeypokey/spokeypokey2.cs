@@ -3,13 +3,13 @@ using System.Linq;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey
 {
-    public class spokeypokey2 : RavenTestBase
+    public class spokeypokey2 : RavenNewTestBase
     {
         private enum AddressTypeEnumPto2
         {

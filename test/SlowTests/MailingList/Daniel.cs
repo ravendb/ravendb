@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Daniel : RavenTestBase
+    public class Daniel : RavenNewTestBase
     {
         [Fact]
         public void Run()
@@ -63,7 +63,7 @@ namespace SlowTests.MailingList
         {
             public List<Team4x4> Teams { get; set; }
 
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Location { get; set; }
             public DateTimeOffset Date { get; set; }
         }

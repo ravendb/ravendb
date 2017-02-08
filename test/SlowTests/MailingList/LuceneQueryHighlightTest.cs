@@ -1,14 +1,14 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using SlowTests.Utils.Analyzers;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LuceneQueryHighlightTest : RavenTestBase
+    public class LuceneQueryHighlightTest : RavenNewTestBase
     {
         private const string Q = "What words rhyme with concurrency and asymptotic?";
 

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DeserializationToObjectTests : RavenTestBase
+    public class DeserializationToObjectTests : RavenNewTestBase
     {
         [Fact]
         public void Query_GivenDbWithComplexObjects_ShouldDeserializePropertiesToOriginalType()

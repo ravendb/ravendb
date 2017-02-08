@@ -1,13 +1,14 @@
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Mouhong : RavenTestBase
+    public class Mouhong : RavenNewTestBase
     {
         [Fact]
         public void CanSortDescending()
@@ -110,7 +111,7 @@ namespace SlowTests.MailingList
                                };
 
                 //Index(x => x.Weight, Raven.Abstractions.Indexing.FieldIndexing.NotAnalyzed);
-                Sort(x => x.Weight, Raven.Abstractions.Indexing.SortOptions.NumericDouble);
+                Sort(x => x.Weight, SortOptions.NumericDouble);
             }
         }
     }

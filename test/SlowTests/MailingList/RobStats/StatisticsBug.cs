@@ -8,14 +8,14 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList.RobStats
 {
-    public class StatisticsBug : RavenTestBase
+    public class StatisticsBug : RavenNewTestBase
     {
         private class Entity
         {

@@ -8,15 +8,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SearchByMapReduceExample : RavenTestBase
+    public class SearchByMapReduceExample : RavenNewTestBase
     {
         [Fact]
         public void GivenAListOfLogEntriesAndAPartialClientName_Search_Returns1Player()
@@ -133,14 +133,6 @@ namespace SlowTests.MailingList
             public string ClientName { get; set; }
         }
 
-        private class NoStaleQueriesListener : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
-            {
-                queryCustomization.WaitForNonStaleResults();
-            }
-        }
-
         private IList<LogEntries_Search.ReduceResult> Search(IDocumentStore documentStore, string query)
         {
             if (documentStore == null)
@@ -163,9 +155,6 @@ namespace SlowTests.MailingList
         private IDocumentStore CreateDocumentStore()
         {
             var documentStore = GetDocumentStore();
-
-            // Force query's to wait for index's to catch up. Unit Testing only :P
-            documentStore.RegisterListener(new NoStaleQueriesListener());
 
             // Wire up the index.
             new LogEntries_Search().Execute(documentStore);

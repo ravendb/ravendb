@@ -1,10 +1,10 @@
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class JoelAsync : RavenTestBase
+    public class JoelAsync : RavenNewTestBase
     {
         private class Dummy
         {

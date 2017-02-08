@@ -7,15 +7,15 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 using System.Linq;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 
 namespace SlowTests.MailingList
 {
-    public class QueryOnItems : RavenTestBase
+    public class QueryOnItems : RavenNewTestBase
     {
         private class ProviderIdentifier
         {

@@ -9,15 +9,15 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Arun : RavenTestBase
+    public class Arun : RavenNewTestBase
     {
         [Fact]
         public void SaveDynamicEntityWithStronglyTypedProperties()

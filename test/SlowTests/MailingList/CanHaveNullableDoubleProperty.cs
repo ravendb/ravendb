@@ -5,15 +5,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Extensions;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanHaveNullableDoubleProperty : RavenTestBase
+    public class CanHaveNullableDoubleProperty : RavenNewTestBase
     {
         [Fact]
         public void WillSupportNullableDoubles()
@@ -27,13 +28,12 @@ namespace SlowTests.MailingList
 
                 new Events_ByActiveStagingPublishOnSaleAndStartDate().Execute(store);
 
-                WaitForUserToContinueTheTest(store);
-
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<Event, Events_ByActiveStagingPublishOnSaleAndStartDate>()
                         .Customize(x => x.Include<Event>(e => e.PerformerIds).Include<Event>(e => e.VenueId).WaitForNonStaleResults())
                         .Where(e => e.StartDate == DateTime.Now.Date)
+                        .Take(1024)
                         .ToList();
 
                     TestHelper.AssertNoIndexErrors(store);
@@ -47,7 +47,6 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.RegisterListener(new NoStaleQueriesAllowed());
                 store.Initialize();
                 new Events_ByActiveStagingPublishOnSaleAndStartDate().Execute(store);
 
@@ -58,6 +57,7 @@ namespace SlowTests.MailingList
                     var results = documentSession.Query<Event, Events_ByActiveStagingPublishOnSaleAndStartDate>()
                         .Customize(x => x.Include<Event>(e => e.PerformerIds).Include<Event>(e => e.VenueId).WaitForNonStaleResults())
                         .Where(e => e.StartDate == DateTime.Now.Date)
+                        .Take(1024)
                         .ToList();
 
                     TestHelper.AssertNoIndexErrors(store);
@@ -65,15 +65,6 @@ namespace SlowTests.MailingList
                 }
             }
         }
-
-        private class NoStaleQueriesAllowed : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
-            {
-                queryCustomization.WaitForNonStaleResults();
-            }
-        }
-
 
         private class Event : Document
         {

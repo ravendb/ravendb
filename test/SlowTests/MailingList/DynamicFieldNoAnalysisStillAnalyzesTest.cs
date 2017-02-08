@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 // ReSharper disable MemberCanBePrivate.Local
@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DynamicFieldNoAnalysisStillAnalyzesTest : RavenTestBase
+    public class DynamicFieldNoAnalysisStillAnalyzesTest : RavenNewTestBase
     {
 
         [Fact]

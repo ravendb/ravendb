@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ComplexIndexMerge : RavenTestBase
+    public class ComplexIndexMerge : RavenNewTestBase
     {
         private class Ref
         {

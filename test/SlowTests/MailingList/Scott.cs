@@ -2,21 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Scott : RavenTestBase
+    public class Scott : RavenNewTestBase
     {
         [Fact(Skip = "Missing feature: Spatial")]
         public void CanQueryMapReduceIndexGeo()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("TagCloud",
+                store.Admin.Send(new PutIndexOperation("TagCloud",
                                                 new IndexDefinition
                                                 {
                                                     Maps = {
@@ -41,7 +42,7 @@ select new {
                                                     {
                                                         { "Tag", new IndexFieldOptions {Indexing = FieldIndexing.NotAnalyzed}}
                                                     }
-                                                });
+                                                }));
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Post

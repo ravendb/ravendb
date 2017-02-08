@@ -2,12 +2,13 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Class7 : RavenTestBase
+    public class Class7 : RavenNewTestBase
     {
         [Fact]
         public void ThrowsOnUnindexedSorts()
@@ -35,7 +36,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var e = Assert.Throws<InvalidOperationException>(() =>
+                    var e = Assert.Throws<RavenException>(() =>
                     {
                         var results = session.Query<Person, PersonIndex>()
                             .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())

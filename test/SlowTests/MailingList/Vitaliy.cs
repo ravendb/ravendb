@@ -7,30 +7,30 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Vitaliy : RavenTestBase
+    public class Vitaliy : RavenNewTestBase
     {
         private class Cgc
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
         }
 
         private class Production
         {
-            public Guid Id { get; set; }
-            public Guid CgcId { get; set; }
+            public string Id { get; set; }
+            public string CgcId { get; set; }
             public string Name { get; set; }
         }
 
         private class CgcAndProduction
         {
-            public Guid ProductionId { get; set; }
-            public Guid CgcId { get; set; }
+            public string ProductionId { get; set; }
+            public string CgcId { get; set; }
             public string CgcName { get; set; }
             public string ProductionName { get; set; }
         }

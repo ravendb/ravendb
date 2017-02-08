@@ -6,13 +6,13 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LazyAggregationEmbedded : RavenTestBase
+    public class LazyAggregationEmbedded : RavenNewTestBase
 
     {
         [Fact]

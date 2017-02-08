@@ -1,12 +1,12 @@
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FailingProjection : RavenTestBase
+    public class FailingProjection : RavenNewTestBase
     {
         private class MyClass
         {
@@ -30,12 +30,11 @@ namespace SlowTests.MailingList
                 }
                 using (var session = store.OpenSession())
                 {
-                    store.DatabaseCommands
-                        .PutIndex("MyClass/ByIndex",
+                    store.Admin.Send(new PutIndexOperation("MyClass/ByIndex",
                         new IndexDefinitionBuilder<MyClass>()
                         {
                             Map = docs => from doc in docs select new { Index = doc.Index }
-                        }, true);
+                        }.ToIndexDefinition(store.Conventions)));
 
                     WaitForIndexing(store);
 

@@ -2,12 +2,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class BadTransformer : RavenTestBase
+    public class BadTransformer : RavenNewTestBase
     {
         [Fact]
         public void CanCreateTransformer()

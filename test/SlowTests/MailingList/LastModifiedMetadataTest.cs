@@ -1,14 +1,14 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LastModifiedMetadataTest : RavenTestBase
+    public class LastModifiedMetadataTest : RavenNewTestBase
     {
         private class AmazingIndex2 : AbstractIndexCreationTask<User>
         {
@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
                     var user3 = session.Load<User>(user1.InternalId);
                     Assert.NotNull(user3);
                     var metadata = session.Advanced.GetMetadataFor(user3);
-                    var lastModified = metadata.Value<DateTime>(Constants.Metadata.LastModified);
+                    var lastModified = DateTime.Parse(metadata[Constants.Metadata.LastModified]);
 
                     var modifiedDocuments = (from u in session.Query<User, AmazingIndex2>()
                                                 .TransformWith<AmazingTransformer2, AmazingTransformer2.ModifiedDocuments>()

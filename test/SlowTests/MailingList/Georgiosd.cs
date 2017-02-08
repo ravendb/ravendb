@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Georgiosd : RavenTestBase
+    public class Georgiosd : RavenNewTestBase
     {
         [Fact]
         public void CanGet304FromLazyFacets()
@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
 
                     for (int i = 0; i < 10; ++i)
                     {
-                        session.Store(new Org { Id = i + 1, Sectors = new List<Sector> { i % 2 == 0 ? sector1 : sector2 } });
+                        session.Store(new Org { Id = (i + 1).ToString(), Sectors = new List<Sector> { i % 2 == 0 ? sector1 : sector2 } });
                     }
 
                     session.Store(new LocalFacet());
@@ -59,7 +59,7 @@ namespace SlowTests.MailingList
 
         private class Org
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public IList<Sector> Sectors { get; set; }
         }
 

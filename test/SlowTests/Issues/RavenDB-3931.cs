@@ -7,8 +7,8 @@
 using System.Collections.Generic;
 using System.IO;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+using Raven.NewClient.Client.Document;
 using Xunit;
 
 namespace SlowTests.Issues

@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DataSetIndexTest : RavenTestBase
+    public class DataSetIndexTest : RavenNewTestBase
     {
         private const int MaxNumberOfItemsInDataSet = 50;
 
@@ -28,16 +29,17 @@ namespace SlowTests.MailingList
                     CreateDataSet(session, "stations/energy", "EX");
                 }
 
-               // WaitForUserToContinueTheTest(store);
+                // WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
-                                .WaitForNonStaleResults()
-                                .AddOrder("Split_N1_Range", true, typeof(double))
-                                .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId");
+                        .WaitForNonStaleResults()
+                        .AddOrder("Split_N1_Range", true, typeof(double))
+                        .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
+                        .Take(1024);
                     var result = query.ToList();
-                    Assert.Equal("songs/50", result.First().SongId); //GREEN
+                    Assert.Equal("songs/50", result.First().SongId.ToString()); //GREEN
                 }
             }
         }
@@ -60,11 +62,12 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
-                                .WaitForNonStaleResults()
-                                .AddOrder("Split_N1_Range", true, typeof(double))
-                                .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId");
+                        .WaitForNonStaleResults()
+                        .AddOrder("Split_N1_Range", true, typeof(double))
+                        .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
+                        .Take(1024);
                     var result = query.ToList();
-                    Assert.Equal("songs/50", result.First().SongId); //GREEN
+                    Assert.Equal("songs/50", result.First().SongId.ToString()); //GREEN
                 }
 
                 using (var session = store.OpenSession())
@@ -72,9 +75,10 @@ namespace SlowTests.MailingList
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
                                 .WaitForNonStaleResults()
                                 .AddOrder("Split_N1_Range", true, typeof(double))
-                                .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId");
+                                .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
+                                .Take(1024);
                     var result = query.Lazily().Value.ToList();
-                    Assert.Equal("songs/50", result.First().SongId); //RED! (:
+                    Assert.Equal("songs/50", result.First().SongId.ToString()); //RED! (:
                 }
             }
         }

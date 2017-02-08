@@ -1,12 +1,13 @@
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SortTest : RavenTestBase
+    public class SortTest : RavenNewTestBase
     {
         [Fact]
         public void ArticlesAreReturnedInIdOrder()
@@ -30,7 +31,7 @@ namespace SlowTests.MailingList
                     Assert.NotNull(results);
                     Assert.NotEmpty(results);
                     Assert.Equal(10, results.Count());
-                    Assert.Equal(10, results[1].Id);
+                    Assert.Equal("10", results[1].Id);
 
                     // modifiy Article 2 and wait for the index to update.
                     UpdateArticle(session, 2, "Changed #");
@@ -44,7 +45,7 @@ namespace SlowTests.MailingList
                     Assert.NotNull(results);
                     Assert.NotEmpty(results);
                     Assert.Equal(10, results.Count());
-                    Assert.Equal(10, results[1].Id);
+                    Assert.Equal("10", results[1].Id);
                 }
             }
         }
@@ -69,7 +70,7 @@ namespace SlowTests.MailingList
         {
             session.Store(new Article
             {
-                Id = id,
+                Id = id.ToString(),
                 Title = (title ?? "Title #") + id,
                 Authors = new UserRef[] { new UserRef { Id = id, Name = "User Number" + id } },
                 Abstract = "Something about nothing",
@@ -79,7 +80,7 @@ namespace SlowTests.MailingList
         }
         private static void UpdateArticle(IDocumentSession session, int id, string title = null)
         {
-            session.Load<Article>(id).Title = (title ?? "Title #") + id;
+            session.Load<Article>(id.ToString()).Title = (title ?? "Title #") + id;
             session.SaveChanges();
         }
 
@@ -99,7 +100,7 @@ namespace SlowTests.MailingList
 
         private class Article
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Title { get; set; }
             public UserRef[] Authors { get; set; }
             public string Abstract { get; set; }

@@ -1996,13 +1996,26 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         public void RenameResults(QueryResult queryResult)
         {
+            var anyChanged = false;
             for (int index = 0; index < queryResult.Results.Items.Count(); index++)
             {
                 var result = (BlittableJsonReaderObject)queryResult.Results[index];
-                RenameSingleResult(result);
+                anyChanged |= RenameSingleResult(result);
+            }
+
+            if (anyChanged)
+            {
+                var array = new DynamicJsonArray(queryResult.Results);
+                var _ = new DynamicJsonValue
+                {
+                    ["_"] = array
+                };
+
+                var json = queryResult.Results.Parent._context.ReadObject(_, "query/results/rename");
+                queryResult.Results = (BlittableJsonReaderArray)json["_"];
             }
         }
-        
+
         public bool RenameSingleResult(BlittableJsonReaderObject doc)
         {
             var changed = false;
@@ -2021,13 +2034,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     doc.Modifications.Remove(renamedField);
                 }
             }
+
             foreach (var rename in FieldsToRename)
             {
                 object val;
                 if (values.TryGetValue(rename.OriginalField, out val) == false)
                     continue;
                 changed = true;
-                if (rename.NewField != null)
+                var json = val as BlittableJsonReaderObject;
+                if (rename.NewField == null && json != null)
+                {
+                    foreach (var propertyName in json.GetPropertyNames())
+                        doc.Modifications[propertyName] = json[propertyName];
+                }
+                else if (rename.NewField != null)
                 {
                     doc.Modifications[rename.NewField] = val;
                 }
@@ -2036,6 +2056,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     doc.Modifications[rename.OriginalField] = val;
                 }
             }
+
             return changed;
         }
 

@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformWithLoad : RavenTestBase
+    public class TransformWithLoad : RavenNewTestBase
     {
         private IDocumentStore store;
 
@@ -113,11 +113,11 @@ namespace SlowTests.MailingList
             using (var session = store.OpenSession())
             {
                 var result = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>(new [] { "contacts/1", "contacts/2" }).Value;
-                Assert.Equal(2, result.Length);
-                Assert.NotNull(result[0]);
-                Assert.Null(result[1]);
+                Assert.Equal(2, result.Count);
+                Assert.NotNull(result["contacts/1"]);
+                Assert.Null(result["contacts/2"]);
 
-                foreach (var detail in result[0].ContactDetails)
+                foreach (var detail in result["contacts/1"].ContactDetails)
                 {
                     Assert.NotNull(detail.Id);
                 }
@@ -130,11 +130,11 @@ namespace SlowTests.MailingList
             using (var session = store.OpenSession())
             {
                 var result = session.Load<ContactTransformer, ContactDto>(new [] { "contacts/1", "contacts/2" });
-                Assert.Equal(2, result.Length);
-                Assert.NotNull(result[0]);
-                Assert.Null(result[1]);
+                Assert.Equal(2, result.Count);
+                Assert.NotNull(result["contacts/1"]);
+                Assert.Null(result["contacts/2"]);
 
-                foreach (var detail in result[0].ContactDetails)
+                foreach (var detail in result["contacts/1"].ContactDetails)
                 {
                     Assert.NotNull(detail.Id);
                 }
@@ -147,9 +147,9 @@ namespace SlowTests.MailingList
             using (var session = store.OpenSession())
             {
                 var result = session.Load<Contact>(new [] { "contacts/1", "contacts/2" });
-                Assert.Equal(2, result.Length);
-                Assert.NotNull(result[0]);
-                Assert.Null(result[1]);
+                Assert.Equal(2, result.Count);
+                Assert.NotNull(result["contacts/1"]);
+                Assert.Null(result["contacts/2"]);
             }
         }
 

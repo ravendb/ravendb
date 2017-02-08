@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Document;
+using Raven.NewClient.Client.Document;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WhereStringEqualsInCollection : RavenTestBase
+    public class WhereStringEqualsInCollection : RavenNewTestBase
     {
         private readonly DocumentStore store;
 

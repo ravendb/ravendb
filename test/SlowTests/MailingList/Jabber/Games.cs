@@ -2,15 +2,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList.Jabber
 {
-    public class Games : RavenTestBase
+    public class Games : RavenNewTestBase
     {
         private class GameServer
         {
@@ -102,7 +103,7 @@ namespace SlowTests.MailingList.Jabber
         {
             using (var session = store.OpenSession())
             {
-                var gameServer = session.Load<GameServer>(1);
+                var gameServer = session.Load<GameServer>("gameServers/1");
                 if (gameServer != null)
                 {
                     return;

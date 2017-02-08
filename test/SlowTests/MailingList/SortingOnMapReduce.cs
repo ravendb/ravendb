@@ -6,12 +6,13 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexing;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SortingOnMapReduce : RavenTestBase
+    public class SortingOnMapReduce : RavenNewTestBase
     {
         private class Tag
         {
@@ -29,14 +30,14 @@ namespace SlowTests.MailingList
         {
             using (var ds = GetDocumentStore())
             {
-                ds.DatabaseCommands.PutIndex("TagsCount",
+                ds.Admin.Send(new PutIndexOperation("TagsCount",
                     new IndexDefinition
                     {
                         Maps = { "from tag in docs.Tags select new { tag.Name, Count = 1 }" },
                         Reduce = "from result in results group " +
                                  "result by result.Name into g " +
                                  "select new { Name = g.Key, Count = g.Sum(x => x.Count) }",
-                    });
+                    }));
 
                 using (var s = ds.OpenSession())
                 {

@@ -2,7 +2,8 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace Raven.Imports.Newtonsoft.Json.Sample
@@ -24,7 +25,7 @@ namespace Raven.Imports.Newtonsoft.Json.Sample
 
 namespace SlowTests.MailingList
 {
-    public class IndexesIgnoreNewtonsoftJsonPropertyAttributes : RavenTestBase
+    public class IndexesIgnoreNewtonsoftJsonPropertyAttributes : RavenNewTestBase
     {
         private class StudentDto
         {
@@ -69,7 +70,7 @@ namespace SlowTests.MailingList
                 store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new StudentDtos_ByEmailDomain().Execute(store);
 
-                var definition = store.DatabaseCommands.GetIndex(new StudentDtos_ByEmailDomain().IndexName);
+                var definition = store.Admin.Send(new GetIndexOperation(new StudentDtos_ByEmailDomain().IndexName));
 
                 Assert.Equal(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.Email,

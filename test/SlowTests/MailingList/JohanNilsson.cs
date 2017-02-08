@@ -1,13 +1,13 @@
 using System.Reflection;
 using FastTests;
-using Raven.Client.Document;
+using Raven.NewClient.Client.Document;
 using Xunit;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 using System.Linq;
 
 namespace SlowTests.MailingList
 {
-    public class JohanNilsson : RavenTestBase
+    public class JohanNilsson : RavenNewTestBase
     {
         private interface IEntity
         {

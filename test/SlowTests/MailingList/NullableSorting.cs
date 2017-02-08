@@ -6,17 +6,17 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class NullableSorting : RavenTestBase
+    public class NullableSorting : RavenNewTestBase
     {
         private class Blog
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public decimal? Price { get; set; }
         }
 
@@ -62,7 +62,7 @@ namespace SlowTests.MailingList
 
                     var ids = result.Select(b => b.Id).ToArray();
 
-                    Assert.Equal(new[] { 3, 2, 4, 1 }, ids);
+                    Assert.Equal(new[] { "blogs/3", "blogs/2", "blogs/4", "blogs/1" }, ids);
                 }
             }
         }

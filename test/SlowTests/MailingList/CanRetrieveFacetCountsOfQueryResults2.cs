@@ -1,16 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanRetrieveFacetCountsOfQueryResults2 : RavenTestBase
+    public class CanRetrieveFacetCountsOfQueryResults2 : RavenNewTestBase
     {
         private enum Tag
         {

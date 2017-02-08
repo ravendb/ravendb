@@ -7,12 +7,12 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Stockholm : RavenTestBase
+    public class Stockholm : RavenNewTestBase
     {
         private class Courses_Search2 : AbstractIndexCreationTask<Course>
         {

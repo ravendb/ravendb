@@ -3,18 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using FastTests;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Commands;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Document;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class EtagIssue : RavenTestBase
+    public class EtagIssue : RavenNewTestBase
     {
         #region Domain
 
@@ -236,7 +237,6 @@ namespace SlowTests.MailingList
             using (var store = GetDocumentStore())
             {
                 new UserProfileIndex().Execute(store);
-                store.RegisterListener(new NonStaleQueryListener());
 
                 OrganizationProfile[] organizations =
                 {
@@ -258,13 +258,19 @@ namespace SlowTests.MailingList
 
                 WaitForIndexing(store);
 
-                IEnumerable<PatchCommandData> patches = orgAdmins.SelectMany(orgAdmin =>
+                IEnumerable<ICommandData> patches = orgAdmins.SelectMany(orgAdmin =>
                     Establish(orgAdmin.User, new ManagerOf(orgAdmin.Org),
                         orgAdmin.Org, new HasManager(orgAdmin.User)));
 
-                BatchResult[] results = ((IDocumentStore)store).DatabaseCommands.Batch(patches.ToArray());
-                if (results.Any(r => r.PatchStatus.Value != PatchStatus.Patched))
-                    throw new InvalidOperationException("Some patches failed");
+                using (var commands = store.Commands())
+                {
+                    commands.Batch(patches.ToList());
+
+                    var user1 = commands.Get("users/1");
+                    var user2 = commands.Get("users/2");
+
+                    throw new NotImplementedException();
+                }
             }
         }
 
@@ -276,33 +282,25 @@ namespace SlowTests.MailingList
                                        "   (thisArg || _this).Relations.push(_.extend({ '$type': clrType }, relation));" +
                                        "}" + "addRelation(relationClrType, relation);";
 
-            yield return new PatchCommandData
+            yield return new PatchCommandData(user.Id, null, new PatchRequest
             {
-                Id = user.Id,
-                Patch = new PatchRequest
+                Script = patchScript,
+                Values = new Dictionary<string, object>
                 {
-                    Script = patchScript,
-                    Values = new Dictionary<string, object>
-                    {
-                        {"relation", managerOf},
-                        {"relationClrType", ClrType(managerOf.GetType())}
-                    }
+                    {"relation", managerOf},
+                    {"relationClrType", ClrType(managerOf.GetType())}
                 }
-            };
+            }, null);
 
-            yield return new PatchCommandData
+            yield return new PatchCommandData(organization.Id, null, new PatchRequest
             {
-                Id = organization.Id,
-                Patch = new PatchRequest
+                Script = patchScript,
+                Values = new Dictionary<string, object>
                 {
-                    Script = patchScript,
-                    Values = new Dictionary<string, object>
-                    {
-                        {"relation", hasManager},
-                        {"relationClrType", ClrType(hasManager.GetType())}
-                    }
+                    {"relation", hasManager},
+                    {"relationClrType", ClrType(hasManager.GetType())}
                 }
-            };
+            }, null);
         }
 
         private static string ClrType(Type t)
@@ -319,14 +317,6 @@ namespace SlowTests.MailingList
                 foreach (object obj in objs)
                     session.Store(obj);
                 session.SaveChanges();
-            }
-        }
-
-        private class NonStaleQueryListener : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization customization)
-            {
-                customization.WaitForNonStaleResults();
             }
         }
     }

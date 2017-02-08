@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Weave : RavenTestBase
+    public class Weave : RavenNewTestBase
     {
         private class CalcSystem
         {

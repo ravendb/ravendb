@@ -1,19 +1,17 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+
+using Raven.NewClient.Client;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using SlowTests.Utils.Analyzers;
 using Xunit;
 using Enumerable = System.Linq.Enumerable;
 
 namespace SlowTests.MailingList.Stacey
 {
-    public class InServerTesting : RavenTestBase
+    public class InServerTesting : RavenNewTestBase
     {
         private class Image
         {

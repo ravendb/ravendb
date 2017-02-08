@@ -7,37 +7,38 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Documents;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SeanBuchanan : RavenTestBase
+    public class SeanBuchanan : RavenNewTestBase
     {
         private class Consultant : INamedDocument
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public int YearsOfService { get; set; }
         }
 
         private interface INamedDocument
         {
-            int Id { get; set; }
+            string Id { get; set; }
 
             string Name { get; set; }
         }
 
         private class Skill : INamedDocument
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
         }
 
         private class Proficiency
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public DenormalizedReference<Consultant> Consultant { get; set; }
             public DenormalizedReference<Skill> Skill { get; set; }
             public string SkillLevel { get; set; }
@@ -45,7 +46,7 @@ namespace SlowTests.MailingList
 
         private class DenormalizedReference<T> where T : INamedDocument
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
 
             public static implicit operator DenormalizedReference<T>(T doc)
@@ -76,13 +77,13 @@ namespace SlowTests.MailingList
                 //Write the test data to the database.
                 using (var session = store.OpenSession())
                 {
-                    var skill1 = new Skill { Id = 1, Name = "C#" };
-                    var skill2 = new Skill { Id = 2, Name = "SQL" };
-                    var consultant1 = new Consultant { Id = 1, Name = "Subha", YearsOfService = 6 };
-                    var consultant2 = new Consultant { Id = 2, Name = "Tom", YearsOfService = 5 };
+                    var skill1 = new Skill { Id = 1.ToString(), Name = "C#" };
+                    var skill2 = new Skill { Id = 2.ToString(), Name = "SQL" };
+                    var consultant1 = new Consultant { Id = 1.ToString(), Name = "Subha", YearsOfService = 6 };
+                    var consultant2 = new Consultant { Id = 2.ToString(), Name = "Tom", YearsOfService = 5 };
                     var proficiency1 = new Proficiency
                     {
-                        Id = 1,
+                        Id = 1.ToString(),
                         Consultant = consultant1,
                         Skill = skill1,
                         SkillLevel = "Expert"
@@ -96,8 +97,8 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
 
                     var proficiencies = session.Query<Proficiency, Proficiencies_ConsultantId>()
-                                               .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
-                                               .Where(o => o.Consultant.Id == 1)
+                                               .Customize(o => o.WaitForNonStaleResults())
+                                               .Where(o => o.Consultant.Id == 1.ToString())
                                                .ToList();
 
                     Assert.Equal("Subha", proficiencies.Single().Consultant.Name);
@@ -106,7 +107,7 @@ namespace SlowTests.MailingList
                 //Block2
                 using (var session = store.OpenSession())
                 {
-                    var consultant1 = session.Load<Consultant>(1);
+                    var consultant1 = session.Load<Consultant>("consultants/1");
 
                     //Here I am changing the name of one consultant from "Subha" to "Subhashini".
                     //A denormalized reference to this name exists in the Proficiency class. After this update, I will need to sync the denormalized reference.
@@ -119,8 +120,8 @@ namespace SlowTests.MailingList
                     //This block of code simply lists the names of the consultants in the Proficiencies collection. Since I have not synced the collection
                     //yet, I expect the consultant name to still be "Subha."
                     var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
-                                      .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
-                                      .Where(o => o.Consultant.Id == 1)
+                                      .Customize(o => o.WaitForNonStaleResults())
+                                      .Where(o => o.Consultant.Id == 1.ToString())
                                       .ToList();
 
                     Assert.Equal("Subha", proficiencies.Single().Consultant.Name);
@@ -128,7 +129,7 @@ namespace SlowTests.MailingList
 
                 WaitForIndexing(store);
                 //I use this patch to update the consultant name to "Subha" in the Proficiencies collection.
-                store.DatabaseCommands.UpdateByIndex("Proficiencies/ConsultantId",
+                store.Operations.Send(new PatchByIndexOperation("Proficiencies/ConsultantId",
                     new IndexQuery(store.Conventions)
                     {
                         Query = "Consultant_Id:1"
@@ -137,15 +138,16 @@ namespace SlowTests.MailingList
                     {
                         Script = "this.Consultant.Name = 'Subhashini';"
                     },
-                    options: null).WaitForCompletion(TimeSpan.FromSeconds(15));
+                    options: null)).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 //Here, I again list the name of the consultant in the Proficiencies collection and expect it to be "Subhashini".
                 using (var session = store.OpenSession())
                 {
                     //Block2
                     var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
-                                               .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
-                                               .Where(o => o.Consultant.Id == 1).ToList();
+                                               .Customize(o => o.WaitForNonStaleResults())
+                                               .Where(o => o.Consultant.Id == 1.ToString())
+                                               .ToList();
 
                     Assert.Equal("Subhashini", proficiencies.Single().Consultant.Name);
                 }

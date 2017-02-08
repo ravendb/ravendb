@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DayOfWeekTest : RavenTestBase
+    public class DayOfWeekTest : RavenNewTestBase
     {
         [Fact]
         public void CanQueryDatesByDayOfWeek()

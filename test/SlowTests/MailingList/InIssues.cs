@@ -1,12 +1,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class InIssues : RavenTestBase
+    public class InIssues : RavenNewTestBase
     {
         private class Item
         {

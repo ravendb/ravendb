@@ -7,15 +7,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+using Raven.NewClient.Client.Document;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IdentityUserDeserialization : RavenTestBase
+    public class IdentityUserDeserialization : RavenNewTestBase
     {
         [Fact]
         public void Can_Deserialize_IdentityUser()

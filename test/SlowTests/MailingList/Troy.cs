@@ -8,15 +8,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Troy : RavenTestBase
+    public class Troy : RavenNewTestBase
     {
         private DocumentStore _store;
 
@@ -160,7 +160,7 @@ namespace SlowTests.MailingList
 
         private class Product
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public string Description { get; set; }
             public string Category { get; set; }
@@ -193,7 +193,7 @@ namespace SlowTests.MailingList
             {
                 new Product
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     Name = "Blu-Ray Player",
                     Description = "Latest and greated 3D Blu-Ray Player",
                     Created = DateTimeOffset.Now,
@@ -203,7 +203,7 @@ namespace SlowTests.MailingList
                 },
                 new Product
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     Name = "Stair Fence",
                     Description = "Protect your young ones from falling down the stairs.",
                     Created = DateTimeOffset.Now,
@@ -213,7 +213,7 @@ namespace SlowTests.MailingList
                 },
                 new Product
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     Name = "Gigabit Network Switch",
                     Description = "Portable 12 Port GB Network Switch.",
                     Created = DateTimeOffset.Now,
@@ -223,7 +223,7 @@ namespace SlowTests.MailingList
                 },
                 new Product
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     Name = "Cisco 64 Port Switch Commercial Grade",
                     Description = "Commercial 64 Port GB Network Switch.",
                     Created = DateTimeOffset.Now,
@@ -233,7 +233,7 @@ namespace SlowTests.MailingList
                 },
                 new Product
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     Name = "Beolit 12 Airplay",
                     Description = "The best portable wireless sounds featuring Apple's Airplay.",
                     Created = DateTimeOffset.Now,

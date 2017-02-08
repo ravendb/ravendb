@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Tony : RavenTestBase
+    public class Tony : RavenNewTestBase
     {
         [Fact]
         public void TestSortBys()
@@ -47,7 +47,7 @@ namespace SlowTests.MailingList
         
         private class TestBlog
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Title { get; set; }
             public int Weighting { get; set; }
             public IList<TestPost> Posts { get; set; }

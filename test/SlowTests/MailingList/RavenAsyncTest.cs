@@ -1,13 +1,13 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AsyncTest : RavenTestBase
+    public class AsyncTest : RavenNewTestBase
     {
         private class Dummy
         {
@@ -87,12 +87,12 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.LoadAsync<Dummy>("dummies/1");
-                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, store.GetRequestExecuter().Cache.NumberOfItems);
                 }
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.LoadAsync<Dummy>("dummies/1");
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, store.GetRequestExecuter().Cache.NumberOfItems);
                 }
             }
         }

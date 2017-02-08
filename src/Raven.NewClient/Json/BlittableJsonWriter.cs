@@ -346,12 +346,14 @@ namespace Raven.NewClient.Client.Json
 
         public override void WriteValue(byte[] value)
         {
-            throw new NotSupportedException();
+            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(Convert.ToBase64String(value));
+            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(Uri value)
         {
-            throw new NotSupportedException();
+            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.ToString());
+            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(object value)

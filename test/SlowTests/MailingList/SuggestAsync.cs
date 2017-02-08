@@ -6,14 +6,15 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SuggestAsync : RavenTestBase
+    public class SuggestAsync : RavenNewTestBase
     {
         private class Person
         {

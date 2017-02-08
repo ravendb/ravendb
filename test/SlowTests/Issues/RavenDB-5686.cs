@@ -1,29 +1,33 @@
 using FastTests;
-using Raven.Client.Connection;
-using Raven.Client.Document;
-using Raven.Json.Linq;
 using Raven.Server.Utils.Metrics;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5686 : NoDisposalNeeded
+    public class RavenDB_5686 : RavenNewTestBase
     {
         [Fact]
         public void CanSerializeAndDeserializeMeterValue()
         {
             var meter = new MeterValue("name", 1, 2.0, 3.0, 4.0, 15.0);
-            var jObject = RavenJObject.FromObject(meter);
-            var parsed = jObject.Deserialize<MeterValue>(new DocumentConvention());
 
-            Assert.Equal(meter.Name, parsed.Name);
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var json = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(meter, store.Conventions, session.Advanced.Context);
+                    var parsed = (MeterValue)session.Advanced.EntityToBlittable.ConvertToEntity(typeof(MeterValue), "meter", json);
 
-            Assert.Equal(meter.Count, parsed.Count);
-            Assert.Equal(meter.MeanRate, parsed.MeanRate);
+                    Assert.Equal(meter.Name, parsed.Name);
 
-            Assert.Equal(meter.OneMinuteRate, parsed.OneMinuteRate);
-            Assert.Equal(meter.FiveMinuteRate, parsed.FiveMinuteRate);
-            Assert.Equal(meter.FifteenMinuteRate, parsed.FifteenMinuteRate);
+                    Assert.Equal(meter.Count, parsed.Count);
+                    Assert.Equal(meter.MeanRate, parsed.MeanRate);
+
+                    Assert.Equal(meter.OneMinuteRate, parsed.OneMinuteRate);
+                    Assert.Equal(meter.FiveMinuteRate, parsed.FiveMinuteRate);
+                    Assert.Equal(meter.FifteenMinuteRate, parsed.FifteenMinuteRate);
+                }
+            }
         }
     }
 }

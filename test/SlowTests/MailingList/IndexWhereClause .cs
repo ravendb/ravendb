@@ -1,12 +1,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IndexWhereClause : RavenTestBase
+    public class IndexWhereClause : RavenNewTestBase
     {
         [Fact]
         public void Where_clause_with_greater_than_or_less_than()
@@ -43,7 +43,7 @@ namespace SlowTests.MailingList
 
         private class Album
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Title { get; set; }
             public decimal Price { get; set; }
         }

@@ -6,12 +6,13 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WhereClauseTest : RavenTestBase
+    public class WhereClauseTest : RavenNewTestBase
     {
         [Fact]
         public void ATest()

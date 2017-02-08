@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FailingAuthIndex : RavenTestBase
+    public class FailingAuthIndex : RavenNewTestBase
     {
         private class Team
         {

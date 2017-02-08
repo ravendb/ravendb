@@ -7,13 +7,13 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public sealed class NullableInIndex : RavenTestBase
+    public sealed class NullableInIndex : RavenNewTestBase
     {
         private sealed class Document
         {

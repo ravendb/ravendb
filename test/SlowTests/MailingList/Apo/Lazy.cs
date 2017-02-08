@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace SlowTests.MailingList.Apo
 {
-    public class Lazy : RavenTestBase
+    public class Lazy : RavenNewTestBase
     {
         private class TestClass
         {
@@ -38,7 +38,7 @@ namespace SlowTests.MailingList.Apo
 
                     // should not throw
                     session.Query<TestClass>()
-                            .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                            .Customize(x => x.WaitForNonStaleResults())
                             .Where(x => x.Date >= DateTime.UtcNow.AddMinutes(-1))
                             .OrderByDescending(x => x.Date)
                             .Lazily(result =>

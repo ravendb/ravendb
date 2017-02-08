@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AaronSt : RavenTestBase
+    public class AaronSt : RavenNewTestBase
     {
         [Fact]
         public void CanDoDistinctOnProject()

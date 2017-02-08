@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RavenDb1192_MapReduceNestedItemsTests : RavenTestBase
+    public class RavenDb1192_MapReduceNestedItemsTests : RavenNewTestBase
     {
         [Fact]
         public void Can_Reduce_Nested_List_Of_KeyValuePair_Objects()

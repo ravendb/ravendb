@@ -6,12 +6,13 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Lars : RavenTestBase
+    public class Lars : RavenNewTestBase
     {
         private class Item
         {
@@ -50,7 +51,7 @@ namespace SlowTests.MailingList
             using (var s = GetDocumentStore())
             {
                 new Index().Execute(s);
-                var indexDefinition = s.DatabaseCommands.GetIndex("Index");
+                var indexDefinition = s.Admin.Send(new GetIndexOperation("Index"));
                 Assert.Contains("Enumerable.ToArray(g)", indexDefinition.Reduce);
                 Assert.Contains("Enumerable.Sum", indexDefinition.Reduce);
             }

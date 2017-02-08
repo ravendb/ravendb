@@ -7,12 +7,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformerParameterTests : RavenTestBase
+    public class TransformerParameterTests : RavenNewTestBase
     {
         [Fact]
         public void CanCastTransformerParameter()

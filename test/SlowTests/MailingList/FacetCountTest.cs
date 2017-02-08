@@ -1,17 +1,15 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FacetCountTest : RavenTestBase
+    public class FacetCountTest : RavenNewTestBase
     {
         private class WodsProjection
         {
@@ -130,12 +128,12 @@ namespace SlowTests.MailingList
 
                         var wods = query.ToList();
 
-                        var facets = session.Advanced.DocumentStore.DatabaseCommands.GetFacets(new FacetQuery(store.Conventions)
+                        var facets = session.Advanced.MultiFacetedSearch(new FacetQuery(store.Conventions)
                         {
                             IndexName = "Wod/Search",
                             Query = query.ToString(),
                             FacetSetupDoc = "Facets/WodFacets"
-                        });
+                        })[0];
 
                         var pullupsCount = facets.Results["ExerciseList"].Values.First(o => o.Range == "pull-ups").Hits;
 
