@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class MapReduceIndexDefinition : MapIndexDefinition
     {
-        public MapReduceIndexDefinition(IndexDefinition definition, string[] collections, string[] outputFields,
+        public MapReduceIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields,
             string[] groupByFields, bool hasDynamicFields)
             : base(definition, collections, outputFields, hasDynamicFields)
         {

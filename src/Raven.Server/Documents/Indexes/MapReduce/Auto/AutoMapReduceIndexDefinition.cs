@@ -13,8 +13,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
     {
         public readonly Dictionary<string, IndexField> GroupByFields;
 
-        public AutoMapReduceIndexDefinition(string[] collections, IndexField[] mapFields, IndexField[] groupByFields)
-            : base(IndexNameFinder.FindMapReduceIndexName(collections, mapFields, groupByFields), collections, IndexLockMode.Unlock, mapFields)
+        public AutoMapReduceIndexDefinition(string collection, IndexField[] mapFields, IndexField[] groupByFields)
+            : base(IndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), new HashSet<string> { collection }, IndexLockMode.Unlock, mapFields)
         {
             foreach (var field in mapFields)
             {
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 groupByFields[i] = field;
             }
 
-            return new AutoMapReduceIndexDefinition(new[] { collection }, mapFields, groupByFields)
+            return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields)
             {
                 LockMode = (IndexLockMode)lockModeAsInt
             };

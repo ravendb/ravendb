@@ -158,8 +158,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(1, indexes[0].IndexId);
                 Assert.Equal(IndexType.Map, indexes[0].Type);
                 Assert.Equal("Users_ByName", indexes[0].Name);
-                Assert.Equal(1, indexes[0].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[0].Definition.Collections[0]);
+                Assert.Equal(1, indexes[0].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Contains("Name", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
@@ -170,8 +170,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(IndexType.Map, indexes[1].Type);
                 Assert.Equal("Users_ByAge", indexes[1].Name);
-                Assert.Equal(1, indexes[1].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[1].Definition.Collections[0]);
+                Assert.Equal(1, indexes[1].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[1].Definition.Collections.Single());
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
                 Assert.Contains("CustomAge", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);

@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Exceptions.Indexes;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -138,14 +139,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var staticMapIndex = (MapReduceIndex)index;
             var staticIndex = staticMapIndex._compiled;
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, 
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, 
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
         private static MapReduceIndex CreateIndexInstance(int indexId, IndexDefinition definition)
         {
-            string[] collections;
+            HashSet<string> collections;
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition, out collections);
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, collections, staticIndex.OutputFields, 

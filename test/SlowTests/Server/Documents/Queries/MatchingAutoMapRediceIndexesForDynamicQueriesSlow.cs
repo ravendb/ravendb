@@ -16,7 +16,7 @@ namespace SlowTests.Server.Documents.Queries
         [Fact]
         public void Failure_if_matching_index_has_lot_of_errors()
         {
-            var definition = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            var definition = new AutoMapReduceIndexDefinition("Users", new[]
              {
                 new IndexField
                 {

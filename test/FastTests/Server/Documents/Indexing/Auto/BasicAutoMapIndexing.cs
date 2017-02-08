@@ -131,8 +131,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(2, indexes.Count);
 
                 Assert.Equal(1, indexes[0].IndexId);
-                Assert.Equal(1, indexes[0].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[0].Definition.Collections[0]);
+                Assert.Equal(1, indexes[0].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Equal("Name1", indexes[0].Definition.MapFields["Name1"].Name);
                 Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields["Name1"].SortOption);
@@ -142,8 +142,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexState.Normal, indexes[0].State);
 
                 Assert.Equal(2, indexes[1].IndexId);
-                Assert.Equal(1, indexes[1].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[1].Definition.Collections[0]);
+                Assert.Equal(1, indexes[1].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[1].Definition.Collections.Single());
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
                 Assert.Equal("Name2", indexes[1].Definition.MapFields["Name2"].Name);
                 Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Name2"].SortOption);

@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (definition.Collections.Contains(collection, StringComparer.OrdinalIgnoreCase) == false)
             {
-                if (definition.Collections.Length == 0)
+                if (definition.Collections.Count == 0)
                     explanations?.Add(new Explanation(indexName, "Query is specific for collection, but the index searches across all of them, may result in a different type being returned."));
                 else
                     explanations?.Add(new Explanation(indexName, $"Index does not apply to collection '{collection}'"));
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
             else
             {
-                if (definition.Collections.Length > 1) // we only allow indexes with a single entity name
+                if (definition.Collections.Count > 1) // we only allow indexes with a single entity name
                 {
                     explanations?.Add(new Explanation(indexName, "Index contains more than a single entity name, may result in a different type being returned."));
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);

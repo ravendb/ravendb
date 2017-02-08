@@ -285,8 +285,8 @@ select new
                 Assert.Equal(1, indexes[0].IndexId);
                 Assert.Equal(IndexType.MapReduce, indexes[0].Type);
                 Assert.Equal("Users_ByCount_GroupByLocation", indexes[0].Name);
-                Assert.Equal(1, indexes[0].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[0].Definition.Collections[0]);
+                Assert.Equal(1, indexes[0].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(2, indexes[0].Definition.MapFields.Count);
                 Assert.Contains("Location", indexes[0].Definition.MapFields.Keys);
                 Assert.Contains("Count", indexes[0].Definition.MapFields.Keys);
@@ -299,8 +299,8 @@ select new
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(IndexType.MapReduce, indexes[1].Type);
                 Assert.Equal("Orders_ByCount_GroupByProduct", indexes[1].Name);
-                Assert.Equal(1, indexes[1].Definition.Collections.Length);
-                Assert.Equal("Orders", indexes[1].Definition.Collections[0]);
+                Assert.Equal(1, indexes[1].Definition.Collections.Count);
+                Assert.Equal("Orders", indexes[1].Definition.Collections.Single());
                 Assert.Equal(3, indexes[1].Definition.MapFields.Count);
                 Assert.Contains("Product", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(FieldIndexing.Analyzed, indexes[1].Definition.MapFields["Product"].Indexing);

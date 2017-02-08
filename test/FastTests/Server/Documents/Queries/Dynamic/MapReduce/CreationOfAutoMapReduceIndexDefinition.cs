@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
@@ -18,8 +19,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         public void SpecifyingInvalidParametersWillResultInException()
         {
             Assert.Throws<ArgumentNullException>(() => new AutoMapReduceIndexDefinition(null, null, null));
-            Assert.Throws<ArgumentNullException>(() => new AutoMapReduceIndexDefinition(new[] { "test" }, null, null));
-            Assert.Throws<ArgumentNullException>(() => new AutoMapReduceIndexDefinition(new[] { "test" }, new[]
+            Assert.Throws<ArgumentNullException>(() => new AutoMapReduceIndexDefinition("test", null, null));
+            Assert.Throws<ArgumentNullException>(() => new AutoMapReduceIndexDefinition("test", new[]
             {
                 new IndexField()
                 {
@@ -28,7 +29,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 },
             }, null));
 
-            Assert.Throws<ArgumentException>(() => new AutoMapReduceIndexDefinition(new[] { "test" }, new[]
+            Assert.Throws<ArgumentException>(() => new AutoMapReduceIndexDefinition("test", new[]
             {
                 new IndexField
                 {
@@ -44,7 +45,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 }
             }));
 
-            Assert.Throws<ArgumentException>(() => new AutoMapReduceIndexDefinition(new[] { "test" }, new[]
+            Assert.Throws<ArgumentException>(() => new AutoMapReduceIndexDefinition("test", new[]
             {
                 new IndexField
                 {
@@ -60,7 +61,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 }
             }));
 
-            new AutoMapReduceIndexDefinition(new[] { "test" }, new[]
+            new AutoMapReduceIndexDefinition("test", new[]
             {
                 new IndexField
                 {
@@ -96,8 +97,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Count"));
             Assert.Equal("Auto/Users/ByCountReducedByLocation", definition.Name);
         }
@@ -194,8 +195,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             var definition = (AutoMapReduceIndexDefinition)_sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Count"));
             Assert.True(definition.ContainsField("Age"));
             Assert.True(definition.GroupByFields.ContainsKey("Location"));

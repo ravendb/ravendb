@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Configuration;
@@ -165,13 +166,13 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticMapIndex = (MapIndex)index;
             var staticIndex = staticMapIndex._compiled;
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
         private static MapIndex CreateIndexInstance(int indexId, IndexDefinition definition)
         {
-            string[] collections;
+            HashSet<string> collections;
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition, out collections);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, collections, staticIndex.OutputFields, staticIndex.HasDynamicFields);

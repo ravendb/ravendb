@@ -33,7 +33,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] {"Users"}, new[]
+                var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
                 {
                     new IndexField
                     {

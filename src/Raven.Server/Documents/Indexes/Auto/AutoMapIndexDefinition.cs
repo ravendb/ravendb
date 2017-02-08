@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
@@ -10,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Auto
     public class AutoMapIndexDefinition : IndexDefinitionBase
     {
         public AutoMapIndexDefinition(string collection, IndexField[] fields)
-            : base(IndexNameFinder.FindMapIndexName(new[] { collection }, fields), new[] { collection }, IndexLockMode.Unlock, fields)
+            : base(IndexNameFinder.FindMapIndexName(collection, fields), new HashSet<string> { collection }, IndexLockMode.Unlock, fields)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));

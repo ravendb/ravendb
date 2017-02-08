@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Abstractions.Data;
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly bool _hasDynamicFields;
         public readonly IndexDefinition IndexDefinition;
 
-        public MapIndexDefinition(IndexDefinition definition, string[] collections, string[] outputFields, bool hasDynamicFields)
+        public MapIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields, bool hasDynamicFields)
             : base(definition.Name, collections, definition.LockMode, GetFields(definition, outputFields))
         {
             _hasDynamicFields = hasDynamicFields;

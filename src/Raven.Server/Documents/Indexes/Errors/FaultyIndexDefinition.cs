@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 
@@ -8,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Errors
 {
     public class FaultyIndexDefinition : IndexDefinitionBase
     {
-        public FaultyIndexDefinition(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields)
+        public FaultyIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexField[] mapFields)
             : base(name, collections, lockMode, mapFields)
         {
         }

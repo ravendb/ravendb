@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (GroupByFields.Length == 0)
                 throw new InvalidOperationException("Invalid dynamic map-reduce query mapping. There is no group by field specified.");
 
-            return new AutoMapReduceIndexDefinition(new[] { ForCollection }, MapFields.Select(field =>
+            return new AutoMapReduceIndexDefinition(ForCollection, MapFields.Select(field =>
                     new IndexField
                     {
                         Name = field.Name,

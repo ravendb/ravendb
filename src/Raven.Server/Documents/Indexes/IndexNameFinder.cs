@@ -9,12 +9,12 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexNameFinder
     {
-        public static string FindMapIndexName(string[] collections, IReadOnlyCollection<IndexField> fields)
+        public static string FindMapIndexName(string collection, IReadOnlyCollection<IndexField> fields)
         {
-            return FindName(collections, fields);
+            return FindName(collection, fields);
         }
 
-        public static string FindMapReduceIndexName(string[] collections, IReadOnlyCollection<IndexField> fields,
+        public static string FindMapReduceIndexName(string collection, IReadOnlyCollection<IndexField> fields,
             IReadOnlyCollection<IndexField> groupBy)
         {
             if (groupBy == null)
@@ -22,21 +22,21 @@ namespace Raven.Server.Documents.Indexes
 
             var reducedByFields = string.Join("And", groupBy.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
 
-            return $"{FindName(collections, fields)}ReducedBy{reducedByFields}";
+            return $"{FindName(collection, fields)}ReducedBy{reducedByFields}";
         }
 
-        private static string FindName(string[] collections, IReadOnlyCollection<IndexField> fields)
+        private static string FindName(string collection, IReadOnlyCollection<IndexField> fields)
         {
-            foreach (var collection in collections.Where(string.IsNullOrEmpty))
+            if (string.IsNullOrWhiteSpace(collection))
                 throw new ArgumentNullException(nameof(collection));
 
             if (fields == null)
                 throw new ArgumentNullException(nameof(fields));
 
-            var joinedCollections = string.Join("And", collections.Select(x => x == Constants.Indexing.AllDocumentsCollection ? "AllDocs" : x));
+            collection = collection == Constants.Indexing.AllDocumentsCollection ? "AllDocs" : collection;
 
             if (fields.Count == 0)
-                return $"Auto/{joinedCollections}";
+                return $"Auto/{collection}";
             
             var combinedFields = string.Join("And", fields.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
 
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes
                 combinedFields = $"{combinedFields}Highlight{string.Join(string.Empty, highlighted.OrderBy(x => x))}";
             }
 
-            string formattableString = $"Auto/{joinedCollections}/By{combinedFields}";
+            string formattableString = $"Auto/{collection}/By{combinedFields}";
             if (formattableString.Length > 256)
             {
                 var shorterString = formattableString.Substring(0, 256) + "..." +

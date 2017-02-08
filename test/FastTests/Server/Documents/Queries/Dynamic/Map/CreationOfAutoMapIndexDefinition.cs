@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
@@ -39,8 +40,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Term"));
             Assert.Equal("Auto/Users/ByTerm", definition.Name);
         }
@@ -52,8 +53,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Term"));
             Assert.Equal("Auto/Users/ByTerm", definition.Name);
         }
@@ -66,8 +67,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Term"));
             Assert.True(definition.ContainsField("Term2"));
             Assert.Equal("Auto/Users/ByTermAndTerm2", definition.Name);
@@ -81,8 +82,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Term"));
             Assert.True(definition.ContainsField("Term2"));
             Assert.True(definition.ContainsField("Term3"));
@@ -98,8 +99,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Term"));
             Assert.True(definition.ContainsField("Term2"));
             Assert.True(definition.ContainsField("Term3"));
@@ -113,8 +114,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Tags,Name"));
             Assert.Equal("Auto/Users/ByTags_Name", definition.Name);
         }
@@ -127,8 +128,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("User.Name"));
             Assert.Equal("Auto/Users/ByUser_Name", definition.Name);
         }
@@ -147,8 +148,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Name"));
             Assert.True(definition.ContainsField("Age"));
             Assert.Equal("Auto/Users/ByAgeAndNameSortByAge", definition.Name);
@@ -172,8 +173,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Name"));
             Assert.True(definition.ContainsField("Address.Country"));
             Assert.Equal("Auto/Users/ByAddress_CountryAndNameSortByAddress_Country", definition.Name);
@@ -197,8 +198,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Name"));
             Assert.True(definition.ContainsField("Address.ZipCode"));
             Assert.Equal("Auto/Users/ByAddress_ZipCodeAndNameSortByAddress_ZipCode", definition.Name);
@@ -218,8 +219,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Age"));
             Assert.Equal("Auto/Users/ByAgeSortByAge", definition.Name);
             var nameField = definition.GetField("Age");
@@ -253,8 +254,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("FirstName"));
             Assert.True(definition.ContainsField("LastName"));
             Assert.True(definition.ContainsField("Age"));
@@ -296,8 +297,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var definition = _sut.CreateAutoIndexDefinition();
 
-            Assert.Equal(1, definition.Collections.Length);
-            Assert.Equal("Users", definition.Collections[0]);
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("FirstName"));
             Assert.True(definition.ContainsField("LastName"));
             Assert.True(definition.ContainsField("AddressId"));

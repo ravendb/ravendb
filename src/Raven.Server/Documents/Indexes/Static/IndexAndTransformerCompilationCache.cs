@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Transformers;
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static readonly ConcurrentDictionary<CacheKey, Lazy<TransformerBase>> TransformerCache = new ConcurrentDictionary<CacheKey, Lazy<TransformerBase>>();
 
-        public static StaticIndexBase GetIndexInstance(IndexDefinition definition, out string[] collections)
+        public static StaticIndexBase GetIndexInstance(IndexDefinition definition, out HashSet<string> collections)
         {
             var list = new List<string>();
             list.AddRange(definition.Maps);
@@ -38,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(createIndex));
 
             var staticIndexBase = result.Value;
-            collections = key.Collections = staticIndexBase.Maps.Keys.ToArray();
+            collections = key.Collections = staticIndexBase.Maps.Keys.ToHashSet();
             return staticIndexBase;
         }
 
@@ -62,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             public string OutputReduceToCollection;
             public string IndexName;
-            public string[] Collections;
+            public HashSet<string> Collections;
 
             public unsafe CacheKey(List<string> items)
             {

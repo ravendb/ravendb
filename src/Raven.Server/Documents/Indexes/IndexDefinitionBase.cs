@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes
 
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields)
+        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexField[] mapFields)
         {
             Name = name;
             Collections = collections;
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Indexes
 
         public string Name { get; set; }
 
-        public string[] Collections { get; }
+        public HashSet<string> Collections { get; }
 
         public Dictionary<string, IndexField> MapFields { get; }
 
