@@ -416,11 +416,11 @@ namespace Raven.Server.Documents
                     }
                     docCount++;
                     var document = TableValueToDocument(context, ref result.Reader);
-                    string documentKey = document.Key;
-                    if (documentKey.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase) == false)
+                    
+                    if (document.Key.StartsWith(prefix) == false)
                         break;
 
-                    var keyTest = documentKey.Substring(prefix.Length);
+                    var keyTest = document.Key.Substring(prefix.Length);
                     if (!WildcardMatcher.Matches(matches, keyTest) ||
                         WildcardMatcher.MatchesExclusion(exclude, keyTest))
                         continue;
