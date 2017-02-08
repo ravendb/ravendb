@@ -133,5 +133,25 @@ namespace FastTests.Issues
             Assert.Equal(new PathSetting($@"{rootPath}RavenData\Databases\Foo").FullPath, database.Core.DataDirectory.FullPath);
             Assert.Equal(new PathSetting($@"{rootPath}RavenData\Databases\Foo\Indexes").FullPath, database.Indexing.StoragePath.FullPath);
         }
+
+        [Fact]
+        public void Should_create_data_in_directory_specified_at_server_level()
+        {
+            var server = new RavenConfiguration(null, ResourceType.Server);
+
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"C:\RavenData");
+
+            server.Initialize();
+
+            var database = RavenConfiguration.CreateFrom(server, "Foo", ResourceType.Database);
+
+            database.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"~/Items");
+            database.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StoragePath), @"~/Items/Indexes");
+
+            database.Initialize();
+
+            Assert.Equal(new PathSetting(@"C:\RavenData\Items").FullPath, database.Core.DataDirectory.FullPath);
+            Assert.Equal(new PathSetting($@"C:\RavenData\Items\Indexes").FullPath, database.Indexing.StoragePath.FullPath);
+        }
     }
 }

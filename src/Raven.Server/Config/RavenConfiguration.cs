@@ -12,8 +12,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
-using Sparrow;
-using Sparrow.Logging;
 using Sparrow.Platform;
 
 namespace Raven.Server.Config
@@ -157,7 +155,7 @@ namespace Raven.Server.Config
             PostInit();
 
             Initialized = true;
-
+            
             return this;
         }
 

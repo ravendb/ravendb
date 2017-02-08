@@ -34,10 +34,10 @@ namespace Raven.Server.Config.Categories
 
         public virtual void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
-            Initialize(key => new SettingValue(settings[key], serverWideSettings?[key]), type, resourceName, throwIfThereIsNoSetMethod: true);
+            Initialize(key => new SettingValue(settings[key], serverWideSettings?[key]), serverWideSettings?[RavenConfiguration.GetKey(x => x.Core.DataDirectory)], type, resourceName, throwIfThereIsNoSetMethod: true);
         }
 
-        public void Initialize(Func<string, SettingValue> getSetting, ResourceType type, string resourceName, bool throwIfThereIsNoSetMethod)
+        public void Initialize(Func<string, SettingValue> getSetting, string serverDataDir, ResourceType type, string resourceName, bool throwIfThereIsNoSetMethod)
         {
             foreach (var property in GetConfigurationProperties())
             {
@@ -107,7 +107,7 @@ namespace Raven.Server.Config.Categories
                                 if (property.PropertyType == typeof(PathSetting))
                                 {
                                     if (settingValue.CurrentValue != null)
-                                        property.SetValue(this, new PathSetting(Convert.ToString(value)));
+                                        property.SetValue(this, new PathSetting(Convert.ToString(value), serverDataDir));
                                     else
                                         property.SetValue(this, new PathSetting(Convert.ToString(value), type, resourceName));
                                 }
@@ -116,7 +116,7 @@ namespace Raven.Server.Config.Categories
                                     var paths = value.Split(';');
 
                                     if (settingValue.CurrentValue != null)
-                                        property.SetValue(this, paths.Select(x => new PathSetting(Convert.ToString(x))).ToArray());
+                                        property.SetValue(this, paths.Select(x => new PathSetting(Convert.ToString(x), serverDataDir)).ToArray());
                                     else
                                         property.SetValue(this, paths.Select(x => new PathSetting(Convert.ToString(x), type, resourceName)).ToArray());
                                 }
