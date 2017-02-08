@@ -64,6 +64,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private static void ValidateReduceResultsCollectionName(MapReduceIndex index, DocumentDatabase documentDatabase)
         {
             var outputReduceToCollection = index.Definition.OutputReduceToCollection;
+            if (string.IsNullOrWhiteSpace(outputReduceToCollection))
+                return;
 
             if (index.Collections.Contains(Constants.Indexing.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase))
             {
