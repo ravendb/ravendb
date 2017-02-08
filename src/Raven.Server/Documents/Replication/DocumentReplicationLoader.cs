@@ -18,7 +18,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.Utils;
 using Voron;
-using Voron.Data.BTrees;
 
 
 namespace Raven.Server.Documents.Replication
@@ -588,6 +587,26 @@ namespace Raven.Server.Documents.Replication
 
         private bool ValidateReplicaitonSource()
         {
+            if (ReplicationDocument == null)
+            {
+                return true;
+            }
+
+            if (ReplicationDocument.Source == null)
+            {
+                ReplicationDocument.Source = _database.DbId.ToString();
+                DocumentsOperationContext context;
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var djv = ReplicationDocument.ToJson();
+                    var replicatedBlittable = context.ReadObject(djv, Constants.Replication.DocumentReplicationConfiguration);
+                    _database.DocumentsStorage.Put(context, Constants.Replication.DocumentReplicationConfiguration, null, replicatedBlittable);
+                    tx.Commit();
+                }
+                return true;
+            }
+
             if (ReplicationDocument != null &&
                 String.Compare(ReplicationDocument.Source, _database.DbId.ToString(), StringComparison.Ordinal) != 0)
             {
