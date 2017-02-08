@@ -11,12 +11,8 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading;
-using Sparrow.Json;
-using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Impl.Journal;
-using Voron.Impl.Paging;
 using Voron.Global;
 using Voron.Util;
 
@@ -377,13 +373,18 @@ namespace Voron.Impl.Backup
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
                             toDispose.Add(recoveryPager);
 
-                            var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, 0,
-                                lastTxHeader);
-                            toDispose.Add(reader);
-
-                            while (reader.ReadOneTransactionToDataFile(env.Options))
+                            using (var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, 0,
+                                lastTxHeader))
                             {
-                                lastTxHeader = reader.LastTransactionHeader;
+                                while (reader.ReadOneTransactionToDataFile(env.Options))
+                                {
+                                    lastTxHeader = reader.LastTransactionHeader;
+                                }
+                                if (lastTxHeader != null)
+                                {
+                                    TransactionHeader lastTxHeaderStruct = *lastTxHeader;
+                                    lastTxHeader = &lastTxHeaderStruct;
+                                }
                             }
                             
                             break;
