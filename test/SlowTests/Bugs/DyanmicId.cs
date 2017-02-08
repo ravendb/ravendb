@@ -1,0 +1,57 @@
+// -----------------------------------------------------------------------
+//  <copyright file="DyanmicId.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+
+using System;
+using System.Linq;
+using FastTests;
+using Raven.NewClient.Client.Linq;
+using Xunit;
+
+namespace SlowTests.Bugs
+{
+    public class DyanmicId : RavenNewTestBase
+    {
+        private class Article
+        {
+            public string ID { get; set; }
+            public string Title { get; set; }
+            public string SubTitle { get; set; }
+            public DateTime PublishDate { get; set; }
+        }
+
+        [Fact]
+        public void AddEntity()
+        {
+            //SetUp
+            using (var store = GetDocumentStore())
+            {
+                store.Conventions.FindIdentityPropertyNameFromEntityName = (typeName) => "ID";
+                store.Conventions.FindIdentityProperty = prop => prop.Name == "ID";
+
+                using (var session = store.OpenSession())
+                {
+
+                    var article = new Article()
+                    {
+                        Title = "Article 1",
+                        SubTitle = "Article 1 subtitle",
+                        PublishDate = DateTime.UtcNow.Add(TimeSpan.FromDays(1))
+                    };
+                    session.Store(article);
+                    session.SaveChanges();
+
+                    Assert.NotNull(article.ID);
+
+                    var insertedArticle = session.Query<Article>().Where(
+                        a => a.ID.In(new string[] {article.ID}) && a.PublishDate > DateTime.UtcNow).FirstOrDefault();
+
+                    Assert.NotNull(insertedArticle);
+                }
+            }
+        }
+
+    }
+}
