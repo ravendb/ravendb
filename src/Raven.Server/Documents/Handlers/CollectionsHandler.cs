@@ -9,7 +9,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Client.Data.Collection;
 using Raven.NewClient.Client.Data.Collections;
-using Raven.NewClient.Client.Operations.Databases.Collections;
 using Raven.Server.Documents.Operations;
 
 namespace Raven.Server.Documents.Handlers

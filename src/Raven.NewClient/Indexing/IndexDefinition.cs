@@ -36,6 +36,11 @@ namespace Raven.NewClient.Client.Indexing
         public string Name { get; set; }
 
         /// <summary>
+        /// Minimum etag before replacement
+        /// </summary>
+        public long? MinimumEtagBeforeReplace { get; set; }
+
+        /// <summary>
         /// Index lock mode:
         /// <para>- Unlock - all index definition changes acceptable</para>
         /// <para>- LockedIgnore - all index definition changes will be ignored, only log entry will be created</para>

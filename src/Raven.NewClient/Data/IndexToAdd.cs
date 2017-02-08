@@ -3,7 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
 

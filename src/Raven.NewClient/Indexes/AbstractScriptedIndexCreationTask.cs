@@ -41,15 +41,13 @@ namespace Raven.NewClient.Client.Indexes
             set { scripts.RetryOnConcurrencyExceptions = value; }
         }
 
-        public override void AfterExecute(DocumentConvention documentConvention)
+        public void AfterExecute(DocumentStoreBase documentStore, DocumentConvention documentConvention)
         {
-            base.AfterExecute( documentConvention);
             AfterExecute( IndexName, scripts);
         }
 
-        public override async Task AfterExecuteAsync(DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
+        public async Task AfterExecuteAsync(DocumentStoreBase documentStore, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
         {
-            await base.AfterExecuteAsync( documentConvention, token).ConfigureAwait(false);
             await AfterExecuteAsync(IndexName, scripts, token).ConfigureAwait(false);
         }
 
@@ -116,15 +114,13 @@ namespace Raven.NewClient.Client.Indexes
             set { scripts.RetryOnConcurrencyExceptions = value; }
         }
 
-        public override void AfterExecute( DocumentConvention documentConvention)
+        public void AfterExecute(DocumentStoreBase documentStore, DocumentConvention documentConvention)
         {
-            base.AfterExecute( documentConvention);
             AbstractScriptedIndexCreationTask.AfterExecute( IndexName, scripts);
         }
 
-        public override async Task AfterExecuteAsync( DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
+        public async Task AfterExecuteAsync(DocumentStoreBase documentStore, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
         {
-            await base.AfterExecuteAsync( documentConvention, token).ConfigureAwait(false);
             await AbstractScriptedIndexCreationTask.AfterExecuteAsync(IndexName, scripts, token).ConfigureAwait(false);
         }
     }

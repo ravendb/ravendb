@@ -301,6 +301,15 @@ namespace Raven.Server.Web
             return values[0];
         }
 
+        //TODO - Temporary for old client test. need to be deleted .
+        protected string GetQueryStringValue(string name)
+        {
+            var values = HttpContext.Request.Query[name];
+            if (values.Count != 1)
+                return null;
+            return values[0];
+        }
+
         private static void InvalidEmptyValue(string name)
         {
             throw new ArgumentException($"Query string value '{name}' must have a non empty value");

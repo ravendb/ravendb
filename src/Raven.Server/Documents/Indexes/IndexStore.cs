@@ -20,8 +20,9 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-
+using Sparrow.Json;
 using Voron.Platform.Posix;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -129,6 +130,12 @@ namespace Raven.Server.Documents.Indexes
                         }
                         return existingIndex.IndexId;
                     case IndexCreationOptions.Update:
+                        //WIP 
+                        if (definition.MinimumEtagBeforeReplace != null)
+                        {
+                            definition.Name = Constants.SideBySideIndexNamePrefix + definition.Name;
+                            break;
+                        }
                         DeleteIndex(existingIndex.IndexId);
                         break;
                 }
@@ -175,6 +182,7 @@ namespace Raven.Server.Documents.Indexes
                     case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
                         throw new NotSupportedException();
                     case IndexCreationOptions.Update:
+                        //WIP
                         DeleteIndex(existingIndex.IndexId);
                         break;
                 }
@@ -276,7 +284,7 @@ namespace Raven.Server.Documents.Indexes
             return IndexCreationOptions.Update;
         }
 
-        private IndexLockMode ValidateIndexDefinition(string name, out Index existingIndex)
+        public IndexLockMode ValidateIndexDefinition(string name, out Index existingIndex)
         {
             ValidateIndexName(name);
 
@@ -285,7 +293,7 @@ namespace Raven.Server.Documents.Indexes
                 switch (existingIndex.Definition.LockMode)
                 {
                     case IndexLockMode.SideBySide:
-                        throw new NotImplementedException(); // TODO [ppekrol]
+                        return IndexLockMode.SideBySide;
                     case IndexLockMode.LockedIgnore:
                         return IndexLockMode.LockedIgnore;
                     case IndexLockMode.LockedError:
@@ -704,6 +712,11 @@ namespace Raven.Server.Documents.Indexes
             public Index Index { get; set; }
             public IndexState State { get; set; }
             public DateTime CreationDate { get; set; }
+        }
+
+        public void ReplaceIndexes(Index oldIndex, Index newIndex)
+        {
+            throw new NotImplementedException();
         }
     }
 }

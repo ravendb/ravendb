@@ -16,6 +16,8 @@ using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Operations;
+using Raven.NewClient.Operations.Databases.Indexes;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client
 {
@@ -87,23 +89,23 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
         {
-            return indexCreationTask.ExecuteAsync(Conventions);
+            return indexCreationTask.ExecuteAsync(this, Conventions);
         }
 
         /// <summary>
         /// Executes index creation in side-by-side mode.
         /// </summary>
-        public virtual void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public virtual void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null)
         {
-            indexCreationTask.SideBySideExecute(Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
+            indexCreationTask.SideBySideExecute(this, Conventions, minimumEtagBeforeReplace);
         }
 
         /// <summary>
         /// Executes index creation in side-by-side mode.
         /// </summary>
-        public virtual Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public virtual Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null)
         {
-            return indexCreationTask.SideBySideExecuteAsync(Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
+            return indexCreationTask.SideBySideExecuteAsync(this, Conventions, minimumEtagBeforeReplace);
         }
 
         /// <summary>
@@ -127,12 +129,17 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual void ExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks)
         {
-            throw new NotImplementedException();
-            /*var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
-            DatabaseCommands.PutIndexes(indexesToAdd);
+            var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
+            var requestExecuter = GetRequestExecuter();
 
-            foreach (var task in indexCreationTasks)
-                task.AfterExecute(DatabaseCommands, Conventions);*/
+            JsonOperationContext context;
+
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            {
+                var admin = new AdminOperationExecuter(this, requestExecuter, context);
+                var putIndexesOperation = new PutIndexesOperation(indexesToAdd);
+                admin.Send(putIndexesOperation);
+            }
         }
 
         /// <summary>
@@ -140,38 +147,53 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual async Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
         {
-            throw new NotImplementedException();
-            /* var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
-             await AsyncDatabaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
+            var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
+            var requestExecuter = GetRequestExecuter();
 
-             foreach (var task in indexCreationTasks)
-                 await task.AfterExecuteAsync(Conventions).ConfigureAwait(false);*/
+            JsonOperationContext context;
+
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            {
+                var admin = new AdminOperationExecuter(this, requestExecuter, context);
+                var putIndexesOperation = new PutIndexesOperation(indexesToAdd);
+                await admin.SendAsync(putIndexesOperation).ConfigureAwait(false);
+            }
         }
 
         /// <summary>
         /// Executes indexes creation in side-by-side mode.
         /// </summary>
-        public virtual void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public virtual void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null)
         {
-            throw new NotImplementedException();
-            /*var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
-            DatabaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
+            var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions, minimumEtagBeforeReplace);
+            var requestExecuter = GetRequestExecuter();
 
-            foreach (var task in indexCreationTasks)
-                task.AfterExecute(DatabaseCommands, Conventions);*/
+            JsonOperationContext context;
+
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            {
+                var admin = new AdminOperationExecuter(this, requestExecuter, context);
+                var putIndexesOperation = new PutIndexesOperation(indexesToAdd);
+                admin.Send(putIndexesOperation);
+            }
         }
 
         /// <summary>
         /// Executes indexes creation in side-by-side mode.
         /// </summary>
-        public virtual async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public virtual async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null)
         {
-            throw new NotImplementedException();
-            /*var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
-            await AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
+            var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions, minimumEtagBeforeReplace);
+            var requestExecuter = GetRequestExecuter();
 
-            foreach (var task in indexCreationTasks)
-                task.AfterExecute(Conventions);*/
+            JsonOperationContext context;
+
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            {
+                var admin = new AdminOperationExecuter(this, requestExecuter, context);
+                var putIndexesOperation = new PutIndexesOperation(indexesToAdd);
+                await admin.SendAsync(putIndexesOperation).ConfigureAwait(false);
+            }
         }
 
         private DocumentConvention conventions;

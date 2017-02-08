@@ -5,17 +5,13 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Debugging;
-using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
@@ -24,16 +20,125 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using IndexDefinition = Raven.Client.Indexing.IndexDefinition;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/index", "PUT")]
+        public async Task PutIndex()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "index"))
+                {
+                    BlittableJsonReaderObject definition;
+                    string name;
+                     if (json.TryGet("Name", out name) == false)
+                        throw new ArgumentException($"Name must have a non empty value");
+                    if (json.TryGet("Definition", out definition) == false)
+                        throw new ArgumentException($"Index definition must have a non empty value");
+                    var indexDefinition = JsonDeserializationServer.IndexDefinition(definition);
+
+                    if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
+                        throw new ArgumentException("Index must have a 'Maps' fields");
+
+                    indexDefinition.Name = name;
+
+                    var indexId = Database.IndexStore.CreateIndex(indexDefinition);
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName("Index");
+                        writer.WriteString(name);
+                        writer.WriteComma();
+
+                        writer.WritePropertyName("IndexId");
+                        writer.WriteInteger(indexId);
+
+                        writer.WriteEndObject();
+                    }
+                }
+            }
+        }
+
         [RavenAction("/databases/*/indexes", "PUT")]
         public async Task Put()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            //WIP
+            var name = GetQueryStringValue("name");
+            if (name != null)
+            {
+                //TODO - Temporary for old client test. need to be deleted .only PutIndexes need to be in this end point
+                await PutIndex(name);
+            }
+            else
+            {
+                await PutIndexes();
+            }
+            
+        }
 
+        private async Task PutIndexes()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                List<string> createdIndexes = new List<string>();
+                using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "Indexes"))
+                {
+                    BlittableJsonReaderArray indexesToAdd;
+                    if( json.TryGet("Indexes", out indexesToAdd) == false)
+                        throw new ArgumentException($"Query string value name or Indexes must have a non empty value");
+
+                    foreach (var indexToAdd in indexesToAdd)
+                    {
+                        var index = JsonDeserializationServer.IndexToAdd((BlittableJsonReaderObject) indexToAdd);
+
+                        if (index.Definition.Maps == null || index.Definition.Maps.Count == 0)
+                            throw new ArgumentException("Index must have a 'Maps' fields");
+                        index.Definition.Name = index.Name;
+                        var indexId = Database.IndexStore.CreateIndex(index.Definition);
+                        createdIndexes.Add(index.Definition.Name);
+                    }
+                }
+
+                HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    bool isFirst = true;
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("Results");
+                    writer.WriteStartArray();
+                    foreach (var indexName in createdIndexes)
+                    {
+                        if (isFirst)
+                        {
+                            writer.WriteString(indexName);
+                            isFirst = false;
+                        }
+                        else
+                        {
+                            writer.WriteComma();
+                            writer.WriteString(indexName);
+                        }
+                    }
+                    writer.WriteEndArray();
+                    writer.WriteEndObject();
+                }
+            }
+        }
+
+        private async Task PutIndex(string name)
+        {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
@@ -50,7 +155,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var indexId = Database.IndexStore.CreateIndex(indexDefinition);
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -667,6 +772,8 @@ namespace Raven.Server.Documents.Handlers
 
             return Task.CompletedTask;
         }
+
+
 
         private IEnumerable<Index> GetIndexesToReportOn()
         {
