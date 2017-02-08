@@ -8,6 +8,8 @@ namespace Raven.Server.Documents
     {
         public LazyStringValue Key;
 
+        public DocumentFlags Flags;
+
         public LazyStringValue LoweredKey;
 
         public long DeletedEtag;

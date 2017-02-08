@@ -92,6 +92,7 @@ namespace Raven.Server.Documents.Replication
                                 ChangeVector = tombsItCurrent.ChangeVector,
                                 Collection = tombsItCurrent.Collection,
                                 Key = tombsItCurrent.Key,
+                                Flags = tombsItCurrent.Flags,
                                 TransactionMarker = tombsItCurrent.TransactionMarker,
                                 LastModifiedTicks = tombsItCurrent.LastModified.Ticks,
                             };

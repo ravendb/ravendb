@@ -7,7 +7,9 @@ using Raven.NewClient.Client.Exceptions.Indexes;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Operations.Databases.Collections;
 using Raven.NewClient.Client.Replication;
+using Raven.NewClient.Operations.Databases.Documents;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce
@@ -267,6 +269,37 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 Assert.True(collectionStatistics.Collections.ContainsKey(CollectionName.SystemCollection));
                 Assert.True(collectionStatistics.Collections.ContainsKey("Invoices"));
                 Assert.Equal(32, collectionStatistics.CountOfDocuments);
+
+
+                // Check that we do not replicate tombstones of aritifical documents
+
+                await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"));
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new RavenDB_4323.Invoice { Amount = 1, IssuedAt = date.AddYears(31) }, "marker2");
+                    await session.SaveChangesAsync();
+                }
+                WaitForIndexing(store1);
+                WaitForDocument(store2, "marker2");
+
+                var database = await GetDocumentDatabaseInstanceFor(store1);
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (context.OpenReadTransaction())
+                {
+                    var dailyInvoicesTombstones = database.DocumentsStorage.GetTombstonesFrom(context, "DailyInvoices", 0, 0, 128).ToList();
+                    Assert.Equal(9, dailyInvoicesTombstones.Count);
+                }
+
+                var database2 = await GetDocumentDatabaseInstanceFor(store2);
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database2))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var dailyInvoicesTombstones = database.DocumentsStorage.GetTombstonesFrom(context, "DailyInvoices", 0, 0, 128).ToList();
+                    Assert.Equal(0, dailyInvoicesTombstones.Count);
+                    var collections = database.DocumentsStorage.GetTombstoneCollections(tx.InnerTransaction).ToList();
+                    Assert.Equal(2, collections.Count);
+                    Assert.DoesNotContain("DailyInvoices", collections, StringComparer.OrdinalIgnoreCase);
+                }
             }
         }
 

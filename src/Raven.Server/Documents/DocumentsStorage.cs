@@ -954,9 +954,11 @@ namespace Raven.Server.Documents
 
             result.Collection = new LazyStringValue(null, tvr.Read(5, out size), size, context);
 
-            result.TransactionMarker = *(short*)tvr.Read(6, out size);
+            result.Flags = (DocumentFlags)(*(int*)tvr.Read(6, out size));
 
-            result.LastModified = new DateTime(*(long*)tvr.Read(7, out size));
+            result.TransactionMarker = *(short*)tvr.Read(7, out size);
+
+            result.LastModified = new DateTime(*(long*)tvr.Read(8, out size));
 
             return result;
         }
@@ -1019,7 +1021,7 @@ namespace Raven.Server.Documents
                     $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                 {
                     ActualETag = doc.Etag,
-                    ExpectedETag = (long)expectedEtag
+                    ExpectedETag = (long) expectedEtag
                 };
             }
 
@@ -1047,7 +1049,8 @@ namespace Raven.Server.Documents
                 collectionName,
                 doc.ChangeVector,
                 lastModifiedTicks,
-                changeVector);
+                changeVector,
+                doc.Flags);
 
             if (collectionName.IsSystem == false)
             {
@@ -1189,7 +1192,8 @@ namespace Raven.Server.Documents
                         collectionName,
                         result.Item2.ChangeVector,
                         lastModifiedTicks,
-                        changeVector);
+                        changeVector,
+                        DocumentFlags.None);
                 }
                 else
                 {
@@ -1215,7 +1219,8 @@ namespace Raven.Server.Documents
                         collectionName,
                         doc?.ChangeVector,
                         lastModifiedTicks,
-                        changeVector);
+                        changeVector,
+                        DocumentFlags.None);
 
                     // not sure if this needs to be done. 
                     // see http://issues.hibernatingrhinos.com/issue/RavenDB-5226
@@ -1252,7 +1257,8 @@ namespace Raven.Server.Documents
             CollectionName collectionName,
             ChangeVectorEntry[] docChangeVector,
             long? lastModifiedTicks,
-            ChangeVectorEntry[] changeVector)
+            ChangeVectorEntry[] changeVector,
+            DocumentFlags flags)
         {
             var newEtag = GenerateNextEtag();
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
@@ -1286,6 +1292,7 @@ namespace Raven.Server.Documents
                         {keyPtr, keySize},
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
                         collectionSlice,
+                        (int)flags,
                         transactionMarker,
                         modifiedTicks
                     };
@@ -1785,19 +1792,19 @@ namespace Raven.Server.Documents
             {
                 byte* doc = null;
                 int docSize = 0;
-                LazyStringValue lazyCollectioName;
+                LazyStringValue lazyCollectionName;
                 if (incomingDoc != null) // can be null if it is a tombstone
                 {
                     doc = incomingDoc.BasePointer;
                     docSize = incomingDoc.Size;
-                    lazyCollectioName = CollectionName.GetLazyCollectionNameFrom(context, incomingDoc);
+                    lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, incomingDoc);
                 }
                 else
                 {
-                    lazyCollectioName = context.GetLazyString(incomingTombstoneCollection);
+                    lazyCollectionName = context.GetLazyString(incomingTombstoneCollection);
                 }
 
-                using (lazyCollectioName)
+                using (lazyCollectionName)
                 {
                     var tvb = new TableValueBuilder
                     {
@@ -1806,7 +1813,7 @@ namespace Raven.Server.Documents
                         {keyPtr, keySize},
                         {doc, docSize},
                         Bits.SwapBytes(GenerateNextEtag()),
-                        {lazyCollectioName.Buffer, lazyCollectioName.Size},
+                        {lazyCollectionName.Buffer, lazyCollectionName.Size},
                         docPositions.LastModifiedTicks
                     };
 
