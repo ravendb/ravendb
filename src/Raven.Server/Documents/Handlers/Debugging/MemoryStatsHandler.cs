@@ -179,6 +179,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         public static int LongestCommonPrefixLen(List<string> strings)
         {
+            if (strings.Count == 0)
+                return 0;
+
             for (int prefixLen = 0; prefixLen < strings[0].Length; prefixLen++)
             {
                 char c = strings[0][prefixLen];

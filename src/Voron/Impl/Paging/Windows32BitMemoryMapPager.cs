@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron.Data;
 using Voron.Global;
 using Voron.Platform.Win32;
@@ -25,7 +26,14 @@ namespace Voron.Impl.Paging
         public class TransactionState
         {
             public Dictionary<long, LoadedPage> LoadedPages = new Dictionary<long, LoadedPage>();
-            public List<IntPtr> AddressesToUnload = new List<IntPtr>();
+            public List<MappedAddresses> AddressesToUnload = new List<MappedAddresses>();
+        }
+
+        public class MappedAddresses
+        {
+            public string File;
+            public byte* Address;
+            public long Size;
         }
 
         public class LoadedPage
@@ -234,7 +242,7 @@ namespace Voron.Impl.Paging
 
             if (canUnmap)
             {
-                Debug.Assert(state.AddressesToUnload[state.AddressesToUnload.Count - 1] == new IntPtr(page.Pointer));
+                Debug.Assert(state.AddressesToUnload[state.AddressesToUnload.Count - 1].Address == page.Pointer);
                 state.AddressesToUnload.RemoveAt(state.AddressesToUnload.Count - 1);
 
                 UnmapViewOfFile(page.Pointer);
@@ -261,7 +269,14 @@ namespace Voron.Impl.Paging
             if (result == null)
                 throw new Win32Exception();
 
-            state.AddressesToUnload.Add(new IntPtr(result));
+            NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size);
+
+            state.AddressesToUnload.Add(new MappedAddresses
+            {
+                Address = result,
+                File = _fileInfo.FullName,
+                Size = size
+            });
             var loadedPage = new LoadedPage
             {
                 Pointer = result,
@@ -319,7 +334,8 @@ namespace Voron.Impl.Paging
             {
                 foreach (var addr in state.AddressesToUnload)
                 {
-                    UnmapViewOfFile((byte*)addr);
+                    UnmapViewOfFile(addr.Address);
+                    NativeMemory.UnregisterFileMapping(addr.File, (IntPtr)addr.Address, addr.Size);
                 }
             }
             lowLevelTransaction.Windows32BitPagerTransactionState.Clear();
@@ -358,7 +374,18 @@ namespace Voron.Impl.Paging
                     if (page.NumberOfPages < distanceFromStart + numberOfPages)
                     {
                         UnmapViewOfFile(page.Pointer);
-                        _state.AddressesToUnload.Remove(new IntPtr(page.Pointer));
+                        for (int i = 0; i < _state.AddressesToUnload.Count; i++)
+                        {
+                            if (_state.AddressesToUnload[i].Address == page.Pointer)
+                            {
+                                NativeMemory.UnregisterFileMapping(_state.AddressesToUnload[i].File,
+                                    (IntPtr) _state.AddressesToUnload[i].Address, 
+                                    _state.AddressesToUnload[i].Size);
+
+                                _state.AddressesToUnload.RemoveAt(i);
+                                break;
+                            }
+                        }
                         page = _parent.MapPages(_state, allocationStartPosition, ammountToMapInBytes);
                     }
                 }
@@ -389,9 +416,10 @@ namespace Voron.Impl.Paging
                     FlushViewOfFile(loadedPage.Pointer, new IntPtr(loadedPage.NumberOfPages * Constants.Storage.PageSize));
                 }
 
-                foreach (var ptr in _state.AddressesToUnload)
+                foreach (var addr in _state.AddressesToUnload)
                 {
-                    UnmapViewOfFile((byte*)ptr);
+                    UnmapViewOfFile(addr.Address);
+                    NativeMemory.UnregisterFileMapping(addr.File, (IntPtr)addr.Address, addr.Size);
                 }
                 _state.AddressesToUnload.Clear();
                 _state.LoadedPages.Clear();
