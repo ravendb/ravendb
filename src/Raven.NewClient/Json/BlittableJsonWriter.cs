@@ -162,6 +162,12 @@ namespace Raven.NewClient.Client.Json
 
         public override void WriteValue(double value)
         {
+            if (double.IsNaN(value))
+            {
+                _manualBlittalbeJsonDocumentBuilder.WriteValue("NaN");
+                return;
+            }
+
             _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
         }
 
@@ -217,7 +223,16 @@ namespace Raven.NewClient.Client.Json
 
         public override void WriteValue(double? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
+            if (value != null)
+            {
+                if (double.IsNaN(value.Value))
+                {
+                    _manualBlittalbeJsonDocumentBuilder.WriteValue("NaN");
+                    return;
+                }
+
+                _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
+            }
             else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
         }
 
