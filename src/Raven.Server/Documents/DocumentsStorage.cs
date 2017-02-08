@@ -1493,15 +1493,16 @@ namespace Raven.Server.Documents
             {
                 oldVersion = Get(ctx, conflict.LoweredKey);
             }
-            catch (DocumentConflictException )
+            catch (DocumentConflictException)
             {
-                return;// if already conflicted, don't need to do anything
+                return; // if already conflicted, don't need to do anything
             }
+
             if (oldVersion == null)
                 return;
 
             var oldVersionCollectionName = CollectionName.GetCollectionName(oldVersion.Data);
-            if (oldVersionCollectionName.Equals(conflict.Collection, StringComparison.CurrentCultureIgnoreCase))
+            if (oldVersionCollectionName.Equals(conflict.Collection, StringComparison.OrdinalIgnoreCase))
                 return;
 
             DeleteWithoutCreatingTombstone(ctx, oldVersionCollectionName, oldVersion.StorageId, isTombstone: false);
