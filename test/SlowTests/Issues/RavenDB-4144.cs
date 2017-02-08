@@ -6,12 +6,13 @@
 
 using System.Collections.Generic;
 using FastTests;
-using Raven.Client.Data;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Operations.Databases.Documents;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4144 : RavenTestBase
+    public class RavenDB_4144 : RavenNewTestBase
     {
         [Fact]
         public void can_save_javascript_array_values()
@@ -29,13 +30,13 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"var list = ['my', 'list']; 
                                 for(var x in list){
                                     this.List[x] = list[x];
                                 }"
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -61,11 +62,11 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"var test = ['My', 'Array'];
                                this.Name = test.RemoveWhere;"
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -91,11 +92,11 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"var test = ['My', 'Array'];
                                this.Name = function() {}"
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -121,13 +122,13 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"function myConverter(str) {
                                   return str + ' whoeeehoeee'
                                }
                                this.Name = myConverter;"
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -153,13 +154,13 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"function myConverter(str) {
                                   return str + ' whoeeehoeee'
                                }
                                this.Name = myConverter(this.Name);"
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {

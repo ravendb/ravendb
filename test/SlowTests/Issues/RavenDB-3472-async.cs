@@ -9,17 +9,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Shard;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class ShardingTransformerTests_Async : RavenTestBase
+    public class ShardingTransformerTests_Async : RavenNewTestBase
     {
-        [Fact]
-        public async Task TransformerOverShardedLoad_IdIsNotNull()
+        [Fact(Skip = "RavenDB-6283")]
+        public void TransformerOverShardedLoad_IdIsNotNull()
         {
             using (var shard1 = GetDocumentStore())
             using (var shard2 = GetDocumentStore())
@@ -32,47 +31,47 @@ namespace SlowTests.Issues
                     {"America", shard3}
                 };
 
-                ShardStrategy shardStrategy = new ShardStrategy(shards)
-                    .ShardingOn<Company>(company => company.Region)
-                    .ShardingOn<Invoice>(x => x.CompanyId);
+                //ShardStrategy shardStrategy = new ShardStrategy(shards)
+                //    .ShardingOn<Company>(company => company.Region)
+                //    .ShardingOn<Invoice>(x => x.CompanyId);
 
-                using (IDocumentStore store = new ShardedDocumentStore(shardStrategy))
-                {
+                //using (IDocumentStore store = new ShardedDocumentStore(shardStrategy))
+                //{
 
-                    store.Initialize();
+                //    store.Initialize();
 
-                    new Transformer().Execute(store);
+                //    new Transformer().Execute(store);
 
-                    string americanCompanyId;
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        Company asian = new Company { Name = "Company 1", Region = "Asia" };
-                        await session.StoreAsync(asian);
-                        Company middleEastern = new Company { Name = "Company 2", Region = "Middle-East" };
-                        await session.StoreAsync(middleEastern);
-                        Company american = new Company { Name = "Company 3", Region = "America" };
-                        await session.StoreAsync(american);
+                //    string americanCompanyId;
+                //    using (var session = store.OpenAsyncSession())
+                //    {
+                //        Company asian = new Company { Name = "Company 1", Region = "Asia" };
+                //        await session.StoreAsync(asian);
+                //        Company middleEastern = new Company { Name = "Company 2", Region = "Middle-East" };
+                //        await session.StoreAsync(middleEastern);
+                //        Company american = new Company { Name = "Company 3", Region = "America" };
+                //        await session.StoreAsync(american);
 
-                        await session.StoreAsync(new Invoice { CompanyId = american.Id, Amount = 3, IssuedAt = DateTime.Today.AddDays(-1) });
-                        await session.StoreAsync(new Invoice { CompanyId = asian.Id, Amount = 5, IssuedAt = DateTime.Today.AddDays(-1) });
-                        await session.StoreAsync(new Invoice { CompanyId = middleEastern.Id, Amount = 12, IssuedAt = DateTime.Today });
-                        await session.SaveChangesAsync();
+                //        await session.StoreAsync(new Invoice { CompanyId = american.Id, Amount = 3, IssuedAt = DateTime.Today.AddDays(-1) });
+                //        await session.StoreAsync(new Invoice { CompanyId = asian.Id, Amount = 5, IssuedAt = DateTime.Today.AddDays(-1) });
+                //        await session.StoreAsync(new Invoice { CompanyId = middleEastern.Id, Amount = 12, IssuedAt = DateTime.Today });
+                //        await session.SaveChangesAsync();
 
-                        americanCompanyId = american.Id;
-                    }
+                //        americanCompanyId = american.Id;
+                //    }
 
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        var company = await session.LoadAsync<Transformer, Transformer.Result>(americanCompanyId);
+                //    using (var session = store.OpenAsyncSession())
+                //    {
+                //        var company = await session.LoadAsync<Transformer, Transformer.Result>(americanCompanyId);
 
-                        Assert.Equal(company.Id, americanCompanyId);
-                    }
-                }
+                //        Assert.Equal(company.Id, americanCompanyId);
+                //    }
+                //}
             }
         }
 
-        [Fact(Skip = "Wait for new client")]
-        public async Task TransformerOverShardedLoad_IdIsNotNull_WithCustomerStrategy()
+        [Fact(Skip = "RavenDB-6283")]
+        public void TransformerOverShardedLoad_IdIsNotNull_WithCustomerStrategy()
         {
             using (var shard1 = GetDocumentStore())
             using (var shard2 = GetDocumentStore())
@@ -85,39 +84,39 @@ namespace SlowTests.Issues
                     {"Shard2", shard3}
                 };
 
-                var shardStrategy = new ShardStrategy(shards) { ShardResolutionStrategy = new ShardResolutionStrategy() };
+                //var shardStrategy = new ShardStrategy(shards) { ShardResolutionStrategy = new ShardResolutionStrategy() };
 
-                using (IDocumentStore store = new ShardedDocumentStore(shardStrategy))
-                {
+                //using (IDocumentStore store = new ShardedDocumentStore(shardStrategy))
+                //{
 
-                    store.Initialize();
+                //    store.Initialize();
 
-                    new Transformer().Execute(store);
+                //    new Transformer().Execute(store);
 
-                    string americanCompanyId;
-                    using (var session = store.OpenAsyncSession())
-                    {
+                //    string americanCompanyId;
+                //    using (var session = store.OpenAsyncSession())
+                //    {
 
-                        Company asian = new Company { Name = "Company 1" };
-                        await session.StoreAsync(asian);
-                        Company middleEastern = new Company { Name = "Company 2" };
-                        await session.StoreAsync(middleEastern);
-                        Company american = new Company { Name = "Company 3" };
-                        await session.StoreAsync(american);
+                //        Company asian = new Company { Name = "Company 1" };
+                //        await session.StoreAsync(asian);
+                //        Company middleEastern = new Company { Name = "Company 2" };
+                //        await session.StoreAsync(middleEastern);
+                //        Company american = new Company { Name = "Company 3" };
+                //        await session.StoreAsync(american);
 
-                        await session.SaveChangesAsync();
+                //        await session.SaveChangesAsync();
 
 
-                        americanCompanyId = american.Id;
-                    }
+                //        americanCompanyId = american.Id;
+                //    }
 
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        var company = await session.LoadAsync<Transformer, Transformer.Result>(americanCompanyId);
+                //    using (var session = store.OpenAsyncSession())
+                //    {
+                //        var company = await session.LoadAsync<Transformer, Transformer.Result>(americanCompanyId);
 
-                        Assert.Equal(company.Id, americanCompanyId);
-                    }
-                }
+                //        Assert.Equal(company.Id, americanCompanyId);
+                //    }
+                //}
             }
         }
 
@@ -149,29 +148,29 @@ namespace SlowTests.Issues
             }
         }
 
-        private class ShardResolutionStrategy : IShardResolutionStrategy
-        {
-            public string GenerateShardIdFor(object entity, object sessionMetadata)
-            {
-                if (entity is Company)
-                {
-                    var company = (Company)entity;
-                    return "Shard" + Math.Abs(company.Id.GetHashCode()) % 3;
-                }
-                else
-                    throw new ArgumentOutOfRangeException("Unexpected entity");
-            }
+        //private class ShardResolutionStrategy : IShardResolutionStrategy
+        //{
+        //    public string GenerateShardIdFor(object entity, object sessionMetadata)
+        //    {
+        //        if (entity is Company)
+        //        {
+        //            var company = (Company)entity;
+        //            return "Shard" + Math.Abs(company.Id.GetHashCode()) % 3;
+        //        }
+        //        else
+        //            throw new ArgumentOutOfRangeException("Unexpected entity");
+        //    }
 
-            public string MetadataShardIdFor(object entity)
-            {
-                return "Shard0";
-            }
+        //    public string MetadataShardIdFor(object entity)
+        //    {
+        //        return "Shard0";
+        //    }
 
-            public IList<string> PotentialShardsFor(ShardRequestData requestData)
-            {
-                return new[] { "Shard0", "Shard1", "Shard2" };
-            }
-        }
+        //    public IList<string> PotentialShardsFor(ShardRequestData requestData)
+        //    {
+        //        return new[] { "Shard0", "Shard1", "Shard2" };
+        //    }
+        //}
 
         private class Transformer : AbstractTransformerCreationTask<Company>
         {

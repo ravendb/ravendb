@@ -1,13 +1,13 @@
 using System.Globalization;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3818 : RavenTestBase
+    public class RavenDB_3818 : RavenNewTestBase
     {
         [Fact(Skip = "RavenDB-5988")]
         public void SparialSearchWithDistanceErrorPercent()

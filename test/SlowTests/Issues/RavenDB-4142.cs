@@ -7,13 +7,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB4142 : RavenTestBase
+    public class RavenDB4142 : RavenNewTestBase
     {
         private class Orders_Triggers : AbstractScriptedIndexCreationTask<Order, Orders_Triggers.Result>
         {
@@ -81,7 +81,7 @@ namespace SlowTests.Issues
 
         private static void CreateIndexes(IDocumentStore store)
         {
-            new Orders_Triggers().Execute(store.DatabaseCommands, store.Conventions);
+            new Orders_Triggers().Execute(store);
             //new Companies_ByName().Execute(store.DatabaseCommands, store.Conventions);
         }
 

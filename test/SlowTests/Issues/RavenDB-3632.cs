@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3632 : RavenTestBase
+    public class RavenDB_3632 : RavenNewTestBase
     {
         [Fact]
         public async Task IncludeWithLoadAsync()
@@ -43,13 +43,12 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-
-                var listId = Guid.NewGuid();
+                var listId = Guid.NewGuid().ToString();
                 using (var session = store.OpenAsyncSession())
                 {
-                    var item1 = new ListItem<Guid> { Id = Guid.NewGuid() };
-                    var item2 = new ListItem<Guid> { Id = Guid.NewGuid() };
-                    var list = new List<Guid, Guid> { Id = listId, Items = new[] { item1.Id, item2.Id } };
+                    var item1 = new ListItem<string> { Id = Guid.NewGuid().ToString() };
+                    var item2 = new ListItem<string> { Id = Guid.NewGuid().ToString() };
+                    var list = new List<string, string> { Id = listId, Items = new[] { item1.Id, item2.Id } };
                     await session.StoreAsync(item1);
                     await session.StoreAsync(item2);
                     await session.StoreAsync(list);
@@ -59,9 +58,9 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var list = await session.Include<List<Guid, Guid>, ListItem<Guid>>(l => l.Items).LoadAsync<List<Guid, Guid>>(listId);
+                    var list = await session.Include<List<string, string>, ListItem<string>>(l => l.Items).LoadAsync<List<string, string>>(listId);
                     var enumer = list.Items.Select(it => it.ToString());
-                    var l2 = await session.LoadAsync<ListItem<Guid>>(enumer);
+                    var l2 = await session.LoadAsync<ListItem<string>>(enumer);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }

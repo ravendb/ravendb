@@ -14,12 +14,12 @@ namespace Raven.NewClient.Client.Json
         private bool _first;
         private readonly DocumentInfo _documentInfo;
 
-        public BlittableJsonWriter(JsonOperationContext context, DocumentInfo documentInfo = null, 
+        public BlittableJsonWriter(JsonOperationContext context, DocumentInfo documentInfo = null,
             BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter<UnmanagedWriteBuffer> writer = null)
         {
             _manualBlittalbeJsonDocumentBuilder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context, mode ?? BlittableJsonDocumentBuilder.UsageMode.None, writer);
-            _manualBlittalbeJsonDocumentBuilder.Reset(mode ?? BlittableJsonDocumentBuilder.UsageMode.None);            
-            _manualBlittalbeJsonDocumentBuilder.StartWriteObjectDocument();        
+            _manualBlittalbeJsonDocumentBuilder.Reset(mode ?? BlittableJsonDocumentBuilder.UsageMode.None);
+            _manualBlittalbeJsonDocumentBuilder.StartWriteObjectDocument();
             _documentInfo = documentInfo;
             _first = true;
         }
@@ -64,10 +64,10 @@ namespace Raven.NewClient.Client.Json
                     switch (propertyDetails.Token)
                     {
                         case BlittableJsonToken.Integer:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue((long) propertyDetails.Value);
+                            _manualBlittalbeJsonDocumentBuilder.WriteValue((long)propertyDetails.Value);
                             break;
                         case BlittableJsonToken.Float:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue((float) propertyDetails.Value);
+                            _manualBlittalbeJsonDocumentBuilder.WriteValue((float)propertyDetails.Value);
                             break;
                         case BlittableJsonToken.String:
                             _manualBlittalbeJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());
@@ -76,7 +76,7 @@ namespace Raven.NewClient.Client.Json
                             _manualBlittalbeJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());
                             break;
                         case BlittableJsonToken.Boolean:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue((bool) propertyDetails.Value);
+                            _manualBlittalbeJsonDocumentBuilder.WriteValue((bool)propertyDetails.Value);
                             break;
                         case BlittableJsonToken.Null:
                             _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
@@ -121,7 +121,7 @@ namespace Raven.NewClient.Client.Json
 
         public override void WriteNull()
         {
-             _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(string value)
@@ -171,7 +171,7 @@ namespace Raven.NewClient.Client.Json
 
         public override void WriteValue(DateTime value)
         {
-             var s = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
+            var s = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
             _manualBlittalbeJsonDocumentBuilder.WriteValue(s);
         }
 
@@ -308,22 +308,24 @@ namespace Raven.NewClient.Client.Json
 
         public override void WriteValue(ulong value)
         {
-            throw new NotSupportedException();
+            _manualBlittalbeJsonDocumentBuilder.WriteValue((long)value);
         }
 
         public override void WriteValue(ulong? value)
         {
-            throw new NotSupportedException();
+            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue((long)value.Value);
+            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(TimeSpan value)
         {
-            throw new NotSupportedException();
+            _manualBlittalbeJsonDocumentBuilder.WriteValue(value.ToString());
         }
 
         public override void WriteValue(TimeSpan? value)
         {
-            throw new NotSupportedException();
+            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.ToString());
+            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(byte[] value)

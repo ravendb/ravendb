@@ -2,14 +2,14 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3758 : RavenTestBase
+    public class RavenDB_3758 : RavenNewTestBase
     {
         private class Orders_All : AbstractIndexCreationTask<Order>
         {

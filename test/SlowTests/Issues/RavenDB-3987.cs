@@ -1,13 +1,13 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3987 : RavenTestBase
+    public class RavenDB_3987 : RavenNewTestBase
     {
         private class Person
         {

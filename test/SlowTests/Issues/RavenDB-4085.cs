@@ -4,20 +4,20 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Linq;
-using Raven.Client.Smuggler;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Smuggler;
+using Raven.NewClient.Operations.Databases;
 using Raven.Server.Utils;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4085 : RavenTestBase
+    public class RavenDB_4085 : RavenNewTestBase
     {
         [Fact]
         public async Task can_export_all_documents()
@@ -27,15 +27,15 @@ namespace SlowTests.Issues
             {
                 using (var store = GetDocumentStore())
                 {
-                    for (var i = 0; i < 1000; i++)
+                    using (var commands = store.Commands())
                     {
-                        store.DatabaseCommands.Put("users/" + (i + 1), null, new RavenJObject()
+                        for (var i = 0; i < 1000; i++)
                         {
-                            { "Name", "test #" + i }
-                        }, new RavenJObject()
-                        {
-                            { Constants.Metadata.Collection, "Users"}
-                        });
+                            commands.Put("users/" + (i + 1), null, new { Name = "test #" + i }, new Dictionary<string, string>
+                            {
+                                { Constants.Metadata.Collection, "Users" }
+                            });
+                        }
                     }
 
                     var task1 = Task.Run(async () =>
@@ -78,7 +78,7 @@ namespace SlowTests.Issues
                         Assert.Equal(1000, list.Count);
                     }
 
-                    var stats = store.DatabaseCommands.GetStatistics();
+                    var stats = store.Admin.Send(new GetStatisticsOperation());
                     Assert.Equal(1000, stats.CountOfDocuments);
                 }
             }

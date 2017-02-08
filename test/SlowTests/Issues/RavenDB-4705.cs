@@ -2,13 +2,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4705 : RavenTestBase
+    public class RavenDB_4705 : RavenNewTestBase
     {
         private class Entity
         {
@@ -49,9 +51,9 @@ namespace SlowTests.Issues
                 new Entity_ById_V1().SideBySideExecute(documentStore);
                 WaitForIndexing(documentStore);
 
-                documentStore.DatabaseCommands.SetIndexLock("Entity/ById", IndexLockMode.SideBySide);
+                documentStore.Admin.Send(new SetIndexLockOperation("Entity/ById", IndexLockMode.SideBySide));
 
-                var databaseStatisticsBefore = documentStore.DatabaseCommands.GetStatistics();
+                var databaseStatisticsBefore = documentStore.Admin.Send(new GetStatisticsOperation());
                 var indexStatsBefore = databaseStatisticsBefore.Indexes.Single(i => i.Name == "Entity/ById");
 
                 Assert.Equal(2, databaseStatisticsBefore.Indexes.Length);
@@ -59,7 +61,7 @@ namespace SlowTests.Issues
 
                 while (true)
                 {
-                    var index = documentStore.DatabaseCommands.GetStatistics().Indexes.FirstOrDefault(x => x.Name == "Entity/ById");
+                    var index = documentStore.Admin.Send(new GetStatisticsOperation()).Indexes.FirstOrDefault(x => x.Name == "Entity/ById");
                     if (index != null)
                         break;
                     Thread.Sleep(100);
@@ -68,10 +70,10 @@ namespace SlowTests.Issues
                 new Entity_ById_V2().SideBySideExecute(documentStore);
                 WaitForIndexing(documentStore);
 
-                while (documentStore.DatabaseCommands.GetStatistics().Indexes.Length != 2)
+                while (documentStore.Admin.Send(new GetStatisticsOperation()).Indexes.Length != 2)
                     Thread.Sleep(100);
 
-                var databaseStatisticsAfter = documentStore.DatabaseCommands.GetStatistics();
+                var databaseStatisticsAfter = documentStore.Admin.Send(new GetStatisticsOperation());
                 var indexStatsAfter = databaseStatisticsAfter.Indexes.Single(i => i.Name == "Entity/ById");
 
                 Assert.Equal(2, databaseStatisticsAfter.Indexes.Length);
@@ -87,9 +89,9 @@ namespace SlowTests.Issues
                 await new Entity_ById_V1().SideBySideExecuteAsync(documentStore).ConfigureAwait(false);
                 WaitForIndexing(documentStore);
 
-                documentStore.DatabaseCommands.SetIndexLock("Entity/ById", IndexLockMode.SideBySide);
+                documentStore.Admin.Send(new SetIndexLockOperation("Entity/ById", IndexLockMode.SideBySide));
 
-                var databaseStatisticsBefore = documentStore.DatabaseCommands.GetStatistics();
+                var databaseStatisticsBefore = documentStore.Admin.Send(new GetStatisticsOperation());
                 var indexStatsBefore = databaseStatisticsBefore.Indexes.Single(i => i.Name == "Entity/ById");
 
                 Assert.Equal(2, databaseStatisticsBefore.Indexes.Length);
@@ -97,7 +99,7 @@ namespace SlowTests.Issues
 
                 while (true)
                 {
-                    var index = documentStore.DatabaseCommands.GetStatistics().Indexes.FirstOrDefault(x => x.Name == "Entity/ById");
+                    var index = documentStore.Admin.Send(new GetStatisticsOperation()).Indexes.FirstOrDefault(x => x.Name == "Entity/ById");
                     if (index != null)
                         break;
                     Thread.Sleep(100);
@@ -106,10 +108,10 @@ namespace SlowTests.Issues
                 await new Entity_ById_V2().SideBySideExecuteAsync(documentStore).ConfigureAwait(false);
                 WaitForIndexing(documentStore);
 
-                while (documentStore.DatabaseCommands.GetStatistics().Indexes.Length != 2)
+                while (documentStore.Admin.Send(new GetStatisticsOperation()).Indexes.Length != 2)
                     Thread.Sleep(100);
 
-                var databaseStatisticsAfter = documentStore.DatabaseCommands.GetStatistics();
+                var databaseStatisticsAfter = documentStore.Admin.Send(new GetStatisticsOperation());
                 var indexStatsAfter = databaseStatisticsAfter.Indexes.Single(i => i.Name == "Entity/ById");
 
                 Assert.Equal(2, databaseStatisticsAfter.Indexes.Length);
@@ -127,9 +129,9 @@ namespace SlowTests.Issues
                 //IndexCreation.SideBySideCreateIndexes(container, documentStore.DatabaseCommands, documentStore.Conventions);
                 WaitForIndexing(documentStore);
 
-                documentStore.DatabaseCommands.SetIndexLock("Entity/ById", IndexLockMode.SideBySide);
+                documentStore.Admin.Send(new SetIndexLockOperation("Entity/ById", IndexLockMode.SideBySide));
 
-                var databaseStatisticsBefore = documentStore.DatabaseCommands.GetStatistics();
+                var databaseStatisticsBefore = documentStore.Admin.Send(new GetStatisticsOperation());
                 var indexStatsBefore = databaseStatisticsBefore.Indexes.Single(i => i.Name == "Entity/ById");
 
                 Assert.Equal(2, databaseStatisticsBefore.Indexes.Length);
@@ -137,7 +139,7 @@ namespace SlowTests.Issues
 
                 while (true)
                 {
-                    var index = documentStore.DatabaseCommands.GetStatistics().Indexes.FirstOrDefault(x => x.Name == "Entity/ById");
+                    var index = documentStore.Admin.Send(new GetStatisticsOperation()).Indexes.FirstOrDefault(x => x.Name == "Entity/ById");
                     if (index != null)
                         break;
                     Thread.Sleep(100);
@@ -147,10 +149,10 @@ namespace SlowTests.Issues
                 //IndexCreation.SideBySideCreateIndexes(container, documentStore.DatabaseCommands, documentStore.Conventions);
                 WaitForIndexing(documentStore);
 
-                while (documentStore.DatabaseCommands.GetStatistics().Indexes.Length != 2)
+                while (documentStore.Admin.Send(new GetStatisticsOperation()).Indexes.Length != 2)
                     Thread.Sleep(100);
 
-                var databaseStatisticsAfter = documentStore.DatabaseCommands.GetStatistics();
+                var databaseStatisticsAfter = documentStore.Admin.Send(new GetStatisticsOperation());
                 var indexStatsAfter = databaseStatisticsAfter.Indexes.Single(i => i.Name == "Entity/ById");
 
                 Assert.Equal(2, databaseStatisticsAfter.Indexes.Length);
@@ -169,9 +171,9 @@ namespace SlowTests.Issues
                 //    .ConfigureAwait(false);
                 WaitForIndexing(documentStore);
 
-                documentStore.DatabaseCommands.SetIndexLock("Entity/ById", IndexLockMode.SideBySide);
+                documentStore.Admin.Send(new SetIndexLockOperation("Entity/ById", IndexLockMode.SideBySide));
 
-                var databaseStatisticsBefore = documentStore.DatabaseCommands.GetStatistics();
+                var databaseStatisticsBefore = documentStore.Admin.Send(new GetStatisticsOperation());
                 var indexStatsBefore = databaseStatisticsBefore.Indexes.Single(i => i.Name == "Entity/ById");
 
                 Assert.Equal(2, databaseStatisticsBefore.Indexes.Length);
@@ -179,7 +181,7 @@ namespace SlowTests.Issues
 
                 while (true)
                 {
-                    var index = documentStore.DatabaseCommands.GetStatistics().Indexes.FirstOrDefault(x => x.Name == "Entity/ById");
+                    var index = documentStore.Admin.Send(new GetStatisticsOperation()).Indexes.FirstOrDefault(x => x.Name == "Entity/ById");
                     if (index != null)
                         break;
                     Thread.Sleep(100);
@@ -191,10 +193,10 @@ namespace SlowTests.Issues
                 //    .ConfigureAwait(false);
                 WaitForIndexing(documentStore);
 
-                while (documentStore.DatabaseCommands.GetStatistics().Indexes.Length != 2)
+                while (documentStore.Admin.Send(new GetStatisticsOperation()).Indexes.Length != 2)
                     Thread.Sleep(100);
 
-                var databaseStatisticsAfter = documentStore.DatabaseCommands.GetStatistics();
+                var databaseStatisticsAfter = documentStore.Admin.Send(new GetStatisticsOperation());
                 var indexStatsAfter = databaseStatisticsAfter.Indexes.Single(i => i.Name == "Entity/ById");
 
                 Assert.Equal(2, databaseStatisticsAfter.Indexes.Length);
