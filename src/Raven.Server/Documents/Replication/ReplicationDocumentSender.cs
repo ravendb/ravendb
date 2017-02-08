@@ -47,8 +47,10 @@ namespace Raven.Server.Documents.Replication
 
         private IEnumerable<ReplicationBatchDocumentItem> GetDocsConflictsAndTombstonesAfter(DocumentsOperationContext ctx, long etag)
         {
-            var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
+            //since we get conflicts separatedly, ignore document conflicts
+            var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1, throwOnConflicts:false);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1, 0, int.MaxValue);
+
             var conflicts = _parent._database.DocumentsStorage.GetConflictsFrom(ctx, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())

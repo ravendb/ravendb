@@ -447,8 +447,8 @@ namespace Sparrow.Json
                 Flush();
             }
             catch (ObjectDisposedException)
-            {
-                //we are disposing, so this exception doesn't matter
+            {               
+                //we are disposing, so ObjectDisposedException exception doesn't matter
             }
             finally
             {

@@ -17,6 +17,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
+using Raven.NewClient.Client.Exceptions;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
@@ -1658,10 +1659,20 @@ namespace Raven.Server.Documents.Indexes
             HashSet<string> stopWords = null;
             if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
             {
-                var stopWordsDoc = DocumentDatabase.DocumentsStorage.Get(documentsContext, query.StopWordsDocumentId);
-                if (stopWordsDoc == null)
-                    throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId +
-                                                        " could not be found");
+                Document stopWordsDoc;
+                try
+                {
+                    stopWordsDoc = DocumentDatabase.DocumentsStorage.Get(documentsContext, query.StopWordsDocumentId,
+                        throwOnConflict: true);
+                    if (stopWordsDoc == null)
+                        throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId +
+                                                            " could not be found");
+                }
+                catch (DocumentConflictException e)
+                {
+                    throw new InvalidOperationException(
+                        "Stop words document " + query.StopWordsDocumentId + " is conflicted.", e);
+                }
 
                 BlittableJsonReaderArray value;
                 if (stopWordsDoc.Data.TryGet(nameof(StopWordsSetup.StopWords), out value) && value != null)

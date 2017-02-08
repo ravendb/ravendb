@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.Handlers
                             });
                             break;
                         case BatchRequestParser.CommandType.DELETE:
-                            var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
+                            var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag,true);
                             if (deleted != null)
                             {
                                 LastEtag = deleted.Value.Etag;

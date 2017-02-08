@@ -109,8 +109,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     try
                     {
-                        serverPrefixDocReader = Database.DocumentsStorage.Get(context, RavenKeyServerPrefix)?.Data;
-                        hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentKey)?.Data;
+                        serverPrefixDocReader = Database.DocumentsStorage.Get(context, RavenKeyServerPrefix,throwOnConflict:true)?.Data;
+                        hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentKey,throwOnConflict:true)?.Data;
                     }
                     catch (DocumentConflictException e)
                     {
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
 
-                var document = Database.DocumentsStorage.Get(context, hiLoDocumentKey);
+                var document = Database.DocumentsStorage.Get(context, hiLoDocumentKey,true);
 
                 if (document == null)
                     return;

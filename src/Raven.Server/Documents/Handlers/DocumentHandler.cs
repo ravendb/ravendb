@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var document = Database.DocumentsStorage.Get(context, id);
+                var document = Database.DocumentsStorage.Get(context, id, throwOnConflict:true);
                 if (document == null)
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 else
@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Handlers
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths);
             foreach (var id in ids)
             {
-                var document = Database.DocumentsStorage.Get(context, id);
+                var document = Database.DocumentsStorage.Get(context, id, throwOnConflict:true);
                 if (ids.Count == 1 && document == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -545,7 +545,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var document = Database.DocumentsStorage.Get(context, id);
+                var document = Database.DocumentsStorage.Get(context, id, throwOnConflict:true);
                 if (document == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -604,7 +604,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    Database.DocumentsStorage.Delete(context, Key, ExepctedEtag);
+                    Database.DocumentsStorage.Delete(context, Key, ExepctedEtag, true);
                 }
                 catch (ConcurrencyException e)
                 {

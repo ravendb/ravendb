@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Patch
             if (patchIfMissing != null && string.IsNullOrWhiteSpace(patchIfMissing.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty.");
 
-            var document = _database.DocumentsStorage.Get(context, documentKey);
+            var document = _database.DocumentsStorage.Get(context, documentKey,true);
             if (etag.HasValue)
             {
                 if (document == null && etag.Value != 0)

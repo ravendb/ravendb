@@ -43,10 +43,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected override Document DirectGet(Lucene.Net.Documents.Document input, string id)
         {
-            var doc = _documentsStorage.Get(_context, id);
-            if (doc == null)
-                return null;
-            
+            var doc = _documentsStorage.Get(_context, id,true);
             return doc;
         }
     }

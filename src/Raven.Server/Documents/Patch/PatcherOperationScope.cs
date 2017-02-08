@@ -403,7 +403,7 @@ namespace Raven.Server.Documents.Patch
 
         public virtual JsValue LoadDocument(string documentKey, Engine engine, ref int totalStatements)
         {
-            var document = _database.DocumentsStorage.Get(_context, documentKey);
+            var document = _database.DocumentsStorage.Get(_context, documentKey,true);
 
             if (DebugMode)
                 DebugActions.LoadDocument.Add(documentKey);
