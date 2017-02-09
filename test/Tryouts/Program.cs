@@ -54,9 +54,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Issues.RavenDB_4997())
+                using (var a = new FastTests.Server.Documents.Indexing.MapReduce.RavenDB_4323())
                 {
-                    a.Delete_of_conflicted_document_should_resolve_conflict();
+                    a.ReduceResultsBackAsDocuments().Wait();
                 }
             }
         }

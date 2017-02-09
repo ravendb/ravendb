@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             });
         }
 
-        public void DeleteReduceResult(string reduceKeyHash, IndexingStatsScope stats)
+        public void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 

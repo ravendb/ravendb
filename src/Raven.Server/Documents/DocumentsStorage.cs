@@ -274,7 +274,7 @@ namespace Raven.Server.Documents
 
         public void Initialize(StorageEnvironmentOptions options)
         {
-            options.SchemaVersion = 1;
+            options.SchemaVersion = 2;
             try
             {
                 Environment = new StorageEnvironment(options);
