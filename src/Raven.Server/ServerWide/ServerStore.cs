@@ -344,7 +344,17 @@ namespace Raven.Server.ServerWide
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
 
             foreach (var disposable in toDispose)
-                exceptionAggregator.Execute(() => disposable?.Dispose());
+                exceptionAggregator.Execute(() =>
+                {
+                    try
+                    {
+                        disposable?.Dispose();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        //we are disposing, so don't care
+                    }
+                });
 
             exceptionAggregator.ThrowIfNeeded();
         }
