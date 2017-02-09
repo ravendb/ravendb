@@ -266,12 +266,12 @@ namespace Sparrow.Logging
 
             foreach (var kvp in _listeners)
             {
-                if (kvp.Value.Filter.Forward(entry))
+                if (kvp.Value.Filter.Forward(ref entry))
                 {
                     item.WebSocketsList.Add(kvp.Key);
                 }
             }
-            WriteEntryToWriter(state.Writer, entry);
+            WriteEntryToWriter(state.Writer, ref entry);
             item.Data = state.ForwardingStream.Destination;
 
             state.Full.Enqueue(item, timeout: 128);
@@ -279,9 +279,8 @@ namespace Sparrow.Logging
             _hasEntries.Set();
         }
 
-        private void WriteEntryToWriter(StreamWriter writer, LogEntry entry)
+        private void WriteEntryToWriter(StreamWriter writer, ref LogEntry entry)
         {
-
             if (_currentThreadId == null)
             {
                 _currentThreadId = ", " + Thread.CurrentThread.ManagedThreadId.ToString(CultureInfo.InvariantCulture) +
