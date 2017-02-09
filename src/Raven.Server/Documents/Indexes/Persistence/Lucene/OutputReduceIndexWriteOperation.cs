@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Document;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Indexing;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
@@ -54,79 +55,100 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             base.IndexDocument(key, document, stats, indexContext);
 
-            _outputReduceToCollectionCommand?.ReduceDocuments.Add(new OutputReduceToCollectionCommand.OutputReduceDocument
-            {
-                ReduceKeyHash = key,
-                Document = document
-            });
+            _outputReduceToCollectionCommand.AddReduce(key, document);
         }
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
             base.Delete(key, stats);
 
-            _outputReduceToCollectionCommand?.ReduceDocuments.Add(new OutputReduceToCollectionCommand.OutputReduceDocument
-            {
-                IsDelete = true,
-                ReduceKeyHash = key,
-            });
+            _outputReduceToCollectionCommand.DeleteReduce(key);
         }
 
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
         {
             base.DeleteReduceResult(reduceKeyHash, stats);
 
-            _outputReduceToCollectionCommand?.ReduceDocuments.Add(new OutputReduceToCollectionCommand.OutputReduceDocument
-            {
-                IsDelete = true,
-                ReduceKeyHash = reduceKeyHash,
-            });
+            _outputReduceToCollectionCommand.DeleteReduce(reduceKeyHash);
         }
 
-        public class OutputReduceToCollectionCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public class OutputReduceToCollectionCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             private readonly DocumentDatabase _database;
             private readonly string _outputReduceToCollection;
-            private readonly DocumentConvention _documentConvention = new DocumentConvention();
-            private readonly EntityToBlittable _entityToBlittable = new EntityToBlittable(null);
-            public readonly List<OutputReduceDocument> ReduceDocuments = new List<OutputReduceDocument>();
+            private readonly List<OutputReduceDocument> _reduceDocuments = new List<OutputReduceDocument>();
+            private readonly JsonOperationContext _jsonContext;
 
             public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection)
             {
                 _database = database;
                 _outputReduceToCollection = outputReduceToCollection;
+                _jsonContext = JsonOperationContext.ShortTermSingleUse();
             }
 
-            public class OutputReduceDocument
+            private class OutputReduceDocument
             {
                 public bool IsDelete;
-                public LazyStringValue ReduceKeyHash;
-                public object Document;
+                public string Key;
+                public BlittableJsonReaderObject Document;
             }
 
             public override void Execute(DocumentsOperationContext context)
             {
-                foreach (var reduceDocument in ReduceDocuments)
+                foreach (var reduceDocument in _reduceDocuments)
                 {
-                    var id = _outputReduceToCollection + "/" + reduceDocument.ReduceKeyHash;
-
+                    var key = reduceDocument.Key;
                     if (reduceDocument.IsDelete)
                     {
-                        _database.DocumentsStorage.Delete(context, id, null);
+                        _database.DocumentsStorage.Delete(context, key, null);
                         continue;
                     }
 
-                    var documentInfo = new DocumentInfo
+                    using (var document = reduceDocument.Document)
                     {
-                        Id = id,
-                        Collection = _outputReduceToCollection
-                    };
-                    using (var document = _entityToBlittable.ConvertEntityToBlittable(reduceDocument.Document, _documentConvention, context, documentInfo))
-                    {
-                        _database.DocumentsStorage.Put(context, id, null, document, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
-                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(id, document.Size);
+                        _database.DocumentsStorage.Put(context, key, null, document, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(key, document.Size);
                     }
                 }
+            }
+
+            public void AddReduce(string reduceKeyHash, object reduceObject)
+            {
+                var key = _outputReduceToCollection + "/" + reduceKeyHash;
+
+                var djv = new DynamicJsonValue();
+                var propertyAccessor = PropertyAccessor.Create(reduceObject.GetType());
+                foreach (var property in propertyAccessor.PropertiesInOrder)
+                {
+                    var value = property.Value.GetValue(reduceObject);
+                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value);
+                }
+                djv[Constants.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Metadata.Collection] = _outputReduceToCollection
+                };
+
+                _reduceDocuments.Add(new OutputReduceDocument
+                {
+                    Key = key,
+                    Document = _jsonContext.ReadObject(djv, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk),
+                });
+            }
+
+            public void DeleteReduce(string reduceKeyHash)
+            {
+                var key = _outputReduceToCollection + "/" + reduceKeyHash;
+
+                _reduceDocuments.Add(new OutputReduceDocument
+                {
+                    IsDelete = true,
+                    Key = key,
+                });
+            }
+
+            public void Dispose()
+            {
+                _jsonContext?.Dispose();
             }
         }
     }
