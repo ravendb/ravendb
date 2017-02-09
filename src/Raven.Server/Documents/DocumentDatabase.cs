@@ -54,7 +54,7 @@ namespace Raven.Server.Documents
             ResourceName = "db/" + name;
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
-            Changes = new DocumentsChanges();
+            Changes = new DocumentsChanges(name);
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
             TransformerStore = new TransformerStore(this);

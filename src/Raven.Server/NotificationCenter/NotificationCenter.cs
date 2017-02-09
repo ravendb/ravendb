@@ -70,7 +70,14 @@ namespace Raven.Server.NotificationCenter
 
             foreach (var watcher in _watchers)
             {
-                watcher.NotificationsQueue.Enqueue(notification);
+                try
+                {
+                    watcher.NotificationsQueue.Enqueue(notification);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Operations($"Failed to perform notification of type {notification.Type}",ex);
+                }
             }
         }
 
