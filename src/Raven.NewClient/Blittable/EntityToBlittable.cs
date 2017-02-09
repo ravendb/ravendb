@@ -80,7 +80,7 @@ namespace Raven.NewClient.Client.Blittable
                 if (documentType != null)
                 {
                     var type = Type.GetType(documentType);
-                    if (type != null && entityType != typeof(object) && entityType.IsAssignableFrom(type))
+                    if (type != null && entityType.IsAssignableFrom(type))
                     {
                         entity = _session.Conventions.DeserializeEntityFromBlittable(type, document);
                     }
@@ -122,7 +122,7 @@ namespace Raven.NewClient.Client.Blittable
                 if (documentType != null)
                 {
                     var type = Type.GetType(documentType);
-                    if (type != null && entityType != typeof(object) && entityType.IsAssignableFrom(type))
+                    if (type != null && entityType.IsAssignableFrom(type))
                     {
                         entity = documentConvention.DeserializeEntityFromBlittable(type, document);
                     }
