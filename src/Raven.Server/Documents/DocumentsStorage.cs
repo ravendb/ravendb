@@ -1607,12 +1607,17 @@ namespace Raven.Server.Documents
             foreach (var documentConflict in conflicts)
             {
                 if (collection != documentConflict.Collection)
-                {                    
+                {
+                    var msg = $"All conflicted documents must have same collection name, but we found conflicted document in {collection} and an other one in {documentConflict.Collection}";
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info(msg);
+
                     var differentCollectionNameAlert = AlertRaised.Create(
                         $"Script unable to resolve conflicted documents with the key {documentConflict.Key}",
-                        $"All conflicted documents must have same collection name, but we found conflicted document in {collection} and an other one in {documentConflict.Collection}",
+                        msg,
                         AlertType.Replication,
-                        NotificationSeverity.Error
+                        NotificationSeverity.Error,
+                        "Mismatched Collections On Replication Resolve"
                         );
                     _documentDatabase.NotificationCenter.Add(differentCollectionNameAlert);
                     return false;
