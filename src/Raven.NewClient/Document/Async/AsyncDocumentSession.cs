@@ -161,6 +161,9 @@ namespace Raven.NewClient.Client.Document.Async
 
             using (var command = saveChangesOperation.CreateRequest())
             {
+                if (command == null)
+                    return;
+
                 await RequestExecuter.ExecuteAsync(command, Context, token);
                 saveChangesOperation.SetResult(command.Result);
             }

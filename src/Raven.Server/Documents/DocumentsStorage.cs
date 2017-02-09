@@ -1913,7 +1913,7 @@ namespace Raven.Server.Documents
                 return default(PutOperationResults);// never reached
             }
 
-            AssertNoModifications(document, key);
+            BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
             var collectionName = ExtractCollectionName(context, key, document);
             var newEtag = GenerateNextEtag();
@@ -2564,32 +2564,6 @@ namespace Raven.Server.Documents
             }
 
             return result;
-        }
-
-
-        [Conditional("DEBUG")]
-        internal static void AssertNoModifications(BlittableJsonReaderObject data, string key)
-        {
-            if (data == null)
-                return;
-
-            if (data.Modifications != null)
-            {
-                if (data.Modifications.Removals != null && data.Modifications.Removals.Count > 0)
-                    throw new InvalidOperationException($"Modifications detected in '{key}'. JSON: {data}");
-
-                if (data.Modifications.Properties.Count > 0)
-                    throw new InvalidOperationException($"Modifications detected in '{key}'. JSON: {data}");
-            }
-
-            foreach (var propertyName in data.GetPropertyNames())
-            {
-                var inner = data[propertyName] as BlittableJsonReaderObject;
-                if (inner == null)
-                    continue;
-
-                AssertNoModifications(inner, key);
-            }
         }
     }
 }

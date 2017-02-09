@@ -36,16 +36,19 @@ namespace Raven.NewClient.Client.Blittable
                 var reader = writer.CreateReader();
                 var type = entity.GetType();
 
-                RemoveIdentityProperty(reader, type, _session.Conventions);
-                SimplifyJson(reader);
+                var changes = TryRemoveIdentityProperty(reader, type, _session.Conventions);
+                changes |= TrySimplifyJson(reader);
+
+                if (changes)
+                    reader = _session.Context.ReadObject(reader, "convert/entityToBlittable");
 
                 return reader;
             }
         }
 
-        public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext jsonOperationContext, DocumentInfo documentInfo = null)
+        public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext context, DocumentInfo documentInfo = null)
         {
-            using (var writer = new BlittableJsonWriter(jsonOperationContext, documentInfo))
+            using (var writer = new BlittableJsonWriter(context, documentInfo))
             {
                 var serializer = documentConvention.CreateSerializer();
 
@@ -54,8 +57,11 @@ namespace Raven.NewClient.Client.Blittable
                 var reader = writer.CreateReader();
                 var type = entity.GetType();
 
-                RemoveIdentityProperty(reader, type, documentConvention);
-                SimplifyJson(reader);
+                var changes = TryRemoveIdentityProperty(reader, type, documentConvention);
+                changes |= TrySimplifyJson(reader);
+
+                if (changes)
+                    reader = context.ReadObject(reader, "convert/entityToBlittable");
 
                 return reader;
             }
@@ -142,20 +148,22 @@ namespace Raven.NewClient.Client.Blittable
             }
         }
 
-        private static void RemoveIdentityProperty(BlittableJsonReaderObject document, Type entityType, DocumentConvention conventions)
+        private static bool TryRemoveIdentityProperty(BlittableJsonReaderObject document, Type entityType, DocumentConvention conventions)
         {
             var identityProperty = conventions.GetIdentityProperty(entityType);
-            if (identityProperty != null)
-            {
-                if (document.Modifications == null)
-                    document.Modifications = new DynamicJsonValue(document);
+            if (identityProperty == null)
+                return false;
 
-                document.Modifications.Remove(identityProperty.Name);
-            }
+            if (document.Modifications == null)
+                document.Modifications = new DynamicJsonValue(document);
+
+            document.Modifications.Remove(identityProperty.Name);
+            return true;
         }
 
-        private static void SimplifyJson(BlittableJsonReaderObject document)
+        private static bool TrySimplifyJson(BlittableJsonReaderObject document)
         {
+            var simplified = false;
             foreach (var propertyName in document.GetPropertyNames())
             {
                 var propertyValue = document[propertyName];
@@ -163,7 +171,7 @@ namespace Raven.NewClient.Client.Blittable
                 var propertyArray = propertyValue as BlittableJsonReaderArray;
                 if (propertyArray != null)
                 {
-                    SimplifyJson(propertyArray);
+                    simplified |= TrySimplifyJson(propertyArray);
                     continue;
                 }
 
@@ -174,12 +182,14 @@ namespace Raven.NewClient.Client.Blittable
                 string type;
                 if (propertyObject.TryGet(Constants.Json.Fields.Type, out type) == false)
                 {
-                    SimplifyJson(propertyObject);
+                    simplified |= TrySimplifyJson(propertyObject);
                     continue;
                 }
 
                 if (ShouldSimplifyJsonBasedOnType(type) == false)
                     continue;
+
+                simplified = true;
 
                 if (document.Modifications == null)
                     document.Modifications = new DynamicJsonValue(document);
@@ -196,20 +206,25 @@ namespace Raven.NewClient.Client.Blittable
 
                 document.Modifications[propertyName] = values;
 
-                SimplifyJson(values);
+                simplified |= TrySimplifyJson(values);
             }
+
+            return simplified;
         }
 
-        private static void SimplifyJson(BlittableJsonReaderArray array)
+        private static bool TrySimplifyJson(BlittableJsonReaderArray array)
         {
+            var simplified = false;
             foreach (var item in array)
             {
                 var itemObject = item as BlittableJsonReaderObject;
                 if (itemObject == null)
                     continue;
 
-                SimplifyJson(itemObject);
+                simplified |= TrySimplifyJson(itemObject);
             }
+
+            return simplified;
         }
 
         private static readonly Regex ArrayEndRegex = new Regex(@"\[\], [\w\.-]+$", RegexOptions.Compiled);
