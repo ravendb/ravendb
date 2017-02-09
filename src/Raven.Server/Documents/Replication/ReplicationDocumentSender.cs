@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe void AddReplicationItemToBatch(ReplicationBatchDocumentItem item)
         {
-            if (item.Flags.HasFlag(DocumentFlags.Artificial))
+            if ((item.Flags & DocumentFlags.Artificial) == DocumentFlags.Artificial)
             {
                 if (_log.IsInfoEnabled)
                 {

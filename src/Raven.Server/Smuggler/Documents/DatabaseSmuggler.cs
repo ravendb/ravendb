@@ -72,7 +72,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private void ProcessType(DatabaseItemType type, SmugglerResult result)
         {
-            if (_options.OperateOnTypes.HasFlag(type) == false)
+            if ((_options.OperateOnTypes & type) != type)
             {
                 SkipType(type, result);
                 return;
