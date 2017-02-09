@@ -418,7 +418,7 @@ namespace Raven.Server.Documents
                     docCount++;
                     var document = TableValueToDocument(context, ref result.Reader);
                     string documentKey = document.Key;
-                    if (documentKey.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase) == false)
+                    if (documentKey.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == false)
                         break;
 
                     var keyTest = documentKey.Substring(prefix.Length);
