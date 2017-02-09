@@ -99,23 +99,45 @@ namespace Raven.Server.Documents
             return string.Equals(collection, SystemCollection, StringComparison.OrdinalIgnoreCase);
         }
 
-        public static string GetCollectionName(Slice key, BlittableJsonReaderObject document)
+        public static unsafe string GetCollectionName(Slice key, BlittableJsonReaderObject document)
         {
-            if (key.Size >= 6)
+            if (IsSystemDocument(key.Content.Ptr,key.Size))
             {
-                if ((key[0] == (byte)'R' || key[0] == (byte)'r') &&
-                    (key[1] == (byte)'A' || key[1] == (byte)'a') &&
-                    (key[2] == (byte)'V' || key[2] == (byte)'v') &&
-                    (key[3] == (byte)'E' || key[3] == (byte)'e') &&
-                    (key[4] == (byte)'N' || key[4] == (byte)'n') &&
-                    (key[5] == (byte)'/'))
-                {
-                    return SystemCollection;
-                }
+                return SystemCollection;
             }
 
             return GetCollectionName(document);
         }
+
+        public static unsafe bool IsSystemDocument(byte* buffer, int length)
+        {
+            if (length < 6)
+                return false;
+
+            // case insensitive 'Raven/' match without doing allocations
+
+            if ((buffer[0] != (byte)'R' && buffer[0] != (byte)'r') ||
+                (buffer[1] != (byte)'A' && buffer[1] != (byte)'a') ||
+                (buffer[2] != (byte)'V' && buffer[2] != (byte)'v') ||
+                (buffer[3] != (byte)'E' && buffer[3] != (byte)'e') ||
+                (buffer[4] != (byte)'N' && buffer[4] != (byte)'n') ||
+                buffer[5] != (byte)'/')
+                return false;
+
+            if (length < 11)
+                return true;
+
+            // Now need to find if the next bits are 'hilo/'
+            if ((buffer[6] == (byte)'H' || buffer[6] == (byte)'h') &&
+                (buffer[7] == (byte)'I' || buffer[7] == (byte)'i') &&
+                (buffer[8] == (byte)'L' || buffer[8] == (byte)'l') &&
+                (buffer[9] == (byte)'O' || buffer[9] == (byte)'o') &&
+                buffer[10] == (byte)'/')
+                return false;
+
+            return true;
+        }
+
 
         public static string GetCollectionName(string key, BlittableJsonReaderObject document)
         {

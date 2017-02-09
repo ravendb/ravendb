@@ -223,9 +223,9 @@ namespace Raven.Server.Documents.Replication
         }
 
 
-        private void AddReplicationItemToBatch(ReplicationBatchDocumentItem item)
+        private unsafe void AddReplicationItemToBatch(ReplicationBatchDocumentItem item)
         {
-            if (ShouldSkipReplication(item.Key))
+            if (CollectionName.IsSystemDocument(item.Key.Buffer, item.Key.Size))
             {
                 if (_log.IsInfoEnabled)
                 {
@@ -377,34 +377,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe bool ShouldSkipReplication(LazyStringValue str)
-        {
-            if (str.Length < 6)
-                return false;
-
-            // case insensitive 'Raven/' match without doing allocations
-
-            if ((str.Buffer[0] != (byte)'R' && str.Buffer[0] != (byte)'r') ||
-                (str.Buffer[1] != (byte)'A' && str.Buffer[1] != (byte)'a') ||
-                (str.Buffer[2] != (byte)'V' && str.Buffer[2] != (byte)'v') ||
-                (str.Buffer[3] != (byte)'E' && str.Buffer[3] != (byte)'e') ||
-                (str.Buffer[4] != (byte)'N' && str.Buffer[4] != (byte)'n') ||
-                str.Buffer[5] != (byte)'/')
-                return false;
-
-            if (str.Length < 11)
-                return true;
-
-            // Now need to find if the next bits are 'hilo/'
-            if ((str.Buffer[6] == (byte)'H' || str.Buffer[6] == (byte)'h') &&
-                (str.Buffer[7] == (byte)'I' || str.Buffer[7] == (byte)'i') &&
-                (str.Buffer[8] == (byte)'L' || str.Buffer[8] == (byte)'l') &&
-                (str.Buffer[9] == (byte)'O' || str.Buffer[9] == (byte)'o') &&
-                str.Buffer[10] == (byte)'/')
-                return false;
-
-            return true;
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ThrowTooManyChangeVectorEntries(LazyStringValue key, ChangeVectorEntry[] changeVector)

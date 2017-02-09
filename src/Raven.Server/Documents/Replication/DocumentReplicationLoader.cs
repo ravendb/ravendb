@@ -583,44 +583,44 @@ namespace Raven.Server.Documents.Replication
                    NotificationSeverity.Error,
                    "DatabaseMismatch"
                );
-        private bool _databaseMismatchAlertRaised;
 
         private bool ValidateReplicaitonSource()
         {
-            if (ReplicationDocument == null)
+            var replicationDocument = ReplicationDocument;
+            if (replicationDocument == null)
             {
                 return true;
             }
 
-            if (ReplicationDocument.Source == null)
+            if (replicationDocument.Source == null)
             {
-                ReplicationDocument.Source = _database.DbId.ToString();
+                replicationDocument.Source = _database.DbId.ToString();
                 DocumentsOperationContext context;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    var djv = ReplicationDocument.ToJson();
-                    var replicatedBlittable = context.ReadObject(djv, Constants.Replication.DocumentReplicationConfiguration);
-                    _database.DocumentsStorage.Put(context, Constants.Replication.DocumentReplicationConfiguration, null, replicatedBlittable);
-                    tx.Commit();
+                    var djv = replicationDocument.ToJson();
+                    using (var doc = context.ReadObject(djv,
+                        Constants.Replication.DocumentReplicationConfiguration))
+                    {
+                        _database.DocumentsStorage.Put(context, Constants.Replication.DocumentReplicationConfiguration,
+                            null, doc);
+                        tx.Commit();
+                    }
                 }
                 return true;
             }
 
-            if (ReplicationDocument != null &&
-                String.Compare(ReplicationDocument.Source, _database.DbId.ToString(), StringComparison.Ordinal) != 0)
+            Guid sourceDbId;
+            if (Guid.TryParse(replicationDocument.Source, out sourceDbId) == false ||
+                sourceDbId != _database.DbId)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info(
-                        "Replication source does not match this database, outgoing replication is disabled until this will be fixed.");
+                    _log.Info($"Replication source '{replicationDocument.Source}' does not match this database, outgoing replication is disabled until this will be fixed.");
+
                 _database.NotificationCenter.Add(_databaseMismatchAlert);
-                _databaseMismatchAlertRaised = true;
                 return false;
             }
-
-            if (!_databaseMismatchAlertRaised)
-                return true;
-            _databaseMismatchAlertRaised = false;
             _database.NotificationCenter.Dismiss(_databaseMismatchAlert.Id);
             return true;
         }
