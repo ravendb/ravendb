@@ -48,12 +48,9 @@ namespace SlowTests.Core.Subscriptions
 
                     SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60));
                     Assert.Equal(100, docs.Count);
-
-                    foreach (var jsonDocument in docs)
+                    foreach (var doc in docs)
                     {
-                        var collection =
-                            jsonDocument[Constants.Metadata.Key].Value<string>(Constants.Metadata.Collection);
-                        Assert.True(collection == "Users");
+                        Assert.True(doc.Id.StartsWith("users/"));
                     }
                 }
             }
