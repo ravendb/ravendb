@@ -12,10 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Impl;
-using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
@@ -24,8 +21,8 @@ namespace Raven.Database.Actions
 {
     public class MaintenanceActions : ActionsBase
     {
-        public MaintenanceActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
-            : base(database, recentTouches, uuidGenerator, log)
+        public MaintenanceActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, uuidGenerator, log)
         {
         }
 

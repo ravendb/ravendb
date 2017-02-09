@@ -43,7 +43,6 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
-using Raven.Json.Linq;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Database
@@ -90,8 +89,6 @@ namespace Raven.Database
 
         private readonly DocumentDatabaseInitializer initializer;
 
-        private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
-
         public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
         {
             TimerManager = new ResourceTimerManager();
@@ -120,9 +117,6 @@ namespace Raven.Database
                 initializer.SatisfyImportsOnce();
 
                 backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
-
-
-                recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(configuration.MaxRecentTouchesToRemember, StringComparer.OrdinalIgnoreCase);
 
                 configuration.Container.SatisfyImportsOnce(this);
 
@@ -168,16 +162,16 @@ namespace Raven.Database
                 {
                     TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
                     initializer.InitializeIndexDefinitionStorage();
-                    Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
-                    Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
-                    Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
-                    Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
+                    Indexes = new IndexActions(this, uuidGenerator, Log);
+                    Attachments = new AttachmentActions(this, uuidGenerator, Log);
+                    Maintenance = new MaintenanceActions(this, uuidGenerator, Log);
+                    Notifications = new NotificationActions(this, uuidGenerator, Log);
                     Subscriptions = new SubscriptionActions(this, Log);
-                    Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
-                    Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
-                    Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
-                    Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
-                    Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
+                    Patches = new PatchActions(this, uuidGenerator, Log);
+                    Queries = new QueryActions(this, uuidGenerator, Log);
+                    Tasks = new TaskActions(this, uuidGenerator, Log);
+                    Transformers = new TransformerActions(this, uuidGenerator, Log);
+                    Documents = new DocumentActions(this, uuidGenerator, Log);
 
                     inFlightTransactionalState = TransactionalStorage.InitializeInFlightTransactionalState(this, 
                         (key, etag, document, metadata, transactionInformation) => Documents.Put(key, etag, document, metadata, transactionInformation), 
