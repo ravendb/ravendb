@@ -18,7 +18,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.Utils;
 using Voron;
-using Voron.Data.BTrees;
 
 
 namespace Raven.Server.Documents.Replication
@@ -373,8 +372,6 @@ namespace Raven.Server.Documents.Replication
             {
                 Slice lastKey;
                 Slice.From(context.Allocator, string.Empty, out lastKey);
-
-
                 try
                 {
                     bool hasConflicts = true;
@@ -472,7 +469,7 @@ namespace Raven.Server.Documents.Replication
 
             if (_database.DocumentsStorage.TryResolveUsingDefaultResolverInternal(
                 context,
-                ReplicationDocument.DefaultResolver,
+                ReplicationDocument?.DefaultResolver,
                 conflictList,
                 hasTombstoneInStorage: false))
             {
@@ -480,7 +477,7 @@ namespace Raven.Server.Documents.Replication
                 return true;
             }
 
-            if (ReplicationDocument.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
+            if (ReplicationDocument?.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
             {
                 _database.DocumentsStorage.ResolveToLatest(context, conflictList, false);
                 stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
@@ -490,7 +487,7 @@ namespace Raven.Server.Documents.Replication
             return false;
         }
 
-        private void InitializeResolvers()
+        private void UpdateScriptResolvers()
         {
             if (ReplicationDocument?.ResolveByCollection == null)
             {
@@ -513,6 +510,11 @@ namespace Raven.Server.Documents.Replication
                 };
             }
             ScriptConflictResolversCache = copy;
+        }
+
+        private void InitializeResolvers()
+        {
+            UpdateScriptResolvers();
 
             if (_database.DocumentsStorage.ConflictsCount > 0)
             {
@@ -530,10 +532,13 @@ namespace Raven.Server.Documents.Replication
                 });
             }
         }
-
+        
         private void InitializeOutgoingReplications()
         {
             ReplicationDocument = GetReplicationDocument();
+           
+            if (ValidateReplicaitonSource() == false)
+                return;
 
             if (ReplicationDocument?.Destinations == null || //precaution
                 ReplicationDocument.Destinations.Count == 0)
@@ -569,6 +574,55 @@ namespace Raven.Server.Documents.Replication
 
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
+        }
+
+        private readonly AlertRaised _databaseMismatchAlert = AlertRaised.Create(
+                   "Replication source mismatch",
+                   $"Replication source does not match this database, outgoing replication is disabled until this will be fixed at {Constants.Replication.DocumentReplicationConfiguration}.",
+                   AlertType.Replication,
+                   NotificationSeverity.Error,
+                   "DatabaseMismatch"
+               );
+        private bool _databaseMismatchAlertRaised;
+
+        private bool ValidateReplicaitonSource()
+        {
+            if (ReplicationDocument == null)
+            {
+                return true;
+            }
+
+            if (ReplicationDocument.Source == null)
+            {
+                ReplicationDocument.Source = _database.DbId.ToString();
+                DocumentsOperationContext context;
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var djv = ReplicationDocument.ToJson();
+                    var replicatedBlittable = context.ReadObject(djv, Constants.Replication.DocumentReplicationConfiguration);
+                    _database.DocumentsStorage.Put(context, Constants.Replication.DocumentReplicationConfiguration, null, replicatedBlittable);
+                    tx.Commit();
+                }
+                return true;
+            }
+
+            if (ReplicationDocument != null &&
+                String.Compare(ReplicationDocument.Source, _database.DbId.ToString(), StringComparison.Ordinal) != 0)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info(
+                        "Replication source does not match this database, outgoing replication is disabled until this will be fixed.");
+                _database.NotificationCenter.Add(_databaseMismatchAlert);
+                _databaseMismatchAlertRaised = true;
+                return false;
+            }
+
+            if (!_databaseMismatchAlertRaised)
+                return true;
+            _databaseMismatchAlertRaised = false;
+            _database.NotificationCenter.Dismiss(_databaseMismatchAlert.Id);
+            return true;
         }
 
         private void AddAndStartOutgoingReplication(ReplicationDestination destination)
