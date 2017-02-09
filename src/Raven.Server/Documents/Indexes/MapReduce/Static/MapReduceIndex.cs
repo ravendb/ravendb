@@ -87,10 +87,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 if (otherIndex.Definition.OutputReduceToCollection.Equals(outputReduceToCollection, StringComparison.OrdinalIgnoreCase))
                     throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) which will be used to output documents results should be unique to only one index but it is already used by another index ({otherIndex.Name}).");
-            }
 
-            foreach (var otherIndex in indexes)
-            {
                 string description;
                 if (otherIndex.Collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase) &&
                     CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, index.Collections.ToArray() /* todo:*/, indexes, out description))
