@@ -79,6 +79,16 @@ namespace Raven.Server.Documents.Replication
             {
                 return _prevCall.Result;
             }
+            catch (ObjectDisposedException)
+            {
+                //we are disposing, so don't care about this exception.
+                //this is thrown from inside ParseToMemoryAsync() call 
+                //from inside of ReadNextObject() when disposing (thrown from disposed stream basically)
+                return new Result
+                {
+                    Interrupted = true
+                };
+            }
             finally
             {
                 _prevCall = null;
@@ -93,7 +103,8 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 var jsonReaderObject =
-                    await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer);
+                    await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None,
+                        buffer);
                 return new Result
                 {
                     Document = jsonReaderObject,
