@@ -117,7 +117,8 @@ namespace Raven.Client.Indexing
             if (configurationEquals == false)
                 result |= IndexDefinitionCompareDifferences.Configuration;
 
-            // TODO: What should we do here with OutputReduceToCollection?
+            if (string.Equals(OutputReduceToCollection, other.OutputReduceToCollection, StringComparison.OrdinalIgnoreCase) == false)
+                result |= IndexDefinitionCompareDifferences.Reduce;
 
             return result;
         }
@@ -222,9 +223,8 @@ namespace Raven.Client.Indexing
                 result = (result * 397) ^ Maps.Count;
                 result = (result * 397) ^ (Reduce?.GetHashCode() ?? 0);
                 result = (result * 397) ^ DictionaryHashCode(Fields);
+                result = (result * 397) ^ OutputReduceToCollection.GetHashCode();
                 return result;
-
-                 // TODO: What should we do here with OutputReduceToCollection?
             }
         }
 
