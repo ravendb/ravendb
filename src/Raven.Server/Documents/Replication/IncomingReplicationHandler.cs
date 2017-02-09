@@ -1185,7 +1185,8 @@ namespace Raven.Server.Documents.Replication
 
             _replicationFromAnotherSource.Set();
 
-            if (_incomingThread != Thread.CurrentThread)
+            if (_incomingThread != Thread.CurrentThread &&
+                _incomingThread?.ThreadState != ThreadState.Unstarted)
             {
                 _incomingThread?.Join();
             }

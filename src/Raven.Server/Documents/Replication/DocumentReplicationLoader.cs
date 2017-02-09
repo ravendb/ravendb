@@ -608,7 +608,11 @@ namespace Raven.Server.Documents.Replication
                         tx.Commit();
                     }
                 }
-                return true;
+                // this is going to return false, because we modifed the configuration doc
+                // which will cause the code to recurse, so we just avoid running this instance
+                // because the instance we just run because we committed the update have already
+                // done all the work
+                return false; 
             }
 
             Guid sourceDbId;
