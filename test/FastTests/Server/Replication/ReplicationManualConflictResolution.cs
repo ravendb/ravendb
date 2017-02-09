@@ -19,7 +19,7 @@ namespace FastTests.Server.Replication
             using (var slave = GetDocumentStore())
             {
 
-                SetToManualResolution(slave, "return {Name:docs[0].Name + '123'};");
+                SetScriptResolution(slave, "return {Name:docs[0].Name + '123'};","Users");
                 SetupReplication(master, slave);
 
                 using (var session = master.OpenSession())
@@ -85,7 +85,7 @@ namespace FastTests.Server.Replication
             using (var slave = GetDocumentStore())
             {
 
-                SetToManualResolution(slave, "return ResolveToTombstone();");
+                SetScriptResolution(slave, "return ResolveToTombstone();", "Users");
                 SetupReplication(master, slave);
 
                 using (var session = slave.OpenSession())
@@ -118,7 +118,7 @@ namespace FastTests.Server.Replication
             using (var slave = GetDocumentStore())
             {
 
-                SetToManualResolution(slave, @"
+                SetScriptResolution(slave, @"
 
 function onlyUnique(value, index, self) { 
     return self.indexOf(value) === index;
@@ -140,7 +140,7 @@ function onlyUnique(value, index, self) {
             }
 output(out);
 return out;
-");
+", "Users");
                 SetupReplication(master, slave);
                 long? etag;
                 using (var session = slave.OpenSession())
@@ -190,7 +190,7 @@ return out;
             using (var slave = GetDocumentStore())
             {
                 SetupReplication(master, slave);
-                SetToManualResolution(slave, @"return;");
+                SetScriptResolution(slave, @"return;", "Users");
 
                 long? etag;
                 using (var session = slave.OpenSession())
@@ -255,26 +255,6 @@ return out;
                 Thread.Sleep(100);
             }
             return false;
-        }
-
-        public void SetToManualResolution(DocumentStore store, string script)
-        {
-            using (var session = store.OpenSession())
-            {
-                session.Store(new ReplicationDocument
-                {
-                    DocumentConflictResolution = StraightforwardConflictResolution.None,
-                    ResolveByCollection = new Dictionary<string, ScriptResolver>{
-                            { "Users", new ScriptResolver
-                                {
-                                    Script = script
-                                }
-                            }
-                        }
-                }, Constants.Replication.DocumentReplicationConfiguration);
-
-                session.SaveChanges();
-            }
         }
     }
 }
