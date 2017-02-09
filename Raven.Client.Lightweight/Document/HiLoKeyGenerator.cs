@@ -88,6 +88,7 @@ namespace Raven.Client.Document
             using (RavenTransactionAccessor.SupressExplicitRavenTransaction())
 #endif
             using (databaseCommands.ForceReadFromMaster())
+            using (databaseCommands.DisableAllCaching())
             {
                 // we need the latest value of the capacity
                 var calculatedCapacity = Interlocked.Read(ref capacity);
