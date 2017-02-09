@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using Raven.Server.Json;
@@ -11,13 +10,12 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using System.Net.Http;
 using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Client.Connection;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions.Database;
+using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Replication;
 using Raven.NewClient.Client.Replication.Messages;
 using Raven.NewClient.Client.Http;
@@ -104,30 +102,22 @@ namespace Raven.Server.Documents.Replication
 
         private TcpConnectionInfo GetTcpInfo()
         {
-            var convention = new DocumentConvention();
-            //since we use it only once when the connection is initialized, no reason to keep requestFactory around for long
-            using (var requestFactory = new HttpJsonRequestFactory(1))
-            using (
-                var request =
-                    requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
-                        string.Format("{0}/info/tcp",
-                            MultiDatabase.GetRootDatabaseUrl(_destination.Url)),
-                        HttpMethod.Get,
-                        new OperationCredentials(_destination.ApiKey), convention)
-                    {
-                        Timeout = TimeSpan.FromSeconds(15)
-                    }))
+            JsonOperationContext context;
+            using (var requestExecuter = new RequestExecuter(MultiDatabase.GetRootDatabaseUrl(_destination.Url), _destination.Database, _destination.ApiKey))
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
+                var command = new GetTcpInfoCommand();
 
-                var result = request.ReadResponseJson();
-                var tcpConnectionInfo =
-                    convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
+                requestExecuter.Execute(command, context);
+
+                var info = command.Result;
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info(
-                        $"Will replicate to {_destination.Database} @ {_destination.Url} via {tcpConnectionInfo.Url}");
+                        $"Will replicate to {_destination.Database} @ {_destination.Url} via {info.Url}");
                 }
-                return tcpConnectionInfo;
+
+                return info;
             }
         }
 
@@ -147,7 +137,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         var documentSender = new ReplicationDocumentSender(_stream, this, _log);
                         var indexAndTransformerSender = new ReplicationIndexTransformerSender(_stream, this, _log);
-                        
+
                         WriteHeaderToRemotePeer();
                         //handle initial response to last etag and staff
                         try
@@ -160,13 +150,13 @@ namespace Raven.Server.Documents.Replication
                                         new InvalidOperationException(response.Item2.Exception));
                                 throw new InvalidOperationException(response.Item2.Exception);
                             }
-                            
+
                             if (response.Item1 == ReplicationMessageReply.ReplyType.Ok)
                             {
                                 _parent.UpdateReplicationDocumentWithResolver(
-                                    response.Item2.ResolverId, 
+                                    response.Item2.ResolverId,
                                     response.Item2.ResolverVersion);
-                            }                          
+                            }
                         }
                         catch (DatabaseDoesNotExistException e)
                         {
@@ -277,7 +267,7 @@ namespace Raven.Server.Documents.Replication
                 _database.NotificationCenter.AddAfterTransactionCommit(
                     AlertRaised.Create(AlertTitle, msg, AlertType.Replication, NotificationSeverity.Warning, key: FromToString, details: new ExceptionDetails(e)),
                     txw);
-                
+
                 txw.Commit();
             }
         }
@@ -299,7 +289,7 @@ namespace Raven.Server.Documents.Replication
                 });
                 writer.Flush();
                 ReadHeaderResponseAndThrowIfUnAuthorized();
-              //start request/response for fetching last etag
+                //start request/response for fetching last etag
                 var request = new DynamicJsonValue
                 {
                     ["Type"] = "GetLastEtag",
@@ -351,7 +341,7 @@ namespace Raven.Server.Documents.Replication
             while (true)
             {
                 using (var result = _interruptableRead.ParseToMemory(
-                    _waitForChanges, 
+                    _waitForChanges,
                     "replication notify message",
                     timeout,
                     _buffer,
@@ -455,13 +445,13 @@ namespace Raven.Server.Documents.Replication
                 try
                 {
                     var heartbeat = new DynamicJsonValue
-                {
-                    [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
-                    [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
-                    [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
-                    [nameof(ReplicationMessageHeader.ItemCount)] = 0
-                };
-                documentsContext.Write(writer, heartbeat);
+                    {
+                        [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
+                        [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
+                        [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
+                        [nameof(ReplicationMessageHeader.ItemCount)] = 0
+                    };
+                    documentsContext.Write(writer, heartbeat);
                     writer.Flush();
                 }
                 catch (Exception e)
@@ -473,7 +463,7 @@ namespace Raven.Server.Documents.Replication
 
                 try
                 {
-                    HandleServerResponse();                
+                    HandleServerResponse();
                 }
                 catch (Exception e)
                 {
@@ -492,7 +482,7 @@ namespace Raven.Server.Documents.Replication
                 using (var replicationBatchReplyMessage = _interruptableRead.ParseToMemory(
                     _connectionDisposed,
                     "replication acknowledge message",
-                    timeout, 
+                    timeout,
                     _buffer,
                     CancellationToken))
                 {
@@ -662,7 +652,7 @@ namespace Raven.Server.Documents.Replication
             _database.Changes.OnTransformerChange -= OnTransformerChange;
 
             _cts.Cancel();
-          
+
             try
             {
                 _tcpClient?.Dispose();

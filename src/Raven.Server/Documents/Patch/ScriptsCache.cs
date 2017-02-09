@@ -24,36 +24,33 @@ namespace Raven.Server.Documents.Patch
 
         private class ScriptedPatchRequestAndCustomFunctionsToken
         {
-            private readonly PatchRequest request;
-            private readonly string customFunctions;
+            private readonly PatchRequest _request;
+            private readonly string _customFunctions;
 
             public ScriptedPatchRequestAndCustomFunctionsToken(PatchRequest request, string customFunctions)
             {
-                this.request = request;
-                this.customFunctions = customFunctions;
+                _request = request;
+                _customFunctions = customFunctions;
+            }
+
+            private bool Equals(ScriptedPatchRequestAndCustomFunctionsToken other)
+            {
+                return Equals(_request, other._request) && string.Equals(_customFunctions, other._customFunctions, StringComparison.OrdinalIgnoreCase);
             }
 
             public override bool Equals(object obj)
             {
+                if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                var other = obj as ScriptedPatchRequestAndCustomFunctionsToken;
-                if (ReferenceEquals(null, other)) return false;
-                if (request.Equals(other.request))
-                {
-                    if (customFunctions == null && other.customFunctions == null)
-                        return true;
-                    if (customFunctions != null && other.customFunctions != null)
-                        return RavenJTokenEqualityComparer.Default.Equals(customFunctions, other.customFunctions);
-                }
-                return false;
+                if (obj.GetType() != GetType()) return false;
+                return Equals((ScriptedPatchRequestAndCustomFunctionsToken) obj);
             }
 
             public override int GetHashCode()
             {
                 unchecked
                 {
-                    return ((request != null ? request.GetHashCode() : 0) * 397) ^
-                        (customFunctions != null ? RavenJTokenEqualityComparer.Default.GetHashCode(customFunctions) : 0);
+                    return ((_request?.GetHashCode() ?? 0) * 397) ^ (_customFunctions != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(_customFunctions) : 0);
                 }
             }
         }

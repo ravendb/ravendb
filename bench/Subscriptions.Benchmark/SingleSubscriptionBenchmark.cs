@@ -8,7 +8,7 @@ using Raven.NewClient.Client.Replication;
 
 namespace SubscriptionsBenchmark
 {
-    public class CounterObserver : IObserver<JObject>
+    public class CounterObserver : IObserver<object>
     {
         public int MaxCount { get; private set; }
         public int CurCount { get; private set; }
@@ -41,7 +41,7 @@ namespace SubscriptionsBenchmark
             Console.WriteLine(error);
         }
 
-        public void OnNext(JObject value)
+        public void OnNext(object value)
         {
             if (Tcs.Task.IsCompleted)
                 return;
