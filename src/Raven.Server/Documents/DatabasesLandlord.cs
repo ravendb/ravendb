@@ -57,7 +57,7 @@ namespace Raven.Server.Documents
             try
             {
                 if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
-                    throw new ConcurrentLoadTimeoutException(
+                    throw new DatabaseConcurrentLoadTimeoutException(
                         "Too much databases loading concurrently, timed out waiting for them to load.");
 
                 hasAcquired = true;

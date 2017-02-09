@@ -87,7 +87,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PerformanceHint));
 
             // changes
-            scripter.AddType(typeof(OperationStatusChanged));
+            scripter.AddType(typeof(OperationStatusChange));
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
             scripter.AddType(typeof(OperationExceptionResult));

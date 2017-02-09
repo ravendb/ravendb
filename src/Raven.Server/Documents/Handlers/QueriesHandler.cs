@@ -8,6 +8,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Exceptions.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
@@ -154,7 +155,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 result = await runner.ExecuteQuery(indexName, indexQuery, includes, existingResultEtag, token).ConfigureAwait(false);
             }
-            catch (IndexDoesNotExistsException)
+            catch (IndexDoesNotExistException)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return;

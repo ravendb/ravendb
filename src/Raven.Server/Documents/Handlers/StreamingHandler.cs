@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.NewClient.Client.Exceptions.Indexes;
 using Raven.NewClient.Client.Exceptions.Transformers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Transformers;
@@ -121,7 +122,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         await runner.ExecuteStreamQuery(indexName, query, HttpContext.Response, writer, token).ConfigureAwait(false);
                     }
-                    catch (IndexDoesNotExistsException)
+                    catch (IndexDoesNotExistException)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     }

@@ -7,6 +7,8 @@
 using System;
 using System.Collections.Generic;
 using Raven.NewClient.Abstractions.Cluster;
+using Raven.NewClient.Abstractions.Extensions;
+using Sparrow.Json.Parsing;
 
 namespace Raven.NewClient.Client.Replication
 {
@@ -21,7 +23,7 @@ namespace Raven.NewClient.Client.Replication
         /// Override all other properties of the destination
         /// </summary>
 
-        private string url;
+        private string _url;
 
         /// <summary>
         /// Gets or sets the URL of the replication destination
@@ -29,10 +31,10 @@ namespace Raven.NewClient.Client.Replication
         /// <value>The URL.</value>
         public string Url
         {
-            get { return url; }
+            get { return _url; }
             set
             {
-                url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
+                _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
             }
         }
 
@@ -99,9 +101,9 @@ namespace Raven.NewClient.Client.Replication
         {
             get
             {
-                if (string.IsNullOrEmpty(url))
+                if (string.IsNullOrEmpty(_url))
                     return null;
-                return url + " " + Database;
+                return _url + " " + Database;
             }
         }
 
@@ -112,6 +114,13 @@ namespace Raven.NewClient.Client.Replication
 
         public bool Equals(ReplicationDestination other) => IsEqualTo(other);
 
+        public bool IsMatch(ReplicationDestination other)
+        {
+            return
+                string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase);
+        }
+
         public bool IsEqualTo(ReplicationDestination other)
         {
             return string.Equals(Username, other.Username) && string.Equals(Password, other.Password) &&
@@ -121,14 +130,14 @@ namespace Raven.NewClient.Client.Replication
                    IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
                    ((string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
                    (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.OrdinalIgnoreCase))) &&
-                   Abstractions.Extensions.DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
+                   DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
         }
 
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((ReplicationDestination)obj);
         }
 
@@ -136,15 +145,15 @@ namespace Raven.NewClient.Client.Replication
         {
             unchecked
             {
-                var hashCode = (Username != null ? Username.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Password != null ? Password.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Domain != null ? Domain.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (ApiKey != null ? ApiKey.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Database != null ? Database.GetHashCode() : 0);
+                var hashCode = Username?.GetHashCode() ?? 0;
+                hashCode = (hashCode * 397) ^ (Password?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Domain?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (ApiKey?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Database?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (int)TransitiveReplicationBehavior;
                 hashCode = (hashCode * 397) ^ IgnoredClient.GetHashCode();
                 hashCode = (hashCode * 397) ^ Disabled.GetHashCode();
-                hashCode = (hashCode * 397) ^ (ClientVisibleUrl != null ? ClientVisibleUrl.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ClientVisibleUrl?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }
@@ -179,6 +188,37 @@ namespace Raven.NewClient.Client.Replication
                     SpecifiedCollections = source.SpecifiedCollections
                 };
             }
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue
+            {
+                [nameof(ApiKey)] = ApiKey,
+                [nameof(AuthenticationScheme)] = AuthenticationScheme,
+                [nameof(ClientVisibleUrl)] = ClientVisibleUrl,
+                [nameof(Database)] = Database,
+                [nameof(Disabled)] = Disabled,
+                [nameof(Domain)] = Domain,
+                [nameof(Humane)] = Humane,
+                [nameof(IgnoredClient)] = IgnoredClient,
+                [nameof(Password)] = Password,
+                [nameof(SkipIndexReplication)] = SkipIndexReplication,
+                [nameof(TransitiveReplicationBehavior)] = TransitiveReplicationBehavior,
+                [nameof(Url)] = Url,
+                [nameof(Username)] = Username
+            };
+
+            if (SpecifiedCollections != null)
+            {
+                var values = new DynamicJsonValue();
+                foreach (var kvp in SpecifiedCollections)
+                    values[kvp.Key] = kvp.Value;
+
+                json[nameof(SpecifiedCollections)] = values;
+            }
+
+            return json;
         }
     }
 

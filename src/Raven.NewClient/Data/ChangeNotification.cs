@@ -67,6 +67,8 @@ namespace Raven.NewClient.Abstractions.Data
         /// </summary>
         public long? Etag { get; set; }
 
+        internal bool TriggeredByReplicationThread;
+
         public override string ToString()
         {
             return string.Format("{0} on {1}", Type, Key);
@@ -84,6 +86,7 @@ namespace Raven.NewClient.Abstractions.Data
         BulkInsertEnded = 8,
         BulkInsertError = 16,
         DeleteOnTombstoneReplication = 32,
+        Conflict = 64,
         Common = Put | Delete
     }
 

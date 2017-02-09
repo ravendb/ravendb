@@ -1,10 +1,10 @@
 //-----------------------------------------------------------------------
-// <copyright file="IndexStats.cs" company="Hibernating Rhinos LTD">
+// <copyright file="IndexingOperation.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Raven.NewClient.Data.Indexes
+namespace Raven.NewClient.Client.Data.Indexes
 {
     public static class IndexingOperation
     {
@@ -48,6 +48,7 @@ namespace Raven.NewClient.Data.Indexes
             public const string PutMapResult = "Storage/PutMapResult";
             public static string GetMapEntriesTree = "GetMapEntriesTree";
             public static string GetMapEntries = "GetMapEntries";
+            public static string SaveOutputDocuments = "SaveOutputDocuments";
         }
     }
 }

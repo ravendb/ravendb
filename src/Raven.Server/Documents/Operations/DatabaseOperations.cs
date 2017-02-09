@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Operations
                 Status = OperationStatus.InProgress
             };
 
-            var notification = new OperationStatusChanged
+            var notification = new OperationStatusChange
             {
                 OperationId = id,
                 State = operationState
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Operations
             return operation.Task;
         }
 
-        private void RaiseNotifications(OperationStatusChanged change, Operation operation)
+        private void RaiseNotifications(OperationStatusChange change, Operation operation)
         {
             var operationChanged = OperationChanged.Create(change.OperationId, operation.Description, change.State, operation.Killable);
 

@@ -16,19 +16,18 @@ namespace Raven.NewClient.Abstractions
         /// 'r' format is used on the in metadata, because it's delivered as http header. 
         /// </remarks>
         public static readonly string[] DateTimeFormatsToRead = {
-            "o", 
-            "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", 
-            "yyyy-MM-ddTHH:mm:ss.fffffffzzz", 
-            "yyyy-MM-ddTHH:mm:ss.FFFFFFFK", 
-            "r",  
+            "o",
+            "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff",
+            "yyyy-MM-ddTHH:mm:ss.fffffffzzz",
+            "yyyy-MM-ddTHH:mm:ss.FFFFFFFK",
+            "r",
             "yyyy-MM-ddTHH:mm:ss.FFFK"
         };
 
         public static readonly string DateTimeOffsetFormatsToWrite = "o";
         public static readonly string DateTimeFormatsToWrite = "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff";
 
-        public static readonly JsonConverterCollection Converters = new JsonConverterCollection
-        {
+        public static readonly JsonConverter[] Converters = {
             new JsonEnumConverter(),
             new JsonToJsonConverter(),
             new JsonDateTimeISO8601Converter(),
@@ -36,7 +35,7 @@ namespace Raven.NewClient.Abstractions
             new JsonDictionaryDateTimeKeysConverter(),
         };
 
-        static Default ()
+        static Default()
         {
             //Converters.Freeze();
         }

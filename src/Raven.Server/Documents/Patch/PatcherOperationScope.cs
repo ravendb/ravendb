@@ -6,6 +6,7 @@ using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
+using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -261,7 +262,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (v.IsDate())
             {
-                writer.WriteValue(v.AsDate().ToDateTime().ToString(Abstractions.Default.DateTimeFormatsToWrite));
+                writer.WriteValue(v.AsDate().ToDateTime().ToString(Default.DateTimeFormatsToWrite));
                 return;
             }
             if (v.IsObject())

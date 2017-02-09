@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Replication;
@@ -19,7 +18,7 @@ namespace Raven.Server.Documents.Replication
         public ClusterTopologyExplorer(
             DocumentDatabase database,
             List<string> alreadyVisited,
-            TimeSpan timeout, 
+            TimeSpan timeout,
             List<ReplicationDestination> replicationDestinations)
         {
             _database = database;
@@ -28,16 +27,15 @@ namespace Raven.Server.Documents.Replication
             var dbId = _database.DbId.ToString();
 
             foreach (var destination in replicationDestinations)
-            {                                
-                if(destination.Disabled)
+            {
+                if (destination.Disabled)
                     continue;
 
-                var credentials = new OperationCredentials(destination.ApiKey,CredentialCache.DefaultCredentials);
+                var credentials = new OperationCredentials(destination.ApiKey);
 
-                
                 var singleDestinationDiscoverer = new NodeTopologyExplorer(
                     database.DocumentsStorage.ContextPool,
-                    alreadyVisited, 
+                    alreadyVisited,
                     destination,
                     credentials,
                     dbId,
@@ -49,7 +47,7 @@ namespace Raven.Server.Documents.Replication
 
         public async Task<FullTopologyInfo> DiscoverTopologyAsync()
         {
-            var topology = new FullTopologyInfo {DatabaseId = _database.DbId.ToString()};
+            var topology = new FullTopologyInfo { DatabaseId = _database.DbId.ToString() };
             if (_discoverers.Count == 0) //either no destinations or we already visited all destinations
                 return topology;
 
@@ -107,11 +105,11 @@ namespace Raven.Server.Documents.Replication
                     {
                         Database = kvp.Key.Destination.Database,
                         Url = kvp.Key.Destination.Url,
-                        Message = discoveryTask.Exception ?.Message,
+                        Message = discoveryTask.Exception?.Message,
                         Exception = discoveryTask.Exception?.ExtractSingleInnerException().ToString()
                     });
                 }
-                else if(kvp.Value.Result != null)
+                else if (kvp.Value.Result != null)
                 {
                     foreach (var nodeValue in kvp.Value.Result.NodesById)
                     {

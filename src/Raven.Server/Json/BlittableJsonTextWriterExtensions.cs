@@ -711,13 +711,6 @@ namespace Raven.Server.Json
                 writer.WriteString(index.Type.ToString());
                 writer.WriteComma();
 
-                if (index.OutputReduceToCollection != null)
-                {
-                    writer.WritePropertyName(nameof(index.OutputReduceToCollection));
-                    writer.WriteString(index.OutputReduceToCollection);
-                    writer.WriteComma();
-                }
-
                 writer.WritePropertyName(nameof(index.LastIndexingTime));
                 if (index.LastIndexingTime.HasValue)
                     writer.WriteString(index.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true));

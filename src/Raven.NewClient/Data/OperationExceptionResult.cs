@@ -19,8 +19,9 @@ namespace Raven.NewClient.Client.Data
             // .ctor required for deserialization
         }
 
-        public OperationExceptionResult(Exception exception, HttpStatusCode statusCode)
+        public OperationExceptionResult(Exception exception, HttpStatusCode statusCode, bool shouldBePersistent)
         {
+            ShouldPersist = shouldBePersistent;
             Type = exception.GetType().FullName;
             Message = exception.Message;
             Error = ExceptionToString(exception);
@@ -49,5 +50,7 @@ namespace Raven.NewClient.Client.Data
                 return exception.ToString();
             }
         }
+
+        public bool ShouldPersist { get; }
     }
 }

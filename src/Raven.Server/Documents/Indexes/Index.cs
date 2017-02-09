@@ -16,6 +16,8 @@ using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Indexes;
+using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Indexing;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;

@@ -9,11 +9,8 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Platform;
-using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Transformers
 {

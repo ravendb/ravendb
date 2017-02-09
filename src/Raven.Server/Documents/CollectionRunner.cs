@@ -2,6 +2,7 @@
 using System.Linq;
 
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Collections;
 using Raven.NewClient.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

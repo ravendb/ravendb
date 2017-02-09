@@ -6,7 +6,10 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Exceptions.Indexes;
+using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -416,7 +419,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
-                    IndexDoesNotExistsException.ThrowFor(name);
+                    IndexDoesNotExistException.ThrowFor(name);
 
                 var progress = index.GetProgress(context);
                 writer.WriteIndexProgress(context, progress);
@@ -542,7 +545,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
-                    IndexDoesNotExistsException.ThrowFor(name);
+                    IndexDoesNotExistException.ThrowFor(name);
 
                 index.SetLock(mode);
             }
@@ -564,7 +567,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
-                    IndexDoesNotExistsException.ThrowFor(name);
+                    IndexDoesNotExistException.ThrowFor(name);
 
                 index.SetPriority(priority);
             }
@@ -587,7 +590,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var index = Database.IndexStore.GetIndex(name);
                     if (index == null)
-                        IndexDoesNotExistsException.ThrowFor(name);
+                        IndexDoesNotExistException.ThrowFor(name);
 
                     indexes.Add(index);
                 }

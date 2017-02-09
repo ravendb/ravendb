@@ -1,13 +1,15 @@
-﻿namespace Raven.NewClient.Data.Indexes
+﻿namespace Raven.NewClient.Client.Data.Indexes
 {
     public class ReduceRunDetails
     {
         public int NumberOfModifiedLeafs { get; set; }
 
         public int NumberOfModifiedBranches { get; set; }
+
+        public int NumberOfCompressedLeafs { get; set; }
     }
 
-    public class MapRunDetails 
+    public class MapRunDetails
     {
         public string BatchCompleteReason { get; set; }
 

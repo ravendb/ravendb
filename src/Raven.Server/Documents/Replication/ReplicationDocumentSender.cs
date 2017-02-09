@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.NewClient.Client.Replication.Messages;
+using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

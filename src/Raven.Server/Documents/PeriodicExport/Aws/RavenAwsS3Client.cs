@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Util;
 
 namespace Raven.Server.Documents.PeriodicExport.Aws
 {

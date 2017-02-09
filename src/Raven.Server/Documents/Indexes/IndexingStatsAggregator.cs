@@ -5,6 +5,7 @@ using System.Linq;
 
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Data.Indexes;
 using Raven.Server.Exceptions;
 

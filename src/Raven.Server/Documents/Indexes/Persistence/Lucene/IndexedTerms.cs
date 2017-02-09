@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var propertyName = term.Field;
                         if (propertyName.EndsWith("_ConvertToJson") ||
                             propertyName.EndsWith("_IsArray") ||
-                            propertyName.EndsWith(Raven.Abstractions.Data.Constants.Indexing.Fields.RangeFieldSuffix))
+                            propertyName.EndsWith(Raven.NewClient.Abstractions.Data.Constants.Indexing.Fields.RangeFieldSuffix))
                             continue;
 
                         var oldValue = result[propertyName];
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static bool LowPrecisionNumber(string field, string val)
         {
-            if (field.EndsWith(Raven.Abstractions.Data.Constants.Indexing.Fields.RangeFieldSuffix) == false)
+            if (field.EndsWith(Raven.NewClient.Abstractions.Data.Constants.Indexing.Fields.RangeFieldSuffix) == false)
                 return false;
 
             if (string.IsNullOrEmpty(val))

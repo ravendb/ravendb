@@ -9,6 +9,7 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Exceptions.Documents;
+using Raven.NewClient.Client.Exceptions.Indexes;
 using Raven.NewClient.Client.Util.RateLimiting;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -304,7 +305,7 @@ namespace Raven.Server.Documents.Queries
         {
             var index = _database.IndexStore.GetIndex(indexName);
             if (index == null)
-                IndexDoesNotExistsException.ThrowFor(indexName);
+                IndexDoesNotExistException.ThrowFor(indexName);
 
             return index;
         }

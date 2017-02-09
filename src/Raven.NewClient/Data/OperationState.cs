@@ -20,9 +20,9 @@ namespace Raven.NewClient.Client.Data
         {
             return new DynamicJsonValue(GetType())
             {
-                ["Progress"] = Progress?.ToJson(),
-                ["Result"] = Result?.ToJson(),
-                ["Status"] = Status.ToString(),
+                [nameof(Progress)] = Progress?.ToJson(),
+                [nameof(Result)] = Result?.ToJson(),
+                [nameof(Status)] = Status.ToString(),
             };
         }
     }
@@ -31,6 +31,7 @@ namespace Raven.NewClient.Client.Data
     {
         string Message { get; }
         DynamicJsonValue ToJson();
+        bool ShouldPersist { get; }
     }
 
     public enum OperationStatus

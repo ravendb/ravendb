@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.NewClient.Client.Data.Indexes;
 
 namespace Raven.NewClient.Data.Indexes
 {

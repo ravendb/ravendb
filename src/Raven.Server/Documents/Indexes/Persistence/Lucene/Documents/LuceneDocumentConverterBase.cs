@@ -17,6 +17,7 @@ using Raven.NewClient.Abstractions;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
 using Sparrow.Binary;
+using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents

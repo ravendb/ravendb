@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Handlers
                                 ["Key"] = cmd.Key,
                                 ["Etag"] = patchResult.Etag,
                                 ["Method"] = "PATCH",
-                                [nameof(BatchResult.PatchStatus)] = patchResult.Status.ToString(),
+                                ["PatchStatus"] = patchResult.Status.ToString(),
                             });
                             break;
                         case BatchRequestParser.CommandType.DELETE:

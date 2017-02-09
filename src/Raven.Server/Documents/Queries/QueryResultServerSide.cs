@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.NewClient.Client.Data.Queries;
 
 namespace Raven.Server.Documents.Queries
 {
-    public abstract class QueryResultServerSide<T> : QueryResult<T>
+    public abstract class QueryResultServerSide<T> : QueryResult<List<T>>
     {
         public abstract void AddResult(T result);
 

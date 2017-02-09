@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Indexes;
 using Raven.Server.Exceptions;
 using Raven.NewClient.Data.Indexes;
 

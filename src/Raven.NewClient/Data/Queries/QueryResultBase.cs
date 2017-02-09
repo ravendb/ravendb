@@ -1,20 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
-using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Data.Queries
 {
-    public abstract class QueryResultBase
+    public abstract class QueryResultBase<T>
     {
         /// <summary>
         /// Gets or sets the document resulting from this query.
         /// </summary>
-        public BlittableJsonReaderArray Results { get; set; }
+        public T Results { get; set; }
 
         /// <summary>
         /// Gets or sets the document included in the result.
         /// </summary>
-        public BlittableJsonReaderArray Includes { get; set; }
+        public T Includes { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the index is stale.

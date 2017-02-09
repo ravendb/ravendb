@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Extensions;
 using Raven.Server.Json;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries

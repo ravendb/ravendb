@@ -1,7 +1,4 @@
-﻿using System.Runtime.Serialization.Formatters;
-using Newtonsoft.Json;
-using Sparrow.Extensions;
-using Sparrow.Json.Parsing;
+﻿using Sparrow.Json.Parsing;
 
 namespace Raven.NewClient.Client.Data
 {
@@ -18,5 +15,7 @@ namespace Raven.NewClient.Client.Data
                 ["Message"] = Message,
             };
         }
+
+        public bool ShouldPersist => false;
     }
 }

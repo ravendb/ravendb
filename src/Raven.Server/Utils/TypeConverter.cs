@@ -14,7 +14,7 @@ using Raven.Server.Documents.Transformers;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Json;
+using Sparrow.Extensions;
 
 namespace Raven.Server.Utils
 {
@@ -267,7 +267,7 @@ namespace Raven.Server.Utils
                         DateTimeStyles.RoundtripKind, out dateTime))
                         return (T)(object)dateTime;
 
-                    dateTime = RavenJsonTextReader.ParseDateMicrosoft(s);
+                    dateTime = RavenDateTimeExtensions.ParseDateMicrosoft(s);
                     return (T)(object)dateTime;
                 }
             }

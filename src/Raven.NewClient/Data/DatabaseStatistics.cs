@@ -10,7 +10,6 @@ using System.Linq;
 
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Client.Data
@@ -61,6 +60,8 @@ namespace Raven.NewClient.Client.Data
         /// Indicates if process is 64-bit
         /// </summary>
         public bool Is64Bit { get; set; }
+
+        public DateTime? LastIndexingTime { get; set; }
     }
 
     public class IndexInformation
@@ -76,6 +77,8 @@ namespace Raven.NewClient.Client.Data
         public IndexLockMode LockMode { get; set; }
 
         public IndexType Type { get; set; }
+
+        public DateTime? LastIndexingTime { get; set; }
     }
 
     public class TriggerInfo

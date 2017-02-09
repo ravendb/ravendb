@@ -1,7 +1,5 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Data;
 using Raven.NewClient.Data.Indexes;
 
@@ -11,7 +9,7 @@ namespace Raven.NewClient.Client.Data
     {
         public List<DatabaseInfo> Databases { get; set; }
 
-        public List<FileSystemInfo> Filesystems { get; set; }
+        public List<FileSystemInfo> FileSystems { get; set; }
 
         //TODO: ts, cs
 
@@ -21,6 +19,8 @@ namespace Raven.NewClient.Client.Data
     {
         public string Name { get; set; }
         public bool Disabled { get; set; }
+
+        public string LoadError { get; set; }
 
         public Size TotalSize { get; set; }
 
@@ -47,6 +47,7 @@ namespace Raven.NewClient.Client.Data
         public TimeSpan IncrementalBackupInterval { get; set; }
 
         public TimeSpan FullBackupInterval { get; set; }
+
     }
 
     public class DatabaseInfo : ResourceInfo

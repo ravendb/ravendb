@@ -38,7 +38,7 @@ namespace Raven.NewClient.Json.Utilities
             return result;
         }
 
-        public static IEnumerable<T> ParseResultsForQueryOperation<T>(InMemoryDocumentSessionOperations session, QueryResultBase transformedResult)
+        public static IEnumerable<T> ParseResultsForQueryOperation<T>(InMemoryDocumentSessionOperations session, QueryResultBase<BlittableJsonReaderArray> transformedResult)
         {
             for (var i = 0; i < transformedResult.Results.Length; i++)
             {

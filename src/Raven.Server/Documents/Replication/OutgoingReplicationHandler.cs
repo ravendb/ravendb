@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Replication
                         string.Format("{0}/info/tcp",
                             MultiDatabase.GetRootDatabaseUrl(_destination.Url)),
                         HttpMethod.Get,
-                        new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials), convention)
+                        new OperationCredentials(_destination.ApiKey), convention)
                     {
                         Timeout = TimeSpan.FromSeconds(15)
                     }))

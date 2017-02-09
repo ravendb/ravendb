@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Exceptions.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
@@ -207,7 +208,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (TryMatchExistingIndexToQuery(map, out index) == false)
             {
                 if (createAutoIndexIfNoMatchIsFound == false)
-                    throw new IndexDoesNotExistsException("Could not find index for a given query.");
+                    throw new IndexDoesNotExistException("Could not find index for a given query.");
 
                 var definition = map.CreateAutoIndexDefinition();
 
@@ -280,7 +281,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             _indexStore.DeleteIndex(supercededIndex.IndexId);
                         }
-                        catch (IndexDoesNotExistsException)
+                        catch (IndexDoesNotExistException)
                         {
                         }
                     }

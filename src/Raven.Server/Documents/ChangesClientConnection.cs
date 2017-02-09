@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Data;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -301,7 +302,7 @@ namespace Raven.Server.Documents
             Interlocked.Decrement(ref _watchAllOperations);
         }
 
-        public void SendOperationStatusChangeNotification(OperationStatusChanged change)
+        public void SendOperationStatusChangeNotification(OperationStatusChange change)
         {
             if (_watchAllOperations > 0)
             {
@@ -315,15 +316,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void Send(OperationStatusChanged change)
+        private void Send(OperationStatusChange change)
         {
             var value = new DynamicJsonValue
             {
-                ["Type"] = "OperationStatusChanged",
+                ["Type"] = "OperationStatusChange",
                 ["Value"] = new DynamicJsonValue
                 {
-                    [nameof(OperationStatusChanged.OperationId)] = (int)change.OperationId,
-                    [nameof(OperationStatusChanged.State)] = change.State.ToJson()
+                    [nameof(OperationStatusChange.OperationId)] = (int)change.OperationId,
+                    [nameof(OperationStatusChange.State)] = change.State.ToJson()
                 },
             };
 

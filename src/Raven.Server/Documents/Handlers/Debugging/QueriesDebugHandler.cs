@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.NewClient.Client.Exceptions.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-                IndexDoesNotExistsException.ThrowFor(name);
+                IndexDoesNotExistException.ThrowFor(name);
 
             var query = index.CurrentlyRunningQueries
                 .FirstOrDefault(q => q.QueryId == id);

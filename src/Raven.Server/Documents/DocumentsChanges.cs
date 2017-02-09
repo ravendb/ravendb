@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Data;
 
 namespace Raven.Server.Documents
 {
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents
 
         public event Action<TransformerChange> OnTransformerChange;
 
-        public event Action<OperationStatusChanged> OnOperationStatusChange;
+        public event Action<OperationStatusChange> OnOperationStatusChange;
 
         public void RaiseNotifications(IndexChange indexChange)
         {
@@ -68,7 +69,7 @@ namespace Raven.Server.Documents
                 
         }
 
-        public void RaiseNotifications(OperationStatusChanged operationStatusChange)
+        public void RaiseNotifications(OperationStatusChange operationStatusChange)
         {
             OnOperationStatusChange?.Invoke(operationStatusChange);
 

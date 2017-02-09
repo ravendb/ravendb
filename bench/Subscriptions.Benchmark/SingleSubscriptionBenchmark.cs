@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Replication;
 
 namespace SubscriptionsBenchmark
 {
-    public class CounterObserver : IObserver<RavenJObject>
+    public class CounterObserver : IObserver<JObject>
     {
         public int MaxCount { get; private set; }
         public int CurCount { get; private set; }
@@ -40,7 +41,7 @@ namespace SubscriptionsBenchmark
             Console.WriteLine(error);
         }
 
-        public void OnNext(RavenJObject value)
+        public void OnNext(JObject value)
         {
             if (Tcs.Task.IsCompleted)
                 return;

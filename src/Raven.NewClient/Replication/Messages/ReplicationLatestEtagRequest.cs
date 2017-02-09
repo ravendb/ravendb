@@ -9,5 +9,9 @@
         public string SourceUrl { get; set; }
 
         public string SourceMachineName { get; set; }
+
+        public int? ResolverVersion { get; set; }
+
+        public string ResolverId { get; set; }
     }
 }

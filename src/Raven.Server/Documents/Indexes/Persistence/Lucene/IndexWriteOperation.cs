@@ -10,8 +10,13 @@ using Raven.Server.Indexing;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
-
-using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Client.Blittable;
+using Raven.NewClient.Client.Data.Indexes;
+using Raven.NewClient.Client.Document;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {

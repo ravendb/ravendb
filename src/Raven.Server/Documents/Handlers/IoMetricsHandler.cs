@@ -8,6 +8,7 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;

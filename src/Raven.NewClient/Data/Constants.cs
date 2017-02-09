@@ -53,6 +53,8 @@ namespace Raven.NewClient.Abstractions.Data
 
             public const string Etag = "@etag";
 
+            public const string Flags = "@flags";
+
             public const string IndexScore = "@index-score";
 
             public const string LastModified = "@last-modified";
@@ -338,6 +340,8 @@ namespace Raven.NewClient.Abstractions.Data
             {
                 public const string LastSentEtag = "LastSentEtag";
             }
+
+            public const string AllDocumentsCollection = Constants.Indexing.AllDocumentsCollection;
 
             public const string DocumentChangeVector = "Raven-Document-Change-Vector";
 
