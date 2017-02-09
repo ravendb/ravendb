@@ -290,6 +290,26 @@ namespace FastTests.Server.Replication
             return default(T);
         }
 
+        public static void SetScriptResolution(DocumentStore store, string script, string collection)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new ReplicationDocument
+                {
+                    DocumentConflictResolution = StraightforwardConflictResolution.None,
+                    ResolveByCollection = new Dictionary<string, ScriptResolver>{
+                            { collection, new ScriptResolver
+                                {
+                                    Script = script
+                                }
+                            }
+                        }
+                }, Constants.Replication.DocumentReplicationConfiguration);
+
+                session.SaveChanges();
+            }
+        }
+
         protected static void SetReplicationConflictResolution(DocumentStore store,
             StraightforwardConflictResolution conflictResolution)
         {

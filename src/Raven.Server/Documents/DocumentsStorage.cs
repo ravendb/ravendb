@@ -15,6 +15,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Extensions;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -1592,6 +1593,35 @@ namespace Raven.Server.Documents
             DeleteWithoutCreatingTombstone(ctx, oldVersionCollectionName, oldVersion.StorageId, isTombstone: false);
         }
 
+        private bool ValidatedResolveByScriptInput(ScriptResolver scriptResolver,
+            IReadOnlyList<DocumentConflict> conflicts,
+            LazyStringValue collection)
+        {
+            if (scriptResolver == null)
+                return false;
+            if (collection == null)
+                return false;
+            if (conflicts.Count < 2)
+                return false;
+
+            foreach (var documentConflict in conflicts)
+            {
+                if (collection != documentConflict.Collection)
+                {                    
+                    var differentCollectionNameAlert = AlertRaised.Create(
+                        $"Script unable to resolve conflicted documents with the key {documentConflict.Key}",
+                        $"All conflicted documents must have same collection name, but we found conflicted document in {collection} and an other one in {documentConflict.Collection}",
+                        AlertType.Replication,
+                        NotificationSeverity.Error
+                        );
+                    _documentDatabase.NotificationCenter.Add(differentCollectionNameAlert);
+                    return false;
+                }
+            }
+
+           return true; 
+        }
+
         public bool TryResolveConflictByScriptInternal(
             DocumentsOperationContext context,
             ScriptResolver scriptResolver,
@@ -1599,6 +1629,12 @@ namespace Raven.Server.Documents
             LazyStringValue collection,
             bool hasLocalTombstone)
         {
+
+            if (ValidatedResolveByScriptInput(scriptResolver, conflicts, collection) == false)
+            {
+                return false;
+            }
+
             var patch = new PatchConflict(_documentDatabase, conflicts);
             var updatedConflict = conflicts[0];
             var patchRequest = new PatchRequest
