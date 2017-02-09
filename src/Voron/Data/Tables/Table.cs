@@ -144,7 +144,7 @@ namespace Voron.Data.Tables
             long id;
             if (TryFindIdFromPrimaryKey(key, out id) == false)
             {
-                reader = null;
+                reader = default(TableValueReader);
                 return false;
             }
 
@@ -779,7 +779,7 @@ namespace Voron.Data.Tables
             {
                 if (it.Seek(Slices.AfterAllKeys) == false)
                 {
-                    reader = null;
+                    reader = default(TableValueReader);
                     return false;
                 }
 
@@ -894,13 +894,14 @@ namespace Voron.Data.Tables
         }
 
         public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete,
-            Action<TableValueReader> beforeDelete = null)
+            Action<TableValueHolder> beforeDelete = null)
         {
             if (numberOfEntriesToDelete < 0)
                 ThrowNonNegativeNumberOfEntriesToDelete();
 
             int deleted = 0;
             var tree = GetTree(index);
+            TableValueHolder tableValueHolder = null;
             while (deleted < numberOfEntriesToDelete)
             {
                 // deleting from a table can shift things around, so we delete 
@@ -919,7 +920,10 @@ namespace Voron.Data.Tables
                         {
                             int size;
                             var ptr = DirectRead(fstIt.CurrentKey, out size);
-                            beforeDelete(new TableValueReader(fstIt.CurrentKey, ptr, size));
+                            if (tableValueHolder == null)
+                                tableValueHolder = new TableValueHolder();
+                            tableValueHolder.Reader = new TableValueReader(fstIt.CurrentKey, ptr, size);
+                            beforeDelete(tableValueHolder);
                         }
 
                         Delete(fstIt.CurrentKey);

@@ -9,11 +9,11 @@ using Sparrow.Json;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class TableValueReader
+    public unsafe struct TableValueReader
     {
         private readonly byte* _dataPtr;
         private readonly int _dataSize;
-        private readonly int _elementSize = 1;
+        private readonly int _elementSize;
 
         public readonly long Id;
 
@@ -27,10 +27,13 @@ namespace Voron.Data.Tables
             Id = id;
             Pointer = ptr;
             Size = size;
+            
             if (size > byte.MaxValue)
                 _elementSize = 2;
-            if (size > ushort.MaxValue)
+            else if (size > ushort.MaxValue)
                 _elementSize = 4;
+            else
+                _elementSize = 1;
 
             byte offset;
             Count = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);

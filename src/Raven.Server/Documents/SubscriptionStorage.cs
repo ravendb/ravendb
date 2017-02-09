@@ -128,7 +128,8 @@ namespace Raven.Server.Documents
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.WriteTransaction(transactionPersistentContext))
             {
-                var config = GetSubscriptionConfig(id, tx);
+                TableValueReader config;
+                GetSubscriptionConfig(id, tx, out config);
 
                 var subscriptionId = Bits.SwapBytes((ulong)id);
 
@@ -160,7 +161,8 @@ namespace Raven.Server.Documents
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.ReadTransaction(transactionPersistentContext))
             {
-                var config = GetSubscriptionConfig(id, tx);
+                TableValueReader config;
+                GetSubscriptionConfig(id, tx, out config);
 
                 int criteriaSize;
                 var criteriaPtr = config.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out criteriaSize);
@@ -355,7 +357,9 @@ namespace Raven.Server.Documents
             using (var tx = _environment.ReadTransaction(transactionPersistentContext))
             {
                 long _;
-                var subscriptionData = ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context, out _);
+                TableValueReader reader;
+                GetSubscriptionConfig(subscriptionId, tx, out reader);
+                var subscriptionData = ExtractSubscriptionConfigValue(ref reader, context, out _);
                 SetSubscriptionStateData(subscriptionState, subscriptionData);
                 SetSubscriptionHistory(subscriptionState, subscriptionData);
 
@@ -384,7 +388,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static unsafe DynamicJsonValue ExtractSubscriptionConfigValue(TableValueReader tvr, JsonOperationContext context, out long id)
+        private static unsafe DynamicJsonValue ExtractSubscriptionConfigValue(ref TableValueReader tvr, JsonOperationContext context, out long id)
         {
             int size;
             id = Bits.SwapBytes(*(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.IdIndex, out size));
@@ -440,7 +444,9 @@ namespace Raven.Server.Documents
         private DynamicJsonValue GetRunningSubscriptionInternal(JsonOperationContext context, bool history, long id, Transaction tx, SubscriptionState subscriptionState)
         {
             long subscriptionId;
-            var subscriptionData = ExtractSubscriptionConfigValue(GetSubscriptionConfig(id, tx), context, out subscriptionId);
+            TableValueReader result;
+            GetSubscriptionConfig(id, tx, out result);
+            var subscriptionData = ExtractSubscriptionConfigValue(ref result, context, out subscriptionId);
             Debug.Assert(id == subscriptionId);
 
             SetSubscriptionStateData(subscriptionState, subscriptionData);
@@ -453,7 +459,7 @@ namespace Raven.Server.Documents
         private DynamicJsonValue GetSubscriptionInternal(JsonOperationContext context, ref TableValueReader tvr, bool history)
         {
             long id;
-            var subscriptionData = ExtractSubscriptionConfigValue(tvr, context, out id);
+            var subscriptionData = ExtractSubscriptionConfigValue(ref tvr, context, out id);
 
             SubscriptionState subscriptionState;
             if (_subscriptionStates.TryGetValue(id, out subscriptionState))
@@ -467,7 +473,7 @@ namespace Raven.Server.Documents
             return subscriptionData;
         }
 
-        private unsafe TableValueReader GetSubscriptionConfig(long id, Transaction tx)
+        private unsafe void GetSubscriptionConfig(long id, Transaction tx, out TableValueReader result)
         {
             var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
             var subscriptionId = Bits.SwapBytes((ulong)id);
@@ -479,7 +485,7 @@ namespace Raven.Server.Documents
                 if (table.ReadByKey(subscriptionSlice, out config) == false)
                     throw new SubscriptionDoesNotExistException(
                     "There is no subscription configuration for specified identifier (id: " + id + ")");
-                return config;
+                result = config;
             }
 
         }

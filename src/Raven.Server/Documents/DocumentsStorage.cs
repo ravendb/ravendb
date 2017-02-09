@@ -647,6 +647,8 @@ namespace Raven.Server.Documents
         {
             if (context.Transaction == null)
                 ThrowRequiresTransaction();
+            Debug.Assert(context.Transaction != null);
+
             try
             {
                 var doc = Get(context, loweredKey);
@@ -867,7 +869,7 @@ namespace Raven.Server.Documents
 
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
 
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
+            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, 4);
 
             result.LastModified = new DateTime(*(long*)tvr.Read(5, out size));
 
@@ -893,7 +895,7 @@ namespace Raven.Server.Documents
             ptr = tvr.Read((int)ConflictsTable.OriginalKey, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, (int)ConflictsTable.ChangeVector);
+            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictsTable.ChangeVector);
             var read = tvr.Read((int)ConflictsTable.Data, out size);
             if (size > 0)
             {
@@ -912,7 +914,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        private static ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(TableValueReader tvr, int index)
+        private static ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(ref TableValueReader tvr, int index)
         {
             int size;
             var pChangeVector = (ChangeVectorEntry*)tvr.Read(index, out size);
@@ -926,7 +928,7 @@ namespace Raven.Server.Documents
 
         private static DocumentTombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
         {
-            if (tvr == null) //precaution
+            if (tvr.Pointer == null)
                 return null;
 
             var result = new DocumentTombstone
@@ -948,7 +950,7 @@ namespace Raven.Server.Documents
             ptr = tvr.Read(2, out size);
             result.DeletedEtag = Bits.SwapBytes(*(long*)ptr);
 
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
+            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, 4);
 
             result.Collection = new LazyStringValue(null, tvr.Read(5, out size), size, context);
 
@@ -1429,7 +1431,7 @@ namespace Raven.Server.Documents
                         if (compare != 0)
                             break;
 
-                        var currentChangeVector = GetChangeVectorEntriesFromTableValueReader(r.Reader, (int)ConflictsTable.ChangeVector);
+                        var currentChangeVector = GetChangeVectorEntriesFromTableValueReader(ref r.Reader, (int)ConflictsTable.ChangeVector);
                         if (currentChangeVector.SequenceEqual(changeVector))
                         {
                             int size;
@@ -1923,7 +1925,7 @@ namespace Raven.Server.Documents
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
             {
-                TableValueReader oldValue = null;
+                TableValueReader oldValue = default(TableValueReader);
                 if (knownNewKey == false)
                 {
                     table.ReadByKey(keySlice, out oldValue);
@@ -1933,7 +1935,7 @@ namespace Raven.Server.Documents
                 {
                     changeVector = SetDocumentChangeVectorForLocalChange(context,
                         keySlice,
-                        oldValue, newEtag);
+                        ref oldValue, newEtag);
                 }
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -1951,7 +1953,7 @@ namespace Raven.Server.Documents
                         transactionMarker
                     };
 
-                    if (oldValue == null)
+                    if (oldValue.Pointer == null)
                     {
                         if (expectedEtag != null && expectedEtag != 0)
                         {
@@ -2088,11 +2090,11 @@ namespace Raven.Server.Documents
 
         private ChangeVectorEntry[] SetDocumentChangeVectorForLocalChange(
             DocumentsOperationContext context, Slice loweredKey,
-            TableValueReader oldValue, long newEtag)
+            ref TableValueReader oldValue, long newEtag)
         {
-            if (oldValue != null)
+            if (oldValue.Pointer != null)
             {
-                var changeVector = GetChangeVectorEntriesFromTableValueReader(oldValue, 4);
+                var changeVector = GetChangeVectorEntriesFromTableValueReader(ref oldValue, 4);
                 return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, changeVector);
             }
 

@@ -234,7 +234,7 @@ namespace Raven.Server.Documents
 
                 //SetIndexTransformerChangeVectorForLocalChange also merges vectors if conflicts exist
                 changeVectorForWrite = SetIndexTransformerChangeVectorForLocalChange(tx, context, nameAsSlice, ref tvr, newEtag, changeVector);
-                if (tvr != null)
+                if (tvr.Pointer != null)
                 {
                     existing = TableValueToMetadata(ref tvr, context, false);
                 }
@@ -310,7 +310,7 @@ namespace Raven.Server.Documents
 
         private ChangeVectorEntry[] SetIndexTransformerChangeVectorForLocalChange(Transaction tx, TransactionOperationContext context, Slice loweredName, ref TableValueReader oldValue, long newEtag, ChangeVectorEntry[] vector)
         {
-            if (oldValue != null)
+            if (oldValue.Pointer != null)
             {
                 var changeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)MetadataFields.ChangeVector);
                 return ReplicationUtils.UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, changeVector);

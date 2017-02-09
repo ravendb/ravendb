@@ -190,7 +190,7 @@ namespace Raven.Server.NotificationCenter
             {
                 foreach (var holder in it.Results)
                 {
-                    yield return Read(context, holder.Reader);
+                    yield return Read(context, ref holder.Reader);
                 }
             }
         }
@@ -218,7 +218,7 @@ namespace Raven.Server.NotificationCenter
             {
                 foreach (var holder in it.Results)
                 {
-                    var action = Read(context, holder.Reader);
+                    var action = Read(context, ref holder.Reader);
 
                     if (action.PostponedUntil == null)
                         continue;
@@ -245,7 +245,7 @@ namespace Raven.Server.NotificationCenter
                 if (table.ReadByKey(slice, out tvr) == false)
                     return null;
 
-                return Read(context, tvr);
+                return Read(context, ref tvr);
             }
         }
 
@@ -298,7 +298,7 @@ namespace Raven.Server.NotificationCenter
             return count;
         }
 
-        private NotificationTableValue Read(JsonOperationContext context, TableValueReader reader)
+        private NotificationTableValue Read(JsonOperationContext context, ref TableValueReader reader)
         {
             int size;
             

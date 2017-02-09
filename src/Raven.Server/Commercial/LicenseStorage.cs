@@ -93,7 +93,7 @@ namespace Raven.Server.Commercial
                         return null;
                 }
 
-                using (var firstServerStartDateJson = Read(context, infoTvr))
+                using (var firstServerStartDateJson = Read(context, ref infoTvr))
                 {
                     DateTime result;
                     if (firstServerStartDateJson.TryGet(FirstServerStartDateKey, out result))
@@ -105,7 +105,7 @@ namespace Raven.Server.Commercial
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, TableValueReader reader)
+        private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
         {
             int size;
             var ptr = reader.Read(LicenseInfoSchema.LicenseTable.JsonIndex, out size);
@@ -152,7 +152,7 @@ namespace Raven.Server.Commercial
                         return null;
                 }
 
-                using (var licenseJson = Read(context, reader))
+                using (var licenseJson = Read(context, ref reader))
                 {
                     return JsonDeserializationServer.License(licenseJson);
                 }

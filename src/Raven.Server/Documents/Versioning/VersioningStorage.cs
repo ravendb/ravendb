@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Versioning
                 deleted =>
                 {
                     int size;
-                    var etag = Bits.SwapBytes(*(long*) deleted.Read(2, out size));
+                    var etag = Bits.SwapBytes(*(long*) deleted.Reader.Read(2, out size));
                     maxEtagDeleted = Math.Max(maxEtagDeleted, etag);
                 });
             _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);

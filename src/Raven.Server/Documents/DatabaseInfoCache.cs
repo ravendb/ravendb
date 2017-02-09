@@ -76,7 +76,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool TryWriteOfflineDatabaseStatustoRequest(TransactionOperationContext ctx, BlittableJsonTextWriter writer, string databaseName, bool disabled, string indexingStatus)
+        public unsafe bool TryWriteOfflineDatabaseStatustoRequest(TransactionOperationContext ctx, BlittableJsonTextWriter writer, string databaseName, bool disabled, string indexingStatus)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -92,7 +92,7 @@ namespace Raven.Server.Documents
                         return false;
                 }
                 //It seems like the database was shutdown rudely and never wrote it stats onto the disk
-                if (infoTvr == null)
+                if (infoTvr.Pointer == null)
                     return false;
 
                 using (var databaseInfoJson = Read(context, ref infoTvr))

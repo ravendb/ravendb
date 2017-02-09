@@ -54,9 +54,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new SlowTests.Bugs.Andrew())
+                using (var a = new FastTests.Issues.RavenDB_4997())
                 {
-                    a.FunkyIndex();
+                    a.Delete_of_conflicted_document_should_resolve_conflict();
                 }
             }
         }

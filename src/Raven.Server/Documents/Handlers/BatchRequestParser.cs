@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
                         }
-                        switch (GetPropertyType(state, ctx))
+                        switch (GetPropertyType(state))
                         {
                             case CommandPropertyName.Method:
                                 while (parser.Read() == false)
@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Handlers
             // other properties are ignore (for legacy support)
         }
 
-        private static unsafe CommandPropertyName GetPropertyType(JsonParserState state, JsonOperationContext ctx)
+        private static unsafe CommandPropertyName GetPropertyType(JsonParserState state)
         {
             // here we confirm that the value is matching our expectation, in order to save CPU instructions
             // we compare directly against the precomputed values
