@@ -66,8 +66,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
-                DisposeInternal();
-
                 _releaseWriteTransaction?.Dispose();
             }
             finally
@@ -77,11 +75,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        protected virtual void DisposeInternal()
+        public virtual void Commit(IndexingStatsScope stats)
         {
             if (_writer != null) // TODO && _persistance._indexWriter.RamSizeInBytes() >= long.MaxValue)
             {
-                _writer.Commit(); // just make sure changes are flushed to disk
+                using (stats.For(IndexingOperation.Lucene.FlushToDisk))
+                    _writer.Commit(); // just make sure changes are flushed to disk
             }
         }
 
@@ -147,7 +146,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             Stats.DeleteStats = stats.For(IndexingOperation.Lucene.Delete, start: false);
             Stats.AddStats = stats.For(IndexingOperation.Lucene.AddDocument, start: false);
             Stats.ConvertStats = stats.For(IndexingOperation.Lucene.Convert, start: false);
-            Stats.SaveOutputDocumentsStats = stats.For(IndexingOperation.Reduce.SaveOutputDocuments, start: false);
         }
 
         protected class IndexWriteOperationStats
@@ -155,7 +153,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public IndexingStatsScope DeleteStats;
             public IndexingStatsScope ConvertStats;
             public IndexingStatsScope AddStats;
-            public IndexingStatsScope SaveOutputDocumentsStats;
         }
     }
 }

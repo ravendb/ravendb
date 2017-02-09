@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Client.Data.Indexes;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Document;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -26,12 +27,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _outputReduceToCollectionCommand = new OutputReduceToCollectionCommand(DocumentDatabase, outputReduceToCollection);
         }
 
-        protected override void DisposeInternal()
+        public override void Commit(IndexingStatsScope stats)
         {
-            using (Stats.SaveOutputDocumentsStats.Start())
+            using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
             {
                 var enqueue = DocumentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
-                _writer?.Commit(); // just make sure changes are flushed to disk
+                base.Commit(stats);
                 try
                 {
                     enqueue.Wait();
@@ -63,8 +64,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
             base.Delete(key, stats);
-
-
 
             _outputReduceToCollectionCommand?.ReduceDocuments.Add(new OutputReduceToCollectionCommand.OutputReduceDocument
             {

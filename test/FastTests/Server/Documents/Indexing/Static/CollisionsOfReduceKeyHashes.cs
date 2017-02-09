@@ -127,11 +127,15 @@ namespace FastTests.Server.Documents.Indexing.Static
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));
 
+                    var stats = new IndexingStatsScope(new IndexingRunStats());
                     reducer.Execute(null, indexContext,
                         writeOperation,
-                        new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+                        stats, CancellationToken.None);
 
-                    writeOperation.Value.Dispose();
+                    using (var indexWriteOperation = writeOperation.Value)
+                    {
+                        indexWriteOperation.Commit(stats);
+                    }
 
                     index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
 
@@ -184,11 +188,15 @@ namespace FastTests.Server.Documents.Indexing.Static
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));
 
+                    var stats = new IndexingStatsScope(new IndexingRunStats());
                     reducer.Execute(null, indexContext,
                         writeOperation,
-                        new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+                        stats, CancellationToken.None);
 
-                    writeOperation.Value.Dispose();
+                    using (var indexWriteOperation = writeOperation.Value)
+                    {
+                        indexWriteOperation.Commit(stats);
+                    }
 
                     index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
 
@@ -232,11 +240,15 @@ namespace FastTests.Server.Documents.Indexing.Static
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));
 
+                    var stats = new IndexingStatsScope(new IndexingRunStats());
                     reducer.Execute(null, indexContext,
                         writeOperation,
-                        new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+                        stats, CancellationToken.None);
 
-                    writeOperation.Value.Dispose();
+                    using (var indexWriteOperation = writeOperation.Value)
+                    {
+                        indexWriteOperation.Commit(stats);
+                    }
 
                     index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
 
