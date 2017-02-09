@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Util;
@@ -79,7 +80,7 @@ namespace Raven.NewClient.Client.Blittable
                 if (documentType != null)
                 {
                     var type = Type.GetType(documentType);
-                    if (type != null)   
+                    if (type != null && entityType != typeof(object) && entityType.IsAssignableFrom(type))
                     {
                         entity = _session.Conventions.DeserializeEntityFromBlittable(type, document);
                     }
@@ -121,12 +122,12 @@ namespace Raven.NewClient.Client.Blittable
                 if (documentType != null)
                 {
                     var type = Type.GetType(documentType);
-                    if (type != null)
+                    if (type != null && entityType != typeof(object) && entityType.IsAssignableFrom(type))
                     {
                         entity = documentConvention.DeserializeEntityFromBlittable(type, document);
                     }
-                }
-
+                } 
+                
                 if (Equals(entity, defaultValue))
                 {
                     entity = documentConvention.DeserializeEntityFromBlittable(entityType, document);

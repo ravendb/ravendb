@@ -570,9 +570,11 @@ more responsive application.
             var metadata = new DynamicJsonValue();
             if (tag != null)
                 metadata[Constants.Metadata.Collection] = tag;
-            //var clrType = _documentStore.Conventions.GetClrTypeName(entity.GetType());
-            //if (clrType != null)
-            //    metadata[Constants.Headers.RavenClrType] = clrType;
+
+            var clrType = _documentStore.Conventions.GetClrTypeName(entity.GetType());
+            if (clrType != null)
+                metadata[Constants.Headers.RavenClrType] = clrType;
+
             if (id != null)
                 KnownMissingIds.Remove(id);
             StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
