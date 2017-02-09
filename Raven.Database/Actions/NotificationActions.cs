@@ -7,17 +7,15 @@ using System;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Database.Data;
 using Raven.Database.Impl;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
 {
     public class NotificationActions : ActionsBase
     {
-        public NotificationActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
-            : base(database, recentTouches, uuidGenerator, log)
+        public NotificationActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, uuidGenerator, log)
         {
         }
 

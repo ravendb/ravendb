@@ -27,8 +27,8 @@ namespace Raven.Database.Actions
 {
     public class DocumentActions : ActionsBase
     {
-        public DocumentActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
-            : base(database, recentTouches, uuidGenerator, log)
+        public DocumentActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, uuidGenerator, log)
         {
         }
 
@@ -419,13 +419,6 @@ namespace Raven.Database.Actions
             }
 
             return RavenJToken.DeepEquals(newMetadata, existingMetadata);
-        }
-
-        public TouchedDocumentInfo GetRecentTouchesFor(string key)
-        {
-            TouchedDocumentInfo info;
-            RecentTouches.TryGetValue(key, out info);
-            return info;
         }
 
         public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag,

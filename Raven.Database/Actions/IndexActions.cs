@@ -27,7 +27,6 @@ using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
@@ -37,8 +36,8 @@ namespace Raven.Database.Actions
         private volatile bool isPrecomputedBatchForNewIndexIsRunning;
         private readonly object precomputedLock = new object();
 
-        public IndexActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
-            : base(database, recentTouches, uuidGenerator, log)
+        public IndexActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, uuidGenerator, log)
         {
         }
 

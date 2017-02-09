@@ -37,19 +37,6 @@ namespace Raven.Database.Bundles.Replication.Tasks.Handlers
             return docs
                 .Where(document =>
                 {
-                    var info = docActions.GetRecentTouchesFor(document.Key);
-                    if (info != null)
-                    {
-                        if (info.TouchedEtag.CompareTo(lastEtag) > 0)
-                        {
-                            if (Log.IsDebugEnabled)
-                                Log.Debug(
-                                "Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches",
-                                document.Key, destinationId, info.TouchedEtag);
-                            return false;
-                        }
-                    }
-
                     string reason;
                     return strategy.FilterDocuments(destinationId, document.Key, document.Metadata, out reason) &&
                            prefetchingBehavior.FilterDocuments(document);

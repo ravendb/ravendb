@@ -12,9 +12,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Database.Data;
 using Raven.Database.Impl;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
@@ -25,8 +23,8 @@ namespace Raven.Database.Actions
         private readonly object clearTasksLock = new object();
         private readonly ConcurrentDictionary<long, PendingTask> pendingTasks = new ConcurrentDictionary<long, PendingTask>();
 
-        public TaskActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
-            : base(database, recentTouches, uuidGenerator, log)
+        public TaskActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, uuidGenerator, log)
         {
         }
 

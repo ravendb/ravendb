@@ -90,7 +90,6 @@ namespace Raven.Database
 
         private readonly DocumentDatabaseInitializer initializer;
 
-        private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
         public readonly FixedSizeConcurrentQueue<AutoTunerDecisionDescription> AutoTuningTrace = new FixedSizeConcurrentQueue<AutoTunerDecisionDescription>(100);
 
         public class IndexFailDetails
@@ -100,10 +99,7 @@ namespace Raven.Database
             public Exception Ex;
         }
 
-
         public RavenThreadPool ThreadPool { get; set; }
-
-
 
         public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
         {
@@ -128,12 +124,8 @@ namespace Raven.Database
                 ThreadPool = systemDatabase.ThreadPool;
             }
 
-
             transportState = recievedTransportState ?? new TransportState();
             ExtensionsState = new AtomicDictionary<object>();
-
-
-
 
             using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
             {
@@ -153,8 +145,6 @@ namespace Raven.Database
                 initializer.SatisfyImportsOnce();
 
                 backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
-
-                recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(configuration.MaxRecentTouchesToRemember, StringComparer.OrdinalIgnoreCase);
 
                 workContext = new WorkContext
                 {
@@ -198,16 +188,16 @@ namespace Raven.Database
                 {
                     TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
                     var reason = initializer.InitializeIndexDefinitionStorage();
-                    Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
-                    Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
-                    Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
-                    Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
+                    Indexes = new IndexActions(this, uuidGenerator, Log);
+                    Attachments = new AttachmentActions(this, uuidGenerator, Log);
+                    Maintenance = new MaintenanceActions(this, uuidGenerator, Log);
+                    Notifications = new NotificationActions(this, uuidGenerator, Log);
                     Subscriptions = new SubscriptionActions(this, Log);
-                    Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
-                    Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
-                    Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
-                    Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
-                    Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
+                    Patches = new PatchActions(this, uuidGenerator, Log);
+                    Queries = new QueryActions(this, uuidGenerator, Log);
+                    Tasks = new TaskActions(this, uuidGenerator, Log);
+                    Transformers = new TransformerActions(this, uuidGenerator, Log);
+                    Documents = new DocumentActions(this, uuidGenerator, Log);
 
                     lastMapCompletedDatesPerCollection = new LastMapCompletedDatesPerCollection(this);
 
