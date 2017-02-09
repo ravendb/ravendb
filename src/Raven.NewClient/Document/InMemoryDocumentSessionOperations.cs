@@ -207,10 +207,10 @@ namespace Raven.NewClient.Client.Document
 
             if (DocumentsByEntity.TryGetValue(instance, out documentInfo)) return documentInfo;
 
-            if (!GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id) &&
-                (!(instance is IDynamicMetaObjectProvider) ||
-                 !GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
-                throw new InvalidOperationException("Could not find the document key for " + instance);
+            if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id) == false && (instance is IDynamicMetaObjectProvider == false || GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id) == false))
+                throw new InvalidOperationException("Could not find the document id for " + instance);
+
+            AssertNoNonUniqueInstance(instance, id);
 
             throw new ArgumentException("Document " + id + " doesn't exist in the session");
         }

@@ -231,7 +231,7 @@ namespace SlowTests.MailingList
 
         #endregion
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6308")]
         public void ScriptedPatchShouldNotResultInConcurrencyExceptionForNewlyInsertedDocument()
         {
             using (var store = GetDocumentStore())

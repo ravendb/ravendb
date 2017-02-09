@@ -122,7 +122,6 @@ namespace SlowTests.MailingList
 
         private void InitData(IDocumentStore store)
         {
-            store.Conventions.ShouldCacheRequest = s => false;
             store.ExecuteIndex(new FormOpensByDateAndMediaSourceAndVersion());
 
             var date0901 = new DateTime(2012, 9, 1, 1, 2, 3);
