@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
 
@@ -37,6 +38,19 @@ namespace Raven.Server.Documents
 
         public void RaiseSystemNotifications(DocumentChange documentChange)
         {
+            var k = OnSystemDocumentChange;
+            if (k != null)
+            {
+                var invocationList = k.GetInvocationList().GroupBy(x => x.Target)
+                    .Where(x => x.Count() > 1)
+                    .ToArray();
+
+                foreach (var grouping in invocationList)
+                {
+                    Console.WriteLine(grouping.Key + " " + grouping.Count());
+                }
+
+            }
             OnSystemDocumentChange?.Invoke(documentChange);
 
             foreach (var connection in Connections)

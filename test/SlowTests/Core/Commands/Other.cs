@@ -101,31 +101,5 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanDisableAllCaching()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var commands = store.Commands())
-                {
-                    commands.Put("companies/1", null, new Company(), null);
-                    Assert.Equal(0, commands.RequestExecuter.Cache.NumberOfItems);
-                    commands.Get("companies/1");
-                    Assert.Equal(1, commands.RequestExecuter.Cache.NumberOfItems);
-                    commands.Get("companies/1");
-                    Assert.Equal(1, commands.RequestExecuter.Cache.NumberOfItems);
-
-                    store.Conventions.ShouldCacheRequest = s => false;
-
-                    commands.RequestExecuter.Cache.Clear();
-                    Assert.Equal(0, commands.RequestExecuter.Cache.NumberOfItems);
-
-                    commands.Get("companies/1");
-                    Assert.Equal(0, commands.RequestExecuter.Cache.NumberOfItems);
-                    commands.Get("companies/1");
-                    Assert.Equal(0, commands.RequestExecuter.Cache.NumberOfItems);
-                }
-            }
-        }
     }
 }

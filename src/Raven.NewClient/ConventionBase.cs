@@ -14,20 +14,12 @@ namespace Raven.NewClient.Client
         public bool AllowMultipleAsyncOperations { get; set; }
 
         /// <summary>
-        /// Whatever or not RavenDB should cache the request to the specified url.
-        /// </summary>
-        public Func<string, bool> ShouldCacheRequest { get; set; }
-
-        /// <summary>
         /// How should we behave in a replicated environment when we can't 
         /// reach the primary node and need to failover to secondary node(s).
         /// </summary>
         public FailoverBehavior FailoverBehavior { get; set; }
 
-        public FailoverBehavior FailoverBehaviorWithoutFlags
-        {
-            get { return FailoverBehavior & (~FailoverBehavior.ReadFromAllServers); }
-        }
+        public FailoverBehavior FailoverBehaviorWithoutFlags => FailoverBehavior & (~FailoverBehavior.ReadFromAllServers);
 
         public double RequestTimeThresholdInMilliseconds { get; set; }
 

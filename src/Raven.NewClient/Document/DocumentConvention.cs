@@ -66,7 +66,6 @@ namespace Raven.NewClient.Client.Document
             DisableProfiling = true;
             UseParallelMultiGet = true;
             FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
-            ShouldCacheRequest = url => true;
             FindIdentityProperty = q => q.Name == "Id";
             FindClrType = (id, doc) =>
             {

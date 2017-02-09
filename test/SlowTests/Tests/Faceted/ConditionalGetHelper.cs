@@ -96,7 +96,7 @@ namespace SlowTests.Tests.Faceted
                 };
             }
 
-            public override Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
+            public override Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
                 Result = new StatusCodeAndEtag
                 {

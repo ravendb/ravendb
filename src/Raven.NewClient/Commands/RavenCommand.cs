@@ -50,7 +50,7 @@ namespace Raven.NewClient.Client.Commands
             return FailedNodes != null && FailedNodes.Contains(leaderNode);
         }
 
-        public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
+        public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
                 return;
@@ -64,8 +64,7 @@ namespace Raven.NewClient.Client.Commands
                     // in the command, any associated memory will be released on context reset
                     var json = await context.ReadForMemoryAsync(stream, "response/object");
 
-                    if (options.ShouldCacheRequest(url))
-                        CacheResponse(cache, options, url, response, json);
+                    CacheResponse(cache, url, response, json);
 
                     SetResponse(json, fromCache: false);
 
@@ -77,7 +76,7 @@ namespace Raven.NewClient.Client.Commands
             }
         }
 
-        protected virtual void CacheResponse(HttpCache cache, RequestExecuterOptions options, string url, HttpResponseMessage response, BlittableJsonReaderObject responseJson)
+        protected virtual void CacheResponse(HttpCache cache, string url, HttpResponseMessage response, BlittableJsonReaderObject responseJson)
         {
             var etag = response.GetEtagHeader();
             if (etag.HasValue == false)

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
+using Newtonsoft.Json;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
@@ -90,8 +91,11 @@ namespace FastTests.Server.Replication
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {
+                    var replicationStats = GetReplicationStats(store);
+
                     Assert.False(true,
-                        "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts");
+                        "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts \r\n" + 
+                        JsonConvert.SerializeObject(replicationStats,Formatting.Indented));
                 }
             } while (true);
             return conflicts;

@@ -23,8 +23,16 @@ namespace Raven.NewClient.Client.Http
 {
     public class RequestExecuter : IDisposable
     {
+
+        // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
+
+        private static readonly Lazy<HttpClient> _globalHttpClient = new Lazy<HttpClient>(() =>
+        {
+            var httpMessageHandler = new HttpClientHandler();
+            return new HttpClient(httpMessageHandler);
+        });
+
         private readonly string _apiKey;
-        private readonly RequestExecuterOptions _options;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecuter>("Client");
 
         public readonly JsonContextPool ContextPool;
@@ -40,7 +48,7 @@ namespace Raven.NewClient.Client.Http
 
         public readonly HttpCache Cache = new HttpCache();
 
-        private readonly HttpClient _httpClient;
+        private readonly HttpClient _httpClient = _globalHttpClient.Value;
 
         private Topology _topology;
         private readonly Timer _updateTopologyTimer;
@@ -49,10 +57,9 @@ namespace Raven.NewClient.Client.Http
         private Timer _updateCurrentTokenTimer;
         private readonly Timer _updateFailingNodesStatus;
 
-        public RequestExecuter(string url, string databaseName, string apiKey, RequestExecuterOptions options = null)
+        public RequestExecuter(string url, string databaseName, string apiKey)
         {
             _apiKey = apiKey;
-            _options = options ?? new RequestExecuterOptions();
             _topology = new Topology
             {
                 LeaderNode = new ServerNode
@@ -64,9 +71,6 @@ namespace Raven.NewClient.Client.Http
                 WriteBehavior = WriteBehavior.LeaderOnly,
                 Etag = int.MinValue,
             };
-
-            var handler = new HttpClientHandler();
-            _httpClient = new HttpClient(handler);
 
             ContextPool = new JsonContextPool();
 
@@ -199,7 +203,7 @@ namespace Raven.NewClient.Client.Http
                         return;
                 }
 
-                await command.ProcessResponse(context, Cache, _options, response, url).ConfigureAwait(false);
+                await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
             }
         }
 
@@ -555,6 +559,8 @@ namespace Raven.NewClient.Client.Http
             ContextPool.Dispose();
             _updateCurrentTokenTimer?.Dispose();
             _updateFailingNodesStatus?.Dispose();
+            // shared instance, cannot dispose!
+            //_httpClient.Dispose();
         }
     }
 }

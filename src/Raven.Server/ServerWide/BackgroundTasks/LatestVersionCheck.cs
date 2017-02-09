@@ -22,6 +22,12 @@ namespace Raven.Server.ServerWide.BackgroundTasks
         private Timer _latestVersionCheckTimer;
 
         private readonly ServerStore _serverStore;
+
+        private static readonly HttpClient ApiRavenDbClient = new HttpClient()
+        {
+            BaseAddress = new Uri(ApiRavenDbNet)
+        };
+
         public LatestVersionCheck(ServerStore serverStore)
         {
             _serverStore = serverStore;
@@ -37,14 +43,9 @@ namespace Raven.Server.ServerWide.BackgroundTasks
         {
             try
             {
-                var apiRavenDbClient = new HttpClient()
-                {
-                    BaseAddress = new Uri(ApiRavenDbNet)
-                };
-
                 // TODO @gregolsky make channel customizable 
                 var stream =
-                    await apiRavenDbClient.GetStreamAsync("/api/v1/versions/latest?channel=dev&min=40000&max=49999");
+                    await ApiRavenDbClient.GetStreamAsync("/api/v1/versions/latest?channel=dev&min=40000&max=49999");
 
                 JsonOperationContext context;
                 using (_serverStore.ContextPool.AllocateOperationContext(out context))

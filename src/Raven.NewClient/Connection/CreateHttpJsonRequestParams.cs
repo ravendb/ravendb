@@ -31,12 +31,9 @@ namespace Raven.NewClient.Client.Connection
             RequestTimeMetric = requestTimeMetric;
             Timeout = timeout;
             operationsHeadersCollection = new NameValueCollection();
-            ShouldCacheRequest = convention != null ? convention.ShouldCacheRequest : urlParam => false;
         }
 
         public long? Etag { get; }
-
-        public Func<string, bool> ShouldCacheRequest { get; set; }
 
         public bool AvoidCachingRequest { get; set; }
 

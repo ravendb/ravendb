@@ -92,7 +92,7 @@ namespace Raven.NewClient.Client.Commands
             return $"{command.Method}-{requestUrl}";
         }
 
-        public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options,
+        public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache,
             HttpResponseMessage response, string url)
         {
             JsonOperationContext.ManagedPinnedBuffer buffer;
@@ -119,7 +119,7 @@ namespace Raven.NewClient.Client.Commands
                 {
                     var command = _commands[i];
 
-                    MaybeSetCache(getResponse, command, options);
+                    MaybeSetCache(getResponse, command);
                     MaybeReadFromCache(getResponse, command);
 
                     Result.Add(getResponse);
@@ -245,16 +245,13 @@ namespace Raven.NewClient.Client.Commands
             }
         }
 
-        private void MaybeSetCache(GetResponse getResponse, GetRequest command, RequestExecuterOptions options)
+        private void MaybeSetCache(GetResponse getResponse, GetRequest command)
         {
             if (getResponse.StatusCode == HttpStatusCode.NotModified)
                 return;
 
             string requestUrl;
             var cacheKey = GetCacheKey(command, out requestUrl);
-
-            if (options.ShouldCacheRequest(requestUrl) == false)
-                return;
 
             var result = getResponse.Result as BlittableJsonReaderObject;
             if (result == null)

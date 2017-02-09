@@ -37,6 +37,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 {
     public class SmugglerHandler : DatabaseRequestHandler
     {
+        private static readonly HttpClient HttpClient = new HttpClient();
 
         [RavenAction("/databases/*/smuggler/validate-options", "POST")]
         public async Task PostValidateOptions()
@@ -158,27 +159,24 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         public async Task PostImportFromS3Directory()
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
-            using (var httpClient = new HttpClient())
-            {
-                var result = await httpClient.GetAsync(url);
-                var dirTextXml = await result.Content.ReadAsStringAsync();
-                var filesListing = XElement.Parse(dirTextXml);
-                var ns = XNamespace.Get("http://s3.amazonaws.com/doc/2006-03-01/");
-                var urls = from content in filesListing.Elements(ns + "Contents")
-                           let requestUri = url.TrimEnd('/') + "/" + content.Element(ns + "Key").Value
-                           select (Func<Task<Stream>>)(async () =>
-                          {
-                              var respone = await httpClient.GetAsync(requestUri);
-                              if (respone.IsSuccessStatusCode == false)
-                                  throw new InvalidOperationException("Request failed on " + requestUri + " with " +
-                                                                      await respone.Content.ReadAsStreamAsync());
-                              return await respone.Content.ReadAsStreamAsync();
-                          });
+            var result = await HttpClient.GetAsync(url);
+            var dirTextXml = await result.Content.ReadAsStringAsync();
+            var filesListing = XElement.Parse(dirTextXml);
+            var ns = XNamespace.Get("http://s3.amazonaws.com/doc/2006-03-01/");
+            var urls = from content in filesListing.Elements(ns + "Contents")
+                let requestUri = url.TrimEnd('/') + "/" + content.Element(ns + "Key").Value
+                select (Func<Task<Stream>>) (async () =>
+                {
+                    var respone = await HttpClient.GetAsync(requestUri);
+                    if (respone.IsSuccessStatusCode == false)
+                        throw new InvalidOperationException("Request failed on " + requestUri + " with " +
+                                                            await respone.Content.ReadAsStreamAsync());
+                    return await respone.Content.ReadAsStreamAsync();
+                });
 
-                var files = new BlockingCollection<Func<Task<Stream>>>(new ConcurrentQueue<Func<Task<Stream>>>(urls));
-                files.CompleteAdding();
-                await BulkImport(files, Path.GetTempPath());
-            }
+            var files = new BlockingCollection<Func<Task<Stream>>>(new ConcurrentQueue<Func<Task<Stream>>>(urls));
+            files.CompleteAdding();
+            await BulkImport(files, Path.GetTempPath());
         }
 
         [RavenAction("/databases/*/smuggler/import-dir", "GET")]
@@ -301,9 +299,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, context);
                 var token = CreateOperationToken();
 
-                var tuple = await GetImportStream();
-                using (tuple.Item2)
-                using (var stream = new GZipStream(tuple.Item1, CompressionMode.Decompress))
+                using (var stream = new GZipStream(await GetImportStream(), CompressionMode.Decompress))
                 using (token)
                 {
                     var source = new StreamSource(stream, context);
@@ -414,22 +410,21 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private async Task<Tuple<Stream, IDisposable>> GetImportStream()
+        private async Task<Stream> GetImportStream()
         {
             var file = GetStringQueryString("file", required: false);
             if (string.IsNullOrEmpty(file) == false)
-                return Tuple.Create<Stream, IDisposable>(File.OpenRead(file), null);
+                return File.OpenRead(file);
 
             var url = GetStringQueryString("url", required: false);
             if (string.IsNullOrEmpty(url) == false)
             {
-                var httpClient = new HttpClient();
 
-                var stream = await httpClient.GetStreamAsync(url);
-                return Tuple.Create<Stream, IDisposable>(stream, httpClient);
+                var stream = await HttpClient.GetStreamAsync(url);
+                return stream;
             }
 
-            return Tuple.Create<Stream, IDisposable>(HttpContext.Request.Body, null);
+            return HttpContext.Request.Body;
         }
 
 

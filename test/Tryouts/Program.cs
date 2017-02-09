@@ -53,10 +53,11 @@ namespace Tryouts
 
             for (int i = 0; i < 1000; i++)
             {
+               
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Documents.Indexing.MapReduce.RavenDB_4323())
+                using (var a = new FastTests.Issues.RavenDB_4997())
                 {
-                    a.ReduceResultsBackAsDocuments().Wait();
+                    a.Load_of_conflicted_document_with_another_document_should_result_in_error();
                 }
             }
         }

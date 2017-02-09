@@ -39,7 +39,7 @@ namespace Raven.NewClient.Client.Commands
             return request;
         }
 
-        public override Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
+        public override Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             if (response.StatusCode == HttpStatusCode.NotModified)
             {
