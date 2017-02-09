@@ -368,36 +368,39 @@ namespace Raven.Server.Documents
             HasMore
         }
         int _maxTimeToWait = 1000;
+        private bool _alreadyListeningToPreviousOperationEnd;
+
 
         private PendingOperations ExecutePendingOperationsInTransaction(
             List<MergedTransactionCommand> pendingOps, 
             DocumentsOperationContext context, 
             Task previousOperation)
         {
+            _alreadyListeningToPreviousOperationEnd = false;
             var sp = Stopwatch.StartNew();
             do
             {
                 MergedTransactionCommand op;
-                if (_operations.TryDequeue(out op) == false)
+                if (TryGetNextOperation(previousOperation, out op) == false)
                     break;
+
                 pendingOps.Add(op);
                 op.Execute(context);
 
+                if (previousOperation != null && previousOperation.IsCompleted)
+                {
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info(
+                            $"Stopping merged operations because previous transaction async commit completed. Took {sp.Elapsed} with {pendingOps.Count} operations and {_operations.Count} remaining operations");
+                    }
+                    return GetPendingOperationsStatus(context);
+                }
                 if (sp.ElapsedMilliseconds > _maxTimeToWait)
                 {
                     if (previousOperation != null)
                     {
                         _maxTimeToWait += 10;
-                        if (previousOperation.IsCompleted)
-                        {
-                            if (_log.IsInfoEnabled)
-                            {
-                                _log.Info($"Stopping merged operations because previous transaction async commit completed. Took {sp.Elapsed} with {pendingOps.Count} operations and {_operations.Count} remaining operations");
-                            }
-                            _maxTimeToWait -= 10;
-                            return GetPendingOperationsStatus(context);
-                        }
-
                         continue;
                     }
                     if (_log.IsInfoEnabled)
@@ -412,6 +415,39 @@ namespace Raven.Server.Documents
                 _log.Info($"Merged {pendingOps.Count} operations in {sp.Elapsed} and there is no more work");
             }
             return PendingOperations.CompletedAll;
+        }
+
+        private bool TryGetNextOperation(Task previousOperation, out MergedTransactionCommand op)
+        {
+            if (_operations.TryDequeue(out op))
+                return true;
+
+            if (previousOperation == null || previousOperation.IsCompleted)
+                return false;
+
+            return UnlikelyWaitForNextOperationOrPreviousTransactionComplete(previousOperation, out op);
+        }
+
+        private bool UnlikelyWaitForNextOperationOrPreviousTransactionComplete(Task previousOperation,
+            out MergedTransactionCommand op)
+        {
+            if (_alreadyListeningToPreviousOperationEnd == false)
+            {
+                _alreadyListeningToPreviousOperationEnd = true;
+                previousOperation.ContinueWith(_ => _waitHandle.Set(), _shutdown);
+            }
+            while (true)
+            {
+                _waitHandle.Wait(_shutdown);
+                _waitHandle.Reset();
+                if (previousOperation.IsCompleted)
+                {
+                    op = null;
+                    return false;
+                }
+                if (_operations.TryDequeue(out op))
+                    return true;
+            }
         }
 
         private  PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context)

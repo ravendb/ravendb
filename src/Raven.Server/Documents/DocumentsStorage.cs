@@ -43,7 +43,7 @@ namespace Raven.Server.Documents
         private static readonly Slice KeyAndChangeVectorSlice;
         private static readonly Slice AllConflictedDocsEtags;
         private static readonly Slice ConflictedCollection;
-       
+
         public static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollection);
-      
+
             /*
             Collection schema is:
             full name
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents
                 IsGlobal = true,
                 Name = ConflictedCollection
             });
-            
+
             // The documents schema is as follows
             // fields (lowered key, etag, lazy string key, document, change vector, last modified, optional flags)
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
@@ -907,7 +907,7 @@ namespace Raven.Server.Documents
             result.Collection = new LazyStringValue(null, tvr.Read((int)ConflictsTable.Collection, out size), size,
                 context);
 
-            result.LastModified = new DateTime(*(long*)tvr.Read((int) ConflictsTable.LastModified, out size));
+            result.LastModified = new DateTime(*(long*)tvr.Read((int)ConflictsTable.LastModified, out size));
 
             return result;
         }
@@ -981,7 +981,7 @@ namespace Raven.Server.Documents
             long? lastModifiedTicks = null,
             ChangeVectorEntry[] changeVector = null)
         {
-            var result = GetDocumentOrTombstone(context, loweredKey,throwOnConflict:false);
+            var result = GetDocumentOrTombstone(context, loweredKey, throwOnConflict: false);
             if (result.Item2 != null)
                 return null; //NOP, already deleted
 
@@ -1007,6 +1007,8 @@ namespace Raven.Server.Documents
                 if (expectedEtag != null)
                     throw new ConcurrencyException(
                         $"Document {loweredKey} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+
+                return null; //NOP, doesn't exist and doesn't have any concurrency requirements
             }
 
             if (expectedEtag != null && doc.Etag != expectedEtag)
@@ -1071,11 +1073,11 @@ namespace Raven.Server.Documents
             ChangeVectorEntry[] changeVector, IReadOnlyList<DocumentConflict> conflicts, out long etag)
         {
             ChangeVectorEntry[] mergedChangeVector;
-            var indexOfLargestEtag = FindIndexOfLargestEtagAndMergeChangeVectors(conflicts,out mergedChangeVector);
-            var latestConflict = conflicts[indexOfLargestEtag];            
+            var indexOfLargestEtag = FindIndexOfLargestEtagAndMergeChangeVectors(conflicts, out mergedChangeVector);
+            var latestConflict = conflicts[indexOfLargestEtag];
 
             var collectionName = new CollectionName(latestConflict.Collection);
-            
+
             //note that CreateTombstone is also deleting conflicts
             etag = CreateTombstone(context,
                 loweredKey.Content.Ptr,
@@ -1091,7 +1093,7 @@ namespace Raven.Server.Documents
             return collectionName;
         }
 
-        private static int FindIndexOfLargestEtagAndMergeChangeVectors(IReadOnlyList<DocumentConflict> conflicts,out ChangeVectorEntry[] mergedChangeVectorEntries)
+        private static int FindIndexOfLargestEtagAndMergeChangeVectors(IReadOnlyList<DocumentConflict> conflicts, out ChangeVectorEntry[] mergedChangeVectorEntries)
         {
             mergedChangeVectorEntries = null;
             bool firstTime = true;
@@ -1239,7 +1241,7 @@ namespace Raven.Server.Documents
                 }
             }
         }
-        
+
         private long CreateTombstone(
             DocumentsOperationContext context,
             byte* lowerKey, int lowerSize,
@@ -1616,7 +1618,7 @@ namespace Raven.Server.Documents
             {
                 return false;
             }
-            
+
             DocumentConflict resolved = null;
             long maxEtag = -1;
             foreach (var documentConflict in conflicts)
@@ -1643,7 +1645,7 @@ namespace Raven.Server.Documents
 
             if (resolved == null)
                 return false;
-           
+
             resolved.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
             PutResolvedDocumentBackToStorage(context, resolved, hasTombstoneInStorage);
             return true;
@@ -2052,7 +2054,7 @@ namespace Raven.Server.Documents
             {
                 DeleteConflictsFor(context, key);
                 if (documentChangeVector != null)
-                    mergedChangeVectorEntries =  ReplicationUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
+                    mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
 
                 mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, new[]
                 {
@@ -2183,7 +2185,7 @@ namespace Raven.Server.Documents
             using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
             {
                 TableValueReader reader;
-                if (table.ReadByKey(finalKeySlice,out reader) == false)
+                if (table.ReadByKey(finalKeySlice, out reader) == false)
                 {
                     return finalKey;
                 }
@@ -2204,7 +2206,7 @@ namespace Raven.Server.Documents
                 using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
                 {
                     TableValueReader reader;
-                    if (table.ReadByKey(finalKeySlice,out reader) == false)
+                    if (table.ReadByKey(finalKeySlice, out reader) == false)
                     {
                         if (lastKnownBusy + 1 == maybeFree)
                         {
@@ -2491,7 +2493,7 @@ namespace Raven.Server.Documents
             var result = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
             var collections = tx.OpenTable(CollectionsSchema, "Collections");
-            
+
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
