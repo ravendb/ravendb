@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -645,8 +646,7 @@ namespace Raven.Server.Documents
         public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, Slice loweredKey, bool throwOnConflict = true)
         {
             if (context.Transaction == null)
-                throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
-
+                ThrowRequiresTransaction();
             try
             {
                 var doc = Get(context, loweredKey);
@@ -1855,7 +1855,7 @@ namespace Raven.Server.Documents
         {
             if (context.Transaction == null)
             {
-                ThrowPutRequiresTransaction();
+                ThrowRequiresTransaction();
                 return default(PutOperationResults);// never reached
             }
 
@@ -2068,10 +2068,10 @@ namespace Raven.Server.Documents
             return documentChangeVector; // this covers the null && null case too
         }
 
-        private static void ThrowPutRequiresTransaction()
+        private static void ThrowRequiresTransaction([CallerMemberName]string caller = null)
         {
             // ReSharper disable once NotResolvedInText
-            throw new ArgumentException("Context must be set with a valid transaction before calling Put", "context");
+            throw new ArgumentException("Context must be set with a valid transaction before calling " + caller, "context");
         }
 
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerKey, int lowerSize)
