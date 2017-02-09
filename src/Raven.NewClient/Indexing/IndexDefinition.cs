@@ -223,7 +223,7 @@ namespace Raven.NewClient.Client.Indexing
                 result = (result * 397) ^ Maps.Count;
                 result = (result * 397) ^ (Reduce?.GetHashCode() ?? 0);
                 result = (result * 397) ^ DictionaryHashCode(Fields);
-                result = (result * 397) ^ OutputReduceToCollection.GetHashCode();
+                result = (result * 397) ^ (OutputReduceToCollection?.GetHashCode() ?? 0);
                 return result;
             }
         }
