@@ -12,15 +12,15 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
-using Raven.Client.Json;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions.Database;
+using Raven.NewClient.Client.Http;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Attributes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -30,6 +30,8 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using AccessModes = Raven.Client.Data.AccessModes;
+using AccessToken = Raven.Client.Data.AccessToken;
 
 namespace Raven.Server
 {
@@ -355,11 +357,22 @@ namespace Raven.Server
                                 tcp.PinnedBuffer
                                 ))
                             {
-                                header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
+                                header = NewClient.Client.Json.JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
                                 if (_logger.IsInfoEnabled)
                                 {
                                     _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName} from {tcpClient.Client.RemoteEndPoint}");
                                 }
+                            }
+                            if (TryAuthorize(context, Configuration, tcp.Stream, header) == false)
+                            {
+                                string msg =
+                                    $"New {header.Operation} TCP connection to {header.DatabaseName} from {tcpClient.Client.RemoteEndPoint}" +
+                                    $" is not authorized to access {header.DatabaseName}";
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info(msg);
+                                }
+                                throw new UnauthorizedAccessException(msg);
                             }
                         }
 
@@ -380,7 +393,8 @@ namespace Raven.Server
                                 ThrowTimeoutOnDatabaseLoad(header);
                         }
 
-                        tcp.DocumentDatabase = await databaseLoadingTask;
+                        tcp.DocumentDatabase = await databaseLoadingTask;                        
+
                         tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
 
                         switch (header.Operation)
@@ -400,7 +414,7 @@ namespace Raven.Server
                                 responder.AcceptIncomingConnectionAndRespond(tcp);
                                 break;
                             default:
-                                throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);
+                                throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
                         }
 
                         //since the responsers to TCP connections mostly continue to run
@@ -443,6 +457,71 @@ namespace Raven.Server
                 }
 
             });
+        }
+
+        private readonly Lazy<ApiKeyAuthenticator> _authenticator =
+            new Lazy<ApiKeyAuthenticator>(() => new ApiKeyAuthenticator());
+
+        private bool TryAuthorize(JsonOperationContext context, RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin)
+                {
+                    ReplyStatus(writer, "Success");
+                    return true;
+                }
+            
+                if (header.AuthorizationToken == null)
+                {
+                    ReplyStatus(writer, "PreconditionFailed");
+                }
+                AccessToken accessToken;
+                if (AccessTokensById.TryGetValue(header.AuthorizationToken, out accessToken) == false)
+                {
+                    ReplyStatus(writer, "PreconditionFailed");
+                    return false;
+                }
+                if (accessToken.IsExpired)
+                {
+                    ReplyStatus(writer, "PreconditionFailed");
+                    return false;
+                }
+                AccessModes mode;
+                var hasValue =
+                    accessToken.AuthorizedDatabases.TryGetValue(header.DatabaseName, out mode) ||
+                    accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
+
+                if (hasValue == false)
+                    mode = AccessModes.None;
+
+                switch (mode)
+                {
+                    case AccessModes.None:
+                        ReplyStatus(writer, "Forbidden");
+                        return false;
+                    case AccessModes.ReadOnly:
+                        ReplyStatus(writer, "Forbidden");
+                        return false;
+                    case AccessModes.ReadWrite:
+                    case AccessModes.Admin:
+                        ReplyStatus(writer, "Success");
+                        return true;
+                    default:
+                        throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);
+                }
+            }
+                
+        }
+       
+
+        private static void ReplyStatus(BlittableJsonTextWriter writer,string status)
+        {            
+            writer.WriteStartObject();
+            writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Status));
+            writer.WriteString(status);
+            writer.WriteEndObject();
+            writer.Flush();
         }
 
         private static void ThrowTimeoutOnDatabaseLoad(TcpConnectionHeaderMessage header)

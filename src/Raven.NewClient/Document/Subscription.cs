@@ -17,6 +17,8 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Exceptions.Security;
 using Raven.NewClient.Client.Exceptions.Subscriptions;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Json;
@@ -205,6 +207,7 @@ namespace Raven.NewClient.Client.Document
             requestExecuter.ContextPool.AllocateOperationContext(out context);
 
             await requestExecuter.ExecuteAsync(command, context).ConfigureAwait(false);
+            var apiToken = await requestExecuter.GetAuthenticationToken(context, command.RequestedNode);
             var uri = new Uri(command.Result.Url);
 
             await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
@@ -217,12 +220,30 @@ namespace Raven.NewClient.Client.Document
             var header = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
             {
                 Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                DatabaseName = _dbName ?? _store.DefaultDatabase
+                DatabaseName = _dbName ?? _store.DefaultDatabase,
+                AuthorizationToken = apiToken
             }));
 
             var options = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_options));
 
             await _networkStream.WriteAsync(header, 0, header.Length);
+            await _networkStream.FlushAsync();
+            //Reading reply from server
+            using (var response = context.ReadForMemory(_networkStream, "Subscription/tcp-header-response"))
+            {
+                var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
+                switch (reply.Status)
+                {
+                    case TcpConnectionHeaderResponse.AuthorizationStatus.PreconditionFailed:
+                        throw AuthorizationException.Unauthorized(_store.Url);
+                    case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
+                        throw AuthorizationException.Forbidden(_store.Url);
+                    case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException($"Got unexpected status ({reply.Status}) from the server while trying to open TCP connection to database={_dbName}");
+                }
+            }
             await _networkStream.WriteAsync(options, 0, options.Length);
 
             await _networkStream.FlushAsync();

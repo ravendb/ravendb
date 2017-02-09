@@ -16,5 +16,7 @@ namespace Raven.NewClient.Abstractions.Data
         public string DatabaseName { get; set; }
 
         public OperationTypes Operation { get; set; }
+
+        public string AuthorizationToken { get; set; }
     }
 }

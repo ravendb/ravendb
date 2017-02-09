@@ -427,6 +427,11 @@ namespace Raven.NewClient.Client.Http
             throw new InvalidOperationException($"Invalid WriteBehavior value: {topology.WriteBehavior}");
         }
 
+        public async Task<string> GetAuthenticationToken(JsonOperationContext context, ServerNode node)
+        {
+            return await _authenticator.GetAuthenticationTokenAsync(_apiKey, node.Url, context).ConfigureAwait(false);
+        }
+
         private async Task HandleUnauthorized(string oauthSource, ServerNode node, JsonOperationContext context, bool shouldThrow = true)
         {
             try

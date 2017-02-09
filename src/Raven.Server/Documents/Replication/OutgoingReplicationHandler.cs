@@ -19,12 +19,14 @@ using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
+using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions.Database;
-using Raven.Server.Exceptions;
+using Raven.NewClient.Client.Http;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
+using TcpConnectionHeaderMessage = Raven.NewClient.Abstractions.Data.TcpConnectionHeaderMessage;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -37,6 +39,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
+        private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
         private Thread _sendingThread;
         internal readonly DocumentReplicationLoader _parent;
         internal long _lastSentDocumentEtag;
@@ -145,9 +148,8 @@ namespace Raven.Server.Documents.Replication
                     {
                         var documentSender = new ReplicationDocumentSender(_stream, this, _log);
                         var indexAndTransformerSender = new ReplicationIndexTransformerSender(_stream, this, _log);
-                        
-                        WriteHeaderToRemotePeer();
 
+                        WriteHeaderToRemotePeer();                        
                         //handle initial response to last etag and staff
                         try
                         {
@@ -287,15 +289,18 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
+                var token = _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey,_destination.ApiKey, documentsContext).Result;
                 //send initial connection information
                 documentsContext.Write(writer, new DynamicJsonValue
                 {
                     [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _destination.Database,
                     [nameof(TcpConnectionHeaderMessage.Operation)] =
                     TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
+                    [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = token
                 });
-
-              //start request/response for fetching last etag
+                writer.Flush();
+                ReadHeaderResponseAndThrowIfUnAuthorized();
+                //start request/response for fetching last etag
                 var request = new DynamicJsonValue
                 {
                     ["Type"] = "GetLastEtag",
@@ -309,6 +314,45 @@ namespace Raven.Server.Documents.Replication
 
                 documentsContext.Write(writer, request);
                 writer.Flush();
+            }
+        }
+
+        private void ReadHeaderResponseAndThrowIfUnAuthorized()
+        {
+            var timeout = 2*60*1000; // TODO: configurable
+            using (var replicationTcpConnectReplyMessage = _interruptableRead.ParseToMemory(
+                _connectionDisposed,
+                "replication acknowledge response",
+                timeout,
+                _buffer,
+                CancellationToken))
+            {
+                if (replicationTcpConnectReplyMessage.Timeout)
+                {
+                    ThrowTimeout(timeout);
+                }
+                if (replicationTcpConnectReplyMessage.Interrupted)
+                {
+                    ThrowConnectionClosed();
+                }
+                var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(replicationTcpConnectReplyMessage.Document);
+                switch (reply.Status)
+                {
+                    case TcpConnectionHeaderResponse.AuthorizationStatus.PreconditionFailed:
+                        var msg =
+                            $"{_destination.Url}/{_destination.Database} replied with precondition failed, maybe the provided api key ({Destination.ApiKey}) is wrong?";
+                        throw new UnauthorizedAccessException(msg);
+                    case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
+                        msg =
+                            $"{_destination.Url}/{_destination.Database} replied with Forbidden, maybe the provided api key ({Destination.ApiKey}) doesn't have access to this database?";
+                        throw new UnauthorizedAccessException(msg);
+                    case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
+                        //We are good to go
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(
+                            $"Got un-expected response status ({reply.Status}) from {_destination.Url}/{_destination.Database}");
+                }
             }
         }
 
