@@ -138,7 +138,7 @@ namespace Raven.Server.Documents
             foreach (var property in properties)
             {
                 if (isMetadata && property[0] == '@' && 
-                    property.Equals(Constants.Metadata.Collection, StringComparison.CurrentCultureIgnoreCase) == false)
+                    property.Equals(Constants.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
                 object myProperty;
