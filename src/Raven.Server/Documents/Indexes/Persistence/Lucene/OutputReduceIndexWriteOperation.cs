@@ -30,24 +30,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override void Commit(IndexingStatsScope stats)
         {
-            using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
+            var enqueue = DocumentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
+            base.Commit(stats);
+            try
             {
-                var enqueue = DocumentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
-                base.Commit(stats);
-                try
-                {
+                using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
                     enqueue.Wait();
-                }
-                catch (Exception e)
-                {
-                    DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(
-                        "Save Reduce Index Output",
-                        "Failed to save output documnts of reduce index to disk",
-                        AlertType.ErrorSavingReduceOutputDocuments,
-                        NotificationSeverity.Error,
-                        key: _indexName,
-                        details: new ExceptionDetails(e)));
-                }
+            }
+            catch (Exception e)
+            {
+                DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(
+                    "Save Reduce Index Output",
+                    "Failed to save output documnts of reduce index to disk",
+                    AlertType.ErrorSavingReduceOutputDocuments,
+                    NotificationSeverity.Error,
+                    key: _indexName,
+                    details: new ExceptionDetails(e)));
             }
         }
 
