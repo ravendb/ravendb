@@ -28,7 +28,6 @@ using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
@@ -38,8 +37,8 @@ namespace Raven.Database.Actions
         private volatile bool isPrecomputedBatchForNewIndexIsRunning;
         private readonly object precomputedLock = new object();
 
-        public IndexActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
-            : base(database, recentTouches, uuidGenerator, log)
+        public IndexActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, uuidGenerator, log)
         {
         }
 
@@ -122,10 +121,8 @@ namespace Raven.Database.Actions
 
         internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, string[] participatingIds = null)
         {
-            TouchedDocumentInfo touch;
-            RecentTouches.TryRemove(key, out touch);
             Stopwatch sp = null;
-            int count = 0;
+            var count = 0;
 
             using (Database.TransactionalStorage.DisableBatchNesting())
             {
@@ -176,12 +173,6 @@ namespace Raven.Database.Actions
                                                            "Consider restructuring your indexes to avoid LoadDocument on such a popular document.");
                             }
                         }
-
-                        RecentTouches.Set(referencing, new TouchedDocumentInfo
-                        {
-                            PreTouchEtag = preTouchEtag,
-                            TouchedEtag = afterTouchEtag
-                        });
                     }
                 });
             }
