@@ -13,17 +13,14 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Primitives;
-using Raven.Abstractions;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Util;
 
 namespace Raven.Server.Documents.PeriodicExport.Azure
 {

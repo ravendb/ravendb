@@ -3,9 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 
-namespace Raven.Abstractions.Extensions
+namespace Sparrow.Extensions
 {
     public static class RavenDateTimeExtensions
     {

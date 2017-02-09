@@ -3,8 +3,9 @@ using Newtonsoft.Json;
 using Raven.NewClient.Abstractions.Data;
 using Sparrow.Json;
 using Raven.NewClient.Client.Document;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions;
+using Sparrow.Extensions;
 
 namespace Raven.NewClient.Client.Json
 {

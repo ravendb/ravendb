@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using Raven.Abstractions;
-using Raven.Abstractions.Indexing;
-using Raven.Imports.Newtonsoft.Json;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Indexing;
+using Newtonsoft.Json;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;

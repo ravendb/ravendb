@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.AspNetCore.Http;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Extensions;
 using Raven.Server.Json;
 using Sparrow.Json;
 

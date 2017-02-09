@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using FastTests;
 using Raven.NewClient.Client;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Xunit;
 using System.Linq;
 using Raven.NewClient.Client.Linq;

@@ -1,14 +1,12 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
-using Raven.Abstractions.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
+using Newtonsoft.Json;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Indexing;
+
+using Raven.NewClient.Data.Indexes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
-using Voron;
 using Xunit;
 using Voron.Impl.Backup;
 

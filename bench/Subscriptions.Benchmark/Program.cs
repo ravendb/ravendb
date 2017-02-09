@@ -1,30 +1,16 @@
-﻿using Raven.Abstractions.Data;
-using Raven.Abstractions.Json;
-using Raven.Abstractions.Util;
-using Raven.Client.Document;
-using Raven.Json.Linq;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
-using static System.Int32;
-
 
 namespace SubscriptionsBenchmark
 {
-    
-
     public class Program
     {
         public static void Main(string[] args)
         {
-            
+
             var paramDictionary = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
             foreach (var arg in args)
             {
@@ -32,20 +18,20 @@ namespace SubscriptionsBenchmark
                 paramDictionary.Add(keyValue[0], keyValue[1]);
             }
 
-            if (paramDictionary.Count== 6)
+            if (paramDictionary.Count == 6)
             {
-                
+
                 string url = paramDictionary["url"];
                 int batchSize = Int32.Parse(paramDictionary["batch"]);
                 int innerParallelism = Int32.Parse(paramDictionary["ipar"]);
 
                 var canProcceedToStressMre = paramDictionary["procceed"];
-                var canProcceedToStressHandle = new EventWaitHandle(false,EventResetMode.ManualReset,canProcceedToStressMre);
-                
+                var canProcceedToStressHandle = new EventWaitHandle(false, EventResetMode.ManualReset, canProcceedToStressMre);
+
                 var proccessStartedMre = paramDictionary["started"];
                 var reconnect = Boolean.Parse(paramDictionary["reconnect"]);
-                
-                var proccessStartedHandle = new EventWaitHandle(false,EventResetMode.ManualReset,proccessStartedMre);
+
+                var proccessStartedHandle = new EventWaitHandle(false, EventResetMode.ManualReset, proccessStartedMre);
 
                 proccessStartedHandle.Set();
                 canProcceedToStressHandle.WaitOne();
@@ -85,7 +71,7 @@ namespace SubscriptionsBenchmark
                 }
                 Task.WaitAll(tasks.ToArray());
             }
-            else if (args.Length <6)
+            else if (args.Length < 6)
             {
                 Console.ReadLine();
                 string url;
@@ -99,7 +85,7 @@ namespace SubscriptionsBenchmark
                 }
                 if (paramDictionary.TryGetValue("par", out parallelism) == false)
                 {
-                    parallelism= "100";
+                    parallelism = "100";
                 }
                 if (paramDictionary.TryGetValue("ipar", out innerParallelism) == false)
                 {
@@ -115,16 +101,16 @@ namespace SubscriptionsBenchmark
                 }
 
                 var canProcceedToStressMre = "SubsStress.CanStart";
-                var canProcceedToStressHandle = new EventWaitHandle(false,EventResetMode.ManualReset,canProcceedToStressMre);
-                var procs = new List<Tuple<Process,EventWaitHandle>>();
+                var canProcceedToStressHandle = new EventWaitHandle(false, EventResetMode.ManualReset, canProcceedToStressMre);
+                var procs = new List<Tuple<Process, EventWaitHandle>>();
 
                 try
                 {
                     for (var i = 0; i < Int32.Parse(parallelism); i++)
                     {
                         Console.WriteLine($"Creating Proccess {i}");
-                        string hasProccessBeganMreName= $"SubsStress.ProccessStarted{ i}";
-                        var hasProccessBegan = new EventWaitHandle(false,EventResetMode.ManualReset,hasProccessBeganMreName);
+                        string hasProccessBeganMreName = $"SubsStress.ProccessStarted{ i}";
+                        var hasProccessBegan = new EventWaitHandle(false, EventResetMode.ManualReset, hasProccessBeganMreName);
                         string benchmarkPath;
                         if (Debugger.IsAttached)
                         {
@@ -169,6 +155,6 @@ namespace SubscriptionsBenchmark
 
         }
 
-        
+
     }
 }

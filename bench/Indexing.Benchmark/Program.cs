@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Indexing.Benchmark.Entities;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
 using System.Linq;
 using System.Threading;
+using Indexing.Benchmark.Entities;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Extensions;
 #if v35
-using Raven.Abstractions.Data;
-#else
-using Raven.Client.Data;
+using Raven.NewClient.Abstractions.Data;
 #endif
 
 namespace Indexing.Benchmark

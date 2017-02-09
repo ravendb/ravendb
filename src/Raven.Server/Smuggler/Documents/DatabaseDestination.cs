@@ -2,20 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Util;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Smuggler;
-using Raven.NewClient.Extensions;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Client.Smuggler;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Smuggler.Documents

@@ -2,9 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Replication;
+using Raven.NewClient.Client.Replication;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication

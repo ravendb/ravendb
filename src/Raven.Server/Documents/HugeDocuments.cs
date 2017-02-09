@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Database.Util;
+using Raven.NewClient.Database.Util;
 
 namespace Raven.Server.Documents
 {

@@ -3,16 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Exceptions.Transformers;
 using Raven.Server.Config.Settings;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Sparrow;
 using Sparrow.Logging;
-using Sparrow.Platform;
-using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Transformers
 {

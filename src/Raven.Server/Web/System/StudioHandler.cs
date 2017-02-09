@@ -12,13 +12,13 @@ using System.IO.Compression;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.Server.Routing;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using System.Linq;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
 using StringSegment = Sparrow.StringSegment;
 
 namespace Raven.Server.Web.System

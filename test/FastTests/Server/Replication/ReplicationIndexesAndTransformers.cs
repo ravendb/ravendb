@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Replication.Messages;
+using Raven.NewClient.Client.Replication.Messages;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Operations.Databases.Transformers;

@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client.Replication.Messages;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Replication.Messages;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

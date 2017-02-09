@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Indexing;
+﻿using Raven.NewClient.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Documents.Queries.Dynamic

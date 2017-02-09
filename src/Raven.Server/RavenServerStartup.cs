@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Exceptions.Compilation;
 using Raven.NewClient.Client.Exceptions.Database;
@@ -19,9 +19,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
-using IndexCompilationException = Raven.Client.Exceptions.Compilation.IndexCompilationException;
-using ConflictException = Raven.Client.Exceptions.ConflictException;
-using DocumentConflictException = Raven.Client.Exceptions.DocumentConflictException;
 
 namespace Raven.Server
 {

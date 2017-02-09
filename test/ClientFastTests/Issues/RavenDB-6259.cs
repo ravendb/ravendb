@@ -1,17 +1,12 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NewClientTests.NewClient.Server.Replication;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
-using User = Raven.Tests.Core.Utils.Entities.User;
 using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Replication;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Tests.Issues
 {

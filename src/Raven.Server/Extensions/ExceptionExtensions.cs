@@ -4,11 +4,9 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Util;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.NewClient.Abstractions.Util;
 
 namespace Raven.Server.Extensions
 {

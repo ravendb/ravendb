@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;

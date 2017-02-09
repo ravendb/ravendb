@@ -1,6 +1,6 @@
 ﻿using System;
 using Lucene.Net.Documents;
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
 
 namespace Raven.Server.Documents.Indexes
 {

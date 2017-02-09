@@ -1,9 +1,7 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Indexing;
-using Raven.Json.Linq;
 using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Utils;
 using Xunit;

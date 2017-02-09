@@ -3,8 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Raven.Client.Replication.Messages;
-using Raven.Json.Linq;
+using Raven.NewClient.Client.Replication.Messages;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Extensions
@@ -15,17 +14,6 @@ namespace Raven.Server.Extensions
         public static Dictionary<Guid, long> ToDictionary(this ChangeVectorEntry[] changeVector)
         {
             return changeVector.ToDictionary(x => x.DbId, x => x.Etag);
-        }
-
-
-        //note - this is a helper to use in unit tests only
-        public static ChangeVectorEntry FromJson(this RavenJToken self)
-        {
-            return new ChangeVectorEntry
-            {
-                DbId = Guid.Parse(self.Value<string>("DbId")),
-                Etag = long.Parse(self.Value<string>("Etag"))
-            };
         }
 
         public static DynamicJsonArray ToJson(this ChangeVectorEntry[] self)

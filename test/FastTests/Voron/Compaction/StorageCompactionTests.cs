@@ -12,7 +12,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using FastTests.Voron.FixedSize;
 using Lucene.Net.Search;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 using Sparrow;
 using Xunit;
 using Voron;

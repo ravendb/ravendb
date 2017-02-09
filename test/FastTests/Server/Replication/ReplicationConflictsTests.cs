@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Lucene.Net.Util;
-using Raven.Client.Replication.Messages;
+using Raven.NewClient.Client.Replication.Messages;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions;

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
+using Sparrow.Extensions;
+
 namespace Raven.NewClient.Client.Document
 {
     public class RavenLoadConfiguration : ILoadConfiguration

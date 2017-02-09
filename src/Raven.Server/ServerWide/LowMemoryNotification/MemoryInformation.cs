@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using Raven.Abstractions.Logging;
 using Raven.Server.Config.Settings;
 using Voron;
 using Voron.Platform.Posix;

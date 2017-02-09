@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Raven.Client.Json;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 using Xunit;
 

@@ -1,4 +1,4 @@
-﻿using Raven.Client.Indexes;
+﻿using Raven.NewClient.Client.Indexes;
 
 namespace Indexing.Benchmark
 {

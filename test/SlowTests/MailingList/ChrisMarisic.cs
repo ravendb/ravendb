@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexes;
-using Raven.Json.Linq;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 using Xunit;

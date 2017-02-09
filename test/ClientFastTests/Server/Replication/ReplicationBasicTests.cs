@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Linq;
 using Xunit;
 
 namespace NewClientTests.NewClient.Server.Replication

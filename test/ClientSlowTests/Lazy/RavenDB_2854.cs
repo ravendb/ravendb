@@ -1,17 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
 using Xunit;
-using System;
-using Raven.Imports.Newtonsoft.Json;
-using SlowTests.Core.Utils.Entities;
 using Raven.NewClient.Client;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document.Async;
 
 namespace NewClientTests.NewClient
 {

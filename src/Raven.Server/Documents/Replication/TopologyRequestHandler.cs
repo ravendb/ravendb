@@ -1,7 +1,7 @@
 ﻿using System;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Replication.Messages;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Replication;
+using Raven.NewClient.Client.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;

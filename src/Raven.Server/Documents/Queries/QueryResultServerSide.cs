@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Client.Data.Queries;
+using Raven.NewClient.Client.Data.Queries;
 
 namespace Raven.Server.Documents.Queries
 {

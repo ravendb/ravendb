@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Lucene.Net.Documents;
-using Raven.Client.Data;
+using Raven.NewClient.Client.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

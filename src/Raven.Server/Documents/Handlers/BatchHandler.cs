@@ -1,25 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Hosting.Internal;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Patch;
-using Raven.Server.Exceptions;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
-using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Handlers
 {

@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Replication;
 
 namespace SubscriptionsBenchmark
 {
-
     public class CounterObserver : IObserver<RavenJObject>
     {
         public int MaxCount { get; private set; }
@@ -42,7 +37,7 @@ namespace SubscriptionsBenchmark
         public void OnError(Exception error)
         {
             //if (string.Compare(error.Message, "Stream was not writable.", StringComparison.Ordinal)!= 0)
-                Console.WriteLine(error);
+            Console.WriteLine(error);
         }
 
         public void OnNext(RavenJObject value)
@@ -75,11 +70,11 @@ namespace SubscriptionsBenchmark
         private readonly string _collectionName;
         private DocumentStore _store;
 
-        public SingleSubscriptionBenchmark(int batchSize , string url, 
+        public SingleSubscriptionBenchmark(int batchSize, string url,
             string databaseName = "freeDB", string collectionName = "Disks")
         {
             _batchSize = batchSize;
-            
+
             _collectionName = collectionName;
             _store = new DocumentStore()
             {
@@ -102,7 +97,7 @@ namespace SubscriptionsBenchmark
         public async Task PerformBenchmark()
         {
             var runResult = await SingleTestRun().ConfigureAwait(false);
-            
+
             Console.WriteLine(runResult.DocsProccessed + " " + runResult.DocsRequested + " " + runResult.ElapsedMs);
         }
 
@@ -117,8 +112,8 @@ namespace SubscriptionsBenchmark
                         Collection = _collectionName
                     }).ConfigureAwait(false);
                 }
-            
-            
+
+
                 using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
                 {
                     SubscriptionId = _subscriptionId.Value,

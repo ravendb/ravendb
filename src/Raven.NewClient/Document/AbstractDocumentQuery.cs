@@ -20,7 +20,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Linq;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
@@ -31,6 +31,7 @@ using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Util;
 using Raven.NewClient.Client.Document.Async;
 using Raven.NewClient.Client.Document.Batches;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document

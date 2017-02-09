@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
-using Raven.Abstractions.Logging;
-using Raven.Client.Document.Batches;
 using Sparrow.Collections;
 using Sparrow.Logging;
 

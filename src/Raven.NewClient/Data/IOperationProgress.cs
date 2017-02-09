@@ -1,6 +1,4 @@
-﻿using System.Runtime.Serialization.Formatters;
-using Newtonsoft.Json;
-using Sparrow.Json.Parsing;
+﻿using Sparrow.Json.Parsing;
 
 namespace Raven.NewClient.Client.Data
 {

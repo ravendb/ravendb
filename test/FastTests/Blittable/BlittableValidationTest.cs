@@ -8,8 +8,7 @@ using Xunit;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using System.Reflection;
 using System.Linq;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
+using Newtonsoft.Json;
 
 namespace FastTests.Blittable
 {

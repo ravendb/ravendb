@@ -2,9 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Abstractions.Replication;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Replication.Messages;
 using Xunit;
 
 namespace FastTests.Issues

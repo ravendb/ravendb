@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
-using Raven.Database.Util;
+using Raven.NewClient.Database.Util;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 

@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Replication.Messages;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Client.Replication;
+using Raven.NewClient.Client.Replication.Messages;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Http;
 using Raven.Server.Json;
@@ -79,15 +78,15 @@ namespace Raven.Server.Documents.Replication
                     {
                         await ReadTcpHeaderResponseAndThrowOnUnauthorized(context, stream, buffer);
 
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(TopologyDiscoveryRequest.OriginDbId)] = _dbId,
-                            [nameof(TopologyDiscoveryRequest.Timeout)] = _timeout,
-                            [nameof(TopologyDiscoveryRequest.AlreadyVisited)] = new DynamicJsonArray(_alreadyVisited),
-                        });
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(TopologyDiscoveryRequest.OriginDbId)] = _dbId,
+                        [nameof(TopologyDiscoveryRequest.Timeout)] = _timeout,
+                        [nameof(TopologyDiscoveryRequest.AlreadyVisited)] = new DynamicJsonArray(_alreadyVisited),
+                    });
 
-                        writer.Flush();
-                                                
+                    writer.Flush();
+
                         TopologyDiscoveryResponseHeader topologyResponse;
 
                         using (var topologyResponseJson =

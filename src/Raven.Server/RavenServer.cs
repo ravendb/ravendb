@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions.Database;
+using Raven.NewClient.Client.Json;
 using Raven.NewClient.Client.Http;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -371,7 +372,7 @@ namespace Raven.Server
                                 if (_logger.IsInfoEnabled)
                                 {
                                     _logger.Info(msg);
-                                }
+                        }
                                 throw new UnauthorizedAccessException(msg);
                             }
                         }
@@ -393,7 +394,7 @@ namespace Raven.Server
                                 ThrowTimeoutOnDatabaseLoad(header);
                         }
 
-                        tcp.DocumentDatabase = await databaseLoadingTask;                        
+                        tcp.DocumentDatabase = await databaseLoadingTask;
 
                         tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
 

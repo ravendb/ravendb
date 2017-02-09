@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
-using Lucene.Net.Util;
+using Raven.NewClient.Abstractions.Data;
 using Sparrow.Logging;
 
 using Sparrow.Collections;
-using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -122,7 +120,7 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}",e);
+                    _logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
             }
             finally
             {

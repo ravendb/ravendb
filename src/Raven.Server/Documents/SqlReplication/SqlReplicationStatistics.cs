@@ -1,5 +1,5 @@
 using System;
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json.Parsing;

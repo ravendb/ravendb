@@ -1,7 +1,8 @@
 using System;
 using System.Globalization;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Newtonsoft.Json;
+using Sparrow.Extensions;
 
 namespace Raven.NewClient.Abstractions.Json
 {

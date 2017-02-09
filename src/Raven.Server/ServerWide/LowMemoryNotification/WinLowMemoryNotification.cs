@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Raven.Abstractions.Logging;
 using Raven.Server.Config;
 using Sparrow.Logging;
 

@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using TypeScripter.Readers;
 
 namespace TypingsGenerator

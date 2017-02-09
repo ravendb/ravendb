@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;

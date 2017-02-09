@@ -9,17 +9,11 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
-using Raven.NewClient.Abstractions.Data;
-
-using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document;
 
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Linq;
+using Sparrow.Extensions;
 
 namespace Raven.NewClient.Client.Linq
 {

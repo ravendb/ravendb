@@ -1,9 +1,6 @@
-using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
-using Raven.Client.Listeners;
 using Xunit;
 
 namespace SlowTests.MailingList

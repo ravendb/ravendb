@@ -10,7 +10,7 @@ using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
 
 using Version = Lucene.Net.Util.Version;
 

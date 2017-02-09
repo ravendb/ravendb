@@ -1,4 +1,4 @@
-﻿using Raven.Client.Indexing;
+﻿using Raven.NewClient.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 

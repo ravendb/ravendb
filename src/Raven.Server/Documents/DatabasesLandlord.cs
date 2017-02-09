@@ -5,16 +5,14 @@ using System.Text;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Client.Json;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Exceptions.Database;
+using Raven.NewClient.Client.Json;
 using Raven.Server.Config;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
 
 namespace Raven.Server.Documents

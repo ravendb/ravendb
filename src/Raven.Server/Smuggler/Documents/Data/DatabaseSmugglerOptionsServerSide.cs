@@ -1,6 +1,6 @@
 ﻿using System;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Smuggler;
+using Raven.NewClient.Client.Smuggler;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data

@@ -2,15 +2,10 @@
 using System.IO;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Sparrow.Json;
 using Xunit;
-using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {

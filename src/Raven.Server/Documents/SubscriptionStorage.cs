@@ -3,11 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions.Subscriptions;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Exceptions.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -20,7 +19,6 @@ using Voron.Impl;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Json.Parsing;
-using static Raven.Server.Utils.MetricsExtentions;
 
 namespace Raven.Server.Documents
 {

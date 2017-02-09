@@ -1,5 +1,4 @@
 using FastTests;
-using Raven.Abstractions.Connection;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions.Patching;
 using Raven.NewClient.Operations.Databases.Documents;

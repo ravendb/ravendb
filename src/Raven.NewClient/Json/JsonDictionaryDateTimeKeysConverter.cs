@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Newtonsoft.Json;
+using Sparrow.Extensions;
 
 namespace Raven.NewClient.Abstractions.Json
 {

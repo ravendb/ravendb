@@ -1,8 +1,7 @@
 ﻿using System.IO;
 using System.Text;
 
-using Raven.Abstractions.Data;
-
+using Raven.NewClient.Abstractions.Data;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;

@@ -1,6 +1,6 @@
 using FastTests;
 using FastTests.Server.Replication;
-using Raven.Client.Exceptions;
+using Raven.NewClient.Client.Exceptions;
 using Xunit;
 
 namespace SlowTests.Issues

@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 using Raven.Server.Utils;
 using Sparrow.Json;
 

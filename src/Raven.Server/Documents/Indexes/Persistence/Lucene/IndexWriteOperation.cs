@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.NewClient.Abstractions.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
@@ -10,8 +11,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
 
-using Constants = Raven.Abstractions.Data.Constants;
-using Raven.Client.Data.Indexes;
+using Raven.NewClient.Data.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 throw new IndexWriteException(e);
             }
-        }
+            }
 
         public override void Dispose()
         {
@@ -82,10 +82,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 using (stats.For(IndexingOperation.Lucene.FlushToDisk))
                     _writer.Commit(); // just make sure changes are flushed to disk
             }
-        }
+            }
 
         public virtual void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
-        {
+            {
             EnsureValidStats(stats);
 
             bool shouldSkip;

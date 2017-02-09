@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 
 namespace Raven.Server.Documents.Indexes.Static.Linq
 {

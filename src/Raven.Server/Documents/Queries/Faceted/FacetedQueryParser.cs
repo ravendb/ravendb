@@ -6,15 +6,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Lucene.Net.Util;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Data;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
-using Constants = Raven.Abstractions.Data.Constants;
+using Constants = Raven.NewClient.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {

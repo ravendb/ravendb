@@ -1,18 +1,15 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Replication;
 
 namespace NewClientTests.NewClient.Server.Replication
 {
     public class ReplicationTestsBase : RavenNewTestBase
     {
-        
         protected bool WaitForDocumentDeletion(DocumentStore store,
             string docId,
             int timeout = 10000)
@@ -139,7 +136,7 @@ namespace NewClientTests.NewClient.Server.Replication
             {
                 foreach (var destination in replicationConfigDocument.Destinations)
                 {
-                    if(destination.Database.Equals(enabledOrDisabledStoreDestination.DefaultDatabase))
+                    if (destination.Database.Equals(enabledOrDisabledStoreDestination.DefaultDatabase))
                         destination.Disabled = disable;
                 }
 
@@ -186,7 +183,7 @@ namespace NewClientTests.NewClient.Server.Replication
                         {
                             Database = store.DefaultDatabase,
                             Url = store.Url,
-                            
+
                         });
                 session.Store(new ReplicationDocument
                 {
@@ -194,6 +191,6 @@ namespace NewClientTests.NewClient.Server.Replication
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
-        }		
+        }
     }
 }

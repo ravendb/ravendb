@@ -1,11 +1,11 @@
 ﻿using System.Linq;
 using Indexing.Benchmark.Entities;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 #if v35
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
 #else
-using Raven.Client.Indexing;
+using Raven.NewClient.Client.Indexing;
 #endif
 
 namespace Indexing.Benchmark

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 
-using Raven.Abstractions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Data.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

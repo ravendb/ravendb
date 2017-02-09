@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+﻿using Raven.NewClient.Abstractions.Data;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Results

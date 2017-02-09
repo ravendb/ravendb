@@ -8,7 +8,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client;

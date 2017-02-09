@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
 using FastTests;
-using NewClientTests.NewClient.Subscriptions;
-using Raven.Client.Data.Indexes;
 using Raven.NewClient.Client.Indexes;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient.Client.Indexing

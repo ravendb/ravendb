@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using FastTests;
-using Raven.Abstractions.Util.Encryptors;
+using Raven.NewClient.Abstractions.Util.Encryptors;
 using Xunit;
 
 namespace SlowTests.MailingList

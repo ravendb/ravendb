@@ -6,21 +6,20 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using Raven.Server.Json;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Document;
+using Raven.NewClient.Abstractions.Data;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Net.Http;
-using Raven.Abstractions.Connection;
-using Raven.Client.Connection;
-using Raven.Client.Extensions;
-using Raven.Client.Replication.Messages;
-using Raven.Json.Linq;
+using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Client.Connection;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions.Database;
+using Raven.NewClient.Client.Replication;
+using Raven.NewClient.Client.Replication.Messages;
 using Raven.NewClient.Client.Http;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -148,8 +147,8 @@ namespace Raven.Server.Documents.Replication
                     {
                         var documentSender = new ReplicationDocumentSender(_stream, this, _log);
                         var indexAndTransformerSender = new ReplicationIndexTransformerSender(_stream, this, _log);
-
-                        WriteHeaderToRemotePeer();                        
+                        
+                        WriteHeaderToRemotePeer();
                         //handle initial response to last etag and staff
                         try
                         {
@@ -300,7 +299,7 @@ namespace Raven.Server.Documents.Replication
                 });
                 writer.Flush();
                 ReadHeaderResponseAndThrowIfUnAuthorized();
-                //start request/response for fetching last etag
+              //start request/response for fetching last etag
                 var request = new DynamicJsonValue
                 {
                     ["Type"] = "GetLastEtag",

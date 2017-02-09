@@ -17,7 +17,7 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Raven.Client.Data.Indexes;
+using Raven.NewClient.Data.Indexes;
 using Voron.Data.Compression;
 using Voron.Global;
 

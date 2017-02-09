@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
 using System.Threading;
-using Microsoft.Extensions.Configuration;
-using Raven.Abstractions.Logging;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
-using Voron.Platform.Posix;
 using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.LowMemoryNotification

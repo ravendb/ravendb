@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Data.Indexes;
+using Raven.NewClient.Data.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide.Context;
 using Voron;

@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Abstractions.Exceptions;
+using Raven.NewClient.Client.Exceptions.Transformers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;

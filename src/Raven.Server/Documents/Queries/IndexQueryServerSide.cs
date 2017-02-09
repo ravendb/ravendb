@@ -3,17 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Util;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Transformers;
+using Raven.NewClient.Client.Indexing;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-
-using TransformerParameter = Raven.Client.Data.Transformers.TransformerParameter;
 
 namespace Raven.Server.Documents.Queries
 {

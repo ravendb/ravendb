@@ -3,9 +3,10 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Raven.Abstractions;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
+
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Extensions;
 
 namespace BulkInsert.Benchmark
 {

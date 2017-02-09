@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Net;
-using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Server.Utils.Metrics;
 
 namespace Raven.Server.Documents

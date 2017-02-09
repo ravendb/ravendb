@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Document;
+using Raven.NewClient.Client.Linq;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Indexes;
 using Xunit;

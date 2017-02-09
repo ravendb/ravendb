@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Raven.Client.Replication.Messages;
-using Raven.Server.Extensions;
+using Raven.NewClient.Client.Replication.Messages;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Replication

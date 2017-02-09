@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using System.Linq;
-using Raven.Client.Data.Transformers;
+using Raven.NewClient.Client.Data.Transformers;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 

@@ -6,8 +6,7 @@
 
 using System;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

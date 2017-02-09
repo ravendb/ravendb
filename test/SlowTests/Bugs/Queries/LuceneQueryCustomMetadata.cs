@@ -1,8 +1,5 @@
 using System.Dynamic;
 using FastTests;
-using Raven.Json.Linq;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Bugs.Queries

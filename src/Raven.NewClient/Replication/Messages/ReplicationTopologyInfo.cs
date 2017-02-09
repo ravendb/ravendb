@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
+using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.NewClient.Client.Replication.Messages

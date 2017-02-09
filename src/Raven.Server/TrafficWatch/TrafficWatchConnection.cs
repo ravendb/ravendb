@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Logging;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

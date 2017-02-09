@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Replication;
-using Raven.Client.Replication.Messages;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Client.Replication;
+using Raven.NewClient.Client.Replication.Messages;
 using Raven.Server.Extensions;
 using Raven.Server.Utils;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Replication
 {

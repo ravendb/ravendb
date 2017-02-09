@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;

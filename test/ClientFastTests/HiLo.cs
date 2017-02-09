@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using NewClientTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.NewClient.Client.Document.Async;
+using Raven.NewClient.Client.Replication;
 
 namespace FastTests
 {

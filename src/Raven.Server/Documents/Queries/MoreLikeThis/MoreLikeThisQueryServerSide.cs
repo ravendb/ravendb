@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Data.Queries;
-using Raven.Client.Data.Transformers;
+using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Data.Transformers;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

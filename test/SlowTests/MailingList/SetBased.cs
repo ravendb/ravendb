@@ -6,13 +6,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using FastTests;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Indexing;
-using Raven.Json.Linq;
 using Raven.NewClient.Operations.Databases.Documents;
 using Xunit;
 

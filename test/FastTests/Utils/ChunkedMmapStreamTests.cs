@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using FastTests.Voron.FixedSize;
 using Raven.Server.Utils;
 using Xunit;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Voron.Util;
 
 namespace FastTests.Utils

@@ -1,26 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
-using Raven.Client;
-using Raven.Client.Connection.Async;
-using Raven.Client.Connection.Request;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
-using Raven.Json.Linq;
-using Raven.Traffic;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
 
-
-namespace TrafficRecorder
+namespace Raven.Traffic
 {
-
     public class Program
     {
         private static void Main(string[] args)

@@ -1,15 +1,11 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions.Subscriptions;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Exceptions.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Utils.Metrics;
 using Sparrow;
 
 namespace Raven.Server.Documents

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Exceptions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;

@@ -4,11 +4,12 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.NewClient.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Util;
 using Newtonsoft.Json;
 using Raven.NewClient.Client.Util;
+using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.NewClient.Client.Data

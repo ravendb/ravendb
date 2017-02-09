@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Connection;
 using Xunit;
 using System.Linq;
 using Raven.NewClient.Client;

@@ -2,14 +2,13 @@
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Util;
 using Sparrow.Logging;
-using Raven.Abstractions.Util;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.BackgroundTasks
 {

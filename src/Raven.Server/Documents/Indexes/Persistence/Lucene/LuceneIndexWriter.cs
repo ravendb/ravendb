@@ -7,12 +7,8 @@
 using System;
 
 using Lucene.Net.Analysis;
-using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
-
-using Raven.Abstractions.Logging;
-using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene

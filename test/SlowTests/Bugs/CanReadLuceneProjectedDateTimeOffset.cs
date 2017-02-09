@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Imports.Newtonsoft.Json;
+using Raven.NewClient.Client.Linq;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace SlowTests.Bugs

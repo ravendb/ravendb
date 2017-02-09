@@ -1,13 +1,8 @@
 ﻿using System.IO;
 using System.Text;
-using Raven.Abstractions.Linq;
-using Raven.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
+using Newtonsoft.Json;
+using Raven.NewClient.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
 

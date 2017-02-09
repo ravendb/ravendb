@@ -4,7 +4,6 @@ using FastTests;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
-using Raven.Json.Linq;
 using SlowTests.Utils;
 using Xunit;
 

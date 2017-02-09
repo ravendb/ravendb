@@ -1,18 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using Newtonsoft.Json;
-using Raven.Client.Linq;
-using Raven.Json.Linq;
+using Raven.NewClient.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Utils;
-using Voron.Util;
 using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;

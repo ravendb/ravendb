@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Sparrow;
 
 namespace Raven.Server.Documents.Indexes

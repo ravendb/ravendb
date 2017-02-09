@@ -5,9 +5,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Replication.Messages;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Replication;
+using Raven.NewClient.Client.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -532,11 +532,11 @@ namespace Raven.Server.Documents.Replication
                 });
             }
         }
-        
+
         private void InitializeOutgoingReplications()
         {
             ReplicationDocument = GetReplicationDocument();
-           
+
             if (ValidateReplicaitonSource() == false)
                 return;
 
@@ -612,7 +612,7 @@ namespace Raven.Server.Documents.Replication
                 // which will cause the code to recurse, so we just avoid running this instance
                 // because the instance we just run because we committed the update have already
                 // done all the work
-                return false; 
+                return false;
             }
 
             Guid sourceDbId;

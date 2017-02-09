@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using Raven.Client.Data;
+using Raven.NewClient.Client.Data;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Queries

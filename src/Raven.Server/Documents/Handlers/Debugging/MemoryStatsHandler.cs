@@ -5,15 +5,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.FileSystem;
-using Raven.Client.Linq;
+using Raven.NewClient.Data;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
-using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -81,7 +78,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         ["TotalDirectorySize"] = new DynamicJsonValue
                         {
                             ["Mapped"] = sizes.Value,
-                            ["HumaneMapped"] = FileHeader.Humane(sizes.Value)
+                            ["HumaneMapped"] = Size.Humane(sizes.Value)
                         }
                     };
                     foreach (var file in value.OrderBy(x => x.Key))
@@ -101,7 +98,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             ["FileSize"] = GetFileSize(file.Key),
                             ["TotalMapped"] = totalMapped,
-                            ["HumaneTotalMapped"] = FileHeader.Humane(totalMapped),
+                            ["HumaneTotalMapped"] = Size.Humane(totalMapped),
                             ["Mappings"] = dja
                         };
                     }
@@ -121,13 +118,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     ["Id"] = x.Id,
                     ["Allocations"] = x.Allocations,
-                    ["HumaneAllocations"] = FileHeader.Humane(x.Allocations)
+                    ["HumaneAllocations"] = Size.Humane(x.Allocations)
                 }));
                 var groupStats = new DynamicJsonValue
                 {
                     ["Name"] = stats.Key,
                     ["Allocations"] = unmanagedAllocations,
-                    ["HumaneAllocations"] = FileHeader.Humane(unmanagedAllocations)
+                    ["HumaneAllocations"] = Size.Humane(unmanagedAllocations)
                 };
                 if (ids.Count == 1)
                 {
@@ -149,10 +146,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 ["Humane"] = new DynamicJsonValue
                 {
-                    ["WorkingSet"] = FileHeader.Humane(workingSet),
-                    ["TotalUnmanagedAllocations"] = FileHeader.Humane(totalUnmanagedAllocations),
-                    ["ManagedAllocations"] = FileHeader.Humane(managedMemory),
-                    ["TotalMemoryMapped"] = FileHeader.Humane(totalMapping),
+                    ["WorkingSet"] = Size.Humane(workingSet),
+                    ["TotalUnmanagedAllocations"] = Size.Humane(totalUnmanagedAllocations),
+                    ["ManagedAllocations"] = Size.Humane(managedMemory),
+                    ["TotalMemoryMapped"] = Size.Humane(totalMapping),
                 },
 
                 ["Threads"] = threads,
