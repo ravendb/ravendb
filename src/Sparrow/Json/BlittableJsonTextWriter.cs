@@ -428,12 +428,24 @@ namespace Sparrow.Json
 
         public void WriteDouble(LazyDoubleValue val)
         {
+            if (val.IsNaN())
+            {
+                WriteString("NaN");
+                return;
+            }
+
             var lazyStringValue = val.Inner;
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
         }
 
         public void WriteDouble(double val)
         {
+            if (double.IsNaN(val))
+            {
+                WriteString("NaN");
+                return;
+            }
+
             using (var lazyStr = _context.GetLazyString(val.ToString(CultureInfo.InvariantCulture)))
             {
                 WriteRawString(lazyStr.Buffer, lazyStr.Size);

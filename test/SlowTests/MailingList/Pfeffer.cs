@@ -8,7 +8,7 @@ namespace SlowTests.MailingList
 {
     public class Pfeffer : RavenNewTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6305")]
         public void QueryingUsingObjects()
         {
             using (var store = GetDocumentStore())
