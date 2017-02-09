@@ -172,10 +172,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static MapIndex CreateIndexInstance(int indexId, IndexDefinition definition)
         {
-            HashSet<string> collections;
-            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition, out collections);
+            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, collections, staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapIndex(indexId, staticMapIndexDefinition, staticIndex);
             return instance;
         }

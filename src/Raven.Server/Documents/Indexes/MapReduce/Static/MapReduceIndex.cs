@@ -76,18 +76,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) cannot be used as this index ({index.Name}) is mapping this collection and this will result in an infinite loop.");
             }
 
-            var indexes = IndexAndTransformerCompilationCache.IndexCache.Where(pair => string.IsNullOrWhiteSpace(pair.Key.OutputReduceToCollection) == false &&
-                                                                                       pair.Key.IndexName != index.Definition.Name).ToList();
-            foreach (var pair in indexes)
+            var indexes = documentDatabase.IndexStore.GetIndexes()
+                .Where(x => x.Type == IndexType.MapReduce)
+                .Cast<MapReduceIndex>()
+                .Where(mapReduceIndex => string.IsNullOrWhiteSpace(mapReduceIndex.Definition.OutputReduceToCollection) == false &&
+                                         mapReduceIndex.Name != index.Definition.Name)
+                .ToList();
+
+            foreach (var otherIndex in indexes)
             {
-                var otherIndex = pair.Key;
-                if (otherIndex.OutputReduceToCollection.Equals(outputReduceToCollection, StringComparison.OrdinalIgnoreCase))
-                    throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) which will be used to output documents results should be unique to only one index but it is already used by another index ({otherIndex.IndexName}).");
+                if (otherIndex.Definition.OutputReduceToCollection.Equals(outputReduceToCollection, StringComparison.OrdinalIgnoreCase))
+                    throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) which will be used to output documents results should be unique to only one index but it is already used by another index ({otherIndex.Name}).");
             }
 
-            foreach (var pair in indexes)
+            foreach (var otherIndex in indexes)
             {
-                var otherIndex = pair.Key;
                 string description;
                 if (otherIndex.Collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase) &&
                     CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, index.Collections.ToArray() /* todo:*/, indexes, out description))
@@ -99,21 +102,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         }
 
         private static bool CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(
-            IndexAndTransformerCompilationCache.CacheKey otherIndex, string[] indexCollections, 
-            List<KeyValuePair<IndexAndTransformerCompilationCache.CacheKey, Lazy<StaticIndexBase>>> indexes, out string errorMessage)
+            MapReduceIndex otherIndex, string[] indexCollections, 
+            List<MapReduceIndex> indexes, out string errorMessage)
         {
-            errorMessage = $"{otherIndex.IndexName}: {string.Join(",", otherIndex.Collections)} => {otherIndex.OutputReduceToCollection}";
+            errorMessage = $"{otherIndex.Name}: {string.Join(",", otherIndex.Collections)} => {otherIndex.Definition.OutputReduceToCollection}";
 
-            if (string.IsNullOrWhiteSpace(otherIndex.OutputReduceToCollection))
+            if (string.IsNullOrWhiteSpace(otherIndex.Definition.OutputReduceToCollection))
                 return false;
 
-            if (indexCollections.Contains(otherIndex.OutputReduceToCollection))
+            if (indexCollections.Contains(otherIndex.Definition.OutputReduceToCollection))
                 return true;
 
-            foreach (var index in indexes.Where(pair => pair.Key.Collections.Contains(otherIndex.OutputReduceToCollection, StringComparer.OrdinalIgnoreCase)))
+            foreach (var index in indexes.Where(mapReduceIndex => mapReduceIndex.Collections.Contains(otherIndex.Definition.OutputReduceToCollection, StringComparer.OrdinalIgnoreCase)))
             {
                 string a;
-                var aa = CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(index.Key, indexCollections, indexes, out a);
+                var aa = CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(index, indexCollections, indexes, out a);
                 errorMessage += Environment.NewLine + a;
                 if (aa)
                 {
@@ -148,10 +151,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         private static MapReduceIndex CreateIndexInstance(int indexId, IndexDefinition definition)
         {
-            HashSet<string> collections;
-            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition, out collections);
+            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, collections, staticIndex.OutputFields, 
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, 
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
             var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
 
