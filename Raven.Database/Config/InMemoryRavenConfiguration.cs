@@ -11,7 +11,6 @@ using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -283,8 +282,6 @@ namespace Raven.Database.Config
             {
                 IndexStoragePath = indexStoragePathSettingValue;
             }
-
-            MaxRecentTouchesToRemember = ravenSettings.MaxRecentTouchesToRemember.Value;
 
             // HTTP settings
             HostName = ravenSettings.HostName.Value;
@@ -1175,12 +1172,6 @@ namespace Raven.Database.Config
         /// Default: 10,000
         /// </summary>
         public int MaxStepsForScript { get; set; }
-
-        /// <summary>
-        /// The maximum number of recent document touches to store (i.e. updates done in
-        /// order to initiate indexing rather than because something has actually changed).
-        /// </summary>
-        public int MaxRecentTouchesToRemember { get; set; }
 
         /// <summary>
         /// The number of additional steps to add to a given script based on the processed document's quota.

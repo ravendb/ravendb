@@ -120,10 +120,8 @@ namespace Raven.Database.Actions
 
         internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, IEnumerable<string> participatingIds = null)
         {
-            TouchedDocumentInfo touch;
-            RecentTouches.TryRemove(key, out touch);
             Stopwatch sp = null;
-            int count = 0;
+            var count = 0;
 
             using (Database.TransactionalStorage.DisableBatchNesting())
             {
@@ -175,12 +173,6 @@ namespace Raven.Database.Actions
                                                            "Consider restructuring your indexes to avoid LoadDocument on such a popular document.");
                             }
                         }
-
-                        RecentTouches.Set(referencing, new TouchedDocumentInfo
-                        {
-                            PreTouchEtag = preTouchEtag,
-                            TouchedEtag = afterTouchEtag
-                        });
                     }
                 });
             }
