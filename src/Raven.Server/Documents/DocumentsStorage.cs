@@ -1093,7 +1093,8 @@ namespace Raven.Server.Documents
                 collectionName,
                 mergedChangeVector,
                 latestConflict.LastModified.Ticks,
-                changeVector);
+                changeVector,
+                DocumentFlags.None);
 
             return collectionName;
         }
