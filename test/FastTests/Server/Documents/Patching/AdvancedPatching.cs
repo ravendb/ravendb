@@ -492,7 +492,7 @@ this.Value = another.Value;
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public async Task CanPatchMetadata()
         {
             using (var store = GetDocumentStore())

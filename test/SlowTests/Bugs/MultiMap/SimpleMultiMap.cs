@@ -29,7 +29,7 @@ namespace SlowTests.Bugs.MultiMap
             }
         }
 
-        [Fact(Skip = "Aviv")]
+        [Fact]
         public void CanQueryUsingMultiMap()
         {
             using (var store = GetDocumentStore())
