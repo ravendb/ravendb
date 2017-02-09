@@ -18,10 +18,8 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
@@ -32,8 +30,8 @@ namespace Raven.Database.Actions
         private readonly ConcurrentQueue<DeleteIndexTask> pendingDeletions = new ConcurrentQueue<DeleteIndexTask>();
         private readonly InterlockedLock interlockedLock = new InterlockedLock();
 
-        public MaintenanceActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
-            : base(database, recentTouches, uuidGenerator, log)
+        public MaintenanceActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, uuidGenerator, log)
         {
         }
 

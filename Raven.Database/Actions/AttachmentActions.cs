@@ -17,7 +17,6 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
@@ -30,8 +29,8 @@ namespace Raven.Database.Actions
         /// </summary>
         private readonly ConcurrentDictionary<string, object> putAttachmentSerialLock = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
-        public AttachmentActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
-            : base(database, recentTouches, uuidGenerator, log)
+        public AttachmentActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, uuidGenerator, log)
         {
         }
 

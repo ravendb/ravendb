@@ -24,8 +24,6 @@ namespace Raven.Database.Actions
             Constants.RavenLastModified
         };
 
-        protected SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> RecentTouches { get; private set; }
-
         protected DocumentDatabase Database { get; private set; }
 
         protected ILog Log { get; private set; }
@@ -48,10 +46,9 @@ namespace Raven.Database.Actions
 
         protected IUuidGenerator UuidGenerator { get; private set; }
 
-        protected ActionsBase(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
+        protected ActionsBase(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
         {
             Database = database;
-            RecentTouches = recentTouches;
             UuidGenerator = uuidGenerator;
             Log = log;
         }

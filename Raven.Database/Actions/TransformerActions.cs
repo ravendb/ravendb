@@ -10,9 +10,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
-using Raven.Database.Data;
 using Raven.Database.Impl;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
@@ -24,8 +22,8 @@ namespace Raven.Database.Actions
         /// </summary>
         private int temporaryTransfomerIndex = -1;
 
-        public TransformerActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
-            : base(database, recentTouches, uuidGenerator, log)
+        public TransformerActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, uuidGenerator, log)
         {
         }
 

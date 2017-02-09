@@ -21,12 +21,12 @@ namespace Raven.Tests.Bundles.Replication.Issues
             public Index()
             {
                 Map = items =>
-                      from item in items
-                      select new
-                      {
-                          item.Name,
-                          RefName = LoadDocument<Item>(item.Ref).Name
-                      };
+                    from item in items
+                    select new
+                    {
+                        item.Name,
+                        RefName = LoadDocument<Item>(item.Ref).Name
+                    };
             }
         }
 
@@ -47,7 +47,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
             using (var s1 = one.OpenSession())
             {
-                s1.Store(new Item { Id = "items/1", Name = "ayende", Ref = "items/2" });
+                s1.Store(new Item {Id = "items/1", Name = "ayende", Ref = "items/2"});
                 s1.SaveChanges();
             }
 
@@ -68,7 +68,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
             }
             using (var s1 = one.OpenSession())
             {
-                s1.Store(new Item { Id = "items/2", Name = "rahien", Ref = null });
+                s1.Store(new Item {Id = "items/2", Name = "rahien", Ref = null});
                 s1.SaveChanges();
             }
             WaitForReplication(two, "items/2");
@@ -81,5 +81,6 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
                 Assert.Equal("items/1", result.Id);
             }
-        }    }
+        }
+    }
 }
