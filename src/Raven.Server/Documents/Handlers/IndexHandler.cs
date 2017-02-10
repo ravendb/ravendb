@@ -772,7 +772,7 @@ namespace Raven.Server.Documents.Handlers
                         if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
                             break;
 
-                        var tuple = await collector.Queue.TryDequeueAsync(TimeSpan.FromSeconds(4));
+                        var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(4));
                         if (tuple.Item1 == false)
                         {
                             await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
@@ -796,8 +796,6 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
         }
-
-
 
         private IEnumerable<Index> GetIndexesToReportOn()
         {

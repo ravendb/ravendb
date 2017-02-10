@@ -36,7 +36,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexPerformanceStats[] stats)
+        public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexPerformanceStats> stats)
         {
             writer.WriteArray(context, stats, (w, c, stat) =>
             {

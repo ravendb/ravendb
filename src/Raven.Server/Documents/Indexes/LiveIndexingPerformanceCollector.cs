@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes
             _perIndexStats = indexes.ToDictionary(x => x.Name, x => new IndexAndPerformanceStatsList(x));
             _cts = new CancellationTokenSource();
 
-            Task.Run(StartWritingStats);
+            Task.Run(StartCollectingStats);
         }
 
         public void Dispose()
@@ -34,9 +34,9 @@ namespace Raven.Server.Documents.Indexes
             _cts.Dispose();
         }
 
-        public AsyncQueue<IndexPerformanceStats[]> Queue { get; } = new AsyncQueue<IndexPerformanceStats[]>();
+        public AsyncQueue<List<IndexPerformanceStats>> Stats { get; } = new AsyncQueue<List<IndexPerformanceStats>>();
 
-        public async Task StartWritingStats()
+        private async Task StartCollectingStats()
         {
             _changes.OnIndexChange += OnIndexChange;
 
@@ -47,9 +47,9 @@ namespace Raven.Server.Documents.Indexes
                         IndexId = x.Index.IndexId,
                         Performance = x.Index.GetIndexingPerformance()
                     })
-                    .ToArray();
+                    .ToList();
 
-            Queue.Enqueue(stats);
+            Stats.Enqueue(stats);
 
             using (var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(_resourceShutdown, _cts.Token))
             {
@@ -64,21 +64,24 @@ namespace Raven.Server.Documents.Indexes
 
                     var performanceStats = PreparePerformanceStats();
 
-                    if (performanceStats.Length > 0)
+                    if (performanceStats.Count > 0)
                     {
-                        Queue.Enqueue(performanceStats);
+                        Stats.Enqueue(performanceStats);
                     }
                 }
             }
             
         }
 
-        private IndexPerformanceStats[] PreparePerformanceStats()
+        private List<IndexPerformanceStats> PreparePerformanceStats()
         {
-            return _perIndexStats.Values.Select(x =>
+            var preparedStats = new List<IndexPerformanceStats>(_perIndexStats.Count);
+
+            foreach (var indexAndPerformanceStatsList in _perIndexStats.Values)
             {
-                var index = x.Index;
-                var performance = x.Performance;
+                var index = indexAndPerformanceStatsList.Index;
+                var performance = indexAndPerformanceStatsList.Performance;
+
                 var itemsToSend = new List<IndexingStatsAggregator>(performance.Count);
 
                 IndexingStatsAggregator stat;
@@ -90,15 +93,17 @@ namespace Raven.Server.Documents.Indexes
                 if (latestStats.Completed == false && itemsToSend.Contains(latestStats) == false)
                     itemsToSend.Add(latestStats);
 
-                return new IndexPerformanceStats
+                if (itemsToSend.Count > 0)
                 {
-                    IndexName = index.Name,
-                    IndexId = index.IndexId,
-                    Performance = itemsToSend.Select(item => item.ToIndexingPerformanceLiveStatsWithDetails()).ToArray()
-                };
-            })
-            .Where(x => x.Performance.Length > 0)
-            .ToArray();
+                    preparedStats.Add(new IndexPerformanceStats
+                    {
+                        IndexName = index.Name,
+                        IndexId = index.IndexId,
+                        Performance = itemsToSend.Select(item => item.ToIndexingPerformanceLiveStatsWithDetails()).ToArray()
+                    });
+                }
+            }
+            return preparedStats;
         }
 
         private void OnIndexChange(IndexChange change)

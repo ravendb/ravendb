@@ -61,11 +61,11 @@ namespace FastTests.Server.Documents.Indexing
 
                 var collector = new LiveIndexingPerformanceCollector(database.Changes, database.DatabaseShutdown, new[] {index});
 
-                var tuple = await collector.Queue.TryDequeueAsync(TimeSpan.FromSeconds(1));
+                var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(1));
                 Assert.True(tuple.Item1);
                 var stats = tuple.Item2;
 
-                Assert.Equal(1, stats.Length);
+                Assert.Equal(1, stats.Count);
                 var usersStats = stats[0];
                 Assert.Equal("Users/ByName", usersStats.IndexName);
 
@@ -88,7 +88,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 var collector = new LiveIndexingPerformanceCollector(database.Changes, database.DatabaseShutdown, new[] { index });
 
-                var initialIndexing = await collector.Queue.TryDequeueAsync(TimeSpan.FromSeconds(1));
+                var initialIndexing = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(1));
                 Assert.True(initialIndexing.Item1);
 
                 using (var session = store.OpenSession())
@@ -109,11 +109,11 @@ namespace FastTests.Server.Documents.Indexing
                 WaitForIndexing(store);
                 
 
-                var tuple = await collector.Queue.TryDequeueAsync(TimeSpan.FromSeconds(5));
+                var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(5));
                 Assert.True(tuple.Item1);
                 var stats = tuple.Item2;
 
-                Assert.Equal(1, stats.Length);
+                Assert.Equal(1, stats.Count);
                 var usersStats = stats[0];
                 Assert.Equal("Users/ByName", usersStats.IndexName);
 
