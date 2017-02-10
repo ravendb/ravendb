@@ -8,6 +8,7 @@ import gapFinder = require("common/helpers/graph/gapFinder");
 import generalUtils = require("common/generalUtils");
 import rangeAggregator = require("common/helpers/graph/rangeAggregator");
 import liveIndexPerformanceWebSocketClient = require("common/liveIndexPerformanceWebSocketClient");
+import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 
 type rTreeLeaf = {
     minX: number;
@@ -209,6 +210,7 @@ class metrics extends viewModelBase {
 
     private xTickFormat = d3.time.format("%H:%M:%S");
     private canvas: d3.Selection<any>;
+    private inProgressCanvas: d3.Selection<any>;
     private svg: d3.Selection<any>; // spans to canvas size (to provide brush + zoom/pan features)
     private brush: d3.svg.Brush<number>;
     private brushAndZoomCallbacksDisabled = false;
@@ -225,7 +227,9 @@ class metrics extends viewModelBase {
     private hitTest = new hitTest();
     private tooltip: d3.Selection<Raven.Client.Data.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap>;   
 
+    private inProgressAnimator: inProgressAnimator;
     private inProgressMarkerCanvas: HTMLCanvasElement;
+
     private gapFinder: gapFinder;
 
     private dialogVisible = false;
@@ -289,8 +293,8 @@ class metrics extends viewModelBase {
 
         this.totalHeight -= 50; // substract toolbar height
 
-        this.initCanvas();
-        this.initInProgressCanvas();
+        this.initCanvases();
+
         this.hitTest.init(this.svg,
             (indexName) => this.onToggleIndex(indexName),          
             (item, x, y) => this.handleTrackTooltip(item, x, y),
@@ -300,12 +304,24 @@ class metrics extends viewModelBase {
         this.enableLiveView();
     }
 
-    private initCanvas() {
+    private initCanvases() {
         const metricsContainer = d3.select("#metricsContainer");
         this.canvas = metricsContainer
             .append("canvas")
             .attr("width", this.totalWidth + 1)
             .attr("height", this.totalHeight);
+
+        this.inProgressCanvas = metricsContainer    
+            .append("canvas")
+            .attr("width", this.totalWidth + 1)
+            .attr("height", this.totalHeight);
+
+        const inProgressCanvasNode = this.inProgressCanvas.node() as HTMLCanvasElement;
+        inProgressCanvasNode
+            .getContext("2d")
+            .translate(0, metrics.brushSectionHeight);
+
+        this.inProgressAnimator = new inProgressAnimator(inProgressCanvasNode);
 
         this.svg = metricsContainer
             .append("svg")
@@ -336,27 +352,6 @@ class metrics extends viewModelBase {
             .attr("transform", "translate(" + 0 + "," + metrics.brushSectionHeight + ")")
             .call(this.zoom)
             .call(d => this.setupEvents(d));
-    }
-
-    private initInProgressCanvas() {
-        this.inProgressMarkerCanvas = document.createElement("canvas");
-
-        const width = this.totalWidth + 1;
-        const height = this.totalHeight;
-        this.inProgressMarkerCanvas.width = width;
-        this.inProgressMarkerCanvas.height = height;
-
-        const context = this.inProgressMarkerCanvas.getContext("2d");
-
-        const size = Math.max(width, height);
-
-        context.beginPath();
-        context.fillStyle = "black";
-        for (let pos = -size; pos < width + height; pos += metrics.inProgressStripesPadding) {
-            context.moveTo(pos, size);
-            context.lineTo(pos + size, 0);
-        }
-        context.stroke();
     }
 
     private setupEvents(selection: d3.Selection<any>) {
@@ -734,6 +729,7 @@ class metrics extends viewModelBase {
     }
 
     private drawMainSection() {
+        this.inProgressAnimator.reset();
         this.hitTest.reset();
         this.calcMaxYOffset();
         this.fixCurrentOffset();
@@ -772,6 +768,8 @@ class metrics extends viewModelBase {
         } finally {
             context.restore();
         }
+
+        this.inProgressAnimator.animate();
     }
 
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
@@ -825,15 +823,14 @@ class metrics extends viewModelBase {
                 this.drawStripes(context, [perf.Details], x1, yStart + (isOpened ? yOffset : 0), yOffset, extentFunc);
 
                 if (!perf.Completed) {
-                    this.drawInProgressAction(context, perf, extentFunc, x1, yStart + (isOpened ? yOffset : 0), yOffset);
+                    this.findInProgressAction(context, perf, extentFunc, x1, yStart + (isOpened ? yOffset : 0), yOffset);
                 }
             }
         });
     }
 
-    private drawInProgressAction(context: CanvasRenderingContext2D, perf: Raven.Client.Data.Indexes.IndexingPerformanceStats, extentFunc: (duration: number) => number,
+    private findInProgressAction(context: CanvasRenderingContext2D, perf: Raven.Client.Data.Indexes.IndexingPerformanceStats, extentFunc: (duration: number) => number,
         xStart: number, yStart: number, yOffset: number): void {
-        const inProgressArea = [] as number[][];
 
         const extractor = (perfs: Raven.Client.Data.Indexes.IndexingPerformanceOperation[], xStart: number, yStart: number, yOffset: number) => {
 
@@ -842,7 +839,7 @@ class metrics extends viewModelBase {
             perfs.forEach(op => {
                 const dx = extentFunc(op.DurationInMilliseconds);
 
-                inProgressArea.push([currentX, yStart, dx, metrics.trackHeight]);
+                this.inProgressAnimator.register([currentX, yStart, dx, metrics.trackHeight]);
 
                 if (op.Operations.length > 0) {
                     extractor(op.Operations, currentX, yStart + yOffset, yOffset);
@@ -852,23 +849,6 @@ class metrics extends viewModelBase {
         }
 
         extractor([perf.Details], xStart, yStart, yOffset);
-
-        context.save();
-        try {
-            context.beginPath();
-            inProgressArea.forEach(area => {
-                context.rect(area[0], area[1], area[2], area[3]);
-            });
-
-            context.clip();
-            context.globalAlpha = 0.2;
-            context.globalCompositeOperation = "multiply";
-
-            context.drawImage(this.inProgressMarkerCanvas, 0, 0);
-        } finally {
-            context.restore();
-        }
-
     }
 
     private getColorForOperation(operationName: string): string {
