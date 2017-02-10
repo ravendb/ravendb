@@ -100,9 +100,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         private static bool CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(
             MapReduceIndex otherIndex, string[] indexCollections, 
-            List<MapReduceIndex> indexes, out string errorMessage)
+            List<MapReduceIndex> indexes, out string description)
         {
-            errorMessage = $"{otherIndex.Name}: {string.Join(",", otherIndex.Collections)} => {otherIndex.Definition.OutputReduceToCollection}";
+            description = $"{otherIndex.Name}: {string.Join(",", otherIndex.Collections)} => {otherIndex.Definition.OutputReduceToCollection}";
 
             if (string.IsNullOrWhiteSpace(otherIndex.Definition.OutputReduceToCollection))
                 return false;
@@ -112,10 +112,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             foreach (var index in indexes.Where(mapReduceIndex => mapReduceIndex.Collections.Contains(otherIndex.Definition.OutputReduceToCollection, StringComparer.OrdinalIgnoreCase)))
             {
-                string a;
-                var aa = CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(index, indexCollections, indexes, out a);
-                errorMessage += Environment.NewLine + a;
-                if (aa)
+                string innerDescription;
+                var failed = CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(index, indexCollections, indexes, out innerDescription);
+                description += Environment.NewLine + innerDescription;
+                if (failed)
                 {
                     return true;
                 }

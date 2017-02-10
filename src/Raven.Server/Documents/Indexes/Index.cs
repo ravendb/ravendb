@@ -995,8 +995,10 @@ namespace Raven.Server.Documents.Indexes
                         {
                             if (writeOperation.IsValueCreated)
                             {
-                                using (stats.For(IndexingOperation.Lucene.FlushToDisk))
-                                    writeOperation.Value.Dispose();
+                                using (var indexWriteOperation = writeOperation.Value)
+                                {
+                                    indexWriteOperation.Commit(stats);
+                                }
                             }
                         }
 
@@ -1608,7 +1610,6 @@ namespace Raven.Server.Documents.Indexes
                             using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
                             {
                                 result.Results = reader.FacetedQuery(query, indexContext, token.Token);
-
                                 return result;
                             }
                         }

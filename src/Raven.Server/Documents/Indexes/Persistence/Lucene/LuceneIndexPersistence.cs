@@ -115,6 +115,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
+            if (_index.Type == IndexType.MapReduce)
+            {
+                var mapReduceIndex = (MapReduceIndex) _index;
+                if (string.IsNullOrWhiteSpace(mapReduceIndex.Definition.OutputReduceToCollection) == false)
+                    return new OutputReduceIndexWriteOperation(mapReduceIndex, _directory, _converter, writeTransaction, this);
+            }
+
             return new IndexWriteOperation(
                 _index,
                 _directory,
