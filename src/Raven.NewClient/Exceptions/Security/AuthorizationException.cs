@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.NewClient.Client.Data;
 
 namespace Raven.NewClient.Client.Exceptions.Security
 {
@@ -24,6 +25,11 @@ namespace Raven.NewClient.Client.Exceptions.Security
         public static Exception EmptyApiKey(string url)
         {
             return new AuthorizationException($"Got unauthorized response for {url}. Please specify an api-key.");
+        }
+
+        public static Exception Unauthorized(TcpConnectionHeaderResponse.AuthorizationStatus status, string dbName)
+        {
+            return new AuthorizationException($"Got unauthorized response ({status}) for TCP connection to {dbName}");
         }
 
         public static Exception Unauthorized(string url)

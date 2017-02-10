@@ -335,23 +335,14 @@ namespace Raven.Server.Documents.Replication
                 {
                     ThrowConnectionClosed();
                 }
-                var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(replicationTcpConnectReplyMessage.Document);
-                switch (reply.Status)
+                var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(replicationTcpConnectReplyMessage.Document);
+                switch (headerResponse.Status)
                 {
-                    case TcpConnectionHeaderResponse.AuthorizationStatus.PreconditionFailed:
-                        var msg =
-                            $"{_destination.Url}/{_destination.Database} replied with precondition failed, maybe the provided api key ({Destination.ApiKey}) is wrong?";
-                        throw new UnauthorizedAccessException(msg);
-                    case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
-                        msg =
-                            $"{_destination.Url}/{_destination.Database} replied with Forbidden, maybe the provided api key ({Destination.ApiKey}) doesn't have access to this database?";
-                        throw new UnauthorizedAccessException(msg);
                     case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                        //We are good to go
+                        //All good nothing to do
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException(
-                            $"Got un-expected response status ({reply.Status}) from {_destination.Url}/{_destination.Database}");
+                        throw new UnauthorizedAccessException($"{_destination.Url}/{_destination.Database} replied with failure {headerResponse.Status}");
                 }
             }
         }

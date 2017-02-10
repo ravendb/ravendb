@@ -459,32 +459,29 @@ namespace Raven.Server
             });
         }
 
-        private readonly Lazy<ApiKeyAuthenticator> _authenticator =
-            new Lazy<ApiKeyAuthenticator>(() => new ApiKeyAuthenticator());
-
         private bool TryAuthorize(JsonOperationContext context, RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header)
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
                 if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin)
                 {
-                    ReplyStatus(writer, "Success");
+                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
                     return true;
                 }
             
                 if (header.AuthorizationToken == null)
                 {
-                    ReplyStatus(writer, "PreconditionFailed");
+                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.AuthorizationTokenRequired));
                 }
                 AccessToken accessToken;
                 if (AccessTokensById.TryGetValue(header.AuthorizationToken, out accessToken) == false)
                 {
-                    ReplyStatus(writer, "PreconditionFailed");
+                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.BadAuthorizationToken));
                     return false;
                 }
                 if (accessToken.IsExpired)
                 {
-                    ReplyStatus(writer, "PreconditionFailed");
+                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ExpiredAuthorizationToken));
                     return false;
                 }
                 AccessModes mode;
@@ -498,14 +495,14 @@ namespace Raven.Server
                 switch (mode)
                 {
                     case AccessModes.None:
-                        ReplyStatus(writer, "Forbidden");
+                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden));
                         return false;
                     case AccessModes.ReadOnly:
-                        ReplyStatus(writer, "Forbidden");
+                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ForbiddenReadOnly));
                         return false;
                     case AccessModes.ReadWrite:
                     case AccessModes.Admin:
-                        ReplyStatus(writer, "Success");
+                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
                         return true;
                     default:
                         throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);

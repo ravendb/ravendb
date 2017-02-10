@@ -124,14 +124,12 @@ namespace Raven.NewClient.Client.Document
                 var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
                 switch (reply.Status)
                 {
-                    case TcpConnectionHeaderResponse.AuthorizationStatus.PreconditionFailed:
-                        throw AuthorizationException.Unauthorized(database);
                     case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
                         throw AuthorizationException.Forbidden(database);
                     case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException($"Got unexpected status ({reply.Status}) from the server while trying to open TCP connection to database={database}");
+                        throw AuthorizationException.Unauthorized(reply.Status, database);
                 }
             }
 

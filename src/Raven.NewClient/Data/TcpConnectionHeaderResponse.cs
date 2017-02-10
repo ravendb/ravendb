@@ -9,9 +9,12 @@ namespace Raven.NewClient.Client.Data
     {
         public enum AuthorizationStatus
         {
-            PreconditionFailed,
+            AuthorizationTokenRequired,
             Forbidden,
-            Success
+            Success,
+            BadAuthorizationToken,
+            ExpiredAuthorizationToken,
+            ForbiddenReadOnly
         }
 
         public AuthorizationStatus Status { get; set; }
