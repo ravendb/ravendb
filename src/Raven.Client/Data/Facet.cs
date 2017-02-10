@@ -348,7 +348,7 @@ namespace Raven.Client.Data
             var lValueAsStr = GetStringValue(lValue);
             var rValueAsStr = GetStringValue(rValue);
             if (lValueAsStr != null && rValueAsStr != null)
-                return string.Format("{0}{1} TO {2}{3}", CalculateBraces(leftOp, true), lValueAsStr, rValueAsStr, CalculateBraces(rightOp, false));
+                return $"{CalculateBraces(leftOp, true)}{lValueAsStr} TO {rValueAsStr}{CalculateBraces(rightOp, false)}";
             throw new InvalidOperationException("Unable to parse the given operation into a facet range!!! ");
         }
 

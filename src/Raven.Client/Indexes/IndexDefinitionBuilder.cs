@@ -22,7 +22,7 @@ namespace Raven.Client.Indexes
     /// </summary>
     public class IndexDefinitionBuilder<TDocument, TReduceResult>
     {
-        private readonly string indexName;
+        private readonly string _indexName;
         /// <summary>
         /// Gets or sets the map function
         /// </summary>
@@ -80,17 +80,6 @@ namespace Raven.Client.Indexes
         /// </summary>
         public IDictionary<string, string> AnalyzersStrings { get; set; }
 
-        /// <summary>
-        /// Gets or sets the suggestion options.
-        /// </summary>
-        /// <value>The suggestion options.</value>
-        [Obsolete("Use SuggestionsOptions")]
-        public IDictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions> Suggestions
-        {
-            get { return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions()); }
-            set { SuggestionsOptions = value.Keys.ToHashSet(); }
-        }
-
         public ISet<Expression<Func<TReduceResult, object>>> SuggestionsOptions { get; set; }
 
         /// <summary>
@@ -132,7 +121,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         public IndexDefinitionBuilder(string indexName = null)
         {
-            this.indexName = indexName ?? GetType().FullName;
+            _indexName = indexName ?? GetType().FullName;
             Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
             StoresStrings = new Dictionary<string, FieldStorage>();
             Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
@@ -152,11 +141,11 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Toes the index definition.
         /// </summary>
-        public IndexDefinition ToIndexDefinition(DocumentConvention convention, bool validateMap = true)
+        public IndexDefinition ToIndexDefinition(DocumentConventions convention, bool validateMap = true)
         {
             if (Map == null && validateMap)
                 throw new InvalidOperationException(
-                    string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", indexName));
+                    string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", _indexName));
 
             try
             {
@@ -247,7 +236,7 @@ namespace Raven.Client.Indexes
             }
             catch (Exception e)
             {
-                throw new IndexCompilationException("Failed to create index " + indexName, e);
+                throw new IndexCompilationException("Failed to create index " + _indexName, e);
             }
         }
 

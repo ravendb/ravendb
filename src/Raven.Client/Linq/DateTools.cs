@@ -25,7 +25,7 @@ using System.Globalization;
 
 namespace Raven.Client.Linq
 {
-    
+
     /// <summary> Provides support for converting dates to strings and vice-versa.
     /// The strings are structured so that lexicographic sorting orders 
     /// them by date, which makes them suitable for use as field values 
@@ -50,20 +50,20 @@ namespace Raven.Client.Linq
     /// </summary>
     public class DateTools
     {
-        
-        private static readonly System.String YEAR_FORMAT = "yyyy";
-        private static readonly System.String MONTH_FORMAT = "yyyyMM";
-        private static readonly System.String DAY_FORMAT = "yyyyMMdd";
-        private static readonly System.String HOUR_FORMAT = "yyyyMMddHH";
-        private static readonly System.String MINUTE_FORMAT = "yyyyMMddHHmm";
-        private static readonly System.String SECOND_FORMAT = "yyyyMMddHHmmss";
-        private static readonly System.String MILLISECOND_FORMAT = "yyyyMMddHHmmssfff";
-        
+
+        private static readonly string YEAR_FORMAT = "yyyy";
+        private static readonly string MONTH_FORMAT = "yyyyMM";
+        private static readonly string DAY_FORMAT = "yyyyMMdd";
+        private static readonly string HOUR_FORMAT = "yyyyMMddHH";
+        private static readonly string MINUTE_FORMAT = "yyyyMMddHHmm";
+        private static readonly string SECOND_FORMAT = "yyyyMMddHHmmss";
+        private static readonly string MILLISECOND_FORMAT = "yyyyMMddHHmmssfff";
+
         // cannot create, the class has static methods only
         private DateTools()
         {
         }
-        
+
         /// <summary> Converts a Date to a string suitable for indexing.
         /// 
         /// </summary>
@@ -75,11 +75,11 @@ namespace Raven.Client.Linq
         /// <returns> a string in format <code>yyyyMMddHHmmssSSS</code> or shorter,
         /// depending on <code>resolution</code>; using GMT as timezone 
         /// </returns>
-        public static System.String DateToString(System.DateTime date, Resolution resolution)
+        public static string DateToString(DateTime date, Resolution resolution)
         {
             return TimeToString(date.Ticks / TimeSpan.TicksPerMillisecond, resolution);
         }
-        
+
         /// <summary> Converts a millisecond time to a string suitable for indexing.
         /// 
         /// </summary>
@@ -91,10 +91,10 @@ namespace Raven.Client.Linq
         /// <returns> a string in format <code>yyyyMMddHHmmssSSS</code> or shorter,
         /// depending on <code>resolution</code>; using GMT as timezone
         /// </returns>
-        public static System.String TimeToString(long time, Resolution resolution)
+        public static string TimeToString(long time, Resolution resolution)
         {
-            System.DateTime date = new System.DateTime(Round(time, resolution));
-            
+            DateTime date = new DateTime(Round(time, resolution));
+
             if (resolution == Resolution.YEAR)
             {
                 return date.ToString(YEAR_FORMAT, CultureInfo.InvariantCulture);
@@ -123,10 +123,10 @@ namespace Raven.Client.Linq
             {
                 return date.ToString(MILLISECOND_FORMAT, CultureInfo.InvariantCulture);
             }
-            
-            throw new System.ArgumentException("unknown resolution " + resolution);
+
+            throw new ArgumentException("unknown resolution " + resolution);
         }
-        
+
         /// <summary> Converts a string produced by <code>timeToString</code> or
         /// <code>DateToString</code> back to a time, represented as the
         /// number of milliseconds since January 1, 1970, 00:00:00 GMT.
@@ -139,11 +139,11 @@ namespace Raven.Client.Linq
         /// <throws>  ParseException if <code>dateString</code> is not in the  </throws>
         /// <summary>  expected format 
         /// </summary>
-        public static long StringToTime(System.String dateString)
+        public static long StringToTime(string dateString)
         {
             return StringToDate(dateString).Ticks;
         }
-        
+
         /// <summary> Converts a string produced by <code>timeToString</code> or
         /// <code>DateToString</code> back to a time, represented as a
         /// Date object.
@@ -156,30 +156,30 @@ namespace Raven.Client.Linq
         /// <throws>  ParseException if <code>dateString</code> is not in the  </throws>
         /// <summary>  expected format 
         /// </summary>
-        public static System.DateTime StringToDate(System.String dateString)
+        public static DateTime StringToDate(string dateString)
         {
-            System.DateTime date;
+            DateTime date;
             if (dateString.Length == 4)
             {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+                date = new DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
                     1, 1, 0, 0, 0, 0);
             }
             else if (dateString.Length == 6)
             {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+                date = new DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
                     Convert.ToInt16(dateString.Substring(4, 2)),
                     1, 0, 0, 0, 0);
             }
             else if (dateString.Length == 8)
             {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+                date = new DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
                     Convert.ToInt16(dateString.Substring(4, 2)),
                     Convert.ToInt16(dateString.Substring(6, 2)),
                     0, 0, 0, 0);
             }
             else if (dateString.Length == 10)
             {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+                date = new DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
                     Convert.ToInt16(dateString.Substring(4, 2)),
                     Convert.ToInt16(dateString.Substring(6, 2)),
                     Convert.ToInt16(dateString.Substring(8, 2)),
@@ -187,7 +187,7 @@ namespace Raven.Client.Linq
             }
             else if (dateString.Length == 12)
             {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+                date = new DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
                     Convert.ToInt16(dateString.Substring(4, 2)),
                     Convert.ToInt16(dateString.Substring(6, 2)),
                     Convert.ToInt16(dateString.Substring(8, 2)),
@@ -196,7 +196,7 @@ namespace Raven.Client.Linq
             }
             else if (dateString.Length == 14)
             {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+                date = new DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
                     Convert.ToInt16(dateString.Substring(4, 2)),
                     Convert.ToInt16(dateString.Substring(6, 2)),
                     Convert.ToInt16(dateString.Substring(8, 2)),
@@ -206,7 +206,7 @@ namespace Raven.Client.Linq
             }
             else if (dateString.Length == 17)
             {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+                date = new DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
                     Convert.ToInt16(dateString.Substring(4, 2)),
                     Convert.ToInt16(dateString.Substring(6, 2)),
                     Convert.ToInt16(dateString.Substring(8, 2)),
@@ -216,7 +216,7 @@ namespace Raven.Client.Linq
             }
             else
             {
-                throw new System.FormatException("Input is not valid date string: " + dateString);
+                throw new FormatException("Input is not valid date string: " + dateString);
             }
             return date;
         }
@@ -232,11 +232,11 @@ namespace Raven.Client.Linq
         /// the date with all values more precise than <code>resolution</code>
         /// set to 0 or 1
         /// </returns>
-        public static System.DateTime Round(System.DateTime date, Resolution resolution)
+        public static DateTime Round(DateTime date, Resolution resolution)
         {
-            return new System.DateTime(Round(date.Ticks / TimeSpan.TicksPerMillisecond, resolution), date.Kind);
+            return new DateTime(Round(date.Ticks / TimeSpan.TicksPerMillisecond, resolution), date.Kind);
         }
-        
+
         /// <summary> Limit a date's resolution. For example, the date <code>1095767411000</code>
         /// (which represents 2004-09-21 13:50:11) will be changed to 
         /// <code>1093989600000</code> (2004-09-01 00:00:00) when using
@@ -251,8 +251,8 @@ namespace Raven.Client.Linq
         /// </returns>
         public static long Round(long time, Resolution resolution)
         {
-            System.DateTime dt = new System.DateTime(time * TimeSpan.TicksPerMillisecond);
-            
+            DateTime dt = new DateTime(time * TimeSpan.TicksPerMillisecond);
+
             if (resolution == Resolution.YEAR)
             {
                 dt = dt.AddMonths(1 - dt.Month);
@@ -298,11 +298,11 @@ namespace Raven.Client.Linq
             }
             else
             {
-                throw new System.ArgumentException("unknown resolution " + resolution);
+                throw new ArgumentException("unknown resolution " + resolution);
             }
             return dt.Ticks;
         }
-        
+
         /// <summary>Specifies the time granularity. </summary>
         public class Resolution
         {
@@ -335,27 +335,27 @@ namespace Raven.Client.Linq
             /// Resolution by millisecond
             /// </summary>
             public static readonly Resolution MILLISECOND = new Resolution("millisecond");
-            
-            private readonly System.String resolution;
-            
+
+            private readonly string _resolution;
+
             internal Resolution()
             {
             }
-            
-            internal Resolution(System.String resolution)
+
+            internal Resolution(string resolution)
             {
-                this.resolution = resolution;
+                _resolution = resolution;
             }
 
             /// <summary>
-            /// Returns a <see cref="System.String"/> that represents this instance.
+            /// Returns a <see cref="string"/> that represents this instance.
             /// </summary>
             /// <returns>
-            /// A <see cref="System.String"/> that represents this instance.
+            /// A <see cref="string"/> that represents this instance.
             /// </returns>
-            public override System.String ToString()
+            public override string ToString()
             {
-                return resolution;
+                return _resolution;
             }
         }
         static DateTools()

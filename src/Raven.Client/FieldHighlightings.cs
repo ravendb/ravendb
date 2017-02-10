@@ -13,8 +13,8 @@ namespace Raven.Client
 
         public FieldHighlightings(string fieldName)
         {
-            this.FieldName = fieldName;
-            this.highlightings = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            FieldName = fieldName;
+            highlightings = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -24,7 +24,7 @@ namespace Raven.Client
 
         public IEnumerable<string> ResultIndents
         {
-            get { return this.highlightings.Keys; }
+            get { return highlightings.Keys; }
         }
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace Raven.Client
         {
             string[] result;
 
-            if (!this.highlightings.TryGetValue(key, out result))
+            if (!highlightings.TryGetValue(key, out result))
                 return new string[0];
 
             return result;
@@ -44,15 +44,15 @@ namespace Raven.Client
 
         internal void Update(QueryResult queryResult)
         {
-            this.highlightings.Clear();
+            highlightings.Clear();
 
             if (queryResult.Highlightings == null)
                 return;
 
             foreach (var entityFragments in queryResult.Highlightings)
                 foreach (var fieldFragments in entityFragments.Value)
-                    if (fieldFragments.Key == this.FieldName)
-                        this.highlightings.Add(entityFragments.Key, fieldFragments.Value);
+                    if (fieldFragments.Key == FieldName)
+                        highlightings.Add(entityFragments.Key, fieldFragments.Value);
         }
     }
 }

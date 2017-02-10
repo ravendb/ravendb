@@ -2,23 +2,16 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Document;
 using Sparrow.Json;
-using Sparrow.Logging;
 
 namespace Raven.Client.Commands
 {
     public class BatchOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.NewClient.Client");
 
         public BatchOperation(InMemoryDocumentSessionOperations session)
         {
             _session = session;
-        }
-
-        protected void LogBatch()
-        {
-            //TODO
         }
 
         private List<object> _entities;
@@ -31,7 +24,6 @@ namespace Raven.Client.Commands
                 return null;
 
             _session.IncrementRequestCount();
-            LogBatch();
 
             _entities = result.Entities;
             _deferredCommandsCount = result.DeferredCommandsCount;

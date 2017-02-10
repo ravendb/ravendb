@@ -25,11 +25,11 @@ namespace Raven.Client.Linq
             public PropertyInfo MaybeProperty;
         }
 
-        private readonly QueryConvention conventions;
+        private readonly QueryConventions _conventions;
 
-        public LinqPathProvider(QueryConvention conventions)
+        public LinqPathProvider(QueryConventions conventions)
         {
-            this.conventions = conventions;
+            _conventions = conventions;
         }
 
         /// <summary>
@@ -42,16 +42,16 @@ namespace Raven.Client.Linq
             var callExpression = expression as MethodCallExpression;
             if (callExpression != null)
             {
-                var customMethodResult = conventions.TranslateCustomQueryExpression(this, callExpression);
+                var customMethodResult = _conventions.TranslateCustomQueryExpression(this, callExpression);
                 if (customMethodResult != null)
                     return customMethodResult;
 
                 if (callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
                 {
-                    if(callExpression.Arguments.Count != 1)
+                    if (callExpression.Arguments.Count != 1)
                         throw new ArgumentException("Not supported computation: " + callExpression +
                                             ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");
-            
+
                     var target = GetPath(callExpression.Arguments[0]);
                     return new Result
                     {
@@ -66,12 +66,12 @@ namespace Raven.Client.Linq
                     var parent = GetPath(callExpression.Object);
 
                     return new Result
-                           {
-                               MemberType = callExpression.Method.ReturnType,
-                               IsNestedPath = false,
-                               Path = parent.Path + "." +
+                    {
+                        MemberType = callExpression.Method.ReturnType,
+                        IsNestedPath = false,
+                        Path = parent.Path + "." +
                                       GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
-                           };
+                    };
                 }
 
                 throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
@@ -79,7 +79,7 @@ namespace Raven.Client.Linq
 
             var memberExpression = GetMemberExpression(expression);
 
-            var customMemberResult = conventions.TranslateCustomQueryExpression(this, memberExpression);
+            var customMemberResult = _conventions.TranslateCustomQueryExpression(this, memberExpression);
             if (customMemberResult != null)
                 return customMemberResult;
 
@@ -127,7 +127,7 @@ namespace Raven.Client.Linq
 
             if (dataMemberAttributes.Length != 0)
             {
-                string propertyName = ((dynamic) dataMemberAttributes[0]).Name;
+                string propertyName = ((dynamic)dataMemberAttributes[0]).Name;
                 if (string.IsNullOrEmpty(propertyName) == false)
                 {
                     return name.Substring(0, name.Length - member.Name.Length) + propertyName;
@@ -143,10 +143,10 @@ namespace Raven.Client.Linq
                 switch (expression.NodeType)
                 {
                     case ExpressionType.Quote:
-                        expression = ((UnaryExpression) expression).Operand;
+                        expression = ((UnaryExpression)expression).Operand;
                         break;
                     case ExpressionType.Lambda:
-                        expression = ((LambdaExpression) expression).Body;
+                        expression = ((LambdaExpression)expression).Body;
                         break;
                     default:
                         return expression;
@@ -159,8 +159,8 @@ namespace Raven.Client.Linq
         /// </summary>
         public object GetValueFromExpression(Expression expression, Type type)
         {
-             if (expression == null)
-                throw new ArgumentNullException("expression");
+            if (expression == null)
+                throw new ArgumentNullException(nameof(expression));
 
             // Get object
             object value;
@@ -174,7 +174,7 @@ namespace Raven.Client.Linq
                 {
                     if (value == null)
                         return null;
-                    if (conventions.SaveEnumsAsIntegers == false)
+                    if (_conventions.SaveEnumsAsIntegers == false)
                         return Enum.GetName(nonNullableType, value);
                     return Convert.ToInt32(value);
                 }
@@ -222,7 +222,7 @@ namespace Raven.Client.Linq
                     value = GetMemberValue(((MemberExpression)expression));
                     return true;
                 case ExpressionType.MemberInit:
-                    var memberInitExpression = ((MemberInitExpression) expression);
+                    var memberInitExpression = ((MemberInitExpression)expression);
                     value = Expression.Lambda(memberInitExpression).Compile().DynamicInvoke();
                     return true;
                 case ExpressionType.New:
@@ -253,7 +253,7 @@ namespace Raven.Client.Linq
                     expressions = ((NewArrayExpression)expression).Expressions;
                     var constantExpression = (ConstantExpression)expressions.FirstOrDefault();
                     if (constantExpression == null) return false;
-                    if (constantExpression.Value.GetType() != typeof (int)) return false;
+                    if (constantExpression.Value.GetType() != typeof(int)) return false;
                     var length = (int)constantExpression.Value;
                     value = new object[length];
                     return true;
@@ -265,7 +265,7 @@ namespace Raven.Client.Linq
 
         private static object GetNewExpressionValue(Expression expression)
         {
-            var newExpression = ((NewExpression) expression);
+            var newExpression = ((NewExpression)expression);
             var instance = Activator.CreateInstance(newExpression.Type, newExpression.Arguments.Select(e =>
             {
                 object o;
@@ -282,7 +282,7 @@ namespace Raven.Client.Linq
             object obj = null;
 
             if (memberExpression == null)
-                throw new ArgumentNullException("memberExpression");
+                throw new ArgumentNullException(nameof(memberExpression));
 
             // Get object
             if (memberExpression.Expression is ConstantExpression)

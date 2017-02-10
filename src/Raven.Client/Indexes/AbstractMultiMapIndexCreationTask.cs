@@ -15,11 +15,11 @@ namespace Raven.Client.Indexes
     /// </summary>
     public abstract class AbstractMultiMapIndexCreationTask<TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
     {
-        private readonly List<Func<string>> maps = new List<Func<string>>();
+        private readonly List<Func<string>> _maps = new List<Func<string>>();
 
         protected void AddMap<TSource>(Expression<Func<IEnumerable<TSource>, IEnumerable>> expression)
         {
-            maps.Add(() =>
+            _maps.Add(() =>
             {
                 string querySource = typeof(TSource) == typeof(object) ? "docs" : "docs." + Conventions.GetTypeTagName(typeof(TSource));
                 return IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TSource, TReduceResult>(expression, Conventions, querySource, translateIdentityProperty: true);
@@ -58,7 +58,7 @@ namespace Raven.Client.Indexes
         public override IndexDefinition CreateIndexDefinition()
         {
             if (Conventions == null)
-                Conventions = new DocumentConvention();
+                Conventions = new DocumentConventions();
 
             var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>()
             {
@@ -78,7 +78,7 @@ namespace Raven.Client.Indexes
                 SpatialIndexesStrings = SpatialIndexesStrings,
                 OutputReduceToCollection = OutputReduceToCollection,
             }.ToIndexDefinition(Conventions, validateMap: false);
-            foreach (var map in maps.Select(generateMap => generateMap()))
+            foreach (var map in _maps.Select(generateMap => generateMap()))
             {
                 string formattedMap = map;
                 if (Conventions.PrettifyGeneratedLinqExpressions)

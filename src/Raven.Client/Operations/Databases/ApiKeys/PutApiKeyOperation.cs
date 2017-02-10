@@ -25,7 +25,7 @@ namespace Raven.Client.Operations.Databases.ApiKeys
             _apiKey = apiKey;
         }
 
-        public RavenCommand<object> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PutApiKeyCommand(conventions, context, _name, _apiKey);
         }
@@ -36,7 +36,7 @@ namespace Raven.Client.Operations.Databases.ApiKeys
             private readonly string _name;
             private readonly BlittableJsonReaderObject _apiKey;
 
-            public PutApiKeyCommand(DocumentConvention conventions, JsonOperationContext context, string name, ApiKeyDefinition apiKey)
+            public PutApiKeyCommand(DocumentConventions conventions, JsonOperationContext context, string name, ApiKeyDefinition apiKey)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

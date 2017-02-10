@@ -9,8 +9,8 @@ namespace Raven.Client.Document
 {
     public class BulkInsertOperation : IDisposable
     {
-        private readonly IDocumentStore documentStore;
-        private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
+        private readonly IDocumentStore _store;
+        private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
         protected TcpBulkInsertOperation Operation { get; set; }
 
         /*public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
@@ -28,22 +28,22 @@ namespace Raven.Client.Document
             remove { Operation.Report -= value; }
         }
 
-        public BulkInsertOperation(string database, IDocumentStore documentStore)
+        public BulkInsertOperation(string database, IDocumentStore store)
         {
-            this.documentStore = documentStore;
+            _store = store;
 
-            database = database ?? MultiDatabase.GetDatabaseName(documentStore.Url);
+            database = database ?? MultiDatabase.GetDatabaseName(store.Url);
 
-            generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, entity =>
-                AsyncHelpers.RunSync(() => documentStore.Conventions.GenerateDocumentKeyAsync(database, entity)));
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(store.Conventions, entity =>
+                AsyncHelpers.RunSync(() => store.Conventions.GenerateDocumentKeyAsync(database, entity)));
 
             // ReSharper disable once VirtualMemberCallInContructor
-            Operation = GetBulkInsertOperation(database, documentStore.GetRequestExecuter(database));
+            Operation = GetBulkInsertOperation(database, store.GetRequestExecuter(database));
         }
 
         protected virtual TcpBulkInsertOperation GetBulkInsertOperation(string database, RequestExecuter requestExecuter)
         {
-            return new TcpBulkInsertOperation(database, documentStore, requestExecuter, default(CancellationTokenSource));
+            return new TcpBulkInsertOperation(database, _store, requestExecuter, default(CancellationTokenSource));
         }
 
         public async Task DisposeAsync()
@@ -70,16 +70,16 @@ namespace Raven.Client.Document
 
         public async Task StoreAsync(object entity, string id)
         {
-             await Operation.WriteAsync(id, entity).ConfigureAwait(false);
+            await Operation.WriteAsync(id, entity).ConfigureAwait(false);
         }
 
         private string GetId(object entity)
         {
             string id;
-            if (generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
+            if (_generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
             {
-                id = generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
-                generateEntityIdOnTheClient.TrySetIdentity(entity,id); //set Id property if it was null
+                id = _generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
+                _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
             }
             return id;
         }

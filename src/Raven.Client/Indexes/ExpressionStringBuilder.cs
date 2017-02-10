@@ -29,7 +29,7 @@ namespace Raven.Client.Indexes
         private static readonly string[] LiteralEscapedSymbols = new[] { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
 
         private readonly StringBuilder _out = new StringBuilder();
-        private readonly DocumentConvention convention;
+        private readonly DocumentConventions convention;
         private readonly Type queryRoot;
         private readonly string queryRootName;
         private readonly bool translateIdentityProperty;
@@ -40,7 +40,7 @@ namespace Raven.Client.Indexes
 
 
         // Methods
-        private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
+        private ExpressionStringBuilder(DocumentConventions convention, bool translateIdentityProperty, Type queryRoot,
                                         string queryRootName)
         {
             this.convention = convention;
@@ -75,13 +75,6 @@ namespace Raven.Client.Indexes
             }
         }
 
-        internal string CatchBlockToString(CatchBlock node)
-        {
-            var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
-            builder.VisitCatchBlock(node);
-            return builder.ToString();
-        }
-
         private void DumpLabel(LabelTarget target)
         {
             if (!string.IsNullOrEmpty(target.Name))
@@ -94,84 +87,16 @@ namespace Raven.Client.Indexes
             }
         }
 
-        internal string ElementInitBindingToString(ElementInit node)
-        {
-            var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
-            builder.VisitElementInit(node);
-            return builder.ToString();
-        }
-
         /// <summary>
         ///   Convert the expression to a string
         /// </summary>
-        public static string ExpressionToString(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
+        public static string ExpressionToString(DocumentConventions convention, bool translateIdentityProperty, Type queryRoot,
                                                 string queryRootName, Expression node)
         {
             var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
             builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
             return builder.ToString();
         }
-
-        private static string FormatBinder(CallSiteBinder binder)
-        {
-            var binder2 = binder as ConvertBinder;
-            if (binder2 != null)
-            {
-                return ("Convert " + binder2.Type);
-            }
-            var binder3 = binder as GetMemberBinder;
-            if (binder3 != null)
-            {
-                return ("GetMember " + binder3.Name);
-            }
-            var binder4 = binder as SetMemberBinder;
-            if (binder4 != null)
-            {
-                return ("SetMember " + binder4.Name);
-            }
-            var binder5 = binder as DeleteMemberBinder;
-            if (binder5 != null)
-            {
-                return ("DeleteMember " + binder5.Name);
-            }
-            if (binder is GetIndexBinder)
-            {
-                return "GetIndex";
-            }
-            if (binder is SetIndexBinder)
-            {
-                return "SetIndex";
-            }
-            if (binder is DeleteIndexBinder)
-            {
-                return "DeleteIndex";
-            }
-            var binder6 = binder as InvokeMemberBinder;
-            if (binder6 != null)
-            {
-                return ("Call " + binder6.Name);
-            }
-            if (binder is InvokeBinder)
-            {
-                return "Invoke";
-            }
-            if (binder is CreateInstanceBinder)
-            {
-                return "Create";
-            }
-            var binder7 = binder as UnaryOperationBinder;
-            if (binder7 != null)
-            {
-                return binder7.Operation.ToString();
-            }
-            var binder8 = binder as BinaryOperationBinder;
-            if (binder8 != null)
-            {
-                return binder8.Operation.ToString();
-            }
-            return "CallSiteBinder";
-        }
-
 
         private int GetParamId(ParameterExpression p)
         {
@@ -1503,11 +1428,7 @@ namespace Raven.Client.Indexes
             }
             if (expression != null)
             {
-                if (expression.Type == typeof(IClientSideDatabase))
-                {
-                    Out("Database");
-                }
-                else if (typeof(AbstractCommonApiForIndexesAndTransformers).IsAssignableFrom(expression.Type))
+                if (typeof(AbstractCommonApiForIndexesAndTransformers).IsAssignableFrom(expression.Type))
                 {
                     // this is a method that
                     // exists on both the server side and the client side

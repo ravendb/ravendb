@@ -10,7 +10,7 @@ namespace Raven.Client.Commands
     public class LoadOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.NewClient.Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.NewClient.Client");
 
         private string[] _ids;
         private string[] _includes;
@@ -29,8 +29,8 @@ namespace Raven.Client.Commands
                 return null;
 
             _session.IncrementRequestCount();
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Requesting the following ids '{string.Join(", ", _idsToCheckOnServer)}' from {_session.StoreIdentifier}");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Requesting the following ids '{string.Join(", ", _idsToCheckOnServer)}' from {_session.StoreIdentifier}");
             return new GetDocumentCommand
             {
                 Ids = _idsToCheckOnServer.ToArray(),
@@ -88,7 +88,7 @@ namespace Raven.Client.Commands
             if (_session.DocumentsById.TryGetValue(id, out doc))
                 return _session.TrackEntity<T>(doc);
 
-            if (_session.includedDocumentsByKey.TryGetValue(id, out doc))
+            if (_session.IncludedDocumentsByKey.TryGetValue(id, out doc))
                 return _session.TrackEntity<T>(doc);
 
             return default(T);
@@ -97,7 +97,7 @@ namespace Raven.Client.Commands
         public Dictionary<string, T> GetDocuments<T>()
         {
             var finalResults = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < _ids.Length; i++)
+            for (var i = 0; i < _ids.Length; i++)
             {
                 var id = _ids[i];
                 if (id == null)
@@ -120,7 +120,7 @@ namespace Raven.Client.Commands
                         continue;
 
                     var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
-                    _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
+                    _session.IncludedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
                 }
             }
 

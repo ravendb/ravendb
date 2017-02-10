@@ -9,8 +9,8 @@ namespace Raven.Client.Document.Batches
 {
     public class LazyMultiLoaderWithInclude<T> : ILazyLoaderWithInclude<T>
     {
-        private readonly IDocumentSessionImpl session;
-        private readonly List<string> includes = new List<string>();
+        private readonly IDocumentSessionImpl _session;
+        private readonly List<string> _includes = new List<string>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LazyMultiLoaderWithInclude{T}"/> class.
@@ -18,7 +18,7 @@ namespace Raven.Client.Document.Batches
         /// <param name="session">The session.</param>
         internal LazyMultiLoaderWithInclude(IDocumentSessionImpl session)
         {
-            this.session = session;
+            _session = session;
         }
 
         /// <summary>
@@ -27,7 +27,7 @@ namespace Raven.Client.Document.Batches
         /// <param name="path">The path.</param>
         public ILazyLoaderWithInclude<T> Include(string path)
         {
-            includes.Add(path);
+            _includes.Add(path);
             return this;
         }
 
@@ -55,7 +55,7 @@ namespace Raven.Client.Document.Batches
         /// <param name="ids">The ids.</param>
         public Lazy<Dictionary<string, T>> Load(params string[] ids)
         {
-            return session.LazyLoadInternal<T>(ids, includes.ToArray(), null);
+            return _session.LazyLoadInternal<T>(ids, _includes.ToArray(), null);
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace Raven.Client.Document.Batches
         /// <returns></returns>
         public Lazy<Dictionary<string, T>> Load(IEnumerable<string> ids)
         {
-            return session.LazyLoadInternal<T>(ids.ToArray(), includes.ToArray(), null);
+            return _session.LazyLoadInternal<T>(ids.ToArray(), _includes.ToArray(), null);
         }
 
         /// <summary>
@@ -73,10 +73,10 @@ namespace Raven.Client.Document.Batches
         /// </summary>
         public Lazy<T> Load(string id)
         {
-            var results = session.LazyLoadInternal<T>(new[] { id }, includes.ToArray(), null);
+            var results = _session.LazyLoadInternal<T>(new[] { id }, _includes.ToArray(), null);
             return new Lazy<T>(() => results.Value.Values.First());
         }
-        
+
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
@@ -84,7 +84,7 @@ namespace Raven.Client.Document.Batches
         /// <param name="ids">The ids.</param>
         public Lazy<Dictionary<string, TResult>> Load<TResult>(params string[] ids)
         {
-            return session.LazyLoadInternal<TResult>(ids, includes.ToArray(), null);
+            return _session.LazyLoadInternal<TResult>(ids, _includes.ToArray(), null);
         }
 
         /// <summary>
@@ -94,7 +94,7 @@ namespace Raven.Client.Document.Batches
         /// <returns></returns>
         public Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<string> ids)
         {
-            return session.LazyLoadInternal<TResult>(ids.ToArray(), includes.ToArray(), null);
+            return _session.LazyLoadInternal<TResult>(ids.ToArray(), _includes.ToArray(), null);
         }
 
         /// <summary>
@@ -111,8 +111,8 @@ namespace Raven.Client.Document.Batches
 
     public class AsyncLazyMultiLoaderWithInclude<T> : IAsyncLazyLoaderWithInclude<T>
     {
-        private readonly IAsyncDocumentSessionImpl session;
-        private readonly List<string> includes = new List<string>();
+        private readonly IAsyncDocumentSessionImpl _session;
+        private readonly List<string> _includes = new List<string>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LazyMultiLoaderWithInclude{T}"/> class.
@@ -120,16 +120,16 @@ namespace Raven.Client.Document.Batches
         /// <param name="session">The session.</param>
         internal AsyncLazyMultiLoaderWithInclude(IAsyncDocumentSessionImpl session)
         {
-            this.session = session;
+            _session = session;
         }
 
         /// <summary>
         /// Includes the specified path.
         /// </summary>
         /// <param name="path">The path.</param>
-        public  IAsyncLazyLoaderWithInclude<T>  Include(string path)
+        public IAsyncLazyLoaderWithInclude<T> Include(string path)
         {
-            includes.Add(path);
+            _includes.Add(path);
             return this;
         }
 
@@ -158,7 +158,7 @@ namespace Raven.Client.Document.Batches
         /// <param name="ids">The ids.</param>
         public Lazy<Task<Dictionary<string, T>>> LoadAsync(params string[] ids)
         {
-            return session.LazyAsyncLoadInternal<T>(ids, includes.ToArray(), null);
+            return _session.LazyAsyncLoadInternal<T>(ids, _includes.ToArray(), null);
         }
 
         /// <summary>
@@ -168,7 +168,7 @@ namespace Raven.Client.Document.Batches
         /// <returns></returns>
         public Lazy<Task<Dictionary<string, T>>> LoadAsync(IEnumerable<string> ids)
         {
-            return session.LazyAsyncLoadInternal<T>(ids.ToArray(), includes.ToArray(), null);
+            return _session.LazyAsyncLoadInternal<T>(ids.ToArray(), _includes.ToArray(), null);
         }
 
         /// <summary>
@@ -176,7 +176,7 @@ namespace Raven.Client.Document.Batches
         /// </summary>
         public Lazy<Task<T>> LoadAsync(string id)
         {
-            var results = session.LazyAsyncLoadInternal<T>(new[] { id }, includes.ToArray(), null);
+            var results = _session.LazyAsyncLoadInternal<T>(new[] { id }, _includes.ToArray(), null);
 
             return new Lazy<Task<T>>(() => results.Value.ContinueWith(x => x.Result.Values.First()));
         }
@@ -188,7 +188,7 @@ namespace Raven.Client.Document.Batches
         /// <param name="ids">The ids.</param>
         public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(params string[] ids)
         {
-            return session.LazyAsyncLoadInternal<TResult>(ids, includes.ToArray(), null); 
+            return _session.LazyAsyncLoadInternal<TResult>(ids, _includes.ToArray(), null);
         }
 
         /// <summary>
@@ -198,7 +198,7 @@ namespace Raven.Client.Document.Batches
         /// <returns></returns>
         public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<string> ids)
         {
-            return session.LazyAsyncLoadInternal<TResult>(ids.ToArray(), includes.ToArray(), null);
+            return _session.LazyAsyncLoadInternal<TResult>(ids.ToArray(), _includes.ToArray(), null);
         }
 
         /// <summary>

@@ -10,7 +10,7 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Gets the conventions associated with this query
         /// </summary>
-        DocumentConvention Conventions { get; }
+        DocumentConventions Conventions { get; }
 
         /// <summary>
         /// Create a new query for <typeparam name="T"/>
@@ -26,7 +26,7 @@ namespace Raven.Client.Linq
         /// Generates a query inspector
         /// </summary>
         /// <returns>RavenQueryInspector object</returns>
-        RavenQueryInspector<S> CreateRavenQueryInspector<S>();
+        RavenQueryInspector<TS> CreateRavenQueryInspector<TS>();
     }
 
 }

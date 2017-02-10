@@ -75,9 +75,9 @@ namespace Raven.Client.Changes
         /// <summary>
         /// Subscribe to all replication conflicts.
         /// </summary>
-                IObservableWithTask<ReplicationConflictChange> ForAllReplicationConflicts();
+        IObservableWithTask<ReplicationConflictChange> ForAllReplicationConflicts();
 
-                /// <summary>
+        /// <summary>
         /// Subscribe to all bulk insert operation changes that belong to a operation with given Id.
         /// </summary>
         IObservableWithTask<BulkInsertChange> ForBulkInsert(Guid? operationId = null);

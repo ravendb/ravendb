@@ -19,7 +19,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Gets the document convention from the query session
         /// </summary>
-        DocumentConvention DocumentConvention { get; }
+        DocumentConventions DocumentConventions { get; }
 
         /// <summary>
         /// Determines if it is a dynamic map-reduce query
@@ -369,7 +369,7 @@ namespace Raven.Client.Document
 
         void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
 
-        
+
         /// <summary>
         /// Sets the original query type incase of TransforWith usage.
         /// </summary>

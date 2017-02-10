@@ -18,8 +18,7 @@ namespace Raven.Client.Blittable
         public static IEnumerable<Tuple<object, object>> SelectTokenWithRavenSyntaxReturningFlatStructure(this BlittableJsonReaderBase self, string path, bool createSnapshots = false)
         {
             var pathParts = path.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-            object result = null;
-            result = new BlitPath(pathParts[0]).Evaluate(self, false);
+            var result = new BlitPath(pathParts[0]).Evaluate(self, false);
 
             if (pathParts.Length == 1)
             {
@@ -48,7 +47,7 @@ namespace Raven.Client.Blittable
                     }
                     else
                     {
-                        yield return Tuple.Create((object)prop.Value , result);
+                        yield return Tuple.Create(prop.Value, result);
                     }
                 }
             }
@@ -69,7 +68,7 @@ namespace Raven.Client.Blittable
                     }
                     else
                     {
-                        yield return Tuple.Create((object)item, result);
+                        yield return Tuple.Create(item, result);
                     }
                 }
             }

@@ -21,7 +21,7 @@ namespace FastTests.Client
                 {
                     CustomerId = "1",
                     Number = "abc"
-                }, new DocumentConvention(), context);
+                }, new DocumentConventions(), context);
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 IncludesUtil.Include(json, "CustomerId(customer/)", customerId =>
@@ -46,7 +46,7 @@ namespace FastTests.Client
                 {
                     CustomerId = "1",
                     Number = "abc"
-                }, new DocumentConvention(), context);
+                }, new DocumentConventions(), context);
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 IncludesUtil.Include(json, "CustomerId[{0}/customer]", customerId =>

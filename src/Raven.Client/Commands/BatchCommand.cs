@@ -71,7 +71,7 @@ namespace Raven.Client.Commands
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
             if (response == null)
-                throw new InvalidOperationException($"Got null response from the server after doing a batch, something is very wrong. Probably a garbled response.");
+                throw new InvalidOperationException("Got null response from the server after doing a batch, something is very wrong. Probably a garbled response.");
 
             Result = JsonDeserializationClient.BlittableArrayResult(response);
         }

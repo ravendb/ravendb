@@ -8,7 +8,7 @@ namespace Raven.Client.Blittable
     public class BlitPath
     {
         private readonly string _expression;
-        public List<object> Parts { get; private set; }
+        public List<object> Parts { get; }
 
         private int _currentIndex;
 
@@ -122,20 +122,19 @@ namespace Raven.Client.Blittable
                     var o = current as BlittableJsonReaderObject;
                     if (o != null)
                     {
-                      
-                            var newProp = o[propertyName];
-                            if (newProp != null)
-                            {
-                                current = o[propertyName];
-                            }
-                            else
-                            {
-                                current = null;
-                            }
+                        var newProp = o[propertyName];
+                        if (newProp != null)
+                        {
+                            current = o[propertyName];
+                        }
+                        else
+                        {
+                            current = null;
+                        }
 
                         if (current == null && errorWhenNoMatch)
                             string.Format(CultureInfo.InvariantCulture, "Property '{0}' does not exist on JSON.", propertyName);
-                        
+
                     }
                     else
                     {
@@ -153,14 +152,15 @@ namespace Raven.Client.Blittable
                                 default:
                                     if (errorWhenNoMatch)
                                         string.Format(CultureInfo.InvariantCulture, "Property '{0}' not valid on {1}.", current.GetType().Name);
-                                    
+
                                     break;
                             }
                             continue;
                         }
+
                         if (errorWhenNoMatch)
                             string.Format(CultureInfo.InvariantCulture, "Property '{0}' not valid on {1}.", current.GetType().Name);
-                        
+
 
                         return null;
                     }
@@ -169,7 +169,7 @@ namespace Raven.Client.Blittable
                 {
                     var index = (int)part;
 
-                    
+
                     var a = current as BlittableJsonReaderArray;
 
                     if (a != null)

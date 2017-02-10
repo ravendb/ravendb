@@ -15,7 +15,7 @@ namespace Raven.Client.Data
         /// The ID of a database. Can be either the database name ("Northwind") or the full document name ("Raven/Databases/Northwind").
         /// </summary>
         public string Id { get; set; }
-        
+
         /// <summary>
         /// Database settings (unsecured).
         /// </summary>

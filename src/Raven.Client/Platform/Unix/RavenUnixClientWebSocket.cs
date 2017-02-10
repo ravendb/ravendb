@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Platform.Unix
 {
-    public class RavenUnixClientWebSocket : WebSocket, IDisposable
+    public class RavenUnixClientWebSocket : WebSocket
     {
         private const int MessageTypeText = 1;
         private const int MessageTypeBinary = 2;
@@ -87,7 +87,7 @@ namespace Raven.Client.Platform.Unix
             }
 
             if (respCode != (int)HttpStatusCode.SwitchingProtocols)
-                throw new WebSocketException("The server returned status code '" + (int)respCode +
+                throw new WebSocketException("The server returned status code '" + respCode +
                                              "' when status code '101' was expected");
             if (!string.Equals(headers["Upgrade"], "WebSocket", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(headers["Connection"], "Upgrade", StringComparison.OrdinalIgnoreCase)
@@ -153,21 +153,19 @@ namespace Raven.Client.Platform.Unix
             {
                 _state = WebSocketState.Closed;
                 var tmpBuffer = new byte[length];
-                var readLength = await _networkStream.ReadAsync(tmpBuffer, 0, tmpBuffer.Length, token);
+                await _networkStream.ReadAsync(tmpBuffer, 0, tmpBuffer.Length, token);
                 var closeStatus = (WebSocketCloseStatus)(tmpBuffer[0] << 8 | tmpBuffer[1]);
                 var closeDesc = tmpBuffer.Length > 2
                     ? Encoding.UTF8.GetString(tmpBuffer, 2, tmpBuffer.Length - 2)
                     : string.Empty;
                 return new WebSocketReceiveResult((int)length, type, isLast, closeStatus, closeDesc);
             }
-            else
-            {
-                var readSoFar = (int)(arraySegment.Count < length ? arraySegment.Count : length);
-                var readLength = await _networkStream.ReadAsync(arraySegment.Array, arraySegment.Offset, readSoFar, token);
-                _remaining = length - readSoFar;
 
-                return new WebSocketReceiveResult((int)readSoFar, type, isLast && _remaining == 0);
-            }
+            var readSoFar = (int)(arraySegment.Count < length ? arraySegment.Count : length);
+            await _networkStream.ReadAsync(arraySegment.Array, arraySegment.Offset, readSoFar, token);
+            _remaining = length - readSoFar;
+
+            return new WebSocketReceiveResult(readSoFar, type, isLast && _remaining == 0);
         }
 
         public override async Task SendAsync(ArraySegment<byte> segment, WebSocketMessageType messageType, bool endOfMessage, CancellationToken token)
@@ -264,12 +262,13 @@ namespace Raven.Client.Platform.Unix
             }
             else if (length <= ushort.MaxValue)
             {
-                _headerBuffer[1] = (byte)126;
+                _headerBuffer[1] = 126;
                 _headerBuffer[2] = (byte)(length / 256);
                 _headerBuffer[3] = (byte)(length % 256);
             }
-            else {
-                _headerBuffer[1] = (byte)127;
+            else
+            {
+                _headerBuffer[1] = 127;
 
                 var left = length;
                 const int unit = 256;

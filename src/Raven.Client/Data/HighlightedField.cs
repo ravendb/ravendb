@@ -30,22 +30,22 @@ namespace Raven.Client.Data
         /// <summary>
         ///     Gets or sets the field.
         /// </summary>
-        public string Field { get; private set; }
+        public string Field { get; }
 
         /// <summary>
         ///     Gets or sets the fragment length.
         /// </summary>
-        public int FragmentLength { get; private set; }
+        public int FragmentLength { get; }
 
         /// <summary>
         ///     Gets or sets a value indicating how many highlight fragments should be created for the field
         /// </summary>
-        public int FragmentCount { get; private set; }
+        public int FragmentCount { get; }
 
         /// <summary>
         ///     Gets or sets the field in query result item for highlighting fragments
         /// </summary>
-        public string FragmentsField { get; private set; }
+        public string FragmentsField { get; }
 
         /// <summary>
         ///     Converts the string representation of a field highlighting options to the <see cref="HighlightedField" /> class.
@@ -100,10 +100,10 @@ namespace Raven.Client.Data
             return string.Format(
                 CultureInfo.InvariantCulture,
                 "{0}:{1},{2}{3}",
-                this.Field,
-                this.FragmentLength,
-                this.FragmentCount,
-                string.IsNullOrEmpty(this.FragmentsField) ? null : ',' + this.FragmentsField);
+                Field,
+                FragmentLength,
+                FragmentCount,
+                string.IsNullOrEmpty(FragmentsField) ? null : ',' + FragmentsField);
         }
 
         public HighlightedField Clone()

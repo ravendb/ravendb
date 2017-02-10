@@ -54,11 +54,11 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Get the facets as per the specified facet document with the given start and pageSize
         /// </summary>
-        Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken));
+        Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         /// Get the facet results as per the specified facets with the given start and pageSize
         /// </summary>
-        Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken));
+        Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default(CancellationToken));
     }
 }

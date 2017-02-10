@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.Client.Cluster;
 using Raven.Client.Data;
 using Sparrow.Json.Parsing;
 
@@ -15,7 +14,7 @@ namespace Raven.Client.Replication
     /// <summary>
     /// This class represent the list of replication destinations for the server
     /// </summary>
-    public class ReplicationDocument<TClass>
+    public abstract class ReplicationDocument<TClass>
         where TClass : ReplicationDestination
     {
 
@@ -122,19 +121,5 @@ namespace Raven.Client.Replication
                 [nameof(LastModifiedTime)] = LastModifiedTime
             };
         }
-    }
-
-    public class ReplicationDocumentWithClusterInformation : ReplicationDocument<ReplicationDestination.ReplicationDestinationWithClusterInformation>
-    {
-        public ReplicationDocumentWithClusterInformation()
-        {
-            ClusterInformation = new ClusterInformation(false, false);
-            ClusterCommitIndex = -1;
-            Term = -1;
-        }
-
-        public ClusterInformation ClusterInformation { get; set; }
-        public long Term { get; set; }
-        public long ClusterCommitIndex { get; set; }
     }
 }

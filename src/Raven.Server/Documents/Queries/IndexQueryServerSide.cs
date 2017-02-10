@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
-        public IndexQueryServerSide() : base(DocumentConvention.Default)
+        public IndexQueryServerSide() : base(DocumentConventions.Default)
         {
         }
 

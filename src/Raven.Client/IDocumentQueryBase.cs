@@ -20,7 +20,7 @@ namespace Raven.Client
         /// <summary>
         ///     Gets the document convention from the query session
         /// </summary>
-        DocumentConvention DocumentConvention { get; }
+        DocumentConventions DocumentConventions { get; }
 
         /// <summary>
         ///     Negate the next operation

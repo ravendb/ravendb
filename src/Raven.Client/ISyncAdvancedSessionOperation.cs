@@ -100,29 +100,6 @@ namespace Raven.Client
         Dictionary<string, TResult> LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null, string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new();
 
         /// <summary>
-        ///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
-        [Obsolete("Use DocumentQuery instead")]
-        IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
-
-        /// <summary>
-        ///     Query the specified index using Lucene syntax
-        /// </summary>
-        /// <param name="indexName">Name of the index.</param>
-        /// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
-        [Obsolete("Use DocumentQuery instead")]
-        IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false);
-
-        /// <summary>
-        ///     Dynamically query RavenDB using Lucene syntax
-        /// </summary>
-        [Obsolete("Use DocumentQuery instead")]
-        IDocumentQuery<T> LuceneQuery<T>();
-
-        /// <summary>
         ///     Sends a multiple faceted queries in a single request and calculates the facet results for each of them
         /// </summary>
         /// <param name="queries">Array of the faceted queries that will be executed on the server-side</param>

@@ -19,7 +19,7 @@ namespace Raven.Client.Operations.Databases.Indexes
             _pageSize = pageSize;
         }
 
-        public RavenCommand<IndexDefinition[]> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<IndexDefinition[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetIndexesCommand(_start, _pageSize);
         }

@@ -6,11 +6,11 @@ namespace Raven.Client.Operations
 {
     public interface IOperation<T>
     {
-        RavenCommand<T> GetCommand(DocumentConvention conventions, JsonOperationContext context);
+        RavenCommand<T> GetCommand(DocumentConventions conventions, JsonOperationContext context);
     }
 
     public interface IOperation
     {
-        RavenCommand<object> GetCommand(DocumentConvention conventions, JsonOperationContext context);
+        RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context);
     }
 }

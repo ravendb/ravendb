@@ -8,10 +8,10 @@ namespace Raven.Client.Document
 {
     public class GenerateEntityIdOnTheClient
     {
-        private readonly DocumentConvention _conventions;
+        private readonly DocumentConventions _conventions;
         private readonly Func<object, string> _generateKey;
 
-        public GenerateEntityIdOnTheClient(DocumentConvention conventions, Func<object, string> generateKey)
+        public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, string> generateKey)
         {
             _conventions = conventions;
             _generateKey = generateKey;

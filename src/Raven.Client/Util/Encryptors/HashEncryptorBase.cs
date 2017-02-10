@@ -5,7 +5,7 @@ namespace Raven.Client.Util.Encryptors
 {
     public abstract class HashEncryptorBase
     {
-        protected bool AllowNonThreadSafeMethods { get; private set; }
+        protected bool AllowNonThreadSafeMethods { get; }
 
         protected HashEncryptorBase(bool allowNonThreadSafeMethods)
         {

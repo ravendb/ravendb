@@ -14,7 +14,7 @@ namespace SlowTests.MailingList
         {
             var technologySummaryIndex = new TechnologySummary_Index
             {
-                Conventions = new DocumentConvention
+                Conventions = new DocumentConventions
                 {
                     PrettifyGeneratedLinqExpressions = false
                 }

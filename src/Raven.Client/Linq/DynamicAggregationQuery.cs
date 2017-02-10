@@ -13,23 +13,23 @@ namespace Raven.Client.Linq
 
     public class DynamicAggregationQuery<T>
     {
-        private readonly IQueryable<T> queryable;
-        private readonly List<AggregationQuery<T>> facets;
-        private readonly Dictionary<string,string> renames = new Dictionary<string, string>();
+        private readonly IQueryable<T> _queryable;
+        private readonly List<AggregationQuery<T>> _facets;
+        private readonly Dictionary<string, string> _renames = new Dictionary<string, string>();
 
         public DynamicAggregationQuery(IQueryable<T> queryable, Expression<Func<T, object>> path, string displayName = null)
         {
-            facets = new List<AggregationQuery<T>>();
-            this.queryable = queryable;
+            _facets = new List<AggregationQuery<T>>();
+            _queryable = queryable;
             AndAggregateOn(path, displayName);
         }
 
 
         public DynamicAggregationQuery(IQueryable<T> queryable, string path, string displayName = null)
         {
-            facets = new List<AggregationQuery<T>>();
-            this.queryable = queryable;
-            facets.Add(new AggregationQuery<T> { Name = path, DisplayName = displayName });
+            _facets = new List<AggregationQuery<T>>();
+            _queryable = queryable;
+            _facets.Add(new AggregationQuery<T> { Name = path, DisplayName = displayName });
 
         }
 
@@ -39,26 +39,26 @@ namespace Raven.Client.Linq
             if (IsNumeric(path))
             {
                 var tmp = propertyPath + Constants.Indexing.Fields.RangeFieldSuffix;
-                renames[propertyPath] = tmp;
+                _renames[propertyPath] = tmp;
                 propertyPath = tmp;
             }
             if (displayName == null)
                 displayName = propertyPath;
-            if (facets.Count > 0)
+            if (_facets.Count > 0)
             {
-               if (facets.Any(facet => facet.DisplayName == displayName))
-               {
+                if (_facets.Any(facet => facet.DisplayName == displayName))
+                {
                     throw new InvalidOperationException("Cannot use the more than one aggregation function with the same name/without name");
                 }
             }
-            facets.Add(new AggregationQuery<T> { Name = propertyPath, DisplayName = displayName});
+            _facets.Add(new AggregationQuery<T> { Name = propertyPath, DisplayName = displayName });
 
             return this;
         }
 
         public DynamicAggregationQuery<T> AndAggregateOn(string path, string displayName = null)
         {
-            facets.Add(new AggregationQuery<T> { Name = path, DisplayName = displayName });
+            _facets.Add(new AggregationQuery<T> { Name = path, DisplayName = displayName });
 
             return this;
         }
@@ -72,18 +72,18 @@ namespace Raven.Client.Linq
                 unaryExpression.NodeType != ExpressionType.ConvertChecked)
                 return false;
             var type = unaryExpression.Operand.Type;
-            return type == typeof (int) ||
-                   type == typeof (long) ||
-                   type == typeof (short) ||
-                   type == typeof (decimal) ||
-                   type == typeof (double) ||
-                   type == typeof (float);
+            return type == typeof(int) ||
+                   type == typeof(long) ||
+                   type == typeof(short) ||
+                   type == typeof(decimal) ||
+                   type == typeof(double) ||
+                   type == typeof(float);
         }
 
         public DynamicAggregationQuery<T> AddRanges(params Expression<Func<T, bool>>[] paths)
         {
-            var last = facets.Last();
-            
+            var last = _facets.Last();
+
             last.Ranges = last.Ranges ?? new List<Expression<Func<T, bool>>>();
 
             foreach (var func in paths)
@@ -96,15 +96,15 @@ namespace Raven.Client.Linq
 
         private void SetFacet(Expression<Func<T, object>> path, FacetAggregation facetAggregation)
         {
-            var last = facets.Last();
+            var last = _facets.Last();
             last.Aggregation |= facetAggregation;
-            if (facetAggregation == FacetAggregation.Count && 
+            if (facetAggregation == FacetAggregation.Count &&
                 string.IsNullOrEmpty(last.AggregationField) == false)
             {
                 return;
             }
-            if((string.IsNullOrEmpty(last.AggregationField) == false) && (!last.AggregationField.Equals(path.ToPropertyPath())))
-                  throw new InvalidOperationException("Cannot call different aggregation function with differentt parameters at the same aggregation. Use AndAggregateOn");
+            if ((string.IsNullOrEmpty(last.AggregationField) == false) && (!last.AggregationField.Equals(path.ToPropertyPath())))
+                throw new InvalidOperationException("Cannot call different aggregation function with differentt parameters at the same aggregation. Use AndAggregateOn");
 
             last.AggregationField = path.ToPropertyPath();
             last.AggregationType = path.ExtractTypeFromPath().FullName;
@@ -147,29 +147,29 @@ namespace Raven.Client.Linq
 
         public FacetedQueryResult ToList()
         {
-            return HandleRenames(queryable.ToFacets(AggregationQuery<T>.GetFacets(facets)));
+            return HandleRenames(_queryable.ToFacets(AggregationQuery<T>.GetFacets(_facets)));
         }
 
         public Lazy<FacetedQueryResult> ToListLazy()
         {
-            var facetsLazy = queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(facets));
+            var facetsLazy = _queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(_facets));
             return new Lazy<FacetedQueryResult>(() => HandleRenames(facetsLazy.Value));
         }
 
         public async Task<FacetedQueryResult> ToListAsync()
         {
-            return HandleRenames(await queryable.ToFacetsAsync(AggregationQuery<T>.GetFacets(facets)).ConfigureAwait(false));
+            return HandleRenames(await _queryable.ToFacetsAsync(AggregationQuery<T>.GetFacets(_facets)).ConfigureAwait(false));
         }
 
         private FacetedQueryResult HandleRenames(FacetedQueryResult facetedQueryResult)
         {
-            foreach (var rename in renames)
+            foreach (var rename in _renames)
             {
                 FacetResult value;
                 if (facetedQueryResult.Results.TryGetValue(rename.Value, out value) &&
                     facetedQueryResult.Results.ContainsKey(rename.Key) == false)
                 {
-                        facetedQueryResult.Results[rename.Key] = value;
+                    facetedQueryResult.Results[rename.Key] = value;
                     facetedQueryResult.Results.Remove(rename.Value);
                 }
             }

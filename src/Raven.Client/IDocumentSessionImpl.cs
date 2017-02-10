@@ -16,7 +16,7 @@ namespace Raven.Client
     /// </summary>
     internal interface IDocumentSessionImpl : IDocumentSession, ILazySessionOperations, IEagerSessionOperations
     {
-        DocumentConvention Conventions { get; }
+        DocumentConventions Conventions { get; }
 
         Dictionary<string, T> LoadInternal<T>(string[] ids);
         Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes);

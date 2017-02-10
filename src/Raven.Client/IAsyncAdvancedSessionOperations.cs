@@ -54,29 +54,6 @@ namespace Raven.Client
         IAsyncDocumentQuery<T> AsyncDocumentQuery<T>();
 
         /// <summary>
-        ///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
-        [Obsolete("Use AsyncDocumentQuery instead")]
-        IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
-
-        /// <summary>
-        ///     Query the specified index using Lucene syntax
-        /// </summary>
-        /// <param name="index">Name of the index.</param>
-        /// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
-        [Obsolete("Use AsyncDocumentQuery instead")]
-        IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce = false);
-
-        /// <summary>
-        ///     Dynamically query RavenDB using Lucene syntax
-        /// </summary>
-        [Obsolete("Use AsyncDocumentQuery instead")]
-        IAsyncDocumentQuery<T> AsyncLuceneQuery<T>();
-
-        /// <summary>
         ///     Sends a multiple faceted queries in a single request and calculates the facet results for each of them
         /// </summary>
         /// <param name="queries">Array of the faceted queries that will be executed on the server-side</param>

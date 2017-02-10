@@ -21,7 +21,7 @@ namespace Raven.Client.Operations.Databases.ApiKeys
             _name = name;
         }
 
-        public RavenCommand<NamedApiKeyDefinition> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<NamedApiKeyDefinition> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetApiKeyCommand(_name);
         }

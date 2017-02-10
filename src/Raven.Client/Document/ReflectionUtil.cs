@@ -18,7 +18,7 @@ namespace Raven.Client.Document
     /// </summary>
     public static class ReflectionUtil
     {
-        private static Dictionary<Type, string> fullnameCache = new Dictionary<Type, string>();
+        private static Dictionary<Type, string> _fullNameCache = new Dictionary<Type, string>();
 
         /// <summary>
         /// Gets the full name without version information.
@@ -28,7 +28,7 @@ namespace Raven.Client.Document
         public static string GetFullNameWithoutVersionInformation(Type entityType)
         {
             string result;
-            var localFullName = fullnameCache;
+            var localFullName = _fullNameCache;
             if (localFullName.TryGetValue(entityType, out result))
                 return result;
 
@@ -59,7 +59,7 @@ namespace Raven.Client.Document
                 result = entityType.FullName + ", " + asmName;
             }
 
-            fullnameCache = new Dictionary<Type, string>(localFullName)
+            _fullNameCache = new Dictionary<Type, string>(localFullName)
             {
                 {entityType, result}
             };

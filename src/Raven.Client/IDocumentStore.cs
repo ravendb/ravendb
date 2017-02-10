@@ -91,11 +91,6 @@ namespace Raven.Client
         NameValueCollection SharedOperationsHeaders { get; }
 
         /// <summary>
-        /// Whatever this instance has json request factory available
-        /// </summary>
-        bool HasJsonRequestFactory { get; }
-
-        /// <summary>
         /// Gets or sets the identifier for this store.
         /// </summary>
         /// <value>The identifier.</value>
@@ -180,7 +175,7 @@ namespace Raven.Client
         /// Gets the conventions.
         /// </summary>
         /// <value>The conventions.</value>
-        DocumentConvention Conventions { get; }
+        DocumentConventions Conventions { get; }
 
         /// <summary>
         /// Gets the URL.
@@ -198,8 +193,6 @@ namespace Raven.Client
         /// Provides methods to manage data subscriptions.
         /// </summary>
         IReliableSubscriptions Subscriptions { get; }
-
-        void InitializeProfiling();
 
         ProfilingInformation GetProfilingInformationFor(Guid id);
 

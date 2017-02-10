@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Raven.Client.Changes
 {
@@ -7,5 +8,10 @@ namespace Raven.Client.Changes
         bool Connected { get; }
         event EventHandler ConnectionStatusChanged;
         void WaitForAllPendingSubscriptions();
+    }
+
+    public interface IConnectableChanges<T> : IConnectableChanges where T : IConnectableChanges
+    {
+        Task<T> ConnectionTask { get; }
     }
 }

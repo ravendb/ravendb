@@ -10,7 +10,7 @@ namespace Raven.Client.Commands
 {
     public class LoadTransformerOperation
     {
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.NewClient.Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.NewClient.Client");
         private readonly InMemoryDocumentSessionOperations _session;
 
         private string[] _ids;
@@ -28,10 +28,10 @@ namespace Raven.Client.Commands
         {
             if (_idsToCheckOnServer.Count == 0)
                 return null;
-            
+
             _session.IncrementRequestCount();
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Requesting the following ids '{string.Join(", ", _idsToCheckOnServer)}' from {_session.StoreIdentifier}");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Requesting the following ids '{string.Join(", ", _idsToCheckOnServer)}' from {_session.StoreIdentifier}");
 
             return new GetDocumentCommand
             {
@@ -73,7 +73,7 @@ namespace Raven.Client.Commands
             _transformer = transformer;
             _transformerParameters = transformerParameters;
         }
-        
+
         public Dictionary<string, T> GetTransformedDocuments<T>(GetDocumentResult result)
         {
             if (result == null)
@@ -101,7 +101,7 @@ namespace Raven.Client.Commands
                         continue;
 
                     var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
-                    _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
+                    _session.IncludedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
                 }
             }
 

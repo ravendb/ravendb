@@ -25,7 +25,7 @@ namespace Raven.Client.Data
         private IReadOnlyList<Facet> _facets;
         private DynamicJsonArray _facetsAsDynamicJsonArray;
 
-        public FacetQuery(DocumentConvention conventions) : base(conventions)
+        public FacetQuery(DocumentConventions conventions) : base(conventions)
         {
         }
 
@@ -112,7 +112,7 @@ namespace Raven.Client.Data
         }
 
 #if !NET46
-        public static FacetQuery Parse(IQueryCollection query, int start, int pageSize, DocumentConvention conventions)
+        public static FacetQuery Parse(IQueryCollection query, int start, int pageSize, DocumentConventions conventions)
         {
             var result = new FacetQuery(conventions)
             {
@@ -152,7 +152,7 @@ namespace Raven.Client.Data
         }
 #endif
 
-        public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets, int start, int? pageSize, DocumentConvention conventions)
+        public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets, int start, int? pageSize, DocumentConventions conventions)
         {
             var result = new FacetQuery(conventions)
             {

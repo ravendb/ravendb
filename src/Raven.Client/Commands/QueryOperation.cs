@@ -30,7 +30,7 @@ namespace Raven.Client.Commands
         private QueryResult _currentQueryResults;
         private readonly string[] _projectionFields;
         private Stopwatch _sp;
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<QueryOperation>("Raven.NewClient.Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<QueryOperation>("Raven.NewClient.Client");
 
         public QueryResult CurrentQueryResults => _currentQueryResults;
 
@@ -67,7 +67,7 @@ namespace Raven.Client.Commands
             EnsureIsAcceptableAndSaveResult(queryResult);
         }
 
-        private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
+        private static readonly Regex IdOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
             RegexOptions.Compiled |
             RegexOptions.IgnorePatternWhitespace);
 
@@ -78,7 +78,7 @@ namespace Raven.Client.Commands
                 !string.Equals(_indexName, "dynamic", StringComparison.OrdinalIgnoreCase))
                 return;
 
-            var match = idOnly.Match(_indexQuery.Query);
+            var match = IdOnly.Match(_indexQuery.Query);
             if (match.Success == false)
                 return;
 
@@ -97,8 +97,8 @@ namespace Raven.Client.Commands
 
         public void LogQuery()
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Executing query '{_indexQuery.Query}' on index '{_indexName}' in '{_session.StoreIdentifier}'");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Executing query '{_indexQuery.Query}' on index '{_indexName}' in '{_session.StoreIdentifier}'");
         }
 
         public IDisposable EnterQueryContext()
@@ -120,7 +120,7 @@ namespace Raven.Client.Commands
                     continue;
 
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
-                _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
+                _session.IncludedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
             }
 
             var usedTransformer = string.IsNullOrEmpty(_indexQuery.Transformer) == false;
@@ -214,27 +214,21 @@ namespace Raven.Client.Commands
                 var message = $"The query has more results ({_currentQueryResults.TotalResults}) than the implicity take ammount " +
                               $"which is .Take({_session.Conventions.ImplicitTakeAmount}).{Environment.NewLine}" +
                               $"You can solve this error in the following ways:{Environment.NewLine}" +
-                              $"1. Have an explicit .Take() on your query. This is the recommended solution." +
+                              "1. Have an explicit .Take() on your query. This is the recommended solution." +
                               $"2. Set store.Conventions.ThowIfImplicitTakeAmountExceeded to false{Environment.NewLine}" +
-                              $"3. Increase the value of store.Conventions.ImplicitTakeAmount.";
+                              "3. Increase the value of store.Conventions.ImplicitTakeAmount.";
                 throw new RavenException(message);
             }
 
-            if (_logger.IsInfoEnabled)
+            if (Logger.IsInfoEnabled)
             {
                 var isStale = result.IsStale ? "stale " : "";
-                _logger.Info($"Query returned {result.Results.Items.Count()}/{result.TotalResults} {isStale}results");
+                Logger.Info($"Query returned {result.Results.Items.Count()}/{result.TotalResults} {isStale}results");
             }
         }
 
-        public IndexQuery IndexQuery
-        {
-            get { return _indexQuery; }
-        }
+        public IndexQuery IndexQuery => _indexQuery;
 
-        public string IndexName
-        {
-            get { return _indexName; }
-        }
+        public string IndexName => _indexName;
     }
 }

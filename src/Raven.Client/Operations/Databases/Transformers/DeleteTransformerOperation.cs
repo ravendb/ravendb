@@ -20,7 +20,7 @@ namespace Raven.Client.Operations.Databases.Transformers
             _transformerName = transformerName;
         }
 
-        public RavenCommand<object> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DeleteTransformerCommand(_transformerName);
         }

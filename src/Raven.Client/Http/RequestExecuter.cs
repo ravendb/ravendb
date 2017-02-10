@@ -25,7 +25,7 @@ namespace Raven.Client.Http
 
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
 
-        private static readonly Lazy<HttpClient> _globalHttpClient = new Lazy<HttpClient>(() =>
+        private static readonly Lazy<HttpClient> GlobalHttpClient = new Lazy<HttpClient>(() =>
         {
             var httpMessageHandler = new HttpClientHandler();
             return new HttpClient(httpMessageHandler);
@@ -47,7 +47,7 @@ namespace Raven.Client.Http
 
         public readonly HttpCache Cache = new HttpCache();
 
-        private readonly HttpClient _httpClient = _globalHttpClient.Value;
+        private readonly HttpClient _httpClient = GlobalHttpClient.Value;
 
         private Topology _topology;
         private readonly Timer _updateTopologyTimer;

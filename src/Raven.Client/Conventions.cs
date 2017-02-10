@@ -6,7 +6,7 @@ using Raven.Client.Replication;
 
 namespace Raven.Client
 {
-    public abstract class ConventionBase
+    public abstract class Conventions
     {
         /// <summary>
         /// Enable multiple async operations
@@ -24,11 +24,5 @@ namespace Raven.Client
         public double RequestTimeThresholdInMilliseconds { get; set; }
 
         public string AuthenticationScheme { get; set; }
-
-        /// <summary>
-        /// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
-        /// in async manner
-        /// </summary>
-        public Func<HttpResponseMessage, OperationCredentials, Task<Action<HttpClient>>> HandleUnauthorizedResponseAsync { get; set; }
     }
 }

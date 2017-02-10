@@ -81,7 +81,7 @@ namespace SubscriptionsBenchmark
             {
                 DefaultDatabase = databaseName,
                 Url = url,
-                Conventions = new DocumentConvention()
+                Conventions = new DocumentConventions()
                 {
                     FailoverBehavior = FailoverBehavior.FailImmediately
                 }

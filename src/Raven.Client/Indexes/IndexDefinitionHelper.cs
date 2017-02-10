@@ -18,7 +18,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         public static string PruneToFailureLinqQueryAsStringToWorkableCode<TQueryRoot, TReduceResult>(
             LambdaExpression expr,
-            DocumentConvention convention,
+            DocumentConventions convention,
             string querySource, bool translateIdentityProperty)
         {
             if (expr == null)
@@ -53,7 +53,7 @@ namespace Raven.Client.Indexes
 
         private static string FormatLinqQuery(LambdaExpression expr, string querySource, string linqQuery)
         {
-            var querySourceName = expr.Parameters.First(x => x.Type != typeof (IClientSideDatabase)).Name;
+            var querySourceName = expr.Parameters.First().Name;
 
             var indexOfQuerySource = linqQuery.IndexOf(querySourceName, StringComparison.Ordinal);
             if (indexOfQuerySource == -1)
@@ -75,7 +75,7 @@ namespace Raven.Client.Indexes
         private static MethodCallExpression GetFirstMethodCallExpression(Expression expression)
         {
             var firstMethodCallExpression = ((MethodCallExpression)expression);
-            if(firstMethodCallExpression.Arguments.Count > 0)
+            if (firstMethodCallExpression.Arguments.Count > 0)
                 if (firstMethodCallExpression.Arguments[0] is MethodCallExpression)
                     return GetFirstMethodCallExpression(firstMethodCallExpression.Arguments[0]);
             return firstMethodCallExpression;

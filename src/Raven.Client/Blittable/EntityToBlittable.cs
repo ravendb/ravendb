@@ -46,18 +46,18 @@ namespace Raven.Client.Blittable
             }
         }
 
-        public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext context, DocumentInfo documentInfo = null)
+        public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConventions conventions, JsonOperationContext context, DocumentInfo documentInfo = null)
         {
             using (var writer = new BlittableJsonWriter(context, documentInfo))
             {
-                var serializer = documentConvention.CreateSerializer();
+                var serializer = conventions.CreateSerializer();
 
                 serializer.Serialize(writer, entity);
                 writer.FinalizeDocument();
                 var reader = writer.CreateReader();
                 var type = entity.GetType();
 
-                var changes = TryRemoveIdentityProperty(reader, type, documentConvention);
+                var changes = TryRemoveIdentityProperty(reader, type, conventions);
                 changes |= TrySimplifyJson(reader);
 
                 if (changes)
@@ -115,28 +115,28 @@ namespace Raven.Client.Blittable
         /// <param name="entityType"></param>
         /// <param name="id">The id.</param>
         /// <param name="document">The document found.</param>
-        /// <param name="documentConvention">The documentConvention.</param>
+        /// <param name="conventions">The conventions.</param>
         /// <returns>The converted entity</returns>
-        public static object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject document, DocumentConvention documentConvention)
+        public static object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject document, DocumentConventions conventions)
         {
             try
             {
                 var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(entityType);
                 var entity = defaultValue;
 
-                var documentType = documentConvention.GetClrType(id, document);
+                var documentType = conventions.GetClrType(id, document);
                 if (documentType != null)
                 {
                     var type = Type.GetType(documentType);
                     if (type != null && entityType.IsAssignableFrom(type))
                     {
-                        entity = documentConvention.DeserializeEntityFromBlittable(type, document);
+                        entity = conventions.DeserializeEntityFromBlittable(type, document);
                     }
-                } 
-                
+                }
+
                 if (Equals(entity, defaultValue))
                 {
-                    entity = documentConvention.DeserializeEntityFromBlittable(entityType, document);
+                    entity = conventions.DeserializeEntityFromBlittable(entityType, document);
                 }
 
                 return entity;
@@ -148,7 +148,7 @@ namespace Raven.Client.Blittable
             }
         }
 
-        private static bool TryRemoveIdentityProperty(BlittableJsonReaderObject document, Type entityType, DocumentConvention conventions)
+        private static bool TryRemoveIdentityProperty(BlittableJsonReaderObject document, Type entityType, DocumentConventions conventions)
         {
             var identityProperty = conventions.GetIdentityProperty(entityType);
             if (identityProperty == null)

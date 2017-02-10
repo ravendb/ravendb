@@ -18,7 +18,7 @@ namespace SlowTests.Tests.Indexes
             {
                 var index = new IndexSample
                 {
-                    Conventions = new DocumentConvention()
+                    Conventions = new DocumentConventions()
                 };
                 index.Execute(store);
 

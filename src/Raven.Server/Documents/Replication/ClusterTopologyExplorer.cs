@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Connection;
 using Raven.Client.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Extensions;
@@ -31,13 +30,10 @@ namespace Raven.Server.Documents.Replication
                 if (destination.Disabled)
                     continue;
 
-                var credentials = new OperationCredentials(destination.ApiKey);
-
                 var singleDestinationDiscoverer = new NodeTopologyExplorer(
                     database.DocumentsStorage.ContextPool,
                     alreadyVisited,
                     destination,
-                    credentials,
                     dbId,
                     _timeout);
 

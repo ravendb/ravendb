@@ -22,7 +22,7 @@ namespace Raven.Client.Operations.Databases.Indexes
             _priority = priority;
         }
 
-        public RavenCommand<object> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new SetIndexPriorityCommand(_indexName, _priority);
         }

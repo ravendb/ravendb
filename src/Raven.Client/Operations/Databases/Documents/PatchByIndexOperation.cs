@@ -34,21 +34,21 @@ namespace Raven.Client.Operations.Databases.Documents
             _options = options;
         }
 
-        public RavenCommand<OperationIdResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PatchByIndexCommand(conventions, context, _indexName, _queryToUpdate, _patch, _options);
         }
 
         private class PatchByIndexCommand : RavenCommand<OperationIdResult>
         {
-            private readonly DocumentConvention _conventions;
+            private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;
             private readonly string _indexName;
             private readonly IndexQuery _queryToUpdate;
             private readonly BlittableJsonReaderObject _patch;
             private readonly QueryOperationOptions _options;
 
-            public PatchByIndexCommand(DocumentConvention conventions, JsonOperationContext context, string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
+            public PatchByIndexCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

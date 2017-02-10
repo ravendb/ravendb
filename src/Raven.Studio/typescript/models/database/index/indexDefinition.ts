@@ -40,7 +40,7 @@ class indexDefinition {
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
 
     configuration = ko.observableArray<configurationItem>();
-    lockMode: Raven.Abstractions.Indexing.IndexLockMode;
+    lockMode: Raven.Client.Indexing.IndexLockMode;
     indexStoragePath = ko.observable<string>();
 
     hasReduce = ko.observable<boolean>(false);

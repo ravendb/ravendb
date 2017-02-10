@@ -19,7 +19,7 @@ namespace Raven.Client.Data
     /// </summary>
     public class IndexQuery : IndexQuery<Dictionary<string, object>>
     {
-        public IndexQuery(DocumentConvention conventions) : base(conventions)
+        public IndexQuery(DocumentConventions conventions) : base(conventions)
         {
         }
 
@@ -184,7 +184,7 @@ namespace Raven.Client.Data
 
     public abstract class IndexQuery<T> : IndexQueryBase, IEquatable<IndexQuery<T>>
     {
-        public IndexQuery(DocumentConvention conventions) : base(conventions)
+        protected IndexQuery(DocumentConventions conventions) : base(conventions)
         {
         }
 
@@ -336,13 +336,13 @@ namespace Raven.Client.Data
     {
         private int _pageSize;
 
-        protected IndexQueryBase(DocumentConvention conventions)
+        protected IndexQueryBase(DocumentConventions conventions)
         {
             Conventions = conventions;
             _pageSize = conventions.ImplicitTakeAmount;
         }
 
-        protected internal DocumentConvention Conventions { get; }
+        protected internal DocumentConventions Conventions { get; }
 
         /// <summary>
         /// Whatever the page size was explicitly set or still at its default value

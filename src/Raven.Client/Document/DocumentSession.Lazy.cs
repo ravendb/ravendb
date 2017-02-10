@@ -81,7 +81,7 @@ namespace Raven.Client.Document
 
         internal Lazy<T> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval)
         {
-            pendingLazyOperations.Add(operation);
+            PendingLazyOperations.Add(operation);
             var lazyValue = new Lazy<T>(() =>
             {
                 ExecuteAllPendingLazyOperations();
@@ -89,7 +89,7 @@ namespace Raven.Client.Document
             });
 
             if (onEval != null)
-                onEvaluateLazy[operation] = theResult => onEval(GetOperationResult<T>(theResult));
+                OnEvaluateLazy[operation] = theResult => onEval(GetOperationResult<T>(theResult));
 
             return lazyValue;
         }
@@ -106,8 +106,7 @@ namespace Raven.Client.Document
                 ids,
                 transformer,
                 configuration.TransformerParameters,
-                new LoadTransformerOperation(this),
-                singleResult: true);
+                new LoadTransformerOperation(this));
 
             return AddLazyOperation(lazyLoadOperation, onEval);
         }
@@ -124,8 +123,7 @@ namespace Raven.Client.Document
                 ids,
                 transformer,
                 configuration.TransformerParameters,
-                new LoadTransformerOperation(this),
-                singleResult: true);
+                new LoadTransformerOperation(this));
 
             return AddLazyOperation(lazyLoadOperation, onEval);
         }
@@ -149,8 +147,7 @@ namespace Raven.Client.Document
                 idsArray,
                 transformer,
                 configuration.TransformerParameters,
-                new LoadTransformerOperation(this),
-                singleResult: false);
+                new LoadTransformerOperation(this));
 
             return AddLazyOperation<Dictionary<string, TResult>>(lazyLoadOperation, null);
         }
@@ -197,7 +194,7 @@ namespace Raven.Client.Document
 
         internal Lazy<int> AddLazyCountOperation(ILazyOperation operation)
         {
-            pendingLazyOperations.Add(operation);
+            PendingLazyOperations.Add(operation);
             var lazyValue = new Lazy<int>(() =>
             {
                 ExecuteAllPendingLazyOperations();

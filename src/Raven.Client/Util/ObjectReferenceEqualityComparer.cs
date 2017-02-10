@@ -26,7 +26,7 @@ namespace Raven.Client.Util
         /// <param name="x">The first object to compare.</param><param name="y">The second object to compare.</param>
         public override bool Equals(T x, T y)
         {
-            return object.ReferenceEquals(x, y);
+            return ReferenceEquals(x, y);
         }
 
         /// <summary>

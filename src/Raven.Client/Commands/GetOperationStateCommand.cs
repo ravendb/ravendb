@@ -8,10 +8,10 @@ namespace Raven.Client.Commands
 {
     public class GetOperationStateCommand : RavenCommand<OperationState>
     {
-        private readonly DocumentConvention _conventions;
+        private readonly DocumentConventions _conventions;
         private readonly long _id;
 
-        public GetOperationStateCommand(DocumentConvention conventions, long id)
+        public GetOperationStateCommand(DocumentConventions conventions, long id)
         {
             _conventions = conventions;
             _id = id;

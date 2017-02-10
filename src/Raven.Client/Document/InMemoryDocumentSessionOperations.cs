@@ -17,6 +17,7 @@ using Raven.Client.Commands;
 using Raven.Client.Data;
 using Raven.Client.Data.Commands;
 using Raven.Client.Document.Batches;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -35,9 +36,8 @@ namespace Raven.Client.Document
         protected readonly RequestExecuter _requestExecuter;
         private readonly IDisposable _releaseOperationContext;
         private readonly JsonOperationContext _context;
-        private static readonly ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
-        protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
-        protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
+        protected readonly List<ILazyOperation> PendingLazyOperations = new List<ILazyOperation>();
+        protected readonly Dictionary<ILazyOperation, Action<object>> OnEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
         private static int _instancesCounter;
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentKeysOnStore = true;
@@ -75,7 +75,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Translate between a key and its associated entity
         /// </summary>
-        internal readonly Dictionary<string, DocumentInfo> includedDocumentsByKey = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
+        internal readonly Dictionary<string, DocumentInfo> IncludedDocumentsByKey = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
@@ -117,10 +117,10 @@ namespace Raven.Client.Document
         /// </summary>
         /// <value>The conventions.</value>
         /// <remarks>
-        /// This instance is shared among all sessions, changes to the <see cref="DocumentConvention"/> should be done
+        /// This instance is shared among all sessions, changes to the <see cref="DocumentConventions"/> should be done
         /// via the <see cref="IDocumentStore"/> instance, not on a single session.
         /// </remarks>
-        public DocumentConvention Conventions => DocumentStore.Conventions;
+        public DocumentConventions Conventions => DocumentStore.Conventions;
 
         /// <summary>
         /// Gets or sets the max number of requests per session.
@@ -139,8 +139,8 @@ namespace Raven.Client.Document
 
         private readonly List<ICommandData> _deferedCommands = new List<ICommandData>();
         private readonly BlittableOperation _blittableOperation;
-        public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
-        public EntityToBlittable EntityToBlittable { get; private set; }
+        public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
+        public EntityToBlittable EntityToBlittable { get; }
 
         public BlittableOperation BlittableOperation
         {
@@ -226,7 +226,7 @@ namespace Raven.Client.Document
         internal bool IsLoadedOrDeleted(string id)
         {
             DocumentInfo documentInfo;
-            return (DocumentsById.TryGetValue(id, out documentInfo) && (documentInfo.Document != null)) || IsDeleted(id) || includedDocumentsByKey.ContainsKey(id);
+            return (DocumentsById.TryGetValue(id, out documentInfo) && (documentInfo.Document != null)) || IsDeleted(id) || IncludedDocumentsByKey.ContainsKey(id);
         }
 
         /// <summary>
@@ -259,7 +259,7 @@ namespace Raven.Client.Document
                 throw new InvalidOperationException($@"The maximum number of requests ({MaxNumberOfRequestsPerSession}) allowed for this session has been reached.
 Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
 Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves (call SaveChanges() only once).
-You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
+You can increase the limit by setting DocumentConventions.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
 advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a 
 more responsive application.
 ");
@@ -346,20 +346,20 @@ more responsive application.
 
                 if (noTracking == false)
                 {
-                    includedDocumentsByKey.Remove(key);
+                    IncludedDocumentsByKey.Remove(key);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
                 }
                 return docInfo.Entity;
             }
 
-            if (includedDocumentsByKey.TryGetValue(key, out docInfo))
+            if (IncludedDocumentsByKey.TryGetValue(key, out docInfo))
             {
                 if (docInfo.Entity == null)
                     docInfo.Entity = ConvertToEntity(entityType, key, document);
 
                 if (noTracking == false)
                 {
-                    includedDocumentsByKey.Remove(key);
+                    IncludedDocumentsByKey.Remove(key);
                     DocumentsById.Add(docInfo);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
                 }
@@ -432,7 +432,7 @@ more responsive application.
         public void Delete<T>(T entity)
         {
             if (ReferenceEquals(entity, null))
-                throw new ArgumentNullException("entity");
+                throw new ArgumentNullException(nameof(entity));
 
             DocumentInfo value;
             if (DocumentsByEntity.TryGetValue(entity, out value) == false)
@@ -440,7 +440,7 @@ more responsive application.
                 throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
             }
             DeletedEntities.Add(entity);
-            includedDocumentsByKey.Remove(value.Id);
+            IncludedDocumentsByKey.Remove(value.Id);
             KnownMissingIds.Add(value.Id);
         }
 
@@ -451,7 +451,7 @@ more responsive application.
         /// <param name="id"></param>
         public void Delete(string id)
         {
-            if (id == null) throw new ArgumentNullException("id");
+            if (id == null) throw new ArgumentNullException(nameof(id));
             DocumentInfo documentInfo;
             long? etag = null;
             if (DocumentsById.TryGetValue(id, out documentInfo))
@@ -526,7 +526,7 @@ more responsive application.
         private void StoreInternal(object entity, long? etag, string id, ConcurrencyCheckMode forceConcurrencyCheck)
         {
             if (null == entity)
-                throw new ArgumentNullException("entity");
+                throw new ArgumentNullException(nameof(entity));
 
             DocumentInfo value;
             if (DocumentsByEntity.TryGetValue(entity, out value))
@@ -605,7 +605,7 @@ more responsive application.
         private async Task StoreAsyncInternal(object entity, long? etag, string id, ConcurrencyCheckMode forceConcurrencyCheck, CancellationToken token = default(CancellationToken))
         {
             if (null == entity)
-                throw new ArgumentNullException("entity");
+                throw new ArgumentNullException(nameof(entity));
 
             if (id == null)
             {
@@ -731,8 +731,8 @@ more responsive application.
                 if (!DocumentsByEntity.TryGetValue(deletedEntity, out documentInfo)) continue;
                 if (changes != null)
                 {
-                    var docChanges = new List<DocumentsChanges>() { };
-                    var change = new DocumentsChanges()
+                    var docChanges = new List<DocumentsChanges>();
+                    var change = new DocumentsChanges
                     {
                         FieldNewValue = string.Empty,
                         FieldOldValue = string.Empty,
@@ -925,7 +925,7 @@ more responsive application.
             DeletedEntities.Clear();
             DocumentsById.Clear();
             KnownMissingIds.Clear();
-            includedDocumentsByKey.Clear();
+            IncludedDocumentsByKey.Clear();
         }
 
         /// <summary>
@@ -1080,7 +1080,7 @@ more responsive application.
         public string CreateDynamicIndexName<T>()
         {
             var indexName = "dynamic";
-            if (typeof(T).IsEntityType())
+            if (typeof(T) != typeof(object))
             {
                 indexName += "/" + Conventions.GetTypeTagName(typeof(T));
             }
@@ -1102,7 +1102,7 @@ more responsive application.
                 DocumentInfo documentInfo;
 
                 // Check if document was already loaded, the check if we've received it through include
-                if (DocumentsById.TryGetValue(id, out documentInfo) == false && includedDocumentsByKey.TryGetValue(id, out documentInfo) == false)
+                if (DocumentsById.TryGetValue(id, out documentInfo) == false && IncludedDocumentsByKey.TryGetValue(id, out documentInfo) == false)
                     return false;
 
                 if (documentInfo.Entity == null)

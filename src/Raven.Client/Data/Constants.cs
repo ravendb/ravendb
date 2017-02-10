@@ -338,7 +338,7 @@ namespace Raven.Client.Data
                 public const string LastSentEtag = "LastSentEtag";
             }
 
-            public const string AllDocumentsCollection = Constants.Indexing.AllDocumentsCollection;
+            public const string AllDocumentsCollection = Indexing.AllDocumentsCollection;
 
             public const string DocumentChangeVector = "Raven-Document-Change-Vector";
 

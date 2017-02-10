@@ -14,7 +14,7 @@ namespace SlowTests.Tests.Indexes
         {
             var index = new ContactIndex
             {
-                Conventions = new DocumentConvention()
+                Conventions = new DocumentConventions()
             };
             var indexDefinition = index.CreateIndexDefinition();
 

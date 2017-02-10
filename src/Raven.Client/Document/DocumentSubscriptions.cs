@@ -12,46 +12,46 @@ namespace Raven.Client.Document
 {
     public class DocumentSubscriptions : IReliableSubscriptions
     {
-        private readonly AsyncDocumentSubscriptions innerAsync;
+        private readonly AsyncDocumentSubscriptions _innerAsync;
 
         public DocumentSubscriptions(IDocumentStore documentStore)
         {
-            innerAsync = new AsyncDocumentSubscriptions(documentStore);
+            _innerAsync = new AsyncDocumentSubscriptions(documentStore);
         }
 
-        public long Create(SubscriptionCriteria criteria,long startEtag=0, string database = null)
+        public long Create(SubscriptionCriteria criteria, long startEtag = 0, string database = null)
         {
-            return AsyncHelpers.RunSync(() => innerAsync.CreateAsync(criteria, startEtag, database));
+            return AsyncHelpers.RunSync(() => _innerAsync.CreateAsync(criteria, startEtag, database));
         }
 
-        public long Create<T>(SubscriptionCriteria<T> criteria, long startEtag=0, string database = null)
+        public long Create<T>(SubscriptionCriteria<T> criteria, long startEtag = 0, string database = null)
         {
-            return AsyncHelpers.RunSync(() => innerAsync.CreateAsync(criteria, startEtag, database));
+            return AsyncHelpers.RunSync(() => _innerAsync.CreateAsync(criteria, startEtag, database));
         }
 
         public Subscription<dynamic> Open(SubscriptionConnectionOptions options, string database = null)
         {
-            return innerAsync.Open<dynamic>(options, database);
+            return _innerAsync.Open<dynamic>(options, database);
         }
 
         public Subscription<T> Open<T>(SubscriptionConnectionOptions options, string database = null) where T : class
         {
-            return innerAsync.Open<T>(options, database);
+            return _innerAsync.Open<T>(options, database);
         }
 
         public List<SubscriptionConfig> GetSubscriptions(int start, int take, string database = null)
         {
-            return AsyncHelpers.RunSync(() => innerAsync.GetSubscriptionsAsync(start, take, database));
+            return AsyncHelpers.RunSync(() => _innerAsync.GetSubscriptionsAsync(start, take, database));
         }
 
         public void Delete(long id, string database = null)
         {
-            AsyncHelpers.RunSync(() => innerAsync.DeleteAsync(id, database));
+            AsyncHelpers.RunSync(() => _innerAsync.DeleteAsync(id, database));
         }
 
         public void Dispose()
         {
-            innerAsync.Dispose();
+            _innerAsync.Dispose();
         }
     }
 }

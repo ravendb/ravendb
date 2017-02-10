@@ -8,7 +8,7 @@ namespace Raven.Client.Operations.Databases.Indexes
 {
     public class StartIndexingOperation : IAdminOperation
     {
-        public RavenCommand<object> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new StartIndexingCommand();
         }

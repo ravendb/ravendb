@@ -29,7 +29,7 @@ namespace Raven.Client.Data
         /// JaroWinkler distance algorithm
         /// </summary>
         JaroWinkler,
-        
+
         /// <summary>
         /// NGram distance algorithm
         /// </summary>

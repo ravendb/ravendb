@@ -5,20 +5,15 @@ namespace Raven.Client.Util
 {
     public class CompletedTask : CompletedTask<object>
     {
-        public new Task Task
-        {
-            get { return base.Task; }
-        }
+        public new Task Task => base.Task;
 
         public static CompletedTask<T> With<T>(T result)
         {
             return new CompletedTask<T>(result);
         }
 
-
         public CompletedTask()
         {
-            
         }
 
         public CompletedTask(Exception error) : base(error)
@@ -29,19 +24,19 @@ namespace Raven.Client.Util
 
     public class CompletedTask<T>
     {
-        private readonly Exception error;
+        private readonly Exception _error;
         public readonly T Result;
 
         public CompletedTask() : this(default(T)) { }
 
         public CompletedTask(T result)
         {
-            this.Result = result;
+            Result = result;
         }
 
         public CompletedTask(Exception error)
         {
-            this.error = error;
+            _error = error;
         }
 
         public Task<T> Task
@@ -49,10 +44,10 @@ namespace Raven.Client.Util
             get
             {
                 var tcs = new TaskCompletionSource<T>();
-                if(error == null)
+                if (_error == null)
                     tcs.SetResult(Result);
                 else
-                    tcs.SetException(error);
+                    tcs.SetException(_error);
                 return tcs.Task;
             }
         }

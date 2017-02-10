@@ -111,21 +111,21 @@ namespace Raven.Client.Extensions
                 }
 
                 builder.Append(curValue);
-                
+
             }
             return builder.ToString().Trim(propertySeparator, collectionSeparator);
         }
 
         public class PropertyPathExpressionVisitor : ExpressionVisitor
         {
-            private readonly string propertySeparator;
-            private readonly string collectionSeparator;
+            private readonly string _propertySeparator;
+            private readonly string _collectionSeparator;
             public Stack<string> Results = new Stack<string>();
 
             public PropertyPathExpressionVisitor(string propertySeparator, string collectionSeparator)
             {
-                this.propertySeparator = propertySeparator;
-                this.collectionSeparator = collectionSeparator;
+                _propertySeparator = propertySeparator;
+                _collectionSeparator = collectionSeparator;
             }
 
             protected override Expression VisitMember(MemberExpression node)
@@ -135,14 +135,14 @@ namespace Raven.Client.Extensions
                 {
                     if (string.IsNullOrEmpty(propertyName) == false)
                     {
-                        Results.Push(propertySeparator);
+                        Results.Push(_propertySeparator);
                         Results.Push("$" + node.Member.Name);
                     }
-                    
+
                     return base.VisitMember(node);
                 }
 
-                Results.Push(propertySeparator);
+                Results.Push(_propertySeparator);
                 Results.Push(node.Member.Name);
                 return base.VisitMember(node);
             }
@@ -159,14 +159,14 @@ namespace Raven.Client.Extensions
                 var genericTypeDefinition = node.Member.DeclaringType.GetGenericTypeDefinition();
                 if (node.Member.Name == "Value" || node.Member.Name == "Key")
                 {
-                    return genericTypeDefinition == typeof (KeyValuePair<,>);
+                    return genericTypeDefinition == typeof(KeyValuePair<,>);
                 }
 
                 if (node.Member.Name == "Values" || node.Member.Name == "Keys")
                 {
                     propertyName = node.Member.Name;
-                    return genericTypeDefinition == typeof (Dictionary<,>) ||
-                           genericTypeDefinition == typeof (IDictionary<,>);
+                    return genericTypeDefinition == typeof(Dictionary<,>) ||
+                           genericTypeDefinition == typeof(IDictionary<,>);
 
                 }
 
@@ -180,7 +180,7 @@ namespace Raven.Client.Extensions
 
 
                 Visit(node.Arguments[1]);
-                Results.Push(collectionSeparator);
+                Results.Push(_collectionSeparator);
                 Visit(node.Arguments[0]);
 
 

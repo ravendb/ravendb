@@ -27,7 +27,7 @@ namespace Raven.Client.Operations.Databases.Indexes
             _indexDefinition = indexDefinition;
         }
 
-        public RavenCommand<PutIndexResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<PutIndexResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PutIndexCommand(conventions, context, _indexName, _indexDefinition);
         }
@@ -38,7 +38,7 @@ namespace Raven.Client.Operations.Databases.Indexes
             private readonly string _indexName;
             private readonly BlittableJsonReaderObject _indexDefinition;
 
-            public PutIndexCommand(DocumentConvention conventions, JsonOperationContext context, string indexName, IndexDefinition indexDefinition)
+            public PutIndexCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexDefinition indexDefinition)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

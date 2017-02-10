@@ -18,8 +18,8 @@ namespace Raven.Client.Document
     /// </summary>
     public class AsyncMultiLoaderWithInclude<T> : IAsyncLoaderWithInclude<T>
     {
-        private readonly IAsyncDocumentSessionImpl session;
-        private readonly List<string> includes = new List<string>();
+        private readonly IAsyncDocumentSessionImpl _session;
+        private readonly List<string> _includes = new List<string>();
 
         /// <summary>
         /// Begin a load while including the specified path 
@@ -33,7 +33,7 @@ namespace Raven.Client.Document
 
         AsyncMultiLoaderWithInclude<T> Include(string path, Type type)
         {
-            includes.Add(path);
+            _includes.Add(path);
             return this;
         }
 
@@ -82,7 +82,7 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public Task<Dictionary<string, T>> LoadAsync(params string[] ids)
         {
-            return session.LoadAsyncInternal<T>(ids, includes.ToArray());
+            return _session.LoadAsyncInternal<T>(ids, _includes.ToArray());
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public Task<Dictionary<string, T>> LoadAsync(IEnumerable<string> ids)
         {
-            return session.LoadAsyncInternal<T>(ids.ToArray(), includes.ToArray());
+            return _session.LoadAsyncInternal<T>(ids.ToArray(), _includes.ToArray());
         }
 
         /// <summary>
@@ -102,7 +102,7 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public Task<T> LoadAsync(string id)
         {
-            return session.LoadAsyncInternal<T>(new[] { id }, includes.ToArray()).ContinueWith(x => x.Result.Values.FirstOrDefault());
+            return _session.LoadAsyncInternal<T>(new[] { id }, _includes.ToArray()).ContinueWith(x => x.Result.Values.FirstOrDefault());
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace Raven.Client.Document
         /// <param name="session">The session.</param>
         internal AsyncMultiLoaderWithInclude(IAsyncDocumentSessionImpl session)
         {
-            this.session = session;
+            _session = session;
         }
 
         /// <summary>
@@ -121,7 +121,7 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public Task<Dictionary<string, TResult>> LoadAsync<TResult>(params string[] ids)
         {
-            return session.LoadAsyncInternal<TResult>(ids, includes.ToArray());
+            return _session.LoadAsyncInternal<TResult>(ids, _includes.ToArray());
         }
 
         /// <summary>
@@ -131,7 +131,7 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids)
         {
-            return session.LoadAsyncInternal<TResult>(ids.ToArray(), includes.ToArray());
+            return _session.LoadAsyncInternal<TResult>(ids.ToArray(), _includes.ToArray());
         }
 
         /// <summary>
@@ -141,7 +141,7 @@ namespace Raven.Client.Document
         /// <param name="id">The id.</param>
         public Task<TResult> LoadAsync<TResult>(string id)
         {
-            return LoadAsync<TResult>(new[] {id}).ContinueWith(x => x.Result.Values.FirstOrDefault());
+            return LoadAsync<TResult>(new[] { id }).ContinueWith(x => x.Result.Values.FirstOrDefault());
         }
     }
 }

@@ -32,11 +32,11 @@ namespace Raven.Client.Util
         public static byte[] GetHash(string input, Encoding encoding)
         {
             if (null == input)
-                throw new System.ArgumentNullException("input", "Unable to calculate hash over null input data");
+                throw new ArgumentNullException(nameof(input), "Unable to calculate hash over null input data");
             if (null == encoding)
-                throw new System.ArgumentNullException("encoding", "Unable to calculate hash over a string without a default encoding. Consider using the GetHash(string) overload to use UTF8 Encoding");
+                throw new ArgumentNullException(nameof(encoding), "Unable to calculate hash over a string without a default encoding. Consider using the GetHash(string) overload to use UTF8 Encoding");
 
-            byte[] target = encoding.GetBytes(input);
+            var target = encoding.GetBytes(input);
 
             return GetHash(target);
         }
@@ -49,9 +49,9 @@ namespace Raven.Client.Util
         public static string GetHashString(byte[] input)
         {
             if (null == input)
-                throw new System.ArgumentNullException("input", "Unable to calculate hash over null input data");
+                throw new ArgumentNullException(nameof(input), "Unable to calculate hash over null input data");
 
-            string retval = BitConverter.ToString(GetHash(input));
+            var retval = BitConverter.ToString(GetHash(input));
             retval = retval.Replace("-", "");
 
             return retval;
@@ -60,11 +60,11 @@ namespace Raven.Client.Util
         public static string GetHashString(string input, Encoding encoding)
         {
             if (null == input)
-                throw new System.ArgumentNullException("input", "Unable to calculate hash over null input data");
+                throw new ArgumentNullException(nameof(input), "Unable to calculate hash over null input data");
             if (null == encoding)
-                throw new System.ArgumentNullException("encoding", "Unable to calculate hash over a string without a default encoding. Consider using the GetHashString(string) overload to use UTF8 Encoding");
+                throw new ArgumentNullException(nameof(encoding), "Unable to calculate hash over a string without a default encoding. Consider using the GetHashString(string) overload to use UTF8 Encoding");
 
-            byte[] target = encoding.GetBytes(input);
+            var target = encoding.GetBytes(input);
 
             return GetHashString(target);
         }
@@ -89,7 +89,7 @@ namespace Raven.Client.Util
         public static byte[] GetHash(byte[] input)
         {
             if (null == input)
-                throw new System.ArgumentNullException("input", "Unable to calculate hash over null input data");
+                throw new ArgumentNullException("input", "Unable to calculate hash over null input data");
 
             //Initial values defined in RFC 1321
             var abcd = GetInitialStruct();
@@ -98,17 +98,17 @@ namespace Raven.Client.Util
             int startIndex = 0;
             while (startIndex <= input.Length - 64)
             {
-                MD5Core.GetHashBlock(input, ref abcd, startIndex);
+                GetHashBlock(input, ref abcd, startIndex);
                 startIndex += 64;
             }
             // The final data block. 
-            return MD5Core.GetHashFinalBlock(input, startIndex, input.Length - startIndex, abcd, (Int64)input.Length * 8);
+            return GetHashFinalBlock(input, startIndex, input.Length - startIndex, abcd, (Int64)input.Length * 8);
         }
 
         public static byte[] GetHash(byte[] input, int offset, int length)
         {
             if (null == input)
-                throw new System.ArgumentNullException("input", "Unable to calculate hash over null input data");
+                throw new ArgumentNullException("input", "Unable to calculate hash over null input data");
 
             //Initial values defined in RFC 1321
             ABCDStruct abcd = new ABCDStruct();
@@ -121,11 +121,11 @@ namespace Raven.Client.Util
             int startIndex = offset;
             while (startIndex <= length - 64)
             {
-                MD5Core.GetHashBlock(input, ref abcd, startIndex);
+                GetHashBlock(input, ref abcd, startIndex);
                 startIndex += 64;
             }
             // The final data block. 
-            return MD5Core.GetHashFinalBlock(input, startIndex, length - startIndex, abcd, (Int64)length * 8);
+            return GetHashFinalBlock(input, startIndex, length - startIndex, abcd, (Int64)length * 8);
         }
 
         internal static byte[] GetHashFinalBlock(byte[] input, int ibStart, int cbSize, ABCDStruct ABCD, Int64 len)
@@ -298,7 +298,7 @@ namespace Raven.Client.Util
         private static uint[] Converter(byte[] input, int ibStart)
         {
             if (null == input)
-                throw new System.ArgumentNullException("input", "Unable convert null array to array of uInts");
+                throw new ArgumentNullException("input", "Unable convert null array to array of uInts");
 
             uint[] result = new uint[16];
 

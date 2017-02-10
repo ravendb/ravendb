@@ -18,7 +18,7 @@ namespace Raven.Client.Operations.Databases.Transformers
             _pageSize = pageSize;
         }
 
-        public RavenCommand<string[]> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<string[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetTransformerNamesCommand(_start, _pageSize);
         }

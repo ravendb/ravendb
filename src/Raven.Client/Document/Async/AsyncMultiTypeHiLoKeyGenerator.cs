@@ -20,15 +20,15 @@ namespace Raven.Client.Document.Async
         private readonly ConcurrentDictionary<string, AsyncHiLoKeyGenerator> _keyGeneratorsByTag = new ConcurrentDictionary<string, AsyncHiLoKeyGenerator>();
         private readonly DocumentStore _store;
         private readonly string _dbName;
-        private readonly DocumentConvention _conventions;
+        private readonly DocumentConventions _conventions;
 
-        public AsyncMultiTypeHiLoKeyGenerator(DocumentStore store, string dbName, DocumentConvention conventions)
+        public AsyncMultiTypeHiLoKeyGenerator(DocumentStore store, string dbName, DocumentConventions conventions)
         {
             _store = store;
             _dbName = dbName;
             _conventions = conventions;
         }
-        
+
         public Task<string> GenerateDocumentKeyAsync(object entity)
         {
             var typeTagName = _conventions.GetDynamicTagName(entity);
@@ -39,7 +39,7 @@ namespace Raven.Client.Document.Async
             if (_keyGeneratorsByTag.TryGetValue(tag, out value))
                 return value.GenerateDocumentKeyAsync(entity);
 
-            lock(_generatorLock)
+            lock (_generatorLock)
             {
                 if (_keyGeneratorsByTag.TryGetValue(tag, out value))
                     return value.GenerateDocumentKeyAsync(entity);

@@ -58,7 +58,7 @@ class query extends viewModelBase {
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
 
     recentQueries = ko.observableArray<storedQueryDto>();
-    allTransformers = ko.observableArray<Raven.Abstractions.Indexing.TransformerDefinition>();
+    allTransformers = ko.observableArray<Raven.Client.Indexing.TransformerDefinition>();
 
     collections = ko.observableArray<collection>([]);
     indexes = ko.observableArray<indexItem>();
@@ -338,7 +338,7 @@ class query extends viewModelBase {
             .done(queries => this.recentQueries(queries));
     }
 
-    private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Abstractions.Indexing.TransformerDefinition>> {
+    private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Client.Indexing.TransformerDefinition>> {
         return new getTransformersCommand(db)
             .execute()
             .done(transformers => this.allTransformers(transformers));
@@ -607,7 +607,7 @@ class query extends viewModelBase {
         });
     }
 
-    selectTransformer(transformer: Raven.Abstractions.Indexing.TransformerDefinition) {
+    selectTransformer(transformer: Raven.Client.Indexing.TransformerDefinition) {
         if (transformer) {
             this.uiTransformer(transformer.Name);
             const inputs = transformerType.extractInputs(transformer.TransformResults);

@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 {
     public class MoreLikeThisQueryServerSide : MoreLikeThisQuery<BlittableJsonReaderObject>
     {
-        public MoreLikeThisQueryServerSide() : base(DocumentConvention.Default)
+        public MoreLikeThisQueryServerSide() : base(DocumentConventions.Default)
         {
         }
 

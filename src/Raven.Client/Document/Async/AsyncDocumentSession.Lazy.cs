@@ -29,7 +29,7 @@ namespace Raven.Client.Document.Async
     {
         internal Lazy<Task<T>> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval, CancellationToken token = default(CancellationToken))
         {
-            pendingLazyOperations.Add(operation);
+            PendingLazyOperations.Add(operation);
             var lazyValue = new Lazy<Task<T>>(() =>
                 ExecuteAllPendingLazyOperationsAsync(token)
                     .ContinueWith(t =>
@@ -41,14 +41,14 @@ namespace Raven.Client.Document.Async
                     }, token));
 
             if (onEval != null)
-                onEvaluateLazy[operation] = theResult => onEval(GetOperationResult<T>(theResult));
+                OnEvaluateLazy[operation] = theResult => onEval(GetOperationResult<T>(theResult));
 
             return lazyValue;
         }
 
         internal Lazy<Task<int>> AddLazyCountOperation(ILazyOperation operation, CancellationToken token = default(CancellationToken))
         {
-            pendingLazyOperations.Add(operation);
+            PendingLazyOperations.Add(operation);
             var lazyValue = new Lazy<Task<int>>(() => ExecuteAllPendingLazyOperationsAsync(token)
                 .ContinueWith(t =>
                 {
@@ -62,7 +62,7 @@ namespace Raven.Client.Document.Async
 
         public async Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default(CancellationToken))
         {
-            if (pendingLazyOperations.Count == 0)
+            if (PendingLazyOperations.Count == 0)
                 return new ResponseTimeInformation();
 
             try
@@ -81,10 +81,10 @@ namespace Raven.Client.Document.Async
                 responseTimeDuration.ComputeServerTotal();
 
 
-                foreach (var pendingLazyOperation in pendingLazyOperations)
+                foreach (var pendingLazyOperation in PendingLazyOperations)
                 {
                     Action<object> value;
-                    if (onEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
+                    if (OnEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
                         value(pendingLazyOperation.Result);
                 }
                 responseTimeDuration.TotalClientDuration = sw.Elapsed;
@@ -92,19 +92,19 @@ namespace Raven.Client.Document.Async
             }
             finally
             {
-                pendingLazyOperations.Clear();
+                PendingLazyOperations.Clear();
             }
         }
 
         private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
-            var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToList();
+            var requests = PendingLazyOperations.Select(x => x.CreateRequest()).ToList();
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
             await RequestExecuter.ExecuteAsync(multiGetCommand, Context).ConfigureAwait(false);
             var responses = multiGetCommand.Result;
 
-            for (var i = 0; i < pendingLazyOperations.Count; i++)
+            for (var i = 0; i < PendingLazyOperations.Count; i++)
             {
                 long totalTime;
                 string tempReqTime;
@@ -123,8 +123,8 @@ namespace Raven.Client.Document.Async
                 if (response.RequestHasErrors())
                     throw new InvalidOperationException("Got an error from server, status code: " + (int)response.StatusCode + Environment.NewLine + response.Result);
 
-                pendingLazyOperations[i].HandleResponse(response);
-                if (pendingLazyOperations[i].RequiresRetry)
+                PendingLazyOperations[i].HandleResponse(response);
+                if (PendingLazyOperations[i].RequiresRetry)
                 {
                     return true;
                 }
@@ -236,8 +236,7 @@ namespace Raven.Client.Document.Async
                 ids,
                 transformer,
                 configuration.TransformerParameters,
-                new LoadTransformerOperation(this),
-                singleResult: true);
+                new LoadTransformerOperation(this));
 
             return AddLazyOperation(lazyLoadOperation, onEval, token);
         }
@@ -260,8 +259,7 @@ namespace Raven.Client.Document.Async
                 idsArray,
                 transformer,
                 configuration.TransformerParameters,
-                new LoadTransformerOperation(this),
-                singleResult: false);
+                new LoadTransformerOperation(this));
 
             return AddLazyOperation<Dictionary<string, TResult>>(lazyLoadOperation, null);
         }

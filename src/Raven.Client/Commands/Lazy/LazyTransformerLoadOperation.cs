@@ -17,9 +17,8 @@ namespace Raven.Client.Commands.Lazy
         private readonly Dictionary<string, object> _transformerParameters;
 
         private readonly LoadTransformerOperation _loadTransformerOperation;
-        private readonly bool _singleResult;
 
-        public LazyTransformerLoadOperation(string[] ids, string transformer, Dictionary<string, object> transformerParameters, LoadTransformerOperation loadTransformerOperation, bool singleResult)
+        public LazyTransformerLoadOperation(string[] ids, string transformer, Dictionary<string, object> transformerParameters, LoadTransformerOperation loadTransformerOperation)
         {
             _ids = ids;
             _transformer = transformer;
@@ -27,7 +26,6 @@ namespace Raven.Client.Commands.Lazy
             _loadTransformerOperation = loadTransformerOperation;
             _loadTransformerOperation.ByIds(ids);
             _loadTransformerOperation.WithTransformer(transformer, transformerParameters);
-            _singleResult = singleResult;
         }
 
         public GetRequest CreateRequest()

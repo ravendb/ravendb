@@ -43,7 +43,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void ShouldWork()
         {
-            var convention = new DocumentConvention
+            var convention = new DocumentConventions
             {
                 FindIdentityProperty = info => info.Name == "id"
             };

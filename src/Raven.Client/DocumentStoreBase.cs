@@ -60,7 +60,6 @@ namespace Raven.Client
         /// <value>The shared operations headers.</value>
         public virtual NameValueCollection SharedOperationsHeaders { get; protected set; }
 
-        public abstract bool HasJsonRequestFactory { get; }
         public abstract string Identifier { get; set; }
         public abstract IDocumentStore Initialize();
         public abstract IAsyncDocumentSession OpenAsyncSession();
@@ -191,15 +190,15 @@ namespace Raven.Client
             }
         }
 
-        private DocumentConvention conventions;
+        private DocumentConventions conventions;
 
         /// <summary>
         /// Gets the conventions.
         /// </summary>
         /// <value>The conventions.</value>
-        public virtual DocumentConvention Conventions
+        public virtual DocumentConventions Conventions
         {
-            get { return conventions ?? (conventions = new DocumentConvention()); }
+            get { return conventions ?? (conventions = new DocumentConventions()); }
             set { conventions = value; }
         }
 
@@ -292,8 +291,6 @@ namespace Raven.Client
 
             Encryptor.Initialize(fips);
         }
-
-        public abstract void InitializeProfiling();
 
         protected void RegisterEvents(InMemoryDocumentSessionOperations session)
         {

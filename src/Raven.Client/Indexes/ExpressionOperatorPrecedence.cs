@@ -17,11 +17,11 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// +  -  !  ~  ++x  --x  (T)x
         /// </summary>
-        Unary = 140,                  
+        Unary = 140,
         /// <summary>
         /// *  /  %
         /// </summary>
-        Multiplicative = 130,         
+        Multiplicative = 130,
         /// <summary>
         /// +  -
         /// </summary>
@@ -29,23 +29,23 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// &lt;&lt; &gt;&gt;
         /// </summary>
-        Shift = 110,    
+        Shift = 110,
         /// <summary>
         /// &lt;  &gt;  &lt;=  &gt;=  is  as
         /// </summary>
-        RelationalAndTypeTesting = 100,             
+        RelationalAndTypeTesting = 100,
         /// <summary>
         /// ==  !=
         /// </summary>
-        Equality = 90,               
+        Equality = 90,
         /// <summary>
         /// &amp;
         /// </summary>
-        LogicalAND = 80,             
+        LogicalAND = 80,
         /// <summary>
         /// ^
         /// </summary>
-        LogicalXOR = 70,             
+        LogicalXOR = 70,
         /// <summary>
         /// |
         /// </summary>
@@ -65,7 +65,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// ?:
         /// </summary>
-        Conditional = 20,            
+        Conditional = 20,
         /// <summary>
         /// =  *=  /=  %=  +=  -=  &lt;&lt;=  &gt;&gt;=  &amp;=  ^=  |=
         /// </summary>

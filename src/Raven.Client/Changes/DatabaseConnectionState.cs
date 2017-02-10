@@ -6,17 +6,17 @@ namespace Raven.Client.Changes
 {
     public class DatabaseConnectionState : ConnectionStateBase
     {
-        private readonly Func<DatabaseConnectionState, Task> ensureConnection;
+        private readonly Func<DatabaseConnectionState, Task> _ensureConnection;
 
         public DatabaseConnectionState(Func<Task> disconnectAction, Func<DatabaseConnectionState, Task> ensureConnection, Task task)
             : base(disconnectAction, task)
         {
-            this.ensureConnection = ensureConnection;
+            _ensureConnection = ensureConnection;
         }
 
         protected override Task EnsureConnection()
         {
-            return ensureConnection(this);
+            return _ensureConnection(this);
         }
 
         public event Action<DocumentChange> OnDocumentChangeNotification = delegate { };

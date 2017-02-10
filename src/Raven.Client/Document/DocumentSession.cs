@@ -115,7 +115,7 @@ namespace Raven.Client.Document
             var command = new GetDocumentCommand
             {
                 Ids = new[] { documentInfo.Id },
-                Context = this.Context
+                Context = Context
             };
             RequestExecuter.Execute(command, Context);
 
@@ -184,7 +184,7 @@ namespace Raven.Client.Document
 
         public ResponseTimeInformation ExecuteAllPendingLazyOperations()
         {
-            if (pendingLazyOperations.Count == 0)
+            if (PendingLazyOperations.Count == 0)
                 return new ResponseTimeInformation();
 
             try
@@ -203,10 +203,10 @@ namespace Raven.Client.Document
                 responseTimeDuration.ComputeServerTotal();
 
 
-                foreach (var pendingLazyOperation in pendingLazyOperations)
+                foreach (var pendingLazyOperation in PendingLazyOperations)
                 {
                     Action<object> value;
-                    if (onEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
+                    if (OnEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
                         value(pendingLazyOperation.Result);
                 }
                 responseTimeDuration.TotalClientDuration = sw.Elapsed;
@@ -214,20 +214,20 @@ namespace Raven.Client.Document
             }
             finally
             {
-                pendingLazyOperations.Clear();
+                PendingLazyOperations.Clear();
             }
         }
 
         private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
             //WIP - Not final
-            var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToList();
+            var requests = PendingLazyOperations.Select(x => x.CreateRequest()).ToList();
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
             RequestExecuter.Execute(multiGetCommand, Context);
             var responses = multiGetCommand.Result;
 
-            for (var i = 0; i < pendingLazyOperations.Count; i++)
+            for (var i = 0; i < PendingLazyOperations.Count; i++)
             {
                 long totalTime;
                 string tempReqTime;
@@ -246,8 +246,8 @@ namespace Raven.Client.Document
                 if (response.RequestHasErrors())
                     throw new InvalidOperationException("Got an error from server, status code: " + (int)response.StatusCode + Environment.NewLine + response.Result);
 
-                pendingLazyOperations[i].HandleResponse(response);
-                if (pendingLazyOperations[i].RequiresRetry)
+                PendingLazyOperations[i].HandleResponse(response);
+                if (PendingLazyOperations[i].RequiresRetry)
                 {
                     return true;
                 }

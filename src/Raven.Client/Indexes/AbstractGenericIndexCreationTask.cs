@@ -33,10 +33,7 @@ namespace Raven.Client.Indexes
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
         }
 
-        public override bool IsMapReduce
-        {
-            get { return Reduce != null; }
-        }
+        public override bool IsMapReduce => Reduce != null;
 
         protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
         {

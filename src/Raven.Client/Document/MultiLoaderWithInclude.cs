@@ -20,8 +20,8 @@ namespace Raven.Client.Document
     /// </summary>
     public class MultiLoaderWithInclude<T> : ILoaderWithInclude<T>
     {
-        private readonly IDocumentSessionImpl session;
-        private readonly List<string> includes = new List<string>();
+        private readonly IDocumentSessionImpl _session;
+        private readonly List<string> _includes = new List<string>();
 
         /// <summary>
         /// Includes the specified path.
@@ -34,7 +34,7 @@ namespace Raven.Client.Document
 
         ILoaderWithInclude<T> Include(string path, Type type)
         {
-            includes.Add(path);
+            _includes.Add(path);
             return this;
         }
 
@@ -81,7 +81,7 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public Dictionary<string, T> Load(params string[] ids)
         {
-            return session.LoadInternal<T>(ids, includes.ToArray());
+            return _session.LoadInternal<T>(ids, _includes.ToArray());
         }
 
         /// <summary>
@@ -91,7 +91,7 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public Dictionary<string, T> Load(IEnumerable<string> ids)
         {
-            return session.LoadInternal<T>(ids.ToArray(), includes.ToArray());
+            return _session.LoadInternal<T>(ids.ToArray(), _includes.ToArray());
         }
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace Raven.Client.Document
         /// <param name="id">The id.</param>
         public T Load(string id)
         {
-            return session.LoadInternal<T>(new[] { id }, includes.ToArray()).Values.FirstOrDefault();
+            return _session.LoadInternal<T>(new[] { id }, _includes.ToArray()).Values.FirstOrDefault();
         }
 
         /// <summary>
@@ -109,7 +109,7 @@ namespace Raven.Client.Document
         /// <param name="session">The session.</param>
         internal MultiLoaderWithInclude(IDocumentSessionImpl session)
         {
-            this.session = session;
+            _session = session;
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace Raven.Client.Document
         /// <param name="ids">The ids.</param>
         public Dictionary<string, TResult> Load<TResult>(params string[] ids)
         {
-            return session.LoadInternal<TResult>(ids, includes.ToArray());
+            return _session.LoadInternal<TResult>(ids, _includes.ToArray());
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace Raven.Client.Document
         /// <param name="ids">The ids.</param>
         public Dictionary<string, TResult> Load<TResult>(IEnumerable<string> ids)
         {
-            return session.LoadInternal<TResult>(ids.ToArray(), includes.ToArray());
+            return _session.LoadInternal<TResult>(ids.ToArray(), _includes.ToArray());
         }
 
         /// <summary>
@@ -149,7 +149,7 @@ namespace Raven.Client.Document
             var configuration = new RavenLoadConfiguration();
             configure?.Invoke(configuration);
 
-            var result = session.LoadInternal<TResult>(new[] { id }, includes.ToArray(), transformer, configuration.TransformerParameters);
+            var result = _session.LoadInternal<TResult>(new[] { id }, _includes.ToArray(), transformer, configuration.TransformerParameters);
             if (result.Count == 0)
                 return default(TResult);
 
@@ -165,7 +165,7 @@ namespace Raven.Client.Document
             var configuration = new RavenLoadConfiguration();
             configure?.Invoke(configuration);
 
-            return session.LoadInternal<TResult>(ids.ToArray(), includes.ToArray(), transformer, configuration.TransformerParameters);
+            return _session.LoadInternal<TResult>(ids.ToArray(), _includes.ToArray(), transformer, configuration.TransformerParameters);
         }
     }
 }

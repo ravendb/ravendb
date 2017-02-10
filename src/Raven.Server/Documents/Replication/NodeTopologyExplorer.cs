@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Replication;
 using Raven.Client.Replication.Messages;
@@ -22,7 +21,6 @@ namespace Raven.Server.Documents.Replication
         private readonly DocumentsContextPool _pool;
         private readonly List<string> _alreadyVisited;
         private readonly ReplicationDestination _destination;
-        private readonly OperationCredentials _operationCredentials;
         private readonly string _dbId;
         private readonly long _timeout;
         private string _tcpUrl;
@@ -32,16 +30,14 @@ namespace Raven.Server.Documents.Replication
 
         public NodeTopologyExplorer(
             DocumentsContextPool pool,
-            List<string> alreadyVisited, 
-            ReplicationDestination destination, 
-            OperationCredentials operationCredentials, 
+            List<string> alreadyVisited,
+            ReplicationDestination destination,
             string dbId,
             TimeSpan timeout)
         {
             _pool = pool;
             _alreadyVisited = alreadyVisited;
             _destination = destination;
-            _operationCredentials = operationCredentials;
             _dbId = dbId;
             _timeout = (long)Math.Max(5000, timeout.TotalMilliseconds - 10000);// reduce the timeout by 10 sec each hop, to a min of 5
             _log = LoggingSource.Instance.GetLogger<NodeTopologyExplorer>(destination.Database);
@@ -107,8 +103,8 @@ namespace Raven.Server.Documents.Replication
                                 _log.Info("Discover topology request failed. Reason:" + topologyResponse.Exception);
                             throw new InvalidOperationException(topologyResponse.Message, new InvalidOperationException(topologyResponse.Exception));
                         }
-                        using (var topologyInfoJson = await context.ParseToMemoryAsync(stream,"ReplicationDiscovere/Read-topology-info",
-                            BlittableJsonDocumentBuilder.UsageMode.None, 
+                        using (var topologyInfoJson = await context.ParseToMemoryAsync(stream, "ReplicationDiscovere/Read-topology-info",
+                            BlittableJsonDocumentBuilder.UsageMode.None,
                             buffer))
                         {
                             topologyInfoJson.BlittableValidation();

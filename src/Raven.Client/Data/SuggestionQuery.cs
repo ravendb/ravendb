@@ -21,7 +21,7 @@ namespace Raven.Client.Data
         /// </summary>
         public SuggestionQuery()
         {
-            MaxSuggestions = SuggestionQuery.DefaultMaxSuggestions;
+            MaxSuggestions = DefaultMaxSuggestions;
         }
 
         /// <summary>

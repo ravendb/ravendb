@@ -14,7 +14,7 @@ namespace NewClientTests.NewClient.Tests.Indexes
         {
             var indexDefinition = new WithCasting
             {
-                Conventions = new DocumentConvention { PrettifyGeneratedLinqExpressions = false }
+                Conventions = new DocumentConventions { PrettifyGeneratedLinqExpressions = false }
             }.CreateIndexDefinition();
 
             var map = indexDefinition.Maps.First();

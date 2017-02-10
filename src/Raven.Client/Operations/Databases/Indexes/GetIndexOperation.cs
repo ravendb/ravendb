@@ -21,7 +21,7 @@ namespace Raven.Client.Operations.Databases.Indexes
             _indexName = indexName;
         }
 
-        public RavenCommand<IndexDefinition> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<IndexDefinition> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetIndexCommand(_indexName);
         }

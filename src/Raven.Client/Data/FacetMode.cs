@@ -9,7 +9,7 @@ namespace Raven.Client.Data
     }
 
     [Flags]
-    public enum FacetAggregation 
+    public enum FacetAggregation
     {
         None = 0,
         Count = 1,

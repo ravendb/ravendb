@@ -15,14 +15,14 @@ class changesApi extends abstractWebSocketClient<changesApiEventDto> {
     }
 
     //TODO: private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
-    private allDocsHandlers = ko.observableArray<changesCallback<Raven.Abstractions.Data.DocumentChange>>();
-    private allIndexesHandlers = ko.observableArray<changesCallback<Raven.Abstractions.Data.IndexChange>>();
-    private allTransformersHandlers = ko.observableArray<changesCallback<Raven.Abstractions.Data.TransformerChange>>();
+    private allDocsHandlers = ko.observableArray<changesCallback<Raven.Client.Data.DocumentChange>>();
+    private allIndexesHandlers = ko.observableArray<changesCallback<Raven.Client.Data.IndexChange>>();
+    private allTransformersHandlers = ko.observableArray<changesCallback<Raven.Client.Data.TransformerChange>>();
     //TODO: private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
 
-    private watchedDocuments = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.DocumentChange>>>();
-    private watchedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.DocumentChange>>>();
-    private watchedIndexes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.IndexChange>>>();
+    private watchedDocuments = new Map<string, KnockoutObservableArray<changesCallback<Raven.Client.Data.DocumentChange>>>();
+    private watchedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Client.Data.DocumentChange>>>();
+    private watchedIndexes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Client.Data.IndexChange>>>();
 
     /* TODO:
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
@@ -60,25 +60,25 @@ class changesApi extends abstractWebSocketClient<changesApiEventDto> {
 
         switch (eventType) {
             case "DocumentChangeNotification":
-                this.fireEvents<Raven.Abstractions.Data.DocumentChange>(this.allDocsHandlers(), value, () => true);
+                this.fireEvents<Raven.Client.Data.DocumentChange>(this.allDocsHandlers(), value, () => true);
 
                 this.watchedDocuments.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Abstractions.Data.DocumentChange>(callbacks(), value, (event) => event.Key != null && event.Key === key);
+                    this.fireEvents<Raven.Client.Data.DocumentChange>(callbacks(), value, (event) => event.Key != null && event.Key === key);
                 });
 
                 this.watchedPrefixes.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Abstractions.Data.DocumentChange>(callbacks(), value, (event) => event.Key != null && event.Key.startsWith(key));
+                    this.fireEvents<Raven.Client.Data.DocumentChange>(callbacks(), value, (event) => event.Key != null && event.Key.startsWith(key));
                 });
                 break;
             case "IndexChangeNotification":
-                this.fireEvents<Raven.Abstractions.Data.IndexChange>(this.allIndexesHandlers(), value, () => true);
+                this.fireEvents<Raven.Client.Data.IndexChange>(this.allIndexesHandlers(), value, () => true);
 
                 this.watchedIndexes.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Abstractions.Data.IndexChange>(callbacks(), value, (event) => event.Name != null && event.Name === key);
+                    this.fireEvents<Raven.Client.Data.IndexChange>(callbacks(), value, (event) => event.Name != null && event.Name === key);
                 });
                 break;
             case "TransformerChangeNotification":
-                this.fireEvents<Raven.Abstractions.Data.TransformerChange>(this.allTransformersHandlers(), value, () => true);
+                this.fireEvents<Raven.Client.Data.TransformerChange>(this.allTransformersHandlers(), value, () => true);
                 break;
             /* TODO: case "BulkInsertChangeNotification":
                 this.fireEvents(this.allBulkInsertsHandlers(), value, () => true);
@@ -118,8 +118,8 @@ class changesApi extends abstractWebSocketClient<changesApiEventDto> {
             //TODO: send events to other subscriptions*/
     }
 
-    watchAllIndexes(onChange: (e: Raven.Abstractions.Data.IndexChange) => void) {
-        var callback = new changesCallback<Raven.Abstractions.Data.IndexChange>(onChange);
+    watchAllIndexes(onChange: (e: Raven.Client.Data.IndexChange) => void) {
+        var callback = new changesCallback<Raven.Client.Data.IndexChange>(onChange);
         if (this.allIndexesHandlers().length === 0) {
             this.send("watch-indexes");
         }
@@ -132,12 +132,12 @@ class changesApi extends abstractWebSocketClient<changesApiEventDto> {
         });
     }
 
-    watchIndex(indexName: string, onChange: (e: Raven.Abstractions.Data.IndexChange) => void): changeSubscription {
-        let callback = new changesCallback<Raven.Abstractions.Data.IndexChange>(onChange);
+    watchIndex(indexName: string, onChange: (e: Raven.Client.Data.IndexChange) => void): changeSubscription {
+        let callback = new changesCallback<Raven.Client.Data.IndexChange>(onChange);
 
         if (!this.watchedIndexes.has(indexName)) {
             this.send("watch-index", indexName);
-            this.watchedIndexes.set(indexName, ko.observableArray<changesCallback<Raven.Abstractions.Data.IndexChange>>());
+            this.watchedIndexes.set(indexName, ko.observableArray<changesCallback<Raven.Client.Data.IndexChange>>());
         }
 
         let callbacks = this.watchedIndexes.get(indexName);
@@ -152,8 +152,8 @@ class changesApi extends abstractWebSocketClient<changesApiEventDto> {
         });
     }
 
-    watchAllTransformers(onChange: (e: Raven.Abstractions.Data.TransformerChange) => void) {
-        var callback = new changesCallback<Raven.Abstractions.Data.TransformerChange>(onChange);
+    watchAllTransformers(onChange: (e: Raven.Client.Data.TransformerChange) => void) {
+        var callback = new changesCallback<Raven.Client.Data.TransformerChange>(onChange);
         if (this.allTransformersHandlers().length === 0) {
             this.send("watch-transformers");
         }
@@ -181,8 +181,8 @@ class changesApi extends abstractWebSocketClient<changesApiEventDto> {
         });
     }*/
 
-    watchAllDocs(onChange: (e: Raven.Abstractions.Data.DocumentChange) => void) {
-        var callback = new changesCallback<Raven.Abstractions.Data.DocumentChange>(onChange);
+    watchAllDocs(onChange: (e: Raven.Client.Data.DocumentChange) => void) {
+        var callback = new changesCallback<Raven.Client.Data.DocumentChange>(onChange);
 
         if (this.allDocsHandlers().length === 0) {
             this.send("watch-docs");
@@ -198,12 +198,12 @@ class changesApi extends abstractWebSocketClient<changesApiEventDto> {
         });
     }
 
-    watchDocument(docId: string, onChange: (e: Raven.Abstractions.Data.DocumentChange) => void): changeSubscription {
-        let callback = new changesCallback<Raven.Abstractions.Data.DocumentChange>(onChange);
+    watchDocument(docId: string, onChange: (e: Raven.Client.Data.DocumentChange) => void): changeSubscription {
+        let callback = new changesCallback<Raven.Client.Data.DocumentChange>(onChange);
 
         if (!this.watchedDocuments.has(docId)) {
             this.send("watch-doc", docId);
-            this.watchedDocuments.set(docId, ko.observableArray<changesCallback<Raven.Abstractions.Data.DocumentChange>>());
+            this.watchedDocuments.set(docId, ko.observableArray<changesCallback<Raven.Client.Data.DocumentChange>>());
         }
 
         let callbacks = this.watchedDocuments.get(docId);
@@ -218,12 +218,12 @@ class changesApi extends abstractWebSocketClient<changesApiEventDto> {
         });
     }
 
-    watchDocsStartingWith(docIdPrefix: string, onChange: (e: Raven.Abstractions.Data.DocumentChange) => void): changeSubscription {
-        let callback = new changesCallback<Raven.Abstractions.Data.DocumentChange>(onChange);
+    watchDocsStartingWith(docIdPrefix: string, onChange: (e: Raven.Client.Data.DocumentChange) => void): changeSubscription {
+        let callback = new changesCallback<Raven.Client.Data.DocumentChange>(onChange);
 
         if (!this.watchedPrefixes.has(docIdPrefix)) {
             this.send("watch-prefix", docIdPrefix);
-            this.watchedPrefixes.set(docIdPrefix, ko.observableArray<changesCallback<Raven.Abstractions.Data.DocumentChange>>());
+            this.watchedPrefixes.set(docIdPrefix, ko.observableArray<changesCallback<Raven.Client.Data.DocumentChange>>());
         }
 
         let callbacks = this.watchedPrefixes.get(docIdPrefix);

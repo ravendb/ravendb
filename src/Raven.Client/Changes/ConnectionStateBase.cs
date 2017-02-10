@@ -31,9 +31,9 @@ namespace Raven.Client.Changes
 
         public void Dec()
         {
-            lock(this)
+            lock (this)
             {
-                if(--_value == 0)
+                if (--_value == 0)
                     _disconnectAction();
             }
         }

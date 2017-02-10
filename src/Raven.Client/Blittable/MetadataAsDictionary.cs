@@ -23,7 +23,7 @@ namespace Raven.Client.Blittable
                 var propDetails = new BlittableJsonReaderObject.PropertyDetails();
                 _source.GetPropertyByIndex(index, ref propDetails);
                 _metadata[propDetails.Name] = propDetails.Value.ToString();
-            };
+            }
         }
 
         public string this[string key]
@@ -46,13 +46,13 @@ namespace Raven.Client.Blittable
             }
         }
 
-        public bool Changed => (_metadata != null);
+        public bool Changed => _metadata != null;
 
-        public int Count => (_metadata != null) ? _metadata.Count : _source.GetPropertiesByInsertionOrder().Length;
+        public int Count => _metadata?.Count ?? _source.GetPropertiesByInsertionOrder().Length;
 
-        public bool IsReadOnly => (_metadata != null) && _metadata.IsReadOnly;
+        public bool IsReadOnly => _metadata != null && _metadata.IsReadOnly;
 
-        public ICollection<string> Keys => (_metadata != null) ? _metadata.Keys : _source.GetPropertyNames();
+        public ICollection<string> Keys => _metadata != null ? _metadata.Keys : _source.GetPropertyNames();
 
         public ICollection<string> Values
         {
@@ -126,7 +126,7 @@ namespace Raven.Client.Blittable
 
         public bool Remove(KeyValuePair<string, string> item)
         {
-            if (_metadata != null)
+            if (_metadata == null)
                 Init();
             return _metadata.Remove(item);
         }

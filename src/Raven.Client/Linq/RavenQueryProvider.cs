@@ -22,15 +22,15 @@ namespace Raven.Client.Linq
     /// </summary>
     public class RavenQueryProvider<T> : IRavenQueryProvider
     {
-        private Action<QueryResult> afterQueryExecuted;
-        private Action<object> afterStreamExecuted;
-        private Action<IDocumentQueryCustomization> customizeQuery;
-        private readonly string indexName;
-        private readonly IDocumentQueryGenerator queryGenerator;
-        private readonly RavenQueryStatistics ravenQueryStatistics;
-        private readonly RavenQueryHighlightings highlightings;
-        private readonly bool isMapReduce;
-        private readonly Dictionary<string, object> transformerParamaters = new Dictionary<string, object>();
+        private Action<QueryResult> _afterQueryExecuted;
+        private Action<object> _afterStreamExecuted;
+        private Action<IDocumentQueryCustomization> _customizeQuery;
+        private readonly string _indexName;
+        private readonly IDocumentQueryGenerator _queryGenerator;
+        private readonly RavenQueryStatistics _ravenQueryStatistics;
+        private readonly RavenQueryHighlightings _highlightings;
+        private readonly bool _isMapReduce;
+        private readonly Dictionary<string, object> _transformerParamaters = new Dictionary<string, object>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
@@ -47,48 +47,39 @@ namespace Raven.Client.Linq
             FieldsToFetch = new HashSet<string>();
             FieldsToRename = new List<RenamedField>();
 
-            this.queryGenerator = queryGenerator;
-            this.indexName = indexName;
-            this.ravenQueryStatistics = ravenQueryStatistics;
-            this.highlightings = highlightings;
-            this.isMapReduce = isMapReduce;
+            _queryGenerator = queryGenerator;
+            _indexName = indexName;
+            _ravenQueryStatistics = ravenQueryStatistics;
+            _highlightings = highlightings;
+            _isMapReduce = isMapReduce;
         }
-        
+
         /// <summary>
         /// Gets the name of the index.
         /// </summary>
         /// <value>The name of the index.</value>
-        public string IndexName
-        {
-            get { return indexName; }
-        }
+        public string IndexName => _indexName;
 
         /// <summary>
         /// Get the query generator
         /// </summary>
-        public IDocumentQueryGenerator QueryGenerator
-        {
-            get { return queryGenerator; }
-        }
+        public IDocumentQueryGenerator QueryGenerator => _queryGenerator;
 
         /// <summary>
         /// Gets the actions for customizing the generated lucene query
         /// </summary>
-        public Action<IDocumentQueryCustomization> CustomizeQuery
-        {
-            get { return customizeQuery; }
-        }
+        public Action<IDocumentQueryCustomization> CustomizeQuery => _customizeQuery;
 
         /// <summary>
         /// Set the fields to fetch
         /// </summary>
-        public HashSet<string> FieldsToFetch { get; private set; }
+        public HashSet<string> FieldsToFetch { get; }
 
         /// <summary>
         /// Gets the results transformer to use
         /// </summary>
         public string ResultTransformer { get; private set; }
-        public Dictionary<string, object> TransformerParameters { get { return transformerParamaters; } }
+        public Dictionary<string, object> TransformerParameters => _transformerParamaters;
 
         public void AddQueryInput(string name, object value)
         {
@@ -97,7 +88,7 @@ namespace Raven.Client.Linq
 
         public void AddTransformerParameter(string name, object value)
         {
-            transformerParamaters[name] = value;
+            _transformerParamaters[name] = value;
         }
 
         public void AddTransformerParameter(string name, DateTime value)
@@ -111,23 +102,23 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Set the fields to rename
         /// </summary>
-        public List<RenamedField> FieldsToRename { get; private set; }
+        public List<RenamedField> FieldsToRename { get; }
 
         /// <summary>
         /// Change the result type for the query provider
         /// </summary>
-        public IRavenQueryProvider For<S>()
+        public IRavenQueryProvider For<TS>()
         {
-            if (typeof(T) == typeof(S))
+            if (typeof(T) == typeof(TS))
                 return this;
 
-            var ravenQueryProvider = new RavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics, highlightings
-                ,
-                isMapReduce
-            );
-            ravenQueryProvider.ResultTransformer = ResultTransformer;
-            ravenQueryProvider.Customize(customizeQuery);
-            foreach (var transformerParam in this.transformerParamaters)
+            var ravenQueryProvider = new RavenQueryProvider<TS>(_queryGenerator, _indexName, _ravenQueryStatistics, _highlightings, _isMapReduce)
+            {
+                ResultTransformer = ResultTransformer
+            };
+
+            ravenQueryProvider.Customize(_customizeQuery);
+            foreach (var transformerParam in _transformerParamaters)
             {
                 ravenQueryProvider.AddTransformerParameter(transformerParam.Key, transformerParam.Value);
             }
@@ -146,12 +137,12 @@ namespace Raven.Client.Linq
             return GetQueryProviderProcessor<T>().Execute(expression);
         }
 
-        IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
+        IQueryable<TS> IQueryProvider.CreateQuery<TS>(Expression expression)
         {
-            var a = queryGenerator.CreateRavenQueryInspector<S>();
+            var a = _queryGenerator.CreateRavenQueryInspector<TS>();
 
-            a.Init(this, ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
-                                              , isMapReduce);
+            a.Init(this, _ravenQueryStatistics, _highlightings, _indexName, expression, (InMemoryDocumentSessionOperations)_queryGenerator
+                                              , _isMapReduce);
 
             return a;
         }
@@ -164,7 +155,7 @@ namespace Raven.Client.Linq
                 var queryInspectorGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
                 var args = new object[]
                 {
-                    this, ravenQueryStatistics, highlightings, indexName, expression, queryGenerator, isMapReduce
+                    this, _ravenQueryStatistics, _highlightings, _indexName, expression, _queryGenerator, _isMapReduce
                 };
                 var queryInspectorInstance = Activator.CreateInstance(queryInspectorGenericType);
                 var methodInfo = queryInspectorGenericType.GetMethod("Init");
@@ -180,12 +171,12 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Executes the specified expression.
         /// </summary>
-        /// <typeparam name="S"></typeparam>
+        /// <typeparam name="TS"></typeparam>
         /// <param name="expression">The expression.</param>
         /// <returns></returns>
-        S IQueryProvider.Execute<S>(Expression expression)
+        TS IQueryProvider.Execute<TS>(Expression expression)
         {
-            return (S)Execute(expression);
+            return (TS)Execute(expression);
         }
 
         /// <summary>
@@ -205,15 +196,15 @@ namespace Raven.Client.Linq
         /// </summary>
         public void AfterQueryExecuted(Action<QueryResult> afterQueryExecutedCallback)
         {
-            this.afterQueryExecuted = afterQueryExecutedCallback;
+            _afterQueryExecuted = afterQueryExecutedCallback;
         }
 
         public void AfterStreamExecuted(Action<object> afterStreamExecutedCallback)
         {
-            this.afterStreamExecuted = afterStreamExecutedCallback;
+            _afterStreamExecuted = afterStreamExecutedCallback;
         }
 
-        
+
 
         /// <summary>
         /// Customizes the query using the specified action
@@ -223,30 +214,21 @@ namespace Raven.Client.Linq
         {
             if (action == null)
                 return;
-            customizeQuery += action;
+            _customizeQuery += action;
         }
 
         public void TransformWith(string transformerName)
         {
-            this.ResultTransformer = transformerName;
+            ResultTransformer = transformerName;
         }
 
         /// <summary>
         /// Move the registered after query actions
         /// </summary>
-        public void MoveAfterQueryExecuted<K>(IAsyncDocumentQuery<K> documentQuery)
+        public void MoveAfterQueryExecuted<TK>(IAsyncDocumentQuery<TK> documentQuery)
         {
-            if (afterQueryExecuted != null)
-                documentQuery.AfterQueryExecuted(afterQueryExecuted);
-        }
-
-        /// <summary>
-        /// Convert the expression to a Lucene query
-        /// </summary>
-        [Obsolete("Use ToAsyncDocumentQuery instead.")]
-        public IAsyncDocumentQuery<TResult> ToAsyncLuceneQuery<TResult>(Expression expression)
-        {
-            return ToAsyncDocumentQuery<TResult>(expression);
+            if (_afterQueryExecuted != null)
+                documentQuery.AfterQueryExecuted(_afterQueryExecuted);
         }
 
         /// <summary>
@@ -269,12 +251,12 @@ namespace Raven.Client.Linq
         /// Register the query as a lazy query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
-        public Lazy<IEnumerable<S>> Lazily<S>(Expression expression, Action<IEnumerable<S>> onEval)
+        public Lazy<IEnumerable<TS>> Lazily<TS>(Expression expression, Action<IEnumerable<TS>> onEval)
         {
-            var processor = GetQueryProviderProcessor<S>();
+            var processor = GetQueryProviderProcessor<TS>();
             var query = processor.GetDocumentQueryFor(expression);
-            if (afterQueryExecuted != null)
-                query.AfterQueryExecuted(afterQueryExecuted);
+            if (_afterQueryExecuted != null)
+                query.AfterQueryExecuted(_afterQueryExecuted);
 
             var renamedFields = FieldsToFetch.Select(field =>
             {
@@ -286,9 +268,9 @@ namespace Raven.Client.Linq
 
             if (renamedFields.Length > 0)
                 query.AfterQueryExecuted(processor.RenameResults);
-        
+
             if (FieldsToFetch.Count > 0)
-                query = query.SelectFields<S>(FieldsToFetch.ToArray(), renamedFields);
+                query = query.SelectFields<TS>(FieldsToFetch.ToArray(), renamedFields);
 
             return query.Lazily(onEval);
         }
@@ -297,13 +279,13 @@ namespace Raven.Client.Linq
         /// Register the query as a lazy async query in the session and return a lazy async 
         /// instance that will evaluate the query only when needed
         /// </summary>
-        public Lazy<Task<IEnumerable<S>>> LazilyAsync<S>(Expression expression, Action<IEnumerable<S>> onEval)
+        public Lazy<Task<IEnumerable<TS>>> LazilyAsync<TS>(Expression expression, Action<IEnumerable<TS>> onEval)
         {
-            var processor = GetQueryProviderProcessor<S>();
+            var processor = GetQueryProviderProcessor<TS>();
             var query = processor.GetDocumentQueryForAsync(expression);
 
-            if (afterQueryExecuted != null)
-                query.AfterQueryExecuted(afterQueryExecuted);
+            if (_afterQueryExecuted != null)
+                query.AfterQueryExecuted(_afterQueryExecuted);
 
             var renamedFields = FieldsToFetch.Select(field =>
             {
@@ -317,18 +299,18 @@ namespace Raven.Client.Linq
                 query.AfterQueryExecuted(processor.RenameResults);
 
             if (FieldsToFetch.Count > 0)
-                query = query.SelectFields<S>(FieldsToFetch.ToArray(), renamedFields);
+                query = query.SelectFields<TS>(FieldsToFetch.ToArray(), renamedFields);
 
             return query.LazilyAsync(onEval);
         }
-       
+
         /// <summary>
         /// Register the query as a lazy-count query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
-        public Lazy<int> CountLazily<S>(Expression expression)
+        public Lazy<int> CountLazily<TS>(Expression expression)
         {
-            var processor = GetQueryProviderProcessor<S>();
+            var processor = GetQueryProviderProcessor<TS>();
             var query = processor.GetDocumentQueryFor(expression);
             return query.CountLazily();
         }
@@ -337,28 +319,19 @@ namespace Raven.Client.Linq
         /// Register the query as a lazy-count query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
-        public Lazy<Task<int>> CountLazilyAsync<S>(Expression expression, CancellationToken token = default (CancellationToken))
+        public Lazy<Task<int>> CountLazilyAsync<TS>(Expression expression, CancellationToken token = default(CancellationToken))
         {
-            var processor = GetQueryProviderProcessor<S>();
+            var processor = GetQueryProviderProcessor<TS>();
             var query = processor.GetAsyncDocumentQueryFor(expression);
             return query.CountLazilyAsync(token);
         }
 
-        protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
+        protected virtual RavenQueryProviderProcessor<TS> GetQueryProviderProcessor<TS>()
         {
-            return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, afterStreamExecuted, indexName,
+            return new RavenQueryProviderProcessor<TS>(_queryGenerator, _customizeQuery, _afterQueryExecuted, _afterStreamExecuted, _indexName,
                 FieldsToFetch,
                 FieldsToRename,
-                isMapReduce, ResultTransformer, transformerParamaters, OriginalQueryType);
-        }
-
-        /// <summary>
-        /// Convert the expression to a Lucene query
-        /// </summary>
-        [Obsolete("Use ToDocumentQuery instead.")]
-        public IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression)
-        {
-            return ToDocumentQuery<TResult>(expression);
+                _isMapReduce, ResultTransformer, _transformerParamaters, OriginalQueryType);
         }
 
         /// <summary>
@@ -368,7 +341,7 @@ namespace Raven.Client.Linq
         {
             var processor = GetQueryProviderProcessor<T>();
             var result = (IDocumentQuery<TResult>)processor.GetDocumentQueryFor(expression);
-            
+
             result.SetResultTransformer(ResultTransformer);
             var renamedFields = FieldsToFetch.Select(field =>
             {

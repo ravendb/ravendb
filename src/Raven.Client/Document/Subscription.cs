@@ -36,7 +36,7 @@ namespace Raven.Client.Document
     {
         private readonly Logger _logger;
         private readonly IDocumentStore _store;
-        private readonly DocumentConvention _conventions;
+        private readonly DocumentConventions _conventions;
         private readonly string _dbName;
         private readonly CancellationTokenSource _proccessingCts = new CancellationTokenSource();
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
@@ -50,7 +50,7 @@ namespace Raven.Client.Document
         private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
 
         internal Subscription(SubscriptionConnectionOptions options, IDocumentStore documentStore,
-            DocumentConvention conventions, string dbName)
+            DocumentConventions conventions, string dbName)
         {
             _options = options;
             _logger = LoggingSource.Instance.GetLogger<Subscription<T>>(dbName);
@@ -72,12 +72,11 @@ namespace Raven.Client.Document
             try
             {
                 CloseTcpClient();
-                if(_logger.IsInfoEnabled)
+                if (_logger.IsInfoEnabled)
                     _logger.Info($"Subscription {_options.SubscriptionId} was not disposed properly");
             }
             catch
             {
-
             }
         }
 
@@ -208,7 +207,7 @@ namespace Raven.Client.Document
             await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
 
             _tcpClient.NoDelay = true;
-            _tcpClient.SendBufferSize = 32*1024;
+            _tcpClient.SendBufferSize = 32 * 1024;
             _tcpClient.ReceiveBufferSize = 4096;
             _networkStream = _tcpClient.GetStream();
 
@@ -251,7 +250,7 @@ namespace Raven.Client.Document
                 {
                     subscriber.OnError(ex);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     if (_logger.IsInfoEnabled)
                     {
@@ -274,16 +273,16 @@ namespace Raven.Client.Document
                     break;
                 case SubscriptionConnectionServerMessage.ConnectionStatus.InUse:
                     throw new SubscriptionInUseException(
-                        $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it's in use and the connection strategy is {this._options.Strategy}");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
                     throw new SubscriptionClosedException(
-                        $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it was closed");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it was closed");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.NotFound:
                     throw new SubscriptionDoesNotExistException(
-                        $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it does not exist");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist");
                 default:
                     throw new ArgumentException(
-                        $"Subscription {this._options.SubscriptionId} could not be opened, reason: {connectionStatus.Status}");
+                        $"Subscription {_options.SubscriptionId} could not be opened, reason: {connectionStatus.Status}");
             }
         }
 
@@ -342,7 +341,7 @@ namespace Raven.Client.Document
                             notifiedSubscribers = Task.Run(() =>
                             {
                                 // ReSharper disable once AccessToDisposedClosure
-                                using(incomingBatch.Item2)
+                                using (incomingBatch.Item2)
                                 {
                                     foreach (var curDoc in incomingBatch.Item1)
                                     {
@@ -355,7 +354,7 @@ namespace Raven.Client.Document
                                 SendAck(lastReceivedEtag, tcpStream);
                             });
 
-                            
+
                         }
                     }
                 }
@@ -439,7 +438,7 @@ namespace Raven.Client.Document
                 blittable.BlittableValidation();
                 var message = JsonDeserializationClient.SubscriptionNextObjectResult(blittable);
                 message.ParentObjectToDispose = blittable;
-                
+
                 return message;
             }
             catch (Exception)
@@ -666,7 +665,6 @@ namespace Raven.Client.Document
                 }
                 catch (Exception)
                 {
-
                 }
             }
         }

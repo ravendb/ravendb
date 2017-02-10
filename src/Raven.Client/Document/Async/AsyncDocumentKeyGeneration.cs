@@ -14,35 +14,35 @@ namespace Raven.Client.Document.Async
 {
     public class AsyncDocumentKeyGeneration
     {
-        private readonly LinkedList<object> entitiesStoredWithoutIDs = new LinkedList<object>();
+        private readonly LinkedList<object> _entitiesStoredWithoutIDs = new LinkedList<object>();
 
         public delegate bool TryGetValue(object key, out DocumentInfo documentInfo);
 
         public delegate string ModifyObjectId(string id, object entity, BlittableJsonReaderObject metadata);
 
-        private readonly InMemoryDocumentSessionOperations session;
-        private readonly TryGetValue tryGetValue;
-        private readonly ModifyObjectId modifyObjectId;
+        private readonly InMemoryDocumentSessionOperations _session;
+        private readonly TryGetValue _tryGetValue;
+        private readonly ModifyObjectId _modifyObjectId;
 
-        public AsyncDocumentKeyGeneration(InMemoryDocumentSessionOperations session,TryGetValue tryGetValue, ModifyObjectId modifyObjectId)
+        public AsyncDocumentKeyGeneration(InMemoryDocumentSessionOperations session, TryGetValue tryGetValue, ModifyObjectId modifyObjectId)
         {
-            this.session = session;
-            this.tryGetValue = tryGetValue;
-            this.modifyObjectId = modifyObjectId;
+            _session = session;
+            _tryGetValue = tryGetValue;
+            _modifyObjectId = modifyObjectId;
         }
 
         public Task GenerateDocumentKeysForSaveChanges()
         {
-            if (entitiesStoredWithoutIDs.Count != 0)
+            if (_entitiesStoredWithoutIDs.Count != 0)
             {
-                var entity = entitiesStoredWithoutIDs.First.Value;
-                entitiesStoredWithoutIDs.RemoveFirst();
+                var entity = _entitiesStoredWithoutIDs.First.Value;
+                _entitiesStoredWithoutIDs.RemoveFirst();
 
                 DocumentInfo documentInfo;
-                if (tryGetValue(entity, out documentInfo))
+                if (_tryGetValue(entity, out documentInfo))
                 {
-                    return session.GenerateDocumentKeyForStorageAsync(entity)
-                        .ContinueWith(task => documentInfo.Id = modifyObjectId(task.Result, entity, documentInfo.Metadata))
+                    return _session.GenerateDocumentKeyForStorageAsync(entity)
+                        .ContinueWith(task => documentInfo.Id = _modifyObjectId(task.Result, entity, documentInfo.Metadata))
                         .ContinueWithTask(GenerateDocumentKeysForSaveChanges);
                 }
             }
@@ -52,7 +52,7 @@ namespace Raven.Client.Document.Async
 
         public void Add(object entity)
         {
-            entitiesStoredWithoutIDs.AddLast(entity);
+            _entitiesStoredWithoutIDs.AddLast(entity);
         }
     }
 }

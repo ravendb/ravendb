@@ -20,7 +20,7 @@ namespace Raven.Client.Operations.Databases.Indexes
             _indexName = indexName;
         }
 
-        public RavenCommand<OperationIdResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new CompactIndexCommand(_indexName);
         }

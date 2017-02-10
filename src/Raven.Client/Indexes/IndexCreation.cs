@@ -30,7 +30,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Creates the indexes found in the specified assembly.
         /// </summary>
-        /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
+        /// <param name="assemblyToScan">The assembly to scan for indexing tasks.</param>
         /// <param name="documentStore">The document store.</param>
         public static void CreateIndexes(Assembly assemblyToScan, IDocumentStore documentStore)
         {
@@ -68,7 +68,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Creates the indexes found in the specified assembly.
         /// </summary>
-        public static void CreateIndexes(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConvention conventions)
+        public static void CreateIndexes(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConventions conventions)
         {
             var indexCompilationExceptions = new List<IndexCompilationException>();
             try
@@ -78,7 +78,7 @@ namespace Raven.Client.Indexes
 
                 var indexesToAdd = CreateIndexesToAdd(tasks, conventions);
                 var putIndexesOperation = new PutIndexesOperation(indexesToAdd);
-                ((DocumentStore) documentStore).Admin.Send(putIndexesOperation);
+                ((DocumentStore)documentStore).Admin.Send(putIndexesOperation);
             }
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception ex)
@@ -142,7 +142,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Creates the indexes found in the specified assembly.
         /// </summary>
-        public static async Task CreateIndexesAsync(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConvention conventions)
+        public static async Task CreateIndexesAsync(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConventions conventions)
         {
             var indexCompilationExceptions = new List<IndexCompilationException>();
             try
@@ -216,9 +216,9 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Creates the indexes found in the specified assembly in side-by-side mode.
         /// </summary>
-        public static void SideBySideCreateIndexes(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConvention conventions, long? minimumEtagBeforeReplace = null)
+        public static void SideBySideCreateIndexes(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
         {
-            var documentStoreBase = (DocumentStoreBase) documentStore;
+            var documentStoreBase = (DocumentStoreBase)documentStore;
             var indexCompilationExceptions = new List<IndexCompilationException>();
             try
             {
@@ -299,7 +299,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Creates the indexes found in the specified assembly in side-by-side mode.
         /// </summary>
-        public static async Task SideBySideCreateIndexesAsync(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConvention conventions, long? minimumEtagBeforeReplace = null)
+        public static async Task SideBySideCreateIndexesAsync(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
         {
             var documentStoreBase = (DocumentStoreBase)documentStore;
             var indexCompilationExceptions = new List<IndexCompilationException>();
@@ -343,7 +343,7 @@ namespace Raven.Client.Indexes
                 throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
         }
 
-        private static void CreateTransformers(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConvention conventions)
+        private static void CreateTransformers(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConventions conventions)
         {
             foreach (var task in GetAllInstancesOfType<AbstractTransformerCreationTask>(assemblyToScan))
             {
@@ -359,7 +359,7 @@ namespace Raven.Client.Indexes
             }
         }
 
-        private static async Task CreateTransformersAsync(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConvention conventions)
+        private static async Task CreateTransformersAsync(Assembly assemblyToScan, IDocumentStore documentStore, DocumentConventions conventions)
         {
             foreach (var task in GetAllInstancesOfType<AbstractTransformerCreationTask>(assemblyToScan))
             {
@@ -375,7 +375,7 @@ namespace Raven.Client.Indexes
             }
         }
 
-        public static IndexToAdd[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConvention conventions,
+        public static IndexToAdd[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConventions conventions,
             long? minimumEtagBeforeReplace = null)
         {
             var indexesToAdd = indexCreationTasks

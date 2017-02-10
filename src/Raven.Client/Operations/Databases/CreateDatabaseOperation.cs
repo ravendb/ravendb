@@ -21,7 +21,7 @@ namespace Raven.Client.Operations.Databases
             _databaseDocument = databaseDocument;
         }
 
-        public RavenCommand<CreateDatabaseResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<CreateDatabaseResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new CreateDatabaseCommand(conventions, context, _databaseDocument);
         }
@@ -32,7 +32,7 @@ namespace Raven.Client.Operations.Databases
             private readonly BlittableJsonReaderObject _databaseDocument;
             private readonly string _databaseName;
 
-            public CreateDatabaseCommand(DocumentConvention conventions, JsonOperationContext context, DatabaseDocument databaseDocument)
+            public CreateDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseDocument databaseDocument)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

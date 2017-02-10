@@ -8,14 +8,14 @@ namespace Raven.Client.Data
 {
 
     public class ConnectionStringOptions
-    {        
-        private string url;
+    {
+        private string _url;
         public string Url
         {
-            get { return url; }
+            get { return _url; }
             set
             {
-                url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
+                _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
             }
         }
 
@@ -82,27 +82,27 @@ namespace Raven.Client.Data
             return new ConnectionStringParser<TConnectionString>("code", connectionString);
         }
 
-        private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)",
+        private static readonly Regex ConnectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)",
                                                                         RegexOptions.Compiled |
                                                                         RegexOptions.IgnorePatternWhitespace);
 
-        private static readonly Regex connectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
+        private static readonly Regex ConnectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
                                                                                          RegexOptions.Compiled |
                                                                                          RegexOptions.IgnorePatternWhitespace);
 
-        private readonly string connectionString;
-        private readonly string connectionStringName;
+        private readonly string _connectionString;
+        private readonly string _connectionStringName;
 
-        private bool setupPasswordInConnectionString;
-        private bool setupUsernameInConnectionString;
+        private bool _setupPasswordInConnectionString;
+        private bool _setupUsernameInConnectionString;
 
         public TConnectionString ConnectionStringOptions { get; set; }
 
         private ConnectionStringParser(string connectionStringName, string connectionString)
         {
             ConnectionStringOptions = new TConnectionString();
-            this.connectionString = connectionString;
-            this.connectionStringName = connectionStringName;
+            _connectionString = connectionString;
+            _connectionStringName = connectionStringName;
         }
 
         /// <summary>
@@ -120,11 +120,11 @@ namespace Raven.Client.Data
                     break;
                 case "user":
                     networkCredentials.UserName = value;
-                    setupUsernameInConnectionString = true;
+                    _setupUsernameInConnectionString = true;
                     break;
                 case "password":
                     networkCredentials.Password = value;
-                    setupPasswordInConnectionString = true;
+                    _setupPasswordInConnectionString = true;
                     break;
                 case "domain":
                     networkCredentials.Domain = value;
@@ -157,7 +157,7 @@ namespace Raven.Client.Data
                     options.DefaultDatabase = value;
                     break;
 
-               case "failover":
+                case "failover":
                     if (options.FailoverServers == null)
                         options.FailoverServers = new FailoverServers();
 
@@ -242,14 +242,14 @@ namespace Raven.Client.Data
 
         public void Parse()
         {
-            string[] strings = connectionStringArgumentsSplitterRegex.Split(connectionString);
+            string[] strings = ConnectionStringArgumentsSplitterRegex.Split(_connectionString);
             var networkCredential = new NetworkCredential();
             foreach (string str in strings)
             {
                 string arg = str.Trim(';');
-                Match match = connectionStringRegex.Match(arg);
+                Match match = ConnectionStringRegex.Match(arg);
                 if (match.Success == false)
-                    throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed", connectionStringName));
+                    throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed", _connectionStringName));
 
                 string key = match.Groups[1].Value.ToLower();
                 string value = match.Groups[2].Value.Trim();
@@ -262,15 +262,15 @@ namespace Raven.Client.Data
                 processed |= ProcessConnectionStringOption(ConnectionStringOptions as FilesConnectionStringOptions, key, value);
 
                 if (!processed)
-                    throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed, unknown option: '{1}'", connectionStringName, key));
+                    throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed, unknown option: '{1}'", _connectionStringName, key));
             }
 
-            if (setupUsernameInConnectionString == false && setupPasswordInConnectionString == false)
+            if (_setupUsernameInConnectionString == false && _setupPasswordInConnectionString == false)
                 return;
 
-            if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
-                throw new ArgumentException(string.Format("User and Password must both be specified in the connection string: '{0}'", connectionStringName));
-            
+            if (_setupUsernameInConnectionString == false || _setupPasswordInConnectionString == false)
+                throw new ArgumentException(string.Format("User and Password must both be specified in the connection string: '{0}'", _connectionStringName));
+
         }
     }
 }

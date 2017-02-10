@@ -16,7 +16,7 @@ namespace Raven.Client.Data
         /// <param name="fieldWithPotentialPrefix">The field with potential prefix.</param>
         public SortedField(string fieldWithPotentialPrefix)
         {
-            if(fieldWithPotentialPrefix.StartsWith("+"))
+            if (fieldWithPotentialPrefix.StartsWith("+"))
             {
                 Field = fieldWithPotentialPrefix.Substring(1);
             }

@@ -28,40 +28,6 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
-        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
-        [Obsolete("Use DocumentQuery instead.")]
-        public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            return DocumentQuery<T, TIndexCreator>();
-        }
-
-        /// <summary>
-        /// Query the specified index using Lucene syntax
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="indexName">Name of the index.</param>
-        /// <param name="isMapReduce">Indicates if index is a map-reduce index.</param>
-        /// <returns></returns>
-        [Obsolete("Use DocumentQuery instead.")]
-        public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
-        {
-            return DocumentQuery<T>(indexName, isMapReduce);
-        }
-
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
-        [Obsolete("Use DocumentQuery instead.")]
-        public IDocumentQuery<T> LuceneQuery<T>()
-        {
-            return DocumentQuery<T>();
-        }
-
-        /// <summary>
         /// Query the specified index using Lucene syntax
         /// </summary>
         /// <typeparam name="T"></typeparam>

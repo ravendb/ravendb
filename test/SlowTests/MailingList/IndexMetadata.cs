@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void WillGenerateProperIndex()
         {
-            var usersDeleteStatus = new Users_DeleteStatus { Conventions = new DocumentConvention() };
+            var usersDeleteStatus = new Users_DeleteStatus { Conventions = new DocumentConventions() };
             var indexDefinition = usersDeleteStatus.CreateIndexDefinition();
             Assert.Contains("Deleted = this.MetadataFor(user)[\"Deleted\"]", indexDefinition.Maps.First());
         }

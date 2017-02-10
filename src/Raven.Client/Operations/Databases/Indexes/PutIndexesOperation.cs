@@ -22,7 +22,7 @@ namespace Raven.Client.Operations.Databases.Indexes
             _indexToAdd = indexToAdd;
         }
 
-        public RavenCommand<BlittableArrayResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<BlittableArrayResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PutIndexesCommand(conventions, context, _indexToAdd);
         }
@@ -32,7 +32,7 @@ namespace Raven.Client.Operations.Databases.Indexes
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject[] _indexToAdd;
 
-            public PutIndexesCommand(DocumentConvention conventions, JsonOperationContext context, IndexToAdd[] indexesToAdd)
+            public PutIndexesCommand(DocumentConventions conventions, JsonOperationContext context, IndexToAdd[] indexesToAdd)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

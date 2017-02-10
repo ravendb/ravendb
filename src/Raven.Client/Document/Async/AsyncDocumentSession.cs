@@ -83,7 +83,7 @@ namespace Raven.Client.Document.Async
             var command = new GetDocumentCommand
             {
                 Ids = new[] { documentInfo.Id },
-                Context = this.Context
+                Context = Context
             };
             await RequestExecuter.ExecuteAsync(command, Context, token);
 
@@ -93,7 +93,7 @@ namespace Raven.Client.Document.Async
         public async Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
-            return await DeleteByIndexAsync<T>(indexCreator.IndexName, expression).ConfigureAwait(false);
+            return await DeleteByIndexAsync(indexCreator.IndexName, expression).ConfigureAwait(false);
         }
 
         public async Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)

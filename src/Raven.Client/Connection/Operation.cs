@@ -15,7 +15,7 @@ namespace Raven.Client.Connection
     public class Operation : IObserver<OperationStatusChange>
     {
         private readonly RequestExecuter _requestExecuter;
-        private readonly DocumentConvention _conventions;
+        private readonly DocumentConventions _conventions;
         private readonly long _id;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
 
@@ -25,7 +25,7 @@ namespace Raven.Client.Connection
 
         internal long Id => _id;
 
-        public Operation(RequestExecuter requestExecuter, DocumentConvention conventions, long id)
+        public Operation(RequestExecuter requestExecuter, DocumentConventions conventions, long id)
         {
             DevelopmentHelper.TimeBomb(); // use changes API
 

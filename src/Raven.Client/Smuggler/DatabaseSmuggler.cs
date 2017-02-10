@@ -138,7 +138,7 @@ namespace Raven.Client.Smuggler
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _options;
 
-            public ExportCommand(DocumentConvention conventions, JsonOperationContext context, DatabaseSmugglerOptions options)
+            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerOptions options)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

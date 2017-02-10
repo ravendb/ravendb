@@ -15,12 +15,12 @@ namespace Raven.Client.Document.Batches
     public class LazyMoreLikeThisOperation<T> : ILazyOperation
     {
         private readonly MoreLikeThisQuery _query;
-        private readonly MoreLikeThisOperation<T> _operation;
+        private readonly MoreLikeThisOperation _operation;
 
         public LazyMoreLikeThisOperation(InMemoryDocumentSessionOperations session, MoreLikeThisQuery query)
         {
             _query = query;
-            _operation = new MoreLikeThisOperation<T>(session, query);
+            _operation = new MoreLikeThisOperation(session, query);
         }
 
         public GetRequest CreateRequest()

@@ -17,7 +17,7 @@ namespace Raven.Client.Document
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria for a given type.
         /// </summary>
         /// <returns>Created subscription identifier.</returns>
-        Task<long> CreateAsync<T>(SubscriptionCriteria<T> criteria,long startEtag = 0, string database = null);
+        Task<long> CreateAsync<T>(SubscriptionCriteria<T> criteria, long startEtag = 0, string database = null);
 
         /// <summary>
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria.

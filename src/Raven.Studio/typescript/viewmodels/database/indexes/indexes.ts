@@ -213,8 +213,8 @@ class indexes extends viewModelBase {
         this.resetsInProgress.delete(i.name);
     }
 
-    private processIndexEvent(e: Raven.Abstractions.Data.IndexChange) {
-        const indexRemovedEvent = "IndexRemoved" as Raven.Abstractions.Data.IndexChangeTypes;
+    private processIndexEvent(e: Raven.Client.Data.IndexChange) {
+        const indexRemovedEvent = "IndexRemoved" as Raven.Client.Data.IndexChangeTypes;
         if (e.Type === indexRemovedEvent) {
             if (!this.resetsInProgress.has(e.Name)) {
                 this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
@@ -281,7 +281,7 @@ class indexes extends viewModelBase {
         this.updateIndexLockMode(i, "SideBySide","Locked (Side by Side)");
     }
 
-    private updateIndexLockMode(i: index, newLockMode: Raven.Abstractions.Indexing.IndexLockMode, lockModeStrForTitle: string) {
+    private updateIndexLockMode(i: index, newLockMode: Raven.Client.Indexing.IndexLockMode, lockModeStrForTitle: string) {
         if (i.lockMode() !== newLockMode) {
             this.spinners.localLockChanges.push(i.name);
 
@@ -372,7 +372,7 @@ class indexes extends viewModelBase {
         this.setLockModeSelectedIndexes("LockedError", "Lock (Error)");
     }
 
-    private setLockModeSelectedIndexes(lockModeString: Raven.Abstractions.Indexing.IndexLockMode, lockModeStrForTitle: string) {
+    private setLockModeSelectedIndexes(lockModeString: Raven.Client.Indexing.IndexLockMode, lockModeStrForTitle: string) {
         if (this.lockModeCommon() === lockModeString)
             return;
 

@@ -19,15 +19,15 @@ namespace Raven.Client.Document
     public class DefaultRavenContractResolver : DefaultContractResolver
     {
         [ThreadStatic]
-        private static ExtensionDataSetter currentExtensionData;
-        private readonly DisposableAction clearExtensionData = new DisposableAction(() => currentExtensionData = null);
+        private static ExtensionDataSetter _currentExtensionData;
+        private readonly DisposableAction _clearExtensionData = new DisposableAction(() => _currentExtensionData = null);
 
         public IDisposable RegisterForExtensionData(ExtensionDataSetter setter)
         {
-            if (currentExtensionData != null)
+            if (_currentExtensionData != null)
                 throw new InvalidOperationException("Cannot add a data setter because on is already added");
-            currentExtensionData = setter;
-            return clearExtensionData;
+            _currentExtensionData = setter;
+            return _clearExtensionData;
         }
 
         protected override JsonObjectContract CreateObjectContract(Type objectType)
@@ -37,8 +37,7 @@ namespace Raven.Client.Document
             {
                 if (jsonObjectContract.Properties.Contains(key))
                     return;
-                if (currentExtensionData != null)
-                    currentExtensionData(o, key, value);
+                _currentExtensionData?.Invoke(o, key, value);
             };
             return jsonObjectContract;
         }
@@ -67,7 +66,7 @@ namespace Raven.Client.Document
             var fieldInfo = info as FieldInfo;
             if (fieldInfo != null && !fieldInfo.IsPublic)
                 return true;
-            return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute),true).Any();
+            return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Any();
         }
     }
 }

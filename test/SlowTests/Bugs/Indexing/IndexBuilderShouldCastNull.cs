@@ -30,7 +30,7 @@ namespace SlowTests.Bugs.Indexing
         [Fact]
         public void NullableIndexDoesNotCastTwice()
         {
-            var indexDefinition = new NullableIndex { Conventions = new DocumentConvention() }.CreateIndexDefinition();
+            var indexDefinition = new NullableIndex { Conventions = new DocumentConventions() }.CreateIndexDefinition();
             Assert.False(indexDefinition.Maps.Contains("(string)(string)")); // Include also (String)(string)|(string)(String) cases.
             Assert.False(indexDefinition.Maps.Contains("(System.String)(string)"));
             Assert.False(indexDefinition.Maps.Contains("(string)(System.String)"));
@@ -40,7 +40,7 @@ namespace SlowTests.Bugs.Indexing
         [Fact]
         public void AnonymousNullableIndexDoesNotCastTwice()
         {
-            var indexDefinition = new AnonymousNullableIndex { Conventions = new DocumentConvention() }.CreateIndexDefinition();
+            var indexDefinition = new AnonymousNullableIndex { Conventions = new DocumentConventions() }.CreateIndexDefinition();
             Assert.False(indexDefinition.Maps.Contains("(string)(string)")); // Include also (String)(string)|(string)(String) cases.
             Assert.False(indexDefinition.Maps.Contains("(System.String)(string)"));
             Assert.False(indexDefinition.Maps.Contains("(string)(System.String)"));

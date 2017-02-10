@@ -6,34 +6,34 @@ namespace Raven.Client.Util
 {
     public class EasyReaderWriterLock
     {
-        readonly ReaderWriterLockSlim inner = new ReaderWriterLockSlim();
+        readonly ReaderWriterLockSlim _inner = new ReaderWriterLockSlim();
 
         public IDisposable EnterReadLock()
         {
-            if(inner.IsReadLockHeld || inner.IsWriteLockHeld)
+            if (_inner.IsReadLockHeld || _inner.IsWriteLockHeld)
                 return new DisposableAction(() => { });
 
-            inner.EnterReadLock();
-            return new DisposableAction(inner.ExitReadLock);
+            _inner.EnterReadLock();
+            return new DisposableAction(_inner.ExitReadLock);
         }
 
         public IDisposable EnterWriteLock()
         {
-            if (inner.IsWriteLockHeld)
+            if (_inner.IsWriteLockHeld)
                 return new DisposableAction(() => { });
 
-            inner.EnterWriteLock();
-            return new DisposableAction(inner.ExitWriteLock);
+            _inner.EnterWriteLock();
+            return new DisposableAction(_inner.ExitWriteLock);
         }
 
         public IDisposable TryEnterWriteLock(TimeSpan ts)
         {
-            if (inner.IsWriteLockHeld)
+            if (_inner.IsWriteLockHeld)
                 return new DisposableAction(() => { });
 
-            if (inner.TryEnterWriteLock(ts) == false)
+            if (_inner.TryEnterWriteLock(ts) == false)
                 return null;
-            return new DisposableAction(inner.ExitWriteLock);
+            return new DisposableAction(_inner.ExitWriteLock);
         }
 
 

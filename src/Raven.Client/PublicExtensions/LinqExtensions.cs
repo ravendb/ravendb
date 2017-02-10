@@ -118,7 +118,7 @@ namespace Raven.Client.PublicExtensions
             var facetsList = facets.ToList();
 
             if (!facetsList.Any())
-                throw new ArgumentException("Facets must contain at least one entry", "facets");
+                throw new ArgumentException("Facets must contain at least one entry", nameof(facets));
 
             var ravenQueryInspector = (IRavenQueryInspector)queryable;
 
@@ -137,7 +137,7 @@ namespace Raven.Client.PublicExtensions
             var facetsList = facets.ToList();
 
             if (facetsList.Any() == false)
-                throw new ArgumentException("Facets must contain at least one entry", "facets");
+                throw new ArgumentException("Facets must contain at least one entry", nameof(facets));
 
             var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(false);
@@ -171,7 +171,7 @@ namespace Raven.Client.PublicExtensions
             var facetsList = facets.ToList();
 
             if (!facetsList.Any())
-                throw new ArgumentException("Facets must contain at least one entry", "facets");
+                throw new ArgumentException("Facets must contain at least one entry", nameof(facets));
 
             var documentQuery = ((DocumentQuery<T>)query);
 
@@ -185,7 +185,7 @@ namespace Raven.Client.PublicExtensions
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
-        public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
+        public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
@@ -224,7 +224,7 @@ namespace Raven.Client.PublicExtensions
             var facetsList = facets.ToList();
 
             if (facetsList.Any() == false)
-                throw new ArgumentException("Facets must contain at least one entry", "facets");
+                throw new ArgumentException("Facets must contain at least one entry", nameof(facets));
 
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
@@ -265,7 +265,7 @@ namespace Raven.Client.PublicExtensions
             var facetsList = facets.ToList();
 
             if (facetsList.Any() == false)
-                throw new ArgumentException("Facets must contain at least one entry", "facets");
+                throw new ArgumentException("Facets must contain at least one entry", nameof(facets));
 
             var indexQuery = query.GetIndexQuery(isAsync: false);
             var documentQuery = (DocumentQuery<T>)query;
@@ -303,7 +303,7 @@ namespace Raven.Client.PublicExtensions
             var facetsList = facets.ToList();
 
             if (!facetsList.Any())
-                throw new ArgumentException("Facets must contain at least one entry", "facets");
+                throw new ArgumentException("Facets must contain at least one entry", nameof(facets));
 
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 
@@ -405,7 +405,7 @@ namespace Raven.Client.PublicExtensions
             throw new NotImplementedException();
             //return SuggestLazy(queryable, new SuggestionQuery());
         }
-        
+
         /// <summary>
         /// Lazy Suggest alternative values for the queried term
         /// </summary>
@@ -508,7 +508,7 @@ namespace Raven.Client.PublicExtensions
         public static Lazy<int> CountLazily<T>(this IQueryable<T> source)
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var provider = source.Provider as IRavenQueryProvider;
 
@@ -526,7 +526,7 @@ namespace Raven.Client.PublicExtensions
         public static Lazy<Task<int>> CountLazilyAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var provider = source.Provider as IRavenQueryProvider;
 
@@ -573,7 +573,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var provider = source.Provider as IRavenQueryProvider;
 
@@ -621,7 +621,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var filtered = source.Where(predicate);
             var provider = source.Provider as IRavenQueryProvider;
@@ -669,7 +669,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var provider = source.Provider as IRavenQueryProvider;
 
@@ -722,7 +722,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var filtered = source.Where(predicate);
             var provider = source.Provider as IRavenQueryProvider;
@@ -770,7 +770,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var provider = source.Provider as IRavenQueryProvider;
 
@@ -820,7 +820,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var filtered = source.Where(predicate);
             var provider = source.Provider as IRavenQueryProvider;
@@ -866,7 +866,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var provider = source.Provider as IRavenQueryProvider;
 
@@ -918,7 +918,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var filtered = source.Where(predicate);
             var provider = source.Provider as IRavenQueryProvider;
@@ -965,7 +965,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var provider = source.Provider as IRavenQueryProvider;
 
@@ -1016,7 +1016,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var filtered = source.Where(predicate);
             var provider = source.Provider as IRavenQueryProvider;
@@ -1065,7 +1065,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var provider = source.Provider as IRavenQueryProvider;
 
@@ -1118,7 +1118,7 @@ namespace Raven.Client.PublicExtensions
         public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             var filtered = source.Where(predicate);
             var provider = source.Provider as IRavenQueryProvider;

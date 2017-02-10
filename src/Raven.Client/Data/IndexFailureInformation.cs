@@ -27,7 +27,7 @@ namespace Raven.Client.Data
                 // we don't have enough attempts to make a useful determination
                 if (attempts + reduceAttempts < 100)
                     return false;
-                return (errors + (reduceErrors ?? 0)) / (float)(attempts + (reduceAttempts ?? 0)) > FailureThreshold;
+                return (errors + (reduceErrors ?? 0)) / (float)(attempts + (long)reduceAttempts) > FailureThreshold;
             }
             // we don't have enough attempts to make a useful determination
             if (attempts < 100)

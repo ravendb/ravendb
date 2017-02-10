@@ -41,7 +41,7 @@ namespace SlowTests.MailingList
                 store.Conventions.FindTypeTagName = type =>
                                                     typeof(IDomainObject).IsAssignableFrom(type)
                                                         ? "domainobjects"
-                                                        : DocumentConvention.DefaultTypeTagName(type);
+                                                        : DocumentConventions.DefaultTypeTagName(type);
 
                 using (var session = store.OpenSession())
                 {

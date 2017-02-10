@@ -10,7 +10,7 @@ namespace Raven.Client.Operations.Databases
 {
     public class GetBuildNumberOperation : IAdminOperation<BuildNumber>
     {
-        public RavenCommand<BuildNumber> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<BuildNumber> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetBuildNumberCommand();
         }

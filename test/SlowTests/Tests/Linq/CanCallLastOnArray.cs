@@ -72,7 +72,7 @@ namespace SlowTests.Tests.Linq
         [Fact]
         public void AssertMapDefinition()
         {
-            var indexDefinition = new Students_ByEmailDomain { Conventions = new DocumentConvention { PrettifyGeneratedLinqExpressions = false } }.CreateIndexDefinition();
+            var indexDefinition = new Students_ByEmailDomain { Conventions = new DocumentConventions { PrettifyGeneratedLinqExpressions = false } }.CreateIndexDefinition();
 
             Assert.Equal(@"docs.Students.Select(student => new {
     EmailDomain = DynamicEnumerable.LastOrDefault(student.Email.Split(new char[] {

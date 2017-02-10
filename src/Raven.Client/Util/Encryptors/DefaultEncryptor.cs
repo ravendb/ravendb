@@ -49,13 +49,13 @@ namespace Raven.Client.Util.Encryptors
                 SHA256 algorithm = null;
                 try
                 {
-                    algorithm = this.sha256Pool.Allocate();
+                    algorithm = sha256Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.sha256Pool.Free(algorithm);
+                        sha256Pool.Free(algorithm);
                 }                
             }
 
@@ -64,13 +64,13 @@ namespace Raven.Client.Util.Encryptors
                 SHA256 algorithm = null;
                 try
                 {
-                    algorithm = this.sha256Pool.Allocate();
+                    algorithm = sha256Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes, offset, length);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.sha256Pool.Free(algorithm);
+                        sha256Pool.Free(algorithm);
                 }
             }
 
@@ -79,13 +79,13 @@ namespace Raven.Client.Util.Encryptors
                 SHA1 algorithm = null;
                 try
                 {
-                    algorithm = this.sha1Pool.Allocate();
+                    algorithm = sha1Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.sha1Pool.Free(algorithm);
+                        sha1Pool.Free(algorithm);
                 }
             }
 
@@ -97,13 +97,13 @@ namespace Raven.Client.Util.Encryptors
                 MD5 algorithm = null;
                 try
                 {
-                    algorithm = this.md5Pool.Allocate();
+                    algorithm = md5Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.md5Pool.Free(algorithm);
+                        md5Pool.Free(algorithm);
                 }
             }
 
@@ -112,13 +112,13 @@ namespace Raven.Client.Util.Encryptors
                 MD5 algorithm = null;
                 try
                 {
-                    algorithm = this.md5Pool.Allocate();
+                    algorithm = md5Pool.Allocate();
                     return algorithm.ComputeHash(stream);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.md5Pool.Free(algorithm);
+                        md5Pool.Free(algorithm);
                 }
             }
 
@@ -130,13 +130,13 @@ namespace Raven.Client.Util.Encryptors
                 MD5 algorithm = null;
                 try
                 {
-                    algorithm = this.md5Pool.Allocate();
+                    algorithm = md5Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes, offset, length);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.md5Pool.Free(algorithm);
+                        md5Pool.Free(algorithm);
                 }
             }
 
@@ -145,13 +145,13 @@ namespace Raven.Client.Util.Encryptors
                 SHA1 algorithm = null;
                 try
                 {
-                    algorithm = this.sha1Pool.Allocate();
+                    algorithm = sha1Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.sha1Pool.Free(algorithm);
+                        sha1Pool.Free(algorithm);
                 }
             }
 
@@ -160,13 +160,13 @@ namespace Raven.Client.Util.Encryptors
                 SHA1 algorithm = null;
                 try
                 {
-                    algorithm = this.sha1Pool.Allocate();
+                    algorithm = sha1Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes, offset, length);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.sha1Pool.Free(algorithm);
+                        sha1Pool.Free(algorithm);
                 }
             }
         }

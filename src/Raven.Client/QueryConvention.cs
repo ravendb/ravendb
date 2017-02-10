@@ -7,7 +7,7 @@ using Raven.Client.Replication;
 
 namespace Raven.Client
 {
-    public abstract class QueryConvention : ConventionBase
+    public abstract class QueryConventions : Conventions
     {
         /// <summary>
         /// Gets or sets the identity parts separator used by the HiLo generators
@@ -58,15 +58,6 @@ namespace Raven.Client
                 return memberExpression.Member;
 
             throw new NotSupportedException("A custom query translator can only be used to evaluate a simple member access or method call.");
-        }
-
-        internal void UpdateFrom(ReplicationClientConfiguration configuration)
-        {
-            if (configuration == null)
-                return;
-
-            if (configuration.FailoverBehavior.HasValue)
-                FailoverBehavior = configuration.FailoverBehavior.Value;
         }
     }
 }

@@ -28,7 +28,7 @@ namespace Raven.Client.Document
         private static readonly ILog Log = LogManager.GetLogger(typeof(TcpBulkInsertOperation));
         private readonly CancellationTokenSource _cts;
         private readonly Task _getServerResponseTask;
-        private readonly BlockingCollection<Tuple<object,string>> _documents = new BlockingCollection<Tuple<object, string>>();
+        private readonly BlockingCollection<Tuple<object, string>> _documents = new BlockingCollection<Tuple<object, string>>();
         private readonly IDocumentStore _store;
         private readonly EntityToBlittable _entityToBlittable;
         private readonly Task _writeToServerTask;
@@ -39,7 +39,7 @@ namespace Raven.Client.Document
         private readonly long _maxDiffSizeBeforeThrottling = 20L * 1024 * 1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
         private TcpClient _tcpClient;
         private string _url;
-        private JsonContextPool _contextPool;
+        private readonly JsonContextPool _contextPool;
 
         private readonly ManualResetEventSlim _headerResponseFinished = new ManualResetEventSlim();
 
@@ -136,7 +136,7 @@ namespace Raven.Client.Document
             while (_documents.IsCompleted == false)
             {
                 _cts.Token.ThrowIfCancellationRequested();
-                Tuple<object,string> doc;
+                Tuple<object, string> doc;
                 try
                 {
                     doc = _documents.Take();
@@ -146,7 +146,7 @@ namespace Raven.Client.Document
                     break;
                 }
                 var needToThrottle = _throttlingEvent.Wait(0) == false;
-                
+
                 using (_contextPool.AllocateOperationContext(out context))
                 {
                 JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
@@ -221,7 +221,7 @@ namespace Raven.Client.Document
 
                 var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
 
-                parser.SetBuffer(bytes,0, result.Count);
+                parser.SetBuffer(bytes, 0, result.Count);
                 while (writer.Read() == false)
                 {
                     // we got incomplete json response.
@@ -336,7 +336,7 @@ namespace Raven.Client.Document
 
             await AssertValidServerConnection().ConfigureAwait(false);// we should never actually get here, the await will throw
 
-            _documents.Add(new Tuple<object, string>(data,id));
+            _documents.Add(new Tuple<object, string>(data, id));
 
         }
 

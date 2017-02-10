@@ -46,7 +46,7 @@ namespace Raven.Client.Document.Batches
         /// </summary>
         /// <param name="id">Identifier of a entity that will be loaded.</param>
         Lazy<T> Load(string id);
-        
+
         /// <summary>
         ///     Loads the specified entities with the specified ids.
         /// </summary>

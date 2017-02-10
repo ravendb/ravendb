@@ -19,7 +19,7 @@ namespace Raven.Client.Operations.Databases.ApiKeys
             _name = name;
         }
 
-        public RavenCommand<object> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DeleteApiKeyCommand(_name);
         }

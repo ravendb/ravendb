@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
@@ -77,19 +76,5 @@ namespace Raven.Client.Data
         public IndexType Type { get; set; }
 
         public DateTime? LastIndexingTime { get; set; }
-    }
-
-    public class TriggerInfo
-    {
-        public string Type { get; set; }
-
-        public string Name { get; set; }
-    }
-
-    public class PluginsInfo
-    {
-        public List<ExtensionsLog> Extensions { get; set; }
-        public List<TriggerInfo> Triggers { get; set; }
-        public List<string> CustomBundles { get; set; }
     }
 }

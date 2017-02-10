@@ -75,12 +75,6 @@ namespace Raven.Client
         /// <summary>
         ///     Transformer parameters that will be passed to transformer if one is specified.
         /// </summary>
-        [Obsolete("Use SetTransformerParameters instead.")]
-        void SetQueryInputs(Dictionary<string, object> queryInputs);
-
-        /// <summary>
-        ///     Transformer parameters that will be passed to transformer if one is specified.
-        /// </summary>
         void SetTransformerParameters(Dictionary<string, object> transformerParameters);
 
         /// <summary>

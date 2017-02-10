@@ -171,7 +171,7 @@ namespace SlowTests.MailingList
 
         protected override void ModifyStore(DocumentStore store)
         {
-            store.Conventions = new DocumentConvention
+            store.Conventions = new DocumentConventions
             {
                 TransformTypeTagNameToDocumentKeyPrefix = tag => tag,
                 FindTypeTagName = type => type.Name

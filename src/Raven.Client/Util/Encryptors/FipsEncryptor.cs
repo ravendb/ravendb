@@ -36,10 +36,10 @@ namespace Raven.Client.Util.Encryptors
                 //no-op
             }
 
-            ABCDStruct abcdStruct = MD5Core.GetInitialStruct();
-            private readonly byte[] remainingBuffer = new byte[BufferSize];
-            private int remainingCount;
-            private int totalLength;
+            ABCDStruct _abcdStruct = MD5Core.GetInitialStruct();
+            private readonly byte[] _remainingBuffer = new byte[BufferSize];
+            private int _remainingCount;
+            private int _totalLength;
 
             private const int BufferSize = 64;
 
@@ -65,8 +65,8 @@ namespace Raven.Client.Util.Encryptors
             {
                 ThrowNotSupportedExceptionForNonThreadSafeMethod();
 
-                totalLength += remainingCount;
-                return MD5Core.GetHashFinalBlock(remainingBuffer, 0, remainingCount, abcdStruct, (Int64)totalLength * 8);
+                _totalLength += _remainingCount;
+                return MD5Core.GetHashFinalBlock(_remainingBuffer, 0, _remainingCount, _abcdStruct, (Int64)_totalLength * 8);
             }
 
             public void TransformBlock(byte[] bytes, int offset, int length)
@@ -74,49 +74,43 @@ namespace Raven.Client.Util.Encryptors
                 ThrowNotSupportedExceptionForNonThreadSafeMethod();
 
                 int start = offset;
-                if (remainingCount > 0)
+                if (_remainingCount > 0)
                 {
-                    if (remainingCount + length < BufferSize)
+                    if (_remainingCount + length < BufferSize)
                     {
                         // just append to remaining buffer
-                        Buffer.BlockCopy(bytes, offset, remainingBuffer, remainingCount, length);
-                        remainingCount += length;
+                        Buffer.BlockCopy(bytes, offset, _remainingBuffer, _remainingCount, length);
+                        _remainingCount += length;
                         return;
                     }
 
                     // fill up buffer
-                    Buffer.BlockCopy(bytes, offset, remainingBuffer, remainingCount, BufferSize - remainingCount);
-                    start += BufferSize - remainingCount;
+                    Buffer.BlockCopy(bytes, offset, _remainingBuffer, _remainingCount, BufferSize - _remainingCount);
+                    start += BufferSize - _remainingCount;
                     // now we have 64 bytes in buffer
-                    MD5Core.GetHashBlock(remainingBuffer, ref abcdStruct, 0);
-                    totalLength += BufferSize;
-                    remainingCount = 0;
+                    MD5Core.GetHashBlock(_remainingBuffer, ref _abcdStruct, 0);
+                    _totalLength += BufferSize;
+                    _remainingCount = 0;
                 }
 
                 // while has 64 bytes blocks
                 while (start <= length - BufferSize)
                 {
-                    MD5Core.GetHashBlock(bytes, ref abcdStruct, start);
-                    totalLength += BufferSize;
+                    MD5Core.GetHashBlock(bytes, ref _abcdStruct, start);
+                    _totalLength += BufferSize;
                     start += BufferSize;
                 }
 
                 // save rest (if any)
                 if (start != length)
                 {
-                    remainingCount = length - start;
-                    Buffer.BlockCopy(bytes, start, remainingBuffer, 0, remainingCount);
+                    _remainingCount = length - start;
+                    Buffer.BlockCopy(bytes, start, _remainingBuffer, 0, _remainingCount);
                 }
 
             }
 
-            public int StorageHashSize
-            {
-                get
-                {
-                    return 20;
-                }
-            }
+            public int StorageHashSize => 20;
 
             //SHA1
             public byte[] ComputeForStorage(byte[] bytes)
@@ -161,23 +155,23 @@ namespace Raven.Client.Util.Encryptors
 
         public class FipsSymmetricalEncryptor : ISymmetricalEncryptor
         {
-            private readonly SymmetricAlgorithm algorithm;
+            private readonly SymmetricAlgorithm _algorithm;
 
             public FipsSymmetricalEncryptor()
             {
-                algorithm = Aes.Create();
+                _algorithm = Aes.Create();
             }
 
             public byte[] Key
             {
                 get
                 {
-                    return algorithm.Key;
+                    return _algorithm.Key;
                 }
 
                 set
                 {
-                    algorithm.Key = value;
+                    _algorithm.Key = value;
                 }
             }
 
@@ -185,12 +179,12 @@ namespace Raven.Client.Util.Encryptors
             {
                 get
                 {
-                    return algorithm.IV;
+                    return _algorithm.IV;
                 }
 
                 set
                 {
-                    algorithm.IV = value;
+                    _algorithm.IV = value;
                 }
             }
 
@@ -198,85 +192,78 @@ namespace Raven.Client.Util.Encryptors
             {
                 get
                 {
-                    return algorithm.KeySize;
+                    return _algorithm.KeySize;
                 }
 
                 set
                 {
-                    algorithm.KeySize = value;
+                    _algorithm.KeySize = value;
                 }
             }
 
             public void GenerateKey()
             {
-                algorithm.GenerateKey();
+                _algorithm.GenerateKey();
             }
 
             public void GenerateIV()
             {
-                algorithm.GenerateIV();
+                _algorithm.GenerateIV();
             }
 
             public ICryptoTransform CreateEncryptor()
             {
-                return algorithm.CreateEncryptor();
+                return _algorithm.CreateEncryptor();
             }
 
             public ICryptoTransform CreateDecryptor()
             {
-                return algorithm.CreateDecryptor();
+                return _algorithm.CreateDecryptor();
             }
 
             public ICryptoTransform CreateDecryptor(byte[] key, byte[] iv)
             {
-                return algorithm.CreateDecryptor(key, iv);
+                return _algorithm.CreateDecryptor(key, iv);
             }
 
             public void Dispose()
             {
-                if (algorithm != null)
-                    algorithm.Dispose();
+                _algorithm?.Dispose();
             }
         }
         public class FipsAsymmetricalEncryptor : IAsymmetricalEncryptor
         {
-            private readonly RSACng algorithm;
+            private readonly RSACng _algorithm;
 
             public FipsAsymmetricalEncryptor()
             {
-                
-                algorithm = new RSACng();
+
+                _algorithm = new RSACng();
             }
 
             public FipsAsymmetricalEncryptor(int keySize)
             {
-                algorithm = new RSACng(keySize);
+                _algorithm = new RSACng(keySize);
             }
 
             public int KeySize
             {
                 get
                 {
-                    return algorithm.KeySize;
+                    return _algorithm.KeySize;
                 }
 
                 set
                 {
-                    algorithm.KeySize = value;
+                    _algorithm.KeySize = value;
                 }
             }
 
-            public AsymmetricAlgorithm Algorithm
-            {
-                get
-                {
-                    return algorithm;
-                }
-            }
+            public AsymmetricAlgorithm Algorithm => _algorithm;
 
             public void ImportParameters(byte[] exponent, byte[] modulus)
             {
-                algorithm.ImportParameters(new RSAParameters
+                _algorithm.ImportParameters(new RSAParameters
                 {
                     Modulus = modulus,
                     Exponent = exponent
@@ -285,39 +272,38 @@ namespace Raven.Client.Util.Encryptors
 
             public byte[] Encrypt(byte[] bytes)
             {
-                return algorithm.Encrypt(bytes, RSAEncryptionPadding.OaepSHA256);
+                return _algorithm.Encrypt(bytes, RSAEncryptionPadding.OaepSHA256);
             }
 
             public byte[] Decrypt(byte[] bytes)
             {
-                return algorithm.Decrypt(bytes, RSAEncryptionPadding.OaepSHA256);
+                return _algorithm.Decrypt(bytes, RSAEncryptionPadding.OaepSHA256);
             }
 
 
             public void ImportParameters(RSAParameters parameters)
             {
-                algorithm.ImportParameters(parameters);
+                _algorithm.ImportParameters(parameters);
             }
 
             public RSAParameters ExportParameters(bool includePrivateParameters)
             {
-                return algorithm.ExportParameters(includePrivateParameters);
+                return _algorithm.ExportParameters(includePrivateParameters);
             }
 
-            public byte[] SignHash(byte [] data)
+            public byte[] SignHash(byte[] data)
             {
-                return algorithm.SignHash(data, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
+                return _algorithm.SignHash(data, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
             }
 
             public bool VerifyHash(byte[] hash, byte[] signature)
             {
-                return algorithm.VerifyHash(hash, signature, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
+                return _algorithm.VerifyHash(hash, signature, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
             }
 
             public void Dispose()
             {
-                if (algorithm != null)
-                    algorithm.Dispose();
+                _algorithm?.Dispose();
             }
         }
     }

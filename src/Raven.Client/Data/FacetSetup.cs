@@ -8,7 +8,7 @@ namespace Raven.Client.Data
         /// Id of a facet setup document.
         /// </summary>
         public string Id { get; set; }
-        
+
         /// <summary>
         /// List of facets.
         /// </summary>

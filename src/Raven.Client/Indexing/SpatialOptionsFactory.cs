@@ -4,21 +4,9 @@ namespace Raven.Client.Indexing
 {
     public class SpatialOptionsFactory
     {
-        public GeographySpatialOptionsFactory Geography
-        {
-            get
-            {
-                return new GeographySpatialOptionsFactory();
-            }
-        }
+        public GeographySpatialOptionsFactory Geography => new GeographySpatialOptionsFactory();
 
-        public CartesianSpatialOptionsFactory Cartesian
-        {
-            get
-            {
-                return new CartesianSpatialOptionsFactory();
-            }
-        }
+        public CartesianSpatialOptionsFactory Cartesian => new CartesianSpatialOptionsFactory();
 
         public static SpatialOptions FromLegacy(SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.GeohashPrefixTree, int maxTreeLevel = 0)
         {
@@ -106,7 +94,7 @@ namespace Raven.Client.Indexing
         public SpatialOptions QuadPrefixTreeIndex(int maxTreeLevel, SpatialBounds bounds)
         {
             if (maxTreeLevel == 0)
-                throw new ArgumentOutOfRangeException("maxTreeLevel");
+                throw new ArgumentOutOfRangeException(nameof(maxTreeLevel));
 
             return new SpatialOptions
             {
@@ -123,10 +111,10 @@ namespace Raven.Client.Indexing
 
     public class SpatialBounds
     {
-        public double MinX { get; private set; }
-        public double MaxX { get; private set; }
-        public double MinY { get; private set; }
-        public double MaxY { get; private set; }
+        public double MinX { get; }
+        public double MaxX { get; }
+        public double MinY { get; }
+        public double MaxY { get; }
 
         public SpatialBounds(double minX, double minY, double maxX, double maxY)
         {
@@ -145,7 +133,7 @@ namespace Raven.Client.Indexing
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((SpatialBounds)obj);
         }
 

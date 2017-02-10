@@ -22,7 +22,7 @@ namespace Raven.Client.Indexing
         /// </summary>
         public string Name { get; set; }
 
-        public TransformerLockMode LockMode { get; set; } 
+        public TransformerLockMode LockMode { get; set; }
 
         public bool Equals(TransformerDefinition other)
         {
@@ -34,7 +34,7 @@ namespace Raven.Client.Indexing
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((TransformerDefinition) obj);
+            return Equals((TransformerDefinition)obj);
         }
 
         public override int GetHashCode()
@@ -44,7 +44,7 @@ namespace Raven.Client.Indexing
 
         public TransformerDefinition Clone()
         {
-            return (TransformerDefinition) MemberwiseClone();
+            return (TransformerDefinition)MemberwiseClone();
         }
 
         public override string ToString()

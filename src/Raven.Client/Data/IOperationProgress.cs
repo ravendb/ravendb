@@ -38,6 +38,7 @@ namespace Raven.Client.Data
             {
                 ["Progress"] = Progress
             };
-;        }
+            ;
+        }
     }
 }

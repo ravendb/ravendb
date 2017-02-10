@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Sparrow.Json;
-using Sparrow.Logging;
 
 namespace Raven.Client.Commands
 {
@@ -13,8 +12,6 @@ namespace Raven.Client.Commands
         private readonly string _id;
         private readonly int _start;
         private readonly int _pageSize;
-
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.NewClient.Client");
 
         private BlittableArrayResult _result;
 
@@ -50,7 +47,7 @@ namespace Raven.Client.Commands
                 var metadata = document.GetMetadata();
                 var id = metadata.GetId();
 
-                results.Add((T) _session.ConvertToEntity(typeof(T), id, document));
+                results.Add((T)_session.ConvertToEntity(typeof(T), id, document));
             }
 
             return results;

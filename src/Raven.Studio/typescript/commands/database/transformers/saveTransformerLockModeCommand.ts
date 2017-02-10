@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 
 class saveTransformerLockModeCommand extends commandBase {
 
-    constructor(private transformers: Array<transformer>, private lockMode: Raven.Abstractions.Indexing.TransformerLockMode, private db: database) {
+    constructor(private transformers: Array<transformer>, private lockMode: Raven.Client.Indexing.TransformerLockMode, private db: database) {
         super();
     }
 

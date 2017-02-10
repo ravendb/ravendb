@@ -6,14 +6,6 @@
 
 namespace Raven.Client.Replication
 {
-    /// <summary>
-    /// Data class for replication config document, available on a destination server
-    /// </summary>
-    public class ReplicationConfig
-    {
-        public StraightforwardConflictResolution DocumentConflictResolution { get; set; }
-    }
-
     public enum StraightforwardConflictResolution
     {
         None,

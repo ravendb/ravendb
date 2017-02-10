@@ -21,7 +21,7 @@ namespace Raven.Client.Operations.Databases
             _hardDelete = hardDelete;
         }
 
-        public RavenCommand<object> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DeleteDatabaseCommand(_name, _hardDelete);
         }

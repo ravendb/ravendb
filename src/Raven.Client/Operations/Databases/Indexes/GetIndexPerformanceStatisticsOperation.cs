@@ -24,17 +24,17 @@ namespace Raven.Client.Operations.Databases.Indexes
             _indexNames = indexNames;
         }
 
-        public RavenCommand<IndexPerformanceStats[]> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<IndexPerformanceStats[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetIndexPerformanceStatisticsCommand(conventions, _indexNames);
         }
 
         private class GetIndexPerformanceStatisticsCommand : RavenCommand<IndexPerformanceStats[]>
         {
-            private readonly DocumentConvention _conventions;
+            private readonly DocumentConventions _conventions;
             private readonly string[] _indexNames;
 
-            public GetIndexPerformanceStatisticsCommand(DocumentConvention conventions, string[] indexNames)
+            public GetIndexPerformanceStatisticsCommand(DocumentConventions conventions, string[] indexNames)
             {
                 _conventions = conventions;
                 _indexNames = indexNames;

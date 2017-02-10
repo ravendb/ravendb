@@ -10,15 +10,15 @@ namespace Raven.Client.Platform
 {
     public class RavenClientWebSocket : IDisposable
     {
-        private readonly RavenUnixClientWebSocket unixInstance;
-        private readonly ClientWebSocket winInstance;
+        private readonly RavenUnixClientWebSocket _unixInstance;
+        private readonly ClientWebSocket _winInstance;
 
         public RavenClientWebSocket()
         {
             if (PlatformDetails.RunningOnPosix)
-                unixInstance = new RavenUnixClientWebSocket();
+                _unixInstance = new RavenUnixClientWebSocket();
             else
-                winInstance = new ClientWebSocket();
+                _winInstance = new ClientWebSocket();
         }
 
         public WebSocketState State
@@ -26,56 +26,56 @@ namespace Raven.Client.Platform
             get
             {
                 if (PlatformDetails.RunningOnPosix)
-                    return unixInstance.State;
-                return winInstance.State;
+                    return _unixInstance.State;
+                return _winInstance.State;
             }
         }
 
         public async Task ConnectAsync(Uri uri, CancellationToken token)
         {
             if (PlatformDetails.RunningOnPosix)
-                await unixInstance.ConnectAsync(uri, token);
+                await _unixInstance.ConnectAsync(uri, token);
             else
-                await winInstance.ConnectAsync(uri, token);
+                await _winInstance.ConnectAsync(uri, token);
         }
 
         public async Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> arraySegment, CancellationToken token)
         {
             if (PlatformDetails.RunningOnPosix)
-                return await unixInstance.ReceiveAsync(arraySegment, token);
-            return await winInstance.ReceiveAsync(arraySegment, token).ConfigureAwait(false);
+                return await _unixInstance.ReceiveAsync(arraySegment, token);
+            return await _winInstance.ReceiveAsync(arraySegment, token).ConfigureAwait(false);
         }
 
         public async Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken token)
         {
             if (PlatformDetails.RunningOnPosix)
-                await unixInstance.CloseOutputAsync(closeStatus, statusDescription, token);
+                await _unixInstance.CloseOutputAsync(closeStatus, statusDescription, token);
             else
-                await winInstance.CloseOutputAsync(closeStatus, statusDescription, token);
+                await _winInstance.CloseOutputAsync(closeStatus, statusDescription, token);
         }
 
         public async Task SendAsync(ArraySegment<byte> segment, WebSocketMessageType messageType, bool endOfMessage, CancellationToken token)
         {
             if (PlatformDetails.RunningOnPosix)
-                await unixInstance.SendAsync(segment, messageType, endOfMessage, token);
+                await _unixInstance.SendAsync(segment, messageType, endOfMessage, token);
             else
-                await winInstance.SendAsync(segment, messageType, endOfMessage, token);
+                await _winInstance.SendAsync(segment, messageType, endOfMessage, token);
         }
 
         public void Dispose()
         {
             if (PlatformDetails.RunningOnPosix)
-                unixInstance.Dispose();
+                _unixInstance.Dispose();
             else
-                winInstance.Dispose();
+                _winInstance.Dispose();
         }
 
         public async Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken token)
         {
             if (PlatformDetails.RunningOnPosix)
-                await unixInstance.CloseAsync(closeStatus, statusDescription, token);
+                await _unixInstance.CloseAsync(closeStatus, statusDescription, token);
             else
-                await winInstance.CloseAsync(closeStatus, statusDescription, token);
+                await _winInstance.CloseAsync(closeStatus, statusDescription, token);
         }
     }
 }

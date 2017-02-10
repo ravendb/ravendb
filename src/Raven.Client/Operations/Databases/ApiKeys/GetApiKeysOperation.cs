@@ -19,7 +19,7 @@ namespace Raven.Client.Operations.Databases.ApiKeys
             _pageSize = pageSize;
         }
 
-        public RavenCommand<NamedApiKeyDefinition[]> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<NamedApiKeyDefinition[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetApiKeysCommand(_start, _pageSize);
         }

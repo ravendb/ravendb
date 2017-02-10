@@ -10,10 +10,6 @@ namespace Raven.Client.Blittable
 {
     public class BlittableOperation
     {
-        public BlittableOperation()
-        {
-        }
-
         public bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
         {
             // prevent saves of a modified read only entity
@@ -27,7 +23,7 @@ namespace Raven.Client.Blittable
             if ((readOnly != null) && (readOnly.Equals("true")) && (newReadOnly.Equals("true")))
                 return false;
 
-            var docChanges = new List<DocumentsChanges>() { };
+            var docChanges = new List<DocumentsChanges>();
 
             if (!documentInfo.IsNewDocument && documentInfo.Document != null)
                 return CompareBlittable(documentInfo.Id, documentInfo.Document, newObj, changes, docChanges);

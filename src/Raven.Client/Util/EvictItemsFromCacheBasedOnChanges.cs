@@ -68,13 +68,13 @@ namespace Raven.Client.Util
             indexesSubscription.Dispose();
             using (changes as IDisposable)
             {
-                var remoteDatabaseChanges = changes as RemoteDatabaseChanges;
-                if (remoteDatabaseChanges != null)
-                {
-                    throw new NotImplementedException();
+                //var remoteDatabaseChanges = changes as RemoteDatabaseChanges;
+                //if (remoteDatabaseChanges != null)
+                //{
+                //    throw new NotImplementedException();
 
-                    //remoteDatabaseChanges.DisposeAsync().Wait(TimeSpan.FromSeconds(3));
-                }
+                //    remoteDatabaseChanges.DisposeAsync().Wait(TimeSpan.FromSeconds(3));
+                //}
             }
         }
     }

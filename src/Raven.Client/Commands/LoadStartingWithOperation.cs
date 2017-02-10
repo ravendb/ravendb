@@ -9,7 +9,7 @@ namespace Raven.Client.Commands
 {
     public class LoadStartingWithOperation
     {
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LoadStartingWithOperation>("Raven.NewClient.Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LoadStartingWithOperation>("Raven.NewClient.Client");
         private readonly InMemoryDocumentSessionOperations _session;
 
         private string _startWith;
@@ -33,8 +33,8 @@ namespace Raven.Client.Commands
         public GetDocumentCommand CreateRequest()
         {
             _session.IncrementRequestCount();
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Requesting documents with ids starting with '{_startWith}' from {_session.StoreIdentifier}");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Requesting documents with ids starting with '{_startWith}' from {_session.StoreIdentifier}");
 
             return new GetDocumentCommand
             {

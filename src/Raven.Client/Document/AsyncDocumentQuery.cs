@@ -25,7 +25,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
-        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session,  string indexName, string[] fieldsToFetch, string[] projectionFields, bool  isMapReduce)
+        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
             : base(session, indexName, fieldsToFetch, projectionFields, isMapReduce)
         {
         }
@@ -556,7 +556,7 @@ namespace Raven.Client.Document
         {
             OrderByDescending(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
             return this;
-        }		
+        }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Highlight(
             string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
@@ -568,26 +568,26 @@ namespace Raven.Client.Document
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Highlight(string fieldName, int fragmentLength, int fragmentCount,
             out FieldHighlightings fieldHighlightings)
         {
-            this.Highlight(fieldName, fragmentLength, fragmentCount, out fieldHighlightings);
+            Highlight(fieldName, fragmentLength, fragmentCount, out fieldHighlightings);
             return this;
         }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount,
             out FieldHighlightings fieldHighlightings)
         {
-            this.Highlight(fieldName, fieldKeyName, fragmentLength, fragmentCount, out fieldHighlightings);
+            Highlight(fieldName, fieldKeyName, fragmentLength, fragmentCount, out fieldHighlightings);
             return this;
         }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Highlight<TValue>(
-            Expression<Func<T, TValue>> propertySelector, 
-            int fragmentLength, 
+            Expression<Func<T, TValue>> propertySelector,
+            int fragmentLength,
             int fragmentCount,
             Expression<Func<T, IEnumerable>> fragmentsPropertySelector)
         {
-            var fieldName = this.GetMemberQueryPath(propertySelector);
-            var fragmentsField = this.GetMemberQueryPath(fragmentsPropertySelector);
-            this.Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
+            var fieldName = GetMemberQueryPath(propertySelector);
+            var fragmentsField = GetMemberQueryPath(fragmentsPropertySelector);
+            Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
             return this;
         }
 
@@ -595,7 +595,7 @@ namespace Raven.Client.Document
             Expression<Func<T, TValue>> propertySelector, int fragmentLength, int fragmentCount,
             out FieldHighlightings fieldHighlightings)
         {
-            this.Highlight(this.GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
+            Highlight(GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
             return this;
         }
 
@@ -603,19 +603,19 @@ namespace Raven.Client.Document
             Expression<Func<T, TValue>> propertySelector, Expression<Func<T, TValue>> keyPropertySelector, int fragmentLength, int fragmentCount,
             out FieldHighlightings fieldHighlightings)
         {
-            this.Highlight(this.GetMemberQueryPath(propertySelector), this.GetMemberQueryPath(keyPropertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
+            Highlight(GetMemberQueryPath(propertySelector), GetMemberQueryPath(keyPropertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
             return this;
         }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetHighlighterTags(string preTag, string postTag)
         {
-            this.SetHighlighterTags(new[]{preTag}, new[]{postTag});
+            SetHighlighterTags(new[] { preTag }, new[] { postTag });
             return this;
         }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetHighlighterTags(string[] preTags, string[] postTags)
         {
-            this.SetHighlighterTags(preTags, postTags);
+            SetHighlighterTags(preTags, postTags);
             return this;
         }
 
@@ -677,7 +677,7 @@ namespace Raven.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution)
         {
-            BeforeQueryExecution(beforeQueryExecutionAction);
+            BeforeQueryExecution(BeforeQueryExecutionAction);
             return this;
         }
 
@@ -716,48 +716,48 @@ namespace Raven.Client.Document
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
         public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
         {
-            var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(theSession,
-                                                                         indexName, fields, projections,
-                                                                         isMapReduce)
-                                        {
-                                            pageSize = pageSize,
-                                            queryText = new StringBuilder(queryText.ToString()),
-                                            start = start,
-                                            timeout = timeout,
-                                            cutoffEtag = cutoffEtag,
-                                            queryStats = queryStats,
-                                            theWaitForNonStaleResults = theWaitForNonStaleResults,
-                                            theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
-                                            orderByFields = orderByFields,
-                                            dynamicMapReduceFields = dynamicMapReduceFields,
-                                            isDistinct = isDistinct,
-                                            allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
-                                            negate = negate,
-                                            transformResultsFunc = transformResultsFunc,
-                                            includes = new HashSet<string>(includes),
-                                            isSpatialQuery = isSpatialQuery,
-                                            spatialFieldName = spatialFieldName,
-                                            queryShape = queryShape,
-                                            spatialRelation = spatialRelation,
-                                            spatialUnits = spatialUnits,
-                                            distanceErrorPct = distanceErrorPct,
-                                            rootTypes = { typeof(T) },
-                                            defaultField = defaultField,
-                                            beforeQueryExecutionAction = beforeQueryExecutionAction,
-                                            afterQueryExecutedCallback = afterQueryExecutedCallback,
-                                            afterStreamExecutedCallback = afterStreamExecutedCallback,
-                                            highlightedFields = new List<HighlightedField>(highlightedFields),
-                                            highlighterPreTags = highlighterPreTags,
-                                            highlighterPostTags = highlighterPostTags,
-                                            resultsTransformer = resultsTransformer,
-                                            transformerParameters = transformerParameters,
-                                            disableEntitiesTracking = disableEntitiesTracking,
-                                            disableCaching = disableCaching,
-                                            showQueryTimings = showQueryTimings,
-                                            lastEquality = lastEquality,
-                                            shouldExplainScores = shouldExplainScores
-                                        };
-            asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
+            var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(TheSession,
+                                                                         IndexName, fields, projections,
+                                                                         IsMapReduce)
+            {
+                PageSize = PageSize,
+                QueryText = new StringBuilder(QueryText.ToString()),
+                Start = Start,
+                Timeout = Timeout,
+                CutoffEtag = CutoffEtag,
+                QueryStats = QueryStats,
+                TheWaitForNonStaleResults = TheWaitForNonStaleResults,
+                TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
+                OrderByFields = OrderByFields,
+                DynamicMapReduceFields = DynamicMapReduceFields,
+                _isDistinct = _isDistinct,
+                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
+                Negate = Negate,
+                TransformResultsFunc = TransformResultsFunc,
+                Includes = new HashSet<string>(Includes),
+                IsSpatialQuery = IsSpatialQuery,
+                SpatialFieldName = SpatialFieldName,
+                QueryShape = QueryShape,
+                SpatialRelation = SpatialRelation,
+                SpatialUnits = SpatialUnits,
+                DistanceErrorPct = DistanceErrorPct,
+                RootTypes = { typeof(T) },
+                DefaultField = DefaultField,
+                BeforeQueryExecutionAction = BeforeQueryExecutionAction,
+                AfterQueryExecutedCallback = AfterQueryExecutedCallback,
+                AfterStreamExecutedCallback = AfterStreamExecutedCallback,
+                HighlightedFields = new List<HighlightedField>(HighlightedFields),
+                HighlighterPreTags = HighlighterPreTags,
+                HighlighterPostTags = HighlighterPostTags,
+                ResultsTransformer = ResultsTransformer,
+                TransformerParameters = TransformerParameters,
+                DisableEntitiesTracking = DisableEntitiesTracking,
+                DisableCaching = DisableCaching,
+                ShowQueryTimings = ShowQueryTimings,
+                LastEquality = LastEquality,
+                ShouldExplainScores = ShouldExplainScores
+            };
+            asyncDocumentQuery.AfterQueryExecuted(AfterQueryExecutedCallback);
             return asyncDocumentQuery;
         }
 
@@ -779,7 +779,7 @@ namespace Raven.Client.Document
 
         public void SetTransformerParameters(Dictionary<string, object> parameters)
         {
-            transformerParameters = parameters;
+            TransformerParameters = parameters;
         }
 
 
@@ -787,17 +787,17 @@ namespace Raven.Client.Document
         /// Register the query as a lazy-count query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
-        public Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default (CancellationToken))
+        public Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default(CancellationToken))
         {
-            if (queryOperation == null)
+            if (QueryOperation == null)
             {
                 Take(0);
-                queryOperation = InitializeQueryOperation();
+                QueryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
+            var lazyQueryOperation = new LazyQueryOperation<T>(QueryOperation, AfterQueryExecutedCallback);
 
-            return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation,token);
+            return ((AsyncDocumentSession)TheSession).AddLazyCountOperation(lazyQueryOperation, token);
         }
 
         /// <summary>
@@ -977,7 +977,7 @@ namespace Raven.Client.Document
             return this;
         }
 
-        IAsyncDocumentQuery<T>  IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Distinct()
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Distinct()
         {
             Distinct();
             return this;
@@ -989,16 +989,16 @@ namespace Raven.Client.Document
         /// <param name="resultsTransformer"></param>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
         {
-            base.SetResultTransformer(resultsTransformer);
+            SetResultTransformer(resultsTransformer);
             return this;
         }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ExplainScores()
         {
-            shouldExplainScores = true;
+            ShouldExplainScores = true;
             return this;
 
-    }
+        }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
         {

@@ -3,7 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using Raven.Client.Connection;
+using Raven.Client.Http;
 
 namespace Raven.Server.Exceptions.PeriodicExport
 {
@@ -28,7 +28,7 @@ namespace Raven.Server.Exceptions.PeriodicExport
             string responseString = null;
             if (response.Content != null)
             {
-                var readAsStringAsync = response.GetResponseStreamWithHttpDecompression();
+                var readAsStringAsync = RequestExecuter.ReadAsStreamUncompressedAsync(response);
                 if (readAsStringAsync.IsCompleted)
                 {
                     using (var streamReader = new StreamReader(readAsStringAsync.Result))

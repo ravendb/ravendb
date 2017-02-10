@@ -46,7 +46,7 @@ namespace SlowTests.Tests.Linq
         [Fact]
         public void WillReplaceFirstWithFirstOrDefault()
         {
-            var indexDefinition = new IndexWithLetInReduceFunction { Conventions = new DocumentConvention() }.CreateIndexDefinition();
+            var indexDefinition = new IndexWithLetInReduceFunction { Conventions = new DocumentConventions() }.CreateIndexDefinition();
             Assert.Contains("FirstOrDefault", indexDefinition.Reduce);
         }
     }

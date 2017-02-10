@@ -8,6 +8,6 @@ namespace Raven.Client.Data
     public class VoronActiveTransaction
     {
         public long Id;
-        public string Flags; 
+        public string Flags;
     }
 }

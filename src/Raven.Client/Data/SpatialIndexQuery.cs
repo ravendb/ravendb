@@ -47,12 +47,7 @@ namespace Raven.Client.Data
         /// </summary>
         public SpatialUnits? RadiusUnitOverride { get; set; }
 
-        private string spatialFieldName = Constants.Indexing.Fields.DefaultSpatialFieldName;
-        public string SpatialFieldName
-        {
-            get { return spatialFieldName; }
-            set { spatialFieldName = value; }
-        }
+        public string SpatialFieldName { get; set; } = Constants.Indexing.Fields.DefaultSpatialFieldName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
@@ -80,13 +75,13 @@ namespace Raven.Client.Data
             IsDistinct = query.IsDistinct;
             AllowMultipleIndexEntriesForSameDocumentToResultTransformer =
                 query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
-            
+
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
         /// </summary>
-        public SpatialIndexQuery(DocumentConvention conventions) : base(conventions)
+        public SpatialIndexQuery(DocumentConventions conventions) : base(conventions)
         {
             DistanceErrorPercentage = Constants.DefaultSpatialDistanceErrorPct;
         }
@@ -101,12 +96,7 @@ namespace Raven.Client.Data
             if (RadiusUnitOverride.HasValue)
                 unitsParam = string.Format("&spatialUnits={0}", RadiusUnitOverride.Value);
 
-            return string.Format("queryShape={0}&spatialRelation={1}&spatialField={2}&distErrPrc={3}{4}",
-                Uri.EscapeDataString(QueryShape),
-                SpatialRelation,
-                spatialFieldName,
-                DistanceErrorPercentage.ToString(CultureInfo.InvariantCulture),
-                unitsParam);
+            return $"queryShape={Uri.EscapeDataString(QueryShape)}&spatialRelation={SpatialRelation}&spatialField={SpatialFieldName}&distErrPrc={DistanceErrorPercentage.ToString(CultureInfo.InvariantCulture)}{unitsParam}";
         }
     }
 }

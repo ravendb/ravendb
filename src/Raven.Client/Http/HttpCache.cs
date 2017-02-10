@@ -82,7 +82,7 @@ namespace Raven.Client.Http
         public unsafe void Set(string url, long etag, BlittableJsonReaderObject result)
         {
             var mem = _unmanagedBuffersPool.Allocate(result.Size);
-            result.CopyTo((byte*)mem.Address);
+            result.CopyTo(mem.Address);
             if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize)
             {
                 if (_cleanupTask == null)
@@ -99,7 +99,7 @@ namespace Raven.Client.Http
             {
                 Usages = 1,
                 Etag = etag,
-                Ptr = (byte*)mem.Address,
+                Ptr = mem.Address,
                 Size = result.Size,
                 Allocation = mem,
                 LastServerUpdate = SystemTime.UtcNow,

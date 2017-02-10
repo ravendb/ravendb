@@ -28,7 +28,7 @@ namespace Raven.Client.Connection
         }
 
         [ThreadStatic]
-        private static IHashEncryptor sha1;
+        private static IHashEncryptor _sha1;
 
         /**** Cryptography *****/
 
@@ -36,9 +36,9 @@ namespace Raven.Client.Connection
         {
             var bytes = Encoding.UTF8.GetBytes(data);
 
-            if (sha1 == null)
-                sha1 = Encryptor.Current.CreateHash();
-            var hash = sha1.Compute20(bytes);
+            if (_sha1 == null)
+                _sha1 = Encryptor.Current.CreateHash();
+            var hash = _sha1.Compute20(bytes);
             return BytesToString(hash);
         }
 

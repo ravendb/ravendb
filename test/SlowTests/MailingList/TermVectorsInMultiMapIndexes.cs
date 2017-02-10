@@ -19,7 +19,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanCreateTermVectorInMultimapIndex()
         {
-            var indexDefinition = new SampleData_MultiMapIndex { Conventions = new DocumentConvention() }.CreateIndexDefinition();
+            var indexDefinition = new SampleData_MultiMapIndex { Conventions = new DocumentConventions() }.CreateIndexDefinition();
             // note also that overriden CreateIndexDefinition in AbstractMultiMapIndexCreationTask<T> does not default Conventions property in the same way as AbstractIndexCreationTask<T>
             // not sure if this is by design!
             Assert.Equal(FieldTermVector.WithPositionsAndOffsets, indexDefinition.Fields.Single().Value.TermVector.Value);

@@ -48,19 +48,19 @@ namespace Raven.Client.Indexes
         /// <value>
         /// 	<c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
         /// </value>
-        public virtual bool IsMapReduce { get { return false; } }
+        public virtual bool IsMapReduce => false;
 
         /// <summary>
         /// Generates index name from type name replacing all _ with /
         /// <para>e.g.</para>
         /// <para>if our type is <code>'Orders_Totals'</code> then index name would be <code>'Orders/Totals'</code></para>
         /// </summary>
-        public virtual string IndexName { get { return GetType().Name.Replace("_", "/"); } }
+        public virtual string IndexName => GetType().Name.Replace("_", "/");
 
         /// <summary>
         /// Gets or sets the conventions that should be used when index definition is created.
         /// </summary>
-        public DocumentConvention Conventions { get; set; }
+        public DocumentConventions Conventions { get; set; }
 
         /// <summary>
         ///  index can have a priority that controls how much power of the indexing process it is allowed to consume. index priority can be forced by the user.
@@ -127,33 +127,6 @@ namespace Raven.Client.Indexes
             throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         }
 
-        [Obsolete]
-        protected class SpatialIndex
-        {
-            /// <summary>
-            /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
-            /// </summary>
-            /// <param name="fieldName">The field name, will be used for querying</param>
-            /// <param name="lat">Latitude</param>
-            /// <param name="lng">Longitude</param>
-            [Obsolete("Use SpatialGenerate instead.")]
-            public static object Generate(string fieldName, double? lat, double? lng)
-            {
-                throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-            }
-
-            /// <summary>
-            /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
-            /// </summary>
-            /// <param name="lat">Latitude</param>
-            /// <param name="lng">Longitude</param>
-            [Obsolete("Use SpatialGenerate instead.")]
-            public static object Generate(double? lat, double? lng)
-            {
-                throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-            }
-        }
-
         /// <summary>
         /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
         /// </summary>
@@ -211,32 +184,33 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Executes the index creation using in side-by-side mode.
         /// </summary>
-        /// <param name="documentConvention"></param>
+        /// <param name="store"></param>
+        /// <param name="conventions"></param>
         /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
-        public virtual void SideBySideExecute(DocumentStoreBase documentStore, DocumentConvention documentConvention, long? minimumEtagBeforeReplace = null)
+        public virtual void SideBySideExecute(DocumentStoreBase store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
         {
-            PutIndex(documentStore, documentConvention, minimumEtagBeforeReplace);
+            PutIndex(store, conventions, minimumEtagBeforeReplace);
         }
 
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
-        public virtual void Execute(DocumentStoreBase documentStore, DocumentConvention documentConvention)
+        public virtual void Execute(DocumentStoreBase store, DocumentConventions conventions)
         {
-            PutIndex(documentStore, documentConvention);
+            PutIndex(store, conventions);
         }
 
-        private void PutIndex(DocumentStoreBase documentStore, DocumentConvention documentConvention, long? minimumEtagBeforeReplace = null)
+        private void PutIndex(DocumentStoreBase store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
         {
-            Conventions = documentConvention;
+            Conventions = conventions;
             var indexDefinition = CreateIndexDefinition();
 
-            var requestExecuter = documentStore.GetRequestExecuter();
+            var requestExecuter = store.GetRequestExecuter();
 
             JsonOperationContext context;
             using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
-                var admin = new AdminOperationExecuter(documentStore, requestExecuter, context);
+                var admin = new AdminOperationExecuter(store, requestExecuter, context);
                 indexDefinition.MinimumEtagBeforeReplace = minimumEtagBeforeReplace;
                 var putIndexOperation = new PutIndexOperation(IndexName, indexDefinition);
                 admin.Send(putIndexOperation);
@@ -249,17 +223,17 @@ namespace Raven.Client.Indexes
             }
         }
 
-        private async Task PutIndexAsync(DocumentStoreBase documentStore, DocumentConvention documentConvention, long? minimumEtagBeforeReplace = null)
+        private async Task PutIndexAsync(DocumentStoreBase store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
         {
-            Conventions = documentConvention;
+            Conventions = conventions;
             var indexDefinition = CreateIndexDefinition();
 
-            var requestExecuter = documentStore.GetRequestExecuter();
+            var requestExecuter = store.GetRequestExecuter();
 
             JsonOperationContext context;
             using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
-                var admin = new AdminOperationExecuter(documentStore, requestExecuter, context);
+                var admin = new AdminOperationExecuter(store, requestExecuter, context);
                 indexDefinition.MinimumEtagBeforeReplace = minimumEtagBeforeReplace;
                 var putIndexOperation = new PutIndexOperation(IndexName, indexDefinition);
 
@@ -273,18 +247,18 @@ namespace Raven.Client.Indexes
             }
         }
 
-        public IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
+        public IndexDefinition GetLegacyIndexDefinition(DocumentConventions conventions)
         {
             IndexDefinition legacyIndexDefinition;
-            var oldPrettifyGeneratedLinqExpressions = documentConvention.PrettifyGeneratedLinqExpressions;
-            documentConvention.PrettifyGeneratedLinqExpressions = false;
+            var oldPrettifyGeneratedLinqExpressions = conventions.PrettifyGeneratedLinqExpressions;
+            conventions.PrettifyGeneratedLinqExpressions = false;
             try
             {
                 legacyIndexDefinition = CreateIndexDefinition();
             }
             finally
             {
-                documentConvention.PrettifyGeneratedLinqExpressions = oldPrettifyGeneratedLinqExpressions;
+                conventions.PrettifyGeneratedLinqExpressions = oldPrettifyGeneratedLinqExpressions;
             }
             return legacyIndexDefinition;
         }
@@ -305,17 +279,17 @@ namespace Raven.Client.Indexes
             return store.ExecuteIndexAsync(this);
         }
 
-        public virtual async Task SideBySideExecuteAsync(DocumentStoreBase documentStore, DocumentConvention documentConvention, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
+        public virtual async Task SideBySideExecuteAsync(DocumentStoreBase store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
         {
-            await PutIndexAsync(documentStore, documentConvention, minimumEtagBeforeReplace).ConfigureAwait(false);
+            await PutIndexAsync(store, conventions, minimumEtagBeforeReplace).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>
-        public virtual async Task ExecuteAsync(DocumentStoreBase documentStore, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
+        public virtual async Task ExecuteAsync(DocumentStoreBase store, DocumentConventions conventions, CancellationToken token = default(CancellationToken))
         {
-            await PutIndexAsync(documentStore, documentConvention).ConfigureAwait(false);
+            await PutIndexAsync(store, conventions).ConfigureAwait(false);
         }
     }
 
@@ -351,7 +325,7 @@ namespace Raven.Client.Indexes
         public override IndexDefinition CreateIndexDefinition()
         {
             if (Conventions == null)
-                Conventions = new DocumentConvention();
+                Conventions = new DocumentConventions();
 
             var indexDefinition = new IndexDefinitionBuilder<TDocument, TReduceResult>(IndexName)
             {
@@ -419,10 +393,7 @@ namespace Raven.Client.Indexes
         /// <value>
         /// 	<c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
         /// </value>
-        public override bool IsMapReduce
-        {
-            get { return Reduce != null; }
-        }
+        public override bool IsMapReduce => Reduce != null;
 
         /// <summary>
         /// The map definition

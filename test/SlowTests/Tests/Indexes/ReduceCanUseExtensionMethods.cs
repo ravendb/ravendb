@@ -64,7 +64,7 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void CorrectlyUseExtensionMethodsOnConvertedType()
         {
-            var indexDefinition = new PainfulIndex { Conventions = new DocumentConvention() }.CreateIndexDefinition();
+            var indexDefinition = new PainfulIndex { Conventions = new DocumentConventions() }.CreateIndexDefinition();
             var map = indexDefinition.Maps.First();
             Assert.Contains("((String[]) doc.Tags.Split(", map);
         }

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="DocumentConvention.cs" company="Hibernating Rhinos LTD">
+// <copyright file="DocumentConventions.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -19,7 +19,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using Raven.Client.Cluster;
 using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Indexing;
@@ -34,9 +33,9 @@ namespace Raven.Client.Document
     /// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize
     /// the way the Raven client API behaves
     /// </summary>
-    public class DocumentConvention : QueryConvention
+    public class DocumentConventions : QueryConventions
     {
-        internal static DocumentConvention Default = new DocumentConvention();
+        internal static DocumentConventions Default = new DocumentConventions();
 
         public delegate IEnumerable<object> ApplyReduceFunctionFunc(
             Type indexType,
@@ -44,21 +43,21 @@ namespace Raven.Client.Document
             IEnumerable<object> results,
             Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults);
 
-        private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
+        private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> _compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
-        private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
+        private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync =
             new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
-        private readonly IList<Tuple<Type, Func<ValueType, string>>> listOfRegisteredIdLoadConventions =
+        private readonly IList<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions =
             new List<Tuple<Type, Func<ValueType, string>>>();
 
         public Action<object, StreamWriter> SerializeEntityToJsonStream;
         public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DocumentConvention"/> class.
+        /// Initializes a new instance of the <see cref="DocumentConventions"/> class.
         /// </summary>
-        public DocumentConvention()
+        public DocumentConventions()
         {
             PreserveDocumentPropertiesNotFoundOnModel = true;
             PrettifyGeneratedLinqExpressions = true;
@@ -111,14 +110,14 @@ namespace Raven.Client.Document
 
         public class JsonNetBlittableEntitySerializer
         {
-            private readonly DocumentConvention _conventions;
+            private readonly DocumentConventions _conventions;
 
             [ThreadStatic]
             private static BlittableJsonReader _reader;
             [ThreadStatic]
             private static JsonSerializer _serializer;
 
-            public JsonNetBlittableEntitySerializer(DocumentConvention conventions)
+            public JsonNetBlittableEntitySerializer(DocumentConventions conventions)
             {
                 _conventions = conventions;
             }
@@ -143,18 +142,18 @@ namespace Raven.Client.Document
             IEnumerable<object> results,
             Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults)
         {
-            var copy = compiledReduceCache;
+            var copy = _compiledReduceCache;
             Func<IEnumerable<object>, IEnumerable> compile;
             if (copy.TryGetValue(indexType, out compile) == false)
             {
                 compile = generateTransformResults();
-                compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>(copy)
+                _compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>(copy)
                 {
                     {indexType, compile}
                 };
             }
             return compile(results).Cast<object>()
-                .Select<object, object>(result =>
+                .Select(result =>
                  {
                      // we got an anonymous object and we need to get the reduce results
                      var jTokenWriter = new JTokenWriter();
@@ -228,12 +227,12 @@ namespace Raven.Client.Document
         /// <param name="conventions">The conventions.</param>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
+        public static string GenerateDocumentKeyUsingIdentity(DocumentConventions conventions, object entity)
         {
             return conventions.GetDynamicTagName(entity) + "/";
         }
 
-        private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
+        private static IDictionary<Type, string> _cachedDefaultTypeTagNames = new Dictionary<Type, string>();
 
         /// <summary>
         /// Get the default tag name for the specified type.
@@ -241,7 +240,7 @@ namespace Raven.Client.Document
         public static string DefaultTypeTagName(Type t)
         {
             string result;
-            if (cachedDefaultTypeTagNames.TryGetValue(t, out result))
+            if (_cachedDefaultTypeTagNames.TryGetValue(t, out result))
                 return result;
 
             if (t.Name.Contains("<>"))
@@ -265,9 +264,12 @@ namespace Raven.Client.Document
             {
                 result = Inflector.Pluralize(t.Name);
             }
-            var temp = new Dictionary<Type, string>(cachedDefaultTypeTagNames);
-            temp[t] = result;
-            cachedDefaultTypeTagNames = temp;
+            var temp = new Dictionary<Type, string>(_cachedDefaultTypeTagNames)
+            {
+                [t] = result
+            };
+
+            _cachedDefaultTypeTagNames = temp;
             return result;
         }
 
@@ -321,7 +323,7 @@ namespace Raven.Client.Document
         public Task<string> GenerateDocumentKeyAsync(string dbName, object entity)
         {
             var type = entity.GetType();
-            foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventionsAsync
+            foreach (var typeToRegisteredIdConvention in _listOfRegisteredIdConventionsAsync
                 .Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
             {
                 return typeToRegisteredIdConvention.Item2(dbName, entity);
@@ -407,19 +409,19 @@ namespace Raven.Client.Document
         /// Register an async id convention for a single type (and all of its derived types.
         /// Note that you can still fall back to the DocumentKeyGenerator if you want.
         /// </summary>
-        public DocumentConvention RegisterAsyncIdConvention<TEntity>(Func<string, TEntity, Task<string>> func)
+        public DocumentConventions RegisterAsyncIdConvention<TEntity>(Func<string, TEntity, Task<string>> func)
         {
             var type = typeof(TEntity);
-            var entryToRemove = listOfRegisteredIdConventionsAsync.FirstOrDefault(x => x.Item1 == type);
+            var entryToRemove = _listOfRegisteredIdConventionsAsync.FirstOrDefault(x => x.Item1 == type);
             if (entryToRemove != null)
             {
-                listOfRegisteredIdConventionsAsync.Remove(entryToRemove);
+                _listOfRegisteredIdConventionsAsync.Remove(entryToRemove);
             }
 
             int index;
-            for (index = 0; index < listOfRegisteredIdConventionsAsync.Count; index++)
+            for (index = 0; index < _listOfRegisteredIdConventionsAsync.Count; index++)
             {
-                var entry = listOfRegisteredIdConventionsAsync[index];
+                var entry = _listOfRegisteredIdConventionsAsync[index];
                 if (entry.Item1.IsAssignableFrom(type))
                 {
                     break;
@@ -427,7 +429,7 @@ namespace Raven.Client.Document
             }
 
             var item = new Tuple<Type, Func<string, object, Task<string>>>(typeof(TEntity), (dbName, o) => func(dbName, (TEntity)o));
-            listOfRegisteredIdConventionsAsync.Insert(index, item);
+            _listOfRegisteredIdConventionsAsync.Insert(index, item);
 
             return this;
         }
@@ -436,23 +438,23 @@ namespace Raven.Client.Document
         /// Register an id convention for a single type (and all its derived types) to be used when calling session.Load{TEntity}(TId id)
         /// It is used by the default implementation of FindFullDocumentKeyFromNonStringIdentifier.
         /// </summary>
-        public DocumentConvention RegisterIdLoadConvention<TEntity>(Func<ValueType, string> func)
+        public DocumentConventions RegisterIdLoadConvention<TEntity>(Func<ValueType, string> func)
         {
             var type = typeof(TEntity);
-            var entryToRemove = listOfRegisteredIdLoadConventions.FirstOrDefault(x => x.Item1 == type);
+            var entryToRemove = _listOfRegisteredIdLoadConventions.FirstOrDefault(x => x.Item1 == type);
             if (entryToRemove != null)
-                listOfRegisteredIdLoadConventions.Remove(entryToRemove);
+                _listOfRegisteredIdLoadConventions.Remove(entryToRemove);
 
             int index;
-            for (index = 0; index < listOfRegisteredIdLoadConventions.Count; index++)
+            for (index = 0; index < _listOfRegisteredIdLoadConventions.Count; index++)
             {
-                var entry = listOfRegisteredIdLoadConventions[index];
+                var entry = _listOfRegisteredIdLoadConventions[index];
                 if (entry.Item1.IsAssignableFrom(type))
                     break;
             }
 
             var item = new Tuple<Type, Func<ValueType, string>>(typeof(TEntity), o => func(o));
-            listOfRegisteredIdLoadConventions.Insert(index, item);
+            _listOfRegisteredIdLoadConventions.Insert(index, item);
 
             return this;
         }
@@ -529,9 +531,9 @@ namespace Raven.Client.Document
         /// <summary>
         /// Clone the current conventions to a new instance
         /// </summary>
-        public DocumentConvention Clone()
+        public DocumentConventions Clone()
         {
-            return (DocumentConvention)MemberwiseClone();
+            return (DocumentConventions)MemberwiseClone();
         }
 
         /// <summary>
@@ -567,13 +569,11 @@ namespace Raven.Client.Document
 
         public bool AcceptGzipContent { get; set; }
 
-        public ClusterBehavior ClusterBehavior { get; set; }
-
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 
-        private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
-        private readonly Dictionary<string, SortOptions> customDefaultSortOptions = new Dictionary<string, SortOptions>();
-        private readonly List<Type> customRangeTypes = new List<Type>();
+        private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> _listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
+        private readonly Dictionary<string, SortOptions> _customDefaultSortOptions = new Dictionary<string, SortOptions>();
+        private readonly List<Type> _customRangeTypes = new List<Type>();
 
         public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption = SortOptions.String, bool usesRangeField = false)
         {
@@ -586,28 +586,28 @@ namespace Raven.Client.Document
             };
 
             int index;
-            for (index = 0; index < listOfQueryValueConverters.Count; index++)
+            for (index = 0; index < _listOfQueryValueConverters.Count; index++)
             {
-                var entry = listOfQueryValueConverters[index];
+                var entry = _listOfQueryValueConverters[index];
                 if (entry.Item1.IsAssignableFrom(typeof(T)))
                 {
                     break;
                 }
             }
 
-            listOfQueryValueConverters.Insert(index, Tuple.Create(typeof(T), actual));
+            _listOfQueryValueConverters.Insert(index, Tuple.Create(typeof(T), actual));
 
             if (defaultSortOption != SortOptions.String)
-                customDefaultSortOptions.Add(typeof(T).Name, defaultSortOption);
+                _customDefaultSortOptions.Add(typeof(T).Name, defaultSortOption);
 
             if (usesRangeField)
-                customRangeTypes.Add(typeof(T));
+                _customRangeTypes.Add(typeof(T));
         }
 
 
         public bool TryConvertValueForQuery(string fieldName, object value, QueryValueConvertionType convertionType, out string strValue)
         {
-            foreach (var queryValueConverterTuple in listOfQueryValueConverters
+            foreach (var queryValueConverterTuple in _listOfQueryValueConverters
                     .Where(tuple => tuple.Item1.IsInstanceOfType(value)))
             {
                 return queryValueConverterTuple.Item2(fieldName, value, convertionType, out strValue);
@@ -629,10 +629,10 @@ namespace Raven.Client.Document
                 type == typeof(decimal) || type == typeof(TimeSpan) || type == typeof(short))
                 return true;
 
-            return customRangeTypes.Contains(type);
+            return _customRangeTypes.Contains(type);
         }
 
-        protected Dictionary<Type, MemberInfo> idPropertyCache = new Dictionary<Type, MemberInfo>();
+        protected Dictionary<Type, MemberInfo> IdPropertyCache = new Dictionary<Type, MemberInfo>();
 
         /// <summary>
         /// Gets or sets the function to find the identity property.
@@ -648,7 +648,7 @@ namespace Raven.Client.Document
         public MemberInfo GetIdentityProperty(Type type)
         {
             MemberInfo info;
-            var currentIdPropertyCache = idPropertyCache;
+            var currentIdPropertyCache = IdPropertyCache;
             if (currentIdPropertyCache.TryGetValue(type, out info))
                 return info;
 
@@ -660,7 +660,7 @@ namespace Raven.Client.Document
                 identityProperty = propertyInfo ?? identityProperty;
             }
 
-            idPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
+            IdPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
             {
                 {type, identityProperty}
             };

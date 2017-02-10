@@ -8,23 +8,16 @@ using Raven.Client.Document;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 
 namespace Raven.Client.Commands
 {
     public class StreamOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<StreamOperation>("Raven.Client");
 
         public StreamOperation(InMemoryDocumentSessionOperations session)
         {
             _session = session;
-        }
-
-        protected void LogStream()
-        {
-            //TODO
         }
 
         public StreamCommand CreateRequest(IRavenQueryInspector query)
@@ -215,7 +208,7 @@ namespace Raven.Client.Commands
 
         private class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>
         {
-            private bool complete;
+            private bool _complete;
 
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult stream)
             {
@@ -232,7 +225,7 @@ namespace Raven.Client.Commands
 
             public async Task<bool> MoveNextAsync()
             {
-                if (complete)
+                if (_complete)
                     return false;
                 var state = new JsonParserState();
                 JsonOperationContext.ManagedPinnedBuffer buffer;
@@ -295,7 +288,7 @@ namespace Raven.Client.Commands
                             throw new InvalidOperationException("Expected stream closing token, but got " +
                                                                 state.CurrentTokenType);
                         }
-                        complete = true;
+                        _complete = true;
                         return true;
                     }
 

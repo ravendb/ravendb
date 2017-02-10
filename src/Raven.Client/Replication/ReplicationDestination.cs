@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.Client.Cluster;
 using Raven.Client.Extensions.Internal;
 using Sparrow.Json.Parsing;
 
@@ -155,38 +154,6 @@ namespace Raven.Client.Replication
                 hashCode = (hashCode * 397) ^ Disabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ (ClientVisibleUrl?.GetHashCode() ?? 0);
                 return hashCode;
-            }
-        }
-
-        public class ReplicationDestinationWithConfigurationOrigin : ReplicationDestination
-        {
-            public bool HasGlobal { get; set; }
-
-            public bool HasLocal { get; set; }
-        }
-
-        public class ReplicationDestinationWithClusterInformation : ReplicationDestination
-        {
-            public ClusterInformation ClusterInformation { get; set; }
-
-            public static ReplicationDestinationWithClusterInformation Create(ReplicationDestinationWithConfigurationOrigin source, bool isInCluster, bool isLeader)
-            {
-                return new ReplicationDestinationWithClusterInformation
-                {
-                    ApiKey = source.ApiKey,
-                    ClientVisibleUrl = source.ClientVisibleUrl,
-                    Database = source.Database,
-                    Disabled = source.Disabled,
-                    Domain = source.Domain,
-                    IgnoredClient = source.IgnoredClient,
-                    ClusterInformation = new ClusterInformation(isInCluster, isLeader),
-                    Password = source.Password,
-                    SkipIndexReplication = source.SkipIndexReplication,
-                    TransitiveReplicationBehavior = source.TransitiveReplicationBehavior,
-                    Url = source.Url,
-                    Username = source.Username,
-                    SpecifiedCollections = source.SpecifiedCollections
-                };
             }
         }
 

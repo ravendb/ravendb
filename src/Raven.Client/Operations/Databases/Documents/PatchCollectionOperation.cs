@@ -27,7 +27,7 @@ namespace Raven.Client.Operations.Databases.Documents
             _patch = patch;
         }
 
-        public RavenCommand<OperationIdResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PatchCollectionCommand(conventions, context, _collectionName, _patch);
         }
@@ -38,7 +38,7 @@ namespace Raven.Client.Operations.Databases.Documents
             private readonly string _collectionName;
             private readonly BlittableJsonReaderObject _patch;
 
-            public PatchCollectionCommand(DocumentConvention conventions, JsonOperationContext context, string collectionName, PatchRequest patch)
+            public PatchCollectionCommand(DocumentConventions conventions, JsonOperationContext context, string collectionName, PatchRequest patch)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

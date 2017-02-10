@@ -18,7 +18,7 @@ namespace Raven.Client.Operations.Databases
             _pageSize = pageSize;
         }
 
-        public RavenCommand<string[]> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<string[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetDatabaseNamesCommand(_start, _pageSize);
         }

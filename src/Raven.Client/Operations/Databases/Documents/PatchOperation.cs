@@ -44,14 +44,14 @@ namespace Raven.Client.Operations.Databases.Documents
             _skipPatchIfEtagMismatch = skipPatchIfEtagMismatch;
         }
 
-        public RavenCommand<PatchResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<PatchResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PatchCommand(conventions, context, _id, _etag, _patch, _patchIfMissing, _skipPatchIfEtagMismatch, returnDebugInformation: false);
         }
 
         public class PatchCommand : RavenCommand<PatchResult>
         {
-            private readonly DocumentConvention _conventions;
+            private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;
             private readonly string _id;
             private readonly long? _etag;
@@ -59,7 +59,7 @@ namespace Raven.Client.Operations.Databases.Documents
             private readonly bool _skipPatchIfEtagMismatch;
             private readonly bool _returnDebugInformation;
 
-            public PatchCommand(DocumentConvention conventions, JsonOperationContext context, string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfEtagMismatch, bool returnDebugInformation)
+            public PatchCommand(DocumentConventions conventions, JsonOperationContext context, string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfEtagMismatch, bool returnDebugInformation)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

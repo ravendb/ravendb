@@ -9,7 +9,7 @@ class replicationsSetup {
     requestTimeSlaThreshold = ko.observable<number>(null);
     hasAnyReplicationDestination: KnockoutComputed<boolean>;
 
-    constructor(dto: Raven.Abstractions.Replication.ReplicationDocument<Raven.Abstractions.Replication.ReplicationDestination>) {
+    constructor(dto: Raven.Client.Replication.ReplicationDocument<Raven.Client.Replication.ReplicationDestination>) {
         this.source(dto.Source);
 
         this.destinations(dto.Destinations.map(d => new replicationDestination(d)));

@@ -43,11 +43,6 @@ namespace Raven.Client.Linq
             return null;
         }
 
-        internal static Type GetSequenceType(Type elementType)
-        {
-            return typeof(IEnumerable<>).MakeGenericType(elementType);
-        }
-
         internal static Type GetElementType(Type seqType)
         {
             Type ienum = FindIEnumerable(seqType);
@@ -61,30 +56,11 @@ namespace Raven.Client.Linq
             return type != null && type.GetTypeInfo().IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
 
-        internal static bool IsNullAssignable(Type type)
-        {
-            return !type.GetTypeInfo().IsValueType || IsNullableType(type);
-        }
-
         internal static Type GetNonNullableType(Type type)
         {
             if (IsNullableType(type))
                 return type.GetGenericArguments()[0];
             return type;
-        }
-
-        internal static Type GetMemberType(MemberInfo mi)
-        {
-            FieldInfo fi = mi as FieldInfo;
-            if (fi != null)
-                return fi.FieldType;
-            PropertyInfo pi = mi as PropertyInfo;
-            if (pi != null)
-                return pi.PropertyType;
-            EventInfo ei = mi as EventInfo;
-            if (ei != null)
-                return ei.EventHandlerType;
-            return null;
         }
     }
 }

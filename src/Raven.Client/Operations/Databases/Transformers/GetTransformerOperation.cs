@@ -21,7 +21,7 @@ namespace Raven.Client.Operations.Databases.Transformers
             _transformerName = transformerName;
         }
 
-        public RavenCommand<TransformerDefinition> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<TransformerDefinition> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetTransformerCommand(_transformerName);
         }

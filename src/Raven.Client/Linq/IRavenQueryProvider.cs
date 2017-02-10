@@ -61,24 +61,12 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Change the result type for the query provider
         /// </summary>
-        IRavenQueryProvider For<S>();
-
-        /// <summary>
-        /// Convert the Linq query to a Lucene query
-        /// </summary>
-        [Obsolete("Use ToAsyncDocumentQuery instead.")]
-        IAsyncDocumentQuery<T> ToAsyncLuceneQuery<T>(Expression expression);
+        IRavenQueryProvider For<TS>();
 
         /// <summary>
         /// Convert the Linq query to a Lucene query
         /// </summary>
         IAsyncDocumentQuery<T> ToAsyncDocumentQuery<T>(Expression expression);
-
-        /// <summary>
-        /// Convert the linq query to a Lucene query
-        /// </summary>
-        [Obsolete("Use ToDocumentQuery instead.")]
-        IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression);
 
         /// <summary>
         /// Convert the linq query to a Lucene query
@@ -89,7 +77,7 @@ namespace Raven.Client.Linq
         /// Convert the Linq query to a lazy Lucene query and provide a function to execute when it is being evaluated
         /// </summary>
         Lazy<IEnumerable<T>> Lazily<T>(Expression expression, Action<IEnumerable<T>> onEval);
-        
+
         Lazy<Task<IEnumerable<T>>> LazilyAsync<T>(Expression expression, Action<IEnumerable<T>> onEval);
 
         /// <summary>
@@ -100,7 +88,7 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Convert the Linq query to a lazy-count Lucene query and provide a function to execute when it is being evaluated
         /// </summary>
-        Lazy<Task<int>> CountLazilyAsync<T>(Expression expression, CancellationToken token = default (CancellationToken));
+        Lazy<Task<int>> CountLazilyAsync<T>(Expression expression, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         /// Move the registered after query actions
@@ -121,14 +109,6 @@ namespace Raven.Client.Linq
         /// Gets the query inputs being supplied to
         /// </summary>
         Dictionary<string, object> TransformerParameters { get; }
-
-        /// <summary>
-        /// Adds input to transformer via a key/value pair
-        /// </summary>
-        /// <param name="input"></param>
-        /// <param name="value"></param>
-        [Obsolete("Use AddTransformerParameter instead.")]
-        void AddQueryInput(string input, object value);
 
         /// <summary>
         /// Adds input to transformer via a key/value pair

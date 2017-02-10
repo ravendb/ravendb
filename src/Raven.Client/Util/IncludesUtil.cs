@@ -8,10 +8,10 @@ namespace Raven.Client.Util
 {
     public class IncludesUtil
     {
-        private readonly static Regex IncludePrefixRegex = new Regex(@"(\([^\)]+\))$",
+        private static readonly Regex IncludePrefixRegex = new Regex(@"(\([^\)]+\))$",
    RegexOptions.Compiled |
    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        private readonly static Regex IncludeSuffixRegex = new Regex(@"(\[[\{0\}\/][^\]]+\])$",
+        private static readonly Regex IncludeSuffixRegex = new Regex(@"(\[[\{0\}\/][^\]]+\])$",
          RegexOptions.Compiled |
          RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
@@ -48,7 +48,7 @@ namespace Raven.Client.Util
             return result;
         }
 
-       
+
 
 
         public static void Include(BlittableJsonReaderObject document, string include, Func<string, bool> loadId)
@@ -73,7 +73,7 @@ namespace Raven.Client.Util
         {
             if (token == null)
                 return; // nothing to do
-            
+
             //Convert.ToDecimal()
             if (token is BlittableJsonReaderArray)
             {
@@ -82,7 +82,7 @@ namespace Raven.Client.Util
                 for (var i = 0; i < blitArray.Length; i++)
                 {
                     ExecuteInternal(blitArray[i], addition, loadId);
-                }   
+                }
             }
             else if (token is string)
             {
@@ -98,7 +98,7 @@ namespace Raven.Client.Util
             }
             else if (token is LazyStringValue)
             {
-                var value = token.ToString() ;
+                var value = token.ToString();
 
                 // we need to check on both of them, with id & without id
                 // because people will do products/1 and detaisl/products/1 and want to be able
@@ -125,7 +125,7 @@ namespace Raven.Client.Util
             // here we ignore everything else
             // if it ain't a string or array, it is invalid
             // as an id
-            
+
         }
     }
 }

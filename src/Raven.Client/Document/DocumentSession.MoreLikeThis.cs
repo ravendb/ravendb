@@ -82,7 +82,7 @@ namespace Raven.Client.Document
             if (query == null)
                 throw new ArgumentNullException(nameof(query));
 
-            var operation = new MoreLikeThisOperation<T>(this, query);
+            var operation = new MoreLikeThisOperation(this, query);
 
             var command = operation.CreateRequest();
             RequestExecuter.Execute(command, Context);

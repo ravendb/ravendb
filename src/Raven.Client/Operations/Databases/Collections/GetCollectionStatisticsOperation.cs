@@ -10,16 +10,16 @@ namespace Raven.Client.Operations.Databases.Collections
 {
     public class GetCollectionStatisticsOperation : IAdminOperation<CollectionStatistics>
     {
-        public RavenCommand<CollectionStatistics> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<CollectionStatistics> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetCollectionStatisticsCommand(conventions);
         }
 
         private class GetCollectionStatisticsCommand : RavenCommand<CollectionStatistics>
         {
-            private readonly DocumentConvention _conventions;
+            private readonly DocumentConventions _conventions;
 
-            public GetCollectionStatisticsCommand(DocumentConvention conventions)
+            public GetCollectionStatisticsCommand(DocumentConventions conventions)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

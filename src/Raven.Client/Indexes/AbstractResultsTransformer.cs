@@ -27,7 +27,7 @@ namespace Raven.Client.Indexes
         /// <para>e.g.</para>
         /// <para>if our type is <code>'Orders_Totals'</code> then index name would be <code>'Orders/Totals'</code></para>
         /// </summary>
-        public virtual string TransformerName { get { return GetType().Name.Replace("_", "/"); } }
+        public virtual string TransformerName => GetType().Name.Replace("_", "/");
 
         /*[Obsolete("Use Parameter instead.")]
         protected RavenJToken Query(string key)
@@ -124,7 +124,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Gets or sets the conventions that should be used when index definition is created.
         /// </summary>
-        public DocumentConvention Conventions { get; set; }
+        public DocumentConventions Conventions { get; set; }
 
         /// <summary>
         /// Creates the transformer definition.
@@ -144,10 +144,10 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
-        public virtual void Execute(IDocumentStore documentStore, DocumentConvention documentConvention)
+        public virtual void Execute(IDocumentStore documentStore, DocumentConventions conventions)
         {
-            Conventions = documentConvention;
-            var prettify = documentConvention.PrettifyGeneratedLinqExpressions;
+            Conventions = conventions;
+            var prettify = conventions.PrettifyGeneratedLinqExpressions;
             var transformerDefinition = CreateTransformerDefinition(prettify);
 
             var requestExecuter = documentStore.GetRequestExecuter(documentStore.DefaultDatabase);
@@ -156,7 +156,7 @@ namespace Raven.Client.Indexes
 
             documentStore.Admin.Send(new PutTransformerOperation(TransformerName, transformerDefinition));
 
-            /*if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Transformers))
+            /*if (conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Transformers))
                 ReplicateTransformerIfNeeded(databaseCommands);*/
         }
 
@@ -205,10 +205,10 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>
-        public virtual async Task ExecuteAsync(IDocumentStore documentStore, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
+        public virtual async Task ExecuteAsync(IDocumentStore documentStore, DocumentConventions conventions, CancellationToken token = default(CancellationToken))
         {
-            Conventions = documentConvention;
-            var prettify = documentConvention.PrettifyGeneratedLinqExpressions;
+            Conventions = conventions;
+            var prettify = conventions.PrettifyGeneratedLinqExpressions;
             var transformerDefinition = CreateTransformerDefinition(prettify);
 
             var requestExecuter = documentStore.GetRequestExecuter(documentStore.DefaultDatabase);

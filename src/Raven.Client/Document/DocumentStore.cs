@@ -14,7 +14,6 @@ using Raven.Client.Data;
 using Raven.Client.Document.Async;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Metrics;
 using Raven.Client.Operations;
 using Raven.Client.Smuggler;
 using Raven.Client.Util;
@@ -30,11 +29,9 @@ namespace Raven.Client.Document
 
         //private readonly ConcurrentDictionary<string, ClusterAwareRequestExecuter> clusterAwareRequestExecuters = new ConcurrentDictionary<string, ClusterAwareRequestExecuter>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
+        private readonly AtomicDictionary<IDatabaseChanges> _databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
-
-        private readonly ConcurrentDictionary<string, RequestTimeMetric> requestTimeMetrics = new ConcurrentDictionary<string, RequestTimeMetric>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> _observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 
         private readonly ConcurrentDictionary<string, Lazy<RequestExecuter>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecuter>>(StringComparer.OrdinalIgnoreCase);
 
@@ -47,35 +44,15 @@ namespace Raven.Client.Document
         private DatabaseSmuggler _smuggler;
 
         /// <summary>
-        /// The current session id - only used during construction
-        /// </summary>
-        [ThreadStatic]
-        private static Guid? currentSessionId;
-        private const int DefaultNumberOfCachedRequests = 2048;
-        private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
-        private bool aggressiveCachingUsed;
-
-        /// <summary>
-        /// Whatever this instance has json request factory available
-        /// </summary>
-        public override bool HasJsonRequestFactory
-        {
-            get { return true; }
-        }
-
-        public ReplicationBehavior Replication { get; private set; }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="DocumentStore"/> class.
         /// </summary>
         public DocumentStore()
         {
-            Replication = new ReplicationBehavior(this);
             SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
-            Conventions = new DocumentConvention();
+            Conventions = new DocumentConventions();
         }
 
-        private string identifier;
+        private string _identifier;
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -85,15 +62,15 @@ namespace Raven.Client.Document
         {
             get
             {
-                if (identifier != null)
-                    return identifier;
+                if (_identifier != null)
+                    return _identifier;
                 if (Url == null)
                     return null;
                 if (DefaultDatabase != null)
                     return Url + " (DB: " + DefaultDatabase + ")";
                 return Url;
             }
-            set { identifier = value; }
+            set { _identifier = value; }
         }
 
         /// <summary>
@@ -144,15 +121,15 @@ namespace Raven.Client.Document
             GC.SuppressFinalize(this);
 #endif
 
-            foreach (var observeChangesAndEvictItemsFromCacheForDatabase in observeChangesAndEvictItemsFromCacheForDatabases)
+            foreach (var observeChangesAndEvictItemsFromCacheForDatabase in _observeChangesAndEvictItemsFromCacheForDatabases)
             {
                 observeChangesAndEvictItemsFromCacheForDatabase.Value.Dispose();
             }
 
             var tasks = new List<Task>();
-            foreach (var databaseChange in databaseChanges)
+            foreach (var databaseChange in _databaseChanges)
             {
-                var remoteDatabaseChanges = databaseChange.Value as RemoteDatabaseChanges;
+                //var remoteDatabaseChanges = databaseChange.Value as RemoteDatabaseChanges;
                 //TODO iftah
                 /*if (remoteDatabaseChanges != null)
                 {
@@ -206,20 +183,12 @@ namespace Raven.Client.Document
             EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();
-            currentSessionId = sessionId;
-            try
-            {
-                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-                var requestExecuter = GetRequestExecuter(databaseName);
-                var session = new DocumentSession(databaseName, this, sessionId, requestExecuter);
-                RegisterEvents(session);
-                // AfterSessionCreated(session);
-                return session;
-            }
-            finally
-            {
-                currentSessionId = null;
-            }
+            var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
+            var requestExecuter = GetRequestExecuter(databaseName);
+            var session = new DocumentSession(databaseName, this, sessionId, requestExecuter);
+            RegisterEvents(session);
+            // AfterSessionCreated(session);
+            return session;
         }
 
         public override RequestExecuter GetRequestExecuter(string databaseName = null)
@@ -259,8 +228,6 @@ namespace Raven.Client.Document
                 // TODO iftah
                 //SecurityExtensions.InitializeSecurity(Conventions, jsonRequestFactory, Url, Credentials);
 
-                InitializeInternal();
-
                 if (Conventions.AsyncDocumentKeyGenerator == null) // don't overwrite what the user is doing
                 {
                     var generator = new AsyncMultiDatabaseHiLoKeyGenerator(this, Conventions);
@@ -279,37 +246,11 @@ namespace Raven.Client.Document
             return this;
         }
 
-        public Task<string> Generate(string dbName, DocumentConvention conventions,
+        public Task<string> Generate(string dbName, DocumentConventions conventions,
                                                      object entity)
         {
             throw new NotImplementedException();
         }
-
-        public override void InitializeProfiling()
-        {
-            throw new NotImplementedException();
-
-            /*if (jsonRequestFactory == null)
-                throw new InvalidOperationException("Cannot call InitializeProfiling() before Initialize() was called.");
-            Conventions.DisableProfiling = false;
-            jsonRequestFactory.LogRequest += (sender, args) =>
-            {
-                if (Conventions.DisableProfiling)
-                    return;
-                if (args.TotalSize > 1024 * 1024 * 2)
-                {
-                    profilingContext.RecordAction(sender, new RequestResultArgs
-                    {
-                        Url = args.Url,
-                        PostedData = "total request/response size > 2MB, not tracked",
-                        Result = "total request/response size > 2MB, not tracked",
-                    });
-                    return;
-                }
-                profilingContext.RecordAction(sender, args);
-            };*/
-        }
-
 
         /// <summary>
         /// validate the configuration for the document store
@@ -318,110 +259,6 @@ namespace Raven.Client.Document
         {
             if (string.IsNullOrEmpty(Url))
                 throw new ArgumentException("Document store URL cannot be empty", "Url");
-        }
-
-
-        /// <summary>
-        /// Initialize the document store access method to RavenDB
-        /// </summary>
-        protected virtual void InitializeInternal()
-        {
-            /*var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
-
-            //throw new NotImplementedException();
-            /*databaseCommandsGenerator = () =>
-            {
-                string databaseUrl = Url;
-                if (string.IsNullOrEmpty(DefaultDatabase) == false)
-                {
-                    databaseUrl = rootDatabaseUrl;
-                    databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
-                }
-                return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
-                     currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForDatabase, Changes, null,
-                     Listeners.ConflictListeners, true, Conventions.ClusterBehavior));
-            };
-
-            asyncDatabaseCommandsGenerator = () =>
-            {
-                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, 
-                    currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForDatabase, Changes, null, 
-                    Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
-
-                if (string.IsNullOrEmpty(DefaultDatabase))
-                    return asyncServerClient;
-                return asyncServerClient.ForDatabase(DefaultDatabase);
-            };*/
-        }
-
-        /*public IDocumentStoreReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
-        {
-            var key = Url;
-            dbName = dbName ?? DefaultDatabase;
-            if (string.IsNullOrEmpty(dbName) == false)
-            {
-                key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
-            }
-
-            var result = replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory));
-
-            if (FailoverServers == null)
-                return result;
-
-            if (dbName == DefaultDatabase)
-            {
-                if (FailoverServers.IsSetForDefaultDatabase && result.FailoverServers == null)
-                    result.FailoverServers = FailoverServers.ForDefaultDatabase;
-            }
-            else
-            {
-                if (FailoverServers.IsSetForDatabase(dbName) && result.FailoverServers == null)
-                    result.FailoverServers = FailoverServers.GetForDatabase(dbName);
-            }
-
-            return result;
-        }*/
-
-        /*private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string databaseName, ClusterBehavior clusterBehavior, bool incrementStrippingBase)
-        {
-            var key = Url;
-            databaseName = databaseName ?? DefaultDatabase;
-            if (string.IsNullOrEmpty(databaseName) == false)
-                key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + databaseName;
-
-            IRequestExecuter requestExecuter;
-            if (clusterBehavior == ClusterBehavior.None)
-                requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)), GetRequestTimeMetricForDatabase(databaseName));
-            else
-                requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter());
-
-            requestExecuter.GetReadStripingBase(incrementStrippingBase);
-
-            if (FailoverServers == null)
-                return requestExecuter;
-
-            if (databaseName == DefaultDatabase)
-            {
-                if (FailoverServers.IsSetForDefaultDatabase && requestExecuter.FailoverServers == null)
-                    requestExecuter.FailoverServers = FailoverServers.ForDefaultDatabase;
-            }
-            else
-            {
-                if (FailoverServers.IsSetForDatabase(databaseName) && requestExecuter.FailoverServers == null)
-                    requestExecuter.FailoverServers = FailoverServers.GetForDatabase(databaseName);
-            }
-
-            return requestExecuter;
-        }*/
-
-        public RequestTimeMetric GetRequestTimeMetricForDatabase(string databaseName)
-        {
-            var key = Url;
-            databaseName = databaseName ?? DefaultDatabase;
-            if (string.IsNullOrEmpty(databaseName) == false)
-                key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + databaseName;
-
-            return requestTimeMetrics.GetOrAdd(key, new RequestTimeMetric());
         }
 
         /// <summary>
@@ -453,7 +290,7 @@ namespace Raven.Client.Document
         {
             AssertInitialized();
 
-            return databaseChanges.GetOrAdd(database ?? DefaultDatabase, CreateDatabaseChanges);
+            return _databaseChanges.GetOrAdd(database ?? DefaultDatabase, CreateDatabaseChanges);
         }
 
         protected virtual IDatabaseChanges CreateDatabaseChanges(string database)
@@ -536,7 +373,6 @@ namespace Raven.Client.Document
             EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();
-            currentSessionId = sessionId;
             try
             {
                 var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
@@ -547,7 +383,6 @@ namespace Raven.Client.Document
             }
             finally
             {
-                currentSessionId = null;
             }
         }
 
@@ -573,27 +408,10 @@ namespace Raven.Client.Document
             return OpenAsyncSessionInternal(new OpenSessionOptions());
         }
 
-
-
-
         /// <summary>
         /// Called after dispose is completed
         /// </summary>
         public override event EventHandler AfterDispose;
-
-        /// <summary>
-        /// Max number of cached requests (default: 2048)
-        /// </summary>
-        /*public int MaxNumberOfCachedRequests
-        {
-            get { return maxNumberOfCachedRequests; }
-            set
-            {
-                maxNumberOfCachedRequests = value;
-                if (initialized == true)
-                jsonRequestFactory.ResetCache(maxNumberOfCachedRequests);
-            }
-        }*/
 
         public Func<HttpMessageHandler> HttpMessageHandlerFactory { get; set; }
 
@@ -626,7 +444,7 @@ namespace Raven.Client.Document
         public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
         {
             var databaseName = database ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.SystemDatabase;
-            var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
+            var changes = _observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
 
             return changes == null ? new CompletedTask() : changes.ConnectionTask;
         }

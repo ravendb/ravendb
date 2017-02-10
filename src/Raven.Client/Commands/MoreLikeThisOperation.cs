@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Commands
 {
-    public class MoreLikeThisOperation<T>
+    public class MoreLikeThisOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly MoreLikeThisQuery _query;
@@ -50,7 +50,7 @@ namespace Raven.Client.Commands
                     continue;
 
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
-                _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
+                _session.IncludedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
             }
 
             var usedTransformer = string.IsNullOrEmpty(_query.Transformer) == false;

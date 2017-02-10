@@ -13,7 +13,7 @@ namespace Raven.Client.Indexing
         /// Store the term vectors of each document. A term vector is a list of the document's
         /// terms and their number of occurrences in that document.
         /// </summary>
-        Yes,        
+        Yes,
         /// <summary>
         /// Store the term vector + token position information
         /// </summary>

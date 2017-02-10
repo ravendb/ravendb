@@ -12,12 +12,12 @@ namespace Raven.Client.Document.Async
     public class AsyncMultiDatabaseHiLoKeyGenerator
     {
         private readonly DocumentStore _store;
-        private readonly DocumentConvention _conventions;
+        private readonly DocumentConventions _conventions;
 
         private readonly ConcurrentDictionary<string, AsyncMultiTypeHiLoKeyGenerator> _generators =
             new ConcurrentDictionary<string, AsyncMultiTypeHiLoKeyGenerator>();
 
-        public AsyncMultiDatabaseHiLoKeyGenerator(DocumentStore store, DocumentConvention conventions)
+        public AsyncMultiDatabaseHiLoKeyGenerator(DocumentStore store, DocumentConventions conventions)
         {
             _store = store;
             _conventions = conventions;
@@ -32,7 +32,7 @@ namespace Raven.Client.Document.Async
             return generator.GenerateDocumentKeyAsync(entity);
         }
 
-        public  AsyncMultiTypeHiLoKeyGenerator GenrateAsyncMultiTypeHiLoFunc(string dbName)
+        public AsyncMultiTypeHiLoKeyGenerator GenrateAsyncMultiTypeHiLoFunc(string dbName)
         {
             return new AsyncMultiTypeHiLoKeyGenerator(_store, dbName, _conventions);
         }

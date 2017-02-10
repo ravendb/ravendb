@@ -11,18 +11,18 @@ namespace Raven.Client
 {
     public class RavenQueryHighlightings
     {
-        private readonly List<FieldHighlightings> fields = new List<FieldHighlightings>();
+        private readonly List<FieldHighlightings> _fields = new List<FieldHighlightings>();
 
         internal FieldHighlightings AddField(string fieldName)
         {
             var fieldHighlightings = new FieldHighlightings(fieldName);
-            this.fields.Add(fieldHighlightings);
+            _fields.Add(fieldHighlightings);
             return fieldHighlightings;
         }
 
         internal void Update(QueryResult queryResult)
         {
-            foreach (var fieldHighlightings in this.fields)
+            foreach (var fieldHighlightings in _fields)
                 fieldHighlightings.Update(queryResult);
         }
     }

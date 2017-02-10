@@ -27,7 +27,7 @@ namespace Raven.Client.Operations.Databases.Transformers
             _transformerDefinition = transformerDefinition;
         }
 
-        public RavenCommand<PutTransformerResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<PutTransformerResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PutTransformerCommand(conventions, context, _transformerName, _transformerDefinition);
         }
@@ -38,7 +38,7 @@ namespace Raven.Client.Operations.Databases.Transformers
             private readonly string _transformerName;
             private readonly BlittableJsonReaderObject _transformerDefinition;
 
-            public PutTransformerCommand(DocumentConvention conventions, JsonOperationContext context, string transformerName, TransformerDefinition transformerDefinition)
+            public PutTransformerCommand(DocumentConventions conventions, JsonOperationContext context, string transformerName, TransformerDefinition transformerDefinition)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

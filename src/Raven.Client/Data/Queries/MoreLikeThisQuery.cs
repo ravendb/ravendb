@@ -7,7 +7,7 @@ namespace Raven.Client.Data.Queries
 {
     public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, object>>
     {
-        public MoreLikeThisQuery(DocumentConvention conventions) : base(conventions)
+        public MoreLikeThisQuery(DocumentConventions conventions) : base(conventions)
         {
         }
 
@@ -22,9 +22,9 @@ namespace Raven.Client.Data.Queries
     public abstract class MoreLikeThisQuery<T> : IIndexQuery
         where T : class
     {
-        public DocumentConvention Conventions { get; }
+        public DocumentConventions Conventions { get; }
 
-        protected MoreLikeThisQuery(DocumentConvention conventions)
+        protected MoreLikeThisQuery(DocumentConventions conventions)
         {
             Conventions = conventions;
             PageSize = conventions.ImplicitTakeAmount;

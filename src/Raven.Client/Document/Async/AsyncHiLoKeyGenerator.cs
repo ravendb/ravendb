@@ -28,9 +28,9 @@ namespace Raven.Client.Document.Async
 
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
+        /// Initializes a new instance of the <see cref="AsyncHiLoKeyGenerator"/> class.
         /// </summary>
-        public AsyncHiLoKeyGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator)            
+        public AsyncHiLoKeyGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator)
         {
             _store = store;
             _tag = tag;
@@ -59,9 +59,9 @@ namespace Raven.Client.Document.Async
 
             public RangeValue(long min, long max)
             {
-                this.Min = min;
-                this.Max = max;
-                this.Current = min - 1;
+                Min = min;
+                Max = max;
+                Current = min - 1;
             }
         }
 

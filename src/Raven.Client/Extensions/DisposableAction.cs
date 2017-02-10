@@ -13,7 +13,7 @@ namespace Raven.Client.Extensions
     /// </summary>
     public class DisposableAction : IDisposable
     {
-        private readonly Action action;
+        private readonly Action _action;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DisposableAction"/> class.
@@ -21,7 +21,7 @@ namespace Raven.Client.Extensions
         /// <param name="action">The action.</param>
         public DisposableAction(Action action)
         {
-            this.action = action;
+            _action = action;
         }
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace Raven.Client.Extensions
         /// </summary>
         public void Dispose()
         {
-            action();
+            _action();
         }
     }
 }

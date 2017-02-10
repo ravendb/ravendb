@@ -1,4 +1,3 @@
-using System;
 using Raven.Client.Data;
 using Raven.Client.Indexing;
 
@@ -34,12 +33,6 @@ namespace Raven.Client.Spatial
         public SpatialCriteria Within(object shape, double distErrorPercent = 0.025)
         {
             return RelatesToShape(shape, SpatialRelation.Within, distErrorPercent);
-        }
-
-        [Obsolete("Order of parameters in this method is inconsistent with the rest of the API (x = longitude, y = latitude). Please use 'WithinRadius'.")]
-        public SpatialCriteria WithinRadiusOf(double radius, double x, double y, double distErrorPercent = 0.025)
-        {
-            return RelatesToShape(SpatialIndexQuery.GetQueryShapeFromLatLon(y, x, radius), SpatialRelation.Within, distErrorPercent);
         }
 
         public SpatialCriteria WithinRadius(double radius, double latitude, double longitude, double distErrorPercent=0.025)

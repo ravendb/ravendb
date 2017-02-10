@@ -10,7 +10,7 @@ namespace Raven.Client.Operations.Databases.Indexes
 {
     public class GetIndexingStatusOperation : IAdminOperation<IndexingStatus>
     {
-        public RavenCommand<IndexingStatus> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<IndexingStatus> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetIndexingStatusCommand();
         }

@@ -34,7 +34,7 @@ namespace SlowTests.Bugs.MultiTenancy
                                                         {
                                                             Map = movies => from movie in movies
                                                                             select new { movie.Name }
-                                                        }.ToIndexDefinition(new DocumentConvention())));
+                                                        }.ToIndexDefinition(new DocumentConventions())));
 
                 using (var session = store.OpenSession())
                 {

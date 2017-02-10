@@ -15,7 +15,7 @@ namespace Raven.Client.Commands
 {
     public class QueryCommand : RavenCommand<QueryResult>
     {
-        private readonly DocumentConvention _conventions;
+        private readonly DocumentConventions _conventions;
         private readonly JsonOperationContext _context;
         private readonly string _indexName;
         private readonly IndexQuery _indexQuery;
@@ -23,7 +23,7 @@ namespace Raven.Client.Commands
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
 
-        public QueryCommand(DocumentConvention conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
+        public QueryCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
             if (conventions == null)
                 throw new ArgumentNullException(nameof(conventions));

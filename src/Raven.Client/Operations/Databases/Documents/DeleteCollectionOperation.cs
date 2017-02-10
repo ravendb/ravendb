@@ -20,7 +20,7 @@ namespace Raven.Client.Operations.Databases.Documents
             _collectionName = collectionName;
         }
 
-        public RavenCommand<OperationIdResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DeleteCollectionCommand(_collectionName);
         }

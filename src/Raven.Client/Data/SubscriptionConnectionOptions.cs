@@ -56,7 +56,7 @@ namespace Raven.Client.Data
             ParentObjectToDispose = null;
         }
     }
-  
+
     public class SubscriptionConnectionOptions
     {
         public long SubscriptionId { get; set; }
@@ -74,5 +74,5 @@ namespace Raven.Client.Data
         public long ClientSubscriptionId { get; set; } = Interlocked.Increment(ref _counter);
 
         private static long _counter;
-    }        
+    }
 }

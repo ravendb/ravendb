@@ -10,9 +10,9 @@ namespace Raven.Client.Data
     /// </summary>
     public class SuggestionQueryResult
     {
-         /// <summary>
+        /// <summary>
         /// Suggestions based on the term and dictionary
         /// </summary>
-        public string[] Suggestions { get; set; } 
+        public string[] Suggestions { get; set; }
     }
 }

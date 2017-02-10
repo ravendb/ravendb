@@ -29,7 +29,7 @@ namespace Raven.Client.Operations.Databases.Documents
             _options = options;
         }
 
-        public RavenCommand<OperationIdResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
+        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DeleteByIndexCommand(_indexName, _queryToDelete, _options);
         }

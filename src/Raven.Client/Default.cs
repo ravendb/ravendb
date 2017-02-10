@@ -1,6 +1,3 @@
-using Newtonsoft.Json;
-using Raven.Client.Json;
-
 namespace Raven.Client
 {
     public static class Default
@@ -26,18 +23,5 @@ namespace Raven.Client
 
         public static readonly string DateTimeOffsetFormatsToWrite = "o";
         public static readonly string DateTimeFormatsToWrite = "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff";
-
-        public static readonly JsonConverter[] Converters = {
-            new JsonEnumConverter(),
-            new JsonToJsonConverter(),
-            new JsonDateTimeISO8601Converter(),
-            new JsonDateTimeOffsetConverter(),
-            new JsonDictionaryDateTimeKeysConverter(),
-        };
-
-        static Default()
-        {
-            //Converters.Freeze();
-        }
     }
 }

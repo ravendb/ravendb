@@ -18,7 +18,7 @@ namespace Raven.Client
     /// </summary>
     internal interface IAsyncDocumentSessionImpl : IAsyncDocumentSession, IAsyncLazySessionOperations, IAsyncEagerSessionOperations
     {
-        DocumentConvention Conventions { get; }
+        DocumentConventions Conventions { get; }
 
         Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, CancellationToken token = default (CancellationToken));
 

@@ -16,12 +16,12 @@ namespace Raven.Client.Commands
             public string Reason { get; set; }
         }
 
-        private readonly DocumentConvention _conventions;
+        private readonly DocumentConventions _conventions;
         private readonly JsonOperationContext _context;
         private readonly string _indexName;
         private readonly IndexQuery _indexQuery;
 
-        public ExplainQueryCommand(DocumentConvention conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery)
+        public ExplainQueryCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery)
         {
             if (conventions == null)
                 throw new ArgumentNullException(nameof(conventions));

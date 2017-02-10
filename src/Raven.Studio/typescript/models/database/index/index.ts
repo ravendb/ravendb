@@ -17,7 +17,7 @@ class index {
     isTestIndex: boolean;
     lastIndexingTime?: string;
     lastQueryingTime?: string;
-    lockMode = ko.observable<Raven.Abstractions.Indexing.IndexLockMode>();
+    lockMode = ko.observable<Raven.Client.Indexing.IndexLockMode>();
     mapAttempts: number;
     mapErrors: number;
     mapSuccesses: number;

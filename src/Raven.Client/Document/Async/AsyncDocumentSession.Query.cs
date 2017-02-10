@@ -77,36 +77,6 @@ namespace Raven.Client.Document.Async
             return new AsyncDocumentQuery<T>(this, indexName, new string[0], new string[0], false);
         }
 
-        /// <summary>
-        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
-        [Obsolete("Use AsyncDocumentQuery instead")]
-        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            return AsyncDocumentQuery<T, TIndexCreator>();
-        }
-
-        /// <summary>
-        /// Query the specified index using Lucene syntax
-        /// </summary>
-        [Obsolete("Use AsyncDocumentQuery instead.")]
-        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
-        {
-            return AsyncDocumentQuery<T>(index, isMapReduce);
-        }
-
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
-        [Obsolete("Use AsyncDocumentQuery instead.")]
-        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
-        {
-            return AsyncDocumentQuery<T>();
-        }
-
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
         {
             return new RavenQueryInspector<S>();

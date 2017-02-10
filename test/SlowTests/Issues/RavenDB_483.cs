@@ -60,7 +60,7 @@ namespace SlowTests.Issues
             var indexDefinition = new IndexDefinitionBuilder<Person>()
             {
                 Map = persons => from p in persons select new {DateTime = (DateTime?) null}
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
+            }.ToIndexDefinition(new DocumentConventions{PrettifyGeneratedLinqExpressions = false});
 
             const string expected = @"docs.People.Select(p => new {
     DateTime = ((DateTime ? ) null)
