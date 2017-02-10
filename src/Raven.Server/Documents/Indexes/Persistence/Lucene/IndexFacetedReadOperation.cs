@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var key = facetResult.Key;
                 foreach (var facet in facets.Values.Where(f => f.DisplayName == key))
                 {
-                    if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+                    if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
                     {
                         foreach (var facetValue in facetResult.Value.Values)
                         {
@@ -313,22 +313,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var doc = docsInQuery.Array[index];
 
                         var currentVal = longs[doc - docBase];
-                        if (facet.Aggregation.HasFlag(FacetAggregation.Max))
+                        if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
                         {
                             value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
                         }
 
-                        if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+                        if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
                         {
                             value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
                         }
 
-                        if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+                        if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
                         {
                             value.Sum = currentVal + (value.Sum ?? 0d);
                         }
 
-                        if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+                        if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
                         {
                             value.Average = currentVal + (value.Average ?? 0d);
                         }
@@ -341,22 +341,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var doc = docsInQuery.Array[index];
 
                         var currentVal = doubles[doc - docBase];
-                        if (facet.Aggregation.HasFlag(FacetAggregation.Max))
+                        if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
                         {
                             value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
                         }
 
-                        if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+                        if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
                         {
                             value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
                         }
 
-                        if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+                        if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
                         {
                             value.Sum = currentVal + (value.Sum ?? 0d);
                         }
 
-                        if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+                        if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
                         {
                             value.Average = currentVal + (value.Average ?? 0d);
                         }

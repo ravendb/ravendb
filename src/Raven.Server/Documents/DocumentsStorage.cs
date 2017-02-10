@@ -1918,7 +1918,7 @@ namespace Raven.Server.Documents
             var collectionName = ExtractCollectionName(context, key, document);
             var newEtag = GenerateNextEtag();
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
-            if (collectionName.IsSystem == false && flags.HasFlag(DocumentFlags.Artificial) == false)
+            if (collectionName.IsSystem == false && (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
             {
                 bool hasVersion =
                     _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,

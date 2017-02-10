@@ -111,9 +111,9 @@ namespace Voron.Platform.Win32
 
             _totalAllocationSize = _fileInfo.Length;
 
-            if (_access.HasFlag(Win32NativeFileAccess.GenericWrite) ||
-                _access.HasFlag(Win32NativeFileAccess.GenericAll) ||
-                _access.HasFlag(Win32NativeFileAccess.FILE_GENERIC_WRITE))
+            if ((access & Win32NativeFileAccess.GenericWrite) == Win32NativeFileAccess.GenericWrite ||
+                (access & Win32NativeFileAccess.GenericAll) == Win32NativeFileAccess.GenericAll ||
+                (access & Win32NativeFileAccess.FILE_GENERIC_WRITE) == Win32NativeFileAccess.FILE_GENERIC_WRITE)
             {
                 var fileLength = _fileStream.Length;
                 if (fileLength == 0 && initialFileSize.HasValue)

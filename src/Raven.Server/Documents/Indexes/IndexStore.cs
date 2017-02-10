@@ -251,13 +251,14 @@ namespace Raven.Server.Documents.Indexes
             if (result == IndexDefinitionCompareDifferences.None)
                 return IndexCreationOptions.Noop;
 
-            if (result.HasFlag(IndexDefinitionCompareDifferences.Maps) || result.HasFlag(IndexDefinitionCompareDifferences.Reduce))
+            if ((result & IndexDefinitionCompareDifferences.Maps) == IndexDefinitionCompareDifferences.Maps || 
+                (result & IndexDefinitionCompareDifferences.Reduce) == IndexDefinitionCompareDifferences.Reduce)
                 return IndexCreationOptions.Update;
 
-            if (result.HasFlag(IndexDefinitionCompareDifferences.Fields))
+            if ((result & IndexDefinitionCompareDifferences.Fields) == IndexDefinitionCompareDifferences.Fields)
                 return IndexCreationOptions.Update;
 
-            if (result.HasFlag(IndexDefinitionCompareDifferences.Configuration))
+            if ((result & IndexDefinitionCompareDifferences.Configuration) == IndexDefinitionCompareDifferences.Configuration)
             {
                 var currentConfiguration = existingIndex.Configuration as SingleIndexConfiguration;
                 if (currentConfiguration == null) // should not happen
@@ -278,7 +279,8 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (result.HasFlag(IndexDefinitionCompareDifferences.MapsFormatting) || result.HasFlag(IndexDefinitionCompareDifferences.ReduceFormatting))
+            if ((result & IndexDefinitionCompareDifferences.MapsFormatting) == IndexDefinitionCompareDifferences.MapsFormatting ||
+                (result & IndexDefinitionCompareDifferences.ReduceFormatting) == IndexDefinitionCompareDifferences.ReduceFormatting)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
             return IndexCreationOptions.Update;

@@ -101,9 +101,9 @@ namespace Voron.Impl.Paging
 
             _totalAllocationSize = _fileInfo.Length;
 
-            if (access.HasFlag(Win32NativeFileAccess.GenericWrite) ||
-                access.HasFlag(Win32NativeFileAccess.GenericAll) ||
-                access.HasFlag(Win32NativeFileAccess.FILE_GENERIC_WRITE))
+            if ((access & Win32NativeFileAccess.GenericWrite) == Win32NativeFileAccess.GenericWrite ||
+                (access & Win32NativeFileAccess.GenericAll) == Win32NativeFileAccess.GenericAll ||
+                (access & Win32NativeFileAccess.FILE_GENERIC_WRITE) == Win32NativeFileAccess.FILE_GENERIC_WRITE)
             {
                 var fileLength = _fileStream.Length;
                 if ((fileLength == 0) && initialFileSize.HasValue)
