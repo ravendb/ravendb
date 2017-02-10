@@ -24,6 +24,7 @@ using Newtonsoft.Json.Serialization;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Json;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Helpers;
 using Raven.NewClient.Client.Util;
 
@@ -39,6 +40,8 @@ namespace Raven.NewClient.Client.Document
     /// </summary>
     public class DocumentConvention : QueryConvention
     {
+        internal static DocumentConvention Default = new DocumentConvention();
+
         public delegate IEnumerable<object> ApplyReduceFunctionFunc(
             Type indexType,
             Type resultType,
@@ -474,7 +477,7 @@ namespace Raven.NewClient.Client.Document
                 TypeNameHandling = TypeNameHandling.Auto,
                 TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-                FloatParseHandling = FloatParseHandling.Double,
+                FloatParseHandling = FloatParseHandling.Double
             };
 
             CustomizeJsonSerializer(jsonSerializer);
@@ -483,6 +486,7 @@ namespace Raven.NewClient.Client.Document
                 jsonSerializer.Converters.Add(new StringEnumConverter());
 
             jsonSerializer.Converters.Add(new JsonDateTimeISO8601Converter());
+            jsonSerializer.Converters.Add(new JsonLuceneDateTimeConverter());
             // TODO: Iftah
             //var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
             //if (jsonSerializer.Converters.Count == 0)

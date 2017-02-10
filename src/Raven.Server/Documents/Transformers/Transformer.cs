@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Transformers
             if (_configuration.RunInMemory)
                 return;
 
-            File.WriteAllText(GetPath(TransformerId, Name, _configuration).FullPath, JsonConvert.SerializeObject(Definition, Formatting.Indented, Default.Converters));
+            File.WriteAllText(GetPath(TransformerId, Name, _configuration).FullPath, JsonConvert.SerializeObject(Definition, Formatting.Indented));
         }
 
         public static Transformer CreateNew(int transformerId, TransformerDefinition definition,

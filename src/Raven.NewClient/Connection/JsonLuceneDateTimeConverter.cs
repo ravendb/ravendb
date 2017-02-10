@@ -16,9 +16,7 @@ namespace Raven.NewClient.Client.Connection
     public class JsonLuceneDateTimeConverter : JsonConverter
     {
         // 17 numeric characters on a datetime field == Lucene datetime
-        private static readonly Regex luceneDateTimePattern = new Regex(@"\d{17}",
-            RegexOptions.Compiled
-            );
+        private static readonly Regex LuceneDateTimePattern = new Regex(@"\d{17}", RegexOptions.Compiled);
 
         /// <summary>
         /// Writes the JSON representation of the object.
@@ -42,7 +40,7 @@ namespace Raven.NewClient.Client.Connection
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             var input = reader.Value as string;
-            if (input != null && luceneDateTimePattern.IsMatch(input))
+            if (input != null && LuceneDateTimePattern.IsMatch(input))
             {
                 var stringToDate = DateTools.StringToDate(input);
                 if (objectType == typeof(DateTimeOffset) || objectType == typeof(DateTimeOffset?))
@@ -61,11 +59,11 @@ namespace Raven.NewClient.Client.Connection
         /// </returns>
         public override bool CanConvert(Type objectType)
         {
-            return 
-                objectType == typeof (DateTime) || 
-                objectType == typeof (DateTimeOffset) || 
-                objectType == typeof (DateTime?) ||
-                objectType == typeof (DateTimeOffset?);
+            return
+                objectType == typeof(DateTime) ||
+                objectType == typeof(DateTimeOffset) ||
+                objectType == typeof(DateTime?) ||
+                objectType == typeof(DateTimeOffset?);
         }
 
         /// <summary>
@@ -74,12 +72,6 @@ namespace Raven.NewClient.Client.Connection
         /// <value>
         /// 	<c>true</c> if this <see cref="T:Newtonsoft.Json.JsonConverter"/> can write JSON; otherwise, <c>false</c>.
         /// </value>
-        public override bool CanWrite
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool CanWrite => false;
     }
 }

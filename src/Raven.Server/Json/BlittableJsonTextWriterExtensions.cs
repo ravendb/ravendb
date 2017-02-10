@@ -261,7 +261,7 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             var type = typeof(T);
-            if (type == typeof(Document))
+            if (type == typeof(List<Document>))
             {
                 writer.WritePropertyName(nameof(result.Results));
                 writer.WriteDocuments(context, (List<Document>)(object)result.Results, metadataOnly);
@@ -271,7 +271,7 @@ namespace Raven.Server.Json
                 writer.WriteDocuments(context, (List<Document>)(object)result.Includes, metadataOnly);
                 writer.WriteComma();
             }
-            else if (type == typeof(BlittableJsonReaderObject))
+            else if (type == typeof(List<BlittableJsonReaderObject>))
             {
                 writer.WritePropertyName(nameof(result.Results));
                 writer.WriteObjects(context, (List<BlittableJsonReaderObject>)(object)result.Results);

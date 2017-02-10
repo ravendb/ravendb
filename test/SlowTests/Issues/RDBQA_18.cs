@@ -12,7 +12,7 @@ namespace SlowTests.Issues
 {
     public class RDBQA_18 : RavenNewTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6314")]
         public void ShouldNotThrowNullReferenceException()
         {
             using (var store = new DocumentStore())

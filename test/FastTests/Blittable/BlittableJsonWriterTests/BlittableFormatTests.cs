@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.NewClient.Client.Document;
 using Sparrow.Json;
 using Xunit;
 
@@ -18,7 +19,9 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
             {
-                var compacted = JObject.Parse(new StreamReader(stream).ReadToEnd()).ToString(Formatting.None);
+                var serializer = DocumentConvention.Default.CreateSerializer();
+
+                var compacted = ((JObject)serializer.Deserialize(new JsonTextReader(new StreamReader(stream)))).ToString(Formatting.None);
                 stream.Position = 0;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -44,15 +47,15 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 {
                     var resource = typeof(BlittableFormatTests).Namespace + ".Jsons." + name;
 
-                    using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly
-                        .GetManifestResourceStream(resource))
+                    using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(resource))
                     {
-                        var compacted = JObject.Load(new JsonTextReader(new StreamReader(stream))).ToString(Formatting.None);
+                        var serializer = DocumentConvention.Default.CreateSerializer();
+                        
+                        var compacted = ((JObject)serializer.Deserialize(new JsonTextReader(new StreamReader(stream)))).ToString(Formatting.None);
                         stream.Position = 0;
 
                         using (var writer = context.Read(stream, "docs/1 "))
                         {
-
                             var memoryStream = new MemoryStream();
                             context.Write(memoryStream, writer);
                             var s = Encoding.UTF8.GetString(memoryStream.ToArray());

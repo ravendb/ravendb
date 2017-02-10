@@ -173,7 +173,8 @@ namespace Raven.NewClient.Client.Document
             // if this is still going, we continue with disposal, it is for graceful shutdown only, anyway
 
             //return unused hilo keys
-            AsyncHelpers.RunSync(() => _asyncMultiDbHiLo?.ReturnUnusedRange());
+            if (_asyncMultiDbHiLo != null)
+                AsyncHelpers.RunSync(() => _asyncMultiDbHiLo.ReturnUnusedRange());
 
             Subscriptions?.Dispose();
 
