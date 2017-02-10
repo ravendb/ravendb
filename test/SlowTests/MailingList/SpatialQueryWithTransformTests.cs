@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
@@ -49,7 +50,7 @@ namespace SlowTests.MailingList
                 {
                     var query = session.Query<VacanciesIndex.Result, VacanciesIndex>()
                         .TransformWith<ViewItemTransformer, ViewItemTransformer.View>()
-                        .AddTransformerParameter("USERID", RavenJToken.FromObject("fake"))
+                        .AddTransformerParameter("USERID", JToken.FromObject("fake"))
                         .Customize(x => x.WithinRadiusOf(10, 50.45010, 30.52340));
                     var result = query.ToList();
                     Assert.Equal(1, result.Count);
@@ -96,7 +97,7 @@ namespace SlowTests.MailingList
                 {
                     var query = session.Query<VacanciesIndex.Result, VacanciesIndex>()
                         .TransformWith<ViewItemTransformer, ViewItemTransformer.View>()
-                        .AddTransformerParameter("USERID", RavenJToken.FromObject("fake"))
+                        .AddTransformerParameter("USERID", JToken.FromObject("fake"))
                         .Customize(x => x.WithinRadiusOf(10, 50.45010, 30.52340));
                     var result = query.ToList();
                     Assert.Equal(1, result.Count);

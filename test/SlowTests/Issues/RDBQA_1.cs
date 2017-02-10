@@ -6,6 +6,7 @@
 
 using System;
 using FastTests;
+using Raven.NewClient.Client.Exceptions;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -67,13 +68,13 @@ namespace SlowTests.Issues
                 {
                     var doc = session.Load<Doc>(docId);
 
-                    var e1 = Assert.Throws<InvalidOperationException>(() => session.Delete(doc));
+                    var e1 = Assert.Throws<RavenException>(() => session.Delete(doc));
                     Assert.Equal("Raven.Tests.Issues.RDBQA_1+Doc is marked as read only and cannot be deleted", e1.Message);
 
                     session.Advanced.Clear();
 
                     session.Delete(docId);
-                    var e2 = Assert.Throws<ErrorResponseException>(() => session.SaveChanges());
+                    var e2 = Assert.Throws<RavenException>(() => session.SaveChanges());
                     Assert.Contains("DELETE vetoed on document docs/1 by Raven.Database.Plugins.Builtins.ReadOnlyDeleteTrigger because: You cannot delete document 'docs/1' because it is marked as readonly. Consider changing 'Raven-Read-Only' flag to 'False'.", e2.Message);
                 }
 
@@ -96,7 +97,7 @@ namespace SlowTests.Issues
                     session.Store(doc);
                     //session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = true;
 
-                    var e = Assert.Throws<ErrorResponseException>(() => session.SaveChanges());
+                    var e = Assert.Throws<RavenException>(() => session.SaveChanges());
                     Assert.Contains("PUT vetoed on document docs/1 by Raven.Database.Plugins.Builtins.ReadOnlyPutTrigger because: You cannot update document 'docs/1' when both of them, new and existing one, are marked as readonly. To update this document change 'Raven-Read-Only' flag to 'False' or remove it entirely.", e.Message);
                 }
             }

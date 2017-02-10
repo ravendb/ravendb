@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
@@ -140,7 +141,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        private class GlobalizationTransformer : AbstractTransformerCreationTask<RavenJObject>
+        private class GlobalizationTransformer : AbstractTransformerCreationTask<JObject>
         {
             public const string GlobalizationQueryListenerKey = "Language";
 

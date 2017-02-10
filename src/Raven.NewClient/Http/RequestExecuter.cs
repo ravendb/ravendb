@@ -78,7 +78,12 @@ namespace Raven.NewClient.Client.Http
             _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
-        private void UpdateTopologyCallback(object _)
+        public static RequestExecuter ShortTermSingleUse(string url, string databaseName, string apiKey)
+        {
+            return new ShortTermSingleUseRequestExecuter(url, databaseName, apiKey);
+        }
+
+        protected virtual void UpdateTopologyCallback(object _)
         {
             GC.KeepAlive(UpdateTopology());
         }
@@ -483,7 +488,7 @@ namespace Raven.NewClient.Client.Http
 
         private readonly object _updateFailingNodeStatusLock = new object();
 
-        private void UpdateFailingNodesStatusCallback(object _)
+        protected virtual void UpdateFailingNodesStatusCallback(object _)
         {
             if (Monitor.TryEnter(_updateFailingNodeStatusLock) == false)
                 return;
@@ -566,6 +571,23 @@ namespace Raven.NewClient.Client.Http
             _updateFailingNodesStatus?.Dispose();
             // shared instance, cannot dispose!
             //_httpClient.Dispose();
+        }
+
+
+        private class ShortTermSingleUseRequestExecuter : RequestExecuter
+        {
+            public ShortTermSingleUseRequestExecuter(string url, string databaseName, string apiKey)
+                : base(url, databaseName, apiKey)
+            {
+            }
+
+            protected override void UpdateTopologyCallback(object _)
+            {
+            }
+
+            protected override void UpdateFailingNodesStatusCallback(object _)
+            {
+            }
         }
     }
 }

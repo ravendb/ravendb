@@ -14,6 +14,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Extensions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Platform;
 using Sparrow.Json;
@@ -106,7 +107,7 @@ namespace Raven.Traffic
             }
         }
 
-       /// <summary>
+        /// <summary>
         /// Connects to raven traffic event source and registers all the requests to the file defined in the config
         /// </summary>
         /// <param name="config">configuration conatining the connection, the file to write to, etc.</param>
@@ -124,11 +125,11 @@ namespace Raven.Traffic
 
 
                 // record traffic no more then 7 days
-                var day = 24*60*60;
-                var timeout = (int)config.Timeout.TotalMilliseconds/1000;
-                timeout = Math.Min(timeout, 7*day);
+                var day = 24 * 60 * 60;
+                var timeout = (int)config.Timeout.TotalMilliseconds / 1000;
+                timeout = Math.Min(timeout, 7 * day);
                 if (timeout <= 0)
-                    timeout = 7*day;
+                    timeout = 7 * day;
 
                 try
                 {
@@ -210,7 +211,7 @@ namespace Raven.Traffic
                                     if (config.PrintOutput)
                                         Console.Write("\rRequest #{0} Stored...\t\t ", ++requestsCounter);
 
-                                    var jobj = RavenJObject.FromObject(notification);
+                                    var jobj = JObject.FromObject(notification);
                                     jobj.WriteTo(jsonWriter);
 
                                     if (sp.ElapsedMilliseconds > 5000)

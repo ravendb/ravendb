@@ -1,4 +1,5 @@
-﻿using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+﻿using Raven.NewClient.Client.Data;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries.Parse;
 using Xunit;
 
@@ -9,7 +10,7 @@ namespace FastTests.Server.Basic
         private static readonly LuceneASTQueryConfiguration Config = new LuceneASTQueryConfiguration
         {
             Analayzer = new RavenPerFieldAnalyzerWrapper(new LowerCaseKeywordAnalyzer()),
-            DefaultOperator = Raven.Client.Data.QueryOperator.Or,
+            DefaultOperator = QueryOperator.Or,
             FieldName = "foo"
         };
 

@@ -7,6 +7,9 @@ using Indexing.Benchmark.Entities;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Indexes;
+
 #if v35
 using Raven.NewClient.Abstractions.Data;
 #endif
@@ -42,15 +45,15 @@ namespace Indexing.Benchmark
                 DefaultDatabase = DbName
             }.Initialize();
 
-            if (_store.DatabaseCommands.GlobalAdmin.GetDatabaseNames(100).Contains(DbName))
+            if (_store.Admin.Send(new GetDatabaseNamesOperation(0, 100)).Contains(DbName))
             {
-                _store.DatabaseCommands.GetStatistics(); // give some time for database to load
-                _store.DatabaseCommands.GlobalAdmin.DeleteDatabase(DbName, true);
+                _store.Admin.Send(new GetStatisticsOperation()); // give some time for database to load
+                _store.Admin.Send(new DeleteDatabaseOperation(DbName, hardDelete: true));
             }
 
             var doc = MultiDatabase.CreateDatabaseDocument(DbName);
 
-            _store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
+            _store.Admin.Send(new CreateDatabaseOperation(doc));
         }
 
         public void Execute()
@@ -67,21 +70,21 @@ namespace Indexing.Benchmark
             mapReduceIndexesBench.Execute();
             Console.WriteLine($"{Environment.NewLine}-----------------------------");
 
-            _store.DatabaseCommands.Admin.StopIndexing();
+            _store.Admin.Send(new StopIndexingOperation());
 
-            Console.WriteLine($"Indexing stopped. Number of indexes in the database: {_store.DatabaseCommands.GetStatistics().Indexes.Length}");
+            Console.WriteLine($"Indexing stopped. Number of indexes in the database: {_store.Admin.Send(new GetStatisticsOperation()).Indexes.Length}");
 
             var staleIndexes = new HashSet<string>();
 
-            foreach (var indexName in _store.DatabaseCommands.GetIndexNames(0, 1024))
+            foreach (var indexName in _store.Admin.Send(new GetIndexNamesOperation(0, 1024)))
             {
-                _store.DatabaseCommands.ResetIndex(indexName);
+                _store.Admin.Send(new ResetIndexOperation(indexName));
                 staleIndexes.Add(indexName);
             }
 
             Console.WriteLine("All indexes have been reset");
 
-            _store.DatabaseCommands.Admin.StartIndexing();
+            _store.Admin.Send(new StartIndexingOperation());
 
             var sw = Stopwatch.StartNew();
 
@@ -89,15 +92,15 @@ namespace Indexing.Benchmark
 
             WaitForNonStaleIndexes(staleIndexes, sw);
 
-            _store.DatabaseCommands.Admin.StopIndexing();
+            _store.Admin.Send(new StopIndexingOperation());
 
-            Console.WriteLine($"Indexing stopped. Number of indexes in the database: {_store.DatabaseCommands.GetStatistics().Indexes.Length}");
+            Console.WriteLine($"Indexing stopped. Number of indexes in the database: {_store.Admin.Send(new GetStatisticsOperation()).Indexes.Length}");
 
             staleIndexes = new HashSet<string>();
 
-            foreach (var indexName in _store.DatabaseCommands.GetIndexNames(0, 1024))
+            foreach (var indexName in _store.Admin.Send(new GetIndexNamesOperation(0, 1024)))
             {
-                _store.DatabaseCommands.ResetIndex(indexName);
+                _store.Admin.Send(new ResetIndexOperation(indexName));
                 staleIndexes.Add(indexName);
             }
 
@@ -129,11 +132,11 @@ namespace Indexing.Benchmark
                 staleIndexes.Add(employeesGroupByCountry.IndexName);
             }
 
-            _store.DatabaseCommands.Admin.StartIndexing();
+            _store.Admin.Send(new StartIndexingOperation());
 
             sw = Stopwatch.StartNew();
 
-            Console.WriteLine($"Indexing is working again. Number of indexes in the database: {_store.DatabaseCommands.GetStatistics().Indexes.Length}. Waiting for non stale results");
+            Console.WriteLine($"Indexing is working again. Number of indexes in the database: {_store.Admin.Send(new GetStatisticsOperation()).Indexes.Length}. Waiting for non stale results");
 
             WaitForNonStaleIndexes(staleIndexes, sw);
         }
@@ -142,7 +145,7 @@ namespace Indexing.Benchmark
         {
             do
             {
-                var stats = _store.DatabaseCommands.GetStatistics();
+                var stats = _store.Admin.Send(new GetStatisticsOperation());
 
                 if (stats.StaleIndexes.Length != staleIndexes.Count)
                 {

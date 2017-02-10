@@ -2,6 +2,7 @@ using System.Linq;
 using FastTests;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq.Indexing;
 using Xunit;
 
 namespace SlowTests.MailingList

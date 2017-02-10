@@ -13,6 +13,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Util;
+using Raven.Server.Exceptions.PeriodicExport;
 
 namespace Raven.Server.Documents.PeriodicExport.Aws
 {
@@ -53,7 +54,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
             if (response.IsSuccessStatusCode)
                 return;
 
-            throw ErrorResponseException.FromResponseMessage(response);
+            throw StorageException.FromResponseMessage(response);
         }
 
         public async Task<Blob> GetObject(string bucketName, string key)
@@ -84,7 +85,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
                 return null;
 
             if (response.IsSuccessStatusCode == false)
-                throw ErrorResponseException.FromResponseMessage(response);
+                throw StorageException.FromResponseMessage(response);
 
             var data = await response.Content.ReadAsStreamAsync();
             var metadataHeaders = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());

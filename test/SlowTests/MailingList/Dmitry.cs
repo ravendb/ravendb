@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq.Indexing;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -20,10 +22,10 @@ namespace SlowTests.MailingList
             };
             content.Keywords.Add("new");
 
-            var obj = RavenJToken.FromObject(content);
-            var newObj = RavenJToken.FromObject(content);
+            var obj = JToken.FromObject(content);
+            var newObj = JToken.FromObject(content);
 
-            Assert.True(RavenJToken.DeepEquals(obj, newObj));
+            Assert.True(JToken.DeepEquals(obj, newObj));
         }
 
         [Fact]

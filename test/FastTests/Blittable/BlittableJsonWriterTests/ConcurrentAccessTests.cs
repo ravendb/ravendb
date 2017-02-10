@@ -13,7 +13,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 {
     public class ConcurrentAccessTests : BlittableJsonTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6309")]
         public void ConcurrentReadsTest()
         {
             var str = GenerateSimpleEntityForFunctionalityTest2();

@@ -527,7 +527,7 @@ namespace FastTests.Server.Replication
                     {
                         var metadata = s2.Advanced.GetMetadataFor(s2.Load<User>("foo/bar"));
                         string collection;
-                        metadata.TryGetValue(Raven.Abstractions.Data.Constants.Metadata.Collection, out collection);
+                        metadata.TryGetValue(Raven.NewClient.Abstractions.Data.Constants.Metadata.Collection, out collection);
                         return collection;
                     }
                 }, "New_Users");
@@ -571,7 +571,7 @@ namespace FastTests.Server.Replication
                     {
                         var metadata = s2.Advanced.GetMetadataFor(s2.Load<User>("foo/bar"));
                         string collection;
-                        metadata.TryGetValue(Raven.Abstractions.Data.Constants.Metadata.Collection, out collection);
+                        metadata.TryGetValue(Raven.NewClient.Abstractions.Data.Constants.Metadata.Collection, out collection);
                         return collection;
                     }
                 }, "New_Users");
@@ -621,7 +621,7 @@ namespace FastTests.Server.Replication
                         newDoc = s2.Load<New_User2>("foo/bar");
                         var metadata = s2.Advanced.GetMetadataFor(newDoc);
                         string collection;
-                        metadata.TryGetValue(Raven.Abstractions.Data.Constants.Metadata.Collection, out collection);
+                        metadata.TryGetValue(Raven.NewClient.Abstractions.Data.Constants.Metadata.Collection, out collection);
                         return collection;
                     }
                 }, "New_User2s");

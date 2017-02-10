@@ -1,3 +1,4 @@
+using System;
 using FastTests;
 using FastTests.Server.Replication;
 using Raven.NewClient.Client.Exceptions;
@@ -54,16 +55,20 @@ namespace SlowTests.Issues
                 {
                     commands.Get("people/1");
                 }
-                catch (ConflictException e)
+                catch (DocumentConflictException)
                 {
+                    throw new NotImplementedException();
+
+                    /*
                     var c1 = commands.Get(e.ConflictedVersionIds[0]);
                     var c2 = commands.Get(e.ConflictedVersionIds[1]);
 
                     Assert.NotNull(c1);
                     Assert.Null(c2);
 
-                    //       c1.Metadata.Remove(Constants.RavenReplicationConflictDocument);
-                    //commands.Put("people/1", null, c1.DataAsJson, c1.Metadata); FIX ME!
+                    c1.Metadata.Remove(Constants.RavenReplicationConflictDocument);
+                    commands.Put("people/1", null, c1.DataAsJson, c1.Metadata); //FIX ME!
+                    */
                 }
             }
 

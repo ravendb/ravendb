@@ -12,7 +12,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions.Database;
 using Raven.NewClient.Client.Http;
@@ -103,7 +102,7 @@ namespace Raven.Server.Documents.Replication
         private TcpConnectionInfo GetTcpInfo()
         {
             JsonOperationContext context;
-            using (var requestExecuter = new RequestExecuter(MultiDatabase.GetRootDatabaseUrl(_destination.Url), _destination.Database, _destination.ApiKey))
+            using (var requestExecuter = RequestExecuter.ShortTermSingleUse(MultiDatabase.GetRootDatabaseUrl(_destination.Url), _destination.Database, _destination.ApiKey))
             using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
                 var command = new GetTcpInfoCommand();
@@ -112,10 +111,7 @@ namespace Raven.Server.Documents.Replication
 
                 var info = command.Result;
                 if (_log.IsInfoEnabled)
-                {
-                    _log.Info(
-                        $"Will replicate to {_destination.Database} @ {_destination.Url} via {info.Url}");
-                }
+                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via {info.Url}");
 
                 return info;
             }

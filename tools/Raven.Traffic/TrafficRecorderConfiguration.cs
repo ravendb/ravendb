@@ -60,37 +60,24 @@ namespace Raven.Traffic
             ValidConfig
         }
 
-        private static NetworkCredential GetCredentials(RavenConnectionStringOptions connectionStringOptions)
-        {
-            var cred = connectionStringOptions.Credentials as NetworkCredential;
-            if (cred != null)
-                return cred;
-            cred = new NetworkCredential();
-            connectionStringOptions.Credentials = cred;
-            return cred;
-        }
-
         public static OptionSet InitOptionsSetObject(TrafficToolConfiguration config = null)
         {
             var options = new OptionSet();
             options.OnWarning += s => WriteLineWithColor(ConsoleColor.Yellow, s);
             options.Add("traceSeconds:", OptionCategory.TrafficRecordReplay, "Time to perform the traffic watch(seconds)", x =>
             {
-                var durationConstraint = Int32.Parse(x);
+                var durationConstraint = int.Parse(x);
                 config.DurationConstraint = TimeSpan.FromSeconds(durationConstraint);
             });
 
             options.Add("traceRequests:", OptionCategory.TrafficRecordReplay, "Time to perform the traffic watch", x =>
             {
-                var amountConstraint = Int32.Parse(x);
+                var amountConstraint = int.Parse(x);
                 config.AmountConstraint = amountConstraint;
             });
             options.Add("compressed", OptionCategory.TrafficRecordReplay, "Work with compressed json outpu/input", x => { config.IsCompressed = true; });
             options.Add("noOutput", OptionCategory.TrafficRecordReplay, "Suppress console progress output", value => config.PrintOutput = false);
             options.Add("timeout:", OptionCategory.TrafficRecordReplay, "The timeout to use for requests(seconds)", s => config.Timeout = TimeSpan.FromSeconds(int.Parse(s)));
-            options.Add("u|user|username:", OptionCategory.TrafficRecordReplay, "The username to use when the database requires the client to authenticate.", value => GetCredentials(config.ConnectionString).UserName = value);
-            options.Add("p|pass|password:", OptionCategory.TrafficRecordReplay, "The password to use when the database requires the client to authenticate.", value => GetCredentials(config.ConnectionString).Password = value);
-            options.Add("domain:", OptionCategory.TrafficRecordReplay, "The domain to use when the database requires the client to authenticate.", value => GetCredentials(config.ConnectionString).Domain = value);
             options.Add("key|api-key|apikey:", OptionCategory.TrafficRecordReplay, "The API-key to use, when using OAuth.", value => config.ApiKey = value);
             return options;
         }

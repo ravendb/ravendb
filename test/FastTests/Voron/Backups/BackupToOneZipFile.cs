@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Indexing;
 
@@ -28,7 +29,7 @@ namespace FastTests.Voron.Backups
                 {
                     Collection = "Users",
                 };
-                var obj = RavenJObject.FromObject(subscriptionCriteria);
+                var obj = JObject.FromObject(subscriptionCriteria);
                 var objString = obj.ToString(Formatting.None);
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);
@@ -113,7 +114,7 @@ namespace FastTests.Voron.Backups
                     {
                         Collection = "Users",
                     };
-                    var obj = RavenJObject.FromObject(subscriptionCriteria);
+                    var obj = JObject.FromObject(subscriptionCriteria);
                     var objString = obj.ToString(Formatting.None);
                     var stream = new MemoryStream();
                     var streamWriter = new StreamWriter(stream);

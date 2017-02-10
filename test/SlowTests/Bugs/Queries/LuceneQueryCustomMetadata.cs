@@ -1,5 +1,6 @@
 using System.Dynamic;
 using FastTests;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace SlowTests.Bugs.Queries
@@ -21,7 +22,7 @@ namespace SlowTests.Bugs.Queries
 
                     var metadata = session.Advanced.GetMetadataFor((ExpandoObject)expando);
 
-                    metadata[PropertyName] = RavenJToken.FromObject(true).ToString();
+                    metadata[PropertyName] = JToken.FromObject(true).ToString();
 
                     session.SaveChanges();
                 }

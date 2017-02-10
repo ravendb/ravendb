@@ -8,13 +8,13 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Smuggler;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Utils;
+using Sparrow.Extensions;
 using Xunit;
 
 namespace SlowTests.Issues

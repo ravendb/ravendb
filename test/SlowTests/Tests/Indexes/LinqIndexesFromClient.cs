@@ -30,12 +30,12 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void Convert_select_many_will_keep_doc_id()
         {
-            var indexDefinition = new Raven.Client.Indexes.IndexDefinitionBuilder<Order>
+            var indexDefinition = new IndexDefinitionBuilder<Order>
             {
                 Map = orders => from order in orders
                                 from line in order.OrderLines
                                 select new { line.ProductId }
-            }.ToIndexDefinition(new Raven.Client.Document.DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
 
             indexDefinition.Name = "Index1";
             var index = IndexAndTransformerCompiler.Compile(indexDefinition);
@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Indexes
             }).Cast<object>().ToArray();
 
                 var fields = index.OutputFields
-                    .Select(x => IndexField.Create(x, new Raven.Client.Indexing.IndexFieldOptions(), null))
+                    .Select(x => IndexField.Create(x, new IndexFieldOptions(), null))
                     .ToList();
 
                 var converter = new AnonymousLuceneDocumentConverter(fields, false);
@@ -91,13 +91,13 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void CanCompileComplexQuery()
         {
-            var indexDefinition = new Raven.Client.Indexes.IndexDefinitionBuilder<Person>()
+            var indexDefinition = new IndexDefinitionBuilder<Person>()
             {
                 Map = people => from person in people
                                 from role in person.Roles
                                 where role == "Student"
                                 select new { role }
-            }.ToIndexDefinition(new Raven.Client.Document.DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
 
             indexDefinition.Name = "Index1";
             IndexAndTransformerCompiler.Compile(indexDefinition);

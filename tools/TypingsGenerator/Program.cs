@@ -49,12 +49,10 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
-                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
-                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
+                .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
-                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(RavenJArray))
-                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJToken))
+                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(BlittableJsonReaderArray))
                 .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
             scripter = ConfigureTypes(scripter);

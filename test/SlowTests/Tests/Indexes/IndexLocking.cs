@@ -26,7 +26,7 @@ namespace SlowTests.Tests.Indexes
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.Unlock);
 
                 var database = await GetDatabase(store.DefaultDatabase);
-                database.IndexStore.GetIndex("IndexSample").SetLock(Raven.Abstractions.Indexing.IndexLockMode.LockedIgnore);
+                database.IndexStore.GetIndex("IndexSample").SetLock(IndexLockMode.LockedIgnore);
 
                 indexDefinition = store.Admin.Send(new GetIndexOperation("IndexSample"));
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.LockedIgnore);

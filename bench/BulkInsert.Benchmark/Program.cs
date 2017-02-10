@@ -7,6 +7,7 @@ using System.Linq;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Operations.Databases;
 
 namespace BulkInsert.Benchmark
 {
@@ -70,7 +71,7 @@ namespace BulkInsert.Benchmark
                 if (dbname == null)
                     dbname = "test";
                 var doc = MultiDatabase.CreateDatabaseDocument(dbname);
-                store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc).Wait();
+                store.Admin.Send(new CreateDatabaseOperation(doc));
             }
             catch (Exception ex)
             {

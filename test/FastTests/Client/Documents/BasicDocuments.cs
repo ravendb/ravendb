@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
@@ -31,7 +32,7 @@ namespace FastTests.Client.Documents
         {
             using (var store = GetDocumentStore())
             {
-                var dummy = RavenJObject.FromObject(new User());
+                var dummy = JObject.FromObject(new User());
                 dummy.Remove("Id");
 
                 using (var session = store.OpenAsyncSession())
@@ -66,13 +67,13 @@ namespace FastTests.Client.Documents
 
                     var doc1Properties = doc1.GetPropertyNames();
                     Assert.True(doc1Properties.Contains("@metadata"));
-                    Assert.Equal(dummy.Keys.Count + 1, doc1Properties.Length); // +1 for @metadata
+                    Assert.Equal(dummy.Count + 1, doc1Properties.Length); // +1 for @metadata
 
                     Assert.NotNull(doc2);
 
                     var doc2Properties = doc2.GetPropertyNames();
                     Assert.True(doc2Properties.Contains("@metadata"));
-                    Assert.Equal(dummy.Keys.Count + 1, doc2Properties.Length); // +1 for @metadata
+                    Assert.Equal(dummy.Count + 1, doc2Properties.Length); // +1 for @metadata
 
                     using (var session = (DocumentSession)store.OpenSession())
                     {
@@ -121,7 +122,7 @@ namespace FastTests.Client.Documents
                 var transformer = new Transformer();
                 transformer.Execute(store);
 
-                var dummy = RavenJObject.FromObject(new User());
+                var dummy = JObject.FromObject(new User());
                 dummy.Remove("Id");
 
                 using (var session = store.OpenAsyncSession())

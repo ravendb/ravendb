@@ -21,6 +21,7 @@ using System.Xml;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Util;
+using Raven.Server.Exceptions.PeriodicExport;
 
 namespace Raven.Server.Documents.PeriodicExport.Azure
 {
@@ -71,7 +72,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             if (response.StatusCode == HttpStatusCode.Conflict)
                 return;
 
-            throw ErrorResponseException.FromResponseMessage(response);
+            throw StorageException.FromResponseMessage(response);
         }
 
         public async Task PutBlob(string key, Stream stream, Dictionary<string, string> metadata)
@@ -107,7 +108,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             if (response.IsSuccessStatusCode)
                 return;
 
-            throw ErrorResponseException.FromResponseMessage(response);
+            throw StorageException.FromResponseMessage(response);
         }
 
         private async Task PutBlockApi(string key, Stream stream, Dictionary<string, string> metadata)
@@ -318,7 +319,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
 
             if (retryRequest == false ||
                 (response != null && response.StatusCode == HttpStatusCode.RequestEntityTooLarge))
-                throw ErrorResponseException.FromResponseMessage(response);
+                throw StorageException.FromResponseMessage(response);
 
             //wait for one second before trying again to send the request
             //maybe there was a network issue?
@@ -353,7 +354,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             if (response.IsSuccessStatusCode)
                 return;
 
-            throw ErrorResponseException.FromResponseMessage(response);
+            throw StorageException.FromResponseMessage(response);
         }
 
         private static XmlDocument CreateXmlDocument(List<string> blockIds)
@@ -398,7 +399,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
                 return null;
 
             if (response.IsSuccessStatusCode == false)
-                throw ErrorResponseException.FromResponseMessage(response);
+                throw StorageException.FromResponseMessage(response);
 
             var data = await response.Content.ReadAsStreamAsync();
             var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());

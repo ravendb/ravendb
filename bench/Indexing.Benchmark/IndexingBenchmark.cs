@@ -4,7 +4,6 @@ using Raven.NewClient.Client;
 #if v35
 using Raven.NewClient.Abstractions.Data;
 #else
-using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 #endif
 
@@ -18,15 +17,15 @@ namespace Indexing.Benchmark
         {
             _store = store;
         }
-        
+
         public abstract IndexingTestRun[] IndexTestRuns { get; }
-        
+
         public void Execute()
         {
             foreach (var test in IndexTestRuns)
             {
                 test.Index.Execute(_store);
-                
+
                 Console.WriteLine($"{Environment.NewLine}{test.Index.IndexName} index created. Waiting for non-stale results ...");
 
                 var sw = Stopwatch.StartNew();
@@ -48,12 +47,12 @@ namespace Indexing.Benchmark
                 //    } while ((result != null && result.IsStale == false) || sw.Elapsed > stalenessTimeout);
                 //}, TaskCreationOptions.LongRunning);
 
-                result = _store.DatabaseCommands.Query(test.Index.IndexName, new IndexQuery(_store.Conventions)
-                {
-                    WaitForNonStaleResultsTimeout = stalenessTimeout,
-                    PageSize = 0,
-                    Start = 0
-                });
+                //result = _store.DatabaseCommands.Query(test.Index.IndexName, new IndexQuery(_store.Conventions)
+                //{
+                //    WaitForNonStaleResultsTimeout = stalenessTimeout,
+                //    PageSize = 0,
+                //    Start = 0
+                //});
 
 #else
                 do

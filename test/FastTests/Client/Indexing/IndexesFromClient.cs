@@ -670,15 +670,15 @@ namespace FastTests.Client.Indexing
                         {
                             Name = "Title",
                             Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = Raven.Abstractions.Indexing.FieldIndexing.Analyzed,
-                            Storage = Raven.Abstractions.Indexing.FieldStorage.Yes
+                            Indexing = FieldIndexing.Analyzed,
+                            Storage = FieldStorage.Yes
                         },
                         new IndexField
                         {
                             Name = "Desc",
                             Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = Raven.Abstractions.Indexing.FieldIndexing.Analyzed,
-                            Storage = Raven.Abstractions.Indexing.FieldStorage.Yes
+                            Indexing = FieldIndexing.Analyzed,
+                            Storage = FieldStorage.Yes
                         }
                     }));
 

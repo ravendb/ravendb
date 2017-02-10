@@ -2,6 +2,7 @@
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Operations.Databases;
 
 namespace Raven.Traffic
 {
@@ -31,8 +32,7 @@ namespace Raven.Traffic
                         store = new DocumentStore
                         {
                             Url = config.ConnectionString.Url,
-                            DefaultDatabase = config.ResourceName,
-                            Credentials = config.ConnectionString.Credentials,
+                            DefaultDatabase = config.ResourceName
                         }.Initialize();
                     }
                     catch (Exception e)
@@ -45,7 +45,7 @@ namespace Raven.Traffic
                     {
                         try
                         {
-                            store.DatabaseCommands.GetStatistics();
+                            store.Admin.Send(new GetStatisticsOperation());
                         }
                         catch (Exception)
                         {
