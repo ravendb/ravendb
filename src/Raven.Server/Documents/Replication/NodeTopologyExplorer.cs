@@ -7,13 +7,15 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Http;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-
+using TcpConnectionHeaderMessage = Raven.NewClient.Abstractions.Data.TcpConnectionHeaderMessage;
 namespace Raven.Server.Documents.Replication
 {
     public class NodeTopologyExplorer : IDisposable
@@ -27,6 +29,7 @@ namespace Raven.Server.Documents.Replication
         private string _tcpUrl;
         private readonly TcpClient _tcpClient;
         private readonly Logger _log;
+        private ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
 
         public NodeTopologyExplorer(
             DocumentsContextPool pool,
@@ -58,7 +61,7 @@ namespace Raven.Server.Documents.Replication
                 _destination.Url,
                 _destination.Database,
                 _destination.ApiKey);
-
+                var token = await _authenticator.GetAuthenticationTokenAsync(_operationCredentials.ApiKey,_destination.Url, context);
                 await ConnectSocketAsync();
                 using (var stream = _tcpClient.GetStream())
                 using (var writer = new BlittableJsonTextWriter(context, stream))
@@ -68,21 +71,23 @@ namespace Raven.Server.Documents.Replication
                         [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _destination.Database,
                         [nameof(TcpConnectionHeaderMessage.Operation)] =
                             TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery.ToString(),
+                        [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = token
                     });
-
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(TopologyDiscoveryRequest.OriginDbId)] = _dbId,
-                        [nameof(TopologyDiscoveryRequest.Timeout)] = _timeout,
-                        [nameof(TopologyDiscoveryRequest.AlreadyVisited)] = new DynamicJsonArray(_alreadyVisited),
-                    });
-
                     writer.Flush();
-
-                    //now parse the response                
                     JsonOperationContext.ManagedPinnedBuffer buffer;
-                    using(context.GetManagedBuffer(out buffer))
+                    using (context.GetManagedBuffer(out buffer))
                     {
+                        await ReadTcpHeaderResponseAndThrowOnUnauthorized(context, stream, buffer);
+
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(TopologyDiscoveryRequest.OriginDbId)] = _dbId,
+                            [nameof(TopologyDiscoveryRequest.Timeout)] = _timeout,
+                            [nameof(TopologyDiscoveryRequest.AlreadyVisited)] = new DynamicJsonArray(_alreadyVisited),
+                        });
+
+                        writer.Flush();
+                                                
                         TopologyDiscoveryResponseHeader topologyResponse;
 
                         using (var topologyResponseJson =
@@ -112,6 +117,35 @@ namespace Raven.Server.Documents.Replication
                             return topology;
                         }
                     }
+                }
+            }
+        }
+
+        private async Task ReadTcpHeaderResponseAndThrowOnUnauthorized(JsonOperationContext context, NetworkStream stream, JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
+            using (var tcpConnectionHeaderResponse =
+                await context.ParseToMemoryAsync(stream, "ReplicationDiscovere/tcpConnectionHeaderResponse",
+                    BlittableJsonDocumentBuilder.UsageMode.None,
+                    buffer))
+            {
+                tcpConnectionHeaderResponse.BlittableValidation();
+                var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(tcpConnectionHeaderResponse);
+                switch (headerResponse.Status)
+                {
+                    case TcpConnectionHeaderResponse.AuthorizationStatus.PreconditionFailed:
+                        var msg =
+                            $"{_destination.Url}/{_destination.Database} replied with precondition failed, maybe the provided api key ({Destination.ApiKey}) is wrong?";
+                        throw new UnauthorizedAccessException(msg);
+                    case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
+                        msg =
+                            $"{_destination.Url}/{_destination.Database} replied with Forbidden, maybe the provided api key ({Destination.ApiKey}) doesn't have access to this database?";
+                        throw new UnauthorizedAccessException(msg);
+                    case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
+                        //All good nothing to do
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(
+                            $"Got un-expected response status ({headerResponse.Status}) from {_destination.Url}/{_destination.Database}");
                 }
             }
         }

@@ -11,7 +11,7 @@ namespace Raven.NewClient.Client.Commands
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             url = $"{node.Url}/info/tcp";
-
+            RequestedNode = node;
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
@@ -27,6 +27,9 @@ namespace Raven.NewClient.Client.Commands
             }
             Result = JsonDeserializationClient.GetTcpInfoResult(response);
         }
+
+        public ServerNode RequestedNode { get; private set; }
+
 
         public override bool IsReadRequest => true;
     }

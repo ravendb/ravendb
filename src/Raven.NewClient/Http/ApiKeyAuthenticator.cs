@@ -23,6 +23,14 @@ namespace Raven.NewClient.Client.Http
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ApiKeyAuthenticator>("Client");
         private readonly CancellationTokenSource _disposedToken = new CancellationTokenSource();
 
+        public async Task<string> GetAuthenticationTokenAsync(string apiKey, string url, JsonOperationContext context)
+        {
+            if (string.IsNullOrEmpty(apiKey))
+                return null;
+            var oauthSource = url + "/OAuth/API-Key";
+            return await AuthenticateAsync(oauthSource, apiKey, context).ConfigureAwait(false);
+        }
+
         public async Task<string> AuthenticateAsync(string url, string apiKey, JsonOperationContext context)
         {
             var uri = new Uri(url.ToWebSocketPath());

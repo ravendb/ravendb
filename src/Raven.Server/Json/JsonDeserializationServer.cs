@@ -2,10 +2,10 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
-using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Client.Replication.Messages;
 using Raven.Client.Smuggler;
+using Raven.NewClient.Client.Data;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
@@ -14,6 +14,8 @@ using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using Facet = Raven.Client.Data.Facet;
+using FacetSetup = Raven.Client.Data.FacetSetup;
 
 namespace Raven.Server.Json
 {
@@ -40,6 +42,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, DatabaseSmugglerOptions> DatabaseSmugglerOptions = GenerateJsonDeserializationRoutine<DatabaseSmugglerOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationMessageReply> ReplicationMessageReply = GenerateJsonDeserializationRoutine<ReplicationMessageReply>();
+
+        public static readonly Func<BlittableJsonReaderObject, TcpConnectionHeaderResponse> TcpConnectionHeaderResponse = GenerateJsonDeserializationRoutine<TcpConnectionHeaderResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationLatestEtagRequest> ReplicationLatestEtagRequest = GenerateJsonDeserializationRoutine<ReplicationLatestEtagRequest>();
 

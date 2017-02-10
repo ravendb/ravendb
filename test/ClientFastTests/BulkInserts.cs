@@ -16,8 +16,7 @@ namespace NewClientTests.NewClient.FastTests.BulkInsert
         public async Task Simple_Bulk_Insert()
         {
             using (var store = GetDocumentStore())
-            {
-                
+            {                
                 using (var bulkInsert = store.BulkInsert())
                 {
                     for (int i = 0; i < 1000; i++)
