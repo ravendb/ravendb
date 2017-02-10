@@ -9,7 +9,7 @@
       "type": "platform",
       "version": "1.1.0"
     },
-    "Raven.NewClient": "4.0.0-*",
+    "Raven.Client": "4.0.0-*",
     "Raven.Server": "4.0.0-*",
     "TypeScripter": "0.5.3"
   },

@@ -1,6 +1,6 @@
 {
   "version": "4.0.0-*",
-  "description": "Raven.NewClient.Client is the client library for accessing RavenDB",
+  "description": "Raven.Client is the client library for accessing RavenDB",
   "authors": [
     "Hibernating Rhinos"
   ],

@@ -95,7 +95,6 @@ namespace Raven.NewClient.Client.Document
             //ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
             CustomizeJsonSerializer = serializer => // todo: remove this or merge with SerializeEntityToJsonStream
             {
-                serializer.Binder = new ClientSerializationBinder();
             };
             FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
             ShouldAggressiveCacheTrackChanges = true;
@@ -686,25 +685,6 @@ namespace Raven.NewClient.Client.Document
                 {
                     yield return propertyInfo;
                 }
-            }
-        }
-
-        private class ClientSerializationBinder : DefaultSerializationBinder
-        {
-            public ClientSerializationBinder()
-            {
-                DevelopmentHelper.TimeBomb();
-            }
-
-            public override Type BindToType(string assemblyName, string typeName)
-            {
-                if (string.IsNullOrWhiteSpace(assemblyName) == false)
-                    assemblyName = assemblyName.Replace("Raven.Client", "Raven.NewClient");
-
-                if (string.IsNullOrWhiteSpace(typeName) == false)
-                    typeName = typeName.Replace("Raven.Client", "Raven.NewClient.Client");
-
-                return base.BindToType(assemblyName, typeName);
             }
         }
     }

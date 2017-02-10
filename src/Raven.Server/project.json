@@ -50,7 +50,7 @@
     "Microsoft.NETCore.App": "1.1.0",
     "Npgsql": "3.2.0",
     "Sparrow": "4.0.0-*",
-    "Raven.NewClient": "4.0.0-*",
+    "Raven.Client": "4.0.0-*",
     "System.ComponentModel": "4.3.0",
     "System.Data.SqlClient": "4.3.0",
     "System.Reflection.Emit.Lightweight": "4.3.0",

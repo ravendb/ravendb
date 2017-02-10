@@ -10,7 +10,7 @@
       "version": "1.1.0"
     },
     "Sparrow": "4.0.0-*",
-    "Raven.NewClient": "4.0.0-*",
+    "Raven.Client": "4.0.0-*",
     "Raven.Server": "4.0.0-*"
   },
 

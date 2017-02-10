@@ -39,7 +39,7 @@
     "Voron": "4.0.0-*",
     "FastTests": "4.0.0-*",
     "ClientFastTests": "4.0.0-*",
-    "Raven.NewClient": "4.0.0-*",
+    "Raven.Client": "4.0.0-*",
     "StressTests": "4.0.0-*"
   }
 }
