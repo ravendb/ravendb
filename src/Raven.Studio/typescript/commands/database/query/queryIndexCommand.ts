@@ -12,7 +12,7 @@ class queryIndexCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultSet<any>> {
-        const selector = (results: Raven.Client.Data.Queries.QueryResult<any>) => new pagedResultSet(results.Results.map(d => new document(d)), results.TotalResults, results);
+        const selector = (results: Raven.Client.Data.Queries.QueryResult<Array<any>>) => new pagedResultSet(results.Results.map(d => new document(d)), results.TotalResults, results);
         return this.query(this.getUrl(), null, this.db, selector)
             .fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
     }

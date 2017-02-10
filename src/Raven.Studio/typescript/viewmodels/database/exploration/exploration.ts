@@ -65,7 +65,7 @@ class exploration extends viewModelBase {
 
         var command = new dataExplorationCommand(requestDto, this.activeDatabase());
         command.execute()
-            .done((results: Raven.Client.Data.Queries.QueryResult<any>) => { //TODO: avoid using any? 
+            .done((results: Raven.Client.Data.Queries.QueryResult<Array<any>>) => { //TODO: avoid using any? 
                 // TODO if (results.Error) {
                     //TODO:messagePublisher.reportError("Unable to execute query", results.Error);
                 //TODO: } else {
