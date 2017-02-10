@@ -1,11 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Rudolph : RavenTestBase
+    public class Rudolph : RavenNewTestBase
     {
         private class User
         {

@@ -1,12 +1,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ravendb_failing_query_with_static_indexes_and_common_base_class : RavenTestBase
+    public class ravendb_failing_query_with_static_indexes_and_common_base_class : RavenNewTestBase
     {
         [Fact]
         public void it_fails_but_should_not()

@@ -1,12 +1,15 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Documents;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Micha : RavenTestBase
+    public class Micha : RavenNewTestBase
     {
         private class Entity
         {
@@ -31,7 +34,7 @@ namespace SlowTests.MailingList
 
                 WaitForIndexing(store);
 
-                store.DatabaseCommands.UpdateByIndex("EntityEntityIdPatch",
+                store.Operations.Send(new PatchByIndexOperation("EntityEntityIdPatch",
                     new IndexQuery(store.Conventions),
                     new PatchRequest
                     {
@@ -39,12 +42,12 @@ namespace SlowTests.MailingList
 this.EntityTypeId = this.EntityType;
 delete this.EntityType
 "
-                    });
+                    }));
 
-                var id = store.DatabaseCommands.GetIndex("EntityEntityIdPatch").IndexId;
-                store.DatabaseCommands.DeleteIndex("EntityEntityIdPatch");
+                var id = store.Admin.Send(new GetIndexOperation("EntityEntityIdPatch")).IndexId;
+                store.Admin.Send(new DeleteIndexOperation("EntityEntityIdPatch"));
 
-                Assert.False(store.DatabaseCommands.GetStatistics().Indexes.Any(x => x.IndexId == id));
+                Assert.False(store.Admin.Send(new GetStatisticsOperation()).Indexes.Any(x => x.IndexId == id));
             }
         }
     }

@@ -6,14 +6,14 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase,IEnumerable<object>
+    public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase, IEnumerable<object>
     {
         private readonly int _count;
         private readonly byte* _metadataPtr;
 
         private readonly byte* _dataStart;
         private readonly long _currentOffsetSize;
-        private Dictionary<int, Tuple<object,BlittableJsonToken>> _cache;
+        private Dictionary<int, Tuple<object, BlittableJsonToken>> _cache;
 
         public DynamicJsonArray Modifications;
 
@@ -79,17 +79,17 @@ namespace Sparrow.Json
             if (index >= _count || index < 0)
                 throw new IndexOutOfRangeException($"Cannot access index {index} when our size is {_count}");
 
-            var itemMetadataStartPtr = _metadataPtr + index * (_currentOffsetSize+1);
+            var itemMetadataStartPtr = _metadataPtr + index * (_currentOffsetSize + 1);
             var offset = ReadNumber(itemMetadataStartPtr, _currentOffsetSize);
             var token = *(itemMetadataStartPtr + _currentOffsetSize);
             result = Tuple.Create(_parent.GetObject((BlittableJsonToken)token,
-                (int) (_dataStart - _parent.BasePointer - offset)), (BlittableJsonToken)token & TypesMask);
+                (int)(_dataStart - _parent.BasePointer - offset)), (BlittableJsonToken)token & TypesMask);
 
             if (result.Item1 is BlittableJsonReaderBase)
             {
                 if (_cache == null)
                 {
-                    _cache = new Dictionary<int, Tuple<object,BlittableJsonToken>>();
+                    _cache = new Dictionary<int, Tuple<object, BlittableJsonToken>>();
                 }
                 _cache[index] = result;
             }
@@ -149,7 +149,7 @@ namespace Sparrow.Json
                 if ((x?.Equals(y) ?? false) == false)
                     return false;
             }
-            
+
             return true;
         }
 

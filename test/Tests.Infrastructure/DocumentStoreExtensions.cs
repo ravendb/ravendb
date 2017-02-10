@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
@@ -42,6 +44,14 @@ namespace FastTests
                 RequestExecuter = store.GetRequestExecuter(databaseName);
 
                 _returnContext = RequestExecuter.ContextPool.AllocateOperationContext(out Context);
+            }
+
+            public BlittableJsonReaderObject ParseJson(string json)
+            {
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
+                {
+                    return Context.ReadForMemory(stream, "json");
+                }
             }
 
             public TEntity Deserialize<TEntity>(BlittableJsonReaderObject json)

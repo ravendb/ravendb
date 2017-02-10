@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -986,6 +987,49 @@ namespace Sparrow.Json
         public override int GetHashCode()
         {
             return _size ^ _propCount;
+        }
+
+        [Conditional("DEBUG")]
+        public static void AssertNoModifications(BlittableJsonReaderObject data, string id, bool assertChildren, bool assertRemovals = true, bool assertProperties = true)
+        {
+            if (assertRemovals == false && assertProperties == false)
+                throw new InvalidOperationException($"Both {nameof(assertRemovals)} and {nameof(assertProperties)} cannot be set to false.");
+
+            if (data == null)
+                return;
+
+            if (assertRemovals && data.Modifications?.Removals?.Count > 0)
+                throw new InvalidOperationException($"Modifications (removals) detected in '{id}'. JSON: {data}");
+
+            if (assertProperties && data.Modifications?.Properties.Count > 0)
+                throw new InvalidOperationException($"Modifications (properties) detected in '{id}'. JSON: {data}");
+
+            if (assertChildren == false)
+                return;
+
+            foreach (var propertyName in data.GetPropertyNames())
+            {
+                var property = data[propertyName];
+                var inner = property as BlittableJsonReaderObject;
+                if (inner != null)
+                {
+                    AssertNoModifications(inner, id, assertChildren: true);
+                    continue;
+                }
+
+                var innerArray = property as BlittableJsonReaderArray;
+                if (innerArray == null)
+                    continue;
+
+                foreach (var item in innerArray)
+                {
+                    var innerItem = item as BlittableJsonReaderObject;
+                    if (innerItem == null)
+                        continue;
+
+                    AssertNoModifications(innerItem, id, assertChildren: true);
+                }
+            }
         }
     }
 }

@@ -15,6 +15,7 @@ namespace Raven.Server.Utils.Metrics
         public string Name { get; private set; }
 
         [JsonConstructor]
+        [Newtonsoft.Json.JsonConstructor]
         public MeterValue(string name, long count, double meanRate, double oneMinuteRate, double fiveMinuteRate, double fifteenMinuteRate)
         {
             Count = count;

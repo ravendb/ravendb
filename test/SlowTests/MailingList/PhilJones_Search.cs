@@ -5,12 +5,12 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class PhilJones_Search : RavenTestBase
+    public class PhilJones_Search : RavenNewTestBase
     {
         private class User
         {

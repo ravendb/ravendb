@@ -9,15 +9,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+using Raven.NewClient.Client.Document;
 using Xunit;
 
 namespace SlowTests.MailingList.Everett
 {
-    public class CanReadBytes : RavenTestBase
+    public class CanReadBytes : RavenNewTestBase
     {
         [Fact]
         public void query_for_object_with_byte_array_with_TypeNameHandling_All()

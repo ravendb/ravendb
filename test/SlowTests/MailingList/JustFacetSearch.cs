@@ -7,22 +7,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Client.Listeners;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class JustFacetSearch : RavenTestBase
+    public class JustFacetSearch : RavenNewTestBase
     {
         private class Article
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Title { get; set; }
             public string Description { get; set; }
             public string Content { get; set; }
@@ -32,7 +31,7 @@ namespace SlowTests.MailingList
 
         private class Section
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public string Slug { get; set; }
         }
@@ -68,7 +67,7 @@ namespace SlowTests.MailingList
 
         private class SectionFacet
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public int Count { get; set; }
         }
@@ -122,7 +121,7 @@ namespace SlowTests.MailingList
                     var section = session.Load<Section>(value.Range);
                     return new SectionFacet
                     {
-                        Id = section.Id,
+                        Id = section.Id.ToString(),
                         Name = section.Name,
                         Count = value.Hits
                     };
@@ -143,14 +142,13 @@ namespace SlowTests.MailingList
         {
             var sections = new[]
             {
-                new Section {Id = 1, Name = "TV Articles", Slug = "tv-articles"},
-                new Section {Id = 2, Name = "General Articles", Slug = "general"}
+                new Section {Name = "TV Articles", Slug = "tv-articles"},
+                new Section {Name = "General Articles", Slug = "general"}
             };
             var articles = new[]
             {
-                new Article
-                {Id = 1, Title = "How to fix your TV", Description = "How to", Sections = new[] {"Sections/1", "Sections/2"}},
-                new Article {Id = 2, Title = "How to do something", Description = "How to", Sections = new[] {"Sections/2"}}
+                new Article {Title = "How to fix your TV", Description = "How to", Sections = new[] {"Sections/1", "Sections/2"}},
+                new Article {Title = "How to do something", Description = "How to", Sections = new[] {"Sections/2"}}
             };
             foreach (var section in sections) session.Store(section);
             foreach (var article in articles) session.Store(article);
@@ -162,7 +160,7 @@ namespace SlowTests.MailingList
             using (var store = GetDocumentStore())
             {
                 new Advice_Search().Execute(store);
-                store.RegisterListener(new NoStaleQueriesListener());
+
                 var searcher = new FacetSearcher(store);
                 using (var session = store.OpenSession())
                 {
@@ -177,14 +175,6 @@ namespace SlowTests.MailingList
                 Assert.Equal(2, facets.Count);
                 Assert.Equal("TV Articles", facets[0].Name);
                 Assert.Equal("General Articles", facets[1].Name);
-            }
-        }
-
-        private class NoStaleQueriesListener : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
-            {
-                queryCustomization.WaitForNonStaleResults();
             }
         }
     }

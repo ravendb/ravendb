@@ -7,15 +7,15 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Raven.Client.Linq.Indexing;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Bhiku : RavenTestBase
+    public class Bhiku : RavenNewTestBase
     {
         [Fact]
         public void CanUseBoost_StartsWith()

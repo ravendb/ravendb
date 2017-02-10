@@ -1,14 +1,14 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanSearchLazily : RavenTestBase
+    public class CanSearchLazily : RavenNewTestBase
     {
         [Fact]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex()

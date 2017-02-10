@@ -1,13 +1,14 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class QueryingOnValueWithMultipleMinusAnalyzed : RavenTestBase
+    public class QueryingOnValueWithMultipleMinusAnalyzed : RavenNewTestBase
     {
         [Fact]
         public void CanPerformQueryWithDashesInTerm()
@@ -39,7 +40,7 @@ namespace SlowTests.MailingList
 
                 }.ToIndexDefinition(store.Conventions);
 
-                store.DatabaseCommands.PutIndex("someIndex", indexDefinition);
+                store.Admin.Send(new PutIndexOperation("someIndex", indexDefinition));
 
 
                 var prodOne = new Product

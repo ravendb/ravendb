@@ -1,13 +1,13 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AnyBugTest : RavenTestBase
+    public class AnyBugTest : RavenNewTestBase
     {
         private class AnyBug
         {
@@ -44,8 +44,6 @@ namespace SlowTests.MailingList
                         .Where(x => x.Bugs.Any(y => y.StartsWith("roles/1") && y.EndsWith("staffs/2")));
 
                     int resultCount = q.ToList().Count();
-
-                    WaitForUserToContinueTheTest(docStore);
 
                     Assert.Equal<int>(1, resultCount);
                 }

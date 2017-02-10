@@ -8,14 +8,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Client.Linq;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Tamir : RavenTestBase
+    public class Tamir : RavenNewTestBase
     {
         private class Developer
         {
@@ -28,15 +29,15 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6305")]
         public void InOnObjects()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("DevByIDE", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("DevByIDE", new IndexDefinition
                 {
                     Maps = { @"from dev in docs.Developers select new { dev.PreferredIDE, dev.PreferredIDE.Name }" }
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {

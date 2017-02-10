@@ -1,23 +1,22 @@
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Indexing;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TomCabanski : RavenTestBase
+    public class TomCabanski : RavenNewTestBase
     {
         [Fact]
         public void CanEscapeGetFacets()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
                     Maps = { "from doc in docs.Users select new { doc.Age, doc.IsActive, doc.BookVendor }" }
-                });
+                }));
 
                 using (var s = store.OpenSession())
                 {
@@ -36,12 +35,15 @@ namespace SlowTests.MailingList
                     s.SaveChanges();
                 }
 
-                store.DatabaseCommands.GetFacets(new FacetQuery(store.Conventions)
+                using (var session = store.OpenSession())
                 {
-                    IndexName = "test",
-                    Query = "(IsActive:true)  AND (BookVendor:\"stroheim & romann\")",
-                    FacetSetupDoc = "facets/test"
-                });
+                    session.Advanced.MultiFacetedSearch(new FacetQuery(store.Conventions)
+                    {
+                        IndexName = "test",
+                        Query = "(IsActive:true)  AND (BookVendor:\"stroheim & romann\")",
+                        FacetSetupDoc = "facets/test"
+                    });
+                }
             }
         }
     }

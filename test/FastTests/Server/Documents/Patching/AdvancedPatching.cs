@@ -6,7 +6,6 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions.Patching;
-using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Documents;
@@ -374,16 +373,16 @@ namespace FastTests.Server.Documents.Patching
             {
                 using (var commands = store.Commands())
                 {
-                    await commands.PutAsync("doc", null, _test, null);
+                    await commands.PutAsync(_test.Id, null, _test, null);
 
                     var command = new PatchOperation.PatchCommand(
                         store.Conventions,
                         commands.Context,
-                        "doc",
+                        _test.Id,
                         null,
                         new PatchRequest
                         {
-                            Script = "output(this.Id)",
+                            Script = "output(__document_id)",
                         },
                         patchIfMissing: null,
                         skipPatchIfEtagMismatch: false,
@@ -395,7 +394,7 @@ namespace FastTests.Server.Documents.Patching
                     var array = (BlittableJsonReaderArray)result.Debug["Info"];
                     var someId = array[0].ToString();
 
-                    Assert.Equal("someId", someId);
+                    Assert.Equal(_test.Id, someId);
                 }
             }
         }

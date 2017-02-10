@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AutoIndexMerging : RavenTestBase
+    public class AutoIndexMerging : RavenNewTestBase
     {
         private const string SampleLogfileStoreId = "123";
 
@@ -37,8 +38,8 @@ namespace SlowTests.MailingList
                     Assert.Equal(3, GetAutoIndexes(store).Length);
 
                     // now lets delete the second index
-                    store.DatabaseCommands.DeleteIndex(index1Name);
-                    store.DatabaseCommands.DeleteIndex(index2Name);
+                    store.Admin.Send(new DeleteIndexOperation(index1Name));
+                    store.Admin.Send(new DeleteIndexOperation(index2Name));
 
                     FirstQuery(session, out index1Name);
                     SecondQuery(session, out index2Name);
@@ -52,7 +53,7 @@ namespace SlowTests.MailingList
 
         private static IndexDefinition[] GetAutoIndexes(IDocumentStore store)
         {
-            return store.DatabaseCommands.GetIndexes(0, 1024).Where(x => x.Name.StartsWith("Auto/")).ToArray();
+            return store.Admin.Send(new GetIndexesOperation(0, 1024)).Where(x => x.Name.StartsWith("Auto/")).ToArray();
         }
 
         private static int ThirdQuery(IDocumentSession session, out string indexName)

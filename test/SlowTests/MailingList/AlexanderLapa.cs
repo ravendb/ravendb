@@ -4,13 +4,13 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AlexanderLapa : RavenTestBase
+    public class AlexanderLapa : RavenNewTestBase
     {
         [Fact]
         public void ExecuteIndex_Success()

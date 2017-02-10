@@ -2,26 +2,26 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Gal : RavenTestBase
+    public class Gal : RavenNewTestBase
     {
         private class BlogPost
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
         }
 
         [Fact]
         public void UsingInQuery()
         {
-            var id1 = Guid.Parse("00000000-0000-0000-0000-000000000001");
-            var id2 = Guid.Parse("00000000-0000-0000-0000-000000000002");
-            var id3 = Guid.Parse("00000000-0000-0000-0000-000000000003");
+            var id1 = Guid.Parse("00000000-0000-0000-0000-000000000001").ToString();
+            var id2 = Guid.Parse("00000000-0000-0000-0000-000000000002").ToString();
+            var id3 = Guid.Parse("00000000-0000-0000-0000-000000000003").ToString();
 
             using (var store = GetDocumentStore())
             {

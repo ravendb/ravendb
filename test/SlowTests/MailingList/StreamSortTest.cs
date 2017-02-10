@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class StreamSortTest : RavenTestBase
+    public class StreamSortTest : RavenNewTestBase
     {
         [Fact]
         public void Streaming_Results_Should_Sort_Properly()

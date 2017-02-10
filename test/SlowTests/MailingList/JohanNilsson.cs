@@ -1,13 +1,13 @@
 using System.Reflection;
 using FastTests;
-using Raven.Client.Document;
+using Raven.NewClient.Client.Document;
 using Xunit;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 using System.Linq;
 
 namespace SlowTests.MailingList
 {
-    public class JohanNilsson : RavenTestBase
+    public class JohanNilsson : RavenNewTestBase
     {
         private interface IEntity
         {
@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
             public string ImportantProperty { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6124")]
         public void WithCustomizedTagNameAndIdentityProperty()
         {
             var id = string.Empty;

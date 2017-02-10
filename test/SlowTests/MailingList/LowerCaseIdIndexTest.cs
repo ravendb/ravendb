@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LowerCaseIdIndexTest : RavenTestBase
+    public class LowerCaseIdIndexTest : RavenNewTestBase
     {
         [Fact]
         public void CanIndexAndQuery()
@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
                 store.Conventions.FindIdentityProperty = q => q.Name == "id";
 
                 var index = new UserToResource_Index();
-                index.Execute(store.DatabaseCommands, store.Conventions);
+                index.Execute(store);
 
                 using (var session = store.OpenSession())
                 {

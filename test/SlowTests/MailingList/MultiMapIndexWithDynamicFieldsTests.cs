@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class MultiMapIndexWithDynamicFieldsTests : RavenTestBase
+    public class MultiMapIndexWithDynamicFieldsTests : RavenNewTestBase
     {
         [Fact]
         public void CanSortDynamically()
@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
                         .Take(128)
                         .ToList();
                     Assert.Equal(50, result.Count); //FAIL(:
-                    Assert.Equal(49.50m, result.First().Attributes.First(x => x.Name == "N1").Value);
+                    Assert.Equal(49.50, result.First().Attributes.First(x => x.Name == "N1").Value);
                 }
             }
         }

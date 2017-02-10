@@ -7,12 +7,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class BadQuery : RavenTestBase
+    public class BadQuery : RavenNewTestBase
     {
         private class Entity
         {

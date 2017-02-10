@@ -1,8 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -16,7 +17,7 @@ namespace SlowTests.MailingList
     /// 
     /// Current Build: 2073
     /// </summary>
-    public class NullableExample : RavenTestBase
+    public class NullableExample : RavenNewTestBase
     {
         private class Doc
         {
@@ -29,21 +30,24 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Delete("1", null);
-                store.DatabaseCommands.Delete("2", null);
-                store.DatabaseCommands.Delete("3", null);
-                store.DatabaseCommands.Delete("4", null);
-                store.DatabaseCommands.Delete("5", null);
+                using (var commands = store.Commands())
+                {
+                    commands.Delete("1", null);
+                    commands.Delete("2", null);
+                    commands.Delete("3", null);
+                    commands.Delete("4", null);
+                    commands.Delete("5", null);
+                }
 
-                store.DatabaseCommands.DeleteIndex("test");
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new DeleteIndexOperation("test"));
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
                     Maps = { "from doc in docs.Docs select new { DocId = doc.DocId, _ = doc.Map.Select(p => CreateField(p.Key, p.Value)) }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         { "X", new IndexFieldOptions { Sort = SortOptions.NumericDefault } }
                     }
-                });
+                }));
                 using (var session = store.OpenSession())
                 {
                     // Insert valid documents.

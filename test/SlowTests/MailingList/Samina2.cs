@@ -8,17 +8,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Samina2 : RavenTestBase
+    public class Samina2 : RavenNewTestBase
     {
         private class PropertySearchingViewModel
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string UserFriendlyId { get; set; }
             public List<Unavailability> Unavailabilities { get; set; }
             public string UserFriendlyPropertyId { get; set; }
@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
             {
                 using (var session = store.OpenSession())
                 {
-                    var model = new PropertySearchingViewModel() { Id = Guid.NewGuid(), UserFriendlyPropertyId = "p001" };
+                    var model = new PropertySearchingViewModel() { Id = Guid.NewGuid().ToString(), UserFriendlyPropertyId = "p001" };
                     model.Unavailabilities.Add(new Unavailability() { StartDay = startDate, EndDay = endDate });
 
                     session.Store(model);

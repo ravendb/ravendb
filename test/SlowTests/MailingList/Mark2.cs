@@ -1,31 +1,32 @@
+using System.Collections.Generic;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexing;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Mark2 : RavenTestBase
+    public class Mark2 : RavenNewTestBase
     {
         [Fact]
         public void ShouldNotGetErrors()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
                     Maps = { @"from brief in docs.TestCases
  select new {
  _tWarnings_AccessoryWarnings_Value = brief.Warnings.AccessoryWarnings.Select(y=>y.Value)
  }"
 }
-                });
+                }));
 
-                store.DatabaseCommands.Put("TestCases/TST00001", null,
-                                           RavenJObject.Parse(
-                                            @"{
+                using (var commands = store.Commands())
+                {
+                    var json = commands.ParseJson(@"{
  ""Warnings"": {
    ""AccessoryWarnings"": [
      {
@@ -38,17 +39,26 @@ namespace SlowTests.MailingList
      }
    ]
  }
-}"),
-                                           new RavenJObject { { Constants.Metadata.Collection, "TestCases" } });
+}");
 
-                store.DatabaseCommands.Put("TestCases/TST00002", null,
-                                           RavenJObject.Parse(
-                                            @"{
+                    commands.Put("TestCases/TST00001", null, json, new Dictionary<string, string>
+                    {
+                        {Constants.Metadata.Collection, "TestCases"}
+                    });
+
+                    json = commands.ParseJson(@"{
  ""Warnings"": {
    ""AccessoryWarnings"": []
  }
-}"),
-                                           new RavenJObject { { Constants.Metadata.Collection, "TestCases" } });
+}");
+
+                    commands.Put("TestCases/TST00002", null,
+                        json,
+                        new Dictionary<string, string>
+                        {
+                            {Constants.Metadata.Collection, "TestCases"}
+                        });
+                }
 
                 WaitForIndexing(store);
 

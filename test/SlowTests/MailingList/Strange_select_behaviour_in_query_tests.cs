@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Strange_select_behaviour_in_query_tests : RavenTestBase
+    public class Strange_select_behaviour_in_query_tests : RavenNewTestBase
     {
         private class TestCommodityGroup
         {

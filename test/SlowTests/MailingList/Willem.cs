@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Willem : RavenTestBase
+    public class Willem : RavenNewTestBase
     {
         [Fact]
         public void ThisIsMyTest()
@@ -341,7 +341,7 @@ namespace SlowTests.MailingList
 
         private abstract class BaseDocument
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public abstract bool Validate();
         }
     }

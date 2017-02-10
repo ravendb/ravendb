@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Versioning
 
         private void PutInternal(JsonOperationContext context, string key, BlittableJsonReaderObject document, Table table)
         {
-            DocumentsStorage.AssertNoModifications(document, key);
+            BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
             byte* lowerKey;
             int lowerSize;

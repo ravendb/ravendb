@@ -5,12 +5,12 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class StreamingHalfWay : RavenTestBase
+    public class StreamingHalfWay : RavenNewTestBase
     {
         [Fact(Skip = "Missing feature: /docs/stream")]
         public void ShouldWork()

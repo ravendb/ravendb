@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WhereInQueryTests : RavenTestBase
+    public class WhereInQueryTests : RavenNewTestBase
     {
         private readonly DocumentStore documentStore;
 

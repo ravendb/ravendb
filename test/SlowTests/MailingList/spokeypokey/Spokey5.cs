@@ -2,13 +2,13 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey
 {
-    public class Spokey5 : RavenTestBase
+    public class Spokey5 : RavenNewTestBase
     {
         private class Reference
         {

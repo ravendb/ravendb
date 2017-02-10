@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Stacey2 : RavenTestBase
+    public class Stacey2 : RavenNewTestBase
     {
         private class Root
         {
@@ -58,7 +58,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var item = session.Load<Aggregate>(1);
+                    var item = session.Load<Aggregate>("aggregates/1");
                     Assert.NotNull(item);
                 }
 
@@ -67,7 +67,7 @@ namespace SlowTests.MailingList
                     session.Advanced.UseOptimisticConcurrency = true;
                     var query = session
                         .Include("Bridge.Aggregates")
-                        .Load<Root>(1);
+                        .Load<Root>("roots/1");
 
                     Assert.NotNull(query);
                 }
@@ -89,7 +89,7 @@ namespace SlowTests.MailingList
                     session.Advanced.UseOptimisticConcurrency = true;
                     var query = session
                         .Include("Bridge.Aggregates")
-                        .Load<Root>(1);
+                        .Load<Root>("roots/1");
                     var loaded = session.Load<Aggregate>("aggregates/1");
 
                     Assert.NotNull(query);

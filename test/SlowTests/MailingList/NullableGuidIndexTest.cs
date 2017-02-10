@@ -1,13 +1,13 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class NullableGuidIndexTest : RavenTestBase
+    public class NullableGuidIndexTest : RavenNewTestBase
     {
         private class TestDocument
         {
@@ -31,7 +31,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                new TestDocumentIndex().Execute(store.DatabaseCommands, store.Conventions);
+                new TestDocumentIndex().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -43,7 +43,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     TestDocument[] results = session.Query<TestDocument, TestDocumentIndex>()
-                        .Customize(c => c.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(c => c.WaitForNonStaleResults())
                         .ToArray();
 
                     TestHelper.AssertNoIndexErrors(store);

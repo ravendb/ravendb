@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class NullableBoolQuery : RavenTestBase
+    public class NullableBoolQuery : RavenNewTestBase
     {
         private class Item
         {

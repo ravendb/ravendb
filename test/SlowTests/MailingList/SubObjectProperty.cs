@@ -1,12 +1,12 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SubObjectProperty : RavenTestBase
+    public class SubObjectProperty : RavenNewTestBase
     {
         [Fact]
         public void CanProjectProperly()

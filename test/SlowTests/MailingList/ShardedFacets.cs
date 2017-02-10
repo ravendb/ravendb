@@ -4,68 +4,63 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Shard;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Replication;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ShardedFacets : RavenTestBase
+    public class ShardedFacets : RavenNewTestBase
     {
         protected override void ModifyStore(DocumentStore store)
         {
             store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6283")]
         public void FacetTest()
         {
             using (var ds1 = GetDocumentStore())
             using (var ds2 = GetDocumentStore())
             {
-                var sharded = new ShardedDocumentStore(
-                    new ShardStrategy(
-                        new Dictionary<string, IDocumentStore> {
-                        {"first", ds1},
-                        {"second", ds2}
-                    }));
+                //var sharded = new ShardedDocumentStore(
+                //    new ShardStrategy(
+                //        new Dictionary<string, IDocumentStore> {
+                //        {"first", ds1},
+                //        {"second", ds2}
+                //    }));
 
-                sharded.Initialize();
+                //sharded.Initialize();
 
-                using (var session = sharded.OpenSession())
-                {
-                    session.Store(new Tag { Name = "tag1" });
-                    session.Store(new Tag { Name = "tag1" });
-                    session.Store(new Tag { Name = "tag2" });
-                    session.SaveChanges();
-                }
+                //using (var session = sharded.OpenSession())
+                //{
+                //    session.Store(new Tag { Name = "tag1" });
+                //    session.Store(new Tag { Name = "tag1" });
+                //    session.Store(new Tag { Name = "tag2" });
+                //    session.SaveChanges();
+                //}
 
-                using (var session = sharded.OpenSession())
-                {
-                    session.Store(new Tag { Name = "tag3" });
-                    session.Store(new Tag { Name = "tag5" });
-                    session.Store(new Tag { Name = "tag8" });
-                    session.SaveChanges();
-                }
+                //using (var session = sharded.OpenSession())
+                //{
+                //    session.Store(new Tag { Name = "tag3" });
+                //    session.Store(new Tag { Name = "tag5" });
+                //    session.Store(new Tag { Name = "tag8" });
+                //    session.SaveChanges();
+                //}
 
-                new Tags_ByName().Execute(sharded);
+                //new Tags_ByName().Execute(sharded);
 
 
-                WaitForIndexing(ds1);
-                WaitForIndexing(ds2);
+                //WaitForIndexing(ds1);
+                //WaitForIndexing(ds2);
 
-                using (var session = sharded.OpenSession())
-                    Assert.NotEmpty(session
-                        .Query<Tag, Tags_ByName>()
-                        .ToFacets(new[] { new Facet { Name = "Name" } }).Results);
+                //using (var session = sharded.OpenSession())
+                //    Assert.NotEmpty(session
+                //        .Query<Tag, Tags_ByName>()
+                //        .ToFacets(new[] { new Facet { Name = "Name" } }).Results);
             }
         }
 

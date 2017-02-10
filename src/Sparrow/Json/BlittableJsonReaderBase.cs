@@ -9,7 +9,7 @@ namespace Sparrow.Json
         protected byte* _mem;
         protected byte* _propNames;
         protected int _propNamesDataOffsetSize;
-        protected JsonOperationContext _context;
+        protected internal JsonOperationContext _context;
 
         public int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {

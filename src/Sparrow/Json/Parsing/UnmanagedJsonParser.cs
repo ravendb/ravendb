@@ -385,7 +385,7 @@ namespace Sparrow.Json.Parsing
                         _isDouble = true;
                         break;
                     case (byte)'-':
-                        if (_isNegative)
+                        if (_isNegative && _isExponent == false)
                             throw CreateException("Already got '-' in this number value");
                         _isNegative = true;
                         break;

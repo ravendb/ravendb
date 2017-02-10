@@ -8,8 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -28,7 +28,7 @@ namespace SlowTests.MailingList
             }
         };
 
-        public class WhenUsingIdCopy : RavenTestBase
+        public class WhenUsingIdCopy : RavenNewTestBase
         {
             private readonly DocumentStore _store;
 
@@ -107,7 +107,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class When_using_Id : RavenTestBase
+        public class When_using_Id : RavenNewTestBase
         {
             private readonly DocumentStore _store;
 

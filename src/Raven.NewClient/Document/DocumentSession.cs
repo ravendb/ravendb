@@ -93,6 +93,9 @@ namespace Raven.NewClient.Client.Document
 
             using (var command = saveChangesOperation.CreateRequest())
             {
+                if (command == null)
+                    return;
+
                 RequestExecuter.Execute(command, Context);
                 saveChangesOperation.SetResult(command.Result);
             }

@@ -147,22 +147,21 @@ namespace Raven.NewClient.Client.Linq
 
         public FacetedQueryResult ToList()
         {
-            return HandlRenames(queryable.ToFacets(AggregationQuery<T>.GetFacets(facets)));
+            return HandleRenames(queryable.ToFacets(AggregationQuery<T>.GetFacets(facets)));
         }
 
         public Lazy<FacetedQueryResult> ToListLazy()
         {
-            throw new NotImplementedException();
-           /* var facetsLazy = queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(facets));
-            return new Lazy<FacetedQueryResult>(() => HandlRenames(facetsLazy.Value));*/
+            var facetsLazy = queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(facets));
+            return new Lazy<FacetedQueryResult>(() => HandleRenames(facetsLazy.Value));
         }
 
         public async Task<FacetedQueryResult> ToListAsync()
         {
-            return HandlRenames(await queryable.ToFacetsAsync(AggregationQuery<T>.GetFacets(facets)).ConfigureAwait(false));
+            return HandleRenames(await queryable.ToFacetsAsync(AggregationQuery<T>.GetFacets(facets)).ConfigureAwait(false));
         }
 
-        private FacetedQueryResult HandlRenames(FacetedQueryResult facetedQueryResult)
+        private FacetedQueryResult HandleRenames(FacetedQueryResult facetedQueryResult)
         {
             foreach (var rename in renames)
             {

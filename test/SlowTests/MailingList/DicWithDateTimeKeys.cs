@@ -6,13 +6,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DicWithDateTimeKeys : RavenTestBase
+    public class DicWithDateTimeKeys : RavenNewTestBase
     {
         private class A
         {
@@ -38,7 +37,7 @@ namespace SlowTests.MailingList
                 }
                 using (var session = store.OpenSession())
                 {
-                    var load = session.Load<A>(1);
+                    var load = session.Load<A>("as/1");
                     Assert.Equal("a", load.Items[dateTimeOffset]);
                 }
             }

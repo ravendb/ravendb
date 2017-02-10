@@ -40,16 +40,18 @@ namespace Raven.NewClient.Json.Utilities
 
         public static IEnumerable<T> ParseResultsForQueryOperation<T>(InMemoryDocumentSessionOperations session, QueryResultBase transformedResult)
         {
-            var resultType = typeof(T);
-            var allowMultiple = resultType.IsArray;
-
             for (var i = 0; i < transformedResult.Results.Length; i++)
             {
                 var item = transformedResult.Results[i] as BlittableJsonReaderObject;
                 if (item == null)
                     continue;
 
-                yield return ParseSingleResult<T>(item, session, allowMultiple, resultType);
+                BlittableJsonReaderArray values;
+                if (item.TryGet(Constants.Json.Fields.Values, out values) == false)
+                    throw new InvalidOperationException("Transformed document must have a $values property");
+
+                foreach (var parsedItem in ParseValuesFromBlittableArray(typeof(T), session, values).Cast<T>())
+                    yield return parsedItem;
             }
         }
 

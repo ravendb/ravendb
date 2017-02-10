@@ -1,13 +1,13 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList.Thor
 {
-    public class LinqTest : RavenTestBase
+    public class LinqTest : RavenNewTestBase
     {
         private class Child
         {

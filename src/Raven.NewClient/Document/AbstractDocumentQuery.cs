@@ -524,7 +524,15 @@ namespace Raven.NewClient.Client.Document
 
         public IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path)
         {
-            Include(path.ToPropertyPath());
+            var idPrefix = DocumentConvention.GetTypeTagName(typeof(TInclude));
+            if (idPrefix != null)
+            {
+                idPrefix = DocumentConvention.TransformTypeTagNameToDocumentKeyPrefix(idPrefix);
+                idPrefix += DocumentConvention.IdentityPartsSeparator;
+            }
+
+            var id = path.ToPropertyPath() + "(" + idPrefix + ")";
+            Include(id);
             return this;
         }
 

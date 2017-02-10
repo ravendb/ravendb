@@ -1,11 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformerLoadCaching : RavenTestBase
+    public class TransformerLoadCaching : RavenNewTestBase
     {
         private class Contact
         {
@@ -55,7 +55,7 @@ namespace SlowTests.MailingList
 
                  using (var session = store.OpenSession())
                  {
-                     session.Load<Contact>(1).Name = "ayende";
+                     session.Load<Contact>("contacts/1").Name = "ayende";
                      session.SaveChanges();
                  }
 

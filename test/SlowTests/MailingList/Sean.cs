@@ -6,13 +6,13 @@
 
 using System;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Data;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Sean : RavenTestBase
+    public class Sean : RavenNewTestBase
     {
         private class Thread
         {

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Accounts : RavenTestBase
+    public class Accounts : RavenNewTestBase
     {
         [Fact]
         public void TestLoadAccountByTypeContains()

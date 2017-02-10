@@ -1,11 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Nberardi : RavenTestBase
+    public class Nberardi : RavenNewTestBase
     {
         [Fact(Skip = "Missing feature: Spatial")]
         public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()

@@ -6,14 +6,14 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LazyWithIncludes : RavenTestBase
+    public class LazyWithIncludes : RavenNewTestBase
     {
         [Fact]
         public void CanGetLazyWithIncludes()

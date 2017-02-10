@@ -7,13 +7,13 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SumTests : RavenTestBase
+    public class SumTests : RavenNewTestBase
     {
         private class Vacancy
         {

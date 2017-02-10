@@ -27,6 +27,9 @@ namespace Raven.NewClient.Client.Commands
         public BatchCommand CreateRequest()
         {
             var result = _session.PrepareForSaveChanges();
+            if (result.Commands.Count == 0)
+                return null;
+
             _session.IncrementRequestCount();
             LogBatch();
 

@@ -1,18 +1,19 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RavenProjectionGuid : RavenTestBase
+    public class RavenProjectionGuid : RavenNewTestBase
     {
         [Fact]
         public void TestProjectedGuid()
         {
-            Guid accountId = Guid.NewGuid();
+            var accountId = Guid.NewGuid().ToString();
 
             using (var documentStore = GetDocumentStore())
             {
@@ -22,9 +23,9 @@ namespace SlowTests.MailingList
                 //Load Test Data
                 using (IDocumentSession session = documentStore.OpenSession())
                 {
-                    session.Store(new CustomerOrder() { Id = Guid.NewGuid(), AccountId = accountId, Status = "Pending", OrderDetails = "a left handed screwdriver" });
-                    session.Store(new CustomerOrder() { Id = Guid.NewGuid(), AccountId = accountId, Status = "InProgress", OrderDetails = "a handfull of fairy dust" });
-                    session.Store(new CustomerOrder() { Id = Guid.NewGuid(), AccountId = accountId, Status = "Delay", OrderDetails = "a long rest" });
+                    session.Store(new CustomerOrder() { Id = Guid.NewGuid().ToString(), AccountId = accountId, Status = "Pending", OrderDetails = "a left handed screwdriver" });
+                    session.Store(new CustomerOrder() { Id = Guid.NewGuid().ToString(), AccountId = accountId, Status = "InProgress", OrderDetails = "a handfull of fairy dust" });
+                    session.Store(new CustomerOrder() { Id = Guid.NewGuid().ToString(), AccountId = accountId, Status = "Delay", OrderDetails = "a long rest" });
 
                     session.SaveChanges();
                     session.Query<CustomerOrder>().Customize(x => x.WaitForNonStaleResults()).TransformWith<CustomerOrderProjectionTeansformer, AccountListItem>().Any();
@@ -46,8 +47,8 @@ namespace SlowTests.MailingList
 
         private class CustomerOrder
         {
-            public Guid Id { get; set; }
-            public Guid AccountId { get; set; }
+            public string Id { get; set; }
+            public string AccountId { get; set; }
             public string Status { get; set; }
             public string OrderDetails { get; set; }
         }
@@ -55,7 +56,7 @@ namespace SlowTests.MailingList
         private class AccountListItem
         {
             public string Id { get; set; }
-            public Guid AccountId { get; set; }
+            public string AccountId { get; set; }
             public string Status { get; set; }
         }
 

@@ -1,14 +1,14 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Raven.Client.Listeners;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class tcoonfield : RavenTestBase
+    public class tcoonfield : RavenNewTestBase
     {
 
         [Fact]
@@ -18,7 +18,6 @@ namespace SlowTests.MailingList
             var product = new Product("MyName", ActiveStatus.Live);
             using (var store = GetDocumentStore())
             {
-                store.RegisterListener(new NoStaleQueriesListener());
                 new Product_AvailableForSale().Execute(store);
 
                 using (var docSession = store.OpenSession())
@@ -34,8 +33,11 @@ namespace SlowTests.MailingList
                 // Act / Assert
                 using (var docSession = store.OpenSession())
                 {
-                    var products = docSession.Advanced.DocumentQuery<Product, Product_AvailableForSale>().Where("Name: MyName").ToList();
-                    WaitForUserToContinueTheTest(store);
+                    var products = docSession.Advanced.DocumentQuery<Product, Product_AvailableForSale>()
+                        .WaitForNonStaleResults()
+                        .Where("Name: MyName")
+                        .ToList();
+
                     Assert.Empty(products);
                     //Worth noting that I also tried the regular query syntax and it failed as well.
                     //docSession.Query<Product>("Product/AvailableForSale").Count(p => p.Name == "MyName").Should().Be(0);
@@ -74,13 +76,5 @@ namespace SlowTests.MailingList
                                   };
             }
         }
-
-        private class NoStaleQueriesListener : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
-            {
-                queryCustomization.WaitForNonStaleResults(TimeSpan.FromSeconds(30));
-            }
-        } 
     }
 }

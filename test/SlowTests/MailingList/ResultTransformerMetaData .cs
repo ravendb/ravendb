@@ -7,27 +7,25 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Indexes;
+
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ResultTransformerMetaData : RavenTestBase
+    public class ResultTransformerMetaData : RavenNewTestBase
     {
         /// <summary>
         /// The only thing i could not recreate here is the fact that the versioning bundle is active.
         /// So im not sure if the @last-modified meta-field will ever be filled in this case
         /// </summary>
-        [Fact]
+        [Fact(Skip = "RavenDB-6264")]
         public void CreateDataAndQuery()
         {
             using (var store = GetDocumentStore())
             {
-
-                store.RegisterListener(new AuditListener(() => "DataImporter"));
+                //store.RegisterListener(new AuditListener(() => "DataImporter"));
                 new CustomerListingTransformer().Execute(store);
 
                 using (var session = store.OpenSession())
@@ -121,6 +119,7 @@ namespace SlowTests.MailingList
 
         }
 
+        /*
         private class AuditListener : IDocumentStoreListener
         {
             private Func<string> authenticator;
@@ -145,5 +144,6 @@ namespace SlowTests.MailingList
 
             }
         }
+        */
     }
 }

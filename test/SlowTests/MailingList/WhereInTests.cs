@@ -1,16 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WhereInTests : RavenTestBase
+    public class WhereInTests : RavenNewTestBase
     {
         [Fact]
         public void WhereIn_using_index_notAnalyzed()

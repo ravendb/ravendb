@@ -1,12 +1,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class EnumAsInts : RavenTestBase
+    public class EnumAsInts : RavenNewTestBase
     {
         private enum Flags
         {

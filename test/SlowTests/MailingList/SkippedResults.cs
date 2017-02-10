@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SkippedResults : RavenTestBase
+    public class SkippedResults : RavenNewTestBase
     {
         [Fact]
         public void Can_page_when_using_nested_property_index()
@@ -35,7 +35,7 @@ namespace SlowTests.MailingList
                     var result = (from p in session.Query<Provider, NestedPropertyIndex1>()
                                   .Customize(x => x.WaitForNonStaleResults())
                                   where p.Zip == "97520"
-                                  select p).ToArray();
+                                  select p).Take(1024).ToArray();
                     Assert.Equal(10, result.Count());
                 }
 

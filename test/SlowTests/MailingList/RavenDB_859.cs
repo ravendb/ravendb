@@ -1,6 +1,6 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -13,7 +13,7 @@ namespace SlowTests.MailingList
     /// 
     /// Passes if you don't use it in a where clause, or if you call the reduce field something other than "Id".
     /// </summary>
-    public class RavenDB_859 : RavenTestBase
+    public class RavenDB_859 : RavenNewTestBase
     {
         private class Foo
         {

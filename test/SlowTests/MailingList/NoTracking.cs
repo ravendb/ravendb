@@ -8,15 +8,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class NoTracking : RavenTestBase
+    public class NoTracking : RavenNewTestBase
     {
-        private static readonly Guid One = Guid.Parse("00000000-0000-0000-0000-000000000001");
-        private static readonly Guid Two = Guid.Parse("00000000-0000-0000-0000-000000000002");
+        private static readonly string One = Guid.Parse("00000000-0000-0000-0000-000000000001").ToString();
+        private static readonly string Two = Guid.Parse("00000000-0000-0000-0000-000000000002").ToString();
 
         private IDocumentStore DocumentStore { get; }
 
@@ -48,8 +48,8 @@ namespace SlowTests.MailingList
         {
             using (var session = DocumentStore.OpenSession())
             {
-                Assert.NotNull(session.Load<A>((ValueType)One));
-                Assert.NotNull(session.Load<B>((ValueType)Two));
+                Assert.NotNull(session.Load<A>(One));
+                Assert.NotNull(session.Load<B>(Two));
             };
         }
 
@@ -64,16 +64,16 @@ namespace SlowTests.MailingList
 
                 foreach (var res in result)
                 {
-                    var bs = session.Load<B>(res.Bs.Cast<ValueType>());
+                    var bs = session.Load<B>(res.Bs);
 
-                    Assert.Equal(bs.Length, 1);
+                    Assert.Equal(bs.Count, 1);
                     // Fails
-                    Assert.NotNull(bs[0]);
+                    Assert.NotNull(bs.FirstOrDefault());
                 }
 
                 // Doesn't work either, B is null
-                Assert.NotNull(session.Load<A>((ValueType)One));
-                Assert.NotNull(session.Load<B>((ValueType)Two));
+                Assert.NotNull(session.Load<A>(One));
+                Assert.NotNull(session.Load<B>(Two));
             }
         }
 
@@ -87,32 +87,32 @@ namespace SlowTests.MailingList
 
                 foreach (var res in result)
                 {
-                    var bs = session.Load<B>(res.Bs.Cast<ValueType>());
+                    var bs = session.Load<B>(res.Bs);
 
-                    Assert.Equal(bs.Length, 1);
+                    Assert.Equal(bs.Count, 1);
                     // Fails
-                    Assert.NotNull(bs[0]);
+                    Assert.NotNull(bs.FirstOrDefault());
                 }
 
-                Assert.NotNull(session.Load<A>((ValueType)One));
-                Assert.NotNull(session.Load<B>((ValueType)Two));
+                Assert.NotNull(session.Load<A>(One));
+                Assert.NotNull(session.Load<B>(Two));
             }
         }
 
         private class A
         {
-            public Guid Id { get; set; }
-            public ISet<Guid> Bs { get; set; }
+            public string Id { get; set; }
+            public ISet<string> Bs { get; set; }
 
             public A()
             {
-                this.Bs = new HashSet<Guid>();
+                Bs = new HashSet<string>();
             }
         }
 
         private class B
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
         }
     }
 }

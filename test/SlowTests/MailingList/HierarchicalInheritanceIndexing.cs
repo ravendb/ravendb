@@ -3,21 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class HierarchicalInheritanceIndexing : RavenTestBase
+    public class HierarchicalInheritanceIndexing : RavenNewTestBase
     {
         [Fact]
         public void CanCreateIndex()
         {
-            Guid rootId = Guid.NewGuid();
-            Guid childId = Guid.NewGuid();
-            Guid grandChildId = Guid.NewGuid();
+            var rootId = Guid.NewGuid().ToString();
+            var childId = Guid.NewGuid().ToString();
+            var grandChildId = Guid.NewGuid().ToString();
             using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
@@ -65,7 +65,9 @@ namespace SlowTests.MailingList
                     var examples =
                         session.Query<ExampleProjection, ExampleIndexCreationTask>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<ExampleProjection>().ToList();
+                        .ProjectFromIndexFieldsInto<ExampleProjection>()
+                        .Take(1024)
+                        .ToList();
 
                     Assert.NotEmpty(examples);
                 }
@@ -79,8 +81,8 @@ namespace SlowTests.MailingList
             {
                 Overrides = new List<ExampleOverride>();
             }
-            public Guid Id { get; set; }
-            public Guid OwnerId { get; set; }
+            public string Id { get; set; }
+            public string OwnerId { get; set; }
             public string Name { get; set; }
             public string Description { get; set; }
             public List<ExampleOverride> Overrides { get; set; }
@@ -94,7 +96,7 @@ namespace SlowTests.MailingList
                 OverriddenValues = new Dictionary<string, object>();
                 Overrides = new List<ExampleOverride>();
             }
-            public Guid OwnerId { get; set; }
+            public string OwnerId { get; set; }
             public ExampleOverride Parent { get; set; }
             public Dictionary<string, object> OverriddenValues { get; set; }
             public List<ExampleOverride> Overrides { get; set; }

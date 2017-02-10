@@ -7,13 +7,13 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LazyTests : RavenTestBase
+    public class LazyTests : RavenNewTestBase
     {
         private class Simple
         {
@@ -22,7 +22,7 @@ namespace SlowTests.MailingList
                 stamp = DateTime.UtcNow.Second;
             }
 
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string key { get; set; }
             public int stamp { get; set; }
         }
@@ -73,13 +73,13 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
             }
@@ -96,13 +96,13 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
             }
@@ -118,13 +118,13 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
             }
@@ -140,13 +140,13 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).ToArray();
                     Assert.True(dump.Length > 0);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).ToArray();
                     Assert.True(dump.Length > 0);
                 }
             }
@@ -162,13 +162,13 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
             }

@@ -6,11 +6,11 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ListCount : RavenTestBase
+    public class ListCount : RavenNewTestBase
     {
         private class Location
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
 
             public string Name { get; set; }
 

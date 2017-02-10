@@ -7,13 +7,14 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DynamicObjectTests : RavenTestBase
+    public class DynamicObjectTests : RavenNewTestBase
     {
         /// <summary>
         /// this test works but really slow

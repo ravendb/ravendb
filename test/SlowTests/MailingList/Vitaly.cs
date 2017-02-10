@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Vitaly : RavenTestBase
+    public class Vitaly : RavenNewTestBase
     {
         private class ActivityShot
         {

@@ -7,16 +7,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Indexing;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SuggestionFail : RavenTestBase
+    public class SuggestionFail : RavenNewTestBase
     {
         private class TheArticle
         {
