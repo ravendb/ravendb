@@ -4,9 +4,6 @@ function UpdateSourceWithBuildInfo ( $projectDir, $buildNumber, $version ) {
 
     $versionInfoFile = [io.path]::combine($projectDir, "src", "Raven.Client", "Properties", "VersionInfo.cs")
     UpdateRavenVersion $projectDir $buildNumber $version $commit $versionInfoFile
-
-    $versionInfoFile2 = [io.path]::combine($projectDir, "src", "Raven.NewClient", "Properties", "VersionInfo.cs")
-    UpdateRavenVersion $projectDir $buildNumber $version $commit $versionInfoFile2
 }
 
 function UpdateCommonAssemblyInfo ( $projectDir, $buildNumber, $version, $commit ) {

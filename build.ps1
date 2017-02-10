@@ -31,9 +31,6 @@ $OUT_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
 $CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client")
 $CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client", "bin", "Release")
 
-$NEW_CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.NewClient")
-$NEW_CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.NewClient", "bin", "Release")
-
 $SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
 
 $SPARROW_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow")
@@ -84,9 +81,7 @@ UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 BuildSparrow $SPARROW_SRC_DIR
 
 BuildClient $CLIENT_SRC_DIR $CLIENT_OUT_DIR $spec.Name
-BuildNewClient $NEW_CLIENT_SRC_DIR $NEW_CLIENT_OUT_DIR $spec.Name
 
-CreateNugetPackage $NEW_CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 
 BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
@@ -100,7 +95,6 @@ Foreach ($spec in $SPECS) {
     $specOutDirs = @{
         "Main" = $specOutDir;
         "Client" = $CLIENT_OUT_DIR;
-        "NewClient" = $NEW_CLIENT_OUT_DIR;
         "Server" = $([io.path]::combine($specOutDir, "Server"));
         "Studio" = $STUDIO_OUT_DIR;
         "Sparrow" = $SPARROW_OUT_DIR;
