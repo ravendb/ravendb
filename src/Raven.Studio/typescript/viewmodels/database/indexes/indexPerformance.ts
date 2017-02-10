@@ -454,19 +454,34 @@ class metrics extends viewModelBase {
         this.liveViewClient(new liveIndexPerformanceWebSocketClient(this.activeDatabase(), onDataUpdate));
     }
 
-    private scrollToRight() {
+    scrollToRight() {
         const currentExtent = this.brush.extent() as [number, number];
         const extentWidth = currentExtent[1] - currentExtent[0];
 
+        const existingBrushStart = currentExtent[0];
+
         if (currentExtent[1] < this.totalWidth) {
-            const newExtentEndX = this.totalWidth;
-            const newExtentStartX = newExtentEndX - extentWidth;
+
+            const desiredExtentStart = this.totalWidth + 10 - extentWidth;
+
+            const moveFunc = (startX: number) => {
+                this.brush.extent([startX, startX + extentWidth]);
+                this.brushContainer.call(this.brush);
+
+                this.onBrush();
+            };
 
             this.brushContainer
                 .transition()
                 .duration(500)
-                .call(this.brush.extent([newExtentStartX, newExtentEndX]))
-                .call(this.brush.event);
+                .tween("side-effect", () => {
+                    const interpolator = d3.interpolate(existingBrushStart, desiredExtentStart);
+
+                    return (t) => {
+                        const currentStart = interpolator(t);
+                        moveFunc(currentStart);
+                    }
+                });
         }
     }
 
@@ -996,7 +1011,7 @@ class metrics extends viewModelBase {
                 let mapDetails: string;
                 mapDetails = `<br/>*** Map details ***<br/>`;
                 mapDetails += `Allocation budget: ${generalUtils.formatBytesToSize(element.MapDetails.AllocationBudget)}<br/>`;
-                mapDetails += `Batch complete reason: ${element.MapDetails.BatchCompleteReason || 'In progress'}<br/>`;
+                mapDetails += `Batch status: ${element.MapDetails.BatchCompleteReason || 'In progress'}<br/>`;
                 mapDetails += `Currently allocated: ${generalUtils.formatBytesToSize(element.MapDetails.CurrentlyAllocated)} <br/>`;
                 mapDetails += `Process private memory: ${generalUtils.formatBytesToSize(element.MapDetails.ProcessPrivateMemory)}<br/>`;
                 mapDetails += `Process working set: ${generalUtils.formatBytesToSize(element.MapDetails.ProcessWorkingSet)}`;
