@@ -1,4 +1,4 @@
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes

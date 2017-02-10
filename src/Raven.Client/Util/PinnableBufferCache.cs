@@ -5,18 +5,16 @@
 // based on https://github.com/dotnet/coreclr/blob/master/src/mscorlib/Common/PinnableBufferCache.cs
 
 using System;
-#if !FEATURE_CORECLR
-using System.Diagnostics.Tracing;
-#endif
-using System.Runtime.InteropServices;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics.Tracing;
+using System.Runtime.InteropServices;
 using System.Threading;
-using System.Runtime.CompilerServices;
-using System.Diagnostics;
+#if !FEATURE_CORECLR
+#endif
 
 
-namespace Raven.NewClient.Abstractions.Util
+namespace Raven.Client.Util
 {
     public class PinnableBufferCache
     {

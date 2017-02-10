@@ -1,9 +1,8 @@
 ﻿using System;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Operations
+namespace Raven.Client.Operations
 {
     public partial class OperationExecuter
     {

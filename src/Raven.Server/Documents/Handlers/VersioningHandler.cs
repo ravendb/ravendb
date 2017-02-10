@@ -8,7 +8,7 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Exceptions.Versioning;
+using Raven.Client.Exceptions.Versioning;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

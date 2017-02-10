@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-namespace Raven.NewClient.Client.Replication
+namespace Raven.Client.Replication
 {
     public class ReplicatedEtagInfo
     {

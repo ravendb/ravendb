@@ -1,6 +1,6 @@
 using System;
 using FastTests;
-using Raven.NewClient.Abstractions;
+using Raven.Client;
 using Xunit;
 
 namespace SlowTests.MailingList

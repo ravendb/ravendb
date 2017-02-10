@@ -3,10 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Reflection;
 
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
     /// <summary>
     /// This class represents a node in an expression, usually a member - but in the case of dynamic queries the path to a member

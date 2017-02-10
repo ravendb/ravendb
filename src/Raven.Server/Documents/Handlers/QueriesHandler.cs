@@ -4,12 +4,11 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Exceptions.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document;
+using Raven.Client.Exceptions.Indexes;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
@@ -133,7 +132,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -168,7 +167,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -206,7 +205,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -313,7 +312,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

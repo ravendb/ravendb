@@ -5,10 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Raven.NewClient.Client.Data;
 using Newtonsoft.Json;
 
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class BulkInsertChange : DocumentChange
     {

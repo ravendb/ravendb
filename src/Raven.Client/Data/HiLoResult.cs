@@ -6,7 +6,7 @@
 
 using System;
 
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// The result of a NextHiLo operation

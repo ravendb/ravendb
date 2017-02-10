@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
-using Raven.NewClient.Client;
+using Raven.Client;
+using Raven.Client.Data.Queries;
 #if v35
 using Raven.NewClient.Abstractions.Data;
 #else
-using Raven.NewClient.Client.Data.Queries;
+
 #endif
 
 namespace Indexing.Benchmark

@@ -2,14 +2,14 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Operations.Databases;
+using Raven.Client.Operations.Databases.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Documents;
 
 namespace NewClientTests.NewClient.Client.Indexing
 {

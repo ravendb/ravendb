@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
 
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Data.Indexes;
-
-namespace Raven.NewClient.Client.Connection
+namespace Raven.Client.Connection
 {
     public static class RavenUrlExtensions
     {

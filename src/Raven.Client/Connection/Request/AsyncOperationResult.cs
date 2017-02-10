@@ -3,9 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 
-namespace Raven.NewClient.Client.Connection.Request
+namespace Raven.Client.Connection.Request
 {
     public class AsyncOperationResult<T>
     {

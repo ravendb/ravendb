@@ -5,12 +5,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     ///     Interface for document session

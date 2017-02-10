@@ -3,12 +3,12 @@ using FastTests;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Exceptions;
+using Raven.Client.Indexes;
+using Raven.Client.Operations.Databases;
+using Raven.Client.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues

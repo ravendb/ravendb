@@ -1,4 +1,4 @@
-﻿namespace Raven.NewClient.Client.Exceptions.Database
+﻿namespace Raven.Client.Exceptions.Database
 {
     public class DatabaseLoadTimeoutException : RavenException
     {

@@ -6,8 +6,8 @@
 
 using System;
 using FastTests;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client;
+using Raven.Client.Data;
 using Xunit;
 
 namespace SlowTests.Bugs.Metadata

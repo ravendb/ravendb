@@ -3,11 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.IO;
 using System.Security.Cryptography;
 
-namespace Raven.NewClient.Abstractions.Util.Encryptors
+namespace Raven.Client.Util.Encryptors
 {
     public sealed class FipsEncryptor : EncryptorBase<FipsEncryptor.FipsHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
     {

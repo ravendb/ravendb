@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Data;
+using Raven.Client.Document;
 using Raven.Server.Documents.Versioning;
 
 namespace FastTests.Server.Documents.Versioning

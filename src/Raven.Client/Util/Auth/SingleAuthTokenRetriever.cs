@@ -3,15 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Specialized;
-using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Connection.Profiling;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 
-
-namespace Raven.NewClient.Client.Util.Auth
+namespace Raven.Client.Util.Auth
 {
     internal class SingleAuthTokenRetriever
     {

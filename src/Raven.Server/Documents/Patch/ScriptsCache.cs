@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Jint;
 using Jint.Parser;
-using Raven.NewClient.Abstractions;
+using Raven.Client;
 
 namespace Raven.Server.Documents.Patch
 {

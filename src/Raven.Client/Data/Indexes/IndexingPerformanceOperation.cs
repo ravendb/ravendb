@@ -1,7 +1,6 @@
 ﻿using System;
-using Raven.NewClient.Client.Data.Indexes;
 
-namespace Raven.NewClient.Data.Indexes
+namespace Raven.Client.Data.Indexes
 {
     public class IndexingPerformanceOperation
     {

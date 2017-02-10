@@ -1,6 +1,6 @@
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Data.Queries
+namespace Raven.Client.Data.Queries
 {
     public class MoreLikeThisQueryResult : MoreLikeThisQueryResult<BlittableJsonReaderArray>
     {

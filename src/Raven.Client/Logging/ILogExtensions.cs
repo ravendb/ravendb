@@ -1,8 +1,8 @@
-namespace Raven.NewClient.Abstractions.Logging
-{
-    using System;
-    using System.Globalization;
+using System;
+using System.Globalization;
 
+namespace Raven.Client.Logging
+{
     public static class ILogExtensions
     {
         public static void Debug(this ILog logger, string message, params object[] args)

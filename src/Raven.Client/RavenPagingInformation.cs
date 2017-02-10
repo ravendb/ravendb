@@ -3,9 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
     public class RavenPagingInformation
     {

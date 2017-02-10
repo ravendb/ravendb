@@ -1,7 +1,7 @@
 ﻿using System;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Exceptions
+namespace Raven.Client.Exceptions
 {
     public class RavenException : Exception
     {

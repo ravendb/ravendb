@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xunit.Performance;
-using Raven.NewClient.Abstractions.Data;
 using Sparrow.Compression;
 using System;
 using System.Collections.Generic;

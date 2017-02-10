@@ -2,24 +2,23 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Client.Connection;
+using Raven.Client.Commands;
+using Raven.Client.Connection;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Security;
+using Raven.Client.Util;
 using Sparrow.Json;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Exceptions.Security;
 using Sparrow.Logging;
 
-namespace Raven.NewClient.Client.Http
+namespace Raven.Client.Http
 {
     public class RequestExecuter : IDisposable
     {

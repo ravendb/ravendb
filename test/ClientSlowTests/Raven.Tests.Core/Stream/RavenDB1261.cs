@@ -5,14 +5,13 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Raven.NewClient.Client.Indexes;
 using Xunit;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
+using Raven.Client.Commands;
+using Raven.Client.Indexes;
 using Sparrow.Json;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Stream

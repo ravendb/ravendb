@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
 using Sparrow.Collections;
 
 namespace Raven.Server.TrafficWatch

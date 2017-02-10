@@ -21,7 +21,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace Raven.NewClient.Client.Util
+namespace Raven.Client.Util
 {
     /// <summary>
     /// The Inflector class transforms words from one 

@@ -1,7 +1,7 @@
 ﻿using System;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Replication.Messages
+namespace Raven.Client.Replication.Messages
 {
     public class ReplicationMessageReply
     {

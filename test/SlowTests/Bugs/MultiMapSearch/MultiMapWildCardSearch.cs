@@ -6,10 +6,11 @@
 
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq.Indexing;
+using Raven.Client;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Linq.Indexing;
+using Raven.Client.PublicExtensions;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiMapSearch

@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Xunit;
-using Raven.NewClient.Client.Linq;
+
 namespace NewClientTests.NewClient.ResultsTransformer
 {
     public class StronglyTypedResultsTransformer : RavenNewTestBase

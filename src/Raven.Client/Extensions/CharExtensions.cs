@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
-namespace Raven.NewClient.Abstractions.Extensions
+
+namespace Raven.Client.Extensions
 {
     public static class CharExtensions
     {

@@ -3,11 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Net;
 
-namespace Raven.NewClient.Abstractions
+using System.Collections.Generic;
+
+namespace Raven.Client
 {
     public class ServerSmugglerRequest
     {

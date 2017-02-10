@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Document.Async;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// Fluent interface for specifying include paths

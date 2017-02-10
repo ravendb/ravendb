@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class DeleteDocumentCommand : RavenCommand<object>
     {

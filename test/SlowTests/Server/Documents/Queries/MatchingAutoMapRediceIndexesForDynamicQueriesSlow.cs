@@ -1,7 +1,6 @@
 ﻿using FastTests.Server.Documents.Queries.Dynamic.MapReduce;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Abstractions;
+using Raven.Client;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;

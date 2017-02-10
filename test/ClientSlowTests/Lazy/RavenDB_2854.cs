@@ -1,8 +1,8 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.PublicExtensions;
 using Xunit;
-using Raven.NewClient.Client;
 
 namespace NewClientTests.NewClient
 {

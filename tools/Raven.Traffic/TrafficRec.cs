@@ -10,13 +10,13 @@ using System.IO.Compression;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Extensions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Platform;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Extensions;
+using Raven.Client.Logging;
+using Raven.Client.Platform;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

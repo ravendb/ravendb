@@ -3,14 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Globalization;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Document;
+using Raven.Client.Indexing;
 
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// A query using spatial filtering

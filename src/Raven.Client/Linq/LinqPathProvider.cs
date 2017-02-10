@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections;
 using System.Linq;
@@ -10,9 +11,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Extensions;
 
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
     public class LinqPathProvider
     {

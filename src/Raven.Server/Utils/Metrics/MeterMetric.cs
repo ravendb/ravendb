@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using Raven.NewClient.Abstractions.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Utils.Metrics

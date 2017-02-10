@@ -1,9 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Net;
 using System.Runtime.InteropServices;
 
-namespace Raven.NewClient.Client.Helpers
+namespace Raven.Client.Helpers
 {
     internal static class EnvironmentHelper
     {

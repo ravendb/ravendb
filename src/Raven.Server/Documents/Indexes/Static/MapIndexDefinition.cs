@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Indexing;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 

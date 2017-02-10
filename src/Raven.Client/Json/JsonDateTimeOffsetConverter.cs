@@ -1,7 +1,7 @@
 using System;
 using Newtonsoft.Json;
 
-namespace Raven.NewClient.Abstractions.Json
+namespace Raven.Client.Json
 {
     public class JsonDateTimeOffsetConverter : RavenJsonConverter
     {

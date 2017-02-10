@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.NewClient.Client.Exceptions.Patching
+namespace Raven.Client.Exceptions.Patching
 {
     public class JavaScriptException : RavenException
     {

@@ -1,8 +1,7 @@
 using System;
-using System.Linq;
 using System.Reflection;
 
-namespace Raven.NewClient.Abstractions.Logging.LogProviders
+namespace Raven.Client.Logging.LogProviders
 {
     public class NLogLogManager : LogManagerBase
     {

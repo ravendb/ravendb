@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public static class EnumerableExtension
     {

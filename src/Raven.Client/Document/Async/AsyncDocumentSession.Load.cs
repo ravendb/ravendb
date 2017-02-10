@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Commands;
+using Raven.Client.Indexes;
 
-namespace Raven.NewClient.Client.Document.Async
+namespace Raven.Client.Document.Async
 {
     public partial class AsyncDocumentSession
     {

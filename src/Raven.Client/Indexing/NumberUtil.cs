@@ -3,10 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Globalization;
 
-namespace Raven.NewClient.Abstractions.Indexing
+namespace Raven.Client.Indexing
 {
     /// <summary>
     /// Helper function for numeric to indexed string and vice versa

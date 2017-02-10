@@ -1,9 +1,8 @@
-using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
-namespace Raven.NewClient.Database.Util
+namespace Raven.Client.Util
 {
     public class SizeLimitedConcurrentDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
     {

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Extensions;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class GetRevisionOperation
     {

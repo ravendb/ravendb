@@ -5,9 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Exceptions;
@@ -17,6 +14,8 @@ using Sparrow;
 using Sparrow.Logging;
 using Voron.Impl;
 using System.Linq;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene

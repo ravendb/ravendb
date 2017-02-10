@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Indexing;
+using Raven.Client.Indexing;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     //from issue http://issues.hibernatingrhinos.com/issue/RavenDB-3543
     internal class SortOptionsEqualityProvider : IEqualityComparer<KeyValuePair<string, SortOptions?>>

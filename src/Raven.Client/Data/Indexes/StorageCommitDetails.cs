@@ -1,4 +1,4 @@
-﻿namespace Raven.NewClient.Data.Indexes
+﻿namespace Raven.Client.Data.Indexes
 {
     public class StorageCommitDetails 
     {

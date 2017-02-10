@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.NewClient.Client.Replication.Messages
+namespace Raven.Client.Replication.Messages
 {
     public class TopologyDiscoveryRequest
     {

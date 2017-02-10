@@ -1,8 +1,6 @@
 using System;
 
-
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     public interface ILoadConfiguration
     {

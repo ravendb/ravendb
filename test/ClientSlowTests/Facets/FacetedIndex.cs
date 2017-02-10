@@ -8,13 +8,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Data;
 using Xunit;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.PublicExtensions;
 
 namespace NewClientTests.NewClient
 {

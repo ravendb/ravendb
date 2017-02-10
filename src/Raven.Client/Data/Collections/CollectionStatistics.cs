@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.NewClient.Client.Data.Collections
+namespace Raven.Client.Data.Collections
 {
     public class CollectionStatistics
     {

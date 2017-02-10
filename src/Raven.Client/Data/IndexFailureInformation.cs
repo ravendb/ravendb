@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-namespace Raven.NewClient.Client.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// Information about index failure rates

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Extensions;
 
 namespace FastTests.Subscriptions
 {

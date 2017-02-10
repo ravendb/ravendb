@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
 using Newtonsoft.Json;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {

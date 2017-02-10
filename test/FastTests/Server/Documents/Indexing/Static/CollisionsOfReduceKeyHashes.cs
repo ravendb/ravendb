@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Client.Indexing;
+using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;

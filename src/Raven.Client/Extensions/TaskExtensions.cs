@@ -1,11 +1,10 @@
 using System;
-using System.Diagnostics;
 using System.Net;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Raven.NewClient.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
     public static class TaskExtensions
     {

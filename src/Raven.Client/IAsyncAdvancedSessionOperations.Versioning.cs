@@ -7,7 +7,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     ///     Advanced async session operations

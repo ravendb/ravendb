@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document.Blittable
+namespace Raven.Client.Blittable
 {
     public static class BlittableExtentions
     {

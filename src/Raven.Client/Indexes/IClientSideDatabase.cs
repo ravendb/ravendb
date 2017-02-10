@@ -3,9 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System.Collections.Generic;
 
-namespace Raven.NewClient.Client.Indexes
+namespace Raven.Client.Indexes
 {
     /// <summary>
     /// DatabaseAccessor for loading documents in the translator

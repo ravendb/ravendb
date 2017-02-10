@@ -6,7 +6,7 @@
 
 using System;
 
-namespace Raven.NewClient.Client.Exceptions.Transformers
+namespace Raven.Client.Exceptions.Transformers
 {
     /// <summary>
     /// This exception is raised when a query is made against a non existing index

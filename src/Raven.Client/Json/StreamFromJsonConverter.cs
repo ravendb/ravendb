@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Newtonsoft.Json;
 
-namespace Raven.NewClient.Abstractions.Json
+namespace Raven.Client.Json
 {
     public class StreamFromJsonConverter: JsonConverter
     {

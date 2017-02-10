@@ -3,16 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Blittable;
+using Raven.Client.Commands;
+using Raven.Client.Connection;
+using Raven.Client.Extensions;
+using Raven.Client.Linq;
+using Raven.Client.Util;
 using Sparrow.Json;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Extensions;
 
-namespace Raven.NewClient.Client.Document.Async
+namespace Raven.Client.Document.Async
 {
     public partial class AsyncDocumentSession
     {

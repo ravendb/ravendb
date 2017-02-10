@@ -12,22 +12,17 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Exceptions.Security;
-using Raven.NewClient.Client.Exceptions.Subscriptions;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Json;
-using Raven.NewClient.Client.Util;
+using Raven.Client.Blittable;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Exceptions.Subscriptions;
+using Raven.Client.Extensions;
+using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public delegate void BeforeBatch();
 

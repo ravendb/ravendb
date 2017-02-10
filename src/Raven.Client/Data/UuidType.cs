@@ -1,6 +1,4 @@
-using System;
-
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public enum UuidType : byte
     {

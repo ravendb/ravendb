@@ -1,9 +1,9 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Indexing;
+using Raven.Client.Operations.Databases.Indexes;
 using SlowTests.Utils;
 using Xunit;
 

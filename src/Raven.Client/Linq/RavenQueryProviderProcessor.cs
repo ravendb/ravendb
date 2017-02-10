@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -11,17 +12,16 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexing;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
+using Raven.Client.PublicExtensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
     /// <summary>
     /// Process a Linq expression to a Lucene query

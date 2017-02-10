@@ -3,13 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using Newtonsoft.Json;
 
-namespace Raven.NewClient.Abstractions.Spatial
+namespace Raven.Client.Spatial
 {
     public class GeoJsonWktConverter
     {

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Raven.NewClient.Client.Data
+namespace Raven.Client.Data
 {
     public class AccessToken
     {

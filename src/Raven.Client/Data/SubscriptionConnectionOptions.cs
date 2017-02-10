@@ -3,16 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-using System.Net;
 using System.Threading;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Extensions;
-using Newtonsoft.Json;
 using Sparrow.Json;
 
-
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class SubscriptionConnectionClientMessage
     {

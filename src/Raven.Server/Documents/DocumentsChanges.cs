@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
 
 namespace Raven.Server.Documents
 {

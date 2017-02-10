@@ -1,13 +1,12 @@
-﻿using System.IO;
-using System.Net.Http;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Json;
-using Raven.NewClient.Data.Indexes;
+﻿using System.Net.Http;
+using Raven.Client.Commands;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Document;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Operations.Databases.Indexes
+namespace Raven.Client.Operations.Databases.Indexes
 {
     public class GetIndexingStatusOperation : IAdminOperation<IndexingStatus>
     {

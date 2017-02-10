@@ -8,7 +8,7 @@ using System;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Logging;
+using Raven.Client.Logging;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;

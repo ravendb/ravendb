@@ -3,11 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
 
-namespace Raven.NewClient.Client.Indexes
+namespace Raven.Client.Indexes
 {
     /// <summary>
     /// Abstract class used to provide infrastructure service for actual creation tasks

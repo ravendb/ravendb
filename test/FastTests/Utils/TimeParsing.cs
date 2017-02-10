@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
-using Raven.NewClient.Abstractions;
+using Raven.Client;
 using Raven.Server.Utils;
 using Xunit;
 

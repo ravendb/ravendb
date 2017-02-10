@@ -1,9 +1,8 @@
 using System;
-using System.IO;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
 
-namespace Raven.NewClient.Client.Extensions
+namespace Raven.Client.Extensions
 {
     ///<summary>
     /// Methods to create multitenant databases

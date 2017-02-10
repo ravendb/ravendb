@@ -6,7 +6,7 @@
 
 using System;
 using FastTests;
-using Raven.NewClient.Client.Exceptions;
+using Raven.Client.Exceptions;
 using Xunit;
 
 namespace SlowTests.Issues

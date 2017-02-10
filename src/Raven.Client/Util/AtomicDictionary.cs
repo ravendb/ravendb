@@ -4,10 +4,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Util;
+using Raven.Client.Extensions;
 
-namespace Raven.NewClient.Client.Util
+namespace Raven.Client.Util
 {
     public class AtomicDictionary<TVal> : IEnumerable<KeyValuePair<string, TVal>>
     {

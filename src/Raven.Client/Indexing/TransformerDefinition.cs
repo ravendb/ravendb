@@ -1,4 +1,4 @@
-namespace Raven.NewClient.Abstractions.Indexing
+namespace Raven.Client.Indexing
 {
     public class TransformerDefinition
     {

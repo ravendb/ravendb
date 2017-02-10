@@ -1,5 +1,5 @@
 ﻿using FastTests;
-using Raven.NewClient.Client;
+using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

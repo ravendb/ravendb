@@ -1,7 +1,7 @@
 ﻿using System.Net.Http;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Data.Commands
+namespace Raven.Client.Data.Commands
 {
     public interface ICommandData
     {

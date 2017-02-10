@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Data.Queries;
+using Raven.Client.Data.Queries;
 
 namespace Raven.Server.Documents.Queries
 {

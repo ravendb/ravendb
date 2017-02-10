@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Net.Http;
 using FastTests;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Blittable;
+using Raven.Client.Commands;
+using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

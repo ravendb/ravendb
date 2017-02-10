@@ -1,6 +1,4 @@
-using System.Collections.Generic;
-
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class RestoreInProgress
     {

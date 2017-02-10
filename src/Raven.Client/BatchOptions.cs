@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
     public class BatchOptions
     {

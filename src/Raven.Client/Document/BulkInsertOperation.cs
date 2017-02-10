@@ -1,11 +1,11 @@
-using Raven.NewClient.Abstractions.Util;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Extensions;
+using Raven.Client.Http;
+using Raven.Client.Util;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public class BulkInsertOperation : IDisposable
     {

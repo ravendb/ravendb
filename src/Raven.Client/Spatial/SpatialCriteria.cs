@@ -1,6 +1,6 @@
-using Raven.NewClient.Abstractions.Indexing;
+using Raven.Client.Indexing;
 
-namespace Raven.NewClient.Client.Spatial
+namespace Raven.Client.Spatial
 {
     public class SpatialCriteria
     {

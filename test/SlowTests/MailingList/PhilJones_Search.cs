@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.NewClient.Client;
+using Raven.Client.PublicExtensions;
 using Xunit;
 
 namespace SlowTests.MailingList

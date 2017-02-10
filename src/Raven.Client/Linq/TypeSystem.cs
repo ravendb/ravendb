@@ -3,14 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Linq;
-using Raven.NewClient.Abstractions.Extensions;
-using Newtonsoft.Json;
+using System.Reflection;
 
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
     internal static class TypeSystem
     {

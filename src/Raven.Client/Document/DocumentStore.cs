@@ -3,27 +3,23 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Changes;
-using Raven.NewClient.Client.Extensions;
-
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Document.Async;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Metrics;
-using Raven.NewClient.Client.Smuggler;
-using Raven.NewClient.Client.Util;
-using Raven.NewClient.Operations;
+using Raven.Client.Changes;
+using Raven.Client.Data;
+using Raven.Client.Document.Async;
+using Raven.Client.Extensions;
+using Raven.Client.Http;
+using Raven.Client.Metrics;
+using Raven.Client.Operations;
+using Raven.Client.Smuggler;
+using Raven.Client.Util;
 
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// Manages access to RavenDB and open sessions to work with RavenDB.

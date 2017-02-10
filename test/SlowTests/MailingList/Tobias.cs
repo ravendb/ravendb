@@ -7,9 +7,9 @@
 using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 using Xunit;
 
 namespace SlowTests.MailingList

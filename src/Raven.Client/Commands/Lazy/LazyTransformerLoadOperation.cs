@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document.Batches;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document.Batches;
+using Raven.Client.Json;
 using Sparrow.Json;
-using Raven.NewClient.Client.Json;
 
-namespace Raven.NewClient.Client.Commands.Lazy
+namespace Raven.Client.Commands.Lazy
 {
     public class LazyTransformerLoadOperation<T> : ILazyOperation
     {

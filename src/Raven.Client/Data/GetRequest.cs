@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Data
+namespace Raven.Client.Data
 {
     public class GetRequest
     {

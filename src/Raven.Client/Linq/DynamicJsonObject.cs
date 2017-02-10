@@ -4,19 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.Globalization;
-using System.Linq;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Linq;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
     public interface IDynamicJsonObject
     {

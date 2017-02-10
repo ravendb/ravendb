@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading;
 
-namespace Raven.NewClient.Client.Util.RateLimiting
+namespace Raven.Client.Util.RateLimiting
 {
     /// <summary>
     /// http://www.jackleitch.net/2010/10/better-rate-limiting-with-dot-net/

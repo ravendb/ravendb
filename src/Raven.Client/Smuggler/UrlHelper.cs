@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Raven.NewClient.Client.Smuggler
+namespace Raven.Client.Smuggler
 {
     public static class UrlHelper
     {

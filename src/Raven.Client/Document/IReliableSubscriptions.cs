@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
 
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public interface IReliableSubscriptions : IDisposable
     {

@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class DatabaseBackupRequest
     {

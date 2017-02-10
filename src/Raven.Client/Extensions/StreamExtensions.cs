@@ -3,19 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Logging;
-using System.Runtime.InteropServices;
 using System.Text;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Util.Streams;
+using System.Threading.Tasks;
+using Raven.Client.Logging;
+using Raven.Client.Util.Streams;
 
-namespace Raven.NewClient.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
     /// <summary>
     /// Extensions for working with streams

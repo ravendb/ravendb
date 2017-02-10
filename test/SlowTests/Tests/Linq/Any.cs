@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions;
+using Raven.Client;
 using SlowTests.Utils;
 using Xunit;
 

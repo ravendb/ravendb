@@ -1,7 +1,7 @@
 using FastTests;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Exceptions.Patching;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Data;
+using Raven.Client.Exceptions.Patching;
+using Raven.Client.Operations.Databases.Documents;
 using Raven.Server.Config;
 using Xunit;
 

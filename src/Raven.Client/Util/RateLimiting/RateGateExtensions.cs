@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Raven.NewClient.Client.Util.RateLimiting
+namespace Raven.Client.Util.RateLimiting
 {
     public static class RateGateExtensions
     {

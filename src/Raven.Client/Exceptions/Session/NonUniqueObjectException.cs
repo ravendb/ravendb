@@ -6,7 +6,7 @@
 
 using System;
 
-namespace Raven.NewClient.Client.Exceptions.Session
+namespace Raven.Client.Exceptions.Session
 {
     /// <summary>
     /// This exception is thrown when a separate instance of an entity is added to the session

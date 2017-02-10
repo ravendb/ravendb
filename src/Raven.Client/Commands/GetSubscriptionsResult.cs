@@ -4,11 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class GetSubscriptionsResult
     {

@@ -3,10 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.IO;
 
-namespace Raven.NewClient.Abstractions.Util
+namespace Raven.Client.Util
 {
     public class PositionWrapperStream : Stream
     {

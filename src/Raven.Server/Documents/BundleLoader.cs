@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;

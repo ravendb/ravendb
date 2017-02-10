@@ -19,8 +19,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.AspNetCore.WebUtilities;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Util;
+using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.Exceptions.PeriodicExport;
 
 namespace Raven.Server.Documents.PeriodicExport.Azure

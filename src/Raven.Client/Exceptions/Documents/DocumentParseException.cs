@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.NewClient.Client.Exceptions.Documents
+namespace Raven.Client.Exceptions.Documents
 {
     public class DocumentParseException : Exception
     {

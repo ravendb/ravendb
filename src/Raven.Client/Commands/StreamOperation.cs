@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Document;
-using Sparrow.Logging;
-using Raven.NewClient.Client.Connection;
+using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using System.Text;
+using Sparrow.Logging;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class StreamOperation
     {

@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
 
-namespace Raven.NewClient.Client.Linq.Indexing
+namespace Raven.Client.Linq.Indexing
 {
     /// <summary>
     /// Extension methods that adds additional behavior during indexing operations

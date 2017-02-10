@@ -15,7 +15,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using System.Threading;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 

@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Data;
+using Raven.Client.Document;
 using Sparrow.Logging;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class MultiGetOperation
     {

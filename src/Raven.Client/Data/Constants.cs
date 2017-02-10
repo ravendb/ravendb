@@ -1,7 +1,4 @@
-using System;
-
-
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public static class Constants
     {

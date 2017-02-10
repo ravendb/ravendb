@@ -3,23 +3,24 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Document.Batches;
-using System.Diagnostics;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Commands.Lazy;
-using Raven.NewClient.Client.Data.Queries;
+using Raven.Client.Commands;
+using Raven.Client.Commands.Lazy;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document.Batches;
+using Raven.Client.Extensions;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 
-namespace Raven.NewClient.Client.Document.Async
+namespace Raven.Client.Document.Async
 {
     /// <summary>
     /// Implementation for async document session 

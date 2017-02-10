@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using NewClientTests;
-using Raven.NewClient.Abstractions.Util;
+using Raven.Client.Util;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 

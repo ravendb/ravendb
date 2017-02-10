@@ -8,9 +8,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Extensions;
 
-namespace Raven.NewClient.Client.Platform.Unix
+namespace Raven.Client.Platform.Unix
 {
     public class RavenUnixClientWebSocket : WebSocket, IDisposable
     {

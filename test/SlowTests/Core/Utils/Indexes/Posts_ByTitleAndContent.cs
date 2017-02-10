@@ -1,6 +1,6 @@
 using System.Linq;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 using Post = SlowTests.Core.Utils.Entities.Post;
 
 namespace SlowTests.Core.Utils.Indexes

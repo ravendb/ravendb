@@ -23,7 +23,7 @@
 using System;
 using System.Globalization;
 
-namespace Raven.NewClient.Abstractions.Linq
+namespace Raven.Client.Linq
 {
     
     /// <summary> Provides support for converting dates to strings and vice-versa.

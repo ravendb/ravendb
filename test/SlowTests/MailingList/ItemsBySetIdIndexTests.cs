@@ -4,8 +4,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 using Xunit;
 
 namespace SlowTests.MailingList

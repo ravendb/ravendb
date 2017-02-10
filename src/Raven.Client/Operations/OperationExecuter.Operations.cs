@@ -1,12 +1,11 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Connection;
+using Raven.Client.Commands;
+using Raven.Client.Connection;
+using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Operations
+namespace Raven.Client.Operations
 {
     public partial class OperationExecuter
     {

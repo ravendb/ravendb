@@ -3,10 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Text;
 
-namespace Raven.NewClient.Abstractions.Util
+namespace Raven.Client.Util
 {
     public static class EscapingHelper
     {

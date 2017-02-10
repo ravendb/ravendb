@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexing;
+using Raven.Client.Indexing;
+using Raven.Client.PublicExtensions;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     ///<summary>
     /// Mostly used by the linq provider

@@ -6,7 +6,7 @@
 
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Replication
+namespace Raven.Client.Replication
 {
     public class ReplicationClientConfiguration
     {

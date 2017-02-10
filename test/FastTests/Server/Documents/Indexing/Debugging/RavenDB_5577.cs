@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -11,6 +9,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using System.Linq;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
 
 namespace FastTests.Server.Documents.Indexing.Debugging
 {

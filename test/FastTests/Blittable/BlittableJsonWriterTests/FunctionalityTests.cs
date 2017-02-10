@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.NewClient.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Compression;
 using Sparrow.Json;

@@ -3,21 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Client.Document;
+using Raven.Client.Exceptions.Compilation;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
+using Raven.Client.Util;
 
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Exceptions.Compilation;
-using Raven.NewClient.Client.Indexing;
-
-namespace Raven.NewClient.Client.Indexes
+namespace Raven.Client.Indexes
 {
     /// <summary>
     /// This class provides a way to define a strongly typed index on the client.

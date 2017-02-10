@@ -1,7 +1,6 @@
-using System;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class DocumentsChanges
     {

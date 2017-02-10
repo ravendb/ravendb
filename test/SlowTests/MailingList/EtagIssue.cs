@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Commands;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Document;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Data.Commands;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 using Xunit;
 
 namespace SlowTests.MailingList

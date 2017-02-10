@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Linq;
+using Raven.Client.Operations.Databases;
+using Raven.Client.Operations.Databases.Documents;
+using Raven.Client.PublicExtensions;
 using Xunit;
 
 namespace SlowTests.Bugs.MapRedue

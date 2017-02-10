@@ -2,10 +2,10 @@
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Operations.Databases.Collections;
-using Raven.NewClient.Client.Smuggler;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Operations.Databases;
+using Raven.Client.Operations.Databases.Collections;
+using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Smuggler;
 using Xunit;
 
 namespace SlowTests.Smuggler

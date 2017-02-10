@@ -2,13 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
 using Xunit;
 using System;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.PublicExtensions;
 using SlowTests.Core.Utils.Entities;
-using Raven.NewClient.Client;
 
 namespace NewClientTests.NewClient
 {

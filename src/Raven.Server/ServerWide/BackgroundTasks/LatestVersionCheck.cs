@@ -2,8 +2,8 @@
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Util;
+using Raven.Client;
+using Raven.Client.Util;
 using Sparrow.Logging;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;

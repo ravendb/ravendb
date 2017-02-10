@@ -4,13 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Connection.Profiling;
-using Raven.NewClient.Client.Helpers;
-
+using Raven.Client.Connection;
+using Raven.Client.Helpers;
 using Sparrow.Collections;
 
-namespace Raven.NewClient.Client.Util
+namespace Raven.Client.Util
 {
     public class SimpleCache : IDisposable
     {

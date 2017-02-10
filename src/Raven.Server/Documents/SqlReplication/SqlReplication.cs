@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Exceptions.Patching;
-using Raven.Server.Documents.Patch;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Exceptions.Patching;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -16,6 +15,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.SqlReplication
 {

@@ -6,11 +6,11 @@
 
 using System;
 using FastTests;
-using Raven.NewClient.Client.Indexing;
 using Xunit;
 using System.Linq;
-using Raven.NewClient.Abstractions.Linq;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Linq;
+using Raven.Client.Operations.Databases.Indexes;
 
 namespace SlowTests.Bugs
 {

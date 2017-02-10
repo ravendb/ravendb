@@ -7,7 +7,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
-namespace Raven.NewClient.Client.Document.Async
+namespace Raven.Client.Document.Async
 {
     public class AsyncMultiDatabaseHiLoKeyGenerator
     {

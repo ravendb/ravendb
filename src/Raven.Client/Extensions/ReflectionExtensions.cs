@@ -5,12 +5,9 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using System.Reflection;
 
-namespace Raven.NewClient.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
     public static class ReflectionExtensions
     {

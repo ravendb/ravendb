@@ -3,14 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Extensions;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// Fluent implementation for specifying include paths for loading documents

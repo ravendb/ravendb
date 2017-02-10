@@ -6,16 +6,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq;
 using System.Linq;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Commands.Lazy;
+using System.Linq.Expressions;
+using Raven.Client.Commands;
+using Raven.Client.Commands.Lazy;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document.Batches;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server

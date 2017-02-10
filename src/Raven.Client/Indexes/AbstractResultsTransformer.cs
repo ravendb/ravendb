@@ -1,19 +1,17 @@
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Document;
-
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Data.Transformers;
-using Raven.NewClient.Client.Operations.Databases.Transformers;
+using Raven.Client.Data.Transformers;
+using Raven.Client.Document;
+using Raven.Client.Indexing;
+using Raven.Client.Operations.Databases.Transformers;
+using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Indexes
+namespace Raven.Client.Indexes
 {
     /// <summary>
     /// Base class for creating transformers

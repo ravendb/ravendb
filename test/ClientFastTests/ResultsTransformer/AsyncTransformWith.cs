@@ -8,8 +8,8 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
+using Raven.Client.PublicExtensions;
 using Xunit;
 
 namespace NewClientTests.NewClient.ResultsTransformer

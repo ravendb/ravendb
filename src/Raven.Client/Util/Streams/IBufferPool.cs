@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.NewClient.Abstractions.Util.Streams
+namespace Raven.Client.Util.Streams
 {
     public interface IBufferPool : IDisposable
     {

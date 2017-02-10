@@ -2,11 +2,11 @@
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Connection;
+using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class HeadDocumentCommand : RavenCommand<long?>
     {

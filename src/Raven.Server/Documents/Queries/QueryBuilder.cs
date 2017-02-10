@@ -8,7 +8,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Utils;

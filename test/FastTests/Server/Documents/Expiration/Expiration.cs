@@ -9,10 +9,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Operations.Databases;
 using Raven.Server.Documents.Expiration;
 using Xunit;
 

@@ -1,8 +1,6 @@
 using System;
 
-using Raven.NewClient.Abstractions.Indexing;
-
-namespace Raven.NewClient.Client.Indexing
+namespace Raven.Client.Indexing
 {
     public class IndexFieldOptions
     {

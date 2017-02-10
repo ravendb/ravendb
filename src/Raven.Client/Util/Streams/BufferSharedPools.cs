@@ -1,11 +1,6 @@
 using Sparrow;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Raven.NewClient.Abstractions.Util.Streams
+namespace Raven.Client.Util.Streams
 {
     public static class BufferSharedPools
     {

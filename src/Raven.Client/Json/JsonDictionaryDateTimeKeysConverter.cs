@@ -2,12 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
-
-using Raven.NewClient.Abstractions.Extensions;
 using Newtonsoft.Json;
 using Sparrow.Extensions;
 
-namespace Raven.NewClient.Abstractions.Json
+namespace Raven.Client.Json
 {
     public class JsonDictionaryDateTimeKeysConverter : RavenJsonConverter
     {

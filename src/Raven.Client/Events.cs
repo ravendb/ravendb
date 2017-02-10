@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Document;
 
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
     public class BeforeStoreEventArgs : EventArgs
     {

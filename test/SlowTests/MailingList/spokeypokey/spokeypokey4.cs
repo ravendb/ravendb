@@ -2,8 +2,8 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey

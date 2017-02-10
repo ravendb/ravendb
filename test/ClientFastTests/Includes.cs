@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
+using Raven.Client.PublicExtensions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

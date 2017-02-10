@@ -3,13 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+
 using System.IO;
 using System.Security.Cryptography;
-
 using Sparrow;
 
-namespace Raven.NewClient.Abstractions.Util.Encryptors
+namespace Raven.Client.Util.Encryptors
 {
     public sealed class DefaultEncryptor : EncryptorBase<DefaultEncryptor.DefaultHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
     {

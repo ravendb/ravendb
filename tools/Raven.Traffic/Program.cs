@@ -1,8 +1,7 @@
 ﻿using System;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Operations.Databases;
 
 namespace Raven.Traffic
 {

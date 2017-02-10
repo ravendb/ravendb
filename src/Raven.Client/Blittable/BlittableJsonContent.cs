@@ -4,9 +4,8 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Blittable
+namespace Raven.Client.Blittable
 {
     public class BlittableJsonContent : HttpContent
     {

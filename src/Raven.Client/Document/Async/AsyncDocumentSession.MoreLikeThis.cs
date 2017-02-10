@@ -3,14 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Data.Queries;
+using Raven.Client.Commands;
+using Raven.Client.Data.Queries;
+using Raven.Client.Indexes;
 
-namespace Raven.NewClient.Client.Document.Async
+namespace Raven.Client.Document.Async
 {
     /// <summary>
     /// Implementation for async document session 

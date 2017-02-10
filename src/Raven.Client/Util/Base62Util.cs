@@ -3,11 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Globalization;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Extensions;
 
-namespace Raven.NewClient.Abstractions.Util
+namespace Raven.Client.Util
 {
     public class Base62Util
     {

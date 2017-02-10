@@ -8,7 +8,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     ///     Interface for document session using async approaches

@@ -3,15 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Document;
 
-using Raven.NewClient.Client.Data;
-
-namespace Raven.NewClient.Client.Connection
+namespace Raven.Client.Connection
 {
     /// <summary>
     /// Provide access to the underlying <see cref="IDocumentQuery{T}"/>

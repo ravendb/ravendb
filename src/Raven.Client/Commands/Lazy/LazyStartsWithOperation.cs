@@ -6,14 +6,14 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document;
+using Raven.Client.Document.Batches;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands.Lazy
+namespace Raven.Client.Commands.Lazy
 {
     public class LazyStartsWithOperation<T> : ILazyOperation
     {

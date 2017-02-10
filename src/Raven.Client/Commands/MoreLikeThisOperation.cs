@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Extensions;
-using Raven.NewClient.Json.Utilities;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Client.Json.Utilities;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class MoreLikeThisOperation<T>
     {

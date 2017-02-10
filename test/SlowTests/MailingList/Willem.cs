@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
 using Newtonsoft.Json;
+using Raven.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList

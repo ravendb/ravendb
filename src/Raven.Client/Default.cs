@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
-using Raven.NewClient.Abstractions.Json;
+using Raven.Client.Json;
 
-namespace Raven.NewClient.Abstractions
+namespace Raven.Client
 {
     public static class Default
     {

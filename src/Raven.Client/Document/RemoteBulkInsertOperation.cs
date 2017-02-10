@@ -1,33 +1,4 @@
-using System.Diagnostics;
-using System.Net;
-
-using Raven.NewClient.Abstractions.Json;
-using Raven.NewClient.Abstractions.Util;
-
-
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Changes;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Util;
-using Newtonsoft.Json;
-
-using Newtonsoft.Json.Bson;
-
-using System.IO.Compression;
-using System.Net.Http;
-using Raven.NewClient.Client.Extensions;
-using System.Text;
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     //TODO: delete this
 //    public class RemoteBulkInsertOperation : TcpBulkInsertOperation, IObserver<BulkInsertChangeNotification>

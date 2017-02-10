@@ -2,7 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries

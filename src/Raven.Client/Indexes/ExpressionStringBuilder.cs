@@ -3,6 +3,7 @@
 // //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // // </copyright>
 // //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -12,13 +13,11 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Utilities;
+using Raven.Client.Data;
+using Raven.Client.Document;
 
-
-namespace Raven.NewClient.Client.Indexes
+namespace Raven.Client.Indexes
 {
     /// <summary>
     ///   Based off of System.Linq.Expressions.ExpressionStringBuilder

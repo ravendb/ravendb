@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Client.Document.Blittable;
+using Raven.Client.Blittable;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Abstractions.Util
+namespace Raven.Client.Util
 {
     public class IncludesUtil
     {

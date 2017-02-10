@@ -1,10 +1,8 @@
-using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Extensions.Internal;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Indexing
+namespace Raven.Client.Indexing
 {
     public class IndexConfiguration : Dictionary<string, string>, IFillFromBlittableJson
     {

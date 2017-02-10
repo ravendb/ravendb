@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Extensions;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Json.Utilities
+namespace Raven.Client.Json.Utilities
 {
     internal static class TransformerHelper
     {

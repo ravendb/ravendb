@@ -3,12 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Util;
+using Raven.Client.Data;
+using Raven.Client.Util;
 
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public class DocumentSubscriptions : IReliableSubscriptions
     {

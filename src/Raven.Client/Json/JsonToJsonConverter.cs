@@ -1,10 +1,7 @@
 using System;
-using System.Reflection;
 using Newtonsoft.Json;
-using Raven.NewClient.Client.Linq;
-using Newtonsoft.Json.Linq;
 
-namespace Raven.NewClient.Abstractions.Json
+namespace Raven.Client.Json
 {
     public class JsonToJsonConverter : JsonConverter
     {

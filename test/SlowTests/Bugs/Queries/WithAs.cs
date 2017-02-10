@@ -1,7 +1,7 @@
 using FastTests;
 using Xunit;
 using System.Linq;
-using Raven.NewClient.Client;
+using Raven.Client.PublicExtensions;
 
 namespace SlowTests.Bugs.Queries
 {

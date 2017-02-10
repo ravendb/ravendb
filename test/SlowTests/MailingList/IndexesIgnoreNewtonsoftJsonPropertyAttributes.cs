@@ -2,8 +2,8 @@ using System;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Indexes;
+using Raven.Client.Operations.Databases.Indexes;
 using Xunit;
 
 namespace Raven.Imports.Newtonsoft.Json.Sample

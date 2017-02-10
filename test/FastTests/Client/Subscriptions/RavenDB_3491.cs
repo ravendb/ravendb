@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Notifications;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
 using Xunit;
 
 namespace FastTests.Client.Subscriptions

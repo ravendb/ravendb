@@ -9,12 +9,10 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
+using Raven.Client.Operations.Databases;
+using Raven.Client.Operations.Databases.Indexes;
 using SlowTests.Core.Utils.Indexes;
 using Sparrow.Json;
 using Xunit;

@@ -1,6 +1,6 @@
 using Sparrow;
 
-namespace Raven.NewClient.Client.Connection
+namespace Raven.Client.Connection
 {
     public static class ServerHash
     {

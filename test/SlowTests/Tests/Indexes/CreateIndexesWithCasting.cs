@@ -1,8 +1,8 @@
 using System.Linq;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes

@@ -5,12 +5,11 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Exceptions.Indexes;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Data.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Exceptions.Indexes;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -671,7 +670,7 @@ namespace Raven.Server.Documents.Handlers
                     return Task.CompletedTask;
                 }
 
-                HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+                HttpContext.Response.Headers[Constants.MetadataEtagField] = CharExtensions.ToInvariantString(result.ResultEtag);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

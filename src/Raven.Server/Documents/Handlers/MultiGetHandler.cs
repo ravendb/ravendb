@@ -14,8 +14,7 @@ using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;

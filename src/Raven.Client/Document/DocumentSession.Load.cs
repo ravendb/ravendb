@@ -8,10 +8,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Commands;
+using Raven.Client.Indexes;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server

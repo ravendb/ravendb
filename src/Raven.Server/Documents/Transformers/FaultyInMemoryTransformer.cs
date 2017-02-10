@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.NewClient.Abstractions.Indexing;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

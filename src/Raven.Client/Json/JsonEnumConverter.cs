@@ -3,11 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Reflection;
 using Newtonsoft.Json;
 
-namespace Raven.NewClient.Abstractions.Json
+namespace Raven.Client.Json
 {
     /// <summary>
     /// Convert an enum to a json string

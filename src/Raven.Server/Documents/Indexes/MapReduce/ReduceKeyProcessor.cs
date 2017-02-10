@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Linq;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Binary;

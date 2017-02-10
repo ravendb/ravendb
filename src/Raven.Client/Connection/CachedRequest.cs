@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Specialized;
 
-
-namespace Raven.NewClient.Client.Connection
+namespace Raven.Client.Connection
 {
     public class CachedRequest
     {

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using Raven.Client;
+using Raven.Client.Indexes;
+using Raven.Client.PublicExtensions;
 using Xunit;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client;
 
 namespace NewClientTests.NewClient
 {

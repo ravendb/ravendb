@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Net.Http;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Data;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Commands
+namespace Raven.Client.Commands
 {
     public class NextHiLoCommand : RavenCommand<HiLoResult>
     {

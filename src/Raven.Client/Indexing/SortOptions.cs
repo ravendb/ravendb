@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-namespace Raven.NewClient.Abstractions.Indexing
+namespace Raven.Client.Indexing
 {
     /// <summary>
     /// The sort options to use for a particular field

@@ -3,8 +3,8 @@ using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Abstractions.Util.Encryptors;
+using Raven.Client.Connection;
+using Raven.Client.Util.Encryptors;
 using Raven.Server.Config;
 
 namespace Raven.Server.Web.Authentication

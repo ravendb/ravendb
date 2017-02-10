@@ -4,7 +4,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Raven.NewClient.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
     ///<summary>
     /// Extension methods to handle common scenarios

@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Client.Replication.Messages;
+using Raven.Client;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
+using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
@@ -975,22 +973,22 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName((nameof(options.Spatial.MaxX)));
                 LazyStringValue lazyStringValue;
-                using (lazyStringValue = context.GetLazyString(options.Spatial.MaxX.ToInvariantString()))
+                using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MaxX)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
                 writer.WritePropertyName((nameof(options.Spatial.MaxY)));
-                using (lazyStringValue = context.GetLazyString(options.Spatial.MaxY.ToInvariantString()))
+                using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MaxY)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
                 writer.WritePropertyName((nameof(options.Spatial.MinX)));
-                using (lazyStringValue = context.GetLazyString(options.Spatial.MinX.ToInvariantString()))
+                using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MinX)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
                 writer.WritePropertyName((nameof(options.Spatial.MinY)));
-                using (lazyStringValue = context.GetLazyString(options.Spatial.MinY.ToInvariantString()))
+                using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MinY)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 

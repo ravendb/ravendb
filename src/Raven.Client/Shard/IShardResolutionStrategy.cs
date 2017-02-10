@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Raven.NewClient.Client.Shard
+namespace Raven.Client.Shard
 {
     /// <summary>
     /// Implementers of this interface provide a way to decide which shards will be queried

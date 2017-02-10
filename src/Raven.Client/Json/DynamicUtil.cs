@@ -3,12 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Microsoft.CSharp.RuntimeBinder;
 
-namespace Raven.NewClient.Abstractions.Json
+namespace Raven.Client.Json
 {
     /// <summary>
     /// Helper class for working with dynamic values completely dynamically

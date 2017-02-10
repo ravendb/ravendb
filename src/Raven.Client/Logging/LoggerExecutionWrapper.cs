@@ -1,8 +1,7 @@
 using System;
-using Raven.NewClient.Abstractions.Data;
 using Sparrow.Collections;
 
-namespace Raven.NewClient.Abstractions.Logging
+namespace Raven.Client.Logging
 {
     public class LoggerExecutionWrapper : ILog
     {

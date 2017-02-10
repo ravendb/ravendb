@@ -1,4 +1,4 @@
-namespace Raven.NewClient.Client.Http
+namespace Raven.Client.Http
 {
     public class TopologySla
     {

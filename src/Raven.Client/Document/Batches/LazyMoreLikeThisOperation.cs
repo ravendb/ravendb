@@ -4,13 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document.Batches
+namespace Raven.Client.Document.Batches
 {
     public class LazyMoreLikeThisOperation<T> : ILazyOperation
     {

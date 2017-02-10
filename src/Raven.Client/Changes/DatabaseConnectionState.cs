@@ -1,9 +1,8 @@
 using System;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
 
-namespace Raven.NewClient.Client.Changes
+namespace Raven.Client.Changes
 {
     public class DatabaseConnectionState : ConnectionStateBase
     {

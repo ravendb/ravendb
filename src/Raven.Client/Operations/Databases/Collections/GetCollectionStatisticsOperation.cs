@@ -1,13 +1,12 @@
 using System;
 using System.Net.Http;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data.Collections;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Operations;
+using Raven.Client.Commands;
+using Raven.Client.Data.Collections;
+using Raven.Client.Document;
+using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Operations.Databases.Collections
+namespace Raven.Client.Operations.Databases.Collections
 {
     public class GetCollectionStatisticsOperation : IAdminOperation<CollectionStatistics>
     {

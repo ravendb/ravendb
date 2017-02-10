@@ -1,4 +1,4 @@
-namespace Raven.NewClient.Abstractions.Indexing
+namespace Raven.Client.Indexing
 {
     /// <summary>
     /// Specifies whether to include term vectors for a field

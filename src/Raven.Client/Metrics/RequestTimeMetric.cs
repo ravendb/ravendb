@@ -3,9 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 
-namespace Raven.NewClient.Client.Metrics
+namespace Raven.Client.Metrics
 {
     public interface IRequestTimeMetric
     {

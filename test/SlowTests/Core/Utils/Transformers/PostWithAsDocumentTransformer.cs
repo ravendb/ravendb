@@ -6,7 +6,7 @@
 
 using System;
 using System.Linq;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
 using Post = SlowTests.Core.Utils.Entities.Post;
 
 namespace SlowTests.Core.Utils.Transformers

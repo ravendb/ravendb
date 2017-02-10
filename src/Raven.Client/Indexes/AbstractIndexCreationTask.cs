@@ -13,18 +13,15 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Document;
+using Raven.Client.Indexing;
+using Raven.Client.Operations;
+using Raven.Client.Operations.Databases.Indexes;
 using Sparrow.Json;
-using Raven.NewClient.Client.Commands;
 
-namespace Raven.NewClient.Client.Indexes
+namespace Raven.Client.Indexes
 {
     /// <summary>
     /// Base class for creating indexes

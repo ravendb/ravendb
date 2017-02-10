@@ -2,13 +2,10 @@ using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net.Http;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.Metrics;
 
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Client.Connection.Profiling;
-using Raven.NewClient.Client.Metrics;
-
-
-namespace Raven.NewClient.Client.Connection
+namespace Raven.Client.Connection
 {
     public class CreateHttpJsonRequestParams
     {

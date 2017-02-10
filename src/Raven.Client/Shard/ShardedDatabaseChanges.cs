@@ -1,12 +1,11 @@
 using System;
-using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Changes;
 using System.Linq;
-using Raven.NewClient.Client.Data;
+using System.Threading.Tasks;
+using Raven.Client.Changes;
+using Raven.Client.Data;
+using Raven.Client.Extensions;
 
-namespace Raven.NewClient.Client.Shard
+namespace Raven.Client.Shard
 {
     public class ShardedDatabaseChanges : IDatabaseChanges
     {
@@ -15,7 +14,7 @@ namespace Raven.NewClient.Client.Shard
         public ShardedDatabaseChanges(IDatabaseChanges[] shardedDatabaseChanges)
         {
             this.shardedDatabaseChanges = shardedDatabaseChanges;
-            ConnectionTask = System.Threading.Tasks.Task.Factory.ContinueWhenAll(shardedDatabaseChanges.Select(x => x.ConnectionTask).ToArray(), tasks =>
+            ConnectionTask = Task.Factory.ContinueWhenAll(shardedDatabaseChanges.Select(x => x.ConnectionTask).ToArray(), tasks =>
             {
                 foreach (var task in tasks)
                 {

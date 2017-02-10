@@ -1,4 +1,4 @@
-namespace Raven.NewClient.Client.Connection.Profiling
+namespace Raven.Client.Connection.Profiling
 {
     /// <summary>
     /// The status of the request

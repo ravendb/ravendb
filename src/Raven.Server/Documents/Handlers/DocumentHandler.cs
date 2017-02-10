@@ -12,11 +12,10 @@ using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Exceptions.Transformers;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Exceptions.Transformers;
 using Raven.Server.Documents.Includes;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -24,6 +23,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Voron.Exceptions;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
 {

@@ -3,10 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Threading;
 
-namespace Raven.NewClient.Abstractions
+namespace Raven.Client
 {
     public class SystemTime
     {

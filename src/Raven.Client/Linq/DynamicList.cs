@@ -3,10 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using Raven.NewClient.Client.Linq;
 
-
-namespace Raven.NewClient.Abstractions.Linq
+namespace Raven.Client.Linq
 {
     public class DynamicList : DynamicObject, IEnumerable<object>
     {

@@ -4,13 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Commands;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server

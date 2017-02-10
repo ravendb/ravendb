@@ -3,10 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Threading.Tasks;
 
-namespace Raven.NewClient.Client.Changes
+namespace Raven.Client.Changes
 {
     internal static class TaskErrorExtensions
     {

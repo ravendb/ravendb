@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Net.Http;
-using Sparrow.Json;
-using Raven.NewClient.Client.Http;
 using System.Threading.Tasks;
+using Raven.Client.Http;
+using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class StreamCommand : RavenCommand<StreamResult>
     {

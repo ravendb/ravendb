@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.NewClient.Client.Exceptions.Compilation
+namespace Raven.Client.Exceptions.Compilation
 {
     public abstract class CompilationException : RavenException
     {

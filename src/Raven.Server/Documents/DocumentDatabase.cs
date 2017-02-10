@@ -4,9 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
+using Raven.Client;
+using Raven.Client.Data;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
@@ -24,8 +23,8 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Impl.Backup;
-using DatabaseInfo = Raven.NewClient.Client.Data.DatabaseInfo;
-using Size = Raven.NewClient.Data.Size;
+using DatabaseInfo = Raven.Client.Data.DatabaseInfo;
+using Size = Raven.Client.Data.Size;
 
 namespace Raven.Server.Documents
 {

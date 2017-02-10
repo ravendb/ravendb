@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-namespace Raven.NewClient.Client.Replication
+namespace Raven.Client.Replication
 {
     /// <summary>
     /// Data class for replication config document, available on a destination server

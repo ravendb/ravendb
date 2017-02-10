@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Client.Data;
+using Raven.Client;
+using Raven.Client.Data;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler.Documents.Data

@@ -4,12 +4,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
+using Raven.Client.Operations.Databases.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 

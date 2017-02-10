@@ -8,13 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Linq;
+using Raven.Client.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Linq

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Net.Http;
-using Raven.NewClient.Abstractions.Util;
+using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Data.Commands
+namespace Raven.Client.Data.Commands
 {
     public class PatchCommandData : ICommandData
     {

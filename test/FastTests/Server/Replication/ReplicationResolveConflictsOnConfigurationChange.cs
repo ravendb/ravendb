@@ -4,8 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Replication;
+using Raven.Client.Document;
+using Raven.Client.Replication;
 using Xunit;
 
 namespace FastTests.Server.Replication

@@ -2,10 +2,10 @@
 using System.Threading;
 using System.Threading.Tasks;
 using NewClientTests.NewClient.Server.Replication;
+using Raven.Client.Indexes;
+using Raven.Client.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Replication;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Tests.Issues

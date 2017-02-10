@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.ServerWide
+﻿using Raven.Client.Properties;
+
+namespace Raven.Server.ServerWide
 {
     public class ServerVersion
     {
@@ -8,14 +10,14 @@
         private static string _fullVersion;
 
         public static string Version => 
-            _version ?? (_version = NewClient.RavenVersionAttribute.Instance.Version);
+            _version ?? (_version = RavenVersionAttribute.Instance.Version);
 
         public static int Build =>  
-            _buildVersion ?? (_buildVersion = NewClient.RavenVersionAttribute.Instance.BuildVersion).Value;
+            _buildVersion ?? (_buildVersion = RavenVersionAttribute.Instance.BuildVersion).Value;
         public static string CommitHash => 
-            _commitHash ?? (_commitHash = NewClient.RavenVersionAttribute.Instance.CommitHash);
+            _commitHash ?? (_commitHash = RavenVersionAttribute.Instance.CommitHash);
         public static string FullVersion => 
-            _fullVersion ?? (_fullVersion = NewClient.RavenVersionAttribute.Instance.FullVersion);
+            _fullVersion ?? (_fullVersion = RavenVersionAttribute.Instance.FullVersion);
 
         public const int DevBuildNumber = 40;
 

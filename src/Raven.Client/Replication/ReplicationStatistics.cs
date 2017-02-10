@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Raven.NewClient.Client.Replication
+namespace Raven.Client.Replication
 {
     
 

@@ -3,12 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
-using System.Linq;
 
-namespace Raven.NewClient.Abstractions.Util
+namespace Raven.Client.Util
 {
     public class ByteArrayComparer : IComparer<Guid>, IComparer<Guid?>
     {

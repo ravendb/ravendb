@@ -7,7 +7,7 @@
 using System;
 using System.Net;
 
-namespace Raven.NewClient.Client.Exceptions.Subscriptions
+namespace Raven.Client.Exceptions.Subscriptions
 {
     public class SubscriptionClosedException : SubscriptionException
     {

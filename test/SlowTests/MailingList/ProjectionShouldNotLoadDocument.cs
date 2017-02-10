@@ -6,11 +6,9 @@
 
 using System.Collections.Generic;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Indexing;
+using Raven.Client.Data;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 using Sparrow.Json;
 using Xunit;
 

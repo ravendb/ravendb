@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Linq;
+using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.PublicExtensions;
 using Xunit;
 
 namespace SlowTests.Issues

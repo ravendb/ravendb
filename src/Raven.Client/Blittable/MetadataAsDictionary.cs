@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Blittable
+namespace Raven.Client.Blittable
 {
     public class MetadataAsDictionary : IDictionary<string, string>
     {

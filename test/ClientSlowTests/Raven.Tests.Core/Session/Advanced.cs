@@ -1,9 +1,9 @@
 using System;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data.Commands;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Exceptions;
+using Raven.Client.Data;
+using Raven.Client.Data.Commands;
+using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
 using Xunit;
 

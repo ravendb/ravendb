@@ -7,7 +7,7 @@
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client.Operations.Databases;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;

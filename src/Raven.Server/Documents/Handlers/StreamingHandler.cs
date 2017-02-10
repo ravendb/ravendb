@@ -2,8 +2,8 @@
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Exceptions.Indexes;
-using Raven.NewClient.Client.Exceptions.Transformers;
+using Raven.Client.Exceptions.Indexes;
+using Raven.Client.Exceptions.Transformers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;

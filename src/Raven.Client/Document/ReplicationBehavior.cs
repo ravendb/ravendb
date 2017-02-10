@@ -3,24 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Logging;
+using Raven.Client.Replication;
 
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Replication;
-
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
-    using Raven.NewClient.Abstractions.Connection;
-
     public class ReplicationBehavior
     {
         private readonly DocumentStore documentStore;

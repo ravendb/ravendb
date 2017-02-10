@@ -3,10 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.NewClient.Abstractions.Util.Encryptors
-{
-    using System;
 
+using System;
+
+namespace Raven.Client.Util.Encryptors
+{
     public static class Encryptor
     {
         static Encryptor()

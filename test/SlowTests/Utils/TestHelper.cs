@@ -1,6 +1,6 @@
 ﻿using System.Linq;
-using Raven.NewClient.Client;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Utils

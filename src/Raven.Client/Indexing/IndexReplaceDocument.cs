@@ -1,8 +1,6 @@
 using System;
 
-using Raven.NewClient.Abstractions.Data;
-
-namespace Raven.NewClient.Abstractions.Indexing
+namespace Raven.Client.Indexing
 {
     public class IndexReplaceDocument
     {

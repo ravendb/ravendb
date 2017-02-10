@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
 

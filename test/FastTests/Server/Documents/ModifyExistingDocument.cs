@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Exceptions;
 using Xunit;
 
 namespace FastTests.Server.Documents

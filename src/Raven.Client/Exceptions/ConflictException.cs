@@ -3,9 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 
-namespace Raven.NewClient.Client.Exceptions
+namespace Raven.Client.Exceptions
 {
     /// <summary>
     /// This exception occurs when a (replication) conflict is encountered.

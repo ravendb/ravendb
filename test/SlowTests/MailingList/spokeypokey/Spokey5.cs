@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
 using SlowTests.Utils;
 using Xunit;
 

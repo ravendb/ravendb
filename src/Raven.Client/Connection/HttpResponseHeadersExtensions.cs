@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Headers;
 
-namespace Raven.NewClient.Abstractions.Connection
+namespace Raven.Client.Connection
 {
     public static class HttpResponseHeadersExtensions
     {

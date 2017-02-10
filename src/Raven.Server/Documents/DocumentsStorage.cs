@@ -7,10 +7,10 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Replication.Messages;
-using Raven.NewClient.Client.Replication;
+using Raven.Client.Data;
+using Raven.Client.Exceptions;
+using Raven.Client.Replication;
+using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Versioning;
@@ -30,6 +30,7 @@ using Sparrow.Logging;
 using Voron.Data;
 using Voron.Util;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents
 {

@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Util;
+using Raven.Client.Util;
 
-namespace Raven.NewClient.Client.Extensions
+namespace Raven.Client.Extensions
 {
     public static class Time
     {

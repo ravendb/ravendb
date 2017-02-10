@@ -1,20 +1,4 @@
-using System.Globalization;
-
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Document;
-
-using Sparrow.Collections;
-using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Threading.Tasks;
-using Raven.NewClient.Client.Data;
-using Newtonsoft.Json;
-
-namespace Raven.NewClient.Client.Changes
+namespace Raven.Client.Changes
 {
     public class RemoteDatabaseChanges //TODO Iftah: RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState, DocumentConvention>, IDatabaseChanges
     {

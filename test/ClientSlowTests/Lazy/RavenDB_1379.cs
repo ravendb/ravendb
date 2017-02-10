@@ -1,9 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
 using Xunit;
 using Xunit.Extensions;
 

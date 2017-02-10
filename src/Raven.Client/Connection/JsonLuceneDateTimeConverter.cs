@@ -3,12 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using Raven.NewClient.Abstractions.Linq;
+using Raven.Client.Linq;
 
-namespace Raven.NewClient.Client.Connection
+namespace Raven.Client.Connection
 {
     /// <summary>
     /// Convert a lucene data format to and from json values

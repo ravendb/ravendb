@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Client.Indexing;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;

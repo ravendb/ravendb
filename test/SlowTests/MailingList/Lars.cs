@@ -6,8 +6,8 @@
 
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Indexes;
+using Raven.Client.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList

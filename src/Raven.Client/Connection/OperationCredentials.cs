@@ -3,9 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Net;
 
-namespace Raven.NewClient.Abstractions.Connection
+namespace Raven.Client.Connection
 {
     public class OperationCredentials
     {

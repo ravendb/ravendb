@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions;
+using Raven.Client;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
 

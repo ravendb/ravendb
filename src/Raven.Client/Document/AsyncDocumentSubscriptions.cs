@@ -3,24 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Util;
-
-using Raven.NewClient.Client.Util;
-using Newtonsoft.Json;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Exceptions.Subscriptions;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Sparrow.Collections;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public class AsyncDocumentSubscriptions : IAsyncReliableSubscriptions
     {

@@ -3,21 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Changes;
-using Raven.NewClient.Client.Connection;
+using Raven.Client.Changes;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
+using Raven.Client.Http;
+using Raven.Client.Indexes;
+using Raven.Client.Operations;
 
-using Raven.NewClient.Client.Connection.Profiling;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations;
-
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
 
     /// <summary>

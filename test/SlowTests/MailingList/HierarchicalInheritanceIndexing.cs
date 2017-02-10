@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
 using Newtonsoft.Json;
+using Raven.Client.Indexes;
+using Raven.Client.PublicExtensions;
 using Xunit;
 
 namespace SlowTests.MailingList

@@ -5,11 +5,11 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Documents;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Indexing;
+using Raven.Client.Operations.Databases.Documents;
+using Raven.Client.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs

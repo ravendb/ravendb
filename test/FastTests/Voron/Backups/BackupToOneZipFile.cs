@@ -2,10 +2,9 @@
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Indexing;
-
-using Raven.NewClient.Data.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;

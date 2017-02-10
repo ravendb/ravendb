@@ -4,16 +4,16 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Extensions;
-using Raven.NewClient.Json.Utilities;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document;
+using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
+using Raven.Client.Json.Utilities;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class QueryOperation
     {

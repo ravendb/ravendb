@@ -2,10 +2,9 @@ using System;
 using System.Dynamic;
 using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder;
+using Raven.Client.Extensions;
 
-using Raven.NewClient.Abstractions.Extensions;
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public class GenerateEntityIdOnTheClient
     {

@@ -5,11 +5,8 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Indexes;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     ///     Advanced synchronous session operations

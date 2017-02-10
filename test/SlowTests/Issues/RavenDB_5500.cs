@@ -2,8 +2,8 @@
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Exceptions;
+using Raven.Client.Operations.Databases.Indexes;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;

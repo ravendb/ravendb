@@ -3,21 +3,17 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
+using Raven.Client.Data.Queries;
 
-
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
-    using System.Linq.Expressions;
-
     /// <summary>
     /// Extension for the built-in <see cref="IQueryProvider"/> allowing for Raven specific operations
     /// </summary>

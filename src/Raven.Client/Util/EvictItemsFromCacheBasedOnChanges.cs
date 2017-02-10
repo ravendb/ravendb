@@ -3,12 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Changes;
+using Raven.Client.Changes;
+using Raven.Client.Data;
 
-namespace Raven.NewClient.Client.Util
+namespace Raven.Client.Util
 {
     public class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IDisposable
     {

@@ -2,13 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq.Expressions;
-using System.Reflection;
 using Newtonsoft.Json;
-using Raven.NewClient.Json.Utilities;
+using Raven.Client.Json.Utilities;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Json
+namespace Raven.Client.Json
 {
     public class BlittableJsonReader : JsonReader
     {

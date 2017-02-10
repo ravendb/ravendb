@@ -3,22 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
 
-using Raven.NewClient.Abstractions.Json;
-using Raven.NewClient.Abstractions.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Serialization;
-using System.Collections.Generic;
-using Raven.NewClient.Client.Linq;
-
-namespace Raven.NewClient.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
     /// <summary>
     /// Json extensions 

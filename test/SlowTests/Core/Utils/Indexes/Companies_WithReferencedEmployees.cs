@@ -6,7 +6,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
 using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Utils.Indexes

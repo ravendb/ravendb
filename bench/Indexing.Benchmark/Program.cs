@@ -4,11 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Indexing.Benchmark.Entities;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Client.Operations.Databases;
+using Raven.Client.Operations.Databases.Indexes;
 
 #if v35
 using Raven.NewClient.Abstractions.Data;

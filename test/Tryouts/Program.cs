@@ -21,8 +21,6 @@ using FastTests.Server.Replication;
 using FastTests.Voron.FixedSize;
 using FastTests.Voron.RawData;
 using FastTests.Voron.Tables;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Document;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;

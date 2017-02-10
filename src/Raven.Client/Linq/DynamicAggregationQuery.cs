@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Extensions;
+using Raven.Client.PublicExtensions;
 
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
 
     public class DynamicAggregationQuery<T>

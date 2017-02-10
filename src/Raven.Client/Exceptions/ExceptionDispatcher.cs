@@ -4,12 +4,12 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Exceptions.Compilation;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Exceptions.Compilation;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Exceptions
+namespace Raven.Client.Exceptions
 {
     public static class ExceptionDispatcher
     {

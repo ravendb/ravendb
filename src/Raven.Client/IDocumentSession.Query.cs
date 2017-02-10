@@ -4,10 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     ///     Interface for document session

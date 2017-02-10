@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Data.Queries
+namespace Raven.Client.Data.Queries
 {
     /// <summary>
     /// The result of a query

@@ -1,15 +1,8 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Abstractions.Linq;
-using Raven.NewClient.Client.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
-namespace Raven.NewClient.Abstractions.Spatial
+namespace Raven.Client.Spatial
 {
     /// <summary>
     /// Converts shape objects to strings, if they are not already a string

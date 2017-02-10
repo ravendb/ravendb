@@ -9,9 +9,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Operations.Databases.Documents;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues

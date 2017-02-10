@@ -3,13 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
 
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public interface IAsyncReliableSubscriptions : IDisposable
     {

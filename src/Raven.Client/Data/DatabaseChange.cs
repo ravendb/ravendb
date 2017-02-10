@@ -1,4 +1,4 @@
-﻿namespace Raven.NewClient.Client.Data
+﻿namespace Raven.Client.Data
 {
     public abstract class DatabaseChange
     {

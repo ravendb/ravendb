@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.NewClient.Data;
-using Raven.NewClient.Data.Indexes;
+using Raven.Client.Data.Indexes;
 
-namespace Raven.NewClient.Client.Data
+namespace Raven.Client.Data
 {
     public class ResourcesInfo
     {

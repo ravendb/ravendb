@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.NewClient.Client.Replication
+namespace Raven.Client.Replication
 {
     /// <summary>
     /// Options for handling failover scenarios in replication environment

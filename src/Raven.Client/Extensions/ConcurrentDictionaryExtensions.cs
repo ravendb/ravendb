@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Raven.NewClient.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
     public static class ConcurrentDictionaryExtensions
     {

@@ -1,7 +1,6 @@
 using System;
 
-
-namespace Raven.NewClient.Client.Util
+namespace Raven.Client.Util
 {
     public static class Types
     {

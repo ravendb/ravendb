@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Operations.Databases;
+using Raven.Client.Operations.Databases.Documents;
 using Xunit;
 
 namespace FastTests.Server.Basic

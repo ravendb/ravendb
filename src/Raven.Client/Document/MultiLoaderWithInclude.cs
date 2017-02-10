@@ -3,15 +3,16 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Extensions;
+using Raven.Client.Indexes;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// Fluent implementation for specifying include paths

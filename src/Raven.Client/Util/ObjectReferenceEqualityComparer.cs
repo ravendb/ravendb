@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-namespace Raven.NewClient.Client.Util
+namespace Raven.Client.Util
 {
 
     /// <summary>

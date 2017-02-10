@@ -1,6 +1,4 @@
-﻿using Raven.NewClient.Client.Data;
-
-namespace Raven.NewClient.Data.Indexes
+﻿namespace Raven.Client.Data.Indexes
 {
     public class IndexErrors
     {

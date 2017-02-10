@@ -8,16 +8,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Commands;
+using Raven.Client.Connection;
+using Raven.Client.Data;
+using Raven.Client.Document.Batches;
+using Raven.Client.Indexes;
 
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     ///     Advanced synchronous session operations

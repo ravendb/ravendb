@@ -1,7 +1,7 @@
 ﻿using System.Linq;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Indexes;
 using Sparrow.Json;
 using Xunit;
 

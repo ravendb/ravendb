@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading;
-using Raven.NewClient.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Database;
 using Raven.Server.Config.Settings;
 using Xunit;
 

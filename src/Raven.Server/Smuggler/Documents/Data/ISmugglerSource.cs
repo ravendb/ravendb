@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Client.Smuggler;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 
 namespace Raven.Server.Smuggler.Documents.Data

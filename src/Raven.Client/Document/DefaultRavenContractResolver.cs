@@ -3,14 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Raven.NewClient.Abstractions.Extensions;
 using Newtonsoft.Json.Serialization;
+using Raven.Client.Extensions;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// The default json contract will serialize all properties and all public fields

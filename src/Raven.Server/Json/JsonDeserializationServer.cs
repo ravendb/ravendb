@@ -1,11 +1,9 @@
 ﻿using System;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Client.Replication.Messages;
-using Raven.NewClient.Client.Replication;
-using Raven.NewClient.Client.Smuggler;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
+using Raven.Client.Replication;
+using Raven.Client.Replication.Messages;
+using Raven.Client.Smuggler;
 using Raven.NewClient.Client.Data;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Expiration;

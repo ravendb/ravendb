@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Data;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
 

@@ -1,6 +1,4 @@
-using System.Net;
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public class OpenSessionOptions
     {

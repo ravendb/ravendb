@@ -3,9 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Threading.Tasks;
 
-namespace Raven.NewClient.Client.Util
+namespace Raven.Client.Util
 {
     public interface IDisposableAsync
     {

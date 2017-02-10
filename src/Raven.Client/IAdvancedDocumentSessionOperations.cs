@@ -6,13 +6,13 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Data.Commands;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Blittable;
+using Raven.Client.Data;
+using Raven.Client.Data.Commands;
+using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     ///     Advanced session operations

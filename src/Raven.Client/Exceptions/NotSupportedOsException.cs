@@ -1,4 +1,4 @@
-﻿namespace Raven.NewClient.Client.Exceptions
+﻿namespace Raven.Client.Exceptions
 {
     public class NotSupportedOSException : RavenException
     {

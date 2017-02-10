@@ -7,12 +7,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Data.Indexes;
-
-namespace Raven.NewClient.Client.Data
+namespace Raven.Client.Data
 {
     public class DatabaseStatistics
     {

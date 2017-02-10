@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Raven.NewClient.Abstractions.Indexing
+namespace Raven.Client.Indexing
 {
     public class IndexMergeResults
     {

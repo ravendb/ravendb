@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 using Xunit;
 
 namespace SlowTests.Bugs

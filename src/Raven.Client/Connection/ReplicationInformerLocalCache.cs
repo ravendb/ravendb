@@ -1,13 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Logging;
 
-
-namespace Raven.NewClient.Client.Connection
+namespace Raven.Client.Connection
 {
     public static class ReplicationInformerLocalCache
     {

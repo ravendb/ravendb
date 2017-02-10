@@ -1,4 +1,4 @@
-﻿namespace Raven.NewClient.Client.Exceptions.Versioning
+﻿namespace Raven.Client.Exceptions.Versioning
 {
     public class VersioningDisabledException : RavenException
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.NewClient.Data
+namespace Raven.Client.Data
 {
     public class Size
     {

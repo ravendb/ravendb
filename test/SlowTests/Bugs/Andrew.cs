@@ -8,9 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using FastTests;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Indexes;
 using Xunit;
 using Task = System.Threading.Tasks.Task;
 

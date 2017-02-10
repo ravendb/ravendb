@@ -10,23 +10,22 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-using Raven.NewClient.Client.Document.Batches;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Util;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data.Commands;
-using Raven.NewClient.Client.Exceptions.Session;
+using Raven.Client.Blittable;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Data.Commands;
+using Raven.Client.Document.Batches;
+using Raven.Client.Exceptions.Session;
+using Raven.Client.Extensions;
+using Raven.Client.Http;
+using Raven.Client.Logging;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// Abstract implementation for in memory session operations

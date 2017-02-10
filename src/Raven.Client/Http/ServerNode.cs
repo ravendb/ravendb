@@ -1,6 +1,6 @@
-﻿using Raven.NewClient.Client.Metrics;
+﻿using Raven.Client.Metrics;
 
-namespace Raven.NewClient.Client.Http
+namespace Raven.Client.Http
 {
     public class ServerNode
     {

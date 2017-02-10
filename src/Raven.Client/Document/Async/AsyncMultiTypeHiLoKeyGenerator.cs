@@ -3,12 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Util;
+using Raven.Client.Util;
 
-
-namespace Raven.NewClient.Client.Document.Async
+namespace Raven.Client.Document.Async
 {
     /// <summary>
     /// Generate a hilo key for each given type

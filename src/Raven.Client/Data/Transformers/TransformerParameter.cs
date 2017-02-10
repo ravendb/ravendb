@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.NewClient.Client.Data.Transformers
+namespace Raven.Client.Data.Transformers
 {
     public class TransformerParameter
     {

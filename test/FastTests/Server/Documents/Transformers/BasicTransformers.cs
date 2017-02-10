@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
-using Raven.NewClient.Abstractions.Indexing;
 using System.Linq;
 using System.Text;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Transformers;
 using Xunit;
 

@@ -1,10 +1,10 @@
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Commands;
+using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Client.Http;
 using Sparrow.Json;
 
 namespace SlowTests.Tests.Faceted

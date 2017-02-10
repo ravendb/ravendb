@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Data;
+using Raven.Client.Document;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Blittable
+namespace Raven.Client.Blittable
 {
     public class BlittableOperation
     {

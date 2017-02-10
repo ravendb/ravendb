@@ -4,9 +4,8 @@ using System.IO;
 
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
-
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;

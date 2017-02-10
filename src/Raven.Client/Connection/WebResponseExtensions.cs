@@ -3,15 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Diagnostics;
+
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.IO.Compression;
 
-namespace Raven.NewClient.Abstractions.Connection
+namespace Raven.Client.Connection
 {
     /// <summary>
     /// Extensions for web requests

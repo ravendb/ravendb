@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
 using Raven.Server.Documents.Includes;
 using System.Linq;
-using Raven.NewClient.Client.Exceptions.Transformers;
+using Raven.Client.Exceptions.Transformers;
+using Raven.Client.Linq;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;

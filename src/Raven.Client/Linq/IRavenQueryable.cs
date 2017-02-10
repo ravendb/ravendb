@@ -3,15 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Spatial;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Spatial;
 
-
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
     /// <summary>
     /// An implementation of <see cref="IOrderedQueryable{T}"/> with Raven specific operation

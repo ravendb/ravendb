@@ -1,13 +1,11 @@
 ﻿using System;
 using Newtonsoft.Json;
-using Raven.NewClient.Abstractions.Data;
-using Sparrow.Json;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions;
+using Raven.Client.Data;
+using Raven.Client.Document;
 using Sparrow.Extensions;
+using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Json
+namespace Raven.Client.Json
 {
     public class BlittableJsonWriter : JsonWriter
     {

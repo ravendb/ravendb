@@ -7,20 +7,15 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Connection;
+using Raven.Client.Data;
+using Raven.Client.Document.Async;
+using Raven.Client.Document.Batches;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
+using Raven.Client.PublicExtensions;
+using Raven.Client.Spatial;
 
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Document.Async;
-using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Spatial;
-
-using Raven.NewClient.Client;
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// A query against a Raven index
@@ -503,7 +498,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance(double lat, double lng)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
+            OrderBy(string.Format("{0};{1};{2}", Constants.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng)));
             return this;
         }
         /// <summary>
@@ -511,7 +506,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance(double lat, double lng, string spatialFieldName)
         {
-            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), spatialFieldName));
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng), spatialFieldName));
             return this;
         }
 

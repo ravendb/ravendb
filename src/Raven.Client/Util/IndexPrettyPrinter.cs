@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 
-namespace Raven.NewClient.Abstractions.Util
+namespace Raven.Client.Util
 {
     public static class IndexPrettyPrinter
     {

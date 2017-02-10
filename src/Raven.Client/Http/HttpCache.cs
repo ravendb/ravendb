@@ -4,13 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-
-namespace Raven.NewClient.Client.Http
+namespace Raven.Client.Http
 {
     public class HttpCache : IDisposable
     {

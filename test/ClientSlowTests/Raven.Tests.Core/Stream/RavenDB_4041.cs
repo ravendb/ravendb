@@ -5,12 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Raven.NewClient.Client.Indexes;
 using Xunit;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
+using Raven.Client.Indexes;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 {

@@ -2,10 +2,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.PublicExtensions;
 using Xunit;
 
 namespace SlowTests.Tests.Track

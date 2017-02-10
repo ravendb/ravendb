@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.NewClient.Client.Data.Collections
+namespace Raven.Client.Data.Collections
 {
     public class CollectionOperationOptions
     {

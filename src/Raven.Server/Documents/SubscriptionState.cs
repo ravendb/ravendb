@@ -2,9 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Exceptions.Subscriptions;
+using Raven.Client.Data;
+using Raven.Client.Exceptions.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.TcpHandlers;
 using Sparrow;
 

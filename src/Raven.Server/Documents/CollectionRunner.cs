@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Linq;
-
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Collections;
-using Raven.NewClient.Client.Util.RateLimiting;
+using Raven.Client.Data;
+using Raven.Client.Data.Collections;
+using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;

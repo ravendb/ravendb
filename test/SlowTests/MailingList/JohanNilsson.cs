@@ -1,9 +1,9 @@
 using System.Reflection;
 using FastTests;
-using Raven.NewClient.Client.Document;
 using Xunit;
-using Raven.NewClient.Client.Linq;
 using System.Linq;
+using Raven.Client.Document;
+using Raven.Client.Linq;
 
 namespace SlowTests.MailingList
 {

@@ -3,17 +3,17 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Indexing;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Abstractions.Data;
 using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 
 namespace NewClientTests.NewClient
 {

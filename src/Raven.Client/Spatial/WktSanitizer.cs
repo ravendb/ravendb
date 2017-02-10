@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Raven.NewClient.Abstractions.Spatial
+namespace Raven.Client.Spatial
 {
     /// <summary>
     /// Santizes WKT strings, reducing them to 2D (discarding 3D and 4D values).

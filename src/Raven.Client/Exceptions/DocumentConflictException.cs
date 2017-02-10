@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
-using Raven.NewClient.Client.Replication.Messages;
+using Raven.Client.Replication.Messages;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Exceptions
+namespace Raven.Client.Exceptions
 {
     public class DocumentConflictException : ConflictException
     {

@@ -1,12 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
-namespace Raven.NewClient.Abstractions.Json
+namespace Raven.Client.Json
 {
     public class ConflictsResolver
     {

@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using Xunit;
 using System;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Blittable;
+using Raven.Client.Document;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace FastTests.Client

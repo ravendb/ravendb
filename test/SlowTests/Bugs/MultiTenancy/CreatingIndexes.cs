@@ -6,11 +6,11 @@
 
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Client.Indexes;
+using Raven.Client.Operations.Databases;
+using Raven.Client.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy

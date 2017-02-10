@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Client.Data;
 
-using Raven.NewClient.Abstractions.Data;
-
-namespace Raven.NewClient.Client.Smuggler
+namespace Raven.Client.Smuggler
 {
     public class DatabaseSmugglerOptions
     {

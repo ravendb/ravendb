@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Voron;

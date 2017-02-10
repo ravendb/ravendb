@@ -6,11 +6,11 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Cluster;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Cluster;
+using Raven.Client.Extensions.Internal;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Replication
+namespace Raven.Client.Replication
 {
     /// <summary>
     /// Data class for replication destination documents

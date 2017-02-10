@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Logging.LogProviders;
+using Raven.Client.Extensions;
+using Raven.Client.Logging.LogProviders;
 using Sparrow.Collections;
 
-namespace Raven.NewClient.Abstractions.Logging
+namespace Raven.Client.Logging
 {
     public static class LogManager
     {

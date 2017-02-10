@@ -7,10 +7,10 @@
 using System;
 using System.Linq;
 using FastTests;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Xunit;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
 
 namespace SlowTests.Bugs
 {

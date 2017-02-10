@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Document;
 using Sparrow.Json;
 using Xunit;
 

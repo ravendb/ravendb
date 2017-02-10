@@ -1,7 +1,6 @@
 ﻿using System;
 using FastTests;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Exceptions.Session;
+using Raven.Client.Exceptions.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

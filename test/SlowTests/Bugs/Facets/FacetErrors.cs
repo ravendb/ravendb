@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using Xunit;
 using System.Linq;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Exceptions;
+using Raven.Client.Data;
+using Raven.Client.Exceptions;
+using Raven.Client.PublicExtensions;
 
 namespace SlowTests.Bugs.Facets
 {

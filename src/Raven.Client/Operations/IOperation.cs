@@ -1,8 +1,8 @@
-﻿using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Document;
+﻿using Raven.Client.Commands;
+using Raven.Client.Document;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Operations
+namespace Raven.Client.Operations
 {
     public interface IOperation<T>
     {

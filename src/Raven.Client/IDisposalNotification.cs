@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
     /// <summary>
     /// Provide a way for interested party to tell whatever implementers have been disposed

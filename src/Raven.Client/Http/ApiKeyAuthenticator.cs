@@ -5,18 +5,16 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Exceptions.Security;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Json;
-using Raven.NewClient.Client.OAuth;
-using Raven.NewClient.Client.Platform;
+using Raven.Client.Connection;
+using Raven.Client.Exceptions.Security;
+using Raven.Client.Extensions;
+using Raven.Client.Json;
+using Raven.Client.Platform;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
-namespace Raven.NewClient.Client.Http
+namespace Raven.Client.Http
 {
     public class ApiKeyAuthenticator : IDisposable
     {

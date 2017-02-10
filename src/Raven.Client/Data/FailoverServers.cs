@@ -3,11 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using Raven.NewClient.Client.Replication;
 
-namespace Raven.NewClient.Abstractions.Data
+using System.Collections.Generic;
+using Raven.Client.Replication;
+
+namespace Raven.Client.Data
 {
     public class FailoverServers
     {

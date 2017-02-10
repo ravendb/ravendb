@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Data;
+using Raven.Client;
+using Raven.Client.Data;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
@@ -14,7 +12,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using DatabaseInfo = Raven.NewClient.Client.Data.DatabaseInfo;
+using DatabaseInfo = Raven.Client.Data.DatabaseInfo;
 
 namespace Raven.Server.Web.System
 {

@@ -1,7 +1,6 @@
 ﻿using System;
-using Raven.NewClient.Abstractions;
 
-namespace Raven.NewClient.Client.Helpers
+namespace Raven.Client.Helpers
 {
     internal static class DevelopmentHelper
     {

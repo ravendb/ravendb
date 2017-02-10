@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Data.Indexes;
+using Raven.Client.Data.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {

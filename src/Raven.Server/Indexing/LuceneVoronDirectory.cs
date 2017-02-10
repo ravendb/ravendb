@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using Lucene.Net.Store;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Extensions;
 using Voron;
 using Voron.Data;
 using Voron.Impl;

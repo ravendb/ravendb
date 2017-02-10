@@ -6,7 +6,7 @@
 
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     /// <summary>
     /// The result of a patch operation

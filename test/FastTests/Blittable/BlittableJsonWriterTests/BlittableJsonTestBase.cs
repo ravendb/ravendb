@@ -2,7 +2,6 @@
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
-using Raven.NewClient.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Xunit;

@@ -6,11 +6,11 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Cluster;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Cluster;
+using Raven.Client.Data;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Replication
+namespace Raven.Client.Replication
 {
     /// <summary>
     /// This class represent the list of replication destinations for the server

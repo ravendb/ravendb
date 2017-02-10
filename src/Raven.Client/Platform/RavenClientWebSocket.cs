@@ -2,11 +2,11 @@
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Platform.Unix;
+using Raven.Client.Platform.Unix;
 using Sparrow.Platform;
 
 // TODO: Move to Raven.NewClient.Client.Http
-namespace Raven.NewClient.Client.Platform
+namespace Raven.Client.Platform
 {
     public class RavenClientWebSocket : IDisposable
     {

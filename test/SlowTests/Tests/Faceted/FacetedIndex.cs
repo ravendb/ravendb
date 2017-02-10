@@ -10,9 +10,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
+using Raven.Client;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.PublicExtensions;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted

@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Blittable;
+using Raven.Client.Data;
+using Raven.Client.Extensions;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class GetDocumentCommand : RavenCommand<GetDocumentResult>
     {

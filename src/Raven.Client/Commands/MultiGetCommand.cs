@@ -3,14 +3,14 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Blittable;
+using Raven.Client.Connection;
+using Raven.Client.Data;
+using Raven.Client.Http;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.NewClient.Client.Http;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class MultiGetCommand : RavenCommand<List<GetResponse>>
     {

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Raven.NewClient.Client.Http
+namespace Raven.Client.Http
 {
     public class Topology
     {

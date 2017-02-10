@@ -2,10 +2,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Replication;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Operations.Databases;
+using Raven.Client.Replication;
 using Xunit;
 
 namespace FastTests.Server.Documents.Notifications

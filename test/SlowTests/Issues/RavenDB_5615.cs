@@ -1,6 +1,6 @@
 ﻿using FastTests;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Operations.Databases.Indexes;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
 

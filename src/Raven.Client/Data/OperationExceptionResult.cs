@@ -2,7 +2,7 @@
 using System.Net;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Data
+namespace Raven.Client.Data
 {
     public class OperationExceptionResult : IOperationResult
     {

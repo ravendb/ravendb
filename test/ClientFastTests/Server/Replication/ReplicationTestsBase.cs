@@ -2,9 +2,9 @@
 using System.Diagnostics;
 using System.Threading;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Replication;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Replication;
 
 namespace NewClientTests.NewClient.Server.Replication
 {

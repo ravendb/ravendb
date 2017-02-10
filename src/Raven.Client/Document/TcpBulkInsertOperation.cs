@@ -7,23 +7,21 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Platform;
+using Raven.Client.Blittable;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Exceptions.BulkInsert;
+using Raven.Client.Http;
+using Raven.Client.Logging;
+using Raven.Client.Platform;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using AsyncHelpers = Raven.NewClient.Abstractions.Util.AsyncHelpers;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Exceptions.BulkInsert;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 using Raven.NewClient.Client.Exceptions.Security;
 using Raven.NewClient.Client.Json;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public class TcpBulkInsertOperation : IDisposable
     {
@@ -148,33 +146,33 @@ namespace Raven.NewClient.Client.Document
                     break;
                 }
                 var needToThrottle = _throttlingEvent.Wait(0) == false;
-                                
+                
                 using (_contextPool.AllocateOperationContext(out context))
                 {
-                    JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
-                    using (context.GetManagedBuffer(out pinnedBuffer))
-                    {
-                        var documentInfo = new DocumentInfo();
+                JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
+                using (context.GetManagedBuffer(out pinnedBuffer))
+                {
+                    var documentInfo = new DocumentInfo();
 
-                        var metadata = new DynamicJsonValue();
-                        var tag = _store.Conventions.GetDynamicTagName(doc.Item1);
-                        if (tag != null)
-                            metadata[Constants.Metadata.Collection] = tag;
-                        metadata[Constants.Metadata.Id] = doc.Item2;
+                    var metadata = new DynamicJsonValue();
+                    var tag = _store.Conventions.GetDynamicTagName(doc.Item1);
+                    if (tag != null)
+                        metadata[Constants.Metadata.Collection] = tag;
+                    metadata[Constants.Metadata.Id] = doc.Item2;
 
-                        documentInfo.Metadata = context.ReadObject(metadata, doc.Item2);
-                        var data = _entityToBlittable.ConvertEntityToBlittable(doc.Item1, _store.Conventions, context, documentInfo);
+                    documentInfo.Metadata = context.ReadObject(metadata, doc.Item2);
+                    var data = _entityToBlittable.ConvertEntityToBlittable(doc.Item1, _store.Conventions, context, documentInfo);
                         WriteVariableSizeInt(connection.Stream, data.Size);
                         WriteToStream(connection.Stream, data, pinnedBuffer);
 
-                        if (needToThrottle)
-                        {
+                    if (needToThrottle)
+                    {
                             connection.Stream.Flush();
-                            _throttlingEvent.Wait(500);
-                        }
+                        _throttlingEvent.Wait(500);
                     }
                 }
             }
+        }
             connection.Stream.WriteByte(0); //done
             connection.Stream.Flush();
         }
@@ -365,7 +363,7 @@ namespace Raven.NewClient.Client.Document
             try
             {
                 try
-                {                    
+                {
                     _documents.CompleteAdding();
                     await _writeToServerTask.ConfigureAwait(false);
 

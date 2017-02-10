@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Raven.NewClient.Client.Changes
+namespace Raven.Client.Changes
 {
     public abstract class ConnectionStateBase : IChangesConnectionState
     {

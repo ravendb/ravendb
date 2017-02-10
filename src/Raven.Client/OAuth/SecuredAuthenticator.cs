@@ -1,25 +1,14 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.WebSockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Json;
-using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Exceptions.Security;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Platform;
+using Raven.Client.Connection;
+using Raven.Client.Exceptions.Security;
+using Raven.Client.Logging;
+using Raven.Client.Platform;
 
-namespace Raven.NewClient.Client.OAuth
+namespace Raven.Client.OAuth
 {
     public class SecuredAuthenticator
     {

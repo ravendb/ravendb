@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Data;
+using Raven.Client.Operations.Databases;
+using Raven.Client.Operations.Databases.Documents;
 using Xunit;
 
 namespace FastTests.Server.Documents.Patching

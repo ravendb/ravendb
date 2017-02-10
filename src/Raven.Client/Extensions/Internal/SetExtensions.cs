@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Raven.NewClient.Abstractions.Extensions 
+namespace Raven.Client.Extensions.Internal 
 {
     public static class SetExtensions
     {

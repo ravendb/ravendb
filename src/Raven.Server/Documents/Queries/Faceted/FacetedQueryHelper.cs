@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using Lucene.Net.Util;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Extensions;
+using Raven.Client.Data;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
-using Constants = Raven.NewClient.Abstractions.Data.Constants;
+using Constants = Raven.Client.Data.Constants;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {

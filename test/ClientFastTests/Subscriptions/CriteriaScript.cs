@@ -2,9 +2,9 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests.Subscriptions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Operations.Databases;
 using Xunit;
 
 namespace NewClientTests.NewClient.Subscriptions

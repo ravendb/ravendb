@@ -3,19 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
-using Raven.NewClient.Client.Document;
-
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Data.Queries;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document;
 using Sparrow.Extensions;
 
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
     /// <summary>
     /// An implementation of <see cref="IRavenQueryProvider"/>

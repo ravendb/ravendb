@@ -7,9 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Data;
+using Raven.Client.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 

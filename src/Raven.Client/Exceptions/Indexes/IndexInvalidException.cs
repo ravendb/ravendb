@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.NewClient.Client.Exceptions.Indexes
+namespace Raven.Client.Exceptions.Indexes
 {
     public class IndexInvalidException : RavenException
     {

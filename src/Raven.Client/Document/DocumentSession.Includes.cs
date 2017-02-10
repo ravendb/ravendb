@@ -7,9 +7,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Linq;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server

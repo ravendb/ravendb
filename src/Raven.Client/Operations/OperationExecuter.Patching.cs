@@ -1,12 +1,12 @@
 ﻿using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Commands;
+using Raven.Client.Operations.Databases.Documents;
+using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Operations
+namespace Raven.Client.Operations
 {
     public partial class OperationExecuter
     {

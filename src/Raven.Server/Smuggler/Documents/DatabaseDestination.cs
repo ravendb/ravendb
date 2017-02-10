@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Client.Smuggler;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Smuggler;
+using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;

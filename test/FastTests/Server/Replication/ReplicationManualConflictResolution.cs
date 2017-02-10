@@ -2,10 +2,8 @@
 using System.Diagnostics;
 using System.Threading;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Replication;
+using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Xunit;
 
 namespace FastTests.Server.Replication

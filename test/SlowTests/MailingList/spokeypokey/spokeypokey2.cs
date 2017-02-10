@@ -3,8 +3,8 @@ using System.Linq;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Linq;
+using Raven.Client;
+using Raven.Client.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey

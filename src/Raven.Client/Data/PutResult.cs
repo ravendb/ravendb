@@ -3,9 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// The result of a PUT operation

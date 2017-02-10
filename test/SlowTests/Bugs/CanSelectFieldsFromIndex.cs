@@ -7,11 +7,10 @@
 using System.Collections.Generic;
 using System.Threading;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Indexing;
+using Raven.Client.Operations.Databases.Indexes;
 using Sparrow.Json;
 using Xunit;
 

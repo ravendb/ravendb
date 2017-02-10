@@ -6,10 +6,10 @@
 
 using System;
 using System.Threading;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Data;
+using Raven.Client.Extensions;
 
-namespace Raven.NewClient.Abstractions.Logging
+namespace Raven.Client.Logging
 {
     public static class LogContext
     {

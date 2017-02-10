@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
-using Raven.NewClient.Client.Data.Commands;
-using Raven.NewClient.Client.Exceptions;
+using Raven.Client.Data.Commands;
+using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
 using Xunit;
 

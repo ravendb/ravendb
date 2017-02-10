@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Commands;
+using Raven.Client.Data;
+using Raven.Client.Data.Commands;
 using Sparrow.Json.Parsing;
 using Xunit;
 

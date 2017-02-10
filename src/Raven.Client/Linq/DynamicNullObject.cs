@@ -5,7 +5,7 @@ using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
     public class DynamicNullObject : DynamicObject, IEnumerable<object>, IComparable
     {

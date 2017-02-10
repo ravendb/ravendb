@@ -4,14 +4,14 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Blittable;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Smuggler
+namespace Raven.Client.Smuggler
 {
     public class DatabaseSmuggler
     {

@@ -6,14 +6,14 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Lucene.Net.Documents;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Client.Linq;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Transformers;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.NewClient.Abstractions.Data;
 using Sparrow.Extensions;
 
 namespace Raven.Server.Utils

@@ -7,15 +7,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Indexes;
+using Raven.Client.Spatial;
 
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Spatial;
-
-
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
     /// <summary>
     ///     A query against a Raven index

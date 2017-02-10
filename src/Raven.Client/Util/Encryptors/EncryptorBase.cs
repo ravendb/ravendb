@@ -1,7 +1,7 @@
-namespace Raven.NewClient.Abstractions.Util.Encryptors
-{
-    using System;
+using System;
 
+namespace Raven.Client.Util.Encryptors
+{
     public abstract class EncryptorBase<THashEncryptor, TSymmetricalEncryptor, TAsymmetricalEncryptor> : IEncryptor
         where THashEncryptor : IHashEncryptor, new()
         where TSymmetricalEncryptor : ISymmetricalEncryptor, new()

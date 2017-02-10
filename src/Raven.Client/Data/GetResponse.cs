@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Data
+namespace Raven.Client.Data
 {
     public class GetResponse
     {

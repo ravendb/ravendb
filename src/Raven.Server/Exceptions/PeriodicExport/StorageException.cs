@@ -3,7 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using Raven.NewClient.Abstractions.Connection;
+using Raven.Client.Connection;
 
 namespace Raven.Server.Exceptions.PeriodicExport
 {

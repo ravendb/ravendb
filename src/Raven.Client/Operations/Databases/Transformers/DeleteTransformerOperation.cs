@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Net.Http;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Operations;
+using Raven.Client.Commands;
+using Raven.Client.Document;
+using Raven.Client.Http;
+using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Operations.Databases.Transformers
+namespace Raven.Client.Operations.Databases.Transformers
 {
     public class DeleteTransformerOperation : IAdminOperation
     {

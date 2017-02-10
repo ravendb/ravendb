@@ -1,12 +1,5 @@
-using Raven.NewClient.Client.Data;
-
-namespace Raven.NewClient.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
-    using System.Linq;
-
-    using Raven.NewClient.Abstractions.Data;
-    
-
     public static class JsonDocumentExtensions
     {
         /*public static bool IsConflictDocument(this JsonDocument document)

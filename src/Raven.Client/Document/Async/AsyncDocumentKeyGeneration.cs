@@ -3,14 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Extensions;
-
+using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document.Async
+namespace Raven.Client.Document.Async
 {
     public class AsyncDocumentKeyGeneration
     {

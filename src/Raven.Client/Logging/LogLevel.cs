@@ -1,4 +1,4 @@
-namespace Raven.NewClient.Abstractions.Logging
+namespace Raven.Client.Logging
 {
     public enum LogLevel
     {

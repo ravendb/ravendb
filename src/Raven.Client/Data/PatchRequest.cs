@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// An advanced patch request for a specified document (using JavaScript)

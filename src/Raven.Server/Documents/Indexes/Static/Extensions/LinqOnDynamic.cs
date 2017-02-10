@@ -7,7 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Linq;
 
 namespace Raven.Server.Documents.Indexes.Static.Extensions
 {

@@ -3,14 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
+using Raven.Client.Data.Queries;
 
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
     /// <summary>
     /// Statistics about a raven query.

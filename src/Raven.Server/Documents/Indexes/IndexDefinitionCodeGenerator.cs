@@ -1,12 +1,12 @@
-﻿using Raven.NewClient.Client.Indexing;
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 

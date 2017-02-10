@@ -1,4 +1,4 @@
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class CreateSubscriptionResult
     {

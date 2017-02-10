@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using Raven.Client.Properties;
 
-[assembly: Raven.NewClient.RavenVersion(Build = "40", CommitHash = "400f636", Version = "4.0", FullVersion = "4.0.0-custom-40")]
+[assembly: RavenVersion(Build = "40", CommitHash = "400f636", Version = "4.0", FullVersion = "4.0.0-custom-40")]
 
-namespace Raven.NewClient
+namespace Raven.Client.Properties
 {
     [AttributeUsage(AttributeTargets.Assembly)]
     public class RavenVersionAttribute : Attribute

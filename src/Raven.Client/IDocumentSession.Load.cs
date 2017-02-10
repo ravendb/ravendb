@@ -6,9 +6,9 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     ///     Interface for document session

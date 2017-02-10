@@ -3,9 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public abstract class AbstractRestoreRequest
     {

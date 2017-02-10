@@ -9,8 +9,8 @@ using System.Dynamic;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Exceptions.Session;
+using Raven.Client.Exceptions.Session;
+using Raven.Client.Extensions;
 using SlowTests.Core.Utils.Transformers;
 
 using Xunit;

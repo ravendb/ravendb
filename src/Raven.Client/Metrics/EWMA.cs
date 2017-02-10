@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.NewClient.Client.Metrics
+namespace Raven.Client.Metrics
 {
     /// <summary>
     ///  An exponentially-weighted moving average

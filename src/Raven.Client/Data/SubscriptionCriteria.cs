@@ -3,13 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using Raven.NewClient.Abstractions.Extensions;
 
-
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class SubscriptionCriteria
     {

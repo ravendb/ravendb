@@ -3,9 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.NewClient.Client.Indexes;
 
-namespace Raven.NewClient.Client.Util
+using Raven.Client.Indexes;
+
+namespace Raven.Client.Util
 {
     public class CSharpClassName
     {

@@ -3,14 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Document;
+using Raven.Client.Document.Batches;
 
-using Raven.NewClient.Client.Document.Batches;
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     /// Interface for document session using async approaches

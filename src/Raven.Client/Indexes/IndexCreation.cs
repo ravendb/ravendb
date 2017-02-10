@@ -3,25 +3,22 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Connection;
-
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Exceptions.Compilation;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Document;
+using Raven.Client.Exceptions.Compilation;
+using Raven.Client.Logging;
+using Raven.Client.Operations;
+using Raven.Client.Operations.Databases.Indexes;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Indexes
+namespace Raven.Client.Indexes
 {
     /// <summary>
     /// Helper class for creating indexes from implementations of <see cref="AbstractIndexCreationTask"/>.

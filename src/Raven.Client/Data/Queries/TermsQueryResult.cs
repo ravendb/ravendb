@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.NewClient.Client.Data.Queries
+namespace Raven.Client.Data.Queries
 {
     public class TermsQueryResult
     {

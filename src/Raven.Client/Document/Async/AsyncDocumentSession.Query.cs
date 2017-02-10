@@ -1,8 +1,8 @@
 using System;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 
-namespace Raven.NewClient.Client.Document.Async
+namespace Raven.Client.Document.Async
 {
     public partial class AsyncDocumentSession
     {

@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,25 +15,20 @@ using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
-
-using Raven.NewClient.Abstractions.Cluster;
-using Raven.NewClient.Abstractions.Indexing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Json;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Helpers;
-using Raven.NewClient.Client.Util;
-
-using Raven.NewClient.Client.Json;
-using Raven.NewClient.Client.Replication;
+using Raven.Client.Cluster;
+using Raven.Client.Connection;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
+using Raven.Client.Json;
+using Raven.Client.Replication;
+using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize

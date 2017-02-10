@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server

@@ -1,16 +1,16 @@
 using System;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Helpers;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Commands;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
+using Raven.Client.Helpers;
+using Raven.Client.Http;
+using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Connection
+namespace Raven.Client.Connection
 {
     public class Operation : IObserver<OperationStatusChange>
     {

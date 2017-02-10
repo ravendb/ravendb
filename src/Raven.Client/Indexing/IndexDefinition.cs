@@ -8,12 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Data.Indexes;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Extensions.Internal;
+using Raven.Client.Util;
 
-namespace Raven.NewClient.Client.Indexing
+namespace Raven.Client.Indexing
 {
     /// <summary>
     /// A definition of a RavenIndex

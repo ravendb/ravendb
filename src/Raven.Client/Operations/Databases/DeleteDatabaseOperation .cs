@@ -1,11 +1,11 @@
 using System;
 using System.Net.Http;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Commands;
+using Raven.Client.Document;
+using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Operations.Databases
+namespace Raven.Client.Operations.Databases
 {
     public class DeleteDatabaseOperation : IAdminOperation
     {

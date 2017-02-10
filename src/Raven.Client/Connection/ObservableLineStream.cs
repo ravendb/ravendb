@@ -4,17 +4,16 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Raven.NewClient.Abstractions.Extensions;
-
-using Sparrow.Collections;
 using System;
 using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
+using Sparrow.Collections;
 
-namespace Raven.NewClient.Client.Connection
+namespace Raven.Client.Connection
 {
     public class ObservableLineStream : IObservable<string>, IDisposable
     {

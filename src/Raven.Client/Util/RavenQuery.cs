@@ -7,7 +7,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Raven.NewClient.Client.Util
+namespace Raven.Client.Util
 {
     /// <summary>
     /// Helper class that provide a way to escape query terms

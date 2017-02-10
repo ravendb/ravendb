@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 using Xunit;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
 
 namespace NewClientTests.NewClient
 {

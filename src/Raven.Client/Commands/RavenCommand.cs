@@ -6,11 +6,11 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Connection;
+using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public abstract class RavenCommand<TResult>
     {

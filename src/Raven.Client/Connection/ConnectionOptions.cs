@@ -3,12 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Net;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Extensions;
 
-namespace Raven.NewClient.Client.Connection
+using System;
+using Raven.Client.Extensions;
+
+namespace Raven.Client.Connection
 {
     public static class ConnectionOptions
     {

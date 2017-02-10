@@ -1,7 +1,7 @@
 using FastTests;
 using System.Linq;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.LiveProjections

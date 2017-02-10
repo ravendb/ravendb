@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading.Tasks;
 
-namespace Raven.NewClient.Json.Utilities
+namespace Raven.Client.Json.Utilities
 {
     public static class ExpressionHelpers
     {

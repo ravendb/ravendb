@@ -7,15 +7,12 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Client.Document;
+using Raven.Client.Extensions.Internal;
+using Raven.Client.Indexing;
+using Raven.Client.Util;
 
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexing;
-
-
-namespace Raven.NewClient.Client.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// All the information required to query an index

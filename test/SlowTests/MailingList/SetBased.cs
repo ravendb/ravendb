@@ -7,11 +7,10 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Data;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Operations.Databases.Documents;
 using Xunit;
 
 namespace SlowTests.MailingList

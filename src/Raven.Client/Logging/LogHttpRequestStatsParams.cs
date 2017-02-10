@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 
-namespace Raven.NewClient.Abstractions.Logging
+namespace Raven.Client.Logging
 {
     public class LogHttpRequestStatsParams
     {

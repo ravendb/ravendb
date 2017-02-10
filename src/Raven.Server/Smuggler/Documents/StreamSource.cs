@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Client.Smuggler;
+using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
+using Raven.Client.Smuggler;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -14,6 +14,7 @@ using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Size = Raven.Server.Config.Settings.Size;
 
 namespace Raven.Server.Smuggler.Documents
 {

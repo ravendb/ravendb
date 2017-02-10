@@ -3,14 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Connection
+namespace Raven.Client.Connection
 {
     public static class HttpExtensions
     {

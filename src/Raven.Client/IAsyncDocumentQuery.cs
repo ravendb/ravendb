@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Spatial;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Spatial;
 
-
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
     /// <summary>
     ///     Asynchronous query against a raven index

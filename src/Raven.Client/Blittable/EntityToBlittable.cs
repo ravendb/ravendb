@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Util;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Blittable
+namespace Raven.Client.Blittable
 {
     public class EntityToBlittable
     {

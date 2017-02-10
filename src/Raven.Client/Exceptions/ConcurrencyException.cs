@@ -6,7 +6,7 @@
 
 using System;
 
-namespace Raven.NewClient.Client.Exceptions
+namespace Raven.Client.Exceptions
 {
     /// <summary>
     /// This exception is raised when a concurrency conflict is encountered

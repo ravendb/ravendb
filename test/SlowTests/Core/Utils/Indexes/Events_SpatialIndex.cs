@@ -5,7 +5,7 @@
 // ---------------------------------------------------------------------
 
 using System.Linq;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
 using Event = SlowTests.Core.Utils.Entities.Event;
 
 namespace SlowTests.Core.Utils.Indexes

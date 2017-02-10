@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
     /// <summary>
     /// Parameters for the Where Equals call

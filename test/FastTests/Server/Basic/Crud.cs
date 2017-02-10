@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
+using Raven.Client.Commands;
+using Raven.Client.Data;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;

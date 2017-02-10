@@ -1,19 +1,14 @@
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Document;
-using Newtonsoft.Json;
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Client.Document;
+using Raven.Client.Indexing;
+using Raven.Client.Util;
 
-using Raven.NewClient.Client.Indexing;
-
-namespace Raven.NewClient.Client.Indexes
+namespace Raven.Client.Indexes
 {
     /// <summary>
     /// Allow to create indexes with multiple maps

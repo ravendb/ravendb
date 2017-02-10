@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,21 +11,19 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Commands;
+using Raven.Client.Connection;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document;
+using Raven.Client.Document.Async;
+using Raven.Client.Extensions;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.PublicExtensions;
+using Raven.Client.Spatial;
 
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document.Async;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Spatial;
-
-
-namespace Raven.NewClient.Client.Linq
+namespace Raven.Client.Linq
 {
     /// <summary>
     /// Implements <see cref="IRavenQueryable{T}"/>

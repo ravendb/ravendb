@@ -2,8 +2,8 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Indexes;
 using Xunit;
 
 namespace StressTests.Tests.Queries

@@ -6,7 +6,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
-using Raven.NewClient.Abstractions.Extensions;
 using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Handlers

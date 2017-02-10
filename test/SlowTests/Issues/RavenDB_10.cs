@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using Xunit;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Operations.Databases.Indexes;
 
 namespace SlowTests.Issues
 {

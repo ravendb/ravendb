@@ -1,9 +1,8 @@
-﻿using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Data.Indexes;
+﻿using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 
-namespace Raven.NewClient.Operations.Databases.Responses
+namespace Raven.Client.Operations.Databases.Responses
 {
     public abstract class ResultsResponse<T>
     {

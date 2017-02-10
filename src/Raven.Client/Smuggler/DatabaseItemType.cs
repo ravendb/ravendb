@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.NewClient.Client.Smuggler
+namespace Raven.Client.Smuggler
 {
     [Flags]
     public enum DatabaseItemType

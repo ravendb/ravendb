@@ -6,15 +6,15 @@ using Jint;
 using Jint.Native;
 using Jint.Parser;
 using Jint.Runtime;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Exceptions.Patching;
+using Raven.Client.Commands;
+using Raven.Client.Exceptions.Patching;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using Sparrow.Logging;
-using JavaScriptException = Raven.NewClient.Client.Exceptions.Patching.JavaScriptException;
+using JavaScriptException = Raven.Client.Exceptions.Patching.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
 {

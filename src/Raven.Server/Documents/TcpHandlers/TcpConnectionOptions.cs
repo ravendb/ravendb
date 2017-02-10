@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.NewClient.Abstractions.Data;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

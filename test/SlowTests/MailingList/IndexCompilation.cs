@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList

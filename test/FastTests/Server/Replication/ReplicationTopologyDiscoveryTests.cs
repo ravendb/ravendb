@@ -3,9 +3,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Replication;
-using Raven.NewClient.Client.Replication.Messages;
+using Raven.Client.Document;
+using Raven.Client.Replication;
 using Raven.Server.Config.Settings;
 using Xunit;
 

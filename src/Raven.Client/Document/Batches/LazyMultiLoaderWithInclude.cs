@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.NewClient.Abstractions.Extensions;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 
-namespace Raven.NewClient.Client.Document.Batches
+namespace Raven.Client.Document.Batches
 {
     public class LazyMultiLoaderWithInclude<T> : ILazyLoaderWithInclude<T>
     {

@@ -1,12 +1,12 @@
 ﻿using System.Net.Http;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Commands;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Operations.Databases
+namespace Raven.Client.Operations.Databases
 {
     public class GetBuildNumberOperation : IAdminOperation<BuildNumber>
     {

@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 
 using Lucene.Net.Search;
-
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Data.Indexes;
+using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 

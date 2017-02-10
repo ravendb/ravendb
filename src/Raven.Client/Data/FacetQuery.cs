@@ -9,17 +9,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-#if !NET46
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-#endif
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Document;
+using Raven.Client.Util;
 using Sparrow.Json.Parsing;
+#if !NET46
+#endif
 
 
-namespace Raven.NewClient.Client.Data
+namespace Raven.Client.Data
 {
     public class FacetQuery : IndexQueryBase
     {

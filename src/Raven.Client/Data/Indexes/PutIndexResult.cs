@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Raven.NewClient.Client.Data.Indexes
+namespace Raven.Client.Data.Indexes
 {
     public class PutIndexResult
     {

@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Http;
+using Raven.Client.Http;
+using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Operations
+namespace Raven.Client.Operations
 {
     public partial class AdminOperationExecuter
     {

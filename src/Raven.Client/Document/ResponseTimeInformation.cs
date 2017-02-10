@@ -3,11 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public class ResponseTimeInformation
     {

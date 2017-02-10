@@ -1,11 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
 using Xunit;
 using System;
 using System.Threading;
 using FastTests.Subscriptions;
-using Raven.NewClient.Client.Exceptions.Subscriptions;
+using Raven.Client.Data;
+using Raven.Client.Exceptions.Subscriptions;
 using Sparrow;
 
 namespace NewClientTests.NewClient.Subscriptions

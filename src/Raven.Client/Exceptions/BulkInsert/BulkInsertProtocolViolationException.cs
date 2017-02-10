@@ -1,4 +1,4 @@
-﻿namespace Raven.NewClient.Client.Exceptions.BulkInsert
+﻿namespace Raven.Client.Exceptions.BulkInsert
 {
     public class BulkInsertProtocolViolationException : RavenException
     {

@@ -9,9 +9,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Linq;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Tests.Linq

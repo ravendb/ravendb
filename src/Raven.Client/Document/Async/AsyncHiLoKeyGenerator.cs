@@ -6,11 +6,11 @@
 
 using System;
 using System.Threading;
-using Raven.NewClient.Commands;
 using System.Threading.Tasks;
+using Raven.Client.Commands;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document.Async
+namespace Raven.Client.Document.Async
 {
     /// <summary>
     /// Generate hilo numbers against a RavenDB document

@@ -3,13 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Document.Batches;
+using Raven.Client.Document;
+using Raven.Client.Document.Batches;
 
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     /// Interface for document session which holds the internal operations

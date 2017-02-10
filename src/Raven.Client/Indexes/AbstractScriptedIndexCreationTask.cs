@@ -7,12 +7,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Data;
+using Raven.Client.Document;
 
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
-
-
-namespace Raven.NewClient.Client.Indexes
+namespace Raven.Client.Indexes
 {
     public abstract class AbstractScriptedIndexCreationTask : AbstractIndexCreationTask
     {

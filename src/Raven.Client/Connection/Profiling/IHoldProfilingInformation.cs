@@ -1,4 +1,4 @@
-namespace Raven.NewClient.Client.Connection.Profiling
+namespace Raven.Client.Connection.Profiling
 {
     /// <summary>
     /// Interface for getting profiling information about the actions of the system

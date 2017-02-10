@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using FastTests;
-using Raven.NewClient.Client.Operations.Databases.Transformers;
+using Raven.Client.Operations.Databases.Transformers;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;

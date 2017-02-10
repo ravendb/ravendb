@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Extensions;
-using Raven.NewClient.Json.Utilities;
+using Raven.Client.Blittable;
+using Raven.Client.Commands;
+using Raven.Client.Connection;
+using Raven.Client.Data;
+using Raven.Client.Extensions;
+using Raven.Client.Json.Utilities;
+using Raven.Client.Linq;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public partial class DocumentSession
     {

@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions;
 
-namespace Raven.NewClient.Client.Connection.Profiling
+namespace Raven.Client.Connection.Profiling
 {
     /// <summary>
     /// Information about a particular session

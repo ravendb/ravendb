@@ -1,7 +1,7 @@
 using System.Linq;
 using FastTests;
+using Raven.Client.PublicExtensions;
 using Xunit;
-using Raven.NewClient.Client;
 
 namespace NewClientTests.NewClient
 {

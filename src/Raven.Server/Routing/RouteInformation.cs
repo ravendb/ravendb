@@ -2,7 +2,7 @@ using System;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Web;

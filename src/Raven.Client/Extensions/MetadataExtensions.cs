@@ -3,18 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using Raven.NewClient.Abstractions.Data;
-using Newtonsoft.Json;
 
-using System.Net.Http;
-
-namespace Raven.NewClient.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
     /// <summary>
     /// Extensions for handling metadata

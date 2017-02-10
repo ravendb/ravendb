@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     public class DocumentsById : IEnumerable<KeyValuePair<string, DocumentInfo>>
     {

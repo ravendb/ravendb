@@ -4,7 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Store;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Extensions;
 using Raven.Server.Utils;
 using Sparrow;
 using Voron;

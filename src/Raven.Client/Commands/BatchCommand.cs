@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Data.Commands;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Blittable;
+using Raven.Client.Data.Commands;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Sparrow.Json;
-using Raven.NewClient.Client.Http;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class BatchCommand : RavenCommand<BlittableArrayResult>, IDisposable
     {

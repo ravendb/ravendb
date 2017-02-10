@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Data;
+using Raven.Client.Data;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Client.Replication;
-using Raven.NewClient.Client.Replication.Messages;
+using Raven.Client.Connection;
+using Raven.Client.Replication;
+using Raven.Client.Replication.Messages;
 using Raven.Server.Extensions;
 using Raven.Server.Utils;
 

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Json.Utilities;
+using Raven.Client.Document;
+using Raven.Client.Json.Utilities;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class LoadStartingWithOperation
     {

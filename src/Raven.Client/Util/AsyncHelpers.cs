@@ -10,10 +10,9 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 
-using Raven.NewClient.Abstractions.Extensions;
-
-namespace Raven.NewClient.Abstractions.Util
+namespace Raven.Client.Util
 {
     public static class AsyncHelpers
     {

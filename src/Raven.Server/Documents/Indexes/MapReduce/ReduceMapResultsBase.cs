@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Raven.NewClient.Client.Data.Indexes;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
@@ -18,7 +18,6 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Raven.NewClient.Data.Indexes;
 using Voron.Data.Compression;
 using Voron.Global;
 

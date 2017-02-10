@@ -1,8 +1,7 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Linq;
+using Raven.Client;
+using Raven.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Tests.Bugs.TransformResults

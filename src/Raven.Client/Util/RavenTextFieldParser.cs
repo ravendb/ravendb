@@ -4,8 +4,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Text;
 
-
-namespace Raven.NewClient.Abstractions.Util
+namespace Raven.Client.Util
 {
     public class TextFieldParser : IDisposable
     {

@@ -6,15 +6,14 @@
 
 using System;
 using System.Diagnostics;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexes;
 using Xunit;
 using System.Linq;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Linq.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Linq.Indexing;
+using Raven.Client.Operations.Databases.Indexes;
 using Sparrow.Json;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Stream

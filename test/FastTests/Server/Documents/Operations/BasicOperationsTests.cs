@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Data;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Sparrow.Json;

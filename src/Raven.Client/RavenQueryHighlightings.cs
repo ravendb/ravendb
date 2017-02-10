@@ -5,11 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
+using Raven.Client.Data.Queries;
 
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
     public class RavenQueryHighlightings
     {

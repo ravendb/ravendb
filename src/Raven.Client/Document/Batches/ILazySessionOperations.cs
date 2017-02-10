@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Data.Queries;
+using Raven.Client.Indexes;
 
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Indexes;
-
-namespace Raven.NewClient.Client.Document.Batches
+namespace Raven.Client.Document.Batches
 {
     /// <summary>
     ///     Specify interface for lazy operation for the session

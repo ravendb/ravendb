@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -15,26 +16,23 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Raven.NewClient.Abstractions.Spatial;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Spatial;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Util;
-using Raven.NewClient.Client.Document.Async;
-using Raven.NewClient.Client.Document.Batches;
+using Raven.Client.Commands;
+using Raven.Client.Connection;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Client.Document.Async;
+using Raven.Client.Document.Batches;
+using Raven.Client.Extensions;
+using Raven.Client.Indexing;
+using Raven.Client.Linq;
+using Raven.Client.PublicExtensions;
+using Raven.Client.Spatial;
+using Raven.Client.Util;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     ///   A query against a Raven index
@@ -363,7 +361,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
+            OrderBy(string.Format("{0};{1};{2}", Constants.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng)));
             return this;
         }
 
@@ -372,7 +370,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng, string sortedFieldName)
         {
-            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), sortedFieldName));
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng), sortedFieldName));
             return this;
         }
 

@@ -3,16 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Dynamic;
 using System.Linq.Expressions;
 using Newtonsoft.Json;
-using System.Linq;
-using Raven.NewClient.Abstractions.Linq;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Linq;
 
-
-namespace Raven.NewClient.Abstractions.Json
+namespace Raven.Client.Json
 {
     /// <summary>
     /// Convert a dynamic variable to a json value and vice versa

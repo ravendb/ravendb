@@ -8,8 +8,8 @@ using System;
 using System.Diagnostics;
 using FastTests;
 using System.Linq;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client.Extensions;
+using Raven.Client.Operations.Databases;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy

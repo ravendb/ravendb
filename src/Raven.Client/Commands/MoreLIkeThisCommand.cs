@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Net.Http;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Data.Queries;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class MoreLikeThisCommand : RavenCommand<MoreLikeThisQueryResult>
     {

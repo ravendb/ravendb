@@ -1,8 +1,8 @@
 ﻿using System.Linq;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.PublicExtensions;
 using Xunit;
 
 namespace FastTests.Issues

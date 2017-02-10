@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using Raven.NewClient.Client.Replication;
+using Raven.Client.Replication;
 
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
 
     public class ConnectionStringOptions

@@ -4,11 +4,9 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
-
+using Raven.Client;
+using Raven.Client.Extensions;
+using Raven.Client.Indexes;
 using SlowTests.Utils;
 using Xunit;
 

@@ -1,9 +1,8 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
+using Raven.Client.Linq.Indexing;
 using Xunit;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Linq.Indexing;
 
 namespace NewClientTests.NewClient.Tests.Indexes
 {

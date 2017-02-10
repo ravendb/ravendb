@@ -3,17 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Lucene.Net.Util;
-using Raven.NewClient.Client.Replication.Messages;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Replication;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Data;
+using Raven.Client.Exceptions;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Operations.Databases.Documents;
+using Raven.Client.Replication;
+using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter;
 using Xunit;
+using Constants = Raven.Client.Data.Constants;
 
 namespace FastTests.Server.Replication
 {
@@ -360,7 +361,7 @@ namespace FastTests.Server.Replication
                 var operation = store2.Operations.Send(new PatchByIndexOperation(userIndex.IndexName, new IndexQuery(store1.Conventions)
                 {
                     Query = string.Empty
-                }, new Raven.NewClient.Client.Data.PatchRequest
+                }, new PatchRequest
                 {
                     Script = string.Empty
                 }));
@@ -421,7 +422,7 @@ namespace FastTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-                var exception = Assert.Throws<DocumentConflictException>(() => store2.Operations.Send(new PatchOperation("foo/bar", null, new Raven.NewClient.Client.Data.PatchRequest
+                var exception = Assert.Throws<DocumentConflictException>(() => store2.Operations.Send(new PatchOperation("foo/bar", null, new PatchRequest
                 {
                     Script = "this.x = 123"
                 })));
@@ -527,7 +528,7 @@ namespace FastTests.Server.Replication
                     {
                         var metadata = s2.Advanced.GetMetadataFor(s2.Load<User>("foo/bar"));
                         string collection;
-                        metadata.TryGetValue(Raven.NewClient.Abstractions.Data.Constants.Metadata.Collection, out collection);
+                        metadata.TryGetValue(Constants.Metadata.Collection, out collection);
                         return collection;
                     }
                 }, "New_Users");
@@ -571,7 +572,7 @@ namespace FastTests.Server.Replication
                     {
                         var metadata = s2.Advanced.GetMetadataFor(s2.Load<User>("foo/bar"));
                         string collection;
-                        metadata.TryGetValue(Raven.NewClient.Abstractions.Data.Constants.Metadata.Collection, out collection);
+                        metadata.TryGetValue(Constants.Metadata.Collection, out collection);
                         return collection;
                     }
                 }, "New_Users");
@@ -621,7 +622,7 @@ namespace FastTests.Server.Replication
                         newDoc = s2.Load<New_User2>("foo/bar");
                         var metadata = s2.Advanced.GetMetadataFor(newDoc);
                         string collection;
-                        metadata.TryGetValue(Raven.NewClient.Abstractions.Data.Constants.Metadata.Collection, out collection);
+                        metadata.TryGetValue(Constants.Metadata.Collection, out collection);
                         return collection;
                     }
                 }, "New_User2s");

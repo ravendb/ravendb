@@ -1,10 +1,10 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Changes;
+using Raven.Client.Changes;
+using Raven.Client.Extensions;
 
-namespace Raven.NewClient.Client.Shard
+namespace Raven.Client.Shard
 {
     public class ShardedObservableWithTask<T> : IObservableWithTask<T>
     {

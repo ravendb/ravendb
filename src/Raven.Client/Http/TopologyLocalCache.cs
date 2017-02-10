@@ -1,10 +1,10 @@
 using System;
 using System.IO;
-using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Json;
+using Raven.Client.Logging;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Http
+namespace Raven.Client.Http
 {
     public static class TopologyLocalCache
     {

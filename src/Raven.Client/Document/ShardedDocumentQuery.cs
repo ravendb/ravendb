@@ -1,4 +1,4 @@
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client.Document
 {
     /// <summary>
     /// A query that is executed against sharded instances

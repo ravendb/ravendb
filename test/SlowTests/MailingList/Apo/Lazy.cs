@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client;
+using Raven.Client.PublicExtensions;
 using Xunit;
 
 namespace SlowTests.MailingList.Apo

@@ -11,7 +11,7 @@ using System.Linq;
 using System.Reflection;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Document;
 using Xunit;
 
 namespace SlowTests.MailingList.Everett

@@ -2,10 +2,10 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Commands;
+using Raven.Client.Indexes;
 using Xunit;
-using Raven.NewClient.Client.Commands;
 using Sparrow.Json;
 
 namespace NewClientTests.NewClient.FastTests.BulkInsert

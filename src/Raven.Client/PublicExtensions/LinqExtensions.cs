@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,16 +11,15 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Document.Async;
-using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Commands;
+using Raven.Client.Connection;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Document.Async;
+using Raven.Client.Document.Batches;
+using Raven.Client.Linq;
 
-namespace Raven.NewClient.Client
+namespace Raven.Client.PublicExtensions
 {
     ///<summary>
     /// Extensions to the linq syntax

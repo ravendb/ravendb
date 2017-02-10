@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Raven.NewClient.Client.Replication.Messages;
+using Raven.Client.Replication.Messages;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Extensions

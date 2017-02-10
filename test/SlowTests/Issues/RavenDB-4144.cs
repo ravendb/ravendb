@@ -6,8 +6,8 @@
 
 using System.Collections.Generic;
 using FastTests;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Data;
+using Raven.Client.Operations.Databases.Documents;
 using Xunit;
 
 namespace SlowTests.Issues

@@ -3,11 +3,11 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
-using Raven.NewClient.Abstractions.Data;
 using System.Collections.Generic;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
+using Raven.Client.Data;
 
 namespace Raven.Server.Documents.Queries.Results
 {

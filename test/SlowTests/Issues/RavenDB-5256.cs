@@ -8,8 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client;
+using Raven.Client;
+using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Issues

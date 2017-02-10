@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Data.Queries;
+using Raven.Client.Indexes;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     public partial interface IAsyncAdvancedSessionOperations
     {

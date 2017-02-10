@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions;
+using Raven.Client;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching

@@ -1,25 +1,20 @@
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Changes;
-using Raven.NewClient.Client.Connection;
-
-using Raven.NewClient.Client.Connection.Profiling;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Util;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Util.Encryptors;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Changes;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Http;
+using Raven.Client.Indexes;
+using Raven.Client.Operations;
+using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Util;
+using Raven.Client.Util.Encryptors;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client
+namespace Raven.Client
 {
 
     /// <summary>

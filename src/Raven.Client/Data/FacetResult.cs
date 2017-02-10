@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using Raven.NewClient.Client.Data;
 
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class FacetResult
     {

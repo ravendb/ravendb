@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.NewClient.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 

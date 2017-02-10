@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Client.Document;
 
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
-
-namespace Raven.NewClient.Client.Data.Queries
+namespace Raven.Client.Data.Queries
 {
     public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, object>>
     {

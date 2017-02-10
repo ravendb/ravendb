@@ -1,13 +1,4 @@
-using System;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Security;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.OAuth;
-
-namespace Raven.NewClient.Client.Extensions
+namespace Raven.Client.Extensions
 {
     internal static class SecurityExtensions
     {

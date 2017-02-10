@@ -1,10 +1,10 @@
 ﻿using System.Net.Http;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Json;
+using Raven.Client.Data;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.Client.Commands
 {
     public class GetStatisticsCommand : RavenCommand<DatabaseStatistics>
     {

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using FastTests;
-using Raven.NewClient.Client;
+using Raven.Client;
 using Xunit;
 
 namespace SlowTests.Issues

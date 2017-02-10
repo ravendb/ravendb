@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.NewClient.Client.Changes
+namespace Raven.Client.Changes
 {
     public interface IConnectableChanges
     {

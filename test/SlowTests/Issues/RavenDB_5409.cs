@@ -3,9 +3,9 @@ using System.Linq;
 using System.Threading;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client.Data.Indexes;
+using Raven.Client.Indexes;
+using Raven.Client.Operations.Databases;
 using Xunit;
 
 namespace SlowTests.Issues

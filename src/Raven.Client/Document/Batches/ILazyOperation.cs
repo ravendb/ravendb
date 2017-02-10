@@ -1,7 +1,7 @@
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 
-namespace Raven.NewClient.Client.Document.Batches
+namespace Raven.Client.Document.Batches
 {
     public interface ILazyOperation
     {

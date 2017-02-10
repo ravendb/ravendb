@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document.Blittable
+namespace Raven.Client.Blittable
 {
     public class BlitPath
     {

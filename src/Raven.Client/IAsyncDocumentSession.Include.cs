@@ -7,8 +7,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Client.Document;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.Client
 {
     /// <summary>
     ///     Interface for document session using async approaches

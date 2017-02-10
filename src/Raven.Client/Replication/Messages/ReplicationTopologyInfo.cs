@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Raven.NewClient.Client.Exceptions;
+using Raven.Client.Exceptions;
 using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client.Replication.Messages
+namespace Raven.Client.Replication.Messages
 {
     public class FullTopologyInfo
     {

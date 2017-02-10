@@ -1,8 +1,8 @@
 ﻿using System;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Data;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Extensions
+namespace Raven.Client.Extensions
 {
     public static class BlittableJsonExtensions
     {

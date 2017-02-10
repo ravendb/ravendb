@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 
-using Raven.NewClient.Abstractions;
-
-namespace Raven.NewClient.Client.Connection.Profiling
+namespace Raven.Client.Connection.Profiling
 {
     /// <summary>
     /// The result of a request made to the server

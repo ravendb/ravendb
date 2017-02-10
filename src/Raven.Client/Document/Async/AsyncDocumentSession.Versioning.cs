@@ -6,9 +6,9 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Commands;
+using Raven.Client.Commands;
 
-namespace Raven.NewClient.Client.Document.Async
+namespace Raven.Client.Document.Async
 {
     /// <summary>
     /// Implementation for async document session 

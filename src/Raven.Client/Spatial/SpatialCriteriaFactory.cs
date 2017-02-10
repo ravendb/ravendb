@@ -1,10 +1,8 @@
 using System;
-using System.Globalization;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
 
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-
-namespace Raven.NewClient.Client.Spatial
+namespace Raven.Client.Spatial
 {
     public class SpatialCriteriaFactory
     {

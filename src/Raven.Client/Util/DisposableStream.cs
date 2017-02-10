@@ -3,12 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Raven.NewClient.Client.Util
+namespace Raven.Client.Util
 {
     public class DisposableStream : Stream
     {

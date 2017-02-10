@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Indexes;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Exceptions;
-using Raven.NewClient.Data.Indexes;
 
 namespace Raven.Server.Documents.Indexes
 {
