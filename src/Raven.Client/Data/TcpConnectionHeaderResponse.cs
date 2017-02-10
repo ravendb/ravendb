@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace Raven.NewClient.Client.Data
+﻿namespace Raven.Client.Data
 {
     public class TcpConnectionHeaderResponse
     {

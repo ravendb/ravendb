@@ -15,7 +15,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Data;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Json;
-using Raven.NewClient.Client.Http;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
@@ -43,7 +42,7 @@ namespace Raven.Server
 
         public ConcurrentDictionary<string, AccessToken> AccessTokensById = new ConcurrentDictionary<string, AccessToken>();
         public ConcurrentDictionary<string, AccessToken> AccessTokensByName = new ConcurrentDictionary<string, AccessToken>();
-        
+
         public Timer ServerMaintenanceTimer;
 
         public readonly ServerStore ServerStore;
@@ -184,9 +183,9 @@ namespace Raven.Server
                     _logger.Info("Could not setup license check.", e);
 
                 var alert = AlertRaised.Create("License manager initialization error",
-                    "Could not intitalize the license manager", 
+                    "Could not intitalize the license manager",
                     AlertType.LicenseManager_InitializationError,
-                    NotificationSeverity.Info, 
+                    NotificationSeverity.Info,
                     details: new ExceptionDetails(e));
 
                 ServerStore.NotificationCenter.Add(alert);
@@ -243,7 +242,7 @@ namespace Raven.Server
                     {
                         throw new IOException("Unable to start tcp listener on " + ipAddress + " on port " + port, ex);
                     }
-                    var listenerLocalEndpoint = (IPEndPoint) listener.LocalEndpoint;
+                    var listenerLocalEndpoint = (IPEndPoint)listener.LocalEndpoint;
                     status.Port = listenerLocalEndpoint.Port;
 
                     for (int i = 0; i < 4; i++)
@@ -264,7 +263,7 @@ namespace Raven.Server
                 {
                     tcpListener.Stop();
                 }
-               
+
                 throw;
             }
         }
@@ -305,7 +304,7 @@ namespace Raven.Server
                     }
             }
         }
-        
+
         private void ListenToNewTcpConnection(TcpListener listener)
         {
             Task.Run(async () =>
@@ -351,13 +350,13 @@ namespace Raven.Server
                         using (_tcpContextPool.AllocateOperationContext(out context))
                         {
                             using (var headerJson = await context.ParseToMemoryAsync(
-                                stream, 
+                                stream,
                                 "tcp-header",
-                                BlittableJsonDocumentBuilder.UsageMode.None, 
+                                BlittableJsonDocumentBuilder.UsageMode.None,
                                 tcp.PinnedBuffer
                                 ))
                             {
-                                header = NewClient.Client.Json.JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
+                                header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
                                 if (_logger.IsInfoEnabled)
                                 {
                                     _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName} from {tcpClient.Client.RemoteEndPoint}");
@@ -371,7 +370,7 @@ namespace Raven.Server
                                 if (_logger.IsInfoEnabled)
                                 {
                                     _logger.Info(msg);
-                        }
+                                }
                                 throw new UnauthorizedAccessException(msg);
                             }
                         }
@@ -468,7 +467,7 @@ namespace Raven.Server
                     ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
                     return true;
                 }
-            
+
                 if (header.AuthorizationToken == null)
                 {
                     ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.AuthorizationTokenRequired));
@@ -508,12 +507,12 @@ namespace Raven.Server
                         throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);
                 }
             }
-                
-        }
-       
 
-        private static void ReplyStatus(BlittableJsonTextWriter writer,string status)
-        {            
+        }
+
+
+        private static void ReplyStatus(BlittableJsonTextWriter writer, string status)
+        {
             writer.WriteStartObject();
             writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Status));
             writer.WriteString(status);
@@ -553,7 +552,7 @@ namespace Raven.Server
                 {
                     if (_tcpListenerTask.Exception != null)
                     {
-                        if(_tcpLogger.IsInfoEnabled)
+                        if (_tcpLogger.IsInfoEnabled)
                             _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
                     }
                     else
@@ -585,7 +584,7 @@ namespace Raven.Server
                         _tcpLogger.Info("Failed to properly dispose the tcp listener", e);
                 }
             }
-            
+
         }
     }
 }

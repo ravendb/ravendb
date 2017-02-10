@@ -16,12 +16,10 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Raven.NewClient.Client.Http;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
-using TcpConnectionHeaderMessage = Raven.NewClient.Abstractions.Data.TcpConnectionHeaderMessage;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -273,7 +271,7 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                var token = _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey,_destination.ApiKey, documentsContext).Result;
+                var token = _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey, _destination.ApiKey, documentsContext).Result;
                 //send initial connection information
                 documentsContext.Write(writer, new DynamicJsonValue
                 {
@@ -303,7 +301,7 @@ namespace Raven.Server.Documents.Replication
 
         private void ReadHeaderResponseAndThrowIfUnAuthorized()
         {
-            var timeout = 2*60*1000; // TODO: configurable
+            var timeout = 2 * 60 * 1000; // TODO: configurable
             using (var replicationTcpConnectReplyMessage = _interruptableRead.ParseToMemory(
                 _connectionDisposed,
                 "replication acknowledge response",

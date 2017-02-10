@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Raven.Client.Blittable;
 using Raven.Client.Commands;
 using Raven.Client.Data;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Exceptions.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Json;

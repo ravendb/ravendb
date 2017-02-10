@@ -1,16 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 using Raven.Client.Data;
-using Raven.NewClient.Abstractions.Data;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Util;
-using TcpConnectionHeaderMessage = Raven.NewClient.Abstractions.Data.TcpConnectionHeaderMessage;
 
 namespace Raven.Server.Documents.TcpHandlers
 {

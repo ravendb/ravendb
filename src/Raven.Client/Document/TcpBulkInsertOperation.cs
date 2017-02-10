@@ -11,15 +11,15 @@ using Raven.Client.Blittable;
 using Raven.Client.Commands;
 using Raven.Client.Data;
 using Raven.Client.Exceptions.BulkInsert;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.Logging;
 using Raven.Client.Platform;
+using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
-using Raven.NewClient.Client.Exceptions.Security;
-using Raven.NewClient.Client.Json;
 
 namespace Raven.Client.Document
 {
@@ -99,7 +99,7 @@ namespace Raven.Client.Document
             _tcpClient.ReceiveBufferSize = 4096;
             var networkStream = _tcpClient.GetStream();
 
-            return new ConnectToServerResult {OAuthToken = apiToken, Stream = networkStream};
+            return new ConnectToServerResult { OAuthToken = apiToken, Stream = networkStream };
         }
 
         private void WriteToServer(string database, ConnectToServerResult connection)
@@ -112,13 +112,13 @@ namespace Raven.Client.Document
             }));
             connection.Stream.Write(header, 0, header.Length);
             connection.Stream.Flush();
-            
+
             JsonOperationContext context;
             //Reading reply from server
             using (_contextPool.AllocateOperationContext(out context))
-            using (var response = context.ReadForMemory(connection.Stream, "bulkinserttcp-header-response")) 
+            using (var response = context.ReadForMemory(connection.Stream, "bulkinserttcp-header-response"))
             {
-                
+
                 var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
                 switch (reply.Status)
                 {
@@ -149,30 +149,30 @@ namespace Raven.Client.Document
 
                 using (_contextPool.AllocateOperationContext(out context))
                 {
-                JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
-                using (context.GetManagedBuffer(out pinnedBuffer))
-                {
-                    var documentInfo = new DocumentInfo();
+                    JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
+                    using (context.GetManagedBuffer(out pinnedBuffer))
+                    {
+                        var documentInfo = new DocumentInfo();
 
-                    var metadata = new DynamicJsonValue();
-                    var tag = _store.Conventions.GetDynamicTagName(doc.Item1);
-                    if (tag != null)
-                        metadata[Constants.Metadata.Collection] = tag;
-                    metadata[Constants.Metadata.Id] = doc.Item2;
+                        var metadata = new DynamicJsonValue();
+                        var tag = _store.Conventions.GetDynamicTagName(doc.Item1);
+                        if (tag != null)
+                            metadata[Constants.Metadata.Collection] = tag;
+                        metadata[Constants.Metadata.Id] = doc.Item2;
 
-                    documentInfo.Metadata = context.ReadObject(metadata, doc.Item2);
-                    var data = _entityToBlittable.ConvertEntityToBlittable(doc.Item1, _store.Conventions, context, documentInfo);
+                        documentInfo.Metadata = context.ReadObject(metadata, doc.Item2);
+                        var data = _entityToBlittable.ConvertEntityToBlittable(doc.Item1, _store.Conventions, context, documentInfo);
                         WriteVariableSizeInt(connection.Stream, data.Size);
                         WriteToStream(connection.Stream, data, pinnedBuffer);
 
-                    if (needToThrottle)
-                    {
+                        if (needToThrottle)
+                        {
                             connection.Stream.Flush();
-                        _throttlingEvent.Wait(500);
+                            _throttlingEvent.Wait(500);
+                        }
                     }
                 }
             }
-        }
             connection.Stream.WriteByte(0); //done
             connection.Stream.Flush();
         }

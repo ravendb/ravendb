@@ -3,17 +3,16 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Raven.Client.Data;
+using Raven.Client.Http;
 using Raven.Client.Replication;
 using Raven.Client.Replication.Messages;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Http;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using TcpConnectionHeaderMessage = Raven.NewClient.Abstractions.Data.TcpConnectionHeaderMessage;
+
 namespace Raven.Server.Documents.Replication
 {
     public class NodeTopologyExplorer : IDisposable
@@ -26,7 +25,7 @@ namespace Raven.Server.Documents.Replication
         private string _tcpUrl;
         private readonly TcpClient _tcpClient;
         private readonly Logger _log;
-        private ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
+        private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
 
         public NodeTopologyExplorer(
             DocumentsContextPool pool,
@@ -56,7 +55,7 @@ namespace Raven.Server.Documents.Replication
                 _destination.Url,
                 _destination.Database,
                 _destination.ApiKey);
-                var token = await _authenticator.GetAuthenticationTokenAsync(_operationCredentials.ApiKey,_destination.Url, context);
+                var token = await _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey, _destination.Url, context);
                 await ConnectSocketAsync();
                 using (var stream = _tcpClient.GetStream())
                 using (var writer = new BlittableJsonTextWriter(context, stream))
@@ -74,14 +73,14 @@ namespace Raven.Server.Documents.Replication
                     {
                         await ReadTcpHeaderResponseAndThrowOnUnauthorized(context, stream, buffer);
 
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(TopologyDiscoveryRequest.OriginDbId)] = _dbId,
-                        [nameof(TopologyDiscoveryRequest.Timeout)] = _timeout,
-                        [nameof(TopologyDiscoveryRequest.AlreadyVisited)] = new DynamicJsonArray(_alreadyVisited),
-                    });
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(TopologyDiscoveryRequest.OriginDbId)] = _dbId,
+                            [nameof(TopologyDiscoveryRequest.Timeout)] = _timeout,
+                            [nameof(TopologyDiscoveryRequest.AlreadyVisited)] = new DynamicJsonArray(_alreadyVisited),
+                        });
 
-                    writer.Flush();
+                        writer.Flush();
 
                         TopologyDiscoveryResponseHeader topologyResponse;
 

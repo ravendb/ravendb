@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private readonly OutputReduceToCollectionCommand _outputReduceToCollectionCommand;
 
-        public OutputReduceIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence) 
+        public OutputReduceIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
             : base(index, directory, converter, writeTransaction, persistence)
         {
             var outputReduceToCollection = index.Definition.OutputReduceToCollection;

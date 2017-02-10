@@ -4,7 +4,6 @@ using Raven.Client.Indexing;
 using Raven.Client.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Client.Smuggler;
-using Raven.NewClient.Client.Data;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
