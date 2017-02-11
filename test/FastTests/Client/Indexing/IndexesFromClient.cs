@@ -17,6 +17,7 @@ using Raven.Client.Operations.Databases.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Exceptions;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
 

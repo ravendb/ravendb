@@ -11,6 +11,7 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Indexing;
 using Raven.Client.Operations.Databases.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes

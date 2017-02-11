@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.PublicExtensions;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Voron.Bugs

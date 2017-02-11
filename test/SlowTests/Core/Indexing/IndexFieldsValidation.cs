@@ -3,6 +3,7 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Exceptions.Compilation;
 using Raven.Client.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Core.Indexing

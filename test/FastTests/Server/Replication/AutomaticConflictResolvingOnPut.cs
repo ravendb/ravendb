@@ -2,6 +2,7 @@
 using System.Threading;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Exceptions;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Replication

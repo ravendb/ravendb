@@ -2,6 +2,7 @@
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Commands;
 using Raven.Client.Data;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;

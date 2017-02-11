@@ -9,6 +9,7 @@ using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Client.Operations.Databases.Indexes;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce

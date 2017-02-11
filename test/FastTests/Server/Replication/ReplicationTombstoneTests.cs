@@ -1,4 +1,5 @@
 ﻿using FastTests.Server.Basic.Entities;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Replication

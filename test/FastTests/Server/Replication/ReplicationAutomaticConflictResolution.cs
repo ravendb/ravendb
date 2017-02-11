@@ -7,6 +7,7 @@
 using System;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Replication;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Replication

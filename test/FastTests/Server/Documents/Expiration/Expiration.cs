@@ -14,6 +14,7 @@ using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Operations.Databases;
 using Raven.Server.Documents.Expiration;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Expiration
