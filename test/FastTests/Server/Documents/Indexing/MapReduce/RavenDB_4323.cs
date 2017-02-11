@@ -19,7 +19,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         [Fact]
         public async Task ReduceResultsBackAsDocuments()
         {
-            var date = DateTime.Today;
+            var date = new DateTime(2017, 1, 1);
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())

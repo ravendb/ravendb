@@ -21,7 +21,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             {
                 var serializer = DocumentConventions.Default.CreateSerializer();
 
-                var compacted = ((JObject)serializer.Deserialize(new JsonTextReader(new StreamReader(stream)))).ToString(Formatting.None);
+                var before = ((JObject)serializer.Deserialize(new JsonTextReader(new StreamReader(stream))));
                 stream.Position = 0;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -29,11 +29,14 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                     var memoryStream = new MemoryStream();
                     context.Write(memoryStream, writer);
-                    var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
-                    JObject.Parse(s); // can parse the output
+                    memoryStream.Position = 0;
+                    var after = ((JObject)serializer.Deserialize(new JsonTextReader(new StreamReader(memoryStream))));
 
-                    Assert.Equal(compacted, s);
+                    if (new JTokenEqualityComparer().Equals(before, after) == false)
+                    {
+                        Assert.Equal(before.ToString(Formatting.None), after.ToString(Formatting.None));
+                    }
                 }
             }
         }
