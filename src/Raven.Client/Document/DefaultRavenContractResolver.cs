@@ -9,7 +9,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json.Serialization;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Document
 {
@@ -18,30 +17,6 @@ namespace Raven.Client.Document
     /// </summary>
     public class DefaultRavenContractResolver : DefaultContractResolver
     {
-        [ThreadStatic]
-        private static ExtensionDataSetter _currentExtensionData;
-        private readonly DisposableAction _clearExtensionData = new DisposableAction(() => _currentExtensionData = null);
-
-        public IDisposable RegisterForExtensionData(ExtensionDataSetter setter)
-        {
-            if (_currentExtensionData != null)
-                throw new InvalidOperationException("Cannot add a data setter because on is already added");
-            _currentExtensionData = setter;
-            return _clearExtensionData;
-        }
-
-        protected override JsonObjectContract CreateObjectContract(Type objectType)
-        {
-            var jsonObjectContract = base.CreateObjectContract(objectType);
-            jsonObjectContract.ExtensionDataSetter += (o, key, value) =>
-            {
-                if (jsonObjectContract.Properties.Contains(key))
-                    return;
-                _currentExtensionData?.Invoke(o, key, value);
-            };
-            return jsonObjectContract;
-        }
-
         /// <summary>
         /// Gets the serializable members for the type.
         /// </summary>
