@@ -1,7 +1,6 @@
 $NETSTANDARD13 = 'netstandard1.3'
 $NET46 = 'net46'
 $SUPPORTED_CLIENT_FRAMEWORKS = @( $NETSTANDARD13 )
-$SUPPORTED_NEW_CLIENT_FRAMEWORKS = @( $NETSTANDARD13 )
 
 function CreateArchiveFromDir ( $targetFilename, $dir, $spec ) {
     if ($spec.PkgType -eq "zip") {
@@ -182,14 +181,12 @@ function CreateRaspberryPiClientLayout ( $outDirs, $packageDir, $projectDir ) {
     $clientPkgDir = [io.path]::combine($packageDir, "Client")
     New-Item -ItemType Directory -Path $clientPkgDir
 
-    Copy-Item "$(Join-Path $clientOutDir -ChildPath "Raven.Client.dll")" -Destination "$clientPkgDir"
-    Copy-Item "$(Join-Path $clientOutDir -ChildPath "Raven.Client.pdb")" -Destination "$clientPkgDir"
     Copy-Item "$(Join-Path $clientOutDir -ChildPath "Sparrow.dll")" -Destination "$clientPkgDir"
     Copy-Item "$(Join-Path $clientOutDir -ChildPath "Sparrow.pdb")" -Destination "$clientPkgDir"
 
-    $newClientOutDir = [io.path]::combine($outDirs.NewClient, $NETSTANDARD13)
-    Copy-Item "$(Join-Path $newClientOutDir -ChildPath "Raven.NewClient.dll")" -Destination "$clientPkgDir"
-    Copy-Item "$(Join-Path $newClientOutDir -ChildPath "Raven.NewClient.pdb")" -Destination "$clientPkgDir"
+    $clientOutDir = [io.path]::combine($outDirs.Client, $NETSTANDARD13)
+    Copy-Item "$(Join-Path $clientOutDir -ChildPath "Raven.Client.dll")" -Destination "$clientPkgDir"
+    Copy-Item "$(Join-Path $clientOutDir -ChildPath "Raven.Client.pdb")" -Destination "$clientPkgDir"
 }
 
 function CopyDotnetTarForRaspberryPi ( $packageDir ) {
@@ -243,12 +240,7 @@ function CreateRegularPackageClientLayout( $outDirs, $packageDir, $projectDir) {
         CopyClient $frameworkClientOutDir $packageDir $assetsDir $framework
     }
 
-    foreach ($framework in $SUPPORTED_NEW_CLIENT_FRAMEWORKS) {
-        $frameworkNewClientOutDir = [io.path]::combine($outDirs.NewClient, $framework)
-        CopyNewClient $frameworkNewClientOutDir $packageDir $assetsDir $framework
-    }
-
-    $sparrowFrameworks = $($SUPPORTED_CLIENT_FRAMEWORKS + $SUPPORTED_NEW_CLIENT_FRAMEWORKS) | select -uniq
+    $sparrowFrameworks = $SUPPORTED_CLIENT_FRAMEWORKS
 
     foreach ($framework in $sparrowFrameworks) {
         $frameworkOutDir = [io.path]::combine($outDirs.Sparrow, $framework)
@@ -258,26 +250,6 @@ function CreateRegularPackageClientLayout( $outDirs, $packageDir, $projectDir) {
 }
 
 function CopyClient ( $clientOutDir, $packageDir, $assetsDir, $framework ) {
-    $ravenClientAssetsDir = [io.path]::combine($assetsDir, "Raven.Client")
-    $ravenClientDir = [io.path]::combine($packageDir, 'Client', $framework, 'Raven.Client')
-    $ravenClientDllDir = [io.path]::combine($ravenClientDir, $framework)
-    New-Item -ItemType Directory -Path $ravenClientDllDir
-
-    Copy-Item "$(Join-Path $clientOutDir -ChildPath "Raven.Client.dll")" -Destination "$ravenClientDllDir"
-    Copy-Item "$(Join-Path $clientOutDir -ChildPath "Raven.Client.pdb")" -Destination "$ravenClientDllDir"
-
-    $ravenClientProjectTemplate = Get-Content -Raw -Path $(Join-Path $ravenClientAssetsDir "project.json.template") | ConvertFrom-Json
-    $ravenClientProjectOrig = Get-Content -Raw -Path $([io.path]::combine($projectDir, "src", "Raven.Client",  "project.json")) | ConvertFrom-Json
-    $ravenClientProjectTemplate.dependencies = $ravenClientProjectOrig.dependencies
-    $ravenClientProjectTemplate.dependencies.Sparrow = $ravenClientProjectOrig.dependencies.Sparrow.version
-    $ravenClientProjectTemplate `
-    | ConvertTo-Json -Depth 100 `
-    | Out-File $(Join-Path $ravenClientDir -ChildPath "project.json") -Encoding UTF8
-
-    Copy-Item "$([io.path]::combine($projectDir, "src", "Raven.Client",  "Raven.Client.xproj"))" -Destination "$(Join-Path $ravenClientDir -ChildPath  "Raven.Client.xproj")"
-}
-
-function CopyNewClient ( $clientOutDir, $packageDir, $assetsDir, $framework ) {
     if (IsFullFramework $framework) {
         $ravenClientDllDir = [io.path]::combine($packageDir, 'Client', $framework)
         New-Item -ItemType Directory -Path $ravenClientDllDir
@@ -285,23 +257,23 @@ function CopyNewClient ( $clientOutDir, $packageDir, $assetsDir, $framework ) {
         Copy-Item "$(Join-Path $clientOutDir -ChildPath "*")" -Recurse -Destination "$ravenClientDllDir"
         CheckLastExitCode
     } else {
-        $ravenClientAssetsDir = [io.path]::combine($assetsDir, "Raven.NewClient")
-        $ravenClientDir = [io.path]::combine($packageDir, 'Client', $framework, 'Raven.NewClient')
+        $ravenClientAssetsDir = [io.path]::combine($assetsDir, "Raven.Client")
+        $ravenClientDir = [io.path]::combine($packageDir, 'Client', $framework, 'Raven.Client')
         $ravenClientDllDir = [io.path]::combine($ravenClientDir, $framework)
         New-Item -ItemType Directory -Path $ravenClientDllDir
 
-        Copy-Item "$(Join-Path $clientOutDir -ChildPath "Raven.NewClient.dll")" -Destination "$ravenClientDllDir"
-        Copy-Item "$(Join-Path $clientOutDir -ChildPath "Raven.NewClient.pdb")" -Destination "$ravenClientDllDir"
+        Copy-Item "$(Join-Path $clientOutDir -ChildPath "Raven.Client.dll")" -Destination "$ravenClientDllDir"
+        Copy-Item "$(Join-Path $clientOutDir -ChildPath "Raven.Client.pdb")" -Destination "$ravenClientDllDir"
 
         $ravenClientProjectTemplate = Get-Content -Raw -Path $(Join-Path $ravenClientAssetsDir "project.json.template") | ConvertFrom-Json
-        $ravenClientProjectOrig = Get-Content -Raw -Path $([io.path]::combine($projectDir, "src", "Raven.NewClient",  "project.json")) | ConvertFrom-Json
+        $ravenClientProjectOrig = Get-Content -Raw -Path $([io.path]::combine($projectDir, "src", "Raven.Client",  "project.json")) | ConvertFrom-Json
         $ravenClientProjectTemplate.dependencies = $ravenClientProjectOrig.dependencies
         $ravenClientProjectTemplate.dependencies.Sparrow = $ravenClientProjectOrig.dependencies.Sparrow.version
         $ravenClientProjectTemplate `
         | ConvertTo-Json -Depth 100 `
         | Out-File $(Join-Path $ravenClientDir -ChildPath "project.json") -Encoding UTF8
 
-        Copy-Item "$([io.path]::combine($projectDir, "src", "Raven.NewClient", "Raven.NewClient.xproj"))" -Destination "$(Join-Path $ravenClientDir -ChildPath  "Raven.NewClient.xproj")"
+        Copy-Item "$([io.path]::combine($projectDir, "src", "Raven.Client", "Raven.Client.xproj"))" -Destination "$(Join-Path $ravenClientDir -ChildPath  "Raven.Client.xproj")"
     }
 }
 

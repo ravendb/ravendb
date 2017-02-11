@@ -9,15 +9,8 @@ function BuildServer ( $srcDir, $outDir, $runtime, $specName ) {
     CheckLastExitCode
 }
 
-function BuildClient ( $srcDir, $outDir, $specName ) {
+function BuildClient ( $srcDir, $specName ) {
     write-host "Building Client for $specName..."
-    & dotnet build --no-incremental `
-                --configuration "Release" $srcDir;
-    CheckLastExitCode
-}
-
-function BuildNewClient ( $srcDir, $specName ) {
-    write-host "Building NewClient for $specName..."
     & dotnet build --no-incremental `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
