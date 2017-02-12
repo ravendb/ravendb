@@ -283,7 +283,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             var reduceReductionColumn = tableColumnsCache.ScheduledReductionColumns["reduce_key"];
             var bucketReductionColumn = tableColumnsCache.ScheduledReductionColumns["bucket"];
 
-            var keysToRemove = new List<string>();
+            var keysToRemove = new HashSet<string>();
             var output = new List<MappedResultInfo>();
             var seenLocally = new HashSet<ReduceKeyAndBucket>(ReduceKeyAndBucketEqualityComparer.Instance);
             

@@ -534,7 +534,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 return (Slice)etag.ToString();
             });
 
-            var keysToRemove = new List<string>();
+            var keysToRemove = new HashSet<string>();
 
             try
             {
