@@ -76,6 +76,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             private readonly string _outputReduceToCollection;
             private readonly List<OutputReduceDocument> _reduceDocuments = new List<OutputReduceDocument>();
             private readonly JsonOperationContext _jsonContext;
+            private PropertyAccessor _propertyAccessor;
 
             public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection)
             {
@@ -115,8 +116,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var key = _outputReduceToCollection + "/" + reduceKeyHash;
 
                 var djv = new DynamicJsonValue();
-                var propertyAccessor = PropertyAccessor.Create(reduceObject.GetType());
-                foreach (var property in propertyAccessor.PropertiesInOrder)
+
+                if (_propertyAccessor == null)
+                    _propertyAccessor = PropertyAccessor.Create(reduceObject.GetType());
+                foreach (var property in _propertyAccessor.PropertiesInOrder)
                 {
                     var value = property.Value.GetValue(reduceObject);
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value);
