@@ -135,13 +135,6 @@ namespace Raven.Client
         bool IsLoaded(string id);
 
         /// <summary>
-        ///     Mark the entity as read only, change tracking won't apply
-        ///     to such an entity. This can be done as an optimization step, so
-        ///     we don't need to check the entity for changes.
-        /// </summary>
-        void MarkReadOnly(object entity);
-
-        /// <summary>
         /// Mark the entity as one that should be ignore for change tracking purposes,
         /// it still takes part in the session, but is ignored for SaveChanges.
         /// </summary>
