@@ -30,6 +30,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         private readonly Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper>();
 
+        public PropertyAccessor OutputReduceToCollectionPropertyAccessor;
+
         private MapReduceIndex(int indexId, MapReduceIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.MapReduce, definition)
         {
