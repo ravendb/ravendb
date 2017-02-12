@@ -272,36 +272,6 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        //[Fact(Skip = "NotImplementedException")]
-        [Fact]
-        public void CanMarkReadOnly()
-        {
-            const string categoryName = "MarkReadOnlyTest";
-
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Company { Id = "companies/1" });
-                    session.SaveChanges();
-
-                    var company = session.Load<Company>("companies/1");
-                    session.Advanced.MarkReadOnly(company);
-                    company.Name = categoryName;
-                    Assert.True(session.Advanced.HasChanges);
-
-                    session.Store(company);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var company = session.Load<Company>("companies/1");
-                    Assert.Equal("true", session.Advanced.GetMetadataFor<Company>(company)["Raven-Read-Only"]);
-                }
-            }
-        }
-
         [Fact]
         public void CanUseNumberOfRequests()
         {

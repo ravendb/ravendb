@@ -12,17 +12,6 @@ namespace Raven.Client.Blittable
     {
         public bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
         {
-            // prevent saves of a modified read only entity
-            object readOnly;
-            documentInfo.Metadata.TryGet(Constants.Headers.RavenReadOnly, out readOnly);
-            BlittableJsonReaderObject newMetadata;
-            var newReadOnly = "false";
-            if (newObj.TryGet(Constants.Metadata.Key, out newMetadata))
-                newMetadata.TryGet(Constants.Headers.RavenReadOnly, out newReadOnly);
-
-            if ((readOnly != null) && (readOnly.Equals("true")) && (newReadOnly.Equals("true")))
-                return false;
-
             var docChanges = new List<DocumentsChanges>();
 
             if (!documentInfo.IsNewDocument && documentInfo.Document != null)
