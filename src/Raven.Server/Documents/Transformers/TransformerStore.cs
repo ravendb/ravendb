@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Exceptions.Transformers;
 using Raven.Client.Indexing;
 using Raven.Server.Config.Settings;
+using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Logging;
@@ -23,14 +25,20 @@ namespace Raven.Server.Documents.Transformers
 
         private readonly object _locker = new object();
 
+        /// <summary>
+        /// The current lock, used to avoid create a new index when wcreating transformer 
+        /// </summary>
+        private readonly object _indexOrTransformerLock;
+
         private bool _initialized;
 
         private PathSetting _path;
 
-        public TransformerStore(DocumentDatabase documentDatabase)
+        public TransformerStore(DocumentDatabase documentDatabase, object indexTransformerLock)
         {
             _documentDatabase = documentDatabase;
             _log = LoggingSource.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
+            _indexOrTransformerLock = indexTransformerLock;
         }
 
         public Task InitializeAsync()
@@ -117,8 +125,13 @@ namespace Raven.Server.Documents.Transformers
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            lock (_locker)
+            lock (_indexOrTransformerLock)
             {
+                var indexes = _documentDatabase.IndexStore.GetIndexes().Select(x => x.Name).ToArray();
+                if (indexes.Contains(definition.Name))
+                {
+                    throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exist");
+                }
                 Transformer existingTransformer;
                 var lockMode = ValidateTransformerDefinition(definition.Name, out existingTransformer);
                 if (lockMode == TransformerLockMode.LockedIgnore)
@@ -213,8 +226,8 @@ namespace Raven.Server.Documents.Transformers
             Debug.Assert(transformer != null);
             Debug.Assert(transformerId > 0);
 
-            _transformers.Add(transformer);
             var etag = _documentDatabase.IndexMetadataPersistence.OnTransformerCreated(transformer);
+            _transformers.Add(transformer);
             _documentDatabase.Changes.RaiseNotifications(new TransformerChange
             {
                 Name = transformer.Name,

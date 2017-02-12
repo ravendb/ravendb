@@ -16,6 +16,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils;
@@ -33,6 +34,11 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly object _locker = new object();
 
+        /// <summary>
+        /// The current lock, used to avoid create a new transformer when creating index 
+        /// </summary>
+        private readonly object _indexOrTransformerLock;
+
         private bool _initialized;
 
         private bool _run = true;
@@ -41,10 +47,11 @@ namespace Raven.Server.Documents.Indexes
 
         public Logger Logger => _logger;
 
-        public IndexStore(DocumentDatabase documentDatabase)
+        public IndexStore(DocumentDatabase documentDatabase, object indexTransformerLock)
         {
             _documentDatabase = documentDatabase;
             _logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
+            _indexOrTransformerLock = indexTransformerLock;
         }
 
         public Task InitializeAsync()
@@ -97,8 +104,13 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            lock (_locker)
+            lock (_indexOrTransformerLock)
             {
+                var transformers = _documentDatabase.TransformerStore.GetTransformers().Select(x => x.Name).ToArray();
+                if (transformers.Contains(definition.Name))
+                {
+                    throw new IndexOrTransformerAlreadyExistException($"Tried to create an index with a name of {definition.Name}, but a transformer under the same name exist");
+                }
                 Index existingIndex;
                 var lockMode = ValidateIndexDefinition(definition.Name, out existingIndex);
                 if (lockMode == IndexLockMode.LockedIgnore)
@@ -200,13 +212,13 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(index != null);
             Debug.Assert(indexId > 0);
-
+            var tr = _documentDatabase.TransformerStore.GetTransformers();
             if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
                 index.Start();
 
-            _indexes.Add(index);
-
             var etag = _documentDatabase.IndexMetadataPersistence.OnIndexCreated(index);
+
+            _indexes.Add(index);
 
             _documentDatabase.Changes.RaiseNotifications(
                 new IndexChange

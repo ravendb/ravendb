@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
-
+        
         public void ResetIdleTime()
         {
             _lastIdleTicks = DateTime.MinValue.Ticks;
@@ -55,8 +55,9 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             Changes = new DocumentsChanges();
             DocumentsStorage = new DocumentsStorage(this);
-            IndexStore = new IndexStore(this);
-            TransformerStore = new TransformerStore(this);
+            var @lock = new object();
+            IndexStore = new IndexStore(this, @lock);
+            TransformerStore = new TransformerStore(this, @lock);
             SqlReplicationLoader = new SqlReplicationLoader(this);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
