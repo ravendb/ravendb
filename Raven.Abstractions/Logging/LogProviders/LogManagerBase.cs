@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Extensions;
@@ -8,7 +9,7 @@ namespace Raven.Abstractions.Logging.LogProviders
     public abstract class LogManagerBase : ILogManager
     {
         private readonly Func<object, ILog> loggerFactory;
-        private readonly Func<string, object> getLoggerByNameDelegate;
+        private readonly Func<Assembly, string, object> getLoggerByNameDelegate;
         private readonly Action<string> mdcRemoveMethodCall;
         private readonly Action<string, string> mdcSetMethodCall;
         private readonly Func<string, IDisposable> ndcPushMethodCall;
@@ -22,7 +23,7 @@ namespace Raven.Abstractions.Logging.LogProviders
             mdcRemoveMethodCall = GetMdcRemoveMethodCall();
         }
 
-        public Func<string, object> GetLoggerByNameDelegate
+        public Func<Assembly, string, object> GetLoggerByNameDelegate
         {
             get { return getLoggerByNameDelegate; }
         }
@@ -45,9 +46,18 @@ namespace Raven.Abstractions.Logging.LogProviders
 
         protected abstract Type GetMdcType();
 
+        
         public ILog GetLogger(string name)
         {
-            return loggerFactory(getLoggerByNameDelegate(name));
+            var @type = this.GetType();
+            Assembly @asm;
+#if !DNXCORE50
+            @asm = @type.Assembly;
+#else
+            @asm = @type.GetTypeInfo().Assembly;
+#endif
+            
+            return loggerFactory(getLoggerByNameDelegate(@asm, name));
         }
 
         public IDisposable OpenNestedConext(string message)
@@ -61,14 +71,42 @@ namespace Raven.Abstractions.Logging.LogProviders
             return new DisposableAction(() => mdcRemoveMethodCall(key));
         }
 
-        private Func<string, object> GetGetLoggerMethodCall()
+        private Func<Assembly, string, object> GetGetLoggerMethodCall()
         {
             Type logManagerType = GetLogManagerType();
-            MethodInfo method = logManagerType.GetMethod("GetLogger", new[] {typeof (string)});
-            ParameterExpression resultValue;
-            ParameterExpression keyParam = Expression.Parameter(typeof (string), "key");
-            MethodCallExpression methodCall = Expression.Call(null, method, new Expression[] {resultValue = keyParam});
-            return Expression.Lambda<Func<string, object>>(methodCall, new[] {resultValue}).Compile();
+            MethodInfo method;
+            
+            ParameterExpression assembly = Expression.Parameter(typeof(Assembly), "repositoryAssembly");
+            ParameterExpression name = Expression.Parameter(typeof(string), "name");
+
+            method = logManagerType.GetMethod("GetLogger", new[] { typeof(string) });
+            if (method != null)
+            {
+                MethodCallExpression methodCall =
+                    Expression.Call(null, method, new Expression[]
+                    {
+                        name
+                    });
+
+                var block = Expression.Block(methodCall);
+                return Expression.Lambda<Func<Assembly, string, object>>(block, new[] { assembly, name}).Compile();
+            }
+
+            method = logManagerType.GetMethod("GetLogger", new[] { typeof(Assembly), typeof(string) });
+            if (method != null)
+            {
+                MethodCallExpression methodCall =
+                    Expression.Call(null, method, new Expression[]
+                    {
+                    assembly,
+                    name
+                    });
+                return Expression.Lambda<Func<Assembly, string, object>>(methodCall, new[] { assembly, name }).Compile();
+            }
+            Debug.Assert(false, "Could not find a valid logger"); // we'll throw only if in debug, for release we'll keep running without logs
+            var returnNullBlock = Expression.Block(Expression.Label(Expression.Label(typeof(object)),Expression.Constant(null)));
+            return Expression.Lambda<Func<Assembly, string, object>>(returnNullBlock, new[] { assembly, name }).Compile();
+            
         }
 
         private Func<string, IDisposable> GetNdcPushMethodCall()
