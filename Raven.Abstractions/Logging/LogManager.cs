@@ -47,6 +47,10 @@ namespace Raven.Abstractions.Logging
 
             // This can throw in a case of invalid NLog.config file.
             var log = logManager.GetLogger(name);
+
+            if (log  == null)
+                return new LoggerExecutionWrapper(new NoOpLogger(), name, Targets);
+
             return new LoggerExecutionWrapper(log, name, Targets);
         }
 
