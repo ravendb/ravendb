@@ -525,7 +525,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
             var deleter = new ScheduledReductionDeleter(getItemsToReduceParams.ItemsToDelete);
 
-            var keysToRemove = new List<string>();
+            var keysToRemove = new HashSet<string>();
 
             try
             {
