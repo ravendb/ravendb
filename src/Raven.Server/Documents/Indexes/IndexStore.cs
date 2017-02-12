@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Indexes
             return IndexCreationOptions.Update;
         }
 
-        public IndexLockMode ValidateIndexDefinition(string name, out Index existingIndex)
+        private IndexLockMode ValidateIndexDefinition(string name, out Index existingIndex)
         {
             ValidateIndexName(name);
 

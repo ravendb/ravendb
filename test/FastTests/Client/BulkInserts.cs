@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client;
 using Raven.Client.Commands;
 using Raven.Client.Indexes;
-using Xunit;
 using Sparrow.Json;
+using Xunit;
 
-namespace NewClientTests.NewClient.FastTests.BulkInsert
+namespace FastTests.Client
 {
     public class BulkInserts : RavenNewTestBase
     {

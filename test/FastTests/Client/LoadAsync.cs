@@ -1,11 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using FastTests;
+﻿using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace NewClientTests.NewClient
+namespace FastTests.Client
 {
     public class LoadAsync : RavenNewTestBase
     {

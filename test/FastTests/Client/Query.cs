@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using FastTests;
 using Raven.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace NewClientTests.NewClient
+namespace FastTests.Client
 {
     public class Query : RavenNewTestBase
     {

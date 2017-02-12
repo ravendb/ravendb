@@ -10,7 +10,7 @@ using Raven.Client.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests
+namespace FastTests.Client
 {
     public class Hilo : RavenNewTestBase
     {

@@ -1,9 +1,8 @@
-﻿using FastTests;
-using Raven.Client.Document;
+﻿using Raven.Client.Document;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace NewClientTests.NewClient
+namespace FastTests.Client
 {
     public class CRUD : RavenNewTestBase
     {

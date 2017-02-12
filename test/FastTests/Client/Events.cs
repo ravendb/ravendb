@@ -1,9 +1,8 @@
-﻿using FastTests;
-using Raven.Client;
+﻿using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace NewClientTests.NewClient
+namespace FastTests.Client
 {
     public class Events : RavenNewTestBase
     {

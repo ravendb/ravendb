@@ -1,8 +1,7 @@
-﻿using FastTests;
-using Raven.Client.Data;
+﻿using Raven.Client.Data;
 using Xunit;
 
-namespace NewClientTests.NewClient
+namespace FastTests.Client
 {
     public class WhatChanged : RavenNewTestBase
     {
