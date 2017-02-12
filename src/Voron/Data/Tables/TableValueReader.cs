@@ -27,11 +27,11 @@ namespace Voron.Data.Tables
             Id = id;
             Pointer = ptr;
             Size = size;
-            
-            if (size > byte.MaxValue)
-                _elementSize = 2;
-            else if (size > ushort.MaxValue)
+
+            if (size > ushort.MaxValue)
                 _elementSize = 4;
+            else if (size > byte.MaxValue)
+                _elementSize = 2;
             else
                 _elementSize = 1;
 
