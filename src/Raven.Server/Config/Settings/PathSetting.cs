@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Raven.Server.ServerWide;
 using Sparrow.Platform;
@@ -47,6 +48,9 @@ namespace Raven.Server.Config.Settings
             var result = Path.IsPathRooted(path)
                 ? path
                 : Path.Combine(_baseDataDir?.FullPath ?? AppContext.BaseDirectory, path);
+
+            if (result.Length > 260 && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                result = @"\\?\" + result;
 
             if (PlatformDetails.RunningOnPosix)
                 return PosixHelper.FixLinuxPath(result);
