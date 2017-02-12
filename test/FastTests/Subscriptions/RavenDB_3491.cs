@@ -52,9 +52,9 @@ namespace NewClientTests.NewClient.Subscriptions
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
-
-                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata.Key].Value<string>("@id")));
-                        subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
+                        
+                        subscription.Subscribe(x => keys.Add(x.Id));
+                        subscription.Subscribe(x => ages.Add(x.Age));
 
                         subscription.Subscribe(docs.Add);
 
@@ -213,8 +213,8 @@ namespace NewClientTests.NewClient.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata.Key].Value<string>("@id")));
-                        subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
+                        subscription.Subscribe(x => keys.Add(x.Id));
+                        subscription.Subscribe(x => ages.Add(x.Age));
 
                         subscription.Subscribe(docs.Add);
 
