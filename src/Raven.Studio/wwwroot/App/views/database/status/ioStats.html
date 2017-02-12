@@ -1,72 +1,133 @@
 <style>
-    svg text {
-        fill: #98a7b7;
+    #IOMetricsContainer {
+        position: relative;
     }
 
-    .axis path {
-        fill: none;
-        stroke: #39434f;
+        #IOMetricsContainer canvas, #IOMetricsContainer svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+    .brush .extent {
+        fill-opacity: .3;
+        stroke: #ca1c59;
+        fill: #ca1c59;
         shape-rendering: crispEdges;
     }
 
-    .type_JournalWrite {
-        fill: #31a354;
-        stroke: #31a354;
-    }
-
-    .type_DataFlush {
-        fill: #fd8d3c;
-        stroke: #e6550d;
-    }
-
-    .type_DataSync {
-        fill: #6baed6;
-        stroke: #3182bd;
-    }
-
-    .type_fg_JournalWrite {
-        fill: #31a354;
-    }
-
-    .type_fg_DataFlush {
-        fill: #e6550d;
-    }
-
-    .type_fg_DataSync {
-        fill: #6baed6;
-    }
-
-    .type_bg_JournalWrite {
-        stroke: #c7e9c0;
+    rect.pane {
         fill: none;
+        pointer-events: all;
     }
 
-    .type_bg_DataFlush {
-        stroke: #fd8d3c;
-        fill: none;
+    .tooltip { 
+        box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.45);
+        position: absolute;
+        text-align: left;
+        background: #2c3333;
+        color: #a9adad;
+        border: 0px;
+        padding: 8px 16px;
+        border-radius: 2px;
+        pointer-events: none;
+        opacity: 1;
     }
 
-    .type_bg_DataSync {
-        stroke: #6baed6;
-        fill: none;
+    .legendColor {
+        width: 15px;
+        height: 15px;
+        display: inline-block;
     }
 </style>
 
-<div class="form-inline toolbar" role="form">
 
-    <button class="btn btn-default" data-bind="click: exportAsJson"><i class="icon-export"></i> <span>Export</span></button>
-    
-    <div class="input-group file-input">
-        <input required="" type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1">
-        <label for="importFilePicker" class="btn btn-default">
-            <i class="icon-import"></i>
-            <span>Import</span>
-        </label>
+<div class="row">
+    <div class="col-md-4">
+        <div class="form-inline toolbar" role="form">
+            <div class="input-group">
+                <input type="text" accesskey="/" class="form-control" placeholder="Filter indexes" title="Filter Indexes (Alt+/)" data-bind="textInput: searchText"/>
+            </div>
+
+            <button class="btn btn-default" data-bind="click: expandIndexes, visible: !isIndexesExpanded()" title="Expand indexes IO stats details"><span>Expand</span></button>
+            <button class="btn btn-default" data-bind="click: collapseIndexes, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><span>Collapse</span></button>
+
+            <button class="btn btn-default" data-bind="click: exportAsJson" title="Export current IO stats graph to a file">
+                <i class="icon-export"></i><span>Export</span>
+            </button>
+
+            <div data-bind="visible: isImport">
+                <br/>
+                <button class="btn btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database IO stats graph">
+                    <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'">Close import</span>
+                </button>
+            </div>
+
+            <div class="input-group file-input" title="Import IO stats graph file">
+                <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json" style="width: 10px">
+                <label for="importFilePicker" class="btn btn-default" data-bind="visible: !isImport()">
+                    <i class="icon-import"></i><span>Import</span>
+                </label>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div id="#IOMetricsLegend">
+            <div class="row">
+                <label class="col-md-1">Legend:</label>
+                <small><strong class="col-md-2" data-bind="style: {color: 'black', 'background-color': eventsColors.JournalWriteLowSizeColor}">Journal Write</strong></small>
+                <small><strong class="col-md-offset-1 col-md-2" data-bind="style: {color: 'black', 'background-color': eventsColors.DataSyncLowSizeColor}">Voron Data Sync</strong></small>
+                <small><strong class="col-md-offset-1 col-md-2" data-bind="style: {color: 'black', 'background-color': eventsColors.DataFlushLowSizeColor}">Voron Data Flush</strong></small>
+            </div>
+            <div class="row">
+                <span class="col-md-offset-1 col-md-3">
+                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.JournalWriteLowSizeColor}"></span>
+                    <small>&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: journalWriteLowHumanSizeLevel"></span></small>
+                </span>
+                <span class="col-md-3">
+                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.DataSyncLowSizeColor}"></span>
+                    <small>&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: dataSyncLowHumanSizeLevel"></span></small>
+                </span>
+                <span class="col-md-3">
+                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.DataFlushLowSizeColor}"></span>
+                    <small>&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: dataFlushLowHumanSizeLevel"></span></small>
+                </span>
+            </div>
+            <div class="row">
+                <span class="col-md-offset-1 col-md-3"><span class="legendColor" data-bind="style: {'background-color': eventsColors.JournalWriteMedSizeColor}"></span>
+                    <small>&nbsp;<span data-bind="text: journalWriteLowHumanSizeLevel"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: journalWriteHighHumanSizeLevel"></span></small>
+                </span>
+                <span class="col-md-3"><span class="legendColor" data-bind="style: {'background-color': eventsColors.DataSyncMedSizeColor}"></span>
+                    <small>&nbsp;<span data-bind="text: dataSyncLowHumanSizeLevel"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: dataSyncHighHumanSizeLevel"></span></small>
+                </span>
+                <span class="col-md-3"><span class="legendColor" data-bind="style: {'background-color': eventsColors.DataFlushMedSizeColor}"></span>
+                    <small>&nbsp;<span data-bind="text: dataFlushLowHumanSizeLevel"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: dataFlushHighHumanSizeLevel"></span></small>
+                </span>
+            </div>
+            <div class="row">
+                <span class="col-md-offset-1 col-md-3">
+                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.JournalWriteHighSizeColor}"></span>
+                    &nbsp;&gt;&nbsp;<small><span data-bind="text: journalWriteHighHumanSizeLevel"></span></small>
+                </span>
+                <span class="col-md-3">
+                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.DataSyncHighSizeColor}"></span>
+                    &nbsp;&gt;&nbsp;<small><span data-bind="text: dataSyncHighHumanSizeLevel"></span></small>
+                </span>
+                <span class="col-md-3">
+                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.DataFlushHighSizeColor}"></span>
+                    &nbsp;&gt;&nbsp;<small><span data-bind="text: dataFlushHighHumanSizeLevel"></span></small>
+                </span>
+            </div>
+        </div>
     </div>
 </div>
 
-<section id="ioStats" style="position: relative">
-    <section data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-        <svg id="ioStatsGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
+<br />
+<div id="ioStats" style="position: relative">
+    <section id="IOMetricsContainer">
+        <div class="tooltip" style="opacity: 0">
+        </div>
     </section>
-</section>
+</div>
