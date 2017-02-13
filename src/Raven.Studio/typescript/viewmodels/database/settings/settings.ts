@@ -41,7 +41,6 @@ class settings extends viewModelBase {
                 editsqlReplicationsRoute,
                 versioningRoute,
                 periodicExportRoute,
-                //scriptedIndexesRoute,
                 customFunctionsEditorRoute,
                 databaseStudioConfig
             ])
