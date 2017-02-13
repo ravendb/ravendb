@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Raven.Server.Web.System
@@ -34,7 +35,7 @@ namespace Raven.Server.Web.System
             "clock$"
         };
 
-        public const int WindowsMaxPath = 230;
+        public static readonly int WindowsMaxPath = (int)typeof(Path).GetField("MaxLongPath", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
 
         public const int LinuxMaxFileNameLength = 230;
 
