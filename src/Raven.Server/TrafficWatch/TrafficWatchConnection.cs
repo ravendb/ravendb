@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Logging;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -22,7 +23,6 @@ namespace Raven.Server.TrafficWatch
         public string TenantSpecific { get; set; }
         public bool IsAlive => _cancellationTokenSource.IsCancellationRequested == false;
 
-        private static readonly byte[] HeartbeatMessage = {(byte) '\r', (byte) '\n'};
         private readonly AsyncManualResetEvent _manualResetEvent;
         private readonly CancellationTokenSource _cancellationTokenSource;
 
@@ -50,7 +50,7 @@ namespace Raven.Server.TrafficWatch
 
                     if (result == false)
                     {
-                        await SendMessage(HeartbeatMessage).ConfigureAwait(false);
+                        await SendMessage(WebSocketHelper.Heartbeat).ConfigureAwait(false);
                         continue;
                     }
 

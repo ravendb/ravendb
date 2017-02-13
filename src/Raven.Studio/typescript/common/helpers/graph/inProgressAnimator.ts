@@ -1,0 +1,114 @@
+/// <reference path="../../../../typings/tsd.d.ts" />
+
+class inProgressAnimator {
+
+    private inProgressArea: number[][] = [];
+    private canvas: HTMLCanvasElement;
+    private context: CanvasRenderingContext2D;
+
+    private inMemoryStripesCanvas: HTMLCanvasElement;
+
+    private hasTimerRunning = false;
+    private startTime: number;
+
+    private static readonly stripesPadding = 10;
+
+    constructor(canvas: HTMLCanvasElement) {
+        this.canvas = canvas;
+        this.context = canvas.getContext("2d");
+
+        this.inMemoryStripesCanvas = document.createElement("canvas");
+        this.inMemoryStripesCanvas.width = this.canvas.width + 2 * inProgressAnimator.stripesPadding;
+        this.inMemoryStripesCanvas.height = this.canvas.height;
+
+        this.fillWithStripes();
+    }
+
+    private fillWithStripes() {
+        const context = this.inMemoryStripesCanvas.getContext("2d");
+
+        context.strokeStyle = "rgba(255,255,255,0.1)";
+        context.lineWidth = 3;
+
+        const height = this.inMemoryStripesCanvas.height;
+        const widthAndHeight = this.inMemoryStripesCanvas.width + height;
+
+        for (let dx = -widthAndHeight; dx <= widthAndHeight; dx += inProgressAnimator.stripesPadding) {
+            context.moveTo(dx - height, height);
+            context.lineTo(dx, 0);
+        }
+        context.stroke();
+    }
+
+    reset() {
+        this.inProgressArea = [];
+    }
+
+    register(input: number[]) {
+        this.inProgressArea.push(input);
+    }
+
+    animate() {
+        if (this.hasTimerRunning) {
+            return;
+        }
+
+        if (this.inProgressArea.length) {
+            this.hasTimerRunning = true;
+
+            this.startTime = new Date().getTime();
+
+            d3.timer(() => this.onFrame());
+        } else {
+            this.clear();
+        }
+    }
+
+    private clear() {
+        const context = this.context;
+        context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    private onFrame() {
+        if (this.inProgressArea.length === 0) {
+            this.clear();
+            this.hasTimerRunning = false;
+            return true;
+        } 
+
+        this.clear();
+        this.draw();
+
+        return false;
+    }
+
+    private draw() {
+
+        const animationDuration = 600;
+        const progress = (new Date().getTime() % animationDuration) / animationDuration;
+        const currentShift = Math.floor(progress * inProgressAnimator.stripesPadding);
+
+        const context = this.context;
+
+        context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        context.save();
+        try {
+            context.beginPath();
+            this.inProgressArea.forEach(area => {
+                context.rect(area[0], area[1], area[2], area[3]);
+            });
+            
+            context.clip();
+
+            context.drawImage(this.inMemoryStripesCanvas, -currentShift, 0);
+
+        } finally {
+            this.context.restore();
+        }
+    }
+
+  
+}
+
+export = inProgressAnimator;

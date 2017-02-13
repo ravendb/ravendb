@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,8 +14,6 @@ namespace Raven.Server.NotificationCenter
 {
     public class NotificationCenterWebsocketWriter : IWebsocketWriter, IDisposable
     {
-        private static readonly ArraySegment<byte> Heartbeat = new ArraySegment<byte>(new[] { (byte)'\r', (byte)'\n' });
-
         private readonly CancellationToken _resourceShutdown;
         private readonly NotificationCenter _notificationCenter;
         private readonly IMemoryContextPool _contextPool;
@@ -50,14 +49,13 @@ namespace Raven.Server.NotificationCenter
                         // we use this to detect client-initialized closure
                         if (receive.IsCompleted)
                         {
-                            if (_webSocket.CloseStatus == WebSocketCloseStatus.NormalClosure)
-                                break;
+                            break;
                         }
 
                         var tuple = await asyncQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
                         if (tuple.Item1 == false)
                         {
-                            await _webSocket.SendAsync(Heartbeat, WebSocketMessageType.Text, true, _resourceShutdown);
+                            await _webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, _resourceShutdown);
                             continue;
                         }
 
