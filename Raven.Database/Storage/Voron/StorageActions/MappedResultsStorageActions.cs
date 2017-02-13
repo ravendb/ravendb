@@ -534,7 +534,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 return (Slice)etag.ToString();
             });
 
-            var keysToRemove = new List<string>();
+            var keysToRemove = new HashSet<string>();
 
             try
             {
@@ -594,19 +594,21 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                             var thisIsNewScheduledReductionRow = deleter.Delete(iterator.CurrentKey, Etag.Parse(value.ReadBytes(ScheduledReductionFields.Etag)));
 
-                            if (thisIsNewScheduledReductionRow)
-                            {
-                                if (seenLocally.Add(rowKey))
-                                {
-                                    getItemsToReduceParams.LastReduceKeyAndBucket = rowKey;
-                                    foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData, cancellationToken))
-                                    {
-                                        getItemsToReduceParams.Take--;
+                            if (thisIsNewScheduledReductionRow == false)
+                                continue;
 
-                                        mappedResults.Add(mappedResultInfo);
-                                    }
+                            if (seenLocally.Add(rowKey))
+                            {
+                                getItemsToReduceParams.LastReduceKeyAndBucket = rowKey;
+                                foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData, cancellationToken))
+                                {
+                                    getItemsToReduceParams.Take--;
+
+                                    mappedResults.Add(mappedResultInfo);
                                 }
                             }
+
+                            keysToRemove.Add(reduceKey);
                         }
                         while (iterator.MoveNext());
                     }
