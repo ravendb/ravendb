@@ -45,6 +45,7 @@ namespace Raven.Server.Documents.Handlers
                         Name = index.Name,
                         IndexId = index.IndexId,
                         LockMode = index.Definition.LockMode,
+                        Priority = index.Definition.Priority,
                         Type = index.Type,
                         LastIndexingTime = index.LastIndexingTime
                     };

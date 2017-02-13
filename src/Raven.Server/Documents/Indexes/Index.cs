@@ -226,8 +226,6 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexType Type { get; }
 
-        public IndexPriority Priority { get; private set; }
-
         public IndexState State { get; protected set; }
 
         public IndexDefinitionBase Definition { get; private set; }
@@ -398,7 +396,6 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
             {
-                Priority = _indexStorage.ReadPriority(tx);
                 State = _indexStorage.ReadState(tx);
                 _lastQueryingTime = DocumentDatabase.Time.GetUtcNow();
                 LastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
@@ -809,7 +806,7 @@ namespace Raven.Server.Documents.Indexes
             _priorityChanged = false;
 
             ThreadPriority newPriority;
-            var priority = Priority;
+            var priority = Definition.Priority;
             switch (priority)
             {
                 case IndexPriority.Low:
@@ -1067,22 +1064,22 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual void SetPriority(IndexPriority priority)
         {
-            if (Priority == priority)
+            if (Definition.Priority == priority)
                 return;
 
             using (DrainRunningQueries())
             {
                 AssertIndexState(assertState: false);
 
-                if (Priority == priority)
+                if (Definition.Priority == priority)
                     return;
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Changing priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
+                    _logger.Info($"Changing priority for '{Name} ({IndexId})' from '{Definition.Priority}' to '{priority}'.");
 
                 _indexStorage.WritePriority(priority);
 
-                Priority = priority;
+                Definition.Priority = priority;
                 _priorityChanged = true;
             }
         }
@@ -1136,7 +1133,6 @@ namespace Raven.Server.Documents.Indexes
         {
             if (Definition.LockMode == mode)
                 return;
-
 
             using (DrainRunningQueries())
             {
@@ -1271,7 +1267,7 @@ namespace Raven.Server.Documents.Indexes
                 stats.Type = Type;
                 stats.EntriesCount = reader.EntriesCount();
                 stats.LockMode = Definition.LockMode;
-                stats.Priority = Priority;
+                stats.Priority = Definition.Priority;
                 stats.State = State;
                 stats.Status = Status;
 

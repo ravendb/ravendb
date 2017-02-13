@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public readonly IndexDefinition IndexDefinition;
 
         public MapIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields, bool hasDynamicFields)
-            : base(definition.Name, collections, definition.LockMode, GetFields(definition, outputFields))
+            : base(definition.Name, collections, definition.LockMode, definition.Priority, GetFields(definition, outputFields))
         {
             _hasDynamicFields = hasDynamicFields;
             IndexDefinition = definition;
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override int ComputeRestOfHash(int hashCode)
         {
-            return hashCode*397 ^ IndexDefinition.GetHashCode();
+            return hashCode * 397 ^ IndexDefinition.GetHashCode();
         }
 
         public static IndexDefinition Load(StorageEnvironment environment)
@@ -90,6 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     var definition = ReadIndexDefinition(reader);
                     definition.Name = ReadName(reader);
                     definition.LockMode = ReadLockMode(reader);
+                    definition.Priority = ReadPriority(reader);
 
                     return definition;
                 }
