@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Sparrow.Json;
 using Voron;
@@ -10,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Auto
     public class AutoMapIndexDefinition : IndexDefinitionBase
     {
         public AutoMapIndexDefinition(string collection, IndexField[] fields)
-            : base(IndexNameFinder.FindMapIndexName(collection, fields), new HashSet<string> { collection }, IndexLockMode.Unlock, fields)
+            : base(IndexNameFinder.FindMapIndexName(collection, fields), new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, fields)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
@@ -80,12 +81,14 @@ namespace Raven.Server.Documents.Indexes.Auto
         public static AutoMapIndexDefinition LoadFromJson(BlittableJsonReaderObject reader)
         {
             var lockMode = ReadLockMode(reader);
+            var priority = ReadPriority(reader);
             var collections = ReadCollections(reader);
             var fields = ReadMapFields(reader);
 
             return new AutoMapIndexDefinition(collections[0], fields)
             {
-                LockMode = lockMode
+                LockMode = lockMode,
+                Priority = priority
             };
         }
     }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Extensions.Internal;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
@@ -23,12 +24,13 @@ namespace Raven.Server.Documents.Indexes
 
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexField[] mapFields)
+        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexField[] mapFields)
         {
             Name = name;
             Collections = collections;
             MapFields = mapFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
             LockMode = lockMode;
+            Priority = priority;
         }
 
         static IndexDefinitionBase()
@@ -43,6 +45,8 @@ namespace Raven.Server.Documents.Indexes
         public Dictionary<string, IndexField> MapFields { get; }
 
         public IndexLockMode LockMode { get; set; }
+
+        public IndexPriority Priority { get; set; }
 
         public virtual bool HasDynamicFields => false;
 
@@ -84,11 +88,11 @@ namespace Raven.Server.Documents.Indexes
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(Name)));
+            writer.WritePropertyName(nameof(Name));
             writer.WriteString(Name);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(Collections)));
+            writer.WritePropertyName(nameof(Collections));
             writer.WriteStartArray();
             var isFirst = true;
             foreach (var collection in Collections)
@@ -102,8 +106,13 @@ namespace Raven.Server.Documents.Indexes
 
             writer.WriteEndArray();
             writer.WriteComma();
-            writer.WritePropertyName((nameof(LockMode)));
+
+            writer.WritePropertyName(nameof(LockMode));
             writer.WriteInteger((int)LockMode);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(Priority));
+            writer.WriteInteger((int)Priority);
             writer.WriteComma();
 
             PersistFields(context, writer);
@@ -154,6 +163,7 @@ namespace Raven.Server.Documents.Indexes
             indexDefinition.IndexId = index.IndexId;
             indexDefinition.Type = index.Type;
             indexDefinition.LockMode = LockMode;
+            indexDefinition.Priority = Priority;
 
             return indexDefinition;
         }
@@ -269,6 +279,15 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException("No persisted lock mode");
 
             return (IndexLockMode)lockModeAsInt;
+        }
+
+        protected static IndexPriority ReadPriority(BlittableJsonReaderObject reader)
+        {
+            int priorityAsInt;
+            if (reader.TryGet(nameof(Priority), out priorityAsInt) == false)
+                throw new InvalidOperationException("No persisted priority");
+
+            return (IndexPriority)priorityAsInt;
         }
 
         protected static IndexField[] ReadMapFields(BlittableJsonReaderObject reader)

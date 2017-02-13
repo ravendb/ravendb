@@ -162,7 +162,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Contains("Name", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
-                Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[0].Definition.Compare(indexDefinition1));
                 Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
 
@@ -174,7 +174,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
                 Assert.Contains("CustomAge", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
-                Assert.Equal(IndexPriority.Normal, indexes[1].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[1].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[1].Definition.Compare(indexDefinition2));
                 Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
             }
