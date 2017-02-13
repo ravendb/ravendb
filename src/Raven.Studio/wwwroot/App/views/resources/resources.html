@@ -14,22 +14,44 @@
                 <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
                 <label></label>
             </div>
-            <input type="text" class="form-control" placeholder="Filter" accesskey="/"  title="Filter resources (Alt+/)" data-bind="textInput: filters.searchText">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Filter" accesskey="/" title="Filter resources (Alt+/)" data-bind="textInput: filters.searchText">    
+            </div>
             <div class="resourcesToolbar-actions">
                 <button class="btn btn-primary" data-bind="click: newDatabase">
                     <i class="icon-plus"></i>
                     <span>New database</span>
                 </button>
-                <button class="btn btn-danger" data-bind="visible: isGlobalAdmin(), enable: selectedResources().length, click: deleteSelectedResources">
-                    <i class="icon-trash"></i>
-                    <span>Delete selected</span>
-                </button>
-                <button type="button" class="btn btn-default" data-bind="enable: selectedResources().length && !spinners.globalToggleDisable(), click: toggleSelectedResources(), css: { 'btn-spinner': spinners.globalToggleDisable() }">
-                    <i data-bind="visible: !allCheckedResourcesDisabled()" class="icon-lock"></i>
-                    <span data-bind="visible: !allCheckedResourcesDisabled()">Disable selected</span>
-                    <i data-bind="visible: allCheckedResourcesDisabled()" class="icon-unlock"></i>
-                    <span data-bind="visible: allCheckedResourcesDisabled()">Enable selected</span>
-                </button>
+                
+                <div class="btn-group-label" data-label="Selection" role="group">
+                    <button class="btn btn-danger" data-bind="visible: isGlobalAdmin(), enable: selectedResources().length, click: deleteSelectedResources">
+                        <i class="icon-trash"></i>
+                        <span>Delete</span>
+                    </button>
+                    
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected resources"
+                                data-bind="enable: selectedResources().length && !spinners.globalToggleDisable(), css: { 'btn-spinner': spinners.globalToggleDisable() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="icon-play"></i><span>Set state...</span>
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li data-bind="click: enableSelectedResources">
+                                <a href="#" title="Enable">
+                                    <i class="icon-unlock"></i>
+                                    <span>Enable</span>
+                                </a>
+                            </li>
+                            <li data-bind="click: disableSelectedResources">
+                                <a href="#" title="Disable">
+                                    <i class="icon-lock"></i>
+                                    <span>Disable</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             <div class="toggle toggle-primary resourcesToolbar-toggleCompactView pull-right">
                 <input id="compactViewInput" name="compactView" class="styled" type="checkbox" data-bind="checked: $root.compactView" />
