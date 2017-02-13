@@ -32,12 +32,10 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
 
-        private readonly object _locker = new object();
-
         /// <summary>
-        /// The current lock, used to avoid create a new transformer when creating index 
+        /// The current lock, used to make sure indexes/transformers have a unique names
         /// </summary>
-        private readonly object _indexOrTransformerLock;
+        private readonly object _indexAndTransformerLocker;
 
         private bool _initialized;
 
@@ -47,11 +45,11 @@ namespace Raven.Server.Documents.Indexes
 
         public Logger Logger => _logger;
 
-        public IndexStore(DocumentDatabase documentDatabase, object indexTransformerLock)
+        public IndexStore(DocumentDatabase documentDatabase, object indexAndTransformerLocker)
         {
             _documentDatabase = documentDatabase;
             _logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
-            _indexOrTransformerLock = indexTransformerLock;
+            _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
         public Task InitializeAsync()
@@ -59,7 +57,7 @@ namespace Raven.Server.Documents.Indexes
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 if (_initialized)
                     throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -104,10 +102,10 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            lock (_indexOrTransformerLock)
+            lock (_indexAndTransformerLocker)
             {
-                var transformers = _documentDatabase.TransformerStore.GetTransformers().Select(x => x.Name).ToArray();
-                if (transformers.Contains(definition.Name))
+                var transformer = _documentDatabase.TransformerStore.GetTransformer(definition.Name);
+                if (transformer == null)
                 {
                     throw new IndexOrTransformerAlreadyExistException($"Tried to create an index with a name of {definition.Name}, but a transformer under the same name exist");
                 }
@@ -174,7 +172,7 @@ namespace Raven.Server.Documents.Indexes
             if (definition is MapIndexDefinition)
                 return CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 Index existingIndex;
                 var lockMode = ValidateIndexDefinition(definition.Name, out existingIndex);
@@ -212,7 +210,7 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(index != null);
             Debug.Assert(indexId > 0);
-            var tr = _documentDatabase.TransformerStore.GetTransformers();
+
             if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
                 index.Start();
 
@@ -365,7 +363,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void DeleteIndexInternal(int id)
         {
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 Index index;
                 if (_indexes.TryRemoveById(id, out index) == false)
@@ -515,7 +513,7 @@ namespace Raven.Server.Documents.Indexes
 
         private int ResetIndexInternal(Index index)
         {
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 DeleteIndex(index.IndexId);
                 return CreateIndex(index.Definition);
@@ -527,7 +525,7 @@ namespace Raven.Server.Documents.Indexes
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 OpenIndexesFromDirectory(_documentDatabase.Configuration.Indexing.StoragePath);
 

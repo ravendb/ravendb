@@ -23,22 +23,20 @@ namespace Raven.Server.Documents.Transformers
 
         private readonly CollectionOfTransformers _transformers = new CollectionOfTransformers();
 
-        private readonly object _locker = new object();
-
         /// <summary>
-        /// The current lock, used to avoid create a new index when wcreating transformer 
+        /// The current lock, used to make sure indexes/transformers have a unique names
         /// </summary>
-        private readonly object _indexOrTransformerLock;
+        private readonly object _indexAndTransformerLocker;
 
         private bool _initialized;
 
         private PathSetting _path;
 
-        public TransformerStore(DocumentDatabase documentDatabase, object indexTransformerLock)
+        public TransformerStore(DocumentDatabase documentDatabase, object indexAndTransformerLocker)
         {
             _documentDatabase = documentDatabase;
             _log = LoggingSource.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
-            _indexOrTransformerLock = indexTransformerLock;
+            _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
         public Task InitializeAsync()
@@ -46,7 +44,7 @@ namespace Raven.Server.Documents.Transformers
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(TransformerStore)} was already initialized.");
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 if (_initialized)
                     throw new InvalidOperationException($"{nameof(TransformerStore)} was already initialized.");
@@ -70,7 +68,7 @@ namespace Raven.Server.Documents.Transformers
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 foreach (var transformerFile in new DirectoryInfo(_path.FullPath).GetFiles())
                 {
@@ -125,10 +123,10 @@ namespace Raven.Server.Documents.Transformers
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            lock (_indexOrTransformerLock)
+            lock (_indexAndTransformerLocker)
             {
-                var indexes = _documentDatabase.IndexStore.GetIndexes().Select(x => x.Name).ToArray();
-                if (indexes.Contains(definition.Name))
+                var index = _documentDatabase.IndexStore.GetIndex(definition.Name);
+                if (index == null)
                 {
                     throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exist");
                 }
@@ -207,18 +205,21 @@ namespace Raven.Server.Documents.Transformers
 
         private void DeleteTransformerInternal(int id)
         {
-            Transformer transformer;
-            if (_transformers.TryRemoveById(id, out transformer) == false)
-                TransformerDoesNotExistException.ThrowFor(id);
-
-            transformer.Delete();
-            var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnTransformerDeleted(transformer);
-            _documentDatabase.Changes.RaiseNotifications(new TransformerChange
+            lock (_indexAndTransformerLocker)
             {
-                Name = transformer.Name,
-                Type = TransformerChangeTypes.TransformerRemoved,
-                Etag = tombstoneEtag
-            });
+                Transformer transformer;
+                if (_transformers.TryRemoveById(id, out transformer) == false)
+                    TransformerDoesNotExistException.ThrowFor(id);
+
+                transformer.Delete();
+                var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnTransformerDeleted(transformer);
+                _documentDatabase.Changes.RaiseNotifications(new TransformerChange
+                {
+                    Name = transformer.Name,
+                    Type = TransformerChangeTypes.TransformerRemoved,
+                    Etag = tombstoneEtag
+                });
+            }
         }
 
         private int CreateTransformerInternal(Transformer transformer, int transformerId)

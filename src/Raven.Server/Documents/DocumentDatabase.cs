@@ -35,6 +35,10 @@ namespace Raven.Server.Documents
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
         private readonly object _idleLocker = new object();
+        /// <summary>
+        /// The current lock, used to make sure indexes/transformers have a unique names
+        /// </summary>
+        private readonly object _indexAndTransformerLocker = new object();
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
         private long _usages;
@@ -55,9 +59,8 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             Changes = new DocumentsChanges();
             DocumentsStorage = new DocumentsStorage(this);
-            var @lock = new object();
-            IndexStore = new IndexStore(this, @lock);
-            TransformerStore = new TransformerStore(this, @lock);
+            IndexStore = new IndexStore(this, _indexAndTransformerLocker);
+            TransformerStore = new TransformerStore(this, _indexAndTransformerLocker);
             SqlReplicationLoader = new SqlReplicationLoader(this);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);

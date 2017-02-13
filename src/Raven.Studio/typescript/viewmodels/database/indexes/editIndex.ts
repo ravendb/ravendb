@@ -139,9 +139,6 @@ class editIndex extends viewModelBase {
             const editMode = this.isEditingExistingIndex();
             return !editMode || renameMode;
         });
-
-        const db = this.activeDatabase();
-        this.fetchTransformers(db);
     }
 
     canActivate(unescapedIndexToEditName: string): JQueryPromise<canActivateResultDto> {
@@ -186,7 +183,8 @@ class editIndex extends viewModelBase {
         this.initializeDirtyFlag();
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
 
-        this.initValidation()
+        this.initValidation();
+        this.fetchTransformers();
         //TODO: scripted index this.checkIfScriptedIndexBundleIsActive();
     }
 
@@ -201,7 +199,8 @@ class editIndex extends viewModelBase {
         });
     }
 
-    private fetchTransformers(db: database) {
+    private fetchTransformers() {
+        const db = this.activeDatabase();
         return new getTransformersCommand(db)
             .execute()
             .done((transformers: Raven.Client.Indexing.TransformerDefinition[]) => {

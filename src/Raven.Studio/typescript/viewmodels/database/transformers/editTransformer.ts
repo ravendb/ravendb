@@ -68,6 +68,7 @@ class editTransformer extends viewModelBase {
 
         this.initValidation();
         this.initializeDirtyFlag();
+        this.fetchIndexes();
     }
 
     attached() {
@@ -117,8 +118,6 @@ class editTransformer extends viewModelBase {
     }
 
     private initializeObservables() {
-        const db = this.activeDatabase();
-
         this.isSaveEnabled = ko.pureComputed(() => {
             const editIndex = this.isEditingExistingTransformer();
             const isDirty = this.dirtyFlag().isDirty();
@@ -127,7 +126,6 @@ class editTransformer extends viewModelBase {
         });
 
         this.isEditingExistingTransformer = ko.pureComputed(() => !!this.loadedTransformerName());
-        this.fetchIndexes(db)
 
         this.canEditTransformerName = ko.pureComputed(() => {
             const renameMode = this.renameMode();
@@ -174,7 +172,8 @@ class editTransformer extends viewModelBase {
         }
     }
 
-    private fetchIndexes(db: database) {
+    private fetchIndexes() {
+        const db = this.activeDatabase()
         new getIndexNamesCommand(db)
             .execute()
             .done((indexesNames) => {
