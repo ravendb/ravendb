@@ -335,6 +335,7 @@ namespace Raven.Database.Config
             Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
             Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
             Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
+            Storage.Voron.MaxSizePerScratchBufferFile = ravenSettings.Voron.MaxSizePerScratchBufferFile.Value;
             Storage.Voron.ScratchBufferSizeNotificationThreshold = ravenSettings.Voron.ScratchBufferSizeNotificationThreshold.Value;
             Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
             Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
@@ -1511,6 +1512,12 @@ namespace Raven.Database.Config
                 /// Default: 6144.
                 /// </summary>
                 public int MaxScratchBufferSize { get; set; }
+
+                /// <summary>
+                /// The maximum per scratch buffer file size. The value is in megabytes. 
+                /// Default: 256.
+                /// </summary>
+                public int MaxSizePerScratchBufferFile { get; set; }
 
                 /// <summary>
                 /// The minimum number of megabytes after which each scratch buffer size increase will create a notification. Used for indexing batch size tuning.

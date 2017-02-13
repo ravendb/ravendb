@@ -27,7 +27,8 @@ namespace Voron.Impl.Scratch
         private const int InvalidScratchFileNumber = -1;
 
         // Immutable state. 
-        private readonly long _sizeLimit;
+        private readonly long sizeLimit;
+        private readonly long sizePerScratchLimit;
         private readonly StorageEnvironmentOptions _options;
         
         // Local per scratch file potentially read delayed inconsistent (need guards). All must be modified atomically (but it wont necessarily require a memory barrier)
@@ -41,7 +42,8 @@ namespace Voron.Impl.Scratch
         public ScratchBufferPool(StorageEnvironment env)
         {
             _options = env.Options;
-            _sizeLimit = env.Options.MaxScratchBufferSize;
+            sizeLimit = env.Options.MaxScratchBufferSize;
+            sizePerScratchLimit = env.Options.MaxSizePerScratchBufferFile;
             _current = NextFile();
         }
 
@@ -131,7 +133,7 @@ namespace Voron.Impl.Scratch
                 }
             }
 
-            if (sizeAfterAllocation >= (_sizeLimit*3)/4 && oldestActiveTransaction > current.OldestTransactionWhenFlushWasForced)
+            if (sizeAfterAllocation >= (sizeLimit*3)/4 && oldestActiveTransaction > current.OldestTransactionWhenFlushWasForced)
             {
                 // we may get recursive flushing, so we want to avoid it
                 if (tx.Environment.Journal.Applicator.IsCurrentThreadInFlushOperation == false)
@@ -163,7 +165,14 @@ namespace Voron.Impl.Scratch
                 }
             }
 
-            if (sizeAfterAllocation > _sizeLimit)
+            var activelyUsedBytes = currentFile.ActivelyUsedBytes(oldestActiveTransaction);
+            if (activelyUsedBytes > sizePerScratchLimit)
+            {
+                // limit every scratch file size
+                return CreateNextFile(tx, numberOfPages, size);
+            }
+
+            if (sizeAfterAllocation > sizeLimit)
             {
                 var sp = Stopwatch.StartNew();
 
@@ -183,7 +192,7 @@ namespace Voron.Impl.Scratch
 
                 sp.Stop();
 
-                bool createNextFile = false;
+                var createNextFile = false;
 
                 if (currentFile.HasDiscontinuousSpaceFor(tx, size, _scratchBuffers.Count))
                 {
@@ -192,8 +201,8 @@ namespace Voron.Impl.Scratch
 
                     createNextFile = true;
                 }
-                else if (_scratchBuffers.Count == 1 && currentFile.Size < _sizeLimit && 
-                        (currentFile.ActivelyUsedBytes(oldestActiveTransaction) + size * AbstractPager.PageSize) < _sizeLimit)
+                else if (_scratchBuffers.Count == 1 && currentFile.Size < sizeLimit && 
+                        (activelyUsedBytes + size * AbstractPager.PageSize) < sizeLimit)
                 {
                     // there is only one scratch file that hasn't reach the size limit yet and
                     // the number of bytes being in active use allows to allocate the requested size
@@ -204,20 +213,7 @@ namespace Voron.Impl.Scratch
 
                 if (createNextFile)
                 {
-                    // We need to ensure that _current stays constant through the codepath until return. 
-                    current = NextFile();
-
-                    try
-                    {
-                        tx.EnsurePagerStateReference(_current.File.PagerState);
-
-                        return current.File.Allocate(tx, numberOfPages, size);
-                    }
-                    finally
-                    {                        
-                        // That's why we update only after exiting. 
-                        _current = current;
-                    }
+                    return CreateNextFile(tx, numberOfPages, size);
                 }
 
                 var debugInfoBuilder = new StringBuilder();
@@ -267,7 +263,7 @@ namespace Voron.Impl.Scratch
                     currentFile.Size / 1024L,
                     currentFile.SizeAfterAllocation(size) / 1024L,
                     sizeAfterAllocation / 1024L,
-                    _sizeLimit / 1024L,
+                    sizeLimit / 1024L,
                     sp.ElapsedMilliseconds,
                     debugInfo
                     );
@@ -280,6 +276,24 @@ namespace Voron.Impl.Scratch
             _options.OnScratchBufferSizeChanged(sizeAfterAllocation);
 
             return result;
+        }
+
+        private PageFromScratchBuffer CreateNextFile(Transaction tx, int numberOfPages, long size)
+        {
+            // We need to ensure that _current stays constant through the codepath until return. 
+            var current = NextFile();
+
+            try
+            {
+                tx.EnsurePagerStateReference(_current.File.PagerState);
+
+                return current.File.Allocate(tx, numberOfPages, size);
+            }
+            finally
+            {
+                // That's why we update only after exiting. 
+                _current = current;
+            }
         }
 
         public void Free(int scratchNumber, long page, long asOfTxId)

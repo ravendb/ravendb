@@ -252,6 +252,7 @@ namespace Raven.Database.Config
             Voron.MaxBufferPoolSize = new IntegerSetting(settings[Constants.Voron.MaxBufferPoolSize], 4);
             Voron.InitialFileSize = new NullableIntegerSetting(settings[Constants.Voron.InitialFileSize], (int?)null);
             Voron.MaxScratchBufferSize = new IntegerSetting(settings[Constants.Voron.MaxScratchBufferSize], 6144);
+            Voron.MaxSizePerScratchBufferFile = new IntegerSetting(settings[Constants.Voron.MaxSizePerScratchBufferFile], 256);
 
             var maxScratchBufferSize = Voron.MaxScratchBufferSize.Value;
             var scratchBufferSizeNotificationThreshold = -1;
@@ -545,6 +546,8 @@ namespace Raven.Database.Config
             public NullableIntegerSetting InitialFileSize { get; set; }
 
             public IntegerSetting MaxScratchBufferSize { get; set; }
+
+            public IntegerSetting MaxSizePerScratchBufferFile { get; set; }
 
             public IntegerSetting ScratchBufferSizeNotificationThreshold { get; set; }
 
