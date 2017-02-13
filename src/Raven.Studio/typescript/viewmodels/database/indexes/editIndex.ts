@@ -12,8 +12,6 @@ import messagePublisher = require("common/messagePublisher");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 import app = require("durandal/app");
 import indexAceAutoCompleteProvider = require("models/database/index/indexAceAutoCompleteProvider");
-import getScriptedIndexesCommand = require("commands/database/index/getScriptedIndexesCommand");
-import scriptedIndexModel = require("models/database/index/scriptedIndex");
 import autoCompleterSupport = require("common/autoCompleterSupport");
 import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
 import indexMergeSuggestion = require("models/database/index/indexMergeSuggestion");
@@ -23,7 +21,6 @@ import saveDocumentCommand = require("commands/database/documents/saveDocumentCo
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
 import renameIndexCommand = require("commands/database/index/renameIndexCommand");
-import saveScriptedIndexesCommand = require("commands/database/documents/saveScriptedIndexesCommand");
 import deleteIndexCommand = require("commands/database/index/deleteIndexCommand");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
 import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
@@ -69,13 +66,6 @@ class editIndex extends viewModelBase {
      mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
     */
 
-    /*TODO scripted index
-        isScriptedIndexBundleActive = ko.observable<boolean>(false);
-        scriptedIndex = ko.observable<scriptedIndexModel>(null);
-        indexScript = ko.observable<string>("");
-        deleteScript = ko.observable<string>("");
-    */
-    
     constructor() {
         super();
 
@@ -86,27 +76,6 @@ class editIndex extends viewModelBase {
 
         this.initializeObservables();
 
-        /* TODO scripted index
-        this.isScriptedIndexBundleActive.subscribe((active: boolean) => {
-            if (active) {
-                this.fetchOrCreateScriptedIndex();
-            }
-        });
-
-        this.indexName.subscribe(name => {
-            if (this.scriptedIndex() !== null) {
-                this.scriptedIndex().indexName(name);
-            }
-        });
-
-        this.scriptedIndex.subscribe(scriptedIndex => {
-            this.indexScript = scriptedIndex.indexScript;
-            this.deleteScript = scriptedIndex.deleteScript;
-            this.initializeDirtyFlag();
-            this.editedIndex().name.valueHasMutated();
-        });*/
-
-        
         /* TODO: side by side
         this.canSaveSideBySideIndex = ko.computed(() => {
             if (!this.isEditingExistingIndex()) {
@@ -185,7 +154,6 @@ class editIndex extends viewModelBase {
 
         this.initValidation();
         this.fetchTransformers();
-        //TODO: scripted index this.checkIfScriptedIndexBundleIsActive();
     }
 
     private initValidation() {
@@ -212,7 +180,6 @@ class editIndex extends viewModelBase {
         super.attached();
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
-        //TODO: this.addScriptsLabelPopover();
     }
 
     private updateIndexPaths() {
@@ -275,11 +242,6 @@ class editIndex extends viewModelBase {
                 checkedFieldsArray.push(spatial.units);
             }
         });
-
-        /* TODO: scripted index part
-            checkedFieldsArray.push(this.indexScript);
-            checkedFieldsArray.push(this.deleteScript);
-        */
 
         this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray, false, jsonUtil.newLineNormalizingHashFunction);
 
@@ -476,39 +438,29 @@ class editIndex extends viewModelBase {
         //TODO: }
     }
 
-    private saveIndex(indexDto: Raven.Client.Indexing.IndexDefinition): JQueryPromise<any> { //TODO: use type
+    private saveIndex(indexDto: Raven.Client.Indexing.IndexDefinition): JQueryPromise<Raven.Client.Data.Indexes.PutIndexResult> {
         eventsCollector.default.reportEvent("index", "save");
-        const commands: Array<JQueryPromise<any>> = [];
 
-        commands.push(new saveIndexDefinitionCommand(indexDto, this.activeDatabase()).execute());
-        /* TODO scripted index
-        if (this.scriptedIndex() !== null) {
-            commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
-        }*/
+        return new saveIndexDefinitionCommand(indexDto, this.activeDatabase())
+            .execute()
+            .done(() => {
+                this.dirtyFlag().reset();
+                this.editedIndex().name.valueHasMutated();
+                //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
 
-        return $.when.apply($, commands).done(() => {
+                if (!this.isEditingExistingIndex()) {
+                    this.isEditingExistingIndex(true);
+                    this.editExistingIndex(indexDto.Name);
+                }
+                /* TODO merge suggestion
+                if (isSavingMergedIndex) {
+                    var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
+                    this.deleteMergedIndexes(indexesToDelete);
+                    this.mergeSuggestion(null);
+                }*/
 
-            /* TODO
-            if (this.scriptedIndex()) {
-                this.fetchOrCreateScriptedIndex(); // reload scripted index to obtain fresh etag and metadata
-            }*/
-            this.dirtyFlag().reset();
-            this.editedIndex().name.valueHasMutated();
-            //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
-
-            if (!this.isEditingExistingIndex()) {
-                this.isEditingExistingIndex(true);
-                this.editExistingIndex(indexDto.Name);
-            }
-            /* TODO merge suggestion
-            if (isSavingMergedIndex) {
-                var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
-                this.deleteMergedIndexes(indexesToDelete);
-                this.mergeSuggestion(null);
-            }*/
-
-            this.updateUrl(indexDto.Name, false /* TODO isSavingMergedIndex */);
-        });
+                this.updateUrl(indexDto.Name, false /* TODO isSavingMergedIndex */);
+            });
     }
 
     updateUrl(indexName: string, isSavingMergedIndex: boolean = false) {
@@ -636,11 +588,6 @@ class editIndex extends viewModelBase {
             var indexDef = this.editedIndex().toDto();
             var replaceDocumentKey = indexReplaceDocument.replaceDocumentPrefix + this.editedIndex().name();
 
-            if (this.scriptedIndex() !== null) {
-                // reset etag as we save different document
-                this.scriptedIndex().__metadata.etag(null);
-            }
-
             this.saveIndex(indexDef)
                 .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index.", response.responseText, response.statusText))
                 .done(() => {
@@ -666,10 +613,6 @@ class editIndex extends viewModelBase {
             var indexToDelete = this.editedIndex().name();
             this.editedIndex().name(this.editedIndex().name().substr(index.TestIndexPrefix.length));
             var indexDef = this.editedIndex().toDto();
-            if (this.scriptedIndex() !== null) {
-                // reset etag as we save different document
-                this.scriptedIndex().__metadata.etag(null);
-            }
 
             this.saveIndex(indexDef)
                 .done(() => {
@@ -686,18 +629,11 @@ class editIndex extends viewModelBase {
                 this.editedIndex().name(index.TestIndexPrefix + this.editedIndex().name());
             }
             var indexDef = this.editedIndex().toDto();
-
-            if (this.scriptedIndex() !== null) {
-                // reset etag as we save different document
-                this.scriptedIndex().__metadata.etag(null);
-            }
-            
             this.saveIndex(indexDef);
         }
     }*/
 
     /* TODO side by side
-
 
     cancelSideBySideIndex() {
         eventsCollector.default.reportEvent("index", "cancel-side-by-side");
@@ -724,40 +660,6 @@ class editIndex extends viewModelBase {
         dialog.show(deleteViewModel);
     }*/
 
-    /* TODO scripted index
-    checkIfScriptedIndexBundleIsActive() {
-        var db = this.activeDatabase();
-        var activeBundles = db.activeBundles();
-        this.isScriptedIndexBundleActive(activeBundles.indexOf("ScriptedIndexResults") != -1);
-    }
-
-    fetchOrCreateScriptedIndex() {
-        var self = this;
-        new getScriptedIndexesCommand(this.activeDatabase(), this.indexName())
-            .execute()
-            .done((scriptedIndexes: scriptedIndexModel[]) => {
-                if (scriptedIndexes.length > 0) {
-                    self.scriptedIndex(scriptedIndexes[0]);
-                } else {
-                    self.scriptedIndex(scriptedIndexModel.emptyForIndex(self.indexName()));
-                }
-
-                this.initializeDirtyFlag();
-            });
-    }
-
-    private scriptedIndexCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-      var completions = [ 
-        { name: "LoadDocument", args: "id" },
-        { name: "PutDocument", args: "id, doc" },
-        { name: "DeleteDocument", args: "id" }
-      ];
-        var result = completions
-            .filter(entry => autoCompleterSupport.wordMatches(prefix, entry.name))
-            .map(entry => { return { name: entry.name, value: entry.name, score: 100, meta: entry.args} });
-
-        callback(null, result);
-    }*/
 }
 
 export = editIndex;

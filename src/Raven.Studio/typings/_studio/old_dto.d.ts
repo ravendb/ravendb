@@ -496,11 +496,6 @@ interface facetValueDto {
     Average: number;
 }
 
-interface scriptedIndexDto extends documentDto {
-    IndexScript: string;
-    DeleteScript: string;
-}
-
 interface conflictDto extends documentDto {
     Id: string;
     ConflictDetectedAt: string;

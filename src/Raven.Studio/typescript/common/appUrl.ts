@@ -83,7 +83,6 @@ class appUrl {
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         editSqlReplication: ko.computed(() => appUrl.forEditSqlReplication(undefined, appUrl.currentDatabase())),
         sqlReplicationsConnections: ko.computed(() => appUrl.forSqlReplicationConnections(appUrl.currentDatabase())),
-        scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
         customFunctionsEditor: ko.computed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
         databaseStudioConfig: ko.computed(() => appUrl.forDatabaseStudioConfig(appUrl.currentDatabase())),
 
@@ -590,10 +589,6 @@ class appUrl {
 
     static forSqlReplicationConnections(db: database): string {
         return "#databases/settings/sqlReplicationConnectionStringsManagement?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forScriptedIndexes(db: database): string {
-        return "#databases/settings/scriptedIndex?" + appUrl.getEncodedDbPart(db);
     }
 
     static forCustomFunctionsEditor(db: database): string {
