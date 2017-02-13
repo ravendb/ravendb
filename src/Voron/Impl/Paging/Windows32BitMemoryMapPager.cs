@@ -58,8 +58,9 @@ namespace Voron.Impl.Paging
 
         public Windows32BitMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null,
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
-            Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
-            : base(options)
+            Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
+            bool usePageProtection = false)
+            : base(options, usePageProtection)
         {
             _memoryMappedFileAccess = access == Win32NativeFileAccess.GenericRead
               ? MemoryMappedFileAccess.Read
@@ -259,6 +260,7 @@ namespace Voron.Impl.Paging
 
             if ((long)offset.Value + size > _fileStreamLength)
             {
+                Debugger.Launch();
                 size = _fileStreamLength - (long)offset.Value;
             }
 
@@ -267,7 +269,10 @@ namespace Voron.Impl.Paging
                 (UIntPtr)size, null);
 
             if (result == null)
-                throw new Win32Exception();
+            {
+                var lastWin32Error = Marshal.GetLastWin32Error();
+                throw new Win32Exception(lastWin32Error, $"Unable to map {size/Constants.Size.Kilobyte:#,#} kb starting at {startPage} on {FileName}");
+            }
 
             NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size);
 

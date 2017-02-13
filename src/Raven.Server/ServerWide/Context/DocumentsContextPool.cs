@@ -3,8 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System;
 using Raven.Server.Documents;
 using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -19,7 +22,9 @@ namespace Raven.Server.ServerWide.Context
 
         protected override DocumentsOperationContext CreateContext()
         {
-            return new DocumentsOperationContext(_database, 1024*1024, 16*1024);
+            if (sizeof(int) == IntPtr.Size || _database.Configuration.Storage.ForceUsing32BitPager)
+                return new DocumentsOperationContext(_database, 32 * 1024, 4 * 1024);
+            return new DocumentsOperationContext(_database, 1024 * 1024, 16 * 1024);
         }
     }
 }

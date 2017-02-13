@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Voron.Global;
 
 namespace Raven.Server.Documents
 {
@@ -408,6 +409,16 @@ namespace Raven.Server.Documents
                     }
                     return GetPendingOperationsStatus(context);
                 }
+
+                if (IntPtr.Size == sizeof(int)) // 32bits, will be optimized away by JIT on 64
+                {
+                    var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
+                    if (llt.NumberOfModifiedPages * Constants.Storage.PageSize > 4 * Constants.Size.Megabyte)
+                    {
+                        break;
+                    }
+                }
+
             } while (true);
             if (_log.IsInfoEnabled)
             {
@@ -451,7 +462,10 @@ namespace Raven.Server.Documents
 
         private  PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context)
         {
-            if(context.Transaction.ModifiedSystemDocuments)
+            if (sizeof(int) == IntPtr.Size) // this optimization is disabled for 32 bits
+                return PendingOperations.CompletedAll;
+
+            if (context.Transaction.ModifiedSystemDocuments)
                 // a transaction that modified system documents may cause us to 
                 // do certain actions (for example, initialize trees for versioning)
                 // which we can't realy do if we are starting another transaction

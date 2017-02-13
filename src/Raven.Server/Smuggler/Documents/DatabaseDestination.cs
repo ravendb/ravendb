@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -113,7 +114,7 @@ namespace Raven.Server.Smuggler.Documents
             private MergedBatchPutCommand _prevCommand;
             private Task _prevCommandTask;
 
-            private readonly Size _enqueueThreshold = new Size(32, SizeUnit.Megabytes);
+            private readonly Size _enqueueThreshold;
 
             public DatabaseDocumentActions(DocumentDatabase database, long buildVersion, bool isRevision, Logger log)
             {
@@ -121,6 +122,10 @@ namespace Raven.Server.Smuggler.Documents
                 _buildVersion = buildVersion;
                 _isRevision = isRevision;
                 _log = log;
+                _enqueueThreshold = new Size(
+                    (sizeof(int) == IntPtr.Size || database.Configuration.Storage.ForceUsing32BitPager) ? 2 : 32,
+                    SizeUnit.Megabytes);
+
                 _command = new MergedBatchPutCommand(database, buildVersion, log)
                 {
                     IsRevision = isRevision

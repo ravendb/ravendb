@@ -43,6 +43,10 @@ namespace Voron.Impl
 
         public bool FlushedToJournal;
 
+        private long _numberOfModifiedPages;
+
+        public long NumberOfModifiedPages => _numberOfModifiedPages;
+
         private readonly WriteAheadJournal _journal;
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
@@ -345,11 +349,13 @@ namespace Voron.Impl
                 int numberOfAllocatedPages;
                 newPage = AllocateOverflowRawPage(currentPage.OverflowSize, out numberOfAllocatedPages, num, currentPage, zeroPage: false);
                 pageSize = Constants.Storage.PageSize * numberOfAllocatedPages;
+                _numberOfModifiedPages += numberOfAllocatedPages;
             }
             else
             {
                 newPage = AllocatePage(1, num, currentPage, zeroPage: false); // allocate new page in a log file but with the same number			
                 pageSize = Environment.Options.PageSize;
+                _numberOfModifiedPages += 1;
             }
 
             Memory.BulkCopy(newPage.Pointer, currentPage.Pointer, pageSize);
@@ -482,6 +488,7 @@ namespace Voron.Impl
             {
                 _overflowPagesInTransaction += (numberOfPages - 1);
             }
+            _numberOfModifiedPages += numberOfPages;
 
             _scratchPagesTable[pageNumber] = pageFromScratchBuffer;
 

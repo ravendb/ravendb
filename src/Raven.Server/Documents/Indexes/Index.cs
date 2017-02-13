@@ -2154,6 +2154,9 @@ namespace Raven.Server.Documents.Indexes
 
         private bool TryIncreasingMemoryUsageForIndex(Size currentlyAllocated, IndexingStatsScope stats)
         {
+            if (_environment.Options.RunningOn32Bits)
+                return false;
+
             //TODO: This has to be exposed via debug endpoint
 
             // we run out our memory quota, so we need to see if we can increase it or break

@@ -189,6 +189,9 @@ namespace Voron.Platform.Posix
 
         public AbstractPager CreatePager()
         {
+            if (_options.RunningOn32Bits)
+                return new Posix32BitMemoryMapPager(_options, _filename);
+
             return new PosixMemoryMapPager(_options, _filename);
         }
 

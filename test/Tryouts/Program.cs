@@ -38,31 +38,25 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Data.Tables;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Client.Operations.Databases;
+using SlowTests.Bugs.Indexing;
 
 namespace Tryouts
 {
     public class Program
     {
-        public class Item
-        {
-            [JsonExtensionData]
-            public IDictionary<string, JToken> ExtensionData;
-
-            public IEnumerable<string> Foo
-            {
-                get { yield return "foo"; yield return "bar"; }
-            }
-        }
 
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            const string name = "stackoverflow";
+            var doc = MultiDatabase.CreateDatabaseDocument(name);
+
+            using (var store = new DocumentStore { Url = "http://localhost:8080", DefaultDatabase = name })
             {
-                Console.WriteLine(i);
-                using (var a = new SlowTests.Issues.RavenDB_10())
-                {
-                    a.ShouldSearchCorrectly();
-                }
+                store.Initialize();
+
+                store.Admin.Send(new CreateDatabaseOperation(doc));
             }
         }
     }
