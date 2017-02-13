@@ -27,6 +27,9 @@ class inProgressAnimator {
     private fillWithStripes() {
         const context = this.inMemoryStripesCanvas.getContext("2d");
 
+        context.strokeStyle = "rgba(255,255,255,0.1)";
+        context.lineWidth = 3;
+
         const height = this.inMemoryStripesCanvas.height;
         const widthAndHeight = this.inMemoryStripesCanvas.width + height;
 
@@ -97,7 +100,6 @@ class inProgressAnimator {
             
             context.clip();
 
-            context.globalAlpha = 0.2;
             context.drawImage(this.inMemoryStripesCanvas, -currentShift, 0);
 
         } finally {
