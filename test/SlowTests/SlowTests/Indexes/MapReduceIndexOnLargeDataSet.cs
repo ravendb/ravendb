@@ -18,11 +18,12 @@ namespace SlowTests.SlowTests.Indexes
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
+                    Name = "test",
                     Maps = { "from x in docs.Users select new { x.Name, Count = 1}" },
                     Reduce = "from r in results group r by r.Name into g select new { Name = g.Key, Count = g.Sum(x=>x.Count) }"
-                }));
+                }}));
 
                 for (int i = 0; i < 200; i++)
                 {

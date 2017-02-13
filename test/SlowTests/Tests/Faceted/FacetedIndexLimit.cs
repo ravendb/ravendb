@@ -510,12 +510,13 @@ namespace SlowTests.Tests.Faceted
         {
             using (var s = store.OpenSession())
             {
-                store.Admin.Send(new PutIndexOperation("CameraCost",
+                store.Admin.Send(new PutIndexesOperation(new [] {
                     new IndexDefinition
                     {
+                        Name = "CameraCost",
                         Maps =
                         {
-                          @"from camera in docs 
+                            @"from camera in docs 
                             select new 
                             { 
                                 camera.Manufacturer, 
@@ -525,7 +526,9 @@ namespace SlowTests.Tests.Faceted
                                 camera.Megapixels
                             }"
                         }
-                    }));
+                    }
+            }))
+            ;
 
                 var counter = 0;
                 foreach (var camera in _data)

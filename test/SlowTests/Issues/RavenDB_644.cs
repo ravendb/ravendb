@@ -164,7 +164,10 @@ namespace SlowTests.Issues
                 {
                     using (var store = GetDocumentStore())
                     {
-                        store.Admin.Send(new PutIndexOperation("test", new Index().CreateIndexDefinition()));
+                        var indexDefinition = new Index().CreateIndexDefinition();
+                        indexDefinition.Name = "test";
+                        store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+                       
                     }
                 });
 
@@ -186,7 +189,10 @@ namespace SlowTests.Issues
                 {
                     using (var store = GetDocumentStore())
                     {
-                        store.Admin.Send(new PutIndexOperation("test", new FancyIndex().CreateIndexDefinition()));
+                        var indexDefinition = new FancyIndex().CreateIndexDefinition();
+                        indexDefinition.Name = "test";
+                        store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+                        
                     }
                 });
 
@@ -201,14 +207,14 @@ namespace SlowTests.Issues
                 {
                     using (var store = GetDocumentStore())
                     {
-                        store.Admin.Send(new PutIndexOperation(
-                            "Index1",
+                        store.Admin.Send(new PutIndexesOperation(new[] {
                             new IndexDefinition
                             {
+                                Name = "Index1",
                                 Maps = { "from i in docs select new { Year = i.Year, Number = i.Number, Count = 0 }" },
                                 Reduce =
                                     "from r in results group r by new { r.Year, r.Number } into yearAndNumber select new { Year = yearAndNumber.Key.Year, Number = yearAndNumber.Key.Number, Count = yearAndNumber.Count() }"
-                            }));
+                            }}));
                     }
                 });
 
@@ -219,14 +225,14 @@ namespace SlowTests.Issues
                 {
                     using (var store = GetDocumentStore())
                     {
-                        store.Admin.Send(new PutIndexOperation(
-                            "Index1",
+                        store.Admin.Send(new PutIndexesOperation(new[] {
                             new IndexDefinition
                             {
+                                Name = "Index1",
                                 Maps = { "from i in items select new { Year = i.Year, Number = i.Number, Count = 0 }" },
                                 Reduce =
                                     "from r in records group r by new { r.Year, r.Number } into yearAndNumber select new { Year = yearAndNumber.Key.Year, Number = yearAndNumber.Key.Number, Count = yearAndNumber.Where(x => x.Number == 0).Select(x => yearAndNumber.Count()) }"
-                            }));
+                            }}));
                     }
                 });
 
@@ -243,7 +249,8 @@ namespace SlowTests.Issues
             var index = new ValidFancyIndex().CreateIndexDefinition();
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", index));
+                index.Name = "test";
+                store.Admin.Send(new PutIndexesOperation(new[] { index}));
             }
         }
     }

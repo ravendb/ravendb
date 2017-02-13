@@ -39,15 +39,16 @@ select new {
 
         private static void Fill(IDocumentStore store)
         {
-            store.Admin.Send(new PutIndexOperation("CommentsCountPerBlog", new IndexDefinition
+            store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {
+                Name = "CommentsCountPerBlog",
                 Maps = { Map },
                 Reduce = Reduce,
                 Fields = new Dictionary<string, IndexFieldOptions>
                 {
                     { "blog_id", new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed } }
                 }
-            }));
+            }}));
         }
 
         [Fact]

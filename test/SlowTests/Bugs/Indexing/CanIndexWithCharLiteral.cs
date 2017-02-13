@@ -14,11 +14,12 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs select  new { SortVersion = doc.Version.PadLeft(5, '0') }" },
-                    Fields = { { "SortVersion", new IndexFieldOptions { Storage = FieldStorage.Yes } } }
-                }));
+                    Fields = { { "SortVersion", new IndexFieldOptions { Storage = FieldStorage.Yes } } },
+                    Name = "test"
+                }}));
 
                 using (var s = store.OpenSession())
                 {

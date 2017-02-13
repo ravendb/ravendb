@@ -21,14 +21,14 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var indexName = "test";
-                store.Admin.Send(new PutIndexOperation(indexName, new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Name = indexName,
                     Maps = { @"from doc in docs.Orders
 select new{
 doc.Name
 }" }
-                }));
+                }}));
 
                 using (var session = store.OpenSession())
                 {

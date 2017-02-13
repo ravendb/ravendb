@@ -72,7 +72,8 @@ namespace SlowTests.SlowTests.Issues
 
                 for (int i = 0; i < 4; i++)
                 {
-                    store.Admin.Send(new PutIndexOperation("email" + i, indexDefinition));
+                    indexDefinition.Name = "email" + i;
+                    store.Admin.Send(new PutIndexesOperation(new [] {indexDefinition}));
 
                 }
 

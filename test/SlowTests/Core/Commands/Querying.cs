@@ -35,10 +35,11 @@ namespace SlowTests.Core.Commands
                     commands.Put("contacts/2", null, contact2, new Dictionary<string, string> { { "@collection", "Contacts" } });
                     commands.Put("contacts/3", null, contact3, new Dictionary<string, string> { { "@collection", "Contacts" } });
 
-                    store.Admin.Send(new PutIndexOperation(indexName, new IndexDefinition
+                    store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                     {
-                        Maps = { "from contact in docs.Contacts select new { contact.FirstName }" }
-                    }));
+                        Maps = { "from contact in docs.Contacts select new { contact.FirstName }" },
+                        Name = indexName
+                    }}));
 
                     WaitForIndexing(store);
 
@@ -75,10 +76,11 @@ namespace SlowTests.Core.Commands
 
                     session.SaveChanges();
 
-                    store.Admin.Send(new PutIndexOperation("Test", new IndexDefinition
+                    store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                     {
-                        Maps = { "from doc in docs.Companies select new { doc.Name }" }
-                    }));
+                        Maps = { "from doc in docs.Companies select new { doc.Name }" },
+                        Name = "Test"
+                    }}));
 
                     WaitForIndexing(store);
                 }

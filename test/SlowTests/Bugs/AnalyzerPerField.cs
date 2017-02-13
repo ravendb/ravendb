@@ -21,12 +21,13 @@ namespace SlowTests.Bugs
             using (var store = GetDocumentStore())
             {
 
-                store.Admin.Send(new PutIndexOperation("Movies", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new [] { new IndexDefinition
                 {
-                  Maps = { "from movie in docs.Movies select new { movie.Name, movie.Tagline}" }, 
+                  Maps = { "from movie in docs.Movies select new { movie.Name, movie.Tagline}" },
+                    Name = "Movies",
                   Fields = {{ "Name" , new IndexFieldOptions {Analyzer = typeof (SimpleAnalyzer).FullName}} ,
                             { "Tagline", new IndexFieldOptions { Analyzer = typeof(StopAnalyzer).FullName}}}                 
-                 }));
+                 }}));
      
                 using (var s = store.OpenSession())
                 {

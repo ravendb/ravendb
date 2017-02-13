@@ -54,12 +54,13 @@ select new {Name = g.Key, CreatedTime = createdTime}
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
+                        Name = "test",
                         Maps = { Map },
                         Reduce = Reduce,
-                    }));
+                    }}));
 
                 using (var session = store.OpenSession())
                 {

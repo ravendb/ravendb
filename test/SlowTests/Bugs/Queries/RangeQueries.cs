@@ -165,12 +165,13 @@ namespace SlowTests.Bugs.Queries
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("SimpleIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { @"from doc in docs.UserWithIDictionaries
                                 from nestedValue in doc.NestedItems
-                                select new {Key=nestedValue.Key, Value=nestedValue.Value.Value}" }
-                }));
+                                select new {Key=nestedValue.Key, Value=nestedValue.Value.Value}" },
+                    Name = "SimpleIndex"
+                }}));
 
                 using (var s = store.OpenSession())
                 {

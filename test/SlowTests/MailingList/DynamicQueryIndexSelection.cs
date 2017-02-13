@@ -69,8 +69,9 @@ namespace SlowTests.MailingList
 
                     session.SaveChanges();
 
-                    store.Admin.Send(new PutIndexOperation("Foos/TestDynamicQueries", new IndexDefinition()
+                    store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition()
                     {
+                        Name = "Foos/TestDynamicQueries",
                         Maps =
                         {
                             @"from doc in docs.Foos
@@ -85,7 +86,7 @@ namespace SlowTests.MailingList
                                     Bar = doc.Bar
                                 }"
                         }
-                    }));
+                    }}));
 
                     RavenQueryStatistics stats;
 

@@ -38,12 +38,13 @@ namespace SlowTests.Bugs.Indexing
 
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("foo",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
                                                     Maps = { "from doc in docs select new { doc.Name}" },
-                                                    Fields = { { "Name", fieldOptions } }
-                                                }));
+                                                    Fields = { { "Name", fieldOptions } },
+                                                    Name = "foo"
+                                                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -75,12 +76,13 @@ namespace SlowTests.Bugs.Indexing
 
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("foo",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from doc in docs select new { doc.Name}" },
-                        Fields = { { "Name", fieldOptions } }
-                    }));
+                        Fields = { { "Name", fieldOptions } },
+                        Name = "foo"
+                    }}));
 
                 for (var i = 0; i < 20; i++)
                 {

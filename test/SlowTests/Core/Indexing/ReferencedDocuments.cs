@@ -266,7 +266,7 @@ namespace SlowTests.Core.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("Users/ByCity", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps =
                     {
@@ -277,8 +277,9 @@ namespace SlowTests.Core.Indexing
                                {
                                    City = address1.City
                                }"
-                    }
-                }));
+                    },
+                    Name = "Users/ByCity"
+                }}));
 
                 using (var session = store.OpenSession())
                 {

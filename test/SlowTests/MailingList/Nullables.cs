@@ -39,14 +39,15 @@ namespace SlowTests.MailingList
                 }
 
                 store.Admin.Send(new DeleteIndexOperation("test"));
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
+                    Name = "test",
                     Maps = { "from doc in docs.Docs select new { DocId = doc.DocId, _ = doc.Map.Select(p => CreateField(p.Key, p.Value)) }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         { "X", new IndexFieldOptions { Sort = SortOptions.NumericDefault } }
                     }
-                }));
+                }}));
                 using (var session = store.OpenSession())
                 {
                     // Insert valid documents.

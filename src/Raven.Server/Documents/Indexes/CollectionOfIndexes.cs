@@ -31,6 +31,20 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public void ReplaceIndexes(Index oldIndex, Index NewIndex)
+        {
+            //WIP
+            _indexesByName.AddOrUpdate(oldIndex.Name, oldIndex, (key, oldValue) => NewIndex);
+            _indexesByName.TryRemove(NewIndex.Name, out NewIndex);
+            foreach (var collection in oldIndex.Definition.Collections)
+            {
+                ConcurrentSet<Index> indexSet;
+                _indexesByCollection.TryGetValue(collection, out indexSet);
+                indexSet.TryRemove(oldIndex);
+            }
+            _indexesById.TryRemove(oldIndex.IndexId, out oldIndex);
+        }
+
         public bool TryGetById(int id, out Index index)
         {
             return _indexesById.TryGetValue(id, out index);

@@ -101,10 +101,11 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("MyIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Items select new { doc.Name }" }
-                }));
+                    Maps = { "from doc in docs.Items select new { doc.Name }" },
+                    Name = "MyIndex"
+                }}));
 
                 using (var commands = store.Commands())
                 {

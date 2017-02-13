@@ -13,6 +13,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Exceptions.Compilation;
+using Raven.Client.Indexing;
 using Raven.Client.Logging;
 using Raven.Client.Operations;
 using Raven.Client.Operations.Databases.Indexes;
@@ -375,7 +376,7 @@ namespace Raven.Client.Indexes
             }
         }
 
-        public static IndexToAdd[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConventions conventions,
+        public static IndexDefinition[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConventions conventions,
             long? minimumEtagBeforeReplace = null)
         {
             var indexesToAdd = indexCreationTasks
@@ -383,13 +384,10 @@ namespace Raven.Client.Indexes
                 {
                     x.Conventions = conventions;
                     var definition = x.CreateIndexDefinition();
+                    definition.Name = x.IndexName;
                     definition.MinimumEtagBeforeReplace = minimumEtagBeforeReplace;
-                    return new IndexToAdd
-                    {
-                        Name = x.IndexName,
-                        Definition = definition,
-                        Priority = x.Priority ?? IndexPriority.Normal
-                    };
+                    definition.Priority = x.Priority ?? IndexPriority.Normal;
+                    return definition;
                 })
                 .ToArray();
 

@@ -32,9 +32,10 @@ namespace SlowTests.Tests.Indexes
                         commands.Put("companies/", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "Companies" } });
                     }
 
-                    store.Admin.Send(new PutIndexOperation("CompaniesByPartners", new IndexDefinition
+                    store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                     {
-                        Maps = { "from company in docs.Companies from partner in company.Partners select new { Partner = partner }" }
+                        Maps = { "from company in docs.Companies from partner in company.Partners select new { Partner = partner }" },
+                        Name = "CompaniesByPartners" }
                     }));
 
                     QueryResult queryResult;

@@ -5,6 +5,7 @@ using Raven.Client.Commands;
 using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Http;
+using Raven.Client.Indexing;
 using Raven.Client.Json;
 using Sparrow.Json;
 
@@ -12,9 +13,9 @@ namespace Raven.Client.Operations.Databases.Indexes
 {
     public class PutIndexesOperation : IAdminOperation<BlittableArrayResult>
     {
-        private readonly IndexToAdd[] _indexToAdd;
+        private readonly IndexDefinition[] _indexToAdd;
 
-        public PutIndexesOperation(IndexToAdd[] indexToAdd)
+        public PutIndexesOperation(IndexDefinition[] indexToAdd)
         {
             if (indexToAdd == null)
                 throw new ArgumentNullException(nameof(indexToAdd));
@@ -32,7 +33,7 @@ namespace Raven.Client.Operations.Databases.Indexes
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject[] _indexToAdd;
 
-            public PutIndexesCommand(DocumentConventions conventions, JsonOperationContext context, IndexToAdd[] indexesToAdd)
+            public PutIndexesCommand(DocumentConventions conventions, JsonOperationContext context, IndexDefinition[] indexesToAdd)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
@@ -45,6 +46,8 @@ namespace Raven.Client.Operations.Databases.Indexes
                 _indexToAdd = new BlittableJsonReaderObject[indexesToAdd.Length];
                 for (var i = 0; i < indexesToAdd.Length; i++)
                 {
+                    if (indexesToAdd[i].Name == null)
+                        throw new ArgumentNullException("Index name missing");
                     _indexToAdd[i] = new EntityToBlittable(null).ConvertEntityToBlittable(indexesToAdd[i], conventions, _context);
                 }
             }

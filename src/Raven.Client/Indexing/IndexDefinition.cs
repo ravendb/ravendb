@@ -40,6 +40,11 @@ namespace Raven.Client.Indexing
         public long? MinimumEtagBeforeReplace { get; set; }
 
         /// <summary>
+        /// Priority of an index
+        /// </summary>
+        public IndexPriority Priority { get; set; }
+
+        /// <summary>
         /// Index lock mode:
         /// <para>- Unlock - all index definition changes acceptable</para>
         /// <para>- LockedIgnore - all index definition changes will be ignored, only log entry will be created</para>

@@ -31,11 +31,12 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("StringReverseIndex",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" }
-                    }));
+                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" },
+                        Name = "StringReverseIndex"
+                    }}));
 
                 using (IDocumentSession documentSession = store.OpenSession())
                 {
@@ -71,11 +72,12 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("StringReverseIndex",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" }
-                    }));
+                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" },
+                        Name = "StringReverseIndex"
+                    }}));
 
                 using (IDocumentSession documentSession = store.OpenSession())
                 {

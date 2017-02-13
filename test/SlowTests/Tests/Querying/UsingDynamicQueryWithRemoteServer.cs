@@ -328,17 +328,17 @@ namespace SlowTests.Tests.Querying
             using (var documentStore = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                documentStore.Admin.Send(new PutIndexOperation(
-                    indexName,
+                documentStore.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
+                        Name = indexName,
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
                             {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
                             {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
-                    }));
+                    }}));
 
                 var blogOne = new Blog
                 {
@@ -399,17 +399,17 @@ namespace SlowTests.Tests.Querying
             using (var documentStore = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                documentStore.Admin.Send(new PutIndexOperation(
-                    indexName,
+                documentStore.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
+                        Name =indexName, 
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
                             {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
                             {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
-                    }));
+                    }}));
 
                 var blogOne = new Blog
                 {
@@ -453,10 +453,10 @@ namespace SlowTests.Tests.Querying
             using (var documentStore = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingMRTests";
-                documentStore.Admin.Send(new PutIndexOperation(
-                    indexName,
+                documentStore.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
+                        Name = indexName,
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
                         Reduce = @"from result in results 
                                    group result by result.Category into g
@@ -466,7 +466,7 @@ namespace SlowTests.Tests.Querying
                             {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
                             {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
-                    }));
+                    }}));
 
                 var blogOne = new Blog
                 {

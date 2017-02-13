@@ -26,66 +26,14 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/index", "PUT")]
-        public async Task PutIndex()
+        [RavenAction("/databases/*/ReplaceIndexes", "PUT")]
+        public Task Replace()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "index"))
-                {
-                    BlittableJsonReaderObject definition;
-                    string name;
-                     if (json.TryGet("Name", out name) == false)
-                        throw new ArgumentException($"Name must have a non empty value");
-                    if (json.TryGet("Definition", out definition) == false)
-                        throw new ArgumentException($"Index definition must have a non empty value");
-                    var indexDefinition = JsonDeserializationServer.IndexDefinition(definition);
-
-                    if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
-                        throw new ArgumentException("Index must have a 'Maps' fields");
-
-                    indexDefinition.Name = name;
-
-                    var indexId = Database.IndexStore.CreateIndex(indexDefinition);
-
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName("Index");
-                        writer.WriteString(name);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName("IndexId");
-                        writer.WriteInteger(indexId);
-
-                        writer.WriteEndObject();
-                    }
-                }
-            }
+            return null;
         }
 
         [RavenAction("/databases/*/indexes", "PUT")]
         public async Task Put()
-        {
-            //WIP
-            var name = GetQueryStringValue("name");
-            if (name != null)
-            {
-                //TODO - Temporary for old client test. need to be deleted .only PutIndexes need to be in this end point
-                await PutIndex(name);
-            }
-            else
-            {
-                await PutIndexes();
-            }
-            
-        }
-
-        private async Task PutIndexes()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -94,22 +42,21 @@ namespace Raven.Server.Documents.Handlers
                 using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "Indexes"))
                 {
                     BlittableJsonReaderArray indexesToAdd;
-                    if( json.TryGet("Indexes", out indexesToAdd) == false)
+                    if (json.TryGet("Indexes", out indexesToAdd) == false)
                         throw new ArgumentException($"Query string value name or Indexes must have a non empty value");
 
                     foreach (var indexToAdd in indexesToAdd)
                     {
-                        var index = JsonDeserializationServer.IndexToAdd((BlittableJsonReaderObject) indexToAdd);
+                        var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
 
-                        if (index.Definition.Maps == null || index.Definition.Maps.Count == 0)
+                        if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                             throw new ArgumentException("Index must have a 'Maps' fields");
-                        index.Definition.Name = index.Name;
-                        var indexId = Database.IndexStore.CreateIndex(index.Definition);
-                        createdIndexes.Add(index.Definition.Name);
+                        var indexId = Database.IndexStore.CreateIndex(indexDefinition);
+                        createdIndexes.Add(indexDefinition.Name);
                     }
                 }
 
-                HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -135,42 +82,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-        }
 
-        private async Task PutIndex(string name)
-        {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                IndexDefinition indexDefinition;
-                using (var json = await context.ReadForDiskAsync(RequestBodyStream(), name))
-                {
-                    indexDefinition = JsonDeserializationServer.IndexDefinition(json);
-                }
-
-                if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
-                    throw new ArgumentException("Index must have a 'Maps' fields");
-
-                indexDefinition.Name = name;
-
-                var indexId = Database.IndexStore.CreateIndex(indexDefinition);
-
-                HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName("Index");
-                    writer.WriteString(name);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName("IndexId");
-                    writer.WriteInteger(indexId);
-
-                    writer.WriteEndObject();
-                }
-            }
         }
 
         [RavenAction("/databases/*/indexes/source", "GET")]

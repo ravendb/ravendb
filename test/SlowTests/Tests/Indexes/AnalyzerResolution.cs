@@ -15,11 +15,14 @@ namespace SlowTests.Tests.Indexes
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinitionBuilder<User>
+                var indexDefinition = new IndexDefinitionBuilder<User>
                 {
                     Map = docs => from doc in docs select new { doc.Id },
                     Analyzers = { { x => x.Id, "SimpleAnalyzer" } }
-                }.ToIndexDefinition(store.Conventions)));
+                }.ToIndexDefinition(store.Conventions);
+                indexDefinition.Name = "test";
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+
             }
         }
     }

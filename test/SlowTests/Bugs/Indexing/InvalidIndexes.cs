@@ -14,14 +14,15 @@ namespace SlowTests.Bugs.Indexing
             using (var store = GetDocumentStore())
             {
                 var ioe = Assert.Throws<IndexCompilationException>(() =>
-                    store.Admin.Send(new PutIndexOperation("test",
+                    store.Admin.Send(new PutIndexesOperation(new[] {
                         new IndexDefinition
                         {
 
                             Maps = { @"from user in docs.Users 
                                     where user.LastLogin > DateTime.Now.AddDays(-10) 
-                                    select new { user.Name}" }
-                        })));
+                                    select new { user.Name}" },
+                            Name = "test"
+                        }})));
 
                 Assert.Contains(@"Cannot use DateTime.Now during a map or reduce phase.", ioe.Message);
             }
@@ -33,12 +34,13 @@ namespace SlowTests.Bugs.Indexing
             using (var store = GetDocumentStore())
             {
                 var ioe = Assert.Throws<IndexCompilationException>(() =>
-                    store.Admin.Send(new PutIndexOperation("test",
+                    store.Admin.Send(new PutIndexesOperation(new[] {
                         new IndexDefinition
                         {
 
-                            Maps = { "from user in docs.Users orderby user.Id select new { user.Name}" }
-                        })));
+                            Maps = { "from user in docs.Users orderby user.Id select new { user.Name}" },
+                            Name = "test"
+                        }})));
 
                 Assert.Contains(@"OrderBy calls are not valid during map or reduce phase, but the following was found:", ioe.Message);
             }

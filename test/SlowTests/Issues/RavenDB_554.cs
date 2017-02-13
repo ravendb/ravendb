@@ -27,10 +27,16 @@ namespace SlowTests.Issues
             using (var docStore = GetDocumentStore())
             {
 
-                docStore.Admin.Send(new PutIndexOperation(IndexName, new IndexDefinition
+                docStore.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
-                    Maps = { "from doc in docs select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }" }
-                }));
+                    Name = IndexName,
+                    Maps =
+                    {
+                        "from doc in docs select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }"
+                    }
+                }
+            }))
+            ;
 
                 using (var session = docStore.OpenSession())
                 {

@@ -71,7 +71,7 @@ namespace SlowTests.Bugs.Indexing
                 var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.NumericLong };
                 var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { @"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}" },
 
@@ -82,9 +82,10 @@ namespace SlowTests.Bugs.Indexing
                         {"f_totaldownload" , fieldOptions2 },
                         {"f_name" , fieldOptions3 },
                         {"f_alias" , fieldOptions3 }
-                    }
+                    },
+                    Name = "test"
 
-                }));
+                }}));
 
                 Soft entity = new Soft
                 {
