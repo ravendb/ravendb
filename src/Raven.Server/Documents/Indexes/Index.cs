@@ -665,6 +665,8 @@ namespace Raven.Server.Documents.Indexes
 
                         AddIndexingPerformance(stats);
 
+                        var batchCompleted = false;
+
                         using (var scope = stats.CreateScope())
                         {
                             try
@@ -684,9 +686,6 @@ namespace Raven.Server.Documents.Indexes
 
                                 _indexingBatchCompleted.SetAndResetAtomically();
 
-                                DocumentDatabase.Changes.RaiseNotifications(
-                                    new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
-
                                 if (didWork)
                                     ResetErrors();
 
@@ -694,6 +693,8 @@ namespace Raven.Server.Documents.Indexes
 
                                 if (_logger.IsInfoEnabled)
                                     _logger.Info($"Finished indexing for '{Name} ({IndexId})'.'");
+
+                                batchCompleted = true;
                             }
                             catch (OutOfMemoryException oome)
                             {
@@ -748,6 +749,12 @@ namespace Raven.Server.Documents.Indexes
                         }
 
                         stats.Complete();
+
+                        if (batchCompleted)
+                        {
+                            DocumentDatabase.Changes.RaiseNotifications(
+                                    new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
+                        }
 
                         try
                         {

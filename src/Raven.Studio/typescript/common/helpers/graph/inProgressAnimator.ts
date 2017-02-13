@@ -6,12 +6,35 @@ class inProgressAnimator {
     private canvas: HTMLCanvasElement;
     private context: CanvasRenderingContext2D;
 
+    private inMemoryStripesCanvas: HTMLCanvasElement;
+
     private hasTimerRunning = false;
     private startTime: number;
+
+    private static readonly stripesPadding = 10;
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
+
+        this.inMemoryStripesCanvas = document.createElement("canvas");
+        this.inMemoryStripesCanvas.width = this.canvas.width + 2 * inProgressAnimator.stripesPadding;
+        this.inMemoryStripesCanvas.height = this.canvas.height;
+
+        this.fillWithStripes();
+    }
+
+    private fillWithStripes() {
+        const context = this.inMemoryStripesCanvas.getContext("2d");
+
+        const height = this.inMemoryStripesCanvas.height;
+        const widthAndHeight = this.inMemoryStripesCanvas.width + height;
+
+        for (let dx = -widthAndHeight; dx <= widthAndHeight; dx += inProgressAnimator.stripesPadding) {
+            context.moveTo(dx - height, height);
+            context.lineTo(dx, 0);
+        }
+        context.stroke();
     }
 
     reset() {
@@ -56,7 +79,15 @@ class inProgressAnimator {
     }
 
     private draw() {
+
+        const animationDuration = 600;
+        const progress = (new Date().getTime() % animationDuration) / animationDuration;
+        const currentShift = Math.floor(progress * inProgressAnimator.stripesPadding);
+
         const context = this.context;
+
+        context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
         context.save();
         try {
             context.beginPath();
@@ -65,26 +96,12 @@ class inProgressAnimator {
             });
             
             context.clip();
-            context.globalAlpha = 0.2 * this.alfaDiff();
 
-            context.fill();
+            context.globalAlpha = 0.2;
+            context.drawImage(this.inMemoryStripesCanvas, -currentShift, 0);
+
         } finally {
             this.context.restore();
-        }
-    }
-
-    private alfaDiff(): number {
-        const timeDelta = new Date().getTime() - this.startTime;
-        const animationTime = 1500;
-        const halfTime = animationTime / 2;
-        const animationPosition = timeDelta % animationTime;
-
-        if (animationPosition < halfTime) {
-            // animate forward
-            return animationPosition * 1.0 / halfTime;
-        } else {
-            // animate backwards
-            return 1.0 - 1.0 * (animationPosition - halfTime) / halfTime;
         }
     }
 

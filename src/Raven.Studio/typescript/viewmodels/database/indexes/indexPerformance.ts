@@ -259,7 +259,9 @@ class metrics extends viewModelBase {
         this.searchText.throttle(200).subscribe(() => this.filterIndexes());
 
         this.autoScroll.subscribe(v => {
-            if (!v) {
+            if (v) {
+                this.scrollToRight();
+            } else {
                 // cancel transition (if any)
                 this.brushContainer
                     .transition(); 
@@ -311,15 +313,15 @@ class metrics extends viewModelBase {
             .attr("width", this.totalWidth + 1)
             .attr("height", this.totalHeight);
 
-        this.inProgressCanvas = metricsContainer    
+        this.inProgressCanvas = metricsContainer
             .append("canvas")
             .attr("width", this.totalWidth + 1)
-            .attr("height", this.totalHeight);
+            .attr("height", this.totalHeight - metrics.brushSectionHeight)
+            .style("top", (metrics.brushSectionHeight + metrics.axisHeight) + "px");
 
         const inProgressCanvasNode = this.inProgressCanvas.node() as HTMLCanvasElement;
-        inProgressCanvasNode
-            .getContext("2d")
-            .translate(0, metrics.brushSectionHeight);
+        const inProgressContext = inProgressCanvasNode.getContext("2d");
+        inProgressContext.translate(0, -metrics.axisHeight);
 
         this.inProgressAnimator = new inProgressAnimator(inProgressCanvasNode);
 
@@ -457,7 +459,10 @@ class metrics extends viewModelBase {
 
         if (currentExtent[1] < this.totalWidth) {
 
-            const desiredExtentStart = this.totalWidth + 10 - extentWidth;
+            const rightPadding = 100;
+            const desiredShift = rightPadding * extentWidth / this.totalWidth;
+
+            const desiredExtentStart = this.totalWidth + desiredShift - extentWidth;
 
             const moveFunc = (startX: number) => {
                 this.brush.extent([startX, startX + extentWidth]);
