@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             var outputReduceToCollection = index.Definition.OutputReduceToCollection;
             Debug.Assert(string.IsNullOrWhiteSpace(outputReduceToCollection) == false);
-            _outputReduceToCollectionCommand = new OutputReduceToCollectionCommand(DocumentDatabase, outputReduceToCollection);
+            _outputReduceToCollectionCommand = new OutputReduceToCollectionCommand(DocumentDatabase, outputReduceToCollection, index);
         }
 
         public override void Commit(IndexingStatsScope stats)
@@ -74,13 +74,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             private readonly DocumentDatabase _database;
             private readonly string _outputReduceToCollection;
+            private readonly MapReduceIndex _index;
             private readonly List<OutputReduceDocument> _reduceDocuments = new List<OutputReduceDocument>();
             private readonly JsonOperationContext _jsonContext;
 
-            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection)
+            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, MapReduceIndex index)
             {
                 _database = database;
                 _outputReduceToCollection = outputReduceToCollection;
+                _index = index;
                 _jsonContext = JsonOperationContext.ShortTermSingleUse();
             }
 
@@ -115,8 +117,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var key = _outputReduceToCollection + "/" + reduceKeyHash;
 
                 var djv = new DynamicJsonValue();
-                var propertyAccessor = PropertyAccessor.Create(reduceObject.GetType());
-                foreach (var property in propertyAccessor.PropertiesInOrder)
+
+                if (_index.OutputReduceToCollectionPropertyAccessor == null)
+                    _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType());
+                foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.PropertiesInOrder)
                 {
                     var value = property.Value.GetValue(reduceObject);
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value);
