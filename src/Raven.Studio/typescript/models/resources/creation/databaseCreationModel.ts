@@ -68,8 +68,6 @@ class databaseCreationModel extends resourceCreationModel {
                 }
         */
 
-        this.fillEncryptionSettingsIfNeeded(securedSettings);
-
         return {
             Id: this.name(),
             Settings: settings,

@@ -31,10 +31,6 @@ class createDatabase extends createResourceBase {
         }
     ];
 
-    bundlesEnabled = {
-        encryption: this.isBundleActiveComputed("Encryption")
-    }
-
     resourceModel = new databaseCreationModel();
 
     indexesPathPlaceholder: KnockoutComputed<string>;
@@ -65,13 +61,6 @@ class createDatabase extends createResourceBase {
                 bundle.validationGroup = undefined;
             }
         });
-
-        const encryptionConfig = this.databaseBundles.find(x => x.name === "Encryption");
-        encryptionConfig.validationGroup = this.resourceModel.encryptionValidationGroup;
-    }
-
-    advancedVisibility = {
-        encryption: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Encryption")
     }
 
     getAvailableBundles() {
@@ -84,23 +73,15 @@ class createDatabase extends createResourceBase {
 
         const globalValid = this.isValid(this.resourceModel.globalValidationGroup);
         const advancedValid = this.isValid(this.resourceModel.advancedValidationGroup);
-        const encryptionValid = !this.bundlesEnabled.encryption() || this.isValid(this.resourceModel.encryptionValidationGroup);
 
-        const allValid = globalValid && advancedValid && encryptionValid;
+        const allValid = globalValid && advancedValid;
 
         if (allValid) {
             this.createResourceInternal();
         } else {
-            if (!advancedValid) {
-                if (!this.advancedConfigurationVisible()) {
-                    this.showAdvancedConfiguration();
-                }
-            } else if (!encryptionValid) {
-                if (!this.advancedVisibility.encryption()) {
-                    this.showAdvancedConfigurationFor("Encryption");   
-                }
+            if (!advancedValid && !this.advancedConfigurationVisible()) {
+                this.showAdvancedConfiguration();
             }
-            //TODO: iterate on invalid sections
         }
     }
 
@@ -114,8 +95,6 @@ class createDatabase extends createResourceBase {
             .always(() => {
                 dialog.close(this);
             });
-
-        //TODO: issue requests for additional bundles configuration + show dialog about encryption configuration so user can save this 
     }
 
     private isBundleActiveComputed(bundleName: string) {
