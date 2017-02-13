@@ -56,9 +56,13 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Issues.RavenDB_6064_2())
+            for (int i = 0; i < 1000; i++)
             {
-                a.CanIndexWithThreeCompressedProperties();
+                Console.WriteLine(i);
+                using (var a = new SlowTests.Issues.RavenDB_4011())
+                {
+                    a.get_index_names();
+                }
             }
         }
     }

@@ -15,7 +15,7 @@ namespace Raven.Client.Operations.Databases.Indexes
     {
         private readonly IndexDefinition[] _indexToAdd;
 
-        public PutIndexesOperation(IndexDefinition[] indexToAdd)
+        public PutIndexesOperation(params IndexDefinition[] indexToAdd)
         {
             if (indexToAdd == null)
                 throw new ArgumentNullException(nameof(indexToAdd));

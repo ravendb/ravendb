@@ -12,23 +12,23 @@ namespace FastTests.Indexes
         [Fact]
         public void TransformersAndIndexesNameShouldBeUniqe()
         {
-            const string name = "Test";
             using (var store = GetDocumentStore())
             {
                 var indexDefinition = new IndexDefinition
                 {
-                    Maps = { "from d in docs select new {d.Name}" }
+                    Maps = { "from d in docs select new {d.Name}" },
+                    Name = "Test"
                 };
 
-                store.Admin.Send(new PutTransformerOperation(name, new TransformerDefinition
+                store.Admin.Send(new PutTransformerOperation("Test", new TransformerDefinition
                 {
-                    Name = name,
+                    Name = "Test",
                     TransformResults = "from user in results select new { user.FirstName, user.LastName }"
                 }));
 
-                Assert.NotNull(store.Admin.Send(new GetTransformerOperation(name)));
-                var e = Assert.Throws<RavenException>(() => store.Admin.Send(new PutIndexOperation(name, indexDefinition)));
-                Assert.Contains($"Tried to create an index with a name of {name}, but a transformer under the same name exist", e.Message);
+                Assert.NotNull(store.Admin.Send(new GetTransformerOperation("Test")));
+                var e = Assert.Throws<RavenException>(() => store.Admin.Send(new PutIndexesOperation(indexDefinition)));
+                Assert.Contains($"Tried to create an index with a name of Test, but a transformer under the same name exist", e.Message);
 
             }
         }
@@ -36,26 +36,26 @@ namespace FastTests.Indexes
         [Fact]
         public void CanCreateIndexWithTheSameNameOfDeletedTransformer()
         {
-            const string name = "Test";
             using (var store = GetDocumentStore())
             {
                 var indexDefinition = new IndexDefinition
                 {
-                    Maps = { "from d in docs select new {d.Name}" }
+                    Maps = { "from d in docs select new {d.Name}" },
+                    Name = "Test",
                 };
 
-                store.Admin.Send(new PutTransformerOperation(name, new TransformerDefinition
+                store.Admin.Send(new PutTransformerOperation("Test", new TransformerDefinition
                 {
-                    Name = name,
+                    Name = "Test",
                     TransformResults = "from user in results select new { user.FirstName, user.LastName }"
                 }));
 
-                Assert.NotNull(store.Admin.Send(new GetTransformerOperation(name)));
-                store.Admin.Send(new DeleteTransformerOperation(name));
-                Assert.Null(store.Admin.Send(new GetTransformerOperation(name)));
+                Assert.NotNull(store.Admin.Send(new GetTransformerOperation("Test")));
+                store.Admin.Send(new DeleteTransformerOperation("Test"));
+                Assert.Null(store.Admin.Send(new GetTransformerOperation("Test")));
 
-                store.Admin.Send(new PutIndexOperation(name, indexDefinition));
-                Assert.NotNull(store.Admin.Send(new GetIndexOperation(name)));
+                store.Admin.Send(new PutIndexesOperation(indexDefinition));
+                Assert.NotNull(store.Admin.Send(new GetIndexOperation("Test")));
 
             }
         }
