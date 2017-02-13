@@ -1,9 +1,8 @@
 ﻿using System.Linq;
-using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace NewClientTests.NewClient.Lazy
+namespace FastTests.Client.Lazy
 {
     public class MultiGetOperations : RavenNewTestBase
     {

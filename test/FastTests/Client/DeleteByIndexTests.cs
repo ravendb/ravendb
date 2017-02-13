@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
@@ -11,7 +10,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 
-namespace NewClientTests.NewClient.Client.Indexing
+namespace FastTests.Client
 {
     public class IndexesDeleteByIndexTests : RavenNewTestBase
     {

@@ -1,8 +1,6 @@
-﻿using FastTests;
-using Raven.Tests.Core.Utils.Entities;
-using Xunit;
+﻿using Xunit;
 
-namespace NewClientTests.NewClient
+namespace FastTests.Client
 {
     public class Issue_6069 : RavenNewTestBase
     {

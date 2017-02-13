@@ -1,10 +1,8 @@
 ﻿using System.Collections.Generic;
-using FastTests;
 using Raven.Tests.Core.Utils.Entities;
-
 using Xunit;
 
-namespace NewClientTests.NewClient
+namespace FastTests.Client
 {
     public class Load :  RavenNewTestBase
     {

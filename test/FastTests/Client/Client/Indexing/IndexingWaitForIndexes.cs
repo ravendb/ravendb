@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Linq;
-using FastTests;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace NewClientTests.NewClient.Client.Indexing
+namespace FastTests.Client.Client.Indexing
 {
     public class IndexingWaitForIndexes : RavenNewTestBase
     {

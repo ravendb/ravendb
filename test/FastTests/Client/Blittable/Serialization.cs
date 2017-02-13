@@ -1,7 +1,6 @@
-﻿using FastTests;
-using Xunit;
+﻿using Xunit;
 
-namespace NewClientTests.NewClient.Blittable
+namespace FastTests.Client.Blittable
 {
     public class Serialization : RavenNewTestBase
     {

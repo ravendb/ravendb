@@ -44,7 +44,7 @@ namespace FastTests.Server.Replication
         }
 
 
-        protected Dictionary<string,string[]> GetConnectionFaliures(DocumentStore store)
+        protected Dictionary<string, string[]> GetConnectionFaliures(DocumentStore store)
         {
             using (var commands = store.Commands())
             {
@@ -94,8 +94,8 @@ namespace FastTests.Server.Replication
                     var replicationStats = GetReplicationStats(store);
 
                     Assert.False(true,
-                        "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts \r\n" + 
-                        JsonConvert.SerializeObject(replicationStats,Formatting.Indented));
+                        "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts \r\n" +
+                        JsonConvert.SerializeObject(replicationStats, Formatting.Indented));
                 }
             } while (true);
             return conflicts;
@@ -137,7 +137,7 @@ namespace FastTests.Server.Replication
 
         protected bool WaitForDocument<T>(DocumentStore store,
             string docId,
-            Func<T, bool> predicate, 
+            Func<T, bool> predicate,
             int timeout = 10000)
         {
             if (Debugger.IsAttached)
@@ -351,7 +351,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected static void SetupReplication(DocumentStore fromStore, Dictionary<string,string> etlScripts, params DocumentStore[] toStores)
+        protected static void SetupReplication(DocumentStore fromStore, Dictionary<string, string> etlScripts, params DocumentStore[] toStores)
         {
             using (var session = fromStore.OpenSession())
             {
@@ -375,11 +375,11 @@ namespace FastTests.Server.Replication
 
         protected void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
-            SetupReplication(fromStore, 
+            SetupReplication(fromStore,
                 new ReplicationDocument
                 {
-                    
-                }, 
+
+                },
                 toStores);
         }
 
@@ -401,6 +401,33 @@ namespace FastTests.Server.Replication
 
                 configOptions.Destinations = destinations;
                 session.Store(configOptions, Constants.Replication.DocumentReplicationConfiguration);
+                session.SaveChanges();
+            }
+        }
+
+        protected static void DeleteReplication(DocumentStore fromStore, DocumentStore deletedStoreDestination)
+        {
+            ReplicationDocument replicationConfigDocument;
+
+            using (var session = fromStore.OpenSession())
+            {
+                replicationConfigDocument =
+                    session.Load<ReplicationDocument>(Constants.Replication.DocumentReplicationConfiguration);
+
+                if (replicationConfigDocument == null)
+                    return;
+
+                session.Delete(replicationConfigDocument);
+                session.SaveChanges();
+            }
+
+            using (var session = fromStore.OpenSession())
+            {
+
+                replicationConfigDocument.Destinations.RemoveAll(
+                    x => x.Database == deletedStoreDestination.DefaultDatabase);
+
+                session.Store(replicationConfigDocument);
                 session.SaveChanges();
             }
         }
@@ -439,7 +466,7 @@ namespace FastTests.Server.Replication
             public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
             {
                 List<string> list = new List<string>();
-                Dictionary<string,string[]> result = new Dictionary<string, string[]>();
+                Dictionary<string, string[]> result = new Dictionary<string, string[]>();
                 foreach (BlittableJsonReaderObject responseItem in response.Items)
                 {
                     BlittableJsonReaderObject obj;
@@ -456,7 +483,7 @@ namespace FastTests.Server.Replication
                         arrItem.TryGet("Reason", out reason);
                         list.Add(reason);
                     }
-                    result.Add(name,list.ToArray());
+                    result.Add(name, list.ToArray());
                 }
                 Result = result;
             }
@@ -526,7 +553,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        private class GetReplicationStatsCommand : RavenCommand<Dictionary<string,object>>
+        private class GetReplicationStatsCommand : RavenCommand<Dictionary<string, object>>
         {
             public override bool IsReadRequest => true;
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -563,14 +590,14 @@ namespace FastTests.Server.Replication
                     liveStats.TryGet("ConflictResolverStatus", out conflictResolverStatus) &&
                     liveStats.TryGet("ConflictsCount", out conflictsCount))
                 {
-                    
+
                     for (var i = 0; i < outgoingHeartbeats.Count; i++)
                     {
                         var prop = new BlittableJsonReaderObject.PropertyDetails();
                         outgoingHeartbeats.GetPropertyByIndex(i, ref prop);
-                        outgoingLastHeartbeat[prop.Name] = (long) prop.Value;
+                        outgoingLastHeartbeat[prop.Name] = (long)prop.Value;
                     }
-                   for (var i = 0; i < incomingHeartbeats.Count; i++)
+                    for (var i = 0; i < incomingHeartbeats.Count; i++)
                     {
                         var prop = new BlittableJsonReaderObject.PropertyDetails();
                         incomingHeartbeats.GetPropertyByIndex(i, ref prop);
@@ -581,20 +608,21 @@ namespace FastTests.Server.Replication
                     liveStatsList.Add(incomingLastHeartbeat);
                     liveStatsList.Add(conflictResolverStatus);
                     liveStatsList.Add(conflictsCount);
-                } else
+                }
+                else
                     ThrowInvalidResponse();
 
-                
+
                 var incoming = new List<Dictionary<string, object>>();
                 BlittableJsonReaderArray incomingStats;
                 if (response.TryGet("IncomingStats", out incomingStats) == false)
                     ThrowInvalidResponse();
-                
+
                 var outgoing = new List<Dictionary<string, object>>();
                 BlittableJsonReaderArray outgoingStats;
                 if (response.TryGet("OutgoingStats", out outgoingStats) == false)
                     ThrowInvalidResponse();
-                
+
                 var resolver = new List<Dictionary<string, object>>();
                 BlittableJsonReaderArray resovlerStats;
                 if (response.TryGet("ResovlerStats", out resovlerStats) == false)
