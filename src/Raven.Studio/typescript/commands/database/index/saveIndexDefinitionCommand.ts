@@ -8,7 +8,7 @@ class saveIndexDefinitionCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<Raven.Client.Data.Indexes.PutIndexResult> {
         return this.saveDefinition()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to save " + this.index.Name, response.responseText, response.statusText);
@@ -19,13 +19,18 @@ class saveIndexDefinitionCommand extends commandBase {
 
     }
 
-    private saveDefinition(): JQueryPromise<saveIndexResult> {
-        const args = {
-            name: this.index.Name
-        };
-        const payload = JSON.stringify(this.index);
-        const url = endpoints.databases.index.indexes + this.urlEncodeArgs(args);
-        return this.put(url, payload, this.db);
+    private saveDefinition(): JQueryPromise<Raven.Client.Data.Indexes.PutIndexResult> {
+        const payload = JSON.stringify([this.index]);
+        const url = endpoints.databases.index.indexes;
+        const saveTask = $.Deferred<Raven.Client.Data.Indexes.PutIndexResult>();
+        this.put(url, payload, this.db)
+            .done((results: Array<Raven.Client.Data.Indexes.PutIndexResult>) => {
+                saveTask.resolve(results[0]);
+            })
+            .fail(response => saveTask.reject(response));
+
+        return saveTask;
+
     }
 }
 

@@ -22,6 +22,7 @@ namespace Raven.Client.Indexing
         public IndexDefinition()
         {
             _configuration = new IndexConfiguration();
+            Priority = IndexPriority.Normal;
         }
 
         /// <summary>
