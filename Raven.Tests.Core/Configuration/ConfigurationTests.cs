@@ -238,7 +238,6 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.TurnOffDiscoveryClient.Value, actual => actual.TurnOffDiscoveryClient);
             configurationComparer.Assert(expected => expected.ServerName.Value, actual => actual.ServerName);
             configurationComparer.Assert(expected => expected.MaxStepsForScript.Value, actual => actual.MaxStepsForScript);
-            configurationComparer.Assert(expected => expected.MaxRecentTouchesToRemember.Value, actual => actual.MaxRecentTouchesToRemember);
             configurationComparer.Assert(expected => expected.AdditionalStepsForScriptBasedOnDocumentSize.Value, actual => actual.AdditionalStepsForScriptBasedOnDocumentSize);
             configurationComparer.Assert(expected => expected.MaxIndexWritesBeforeRecreate.Value, actual => actual.MaxIndexWritesBeforeRecreate);
             configurationComparer.Assert(expected => expected.MaxSimpleIndexOutputsPerDocument.Value, actual => actual.MaxSimpleIndexOutputsPerDocument);

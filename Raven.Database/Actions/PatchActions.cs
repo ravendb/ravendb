@@ -11,18 +11,16 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
-using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Json;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
 {
     public class PatchActions : ActionsBase
     {
-        public PatchActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
-            : base(database, recentTouches, uuidGenerator, log)
+        public PatchActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, uuidGenerator, log)
         {
         }
 

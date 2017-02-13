@@ -29,7 +29,7 @@ namespace Raven.Database.Actions
         private readonly ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>> forciblyReleasedSubscriptions = new ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>>();
 
         public SubscriptionActions(DocumentDatabase database, ILog log)
-            : base(database, null, null, log)
+            : base(database, null, log)
         {
         }
 

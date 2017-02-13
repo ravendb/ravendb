@@ -71,6 +71,7 @@ namespace Raven.Client.Document
             using (new TransactionScope(TransactionScopeOption.Suppress))
             using (RavenTransactionAccessor.SupressExplicitRavenTransaction())
             using (databaseCommands.ForceReadFromMaster())
+            using (databaseCommands.DisableAllCaching())
             {
                 ModifyCapacityIfRequired();
                 while (true)

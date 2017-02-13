@@ -230,8 +230,6 @@ namespace Raven.Database.Config
             MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10 * 1000);
             AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 
-            MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
-
             Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
             Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
 
@@ -482,8 +480,6 @@ namespace Raven.Database.Config
         public IntegerSetting MaxMapReduceIndexOutputsPerDocument { get; private set; }
 
         public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
-
-        public IntegerSetting MaxRecentTouchesToRemember { get; private set; }
 
         public StringSetting DefaultStorageTypeName { get; private set; }
 
