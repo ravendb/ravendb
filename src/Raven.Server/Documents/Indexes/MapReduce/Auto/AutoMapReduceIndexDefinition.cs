@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Extensions.Internal;
 using Raven.Client.Indexing;
 using Sparrow.Json;
@@ -13,7 +14,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         public readonly Dictionary<string, IndexField> GroupByFields;
 
         public AutoMapReduceIndexDefinition(string collection, IndexField[] mapFields, IndexField[] groupByFields)
-            : base(IndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), new HashSet<string> { collection }, IndexLockMode.Unlock, mapFields)
+            : base(IndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, mapFields)
         {
             foreach (var field in mapFields)
             {
@@ -140,9 +141,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         public static AutoMapReduceIndexDefinition LoadFromJson(BlittableJsonReaderObject reader)
         {
             var lockMode = ReadLockMode(reader);
+            var priority = ReadPriority(reader);
             BlittableJsonReaderArray jsonArray;
 
-            if(reader.TryGet(nameof(Collections), out jsonArray) == false)
+            if (reader.TryGet(nameof(Collections), out jsonArray) == false)
                 throw new InvalidOperationException("No persisted collections");
 
             var collection = jsonArray.GetStringByIndex(0);
@@ -213,7 +215,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields)
             {
-                LockMode = lockMode
+                LockMode = lockMode,
+                Priority = priority
             };
         }
     }

@@ -15,22 +15,8 @@ abstract class resourceCreationModel {
     journalsPath = ko.observable<string>();
     tempPath = ko.observable<string>();
 
-    encryption = {
-        key: ko.observable<string>(),
-        algorithm: ko.observable<string>("Rijndael"),
-        keyBitsPreference: ko.observable<number>(256),
-        encryptIndexes: ko.observable<boolean>(true)
-    }
-
-    encryptionAlgorithmsOptions = ["DES", "RC2", "Rijndael", "Triple DES"];
-    encryptionKeyBitsOptions = [128, 192, 256];
-
     globalValidationGroup = ko.validatedObservable({
         name: this.name
-    });
-
-    encryptionValidationGroup = ko.validatedObservable({
-        key: this.encryption.key
     });
 
     setupValidation(resourceDoesntExist: (name: string) => boolean) {
@@ -64,12 +50,6 @@ abstract class resourceCreationModel {
                     params: this.name
                 }]
         });
-
-
-        this.encryption.key.extend({
-            required: true,
-            base64: true
-        });
     }
 
     protected setupPathValidation(observable: KnockoutObservable<string>, name: string) {
@@ -94,40 +74,6 @@ abstract class resourceCreationModel {
                params: this.name
             }]
         });
-    }
-
-    protected fillEncryptionSettingsIfNeeded(securedSettings: dictionary<string | boolean>) {
-        if (_.includes(this.activeBundles(), "Encryption")) {
-            securedSettings[configuration.encryption.encryptionKey] = this.encryption.key();
-            securedSettings[configuration.encryption.algorithmType] = this.getEncryptionAlgorithmFullName(this.encryption.algorithm());
-            securedSettings[configuration.encryption.encryptionKeyBitsPreference] = this.encryption.keyBitsPreference().toString();
-            securedSettings[configuration.encryption.encryptIndexes] = this.encryption.encryptIndexes();
-        }
-    }
-
-    protected getEncryptionAlgorithmFullName(encrytion: string) {
-        switch (encrytion) {
-            case "DES":
-                return "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
-            case "RC2":
-                return "System.Security.Cryptography.RC2CryptoServiceProvider, mscorlib";
-            case "Rijndael":
-                return "System.Security.Cryptography.RijndaelManaged, mscorlib";
-            default:
-                return "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
-        }
-    }
-
-    setEncryptionAlgorithm(value: string) {
-        this.encryption.algorithm(value);
-    }
-
-    setEncryptionBits(value: number) {
-        this.encryption.keyBitsPreference(value);
-    }
-
-    setIndexEncryption(value: boolean) {
-        this.encryption.encryptIndexes(value);
     }
 }
 

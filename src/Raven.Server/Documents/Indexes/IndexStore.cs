@@ -287,6 +287,12 @@ namespace Raven.Server.Documents.Indexes
                 (result & IndexDefinitionCompareDifferences.ReduceFormatting) == IndexDefinitionCompareDifferences.ReduceFormatting)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
+            if ((result & IndexDefinitionCompareDifferences.Priority) == IndexDefinitionCompareDifferences.Priority)
+                return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
+
+            if ((result & IndexDefinitionCompareDifferences.LockMode) == IndexDefinitionCompareDifferences.LockMode)
+                return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
+
             return IndexCreationOptions.Update;
         }
 

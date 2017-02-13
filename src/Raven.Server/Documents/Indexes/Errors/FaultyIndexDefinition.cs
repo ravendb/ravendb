@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Sparrow.Json;
 
@@ -7,8 +8,8 @@ namespace Raven.Server.Documents.Indexes.Errors
 {
     public class FaultyIndexDefinition : IndexDefinitionBase
     {
-        public FaultyIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexField[] mapFields)
-            : base(name, collections, lockMode, mapFields)
+        public FaultyIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexField[] mapFields)
+            : base(name, collections, lockMode, priority, mapFields)
         {
         }
 

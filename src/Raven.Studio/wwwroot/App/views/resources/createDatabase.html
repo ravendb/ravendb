@@ -13,17 +13,6 @@
                             <input type="text" id="resourceName" data-bind="textInput: resourceModel.name" autofocus class="form-control">
                         </div>
                         
-                        <h3>BUNDLES</h3>
-                        <div class="settings-group" data-bind="foreach: getAvailableBundles()">
-                            <div class="checkbox settings-item" data-bind="css: { 'active': $root.advancedBundleConfigurationVisible() === name }">
-                                <input class="styled" type="checkbox" data-bind="checked: $root.resourceModel.activeBundles, checkedValue: name, attr: { id: 'bundle_' + $index() }">
-                                <label data-bind="text: displayName, attr: { 'for': 'bundle_' + $index() }"></label>
-                                <button type="button" class="btn pull-right btn-toggle"
-                                        data-bind="visible: hasAdvancedConfiguration, click: $root.showAdvancedConfigurationFor.bind($root, name), css: { 'btn-danger': validationGroup && !validationGroup.isValid() }">
-                                    <i data-bind="attr: { 'class' : validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
-                                </button>
-                            </div>
-                        </div>
                         <button type="button"
                                 data-bind="click: showAdvancedConfiguration, attr: { 'class': 'btn btn-block btn-toggle ' + (resourceModel.advancedValidationGroup.isValid() ? 'btn-info' : 'btn-danger')  }">
                             <i data-bind="attr: { 'class': resourceModel.advancedValidationGroup.isValid() ? 'icon-settings' : 'icon-danger' }"></i><span>Advanced</span>
@@ -32,10 +21,6 @@
                     <div class="modal-settings-panel-slideout">
                         <div>
                             <div class="advanced" data-bind="template: { name: 'create-db-advanced' }, visible: advancedConfigurationVisible()">
-                            </div>
-                        </div>
-                        <div data-bind="if: bundlesEnabled.encryption()">
-                            <div class="encryption" data-bind="template: { name: 'create-db-encryption' }, visible: advancedVisibility.encryption()">
                             </div>
                         </div>
                     </div>
@@ -118,81 +103,6 @@
                         <li><a href="#" data-bind="text: $data, click: $root.resourceModel.setRecurringAlertTimeout.bind($root.resourceModel, $data)"></a></li>
                     </ul>
                 </div>
-            </div>
-        </div>
-    </div>
-</script>
-
-<script type="text/html" id="create-db-encryption">
-    <div class="form-group row" data-bind="validationElement: resourceModel.encryption.key">
-        <div class="col-md-6">
-            <label class="control-label">
-                Select Key <small class="text-muted">(Base64 Encoding)</small>
-            </label>
-        </div>
-        <div class="col-md-6">
-            <div class="input-group">
-                <input type="text" class="form-control" placeholder="Key" autocomplete="off"
-                       data-bind="textInput: resourceModel.encryption.key">
-                <span class="input-group-btn">
-                    <button class="btn btn-default" type="button" data-bind="click: resetEncryptionKey">
-                        <i class="icon-reset"></i>
-                    </button>
-                </span>
-            </div>
-        </div>
-        <div class="col-sm-12">
-            <p class="bg-info padding padding-sm small">
-                <i class="icon-warning"></i> Save this key in a safe place. If you lose this key you could lose access to your data.
-            </p>
-        </div>
-    </div>
-    <div class="form-group row">
-        <div class="col-md-6">
-            <label>Encryption Algorithm</label>
-        </div>
-        <div class="col-md-6">
-            <div class="btn-group btn-block">
-                <button type="button" class="btn btn-block dropdown-toggle" data-toggle="dropdown">
-                    <span data-bind="text: resourceModel.encryption.algorithm"></span>
-                    <span class="caret"></span>
-                </button>
-                <ul class="dropdown-menu" role="menu" data-bind="foreach: resourceModel.encryptionAlgorithmsOptions">
-                    <li><a href="#" data-bind="text: $data, click: $root.resourceModel.setEncryptionAlgorithm.bind($root.resourceModel, $data)"></a></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    <div class="form-group row">
-        <div class="col-md-6">
-            <label>Encryption Key Bits</label>
-        </div>
-        <div class="col-md-6">
-            <div class="btn-group btn-block">
-                <button type="button" class="btn btn-block dropdown-toggle" data-toggle="dropdown">
-                    <span data-bind="text: resourceModel.encryption.keyBitsPreference"></span>
-                    <span class="caret"></span>
-                </button>
-                <ul class="dropdown-menu" role="menu" data-bind="foreach: resourceModel.encryptionKeyBitsOptions">
-                    <li><a href="#" data-bind="text: $data, click: $root.resourceModel.setEncryptionBits.bind($root.resourceModel, $data)"></a></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    <div class="form-group row">
-        <div class="col-md-6">
-            <label class="control-label">Indexes</label>
-        </div>
-        <div class="col-md-6">
-            <div class="btn-group btn-block">
-                <button type="button" class="btn btn-block dropdown-toggle" data-toggle="dropdown">
-                    <span data-bind="text: resourceModel.encryption.encryptIndexes() ? 'Encrypt' : 'Do not encrypt'">Encrypt</span>
-                    <span class="caret"></span>
-                </button>
-                <ul class="dropdown-menu" role="menu" data-bind="with: resourceModel">
-                    <li><a href="#" data-bind="click: setIndexEncryption.bind($data, true)">Encrypt</a></li>
-                    <li><a href="#" data-bind="click: setIndexEncryption.bind($data, false)">Do not encrypt</a></li>
-                </ul>
             </div>
         </div>
     </div>

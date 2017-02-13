@@ -290,7 +290,7 @@ select new
                 Assert.Contains("Location", indexes[0].Definition.MapFields.Keys);
                 Assert.Contains("Count", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
-                Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[0].Definition.Compare(defOne));
                 Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
                 Assert.Equal(1, indexes[0].MapReduceWorkContext.NextMapResultId);
@@ -306,7 +306,7 @@ select new
                 Assert.Contains("Count", indexes[1].Definition.MapFields.Keys);
                 Assert.Contains("Total", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.SideBySide, indexes[1].Definition.LockMode);
-                Assert.Equal(IndexPriority.Normal, indexes[1].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[1].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[1].Definition.Compare(defTwo));
                 Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
                 Assert.Equal(0, indexes[1].MapReduceWorkContext.NextMapResultId);

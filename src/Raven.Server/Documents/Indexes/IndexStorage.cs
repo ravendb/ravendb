@@ -111,30 +111,26 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public unsafe void WritePriority(IndexPriority priority)
+        public void WritePriority(IndexPriority priority)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
-                var priorityInt = (int)priority;
-                Slice prioritySlice;
-                using (Slice.External(context.Allocator, (byte*)&priorityInt, sizeof(int), out prioritySlice))
-                    statsTree.Add(IndexSchema.PrioritySlice, prioritySlice);
+                var oldPriority = _index.Definition.Priority;
+                try
+                {
+                    _index.Definition.Priority = priority;
+                    _index.Definition.Persist(context, _environment.Options);
 
-                tx.Commit();
+                    tx.Commit();
+                }
+                catch (Exception)
+                {
+                    _index.Definition.Priority = oldPriority;
+                    throw;
+                }
             }
-        }
-
-        public IndexPriority ReadPriority(RavenTransaction tx)
-        {
-            var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
-            var priority = statsTree.Read(IndexSchema.PrioritySlice);
-            if (priority == null)
-                return IndexPriority.Normal;
-
-            return (IndexPriority)priority.Reader.ReadLittleEndianInt32();
         }
 
         public unsafe void WriteState(IndexState state)

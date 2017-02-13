@@ -2,7 +2,7 @@
 using System.Net.Http;
 using Raven.Client.Blittable;
 using Raven.Client.Commands;
-using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Http;
 using Raven.Client.Indexing;
@@ -11,24 +11,24 @@ using Sparrow.Json;
 
 namespace Raven.Client.Operations.Databases.Indexes
 {
-    public class PutIndexesOperation : IAdminOperation<BlittableArrayResult>
+    public class PutIndexesOperation : IAdminOperation<PutIndexResult[]>
     {
         private readonly IndexDefinition[] _indexToAdd;
 
         public PutIndexesOperation(params IndexDefinition[] indexToAdd)
         {
-            if (indexToAdd == null)
+            if (indexToAdd == null || indexToAdd.Length == 0)
                 throw new ArgumentNullException(nameof(indexToAdd));
 
             _indexToAdd = indexToAdd;
         }
 
-        public RavenCommand<BlittableArrayResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<PutIndexResult[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PutIndexesCommand(conventions, context, _indexToAdd);
         }
 
-        private class PutIndexesCommand : RavenCommand<BlittableArrayResult>
+        private class PutIndexesCommand : RavenCommand<PutIndexResult[]>
         {
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject[] _indexToAdd;
@@ -47,7 +47,7 @@ namespace Raven.Client.Operations.Databases.Indexes
                 for (var i = 0; i < indexesToAdd.Length; i++)
                 {
                     if (indexesToAdd[i].Name == null)
-                        throw new ArgumentNullException("Index name missing");
+                        throw new ArgumentNullException(nameof(IndexDefinition.Name));
                     _indexToAdd[i] = new EntityToBlittable(null).ConvertEntityToBlittable(indexesToAdd[i], conventions, _context);
                 }
             }
@@ -83,7 +83,7 @@ namespace Raven.Client.Operations.Databases.Indexes
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
-                Result = JsonDeserializationClient.BlittableArrayResult(response);
+                Result = JsonDeserializationClient.PutIndexesResponse(response).Results;
             }
 
             public override bool IsReadRequest => false;

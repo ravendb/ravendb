@@ -31,8 +31,6 @@ class filesystemCreationModel extends resourceCreationModel {
             settings["Raven/Voron/TempPath"] = tempPath;
         }*/
 
-        this.fillEncryptionSettingsIfNeeded(securedSettings);
-
         return {
             Id: this.name(),
             Settings: settings,

@@ -12,6 +12,7 @@ namespace Raven.Server.Extensions
             result[nameof(IndexDefinition.IsSideBySideIndex)] = definition.IsSideBySideIndex;
             result[nameof(IndexDefinition.IsTestIndex)] = definition.IsTestIndex;
             result[nameof(IndexDefinition.LockMode)] = definition.LockMode.ToString();
+            result[nameof(IndexDefinition.Priority)] = definition.Priority.ToString();
             result[nameof(IndexDefinition.OutputReduceToCollection)] = definition.OutputReduceToCollection;
             result[nameof(IndexDefinition.Name)] = definition.Name;
             result[nameof(IndexDefinition.Reduce)] = definition.Reduce;

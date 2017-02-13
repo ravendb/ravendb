@@ -40,7 +40,7 @@ namespace SlowTests.Bugs.Indexing
                     var db = GetDocumentDatabaseInstanceFor(store).Result;
                     var indexInstance = db.IndexStore.GetIndex("FakeIndex");
 
-                    Assert.Equal((int)expected, (int)indexInstance.Priority);
+                    Assert.Equal(expected, indexInstance.Definition.Priority);
                 }
             }
         }

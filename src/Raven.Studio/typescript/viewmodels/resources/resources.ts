@@ -34,7 +34,6 @@ class resources extends viewModelBase {
 
     selectionState: KnockoutComputed<checkbox>;
     selectedResources = ko.observableArray<string>([]);
-    allCheckedResourcesDisabled: KnockoutComputed<boolean>;
 
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false)
@@ -66,11 +65,6 @@ class resources extends viewModelBase {
             if (selectedCount > 0)
                 return checkbox.SomeChecked;
             return checkbox.UnChecked;
-        });
-
-        this.allCheckedResourcesDisabled = ko.pureComputed(() => {
-            const selected = this.getSelectedResources();
-            return selected.length === selected.filter(x => x.disabled()).length;
         });
     }
 
@@ -244,18 +238,29 @@ class resources extends viewModelBase {
         messagePublisher.reportSuccess(`Resource ${rsInfo.name} was successfully deleted`);
     }
 
-    toggleSelectedResources() {
-        const disableAll = !this.allCheckedResourcesDisabled();
+    enableSelectedResources() {
+        this.toggleSelectedResources(true);
+    }
+
+    disableSelectedResources() {
+        this.toggleSelectedResources(false);
+    }
+
+    private toggleSelectedResources(enableAll: boolean) { 
         const selectedResources = this.getSelectedResources().map(x => x.asResource());
 
+        if (_.every(selectedResources, x => x.disabled() !== enableAll)) {
+            return;
+        }
+
         if (selectedResources.length > 0) {
-            const disableDatabaseToggleViewModel = new disableResourceToggleConfirm(selectedResources, disableAll);
+            const disableDatabaseToggleViewModel = new disableResourceToggleConfirm(selectedResources, !enableAll);
 
             disableDatabaseToggleViewModel.result.done(result => {
                 if (result.can) {
                     this.spinners.globalToggleDisable(true);
 
-                    new disableResourceToggleCommand(selectedResources, disableAll)
+                    new disableResourceToggleCommand(selectedResources, !enableAll)
                         .execute()
                         .done(disableResult => {
                             disableResult.forEach(x => this.onResourceDisabled(x));

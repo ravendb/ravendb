@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/ReplaceIndexes", "PUT")]
+        [RavenAction("/databases/*/indexes/replace", "PUT")]
         public Task Replace()
         {
             return null;

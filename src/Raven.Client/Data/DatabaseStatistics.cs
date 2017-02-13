@@ -73,6 +73,8 @@ namespace Raven.Client.Data
 
         public IndexLockMode LockMode { get; set; }
 
+        public IndexPriority Priority { get; set; }
+
         public IndexType Type { get; set; }
 
         public DateTime? LastIndexingTime { get; set; }
