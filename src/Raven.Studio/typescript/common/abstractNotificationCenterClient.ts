@@ -5,9 +5,9 @@ import changeSubscription = require("common/changeSubscription");
 import changesCallback = require("common/changesCallback");
 import EVENTS = require("common/constants/events");
 
-import abstractWebSocketClient = require("common/abstractWebSocketClient");
+import eventsWebSocketClient = require("common/eventsWebSocketClient");
 
-abstract class abstractNotificationCenterClient extends abstractWebSocketClient<Raven.Server.NotificationCenter.Notifications.Notification> {
+abstract class abstractNotificationCenterClient extends eventsWebSocketClient<Raven.Server.NotificationCenter.Notifications.Notification> {
 
     constructor(rs: resource) {
         super(rs);

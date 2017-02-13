@@ -14,6 +14,8 @@ namespace Raven.Client.Data.Indexes
         {
         }
 
+        public int Id { get; set; }
+
         public DateTime? Completed { get; set; }
 
         public IndexingPerformanceOperation Details { get; set; }

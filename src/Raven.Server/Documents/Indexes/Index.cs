@@ -122,6 +122,8 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentQueue<IndexingStatsAggregator> _lastIndexingStats =
             new ConcurrentQueue<IndexingStatsAggregator>();
 
+        private IndexingStatsAggregator _lastIndexingStat;
+
         private int _numberOfQueries;
 
         protected readonly bool HandleAllDocs;
@@ -663,6 +665,8 @@ namespace Raven.Server.Documents.Indexes
 
                         AddIndexingPerformance(stats);
 
+                        var batchCompleted = false;
+
                         using (var scope = stats.CreateScope())
                         {
                             try
@@ -682,9 +686,6 @@ namespace Raven.Server.Documents.Indexes
 
                                 _indexingBatchCompleted.SetAndResetAtomically();
 
-                                DocumentDatabase.Changes.RaiseNotifications(
-                                    new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
-
                                 if (didWork)
                                     ResetErrors();
 
@@ -692,6 +693,8 @@ namespace Raven.Server.Documents.Indexes
 
                                 if (_logger.IsInfoEnabled)
                                     _logger.Info($"Finished indexing for '{Name} ({IndexId})'.'");
+
+                                batchCompleted = true;
                             }
                             catch (OutOfMemoryException oome)
                             {
@@ -746,6 +749,12 @@ namespace Raven.Server.Documents.Indexes
                         }
 
                         stats.Complete();
+
+                        if (batchCompleted)
+                        {
+                            DocumentDatabase.Changes.RaiseNotifications(
+                                    new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
+                        }
 
                         try
                         {
@@ -1970,20 +1979,25 @@ namespace Raven.Server.Documents.Indexes
 
         private void AddIndexingPerformance(IndexingStatsAggregator stats)
         {
+            _lastIndexingStat = stats;
             _lastIndexingStats.Enqueue(stats);
 
             while (_lastIndexingStats.Count > 25)
                 _lastIndexingStats.TryDequeue(out stats);
         }
 
-        public IndexingPerformanceStats[] GetIndexingPerformance(int fromId)
+        public IndexingPerformanceStats[] GetIndexingPerformance()
         {
             var lastStats = _lastStats;
 
             return _lastIndexingStats
-                .Where(x => x.Id >= fromId)
                 .Select(x => x == lastStats ? x.ToIndexingPerformanceLiveStatsWithDetails() : x.ToIndexingPerformanceStats())
                 .ToArray();
+        }
+
+        public IndexingStatsAggregator GetLatestIndexingStat()
+        {
+            return _lastIndexingStat;
         }
 
         public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
