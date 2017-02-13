@@ -411,6 +411,8 @@ namespace Raven.Abstractions.Data
 
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
 
+            public const string MaxSizePerScratchBufferFile = "Raven/Voron/MaxSizePerScratchBufferFile";
+
             public const string AllowOn32Bits = "Raven/Voron/AllowOn32Bits";
 
             public const string ScratchBufferSizeNotificationThreshold = "Raven/Voron/ScratchBufferSizeNotificationThreshold";

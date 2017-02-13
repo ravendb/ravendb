@@ -458,6 +458,7 @@ namespace Raven.Storage.Voron
             var options = StorageEnvironmentOptions.CreateMemoryOnly(configuration.Storage.Voron.TempPath);
             options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
             options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024L * 1024L;
+            options.MaxSizePerScratchBufferFile = configuration.Storage.Voron.MaxSizePerScratchBufferFile * 1024L * 1024L;
 
             return options;
         }
@@ -482,6 +483,7 @@ namespace Raven.Storage.Voron
             options.IncrementalBackupEnabled = configuration.Storage.Voron.AllowIncrementalBackups;
             options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
             options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024L * 1024L;
+            options.MaxSizePerScratchBufferFile = configuration.Storage.Voron.MaxSizePerScratchBufferFile * 1024L * 1024L;
 
             return options;
         }

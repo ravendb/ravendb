@@ -63,6 +63,8 @@ namespace Voron
 
         public long MaxScratchBufferSize { get; set; }
 
+        public long MaxSizePerScratchBufferFile { get; set; }
+
         public long MaxNumberOfPagesInMergedTransaction { get; set; }
 
         public bool OwnsPagers { get; set; }
@@ -100,6 +102,8 @@ namespace Voron
             InitialLogFileSize = 64 * 1024;
 
             MaxScratchBufferSize = 512 * 1024 * 1024;
+
+            MaxSizePerScratchBufferFile = 256 * 1024 * 1024;
 
             ScratchBufferOverflowTimeout = 5000;
 
