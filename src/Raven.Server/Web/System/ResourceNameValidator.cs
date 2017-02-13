@@ -35,7 +35,8 @@ namespace Raven.Server.Web.System
             "clock$"
         };
 
-        public static readonly int WindowsMaxPath = (int)typeof(Path).GetField("MaxLongPath", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+        // from https://github.com/dotnet/corefx/blob/9c06da6a34fcefa6fb37776ac57b80730e37387c/src/Common/src/System/IO/PathInternal.Windows.cs#L52
+        public static readonly int WindowsMaxPath = short.MaxValue;
 
         public const int LinuxMaxFileNameLength = 230;
 

@@ -6,7 +6,7 @@ namespace FastTests.Issues
 {
     public class RavenDB_5178 : RavenNewTestBase
     {
-        [Fact]
+        [NonLinuxFact]
         public void CanUsePathLongerThan260Chars()
         {
             using (var store = GetDocumentStore())
