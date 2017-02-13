@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Exceptions;
 

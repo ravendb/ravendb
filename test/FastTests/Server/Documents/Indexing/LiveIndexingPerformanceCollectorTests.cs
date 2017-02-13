@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Indexes;
 using Raven.Server.Documents.Indexes;
 using Xunit;
 
