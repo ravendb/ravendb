@@ -58,7 +58,7 @@ namespace SlowTests.Issues
 
                 store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
-                    Name = "tset",
+                    Name = "test",
                     Maps = new HashSet<string> { "from doc in docs select new { doc.Text }" },
                     Fields = { { "Text", opt } },
                 }}));
