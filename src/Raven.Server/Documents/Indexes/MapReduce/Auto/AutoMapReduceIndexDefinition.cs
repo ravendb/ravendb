@@ -139,15 +139,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public static AutoMapReduceIndexDefinition LoadFromJson(BlittableJsonReaderObject reader)
         {
-            int lockModeAsInt;
-            reader.TryGet(nameof(LockMode), out lockModeAsInt);
-
+            var lockMode = ReadLockMode(reader);
             BlittableJsonReaderArray jsonArray;
-            reader.TryGet(nameof(Collections), out jsonArray);
+
+            if(reader.TryGet(nameof(Collections), out jsonArray) == false)
+                throw new InvalidOperationException("No persisted collections");
 
             var collection = jsonArray.GetStringByIndex(0);
 
-            reader.TryGet(nameof(MapFields), out jsonArray);
+            if (reader.TryGet(nameof(MapFields), out jsonArray) == false)
+                throw new InvalidOperationException("No persisted map fields");
 
             var mapFields = new IndexField[jsonArray.Length];
 
@@ -180,7 +181,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 mapFields[i] = field;
             }
 
-            reader.TryGet(nameof(GroupByFields), out jsonArray);
+            if (reader.TryGet(nameof(GroupByFields), out jsonArray) == false)
+                throw new InvalidOperationException("No persisted group by fields");
 
             var groupByFields = new IndexField[jsonArray.Length];
 
@@ -211,7 +213,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields)
             {
-                LockMode = (IndexLockMode)lockModeAsInt
+                LockMode = lockMode
             };
         }
     }
