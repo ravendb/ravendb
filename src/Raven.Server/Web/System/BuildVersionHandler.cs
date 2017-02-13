@@ -28,10 +28,12 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(BuildNumber.BuildVersion)] = ServerVersion.Build,
+                        [nameof(BuildNumber.BuildVersion)] = ServerVersion.Build, 
                         [nameof(BuildNumber.ProductVersion)] = ServerVersion.Version,
                         [nameof(BuildNumber.CommitHash)] = ServerVersion.CommitHash,
-                        [nameof(BuildNumber.FullVersion)] = ServerVersion.FullVersion
+                        [nameof(BuildNumber.FullVersion)] = ServerVersion.FullVersion,
+                        [nameof(BuildNumber.SemVer)] = ServerVersion.SemVersion
+
                     });
                 }
                 var versionBuffer = stream.ToArray();

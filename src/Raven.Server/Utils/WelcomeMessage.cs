@@ -21,8 +21,8 @@ namespace Raven.Server.Utils
 
             const string lineBorder = "+---------------------------------------------------------------+";
 
-            ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}, Commit {2}, PID {3}",
-                ServerVersion.Build, ServerVersion.Version, ServerVersion.CommitHash, Process.GetCurrentProcess().Id);
+            ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}, SemVer {2},  Commit {3}, PID {4}",
+                ServerVersion.Build, ServerVersion.Version, ServerVersion.SemVersion ,ServerVersion.CommitHash, Process.GetCurrentProcess().Id);
             ConsoleWriteLineWithColor(ConsoleColor.DarkCyan, " Source Code (git repo): https://github.com/ravendb/ravendb");
             ConsoleWriteWithColor(new ConsoleText { Message = " Built with ", ForegroundColor = ConsoleColor.Gray },
                 new ConsoleText { Message = "love ", ForegroundColor = ConsoleColor.Red },
