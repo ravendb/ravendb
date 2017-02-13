@@ -11,71 +11,26 @@ abstract class createResourceBase extends dialogViewModelBase {
     abstract getResourceByName(name: string): resource;
 
     advancedConfigurationVisible = ko.observable<boolean>(false);
-    protected advancedBundleConfigurationVisible = ko.observable<string>();
     showWideDialog: KnockoutComputed<boolean>;
 
     resourceModel: resourceCreationModel;
 
     activate() {
         this.initObservables();
-        this.resetEncryptionKey();
     }
 
     protected initObservables() {
-        this.showWideDialog = ko.pureComputed(() => {
-            const hasAdvancedOpened = this.advancedConfigurationVisible();
-            const hasAdvancedBundleOpened = !!this.advancedBundleConfigurationVisible();
-
-            return hasAdvancedBundleOpened || hasAdvancedOpened;
-        });
-
-        this.resourceModel.activeBundles.subscribe((changes: Array<KnockoutArrayChange<string>>) => { 
-            // hide advanced if respononding bundle was unchecked
-            if (!this.advancedBundleConfigurationVisible()) {
-                return;
-            }
-            changes.forEach(change => {
-                if (change.status === "deleted" && change.value === this.advancedBundleConfigurationVisible()) {
-                    this.advancedBundleConfigurationVisible(null);
-                }
-            });
-        }, null, "arrayChange");
-
+        this.showWideDialog = ko.pureComputed(() => this.advancedConfigurationVisible());
         this.resourceModel.setupValidation((name: string) => !this.getResourceByName(name));
     }
 
     showAdvancedConfiguration() {
-        if (this.advancedConfigurationVisible()) {
-            this.advancedConfigurationVisible(false);
-            return;
-        }
-
-        this.advancedBundleConfigurationVisible(null);
-        this.advancedConfigurationVisible(true);
-    }
-
-    showAdvancedConfigurationFor(bundleName: string) {
-        if (this.advancedBundleConfigurationVisible() === bundleName) {
-            this.advancedBundleConfigurationVisible(null);
-            return;
-        }
-
-        if (!_.includes(this.resourceModel.activeBundles(), bundleName)) {
-            this.resourceModel.activeBundles.push(bundleName);
-        }
-        this.advancedConfigurationVisible(false);
-        this.advancedBundleConfigurationVisible(bundleName);
+        this.advancedConfigurationVisible.toggle();
     }
 
     isBundleActive(name: string): boolean {
         //TODO: implement me!
         return true;
-    }
-
-    protected resetEncryptionKey() {
-        const rawKey = forge.random.getBytesSync(32);
-        const generatedKey = forge.util.encode64(rawKey);
-        this.resourceModel.encryption.key(generatedKey);
     }
 
 }
