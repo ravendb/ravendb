@@ -9,6 +9,7 @@ using Raven.Client.Indexing;
 using Raven.Client.Operations.Databases;
 using Raven.Client.Operations.Databases.Documents;
 using Raven.Client.Operations.Databases.Indexes;
+//using Raven.Server.Documents.Patch;
 using Sparrow.Json;
 using Xunit;
 
@@ -806,11 +807,12 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                store.Admin.Send(new PutIndexOperation("TestIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { @"from doc in docs.CustomTypes 
-                            select new { doc.Value }" }
-                }));
+                            select new { doc.Value }" },
+                    Name = "TestIndex"
+                }}));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -928,12 +930,13 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                store.Admin.Send(new PutIndexOperation("TestIndex",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { @"from doc in docs.CustomTypes 
-                                     select new { doc.Owner }" }
-                    }));
+                                     select new { doc.Owner }" },
+                        Name = "TestIndex"
+                    }}));
 
                 WaitForIndexing(store);
 

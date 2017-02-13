@@ -23,11 +23,12 @@ namespace SlowTests.Bugs
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { "from doc in docs select new { doc.Name}"},
-                    Fields = { { "Name", filedOptions } }
-                }));
+                    Fields = { { "Name", filedOptions } },
+                    Name = "test"
+                }}));
 
                 using (var s = store.OpenSession())
                 {
@@ -61,11 +62,12 @@ namespace SlowTests.Bugs
 
                 // Overloading the email property into a catchall freeform container to avoid rewriting the test entirely.
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs select new { Email = doc.Name, Name = doc.Name }" },
-                    Fields = { { "Email", filedOptions } }
-                }));
+                    Fields = { { "Email", filedOptions } },
+                    Name = "test"
+                }}));
 
                 using (var s = store.OpenSession ())
                 {
@@ -107,11 +109,12 @@ namespace SlowTests.Bugs
 
                 // Overloading the email property into a catchall freeform container to avoid rewriting the test entirely.
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs select new { Email = doc.Name, Name = doc.Name }" },
-                    Fields = { { "Email", filedOptions } }
-                }));
+                    Fields = { { "Email", filedOptions } },
+                    Name = "test"
+                }}));
 
                 using (var s = store.OpenSession ())
                 {

@@ -31,11 +31,12 @@ namespace SlowTests.Core.Querying
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("Posts/ByTitle", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new [] {new IndexDefinition
                 {
                     Maps = { "from post in docs.Posts select new { post.Title }" },
-                    Fields = { { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } } }
-                }));
+                    Fields = { { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } } },
+                    Name = "Posts/ByTitle"
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -85,15 +86,16 @@ namespace SlowTests.Core.Querying
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("Posts/ByTitleAndDescription", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { "from post in docs.Posts select new { post.Title, post.Desc }" },
                     Fields =
                     {
                         { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} },
                         { "Desc", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} }
-                    }
-                }));
+                    },
+                    Name = "Posts/ByTitleAndDescription"
+                }}));
 
                 using (var session = store.OpenSession())
                 {

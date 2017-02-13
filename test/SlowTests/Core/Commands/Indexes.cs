@@ -35,10 +35,11 @@ namespace SlowTests.Core.Commands
                     await commands.PutAsync("users/1", null, new User { Name = "testname" }, null);
                 }
 
-                await store.Admin.SendAsync(new PutIndexOperation(usersByname, new IndexDefinition
+                await store.Admin.SendAsync(new PutIndexesOperation(new[] {new IndexDefinition
                 {
-                    Maps = { "from user in docs.Users select new { user.Name }" }
-                }));
+                    Maps = { "from user in docs.Users select new { user.Name }" },
+                    Name = usersByname
+                }}));
 
                 var index = await store.Admin.SendAsync(new GetIndexOperation(usersByname));
                 Assert.Equal(usersByname, index.Name);
@@ -65,11 +66,12 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs.Users select new { doc.Name }" }
-                    }));
+                        Maps = { "from doc in docs.Users select new { doc.Name }" },
+                        Name = "test"
+                    }}));
 
                 WaitForIndexing(store);
 
@@ -100,11 +102,12 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs.Users select new { doc.Name }" }
-                    }));
+                        Maps = { "from doc in docs.Users select new { doc.Name }" },
+                        Name = "test"
+                    }}));
 
                 WaitForIndexing(store);
 
@@ -135,15 +138,16 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from doc in docs.Users select new { doc.Name }" },
                         Fields = new Dictionary<string, IndexFieldOptions>
                                                                  {
                                                                      { "Name", new IndexFieldOptions { Sort = SortOptions.String } }
-                                                                 }
-                    }));
+                                                                 },
+                        Name = "test"
+                    }}));
 
                 WaitForIndexing(store);
 

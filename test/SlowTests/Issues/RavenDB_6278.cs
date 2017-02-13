@@ -23,13 +23,14 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
+                    Name = "test",
                     Maps =
                     {
                         "from user in docs.Users let address = LoadDocument(user.AddressId, \"Addresses\") select new { Name = user.Name, City = address.City }"
                     }
-                }));
+                }}));
 
                 using (var session = store.OpenSession())
                 {

@@ -13,11 +13,12 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs let Name = doc[\"@metadata\"][\"Name\"] where Name.StartsWith(\"Raven\") select new { Name }" }
-                    }));
+                        Maps = { "from doc in docs let Name = doc[\"@metadata\"][\"Name\"] where Name.StartsWith(\"Raven\") select new { Name }" },
+                        Name = "test"
+                    }}));
 
                 using (var s = store.OpenSession())
                 {

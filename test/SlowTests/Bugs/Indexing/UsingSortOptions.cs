@@ -12,15 +12,16 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from user in docs.Users select new { user.Name }" },
 
                     Fields =
                     {
                         {"Name", new IndexFieldOptions {Sort = SortOptions.StringVal}}
-                    }
-                }));
+                    },
+                    Name = "test"
+                }}));
 
                 var indexDefinition = store.Admin.Send(new GetIndexOperation("test"));
 

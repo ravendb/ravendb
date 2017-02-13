@@ -19,16 +19,17 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                var e = Assert.Throws<IndexCompilationException>(() => store.Admin.Send(new PutIndexOperation("foo",
+                var e = Assert.Throws<IndexCompilationException>(() => store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from doc in docs select new { doc.Name }" },
                         Fields =
                         {
                             {"Name", new IndexFieldOptions {Analyzer = "foo bar"}}
-                        }
+                        },
+                        Name = "foo"
 
-                    })));
+                    }})));
 
                 Assert.Equal("Cannot find analyzer type 'foo bar' for field: Name", e.Message);
             }

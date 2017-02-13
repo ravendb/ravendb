@@ -37,8 +37,9 @@ namespace SlowTests.MailingList
                     }
                 }
 
-                store.Admin.Send(new PutIndexOperation("TestIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {  new IndexDefinition
                 {
+                    Name = "TestIndex",
                     Maps = {
                         @"docs.MyEntities.Select(entity => new {
                                     Text = entity.Text,
@@ -49,7 +50,7 @@ namespace SlowTests.MailingList
                     {
                         { "Text", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
                     }
-                }));
+                }}));
 
                 using (var session = store.OpenSession())
                 {

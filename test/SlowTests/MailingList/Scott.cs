@@ -16,9 +16,10 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("TagCloud",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "TagCloud", 
                                                     Maps = {
                                                         @"
 from post in docs.Posts 
@@ -41,7 +42,7 @@ select new {
                                                     {
                                                         { "Tag", new IndexFieldOptions {Indexing = FieldIndexing.NotAnalyzed}}
                                                     }
-                                                }));
+                                                }}));
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Post

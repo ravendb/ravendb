@@ -223,11 +223,12 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Store(new User { Name = "Ayende", Email = "same.email@example.com" });
 
-                    store.Admin.Send(new PutIndexOperation("index",
+                    store.Admin.Send(new PutIndexesOperation(new[] {
                         new IndexDefinition
                         {
-                            Maps = { "from user in docs.Users select new {Email=user.Email}" }
-                        }));
+                            Maps = { "from user in docs.Users select new {Email=user.Email}" },
+                            Name = "index"
+                        }}));
 
                     s.SaveChanges();
                 }

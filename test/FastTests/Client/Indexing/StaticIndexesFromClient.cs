@@ -25,13 +25,14 @@ namespace FastTests.Client.Indexing
 
                 var input = new IndexDefinition
                 {
+                    Name = "Users_ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" },
                     Type = IndexType.Map
                 };
 
                 await store
                     .Admin
-                    .SendAsync(new PutIndexOperation("Users_ByName", input));
+                    .SendAsync(new PutIndexesOperation(new []{input}));
 
                 var output = await store
                     .Admin

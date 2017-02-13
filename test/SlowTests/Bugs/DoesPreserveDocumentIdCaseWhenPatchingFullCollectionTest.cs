@@ -26,10 +26,11 @@ namespace SlowTests.Bugs
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { "from doc in docs select new { doc.Name }" },
-                }));
+                    Name = "test"
+                }}));
 
                 string documentId = null;
                 using (var session = store.OpenSession())

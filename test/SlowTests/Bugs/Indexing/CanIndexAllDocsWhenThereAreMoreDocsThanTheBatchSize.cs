@@ -41,11 +41,12 @@ namespace SlowTests.Bugs.Indexing
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs select new { doc.Name}" }
-                    }));
+                        Maps = { "from doc in docs select new { doc.Name}" },
+                        Name = "test"
+                    }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -61,11 +62,12 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore(modifyDatabaseDocument: _modifyMapTimeout))
             {
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs select new { doc.Name}" }
-                    }));
+                        Maps = { "from doc in docs select new { doc.Name}" },
+                        Name = "test"
+                    }}));
 
                 using (var session = store.OpenSession())
                 {

@@ -144,10 +144,11 @@ namespace SlowTests.Issues
         {
             using (var s = GetDocumentStore())
             {
-                s.Admin.Send(new PutIndexOperation("items_by_ver", new IndexDefinition
+                s.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
+                    Name = "items_by_ver",
                     Maps = { "from doc in docs.Items select new { doc.Version }" }
-                }));
+                }}));
                 using (var session = s.OpenSession())
                 {
                     session.Store(new Item { Version = "first" });

@@ -100,7 +100,9 @@ namespace SlowTests.Core.Streaming
                         Map = docs => from doc in docs select new { Index = doc.Index }
                     };
 
-                    store.Admin.Send(new PutIndexOperation("MyClass/ByIndex", indexDef.ToIndexDefinition(store.Conventions, true)));
+                    var indexDefinition = indexDef.ToIndexDefinition(store.Conventions, true);
+                    indexDefinition.Name = "MyClass/ByIndex";
+                    store.Admin.Send(new PutIndexesOperation(new []{indexDefinition} ));
 
                     WaitForIndexing(store);
 

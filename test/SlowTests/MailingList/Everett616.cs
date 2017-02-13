@@ -54,9 +54,10 @@ namespace SlowTests.MailingList
                     commands.Put("test/2", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "ClickAllocations" } });
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "test",
                                                     Maps = {
                                                     @"docs.ClickAllocations
     .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = doc.__document_id, Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
@@ -66,7 +67,7 @@ namespace SlowTests.MailingList
     .GroupBy(result => result.AccountId)
     .Select(a => new {a = a, clickAllocation = a.OrderByDescending(x => x.Date).FirstOrDefault()})
     .Select(__h__TransparentIdentifier0 => new {AccountId = __h__TransparentIdentifier0.clickAllocation.AccountId, Date = __h__TransparentIdentifier0.clickAllocation.Date, Id = __h__TransparentIdentifier0.clickAllocation.Id, Key = __h__TransparentIdentifier0.clickAllocation.Key, LastSavedDate = __h__TransparentIdentifier0.clickAllocation.LastSavedDate, LastSavedUser = __h__TransparentIdentifier0.clickAllocation.LastSavedUser, OrderNumber = __h__TransparentIdentifier0.clickAllocation.OrderNumber, PurchaseDate = __h__TransparentIdentifier0.clickAllocation.PurchaseDate, PurchaseOrderNumber = __h__TransparentIdentifier0.clickAllocation.PurchaseOrderNumber, Quantity = __h__TransparentIdentifier0.clickAllocation.Quantity, ReorderQuantity = __h__TransparentIdentifier0.clickAllocation.ReorderQuantity, Type = __h__TransparentIdentifier0.clickAllocation.Type})"
-                                                }));
+                                                }}));
 
                 WaitForIndexing(store);
                 TestHelper.AssertNoIndexErrors(store);
@@ -117,9 +118,10 @@ namespace SlowTests.MailingList
                     commands.Put("test/2", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "ClickAllocations" } });
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "test",
                                                     Maps = {
                                                     @"docs.ClickAllocations
     .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = doc.__document_id, Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
@@ -129,7 +131,7 @@ namespace SlowTests.MailingList
     .GroupBy(result => result.AccountId)
     .Select(a => new {a = a, clickAllocation = a.OrderByDescending(x => x.Date).FirstOrDefault()})
     .Select(__h__TransparentIdentifier0 => new {AccountId = __h__TransparentIdentifier0.clickAllocation.AccountId, Date = __h__TransparentIdentifier0.clickAllocation.Date, Id = __h__TransparentIdentifier0.clickAllocation.Id, Key = __h__TransparentIdentifier0.clickAllocation.Key, LastSavedDate = __h__TransparentIdentifier0.clickAllocation.LastSavedDate, LastSavedUser = __h__TransparentIdentifier0.clickAllocation.LastSavedUser, OrderNumber = __h__TransparentIdentifier0.clickAllocation.OrderNumber, PurchaseDate = __h__TransparentIdentifier0.clickAllocation.PurchaseDate, PurchaseOrderNumber = __h__TransparentIdentifier0.clickAllocation.PurchaseOrderNumber, Quantity = __h__TransparentIdentifier0.clickAllocation.Quantity, ReorderQuantity = __h__TransparentIdentifier0.clickAllocation.ReorderQuantity, Type = __h__TransparentIdentifier0.clickAllocation.Type})"
-                                                }));
+                                                }}));
 
                 WaitForIndexing(store);
                 TestHelper.AssertNoIndexErrors(store);

@@ -120,9 +120,10 @@ namespace SlowTests.Tests.Queries
         {
             using (var s = store.OpenSession())
             {
-                store.Admin.Send(new PutIndexOperation("TShirtNested",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "TShirtNested",
                                                     Maps =
                                                     {
                                                         @"from s in docs.TShirts
@@ -133,7 +134,7 @@ namespace SlowTests.Tests.Queries
                                                     {
                                                         { "BarcodeNumber", new IndexFieldOptions { Sort = SortOptions.NumericDefault } }
                                                     }
-                                                }));
+                                                }}));
 
                 foreach (var sample in GetSampleData())
                 {

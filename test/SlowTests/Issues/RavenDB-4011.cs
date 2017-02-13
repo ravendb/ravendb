@@ -49,8 +49,9 @@ namespace SlowTests.Issues
                                               Case = e.CaseId
                                           }
                     };
-
-                    store.Admin.Send(new PutIndexOperation("TestIndex/Numer" + i, builder.ToIndexDefinition(store.Conventions)));
+                    var indexDefinition = builder.ToIndexDefinition(store.Conventions);
+                    indexDefinition.Name = "TestIndex/Numer" + i;
+                    store.Admin.Send(new PutIndexesOperation(new [] {indexDefinition}));
                 }
 
                 WaitForIndexing(store);

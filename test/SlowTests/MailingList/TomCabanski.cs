@@ -13,10 +13,11 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
+                    Name ="test",
                     Maps = { "from doc in docs.Users select new { doc.Age, doc.IsActive, doc.BookVendor }" }
-                }));
+                }}));
 
                 using (var s = store.OpenSession())
                 {

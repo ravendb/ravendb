@@ -13,10 +13,11 @@ namespace SlowTests.Bugs
         {
             using(var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
-                    Maps = { "from doc in docs.ClickBalances select new { doc.AccountId } " }
-                }));
+                    Maps = { "from doc in docs.ClickBalances select new { doc.AccountId } " },
+                    Name = "test"
+                }}));
 
                 using(var s = store.OpenSession())
                 {

@@ -19,7 +19,8 @@ namespace SlowTests.Bugs
         {
             using(var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("Precision", new IndexDefinition { Maps = { "from doc in docs select new { doc.M }"}}));
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition { Maps = { "from doc in docs select new { doc.M }"},
+                    Name = "Precision"}}));
 
                 using(var session = store.OpenSession())
                 {

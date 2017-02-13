@@ -14,15 +14,16 @@ namespace SlowTests.Bugs.MultiMap
             using(var store = GetDocumentStore())
             {
                 var exception = Assert.Throws<IndexCompilationException>(() =>
-                                    store.Admin.Send(new PutIndexOperation("test",
+                                    store.Admin.Send(new PutIndexesOperation(new[] {
                                                         new IndexDefinition
                                                         {
                                                             Maps =
                                                             {
                                                                 "from user in docs.Users select new { user.Username }",
                                                                 "from post in docs.Posts select new { post.Title }"
-                                                            }
-                                                        })));
+                                                            },
+                                                            Name = "test"
+                                                        }})));
 
                 Assert.Contains(@"Map and Reduce functions of a index must return identical types.
 Baseline function		: from user in docs.Users select new { user.Username }
@@ -41,7 +42,7 @@ Additional fields		: Title", exception.Message);
             using (var store = GetDocumentStore())
             {
                 var exception = Assert.Throws<IndexCompilationException>(() => 
-                                    store.Admin.Send(new PutIndexOperation("test",
+                                    store.Admin.Send(new PutIndexesOperation(new[] {
                                                         new IndexDefinition
                                                         {
                                                             Maps =
@@ -49,8 +50,9 @@ Additional fields		: Title", exception.Message);
                                                                 "from user in docs.Users select new { user.Title }",
                                                                 "from post in docs.Posts select new { post.Title }"
                                                             },
-                                                            Reduce = "from result in results group result by result.Title into g select new { Title = g.Key, Count = 1 }"
-                                                        })));
+                                                            Reduce = "from result in results group result by result.Title into g select new { Title = g.Key, Count = 1 }",
+                                                            Name = "test"
+                                                        }})));
 
                 Assert.Contains(@"Map and Reduce functions of a index must return identical types.
 Baseline function		: from user in docs.Users select new { user.Title }

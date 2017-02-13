@@ -301,10 +301,11 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                store.Admin.Send(new PutIndexOperation(indexName,
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
+                        Name = indexName, 
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
                             {
@@ -326,7 +327,7 @@ namespace SlowTests.Tests.Querying
                                 }
                             }
                         }
-                    }));
+                    }}));
 
                 var blogOne = new Blog
                 {
@@ -390,10 +391,11 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingMRTests";
-                store.Admin.Send(new PutIndexOperation(indexName,
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
+                        Name = indexName,
                         Reduce = @"from result in results 
                                    group result by result.Category into g
                                    select new { Category = g.Key, Title = g.Select(x=>x.Title).Aggregate(string.Concat) }",
@@ -418,7 +420,7 @@ namespace SlowTests.Tests.Querying
                                 }
                             }
                         }
-                    }));
+                    }}));
 
                 var blogOne = new Blog
                 {
@@ -476,10 +478,11 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                store.Admin.Send(new PutIndexOperation(indexName,
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
+                        Name = indexName,
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
                             {
@@ -501,7 +504,7 @@ namespace SlowTests.Tests.Querying
                                 }
                             }
                         }
-                    }));
+                    }}));
 
                 var blogOne = new Blog
                 {

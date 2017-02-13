@@ -62,10 +62,11 @@ namespace SlowTests.Tests.Indexes
                     Assert.Equal(1024 * 6, usersCount);
                 }
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
+                    Name= "test",
                     Maps = { "from user in docs.Users select new { user.Name }" }
-                }));
+                }}));
 
                 using (var session = store.OpenSession())
                 {

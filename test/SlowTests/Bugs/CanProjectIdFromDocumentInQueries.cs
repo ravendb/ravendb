@@ -19,16 +19,16 @@ namespace SlowTests.Bugs
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation(
-                    "AmazingIndex",
-                    new IndexDefinitionBuilder<Shipment>()
-                    {
-                        Map = docs => from doc in docs
-                            select new
-                            {
-                                doc.Id
-                            }
-                    }.ToIndexDefinition(store.Conventions)));
+                var indexDefinition = new IndexDefinitionBuilder<Shipment>()
+                {
+                    Map = docs => from doc in docs
+                        select new
+                        {
+                            doc.Id
+                        }
+                }.ToIndexDefinition(store.Conventions);
+                indexDefinition.Name = "AmazingIndex";
+                store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
               
 
                 using (var session = store.OpenSession())

@@ -89,7 +89,8 @@ namespace SlowTests.Issues
                 var notificationsQueue = new AsyncQueue<Notification>();
                 using (db.NotificationCenter.TrackActions(notificationsQueue, null))
                 {
-                    store.Admin.Send(new PutIndexOperation(index.IndexName, definition));
+                    definition.Name = index.IndexName;
+                    store.Admin.Send(new PutIndexesOperation(new[] { definition}));
 
                     WaitForIndexing(store);
 

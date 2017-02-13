@@ -211,7 +211,7 @@ namespace SlowTests.Tests.Faceted
                 session.SaveChanges();
             }
 
-            store.Admin.Send(new PutIndexOperation("Cars", new IndexDefinition
+            store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {
                 Maps = { "from car in docs.Cars select new { car.Make, car.Year, car.Price}" },
                 Fields = new Dictionary<string, IndexFieldOptions>
@@ -223,7 +223,8 @@ namespace SlowTests.Tests.Faceted
                             Sort = SortOptions.NumericDouble
                         }
                     }
-                }
+                },
+                Name = "Cars" }
             }));
 
             WaitForIndexing(store);

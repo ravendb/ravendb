@@ -25,9 +25,10 @@ namespace SlowTests.Issues
                     session.Store(new { Name = "darsy" });
                     session.SaveChanges();
                 }
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
+                        Name = "test",
                         Maps = new HashSet<string> { "from doc in docs select new { doc.Name}" },
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
                                 new IndexFieldOptions {Suggestions = true}
                             }
                         }
-                    }));
+                    }}));
 
                 WaitForIndexing(store);
 
@@ -75,8 +76,9 @@ namespace SlowTests.Issues
                     session.Store(new { Name = "darsy" });
                     session.SaveChanges();
                 }
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
+                    Name = "test",
                     Maps = new HashSet<string> { "from doc in docs select new { doc.Name}" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
@@ -85,7 +87,7 @@ namespace SlowTests.Issues
                             new IndexFieldOptions {Suggestions = true}
                         }
                     }
-                }));
+                }}));
 
                 WaitForIndexing(store);
 

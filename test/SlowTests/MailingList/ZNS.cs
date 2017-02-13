@@ -60,7 +60,7 @@ namespace SlowTests.MailingList
             {
                 //Create an index
                 store.Initialize();
-                store.Admin.Send(new PutIndexOperation("TestItemsIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Name = "TestItemsIndex",
                     Maps = { @"from item in docs.TestItems
@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
                     {
                         { "EventDate", new IndexFieldOptions { Storage = FieldStorage.Yes }}
                     }
-                }));
+                }}));
 
                 //Insert some events at random dates
                 using (var session = store.OpenSession())

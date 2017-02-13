@@ -57,16 +57,17 @@ namespace SlowTests.SlowTests.Queries
         {
             using (var s = store.OpenSession())
             {
-                store.Admin.Send(new PutIndexOperation("TestAttributesByAttributes",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
+                        Name = "TestAttributesByAttributes",
                         Maps =
                         {
                           @"from e in docs.TestAttributes
                             from r in e.Attributes
                             select new { Attributes_Key = r.Key, Attributes_Value = r.Value }"
                         }
-                    }));
+                    }}));
 
                 foreach (var sample in GetSampleData())
                 {

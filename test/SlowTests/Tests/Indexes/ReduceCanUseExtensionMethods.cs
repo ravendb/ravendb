@@ -28,7 +28,7 @@ namespace SlowTests.Tests.Indexes
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("Hi", new IndexDefinitionBuilder<InputData, Result>()
+                var indexDefinition = new IndexDefinitionBuilder<InputData, Result>()
                 {
                     Map = documents => from doc in documents
                                        let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
@@ -36,7 +36,9 @@ namespace SlowTests.Tests.Indexes
                                        {
                                            Tags = tags.ToArray()
                                        }
-                }.ToIndexDefinition(store.Conventions)));
+                }.ToIndexDefinition(store.Conventions);
+                indexDefinition.Name = "Hi";
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                 using (var session = store.OpenSession())
                 {

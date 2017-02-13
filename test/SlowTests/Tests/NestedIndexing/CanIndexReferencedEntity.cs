@@ -20,7 +20,7 @@ namespace SlowTests.Tests.NestedIndexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = {
                         @"
@@ -29,7 +29,8 @@ namespace SlowTests.Tests.NestedIndexing
                         {
                             RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
-                    }
+                    }, 
+                    Name = "test" }
                 }));
 
                 using (var session = store.OpenSession())
@@ -55,7 +56,7 @@ namespace SlowTests.Tests.NestedIndexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = {
                         @"
@@ -64,7 +65,8 @@ namespace SlowTests.Tests.NestedIndexing
                         {
                             RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
-                    }
+                    },
+                    Name = "test" }
                 }));
 
                 using (var session = store.OpenSession())
@@ -98,7 +100,7 @@ namespace SlowTests.Tests.NestedIndexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = {
                         @"
@@ -107,7 +109,8 @@ namespace SlowTests.Tests.NestedIndexing
                         {
                             RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
-                    }
+                    },
+                    Name = "test" }
                 }));
 
                 using (var session = store.OpenSession())
@@ -142,7 +145,7 @@ namespace SlowTests.Tests.NestedIndexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = {
                         @"
@@ -151,7 +154,8 @@ namespace SlowTests.Tests.NestedIndexing
                         {
                             RefNameNotNull = LoadDocument(i.Ref, ""Items"").Name != null
                         }"
-                    }
+                    },
+                    Name = "test" }
                 }));
 
                 using (var session = store.OpenSession())
@@ -185,7 +189,7 @@ namespace SlowTests.Tests.NestedIndexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation( new [] {new IndexDefinition
                 {
                     Maps = {
                         @"
@@ -194,7 +198,8 @@ namespace SlowTests.Tests.NestedIndexing
                         {
                             RefName = LoadDocument(i.Ref, ""Items"").Name 
                         }"
-                    }
+                    },
+                    Name = "test" }
                 }));
 
                 using (var session = store.OpenSession())
@@ -236,7 +241,7 @@ namespace SlowTests.Tests.NestedIndexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = {
                         @"
@@ -245,7 +250,8 @@ namespace SlowTests.Tests.NestedIndexing
                         {
                             RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
-                    }
+                    },
+                    Name = "test" }
                 }));
 
                 using (var session = store.OpenSession())
@@ -278,7 +284,7 @@ namespace SlowTests.Tests.NestedIndexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = {
                         @"
@@ -287,7 +293,8 @@ namespace SlowTests.Tests.NestedIndexing
                         {
                             RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
-                    }
+                    },
+                    Name = "test" }
                 }));
 
                 using (var session = store.OpenSession())

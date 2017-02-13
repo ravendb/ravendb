@@ -34,10 +34,11 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("DevByIDE", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
+                    Name = "DevByIDE",
                     Maps = { @"from dev in docs.Developers select new { dev.PreferredIDE, dev.PreferredIDE.Name }" }
-                }));
+                }}));
 
                 using (var session = store.OpenSession())
                 {

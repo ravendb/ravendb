@@ -74,11 +74,12 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "test",
                                                     Maps = { "from doc in docs.Users select new { doc.Name, doc.Age }" }
-                                                }));
+                                                }}));
 
                 using (var commands = store.Commands())
                 {
@@ -206,18 +207,20 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "test",
                                                     Maps = { "from doc in docs.Users select new { doc.Name, doc.Age }" }
-                                                }));
+                                                }}));
 
 
-                store.Admin.Send(new PutIndexOperation("test2",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "test2",
                                                     Maps = { "from doc in docs.Users select new { doc.Name }" }
-                                                }));
+                                                }}));
 
                 using (var commands = store.Commands())
                 {
@@ -245,18 +248,20 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "test",
                                                     Maps = { "from doc in docs.Users select new { doc.Name, doc.Age }" }
-                                                }));
+                                                }}));
 
 
-                store.Admin.Send(new PutIndexOperation("test2",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "test2",
                                                     Maps = { "from doc in docs.Users select new { doc.Name }" }
-                                                }));
+                                                }}));
 
                 using (var commands = store.Commands())
                 {
@@ -285,15 +290,18 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             //https://groups.google.com/forum/#!topic/ravendb/DYjvNjNIiho/discussion
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test",
-                                                new IndexDefinition
-                                                {
-                                                    Maps = { "from doc in docs.Users select new { doc.Title, doc.BodyText }" },
-                                                    Fields = new Dictionary<string, IndexFieldOptions>
-                                                    {
-                                                        { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
-                                                    }
-                                                }));
+                store.Admin.Send(new PutIndexesOperation(new[] {
+                    new IndexDefinition
+                    {
+                        Name = "test",
+                        Maps = {"from doc in docs.Users select new { doc.Title, doc.BodyText }"},
+                        Fields = new Dictionary<string, IndexFieldOptions>
+                        {
+                            {"Title", new IndexFieldOptions {Indexing = FieldIndexing.Analyzed}}
+                        }
+                    }
+            }))
+            ;
 
                 using (var commands = store.Commands())
                 {
@@ -329,15 +337,15 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("SomeObjects/BasicStuff"
-                                         , new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                                          {
+                                             Name = "SomeObjects/BasicStuff",
                                              Maps = { "from doc in docs.SomeObjects\r\nselect new { IntField = (int)doc.IntField, StringField = doc.StringField }" },
                                              Fields = new Dictionary<string, IndexFieldOptions>
                                              {
                                                  { "IntField", new IndexFieldOptions { Sort = SortOptions.NumericDefault } }
                                              }
-                                         }));
+                                         }}));
 
                 using (IDocumentSession session = store.OpenSession())
                 {

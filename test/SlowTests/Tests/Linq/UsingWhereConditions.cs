@@ -28,13 +28,13 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     AddData(session);
-
-                    store.Admin.Send(new PutIndexOperation(indexName,
-                        new IndexDefinitionBuilder<CommitInfo, CommitInfo>
-                        {
-                            Map = docs => from doc in docs
-                                          select new { doc.Revision },
-                        }.ToIndexDefinition(store.Conventions)));
+                    var indexDefinition = new IndexDefinitionBuilder<CommitInfo, CommitInfo>
+                    {
+                        Map = docs => from doc in docs
+                            select new {doc.Revision},
+                    }.ToIndexDefinition(store.Conventions);
+                    indexDefinition.Name = indexName;
+                    store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForIndexing(store);
 

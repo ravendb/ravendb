@@ -40,8 +40,9 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("Foos/TestIndex", new IndexDefinition()
+                store.Admin.Send(new PutIndexesOperation(new[] {  new IndexDefinition()
                 {
+                    Name = "Foos/TestIndex",
                     Maps =
                     {
                         @"from doc in docs.LaboratoryTrials
@@ -50,7 +51,7 @@ namespace SlowTests.MailingList
                 _ = doc.Patient.IdCards.Select((Func<dynamic,dynamic>)(x => new Field(x.Key, x.Value, Field.Store.NO, Field.Index.ANALYZED_NO_NORMS)))
             }"
                     }
-                }));
+                }}));
 
                 using (var session = store.OpenSession())
                 {

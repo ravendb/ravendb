@@ -24,8 +24,8 @@ namespace SlowTests.Issues
                 var index = new Users_ByCity();
                 var indexDefinition = index.CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = otherPath;
-
-                var e = Assert.Throws<RavenException>(() => store.Admin.Send(new PutIndexOperation(index.IndexName, indexDefinition)));
+                indexDefinition.Name = index.IndexName;
+                var e = Assert.Throws<RavenException>(() => store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition})));
                 Assert.Contains(otherPath, e.Message);
             }
         }
@@ -40,8 +40,8 @@ namespace SlowTests.Issues
                 var index = new Users_ByCity();
                 var indexDefinition = index.CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = otherPath;
-
-                store.Admin.Send(new PutIndexOperation(index.IndexName, indexDefinition));
+                indexDefinition.Name = index.IndexName;
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition}));
 
                 Assert.Equal(1, Directory.GetDirectories(otherPath).Length);
             }
@@ -62,8 +62,8 @@ namespace SlowTests.Issues
             {
                 var indexDefinition = index.CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = otherPath;
-
-                store.Admin.Send(new PutIndexOperation(index.IndexName, indexDefinition));
+                indexDefinition.Name = index.IndexName;
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition}));
             }
 
             using (var store = GetDocumentStore(
@@ -94,13 +94,13 @@ namespace SlowTests.Issues
             {
                 var indexDefinition1 = index.CreateIndexDefinition();
                 indexDefinition1.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = otherPath;
-
-                store.Admin.Send(new PutIndexOperation(index.IndexName + "_1", indexDefinition1));
+                indexDefinition1.Name = index.IndexName + "_1";
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition1}));
 
                 var indexDefinition2 = index.CreateIndexDefinition();
                 indexDefinition2.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = otherPath;
-
-                store.Admin.Send(new PutIndexOperation(index.IndexName + "_2", indexDefinition2));
+                indexDefinition2.Name = index.IndexName + "_2";
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition2}));
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 destPath = database.Configuration.Indexing.StoragePath.FullPath;
@@ -174,13 +174,13 @@ namespace SlowTests.Issues
             {
                 var indexDefinition1 = index.CreateIndexDefinition();
                 indexDefinition1.Configuration[RavenConfiguration.GetKey(x => x.Indexing.RunInMemory)] = "true";
-
-                store.Admin.Send(new PutIndexOperation(index.IndexName + "_1", indexDefinition1));
+                indexDefinition1.Name = index.IndexName + "_1";
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition1 }));
 
                 var indexDefinition2 = index.CreateIndexDefinition();
                 indexDefinition1.Configuration[RavenConfiguration.GetKey(x => x.Indexing.RunInMemory)] = "false";
-
-                store.Admin.Send(new PutIndexOperation(index.IndexName + "_2", indexDefinition2));
+                indexDefinition2.Name = index.IndexName + "_2";
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition2 }));
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
 

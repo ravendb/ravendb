@@ -56,11 +56,12 @@ namespace SlowTests.Issues
                 }
                 var opt = new IndexFieldOptions { Analyzer = typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Analyzed };
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
+                    Name = "tset",
                     Maps = new HashSet<string> { "from doc in docs select new { doc.Text }" },
                     Fields = { { "Text", opt } },
-                }));
+                }}));
 
                 using (var session = store.OpenSession())
                 {

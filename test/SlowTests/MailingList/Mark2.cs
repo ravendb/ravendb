@@ -15,14 +15,15 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {  new IndexDefinition
                 {
+                    Name = "test", 
                     Maps = { @"from brief in docs.TestCases
  select new {
  _tWarnings_AccessoryWarnings_Value = brief.Warnings.AccessoryWarnings.Select(y=>y.Value)
  }"
 }
-                }));
+                }}));
 
                 using (var commands = store.Commands())
                 {
