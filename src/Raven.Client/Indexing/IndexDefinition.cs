@@ -125,6 +125,12 @@ namespace Raven.Client.Indexing
             if (string.Equals(OutputReduceToCollection, other.OutputReduceToCollection, StringComparison.OrdinalIgnoreCase) == false)
                 result |= IndexDefinitionCompareDifferences.Reduce;
 
+            if (LockMode != other.LockMode)
+                result |= IndexDefinitionCompareDifferences.LockMode;
+
+            if (Priority != other.Priority)
+                result |= IndexDefinitionCompareDifferences.Priority;
+
             return result;
         }
 
@@ -362,7 +368,9 @@ namespace Raven.Client.Indexing
         ReduceFormatting = 1 << 4,
         Fields = 1 << 5,
         Configuration = 1 << 6,
+        LockMode = 1 << 7,
+        Priority = 1 << 8,
 
-        All = IndexId | Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration
+        All = IndexId | Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration | LockMode | Priority
     }
 }

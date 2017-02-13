@@ -477,6 +477,8 @@ namespace Raven.Server.Documents.Indexes
 
                 InitializeInternal();
 
+                _priorityChanged = true;
+
                 if (status == IndexRunningStatus.Running)
                     Start();
             }

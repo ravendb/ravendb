@@ -17,6 +17,10 @@ namespace Raven.Client.Operations.Databases.Responses
     {
     }
 
+    public class PutIndexesResponse : ResultsResponse<PutIndexResult>
+    {
+    }
+
     public class GetIndexesResponse : ResultsResponse<IndexDefinition>
     {
     }
