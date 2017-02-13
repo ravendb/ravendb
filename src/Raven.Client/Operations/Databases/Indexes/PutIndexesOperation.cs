@@ -63,8 +63,6 @@ namespace Raven.Client.Operations.Databases.Indexes
                     {
                         using (var writer = new BlittableJsonTextWriter(_context, stream))
                         {
-                            writer.WriteStartObject();
-                            writer.WritePropertyName("Indexes");
                             writer.WriteStartArray();
                             var first = true;
                             foreach (var index in _indexToAdd)
@@ -76,7 +74,6 @@ namespace Raven.Client.Operations.Databases.Indexes
                                 writer.WriteObject(index);
                             }
                             writer.WriteEndArray();
-                            writer.WriteEndObject();
                         }
                     })
                 };

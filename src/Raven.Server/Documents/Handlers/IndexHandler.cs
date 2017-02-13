@@ -38,21 +38,18 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                List<string> createdIndexes = new List<string>();
-                using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "Indexes"))
+                var createdIndexes = new List<KeyValuePair<string, int>>();
+                var tuple = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "Indexes", BlittableJsonDocumentBuilder.UsageMode.None);
+                using (tuple.Item2)
                 {
-                    BlittableJsonReaderArray indexesToAdd;
-                    if (json.TryGet("Indexes", out indexesToAdd) == false)
-                        throw new ArgumentException($"Query string value name or Indexes must have a non empty value");
-
-                    foreach (var indexToAdd in indexesToAdd)
+                    foreach (var indexToAdd in tuple.Item1)
                     {
                         var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
 
                         if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                             throw new ArgumentException("Index must have a 'Maps' fields");
                         var indexId = Database.IndexStore.CreateIndex(indexDefinition);
-                        createdIndexes.Add(indexDefinition.Name);
+                        createdIndexes.Add(new KeyValuePair<string, int>(indexDefinition.Name, indexId));
                     }
                 }
 
@@ -60,25 +57,21 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    bool isFirst = true;
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName("Results");
-                    writer.WriteStartArray();
-                    foreach (var indexName in createdIndexes)
+                    writer.WriteResults(context, createdIndexes, (w, c, index) =>
                     {
-                        if (isFirst)
-                        {
-                            writer.WriteString(indexName);
-                            isFirst = false;
-                        }
-                        else
-                        {
-                            writer.WriteComma();
-                            writer.WriteString(indexName);
-                        }
-                    }
-                    writer.WriteEndArray();
+                        w.WriteStartObject();
+                        w.WritePropertyName(nameof(PutIndexResult.IndexId));
+                        w.WriteInteger(index.Value);
+
+                        w.WriteComma();
+
+                        w.WritePropertyName(nameof(PutIndexResult.Index));
+                        w.WriteString(index.Key);
+                        w.WriteEndObject();
+                    });
+
                     writer.WriteEndObject();
                 }
             }

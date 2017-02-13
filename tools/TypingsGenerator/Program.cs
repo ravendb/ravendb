@@ -73,6 +73,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseDocument));
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(IndexDefinition));
+            scripter.AddType(typeof(PutIndexResult));
 
             // notifications
             scripter.AddType(typeof(AlertRaised));

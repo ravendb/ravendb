@@ -768,6 +768,10 @@ namespace Raven.Server.Json
             writer.WriteString((indexDefinition.LockMode.ToString()));
             writer.WriteComma();
 
+            writer.WritePropertyName((nameof(indexDefinition.Priority)));
+            writer.WriteString((indexDefinition.Priority.ToString()));
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(indexDefinition.OutputReduceToCollection)));
             writer.WriteString((indexDefinition.OutputReduceToCollection));
             writer.WriteComma();

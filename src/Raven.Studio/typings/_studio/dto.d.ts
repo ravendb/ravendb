@@ -53,11 +53,6 @@ interface disableResourceResult {
     Disabled: boolean;
 }
 
-interface saveIndexResult {
-    IndexId: number;
-    Index: string;
-}
-
 interface deleteResourceConfirmResult extends confirmDialogResult {
     keepFiles: boolean;
 }

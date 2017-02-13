@@ -43,6 +43,8 @@ class indexDefinition {
     lockMode: Raven.Client.Indexing.IndexLockMode;
     indexStoragePath = ko.observable<string>();
 
+    priority = ko.observable<Raven.Client.Data.Indexes.IndexPriority>();
+
     hasReduce = ko.observable<boolean>(false);
 
     validationGroup: KnockoutValidationGroup;
@@ -65,6 +67,7 @@ class indexDefinition {
             });
         }
         this.lockMode = dto.LockMode;
+        this.priority(dto.Priority);
         this.configuration(this.parseConfiguration(dto.Configuration));
 
         const existingIndexStoragePath = this.configuration().find(x => x.key() === configuration.indexing.storagePath);
@@ -152,6 +155,7 @@ class indexDefinition {
             IndexId: null,
             Type: this.detectIndexType(),
             LockMode: this.lockMode,
+            Priority: this.priority(),
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
             IsSideBySideIndex: false, //TODO side by side
@@ -206,6 +210,7 @@ class indexDefinition {
             Name: "",
             LockMode: "Unlock",
             Reduce: undefined,
+            Priority: "Normal",
             Configuration: null,
             IsSideBySideIndex: false,
             IsTestIndex: false,
