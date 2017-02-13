@@ -6,5 +6,7 @@ namespace Raven.Client.Data
         public int BuildVersion { get; set; }
         public string CommitHash { get; set; }
         public string FullVersion { get; set; }
+        public string SemVer { get; set; }
+
     }
 }
