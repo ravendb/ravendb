@@ -59,9 +59,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new SlowTests.Issues.RavenDB_4011())
+                using (var a = new SlowTests.Issues.RavenDB_10())
                 {
-                    a.get_index_names();
+                    a.ShouldSearchCorrectly();
                 }
             }
         }

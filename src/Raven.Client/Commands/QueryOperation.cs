@@ -8,6 +8,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Utilities;
 using Sparrow.Json;
@@ -194,6 +195,9 @@ namespace Raven.Client.Commands
 
         public void EnsureIsAcceptableAndSaveResult(QueryResult result)
         {
+            if(result == null)
+                throw new IndexDoesNotExistException("Could not find index " + _indexName);
+
             if (_waitForNonStaleResults && result.IsStale)
             {
                 if (_sp.Elapsed > _timeout)
