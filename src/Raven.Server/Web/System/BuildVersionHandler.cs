@@ -32,8 +32,6 @@ namespace Raven.Server.Web.System
                         [nameof(BuildNumber.ProductVersion)] = ServerVersion.Version,
                         [nameof(BuildNumber.CommitHash)] = ServerVersion.CommitHash,
                         [nameof(BuildNumber.FullVersion)] = ServerVersion.FullVersion,
-                        [nameof(BuildNumber.SemVer)] = ServerVersion.SemVersion
-
                     });
                 }
                 var versionBuffer = stream.ToArray();
