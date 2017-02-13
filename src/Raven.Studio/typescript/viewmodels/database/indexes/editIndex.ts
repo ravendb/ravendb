@@ -36,8 +36,9 @@ import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexF
 import configurationItem = require("models/database/index/configurationItem");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import configuration = require("configuration");
-
+import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import eventsCollector = require("common/eventsCollector");
+import database = require("models/resources/database");
 
 class editIndex extends viewModelBase { 
 
@@ -57,6 +58,8 @@ class editIndex extends viewModelBase {
     defaultIndexPath = ko.observable<string>();
     additionalStoragePaths = ko.observableArray<string>([]);
     selectedIndexPath: KnockoutComputed<string>;
+
+    private transformersNames = ko.observableArray<string>();
 
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
@@ -179,8 +182,30 @@ class editIndex extends viewModelBase {
 
         this.initializeDirtyFlag();
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
-        
+
+        this.initValidation();
+        this.fetchTransformers();
         //TODO: scripted index this.checkIfScriptedIndexBundleIsActive();
+    }
+
+    private initValidation() {
+        this.editedIndex().name.extend({
+            validation: [{
+                validator: (val: string) => {
+                    return !_.includes(this.transformersNames(), val);
+                },
+                message: "Already being used by an existing transformer."
+            }]
+        });
+    }
+
+    private fetchTransformers() {
+        const db = this.activeDatabase();
+        return new getTransformersCommand(db)
+            .execute()
+            .done((transformers: Raven.Client.Indexing.TransformerDefinition[]) => {
+                this.transformersNames(transformers.map(t => t.Name));
+            });
     }
 
     attached() {

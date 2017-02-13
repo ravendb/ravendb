@@ -84,7 +84,7 @@ class indexDefinition {
             validation: [
                 {
                     validator: (val: string) => rg1.test(val),
-                    message: "Can't use backslash in index name"
+                    message: "Can't use backslash in index name."
                 }]
         });
 

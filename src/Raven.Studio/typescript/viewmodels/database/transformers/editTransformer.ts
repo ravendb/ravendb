@@ -12,6 +12,8 @@ import messagePublisher = require("common/messagePublisher");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import eventsCollector = require("common/eventsCollector");
 import renameTransformerCommand = require("commands/database/transformers/renameTransformerCommand");
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
+import database = require("models/resources/database");
 
 class editTransformer extends viewModelBase {
 
@@ -28,7 +30,7 @@ class editTransformer extends viewModelBase {
     renameMode = ko.observable<boolean>(false);
     renameInProgress = ko.observable<boolean>(false);
     canEditTransformerName: KnockoutComputed<boolean>;
-
+    private indexesNames = ko.observableArray<string>();
     globalValidationGroup: KnockoutValidationGroup;
     
     constructor() {
@@ -66,6 +68,7 @@ class editTransformer extends viewModelBase {
 
         this.initValidation();
         this.initializeDirtyFlag();
+        this.fetchIndexes();
     }
 
     attached() {
@@ -91,6 +94,12 @@ class editTransformer extends viewModelBase {
                 {
                     validator: (val: string) => rg1.test(val),
                     message: "Can't use backslash in transformer name"
+                },
+                {
+                    validator: (val: string) => {
+                        return !_.includes(this.indexesNames(), val);
+                    },
+                    message: "Already being used by an existing index."
                 }]
         });
 
@@ -161,6 +170,15 @@ class editTransformer extends viewModelBase {
                 })
                 .always(() => this.isSaving(false));                    
         }
+    }
+
+    private fetchIndexes() {
+        const db = this.activeDatabase()
+        new getIndexNamesCommand(db)
+            .execute()
+            .done((indexesNames) => {
+                this.indexesNames(indexesNames);
+            });
     }
 
     updateUrl(transformerName: string) {

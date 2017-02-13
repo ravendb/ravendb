@@ -564,7 +564,7 @@ namespace Raven.Server.Documents
                     break;
                 case IndexEntryType.Transformer:
                     msg =
-                        $"Tried to create an transformer with a name of {name}, but an index or a transformer under the same name exist";
+                        $"Tried to create a transformer with a name of {name}, but an index or a transformer under the same name exist";
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type),

@@ -16,6 +16,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils;
@@ -31,7 +32,10 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
 
-        private readonly object _locker = new object();
+        /// <summary>
+        /// The current lock, used to make sure indexes/transformers have a unique names
+        /// </summary>
+        private readonly object _indexAndTransformerLocker;
 
         private bool _initialized;
 
@@ -41,10 +45,11 @@ namespace Raven.Server.Documents.Indexes
 
         public Logger Logger => _logger;
 
-        public IndexStore(DocumentDatabase documentDatabase)
+        public IndexStore(DocumentDatabase documentDatabase, object indexAndTransformerLocker)
         {
             _documentDatabase = documentDatabase;
             _logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
+            _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
         public Task InitializeAsync()
@@ -52,7 +57,7 @@ namespace Raven.Server.Documents.Indexes
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 if (_initialized)
                     throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -97,8 +102,13 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
+                var transformer = _documentDatabase.TransformerStore.GetTransformer(definition.Name);
+                if (transformer == null)
+                {
+                    throw new IndexOrTransformerAlreadyExistException($"Tried to create an index with a name of {definition.Name}, but a transformer under the same name exist");
+                }
                 Index existingIndex;
                 var lockMode = ValidateIndexDefinition(definition.Name, out existingIndex);
                 if (lockMode == IndexLockMode.LockedIgnore)
@@ -162,7 +172,7 @@ namespace Raven.Server.Documents.Indexes
             if (definition is MapIndexDefinition)
                 return CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 Index existingIndex;
                 var lockMode = ValidateIndexDefinition(definition.Name, out existingIndex);
@@ -204,9 +214,9 @@ namespace Raven.Server.Documents.Indexes
             if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
                 index.Start();
 
-            _indexes.Add(index);
-
             var etag = _documentDatabase.IndexMetadataPersistence.OnIndexCreated(index);
+
+            _indexes.Add(index);
 
             _documentDatabase.Changes.RaiseNotifications(
                 new IndexChange
@@ -353,7 +363,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void DeleteIndexInternal(int id)
         {
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 Index index;
                 if (_indexes.TryRemoveById(id, out index) == false)
@@ -503,7 +513,7 @@ namespace Raven.Server.Documents.Indexes
 
         private int ResetIndexInternal(Index index)
         {
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 DeleteIndex(index.IndexId);
                 return CreateIndex(index.Definition);
@@ -515,7 +525,7 @@ namespace Raven.Server.Documents.Indexes
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 OpenIndexesFromDirectory(_documentDatabase.Configuration.Indexing.StoragePath);
 
