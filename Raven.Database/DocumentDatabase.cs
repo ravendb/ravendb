@@ -60,6 +60,8 @@ namespace Raven.Database
 
         private static string productVersion;
 
+        private static string semVer;
+
         private readonly TaskScheduler backgroundTaskScheduler;
 
         private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
@@ -306,6 +308,23 @@ namespace Raven.Database
 
                 productVersion = versionAtt.CommitHash;
                 return productVersion;
+            }
+        }
+
+        public static string SemVer
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(semVer))
+                {
+                    return semVer;
+                }
+
+                var customAttributes = typeof(DocumentDatabase).Assembly.GetCustomAttributes(false);
+                dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
+
+                semVer = versionAtt.SemVer;
+                return semVer;
             }
         }
 
