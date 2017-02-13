@@ -859,7 +859,7 @@ Configuration databaseOptions:
 
                 const string lineBorder = "+-----------------------------------------------------------------------------------------------------+";
 
-                ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
+                ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1} , SemVer {2}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion , DocumentDatabase.SemVer);
                 ConsoleWriteLineWithColor(ConsoleColor.DarkCyan, " Source Code (git repo): https://github.com/ravendb/ravendb");
                 ConsoleWriteWithColor(new ConsoleText { Message = " Built with ", ForegroundColor = ConsoleColor.Gray},
                     new ConsoleText { Message = "love ", ForegroundColor = ConsoleColor.Red },

@@ -28,7 +28,7 @@ using System.Runtime.InteropServices;
 
 [assembly: AssemblyDelaySign(false)]
 [assembly: NeutralResourcesLanguage("en-US")]
-[assembly: RavenVersion(Build = "{build-label}", CommitHash = "{commit}", Version = "3.5")]
+[assembly: RavenVersion(Build = "{build-label}", CommitHash = "{commit}", Version = "3.5", SemVer = "3.5.3.13")]
 
 [AttributeUsage(AttributeTargets.Assembly)]
 public class RavenVersionAttribute : Attribute
@@ -47,4 +47,6 @@ public class RavenVersionAttribute : Attribute
         set { build = value; }
     }
     public string Version { get; set; }
+    public string SemVer { get; set; }
+
 }
