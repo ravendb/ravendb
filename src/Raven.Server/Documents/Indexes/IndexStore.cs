@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Indexes
             lock (_indexAndTransformerLocker)
             {
                 var transformer = _documentDatabase.TransformerStore.GetTransformer(definition.Name);
-                if (transformer == null)
+                if (transformer != null)
                 {
                     throw new IndexOrTransformerAlreadyExistException($"Tried to create an index with a name of {definition.Name}, but a transformer under the same name exist");
                 }
