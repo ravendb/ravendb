@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Logging;
@@ -20,9 +21,17 @@ namespace Sparrow.Json
         private long _used;
 
         private List<Tuple<IntPtr, long, NativeMemory.ThreadStats>> _olderBuffers;
-#if !MEM_GUARD
-        private SortedList<IntPtr, int> _fragements;
-#endif
+
+        private struct FreeSection
+        {
+#pragma warning disable 649
+            public FreeSection* Previous ;
+            public int SizeInBytes;
+#pragma warning restore 649
+        }
+
+        private readonly FreeSection*[] _freed = new FreeSection*[32];
+
         private bool _isDisposed;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
         private NativeMemory.ThreadStats _allocatingThread;
@@ -66,6 +75,9 @@ namespace Sparrow.Json
             if (distance != 0)
                 return false;
 
+            // we need to keep the total allocation size as power of 2
+            sizeIncrease = Bits.NextPowerOf2(allocation.SizeInBytes + sizeIncrease) - allocation.SizeInBytes;
+
             if (_used + sizeIncrease > _allocated)
                 return false;
 
@@ -83,22 +95,35 @@ namespace Sparrow.Json
             if(_ptrStart == null)
                 ThrowInvalidAllocateFromResetWithoutRenew();
 
+
 #if MEM_GUARD
-            var allocation = new AllocatedMemoryData
+            return new AllocatedMemoryData
             {
                 Address = ElectricFencedMemory.Allocate(size),
                 SizeInBytes = size
             };
 #else
-            if (_used + size > _allocated)
-                GrowArena(size);
+            size = Bits.NextPowerOf2(Math.Max(sizeof(FreeSection), size));
 
-#if DEBUG
-            if (_fragements != null)
+            if (_used + size > _allocated)
             {
-                Debug.Assert(_fragements.ContainsKey((IntPtr)_ptrCurrent) == false);
+                for (int index = Bits.MostSignificantBit(size) - 1; index < _freed.Length; index++)
+                {
+                    if (_freed[index] == null)
+                        continue;
+
+                    var section = _freed[index];
+                    _freed[index] = section->Previous;
+
+                    return new AllocatedMemoryData
+                    {
+                        Address = (byte*)section,
+                        SizeInBytes = section->SizeInBytes
+                    };
+                }
+
+                GrowArena(size);
             }
-#endif
 
             var allocation = new AllocatedMemoryData()
             {
@@ -109,9 +134,10 @@ namespace Sparrow.Json
             _ptrCurrent += size;
             _used += size;
             TotalUsed += size;
-#endif
-            
+
             return allocation;
+#endif
+
         }
 
         private static void ThrowInvalidAllocateFromResetWithoutRenew()
@@ -173,9 +199,7 @@ namespace Sparrow.Json
         {
             // Reset current arena buffer
             _ptrCurrent = _ptrStart;
-#if !MEM_GUARD
-            _fragements?.Clear();
-#endif
+            Array.Clear(_freed,0, _freed.Length);
 
             if (_olderBuffers == null)
             {
@@ -260,6 +284,9 @@ namespace Sparrow.Json
 
         public void Return(AllocatedMemoryData allocation)
         {
+            if (_isDisposed)
+                return;
+
             var address = allocation.Address;
 #if DEBUG
             Debug.Assert(address != _ptrCurrent);
@@ -278,13 +305,23 @@ namespace Sparrow.Json
             if (address != _ptrCurrent - allocation.SizeInBytes ||
                 address < _ptrStart)
             {
-                if (_fragements == null)
-                {
-                    _fragements = new SortedList<IntPtr, int>(IntPtrComarer.Instance);
-                }
+                // we have fragmentation, so'll just store the values that we need here
+                // in the memory we just freed :-)
 
-                // we have fragmentation, let us try to heal it 
-                _fragements.Add((IntPtr)address, allocation.SizeInBytes);
+                // note that this fragmentation will be healed by the call to ResetArena
+                // trying to do this on the fly is too expensive. 
+
+                Debug.Assert(Bits.NextPowerOf2(allocation.SizeInBytes) == allocation.SizeInBytes,
+                    "Allocation size must always be a power of two"
+                );
+                Debug.Assert(allocation.SizeInBytes >= sizeof(FreeSection));
+
+
+                var index = Bits.MostSignificantBit(allocation.SizeInBytes) - 1;
+                var section = (FreeSection*)address;
+                section->SizeInBytes = allocation.SizeInBytes;
+                section->Previous = _freed[index];
+                _freed[index] = section;
                 return;
             }
             // since the returned allocation is at the end of the arena, we can just move
@@ -292,33 +329,8 @@ namespace Sparrow.Json
             _used -= allocation.SizeInBytes;
             TotalUsed -= allocation.SizeInBytes;
             _ptrCurrent -= allocation.SizeInBytes;
-
-            if (_fragements == null)
-                return;
-
-            // let us try to heal fragmentation at this point
-            while (_fragements.Count > 0)
-            {
-                var highestAddress = (byte*)(_fragements.Keys[_fragements.Count - 1]);
-                if (highestAddress != _ptrCurrent - allocation.SizeInBytes)
-                    break;
-
-                var sizeInBytes = _fragements.Values[_fragements.Count - 1];
-
-                _fragements.RemoveAt(_fragements.Count - 1);
-                if (highestAddress < _ptrStart)
-                {
-                    // this is from another segment, probably, currently we'll just ignore it,
-                    // we might want to track if all the memory from a previous segment has been
-                    // released, and then free it, but not for now
-                    continue;
-                }
-                _used -= sizeInBytes;
-                TotalUsed -= sizeInBytes;
-                _ptrCurrent -= sizeInBytes;
-            }
 #endif
-            }
+        }
 
         public class IntPtrComarer : IComparer<IntPtr>
         {

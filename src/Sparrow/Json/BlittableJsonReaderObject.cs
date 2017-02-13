@@ -44,14 +44,6 @@ namespace Sparrow.Json
             _context.Write(stream, this);
         }
 
-        public BlittableJsonReaderObject(
-            AllocatedMemoryData allocatedMemory, JsonOperationContext context)
-            : this(allocatedMemory.Address, allocatedMemory.SizeInBytes, context)
-        {
-            _allocatedMemory = allocatedMemory;
-        }
-
-
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
             UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
         {
@@ -671,7 +663,10 @@ namespace Sparrow.Json
         {
             var mem = context.GetMemory(Size);
             CopyTo(mem.Address);
-            var cloned = new BlittableJsonReaderObject(mem, context);
+            var cloned = new BlittableJsonReaderObject(mem.Address, Size, context)
+            {
+                _allocatedMemory = mem
+            };
             if (Modifications != null)
             {
                 cloned.Modifications = new DynamicJsonValue(cloned);

@@ -56,9 +56,9 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            using (var a = new SlowTests.Issues.RavenDB_3931())
+            using (var a = new SlowTests.Issues.RavenDB_4011())
             {
-                a.CanSerializeYieldGetterMethods();
+                a.get_index_names();
             }
         }
     }
