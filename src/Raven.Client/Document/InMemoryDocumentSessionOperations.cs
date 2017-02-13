@@ -799,11 +799,6 @@ more responsive application.
             }
         }
 
-        public void MarkReadOnly(object entity)
-        {
-            GetMetadataFor(entity)[Constants.Headers.RavenReadOnly] = "true";
-        }
-
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
         {
             return _blittableOperation.EntityChanged(newObj, documentInfo, changes);

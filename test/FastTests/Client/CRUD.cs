@@ -225,30 +225,6 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CRUD_Operations_With_Mark_Read_Only()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var newSession = store.OpenSession())
-                {
-                    newSession.Store(new User { Name = "AAA", Age = 1}, "users/1");
-                    newSession.SaveChanges();
-                    var user = newSession.Load<User>("users/1");
-                    newSession.Advanced.MarkReadOnly(user);
-                    user.Age = 2;
-                    newSession.SaveChanges();
-                    user.Age = 3;
-                    newSession.SaveChanges();
-                }
-                using (var newSession = store.OpenSession())
-                {
-                    var user = newSession.Load<User>("users/1");
-                    Assert.Equal(user.Age, 2);
-                }
-            }
-        }
-
         public class Family
         {
             public string[] Names { get; set; }
