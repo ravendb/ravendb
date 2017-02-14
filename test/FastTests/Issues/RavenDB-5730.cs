@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using FastTests.Server.Replication;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.NewClient.Client.Document;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Replication;
 using Xunit;
 
 namespace FastTests.Issues
@@ -66,7 +63,7 @@ namespace FastTests.Issues
                 session.Store(new ReplicationDocument
                 {
                     Destinations = destinations
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
 

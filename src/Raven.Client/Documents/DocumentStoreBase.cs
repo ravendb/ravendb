@@ -284,5 +284,6 @@ namespace Raven.Client.Documents
         }
 
         public abstract AdminOperationExecuter Admin { get; }
+        public abstract OperationExecuter Operations { get; }
     }
 }

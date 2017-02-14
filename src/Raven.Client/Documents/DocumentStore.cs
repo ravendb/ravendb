@@ -402,7 +402,7 @@ namespace Raven.Client.Documents
 
         public override AdminOperationExecuter Admin => _adminOperationExecuter ?? (_adminOperationExecuter = new AdminOperationExecuter(this));
 
-        public OperationExecuter Operations => _operationExecuter ?? (_operationExecuter = new OperationExecuter(this));
+        public override OperationExecuter Operations => _operationExecuter ?? (_operationExecuter = new OperationExecuter(this));
 
         public override BulkInsertOperation BulkInsert(string database = null)
         {

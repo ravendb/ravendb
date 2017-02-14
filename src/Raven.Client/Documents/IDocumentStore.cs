@@ -195,5 +195,7 @@ namespace Raven.Client.Documents
         RequestExecuter GetRequestExecuter(string databaseName);
 
         AdminOperationExecuter Admin { get; }
+
+        OperationExecuter Operations { get; }
     }
 }

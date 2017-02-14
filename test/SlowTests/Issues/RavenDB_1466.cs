@@ -11,6 +11,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
@@ -145,8 +146,8 @@ namespace SlowTests.Issues
                                                     .Where(x => x.Region == Region.West).ToFacetQuery("facets/EmployeeFacets");
 
 
-                var multiFacetedSearchResults = session.Advanced.MultiFacetedSearch(northSalaryFacetQuery, southSalaryFacetQuery,
-                                                                                    eastSalaryFacetQuery, westSalaryFacetQuery);
+                var multiFacetedSearchResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(northSalaryFacetQuery, southSalaryFacetQuery,
+                                                                                    eastSalaryFacetQuery, westSalaryFacetQuery));
 
                 Assert.Equal(4, multiFacetedSearchResults.Length);
 
@@ -164,8 +165,8 @@ namespace SlowTests.Issues
                                                 .Where(x => x.Region == Region.West).ToFacetQuery(facets);
 
 
-                multiFacetedSearchResults = session.Advanced.MultiFacetedSearch(northSalaryFacetQuery, southSalaryFacetQuery,
-                                                                                    eastSalaryFacetQuery, westSalaryFacetQuery);
+                multiFacetedSearchResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(northSalaryFacetQuery, southSalaryFacetQuery,
+                                                                                    eastSalaryFacetQuery, westSalaryFacetQuery));
 
                 Assert.Equal(4, multiFacetedSearchResults.Length);
 

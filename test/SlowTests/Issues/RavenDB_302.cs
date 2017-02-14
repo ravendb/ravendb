@@ -10,6 +10,7 @@ using Xunit;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
@@ -132,7 +133,7 @@ namespace SlowTests.Issues
                     var indexQuery = new IndexQuery(s.Conventions) { Query = x.ToString(), DefaultField = "Query" };
                     var facet = FacetQuery.Create("Index", indexQuery, "Raven/Facets/LastName", null, 0, null, s.Conventions);
 
-                    var ravenfacets = session.Advanced.MultiFacetedSearch(facet)[0];
+                    var ravenfacets = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(facet))[0];
 
                     Assert.Equal(1, ravenfacets.Results["LastName"].Values.First(y => y.Range == "brown").Hits);
                 }
