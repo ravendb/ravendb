@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
@@ -11,10 +10,8 @@ using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -22,211 +19,186 @@ using Sparrow.Json;
 namespace Raven.Client.Documents.Conventions
 {
     /// <summary>
-    /// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize
-    /// the way the Raven client API behaves
+    ///     The set of conventions used by the <see cref="DocumentStore" /> which allow the users to customize
+    ///     the way the Raven client API behaves
     /// </summary>
     public class DocumentConventions : QueryConventions
     {
+        public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
+
         internal static DocumentConventions Default = new DocumentConventions();
 
-        public delegate IEnumerable<object> ApplyReduceFunctionFunc(
-            Type indexType,
-            Type resultType,
-            IEnumerable<object> results,
-            Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults);
+        private static IDictionary<Type, string> _cachedDefaultTypeTagNames = new Dictionary<Type, string>();
+        private readonly Dictionary<string, SortOptions> _customDefaultSortOptions = new Dictionary<string, SortOptions>();
+        private readonly List<Type> _customRangeTypes = new List<Type>();
 
-        private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> _compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
+        private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> _listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
 
-        private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync =
-            new List<Tuple<Type, Func<string, object, Task<string>>>>();
+        private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync = new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
-        private readonly IList<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions =
-            new List<Tuple<Type, Func<ValueType, string>>>();
-
-        public Action<object, StreamWriter> SerializeEntityToJsonStream;
+        private readonly IList<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
         public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable;
 
+        protected Dictionary<Type, MemberInfo> IdPropertyCache = new Dictionary<Type, MemberInfo>();
+
+        public Action<object, StreamWriter> SerializeEntityToJsonStream;
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="DocumentConventions"/> class.
+        ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
         /// </summary>
         public DocumentConventions()
         {
-            PreserveDocumentPropertiesNotFoundOnModel = true;
-            PrettifyGeneratedLinqExpressions = true;
-            DisableProfiling = true;
-            UseParallelMultiGet = true;
             FindIdentityProperty = q => q.Name == "Id";
+            IdentityPartsSeparator = "/";
+
             FindClrType = (id, doc) =>
             {
                 BlittableJsonReaderObject metadata;
                 string clrType;
                 if (doc.TryGet(Constants.Documents.Metadata.Key, out metadata) && metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out clrType))
-                {
                     return clrType;
-                }
+
                 return null;
             };
-
             FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
+
             TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;
             FindIdentityPropertyNameFromEntityName = entityName => "Id";
             FindTypeTagName = DefaultTypeTagName;
+
             FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace(",", "_").Replace(".", "_");
             FindPropertyNameForDynamicIndex = (indexedType, indexedName, path, prop) => path + prop;
-            IdentityPartsSeparator = "/";
-            JsonContractResolver = new DefaultRavenContractResolver();
-            MaxNumberOfRequestsPerSession = 30;
-            MaxLengthOfQueryUsingGetUrl = 1024 + 512;
-            ApplyReduceFunction = DefaultApplyReduceFunction;
-            //ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
-            CustomizeJsonSerializer = serializer => // todo: remove this or merge with SerializeEntityToJsonStream
-            {
-            };
-            FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
-            ShouldAggressiveCacheTrackChanges = true;
-            ShouldSaveChangesForceAggressiveCacheCheck = true;
-            IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
-            AcceptGzipContent = true;
-            RequestTimeThresholdInMilliseconds = 100;
 
+            MaxNumberOfRequestsPerSession = 30;
+
+            PrettifyGeneratedLinqExpressions = true;
+            MaxLengthOfQueryUsingGetUrl = 1024 + 512;
+
+            JsonContractResolver = new DefaultRavenContractResolver();
+            CustomizeJsonSerializer = serializer => { };// todo: remove this or merge with SerializeEntityToJsonStream
             SerializeEntityToJsonStream = (entity, streamWriter) =>
             {
                 var jsonSerializer = CreateSerializer();
                 jsonSerializer.Serialize(streamWriter, entity);
                 streamWriter.Flush();
             };
-
             DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
-        }
 
-        internal class JsonNetBlittableEntitySerializer
-        {
-            private readonly DocumentConventions _conventions;
-
-            [ThreadStatic]
-            private static BlittableJsonReader _reader;
-            [ThreadStatic]
-            private static JsonSerializer _serializer;
-
-            public JsonNetBlittableEntitySerializer(DocumentConventions conventions)
-            {
-                _conventions = conventions;
-            }
-
-            public object EntityFromJsonStream(Type type, BlittableJsonReaderObject jsonObject)
-            {
-                if (_reader == null)
-                    _reader = new BlittableJsonReader();
-                if (_serializer == null)
-                    _serializer = _conventions.CreateSerializer();
-
-                _reader.Init(jsonObject);
-
-                return _serializer.Deserialize(_reader, type);
-            }
-        }
-
-
-        private IEnumerable<object> DefaultApplyReduceFunction(
-            Type indexType,
-            Type resultType,
-            IEnumerable<object> results,
-            Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults)
-        {
-            var copy = _compiledReduceCache;
-            Func<IEnumerable<object>, IEnumerable> compile;
-            if (copy.TryGetValue(indexType, out compile) == false)
-            {
-                compile = generateTransformResults();
-                _compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>(copy)
-                {
-                    {indexType, compile}
-                };
-            }
-            return compile(results).Cast<object>()
-                .Select(result =>
-                {
-                    // we got an anonymous object and we need to get the reduce results
-                    var jTokenWriter = new JTokenWriter();
-                    var jsonSerializer = CreateSerializer();
-                    jsonSerializer.Serialize(jTokenWriter, result);
-                    return jsonSerializer.Deserialize(new JTokenReader(jTokenWriter.Token), resultType);
-                });
-        }
-
-        public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
-        {
-            var count = typeTagName.Count(char.IsUpper);
-
-            if (count <= 1) // simple name, just lower case it
-                return typeTagName.ToLowerInvariant();
-
-            // multiple capital letters, so probably something that we want to preserve caps on.
-            return typeTagName;
+            ImplicitTakeAmount = 25;
+            ThrowIfImplicitTakeAmountExceeded = true;
         }
 
         /// <summary>
-        /// Register an action to customize the json serializer used by the <see cref="DocumentStore"/>
+        ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" />
         /// </summary>
         public Action<JsonSerializer> CustomizeJsonSerializer { get; set; }
 
         /// <summary>
-        /// Disable all profiling support
-        /// </summary>
-        public bool DisableProfiling { get; set; }
-
-        /// <summary>
-        /// Gets or sets the max length of Url of GET requests.
+        ///     Gets or sets the max length of Url of GET requests.
         /// </summary>
         /// <value>The max number of requests per session.</value>
         public int MaxNumberOfRequestsPerSession { get; set; }
 
         /// <summary>
-        /// Gets or sets the implicit take amount (page size) that will be used for .Queries() without explicit .Take().
+        ///     Gets or sets the implicit take amount (page size) that will be used for .Queries() without explicit .Take().
         /// </summary>
         /// <value>The max number of requests per session.</value>
-        public int ImplicitTakeAmount { get; set; } = 25;
+        public int ImplicitTakeAmount { get; set; }
 
         /// <summary>
-        /// Gets or sets whether we should throw if implicit take amount is exceeded. 
-        /// The default is true and is recommended in order to make the user use an explicit .Take().
+        ///     Gets or sets whether we should throw if implicit take amount is exceeded.
+        ///     The default is true and is recommended in order to make the user use an explicit .Take().
         /// </summary>
         /// <value>The max number of requests per session.</value>
-        public bool ThrowIfImplicitTakeAmountExceeded { get; set; } = true;
+        public bool ThrowIfImplicitTakeAmountExceeded { get; set; }
 
         /// <summary>
-        /// Gets or sets the default max length of a query using the GET method against a server.
+        ///     Gets or sets the default max length of a query using the GET method against a server.
         /// </summary>
         public int MaxLengthOfQueryUsingGetUrl { get; set; }
 
         /// <summary>
-        /// Whatever to allow queries on document id.
-        /// By default, queries on id are disabled, because it is far more efficient
-        /// to do a Load() than a Query() if you already know the id.
-        /// This is NOT recommended and provided for backward compatibility purposes only.
+        ///     Whatever to allow queries on document id.
+        ///     By default, queries on id are disabled, because it is far more efficient
+        ///     to do a Load() than a Query() if you already know the id.
+        ///     This is NOT recommended and provided for backward compatibility purposes only.
         /// </summary>
         public bool AllowQueriesOnId { get; set; }
 
         /// <summary>
-        /// Whether UseOptimisticConcurrency is set to true by default for all opened sessions
+        ///     Whether UseOptimisticConcurrency is set to true by default for all opened sessions
         /// </summary>
-        public bool DefaultUseOptimisticConcurrency { get; set; }
+        public bool UseOptimisticConcurrency { get; set; }
 
         /// <summary>
-        /// Generates the document key using identity.
+        ///     Gets or sets the function to find the clr type of a document.
         /// </summary>
-        /// <param name="conventions">The conventions.</param>
-        /// <param name="entity">The entity.</param>
-        /// <returns></returns>
-        public static string GenerateDocumentKeyUsingIdentity(DocumentConventions conventions, object entity)
-        {
-            return conventions.GetDynamicTagName(entity) + "/";
-        }
-
-        private static IDictionary<Type, string> _cachedDefaultTypeTagNames = new Dictionary<Type, string>();
+        public Func<string, BlittableJsonReaderObject, string> FindClrType { get; set; }
 
         /// <summary>
-        /// Get the default tag name for the specified type.
+        ///     Gets or sets the function to find the clr type name from a clr type
+        /// </summary>
+        public Func<Type, string> FindClrTypeName { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the json contract resolver.
+        /// </summary>
+        /// <value>The json contract resolver.</value>
+        public IContractResolver JsonContractResolver { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the function to find the type tag.
+        /// </summary>
+        /// <value>The name of the find type tag.</value>
+        public Func<Type, string> FindTypeTagName { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the function to find the tag name if the object is dynamic.
+        /// </summary>
+        /// <value>The tag name.</value>
+        public Func<dynamic, string> FindDynamicTagName { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the function to find the indexed property name
+        ///     given the indexed document type, the index name, the current path and the property path.
+        /// </summary>
+        public Func<Type, string, string, string, string> FindPropertyNameForIndex { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the function to find the indexed property name
+        ///     given the indexed document type, the index name, the current path and the property path.
+        /// </summary>
+        public Func<Type, string, string, string, string> FindPropertyNameForDynamicIndex { get; set; }
+
+        /// <summary>
+        ///     Get or sets the function to get the identity property name from the entity name
+        /// </summary>
+        public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the document key generator.
+        /// </summary>
+        /// <value>The document key generator.</value>
+        public Func<string, object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
+
+        /// <summary>
+        ///     Translate the type tag name to the document key prefix
+        /// </summary>
+        public Func<string, string> TransformTypeTagNameToDocumentKeyPrefix { get; set; }
+
+        /// <summary>
+        ///     Attempts to prettify the generated linq expressions for indexes and transformers
+        /// </summary>
+        public bool PrettifyGeneratedLinqExpressions { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the function to find the identity property.
+        /// </summary>
+        /// <value>The find identity property.</value>
+        public Func<MemberInfo, bool> FindIdentityProperty { get; set; }
+
+        /// <summary>
+        ///     Get the default tag name for the specified type.
         /// </summary>
         public static string DefaultTypeTagName(Type t)
         {
@@ -240,15 +212,11 @@ namespace Raven.Client.Documents.Conventions
             {
                 var name = t.GetGenericTypeDefinition().Name;
                 if (name.Contains('`'))
-                {
                     name = name.Substring(0, name.IndexOf('`'));
-                }
                 var sb = new StringBuilder(Inflector.Pluralize(name));
                 foreach (var argument in t.GetGenericArguments())
-                {
                     sb.Append("Of")
                         .Append(DefaultTypeTagName(argument));
-                }
                 result = sb.ToString();
             }
             else
@@ -265,7 +233,7 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        /// Gets the name of the type tag.
+        ///     Gets the name of the type tag.
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns></returns>
@@ -275,16 +243,14 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        /// If object is dynamic, try to load a tag name.
+        ///     If object is dynamic, try to load a tag name.
         /// </summary>
         /// <param name="entity">Current entity.</param>
         /// <returns>Dynamic tag name if available.</returns>
         public string GetDynamicTagName(object entity)
         {
             if (entity == null)
-            {
                 return null;
-            }
 
             if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
             {
@@ -301,7 +267,7 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        /// Generates the document key.
+        ///     Generates the document key.
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <param name="dbName">Name of the database</param>
@@ -316,107 +282,28 @@ namespace Raven.Client.Documents.Conventions
             var type = entity.GetType();
             foreach (var typeToRegisteredIdConvention in _listOfRegisteredIdConventionsAsync
                 .Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
-            {
                 return typeToRegisteredIdConvention.Item2(dbName, entity);
-            }
 
             return AsyncDocumentKeyGenerator(dbName, entity);
         }
 
         /// <summary>
-        /// Gets or sets the function to find the clr type of a document.
-        /// </summary>
-        public Func<string, BlittableJsonReaderObject, string> FindClrType { get; set; }
-
-        /// <summary>
-        /// Gets or sets the function to find the clr type name from a clr type
-        /// </summary>
-        public Func<Type, string> FindClrTypeName { get; set; }
-
-        /// <summary>
-        /// Gets or sets the json contract resolver.
-        /// </summary>
-        /// <value>The json contract resolver.</value>
-        public IContractResolver JsonContractResolver { get; set; }
-
-        /// <summary>
-        /// Gets or sets the function to find the type tag.
-        /// </summary>
-        /// <value>The name of the find type tag.</value>
-        public Func<Type, string> FindTypeTagName { get; set; }
-
-        /// <summary>
-        /// Gets or sets the function to find the tag name if the object is dynamic.
-        /// </summary>
-        /// <value>The tag name.</value>
-        public Func<dynamic, string> FindDynamicTagName { get; set; }
-
-        /// <summary>
-        /// Gets or sets the function to find the indexed property name
-        /// given the indexed document type, the index name, the current path and the property path.
-        /// </summary>
-        public Func<Type, string, string, string, string> FindPropertyNameForIndex { get; set; }
-
-        /// <summary>
-        /// Gets or sets the function to find the indexed property name
-        /// given the indexed document type, the index name, the current path and the property path.
-        /// </summary>
-        public Func<Type, string, string, string, string> FindPropertyNameForDynamicIndex { get; set; }
-
-        /// <summary>
-        /// Get or sets the function to get the identity property name from the entity name
-        /// </summary>
-        public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
-
-        /// <summary>
-        /// Gets or sets the document key generator.
-        /// </summary>
-        /// <value>The document key generator.</value>
-        public Func<string, object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
-
-        /// <summary>
-        /// Instruct RavenDB to parallel Multi Get processing 
-        /// when handling lazy requests
-        /// </summary>
-        public bool UseParallelMultiGet { get; set; }
-
-        /// <summary>
-        /// Whatever or not RavenDB should in the aggressive cache mode use Changes API to track
-        /// changes and rebuild the cache. This will make that outdated data will be revalidated
-        /// to make the cache more updated, however it is still possible to get a state result because of the time
-        /// needed to receive the notification and forcing to check for cached data.
-        /// </summary>
-        public bool ShouldAggressiveCacheTrackChanges { get; set; }
-
-        /// <summary>
-        /// Whatever or not RavenDB should in the aggressive cache mode should force the aggressive cache
-        /// to check with the server after we called SaveChanges() on a non empty data set.
-        /// This will make any outdated data revalidated, and will work nicely as long as you have just a 
-        /// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
-        /// </summary>
-        public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
-
-        /// <summary>
-        /// Register an async id convention for a single type (and all of its derived types.
-        /// Note that you can still fall back to the DocumentKeyGenerator if you want.
+        ///     Register an async id convention for a single type (and all of its derived types.
+        ///     Note that you can still fall back to the DocumentKeyGenerator if you want.
         /// </summary>
         public DocumentConventions RegisterAsyncIdConvention<TEntity>(Func<string, TEntity, Task<string>> func)
         {
             var type = typeof(TEntity);
             var entryToRemove = _listOfRegisteredIdConventionsAsync.FirstOrDefault(x => x.Item1 == type);
             if (entryToRemove != null)
-            {
                 _listOfRegisteredIdConventionsAsync.Remove(entryToRemove);
-            }
 
             int index;
             for (index = 0; index < _listOfRegisteredIdConventionsAsync.Count; index++)
             {
                 var entry = _listOfRegisteredIdConventionsAsync[index];
                 if (entry.Item1.IsAssignableFrom(type))
-                {
                     break;
-                }
             }
 
             var item = new Tuple<Type, Func<string, object, Task<string>>>(typeof(TEntity), (dbName, o) => func(dbName, (TEntity)o));
@@ -426,8 +313,9 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        /// Register an id convention for a single type (and all its derived types) to be used when calling session.Load{TEntity}(TId id)
-        /// It is used by the default implementation of FindFullDocumentKeyFromNonStringIdentifier.
+        ///     Register an id convention for a single type (and all its derived types) to be used when calling
+        ///     session.Load{TEntity}(TId id)
+        ///     It is used by the default implementation of FindFullDocumentKeyFromNonStringIdentifier.
         /// </summary>
         public DocumentConventions RegisterIdLoadConvention<TEntity>(Func<ValueType, string> func)
         {
@@ -452,7 +340,7 @@ namespace Raven.Client.Documents.Conventions
 
 
         /// <summary>
-        /// Creates the serializer.
+        ///     Creates the serializer.
         /// </summary>
         /// <returns></returns>
         public JsonSerializer CreateSerializer()
@@ -492,7 +380,7 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        /// Get the CLR type (if exists) from the document
+        ///     Get the CLR type (if exists) from the document
         /// </summary>
         public string GetClrType(string id, BlittableJsonReaderObject document)
         {
@@ -500,7 +388,7 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///  Get the CLR type name to be stored in the entity metadata
+        ///     Get the CLR type name to be stored in the entity metadata
         /// </summary>
         public string GetClrTypeName(Type entityType)
         {
@@ -508,63 +396,12 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        /// When RavenDB needs to convert between a string id to a value type like int or guid, it calls
-        /// this to perform the actual work
-        /// </summary>
-        public Func<object, string, string> FindIdValuePartForValueTypeConversion { get; set; }
-
-
-        /// <summary>
-        /// Translate the type tag name to the document key prefix
-        /// </summary>
-        public Func<string, string> TransformTypeTagNameToDocumentKeyPrefix { get; set; }
-
-        /// <summary>
-        /// Clone the current conventions to a new instance
+        ///     Clone the current conventions to a new instance
         /// </summary>
         public DocumentConventions Clone()
         {
             return (DocumentConventions)MemberwiseClone();
         }
-
-        /// <summary>
-        /// This is called in order to ensure that reduce function in a sharded environment is run 
-        /// over the merged results
-        /// </summary>
-        public ApplyReduceFunctionFunc ApplyReduceFunction { get; set; }
-
-
-        /// <summary>
-        /// This is called to provide replication behavior for the client. You can customize 
-        /// this to inject your own replication / failover logic.
-        /// </summary>
-        //public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
-
-        /// <summary>
-        ///  Attempts to prettify the generated linq expressions for indexes and transformers
-        /// </summary>
-        public bool PrettifyGeneratedLinqExpressions { get; set; }
-
-        /// <summary>
-        /// How index and transformer updates should be handled in replicated setup.
-        /// Defaults to <see cref="Documents.Conventions.IndexAndTransformerReplicationMode"/>.
-        /// </summary>
-        public IndexAndTransformerReplicationMode IndexAndTransformerReplicationMode { get; set; }
-
-        /// <summary>
-        /// Controls whatever properties on the object that weren't de-serialized to object properties 
-        /// will be preserved when saving the document again. If false, those properties will be removed
-        /// when the document will be saved.
-        /// </summary>
-        public bool PreserveDocumentPropertiesNotFoundOnModel { get; set; }
-
-        public bool AcceptGzipContent { get; set; }
-
-        public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
-
-        private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> _listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
-        private readonly Dictionary<string, SortOptions> _customDefaultSortOptions = new Dictionary<string, SortOptions>();
-        private readonly List<Type> _customRangeTypes = new List<Type>();
 
         public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption = SortOptions.String, bool usesRangeField = false)
         {
@@ -581,9 +418,7 @@ namespace Raven.Client.Documents.Conventions
             {
                 var entry = _listOfQueryValueConverters[index];
                 if (entry.Item1.IsAssignableFrom(typeof(T)))
-                {
                     break;
-                }
             }
 
             _listOfQueryValueConverters.Insert(index, Tuple.Create(typeof(T), actual));
@@ -600,9 +435,7 @@ namespace Raven.Client.Documents.Conventions
         {
             foreach (var queryValueConverterTuple in _listOfQueryValueConverters
                 .Where(tuple => tuple.Item1.IsInstanceOfType(value)))
-            {
                 return queryValueConverterTuple.Item2(fieldName, value, convertionType, out strValue);
-            }
             strValue = null;
             return false;
         }
@@ -623,16 +456,8 @@ namespace Raven.Client.Documents.Conventions
             return _customRangeTypes.Contains(type);
         }
 
-        protected Dictionary<Type, MemberInfo> IdPropertyCache = new Dictionary<Type, MemberInfo>();
-
         /// <summary>
-        /// Gets or sets the function to find the identity property.
-        /// </summary>
-        /// <value>The find identity property.</value>
-        public Func<MemberInfo, bool> FindIdentityProperty { get; set; }
-
-        /// <summary>
-        /// Gets the identity property.
+        ///     Gets the identity property.
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns></returns>
@@ -659,20 +484,25 @@ namespace Raven.Client.Documents.Conventions
             return identityProperty;
         }
 
+        public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
+        {
+            var count = typeTagName.Count(char.IsUpper);
+
+            if (count <= 1) // simple name, just lower case it
+                return typeTagName.ToLowerInvariant();
+
+            // multiple capital letters, so probably something that we want to preserve caps on.
+            return typeTagName;
+        }
+
         private static IEnumerable<MemberInfo> GetPropertiesForType(Type type)
         {
             foreach (var propertyInfo in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
-            {
                 yield return propertyInfo;
-            }
 
             foreach (var @interface in type.GetInterfaces())
-            {
                 foreach (var propertyInfo in GetPropertiesForType(@interface))
-                {
                     yield return propertyInfo;
-                }
-            }
         }
     }
 }
