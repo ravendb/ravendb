@@ -64,7 +64,7 @@ namespace SlowTests.Bugs.Queries
                 {
                     dynamic loaded = session.Advanced.DocumentQuery<dynamic>()
                         .WhereEquals("@metadata.@collection",
-                                     documentStore.Conventions.GetTypeTagName(typeof(ExpandoObject)))
+                                     documentStore.Conventions.GetCollectionName(typeof(ExpandoObject)))
                         .FirstOrDefault();
 
                     Assert.NotNull(loaded);

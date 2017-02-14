@@ -140,7 +140,7 @@ namespace Raven.Client.Documents.Session
 
         protected override Task<string> GenerateKeyAsync(object entity)
         {
-            return Conventions.GenerateDocumentKeyAsync(DatabaseName, entity);
+            return Conventions.GenerateDocumentIdAsync(DatabaseName, entity);
         }
 
         public IAsyncEagerSessionOperations Eagerly => this;

@@ -1734,7 +1734,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 if (identityProperty == null)
                 {
-                    var idPropName = _documentQuery.DocumentConventions.FindIdentityPropertyNameFromEntityName(_documentQuery.DocumentConventions.GetTypeTagName(typeof(T)));
+                    var idPropName = _documentQuery.DocumentConventions.FindIdentityPropertyNameFromEntityName(_documentQuery.DocumentConventions.GetCollectionName(typeof(T)));
                     if (docField == idPropName)
                     {
                         FieldsToRename.Add(new RenamedField

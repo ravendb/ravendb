@@ -154,7 +154,7 @@ namespace Raven.Client.Documents.BulkInsert
                         var documentInfo = new DocumentInfo();
 
                         var metadata = new DynamicJsonValue();
-                        var tag = _store.Conventions.GetDynamicTagName(doc.Item1);
+                        var tag = _store.Conventions.GetCollectionName(doc.Item1);
                         if (tag != null)
                             metadata[Constants.Documents.Metadata.Collection] = tag;
                         metadata[Constants.Documents.Metadata.Id] = doc.Item2;

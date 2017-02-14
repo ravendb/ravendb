@@ -170,7 +170,7 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         protected override string GenerateKey(object entity)
         {
-            return Conventions.GenerateDocumentKey(DatabaseName, entity);
+            return Conventions.GenerateDocumentId(DatabaseName, entity);
         }
 
         /// <summary>

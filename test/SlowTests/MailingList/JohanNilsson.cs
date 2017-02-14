@@ -38,10 +38,10 @@ namespace SlowTests.MailingList
                       ? property.Name == "Id2"
                       : defaultFindIdentityProperty(property);
 
-                store.Conventions.FindTypeTagName = type =>
+                store.Conventions.FindCollectionName = type =>
                                                     typeof(IDomainObject).IsAssignableFrom(type)
                                                         ? "domainobjects"
-                                                        : DocumentConventions.DefaultTypeTagName(type);
+                                                        : DocumentConventions.DefaultGetCollectionName(type);
 
                 using (var session = store.OpenSession())
                 {

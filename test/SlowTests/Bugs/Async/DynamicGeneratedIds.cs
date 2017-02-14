@@ -28,7 +28,7 @@ namespace SlowTests.Bugs.Async
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.FindDynamicTagName = (entity) => entity.EntityName;
+                store.Conventions.FindCollectionNameForDynamic = (entity) => entity.EntityName;
 
                 using (var session = store.OpenAsyncSession())
                 {
