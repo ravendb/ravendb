@@ -1,12 +1,11 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class GetDatabaseNamesOperation : IAdminOperation<string[]>
+    public class GetDatabaseNamesOperation : IServerOperation<string[]>
     {
         private readonly int _start;
         private readonly int _pageSize;

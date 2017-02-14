@@ -22,7 +22,7 @@ namespace SlowTests.Bugs.Indexing
             {
                 store.Initialize();
 
-                store.Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 new SimpleIndex().Execute(store);
                 new SimpleIndex().Execute(store);

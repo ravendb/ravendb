@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
+using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -13,6 +14,7 @@ namespace Raven.Client.Documents.Operations
         private readonly string _databaseName;
         private readonly RequestExecuter _requestExecuter;
         private readonly JsonOperationContext _context;
+        private ServerOperationExecuter _serverOperationExecuter;
 
         public AdminOperationExecuter(DocumentStoreBase store, string databaseName = null)
         {
@@ -27,6 +29,8 @@ namespace Raven.Client.Documents.Operations
             _requestExecuter = requestExecuter;
             _context = context;
         }
+
+        public ServerOperationExecuter Server => _serverOperationExecuter ?? (_serverOperationExecuter = new ServerOperationExecuter(_store));
 
         public AdminOperationExecuter ForDatabase(string databaseName)
         {

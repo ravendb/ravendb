@@ -47,15 +47,15 @@ namespace Indexing.Benchmark
                 DefaultDatabase = DbName
             }.Initialize();
 
-            if (_store.Admin.Send(new GetDatabaseNamesOperation(0, 100)).Contains(DbName))
+            if (_store.Admin.Server.Send(new GetDatabaseNamesOperation(0, 100)).Contains(DbName))
             {
                 _store.Admin.Send(new GetStatisticsOperation()); // give some time for database to load
-                _store.Admin.Send(new DeleteDatabaseOperation(DbName, hardDelete: true));
+                _store.Admin.Server.Send(new DeleteDatabaseOperation(DbName, hardDelete: true));
             }
 
             var doc = MultiDatabase.CreateDatabaseDocument(DbName);
 
-            _store.Admin.Send(new CreateDatabaseOperation(doc));
+            _store.Admin.Server.Send(new CreateDatabaseOperation(doc));
         }
 
         public void Execute()

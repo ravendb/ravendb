@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -10,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class CreateDatabaseOperation : IAdminOperation<CreateDatabaseResult>
+    public class CreateDatabaseOperation : IServerOperation<CreateDatabaseResult>
     {
         private readonly DatabaseDocument _databaseDocument;
 

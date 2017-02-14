@@ -24,7 +24,7 @@ namespace SlowTests.Bugs.Metadata
             DoNotReuseServer();
             using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name }.Initialize())
             {
-                ((DocumentStore)store).Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var session = store.OpenSession())
                 {
@@ -52,7 +52,7 @@ namespace SlowTests.Bugs.Metadata
             DoNotReuseServer();
             using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name }.Initialize())
             {
-                ((DocumentStore)store).Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var session = store.OpenSession())
                 {
