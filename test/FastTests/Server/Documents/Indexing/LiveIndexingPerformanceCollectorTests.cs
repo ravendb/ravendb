@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexes;
 using Raven.Server.Documents.Indexes;
 using Xunit;
 
@@ -110,17 +108,18 @@ namespace FastTests.Server.Documents.Indexing
                 }
 
                 WaitForIndexing(store);
-                
 
-                IndexPerformanceStats usersStats;
 
                 var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(5));
                 Assert.True(tuple.Item1);
-                usersStats = tuple.Item2[0];
+                var usersStats = tuple.Item2[0];
 
                 while (true)
                 {
-                    tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(0));
+                    if (usersStats.Performance.Select(x => x.InputCount).Sum() == 2)
+                        break;
+
+                    tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(1));
                     if (tuple.Item1 == false)
                         break;
                     Assert.Equal(1, tuple.Item2.Count);

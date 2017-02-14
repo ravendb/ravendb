@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents;
+﻿using System;
+using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 
@@ -12,9 +13,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.Documents.Indexing.LiveIndexingPerformanceCollectorTests())
+                using (var a = new SlowTests.Tests.Querying.SkipDuplicates())
                 {
-                    a.CanObtainLiveIndexingPerformanceStats().Wait();
+                    a.WillSkipDuplicates();
                 }
             }
         }
