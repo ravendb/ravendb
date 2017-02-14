@@ -10,7 +10,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.DefaultUseOptimisticConcurrency = true;
+                store.Conventions.UseOptimisticConcurrency = true;
 
                 using (var session = store.OpenSession())
                 {

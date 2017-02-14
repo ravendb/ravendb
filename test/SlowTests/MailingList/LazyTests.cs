@@ -92,8 +92,6 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.DisableProfiling = false;
-
                 Populate(store);
 
                 using (var session = store.OpenSession())
@@ -115,7 +113,6 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.DisableProfiling = true;
                 Populate(store);
 
                 using (var session = store.OpenSession())
@@ -137,7 +134,6 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.DisableProfiling = false;
                 Populate(store);
 
                 using (var session = store.OpenSession())
@@ -159,7 +155,6 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.DisableProfiling = false;
                 Populate(store);
 
                 using (var session = store.OpenSession())

@@ -157,7 +157,7 @@ namespace Raven.Client.Documents.Session
             _documentStore = documentStore;
             _requestExecuter = requestExecuter;
             _releaseOperationContext = requestExecuter.ContextPool.AllocateOperationContext(out _context);
-            UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
+            UseOptimisticConcurrency = documentStore.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
             EntityToBlittable = new EntityToBlittable(this);
