@@ -172,10 +172,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public bool ContainsField(string field)
         {
-            if (field == Constants.Indexing.Fields.DocumentIdFieldName)
+            if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 return _index.Type.IsMap();
 
-            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
+            if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
                 field = field.Substring(0, field.Length - 6);
 
             field = IndexField.ReplaceInvalidCharactersInFieldName(field);

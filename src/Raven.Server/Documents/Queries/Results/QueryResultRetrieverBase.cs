@@ -46,15 +46,15 @@ namespace Raven.Server.Documents.Queries.Results
             var result = new DynamicJsonValue();
 
             if (_fieldsToFetch.IsDistinct == false && string.IsNullOrEmpty(id) == false)
-                result[Constants.Indexing.Fields.DocumentIdFieldName] = id;
+                result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = id;
 
             Dictionary<string, FieldsToFetch.FieldToFetch> fields;
             if (_fieldsToFetch.ExtractAllFromIndexAndDocument)
             {
                 fields = input.GetFields()
-                    .Where(x => x.Name != Constants.Indexing.Fields.DocumentIdFieldName && 
-                                x.Name != Constants.Indexing.Fields.ReduceKeyFieldName &&
-                                x.Name != Constants.Indexing.Fields.ReduceValueFieldName)
+                    .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName && 
+                                x.Name != Constants.Documents.Indexing.Fields.ReduceKeyFieldName &&
+                                x.Name != Constants.Documents.Indexing.Fields.ReduceValueFieldName)
                     .Distinct(UniqueFieldNames.Instance)
                     .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, x.IsStored));
 
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Queries.Results
             var result = new DynamicJsonValue();
 
             if (fieldsToFetch.IsDistinct == false && doc.Key != null)
-                result[Constants.Indexing.Fields.DocumentIdFieldName] = doc.Key;
+                result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = doc.Key;
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
                 MaybeExtractValueFromDocument(fieldToFetch, doc, result);
@@ -196,9 +196,9 @@ namespace Raven.Server.Documents.Queries.Results
                 throw new NotImplementedException("Support for binary values");
 
             var stringValue = field.StringValue;
-            if (stringValue == Constants.NullValue || stringValue == null)
+            if (stringValue == Constants.Documents.Indexing.Fields.NullValue || stringValue == null)
                 return null;
-            if (stringValue == Constants.EmptyString || stringValue == string.Empty)
+            if (stringValue == Constants.Documents.Indexing.Fields.EmptyString || stringValue == string.Empty)
                 return string.Empty;
 
             if (fieldType.IsJson == false)

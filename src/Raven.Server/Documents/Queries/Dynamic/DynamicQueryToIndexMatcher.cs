@@ -165,15 +165,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var sortFieldName = index.Type.IsAuto() ? sortInfo.Name : sortInfo.NormalizedName;
 
-                if (sortFieldName.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName) ||
-                    sortFieldName.StartsWith(Constants.Indexing.Fields.RandomFieldName) ||
-                    sortFieldName.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
+                if (sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.AlphaNumericFieldName) ||
+                    sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
+                    sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                 {
                     sortFieldName = SortFieldHelper.ExtractName(sortFieldName);
                 }
 
-                if (sortFieldName.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
-                    sortFieldName = sortFieldName.Substring(0, sortFieldName.Length - Constants.Indexing.Fields.RangeFieldSuffix.Length);
+                if (sortFieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
+                    sortFieldName = sortFieldName.Substring(0, sortFieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length);
 
                 IndexField indexField = null;
                 // if the field is not in the output, then we can't sort on it. 

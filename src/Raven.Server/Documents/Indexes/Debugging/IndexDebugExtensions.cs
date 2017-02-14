@@ -416,7 +416,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             {
                 var query = new IndexQueryServerSide
                 {
-                    Query = $"{Constants.Indexing.Fields.ReduceKeyFieldName}:{reduceKeyHash}"
+                    Query = $"{Constants.Documents.Indexing.Fields.ReduceKeyFieldName}:{reduceKeyHash}"
                 };
 
                 var fieldsToFetch = new FieldsToFetch(query, index.Definition, null);

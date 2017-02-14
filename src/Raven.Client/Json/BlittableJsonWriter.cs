@@ -35,7 +35,7 @@ namespace Raven.Client.Json
             if (_documentInfo == null) return;
             if (_documentInfo.Metadata?.Modifications != null && (_documentInfo.Metadata.Modifications.Properties.Count > 0))
             {
-                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Metadata.Key);
+                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
                 _manualBlittalbeJsonDocumentBuilder.StartWriteObject();
 
                 foreach (var prop in _documentInfo.Metadata.Modifications.Properties)
@@ -46,7 +46,7 @@ namespace Raven.Client.Json
 
                 if (_documentInfo.Collection != null)
                 {
-                    _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Metadata.Collection);
+                    _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Collection);
                     _manualBlittalbeJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
                 }
 
@@ -55,7 +55,7 @@ namespace Raven.Client.Json
             }
             else if (_documentInfo.Metadata != null)
             {
-                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Metadata.Key);
+                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
                 _manualBlittalbeJsonDocumentBuilder.StartWriteObject();
                 var ids = _documentInfo.Metadata.GetPropertiesByInsertionOrder();
 
@@ -93,10 +93,10 @@ namespace Raven.Client.Json
             }
             else if (_documentInfo.Collection != null)
             {
-                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Metadata.Key);
+                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
                 _manualBlittalbeJsonDocumentBuilder.StartWriteObject();
 
-                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Metadata.Collection);
+                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Collection);
                 _manualBlittalbeJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
 
                 _manualBlittalbeJsonDocumentBuilder.WriteObjectEnd();

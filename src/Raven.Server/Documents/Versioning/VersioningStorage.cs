@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Versioning
             {
                 context.OpenReadTransaction();
 
-                var configuration = database.DocumentsStorage.Get(context, Constants.Versioning.RavenVersioningConfiguration);
+                var configuration = database.DocumentsStorage.Get(context, Constants.Documents.Versioning.ConfigurationKey);
                 if (configuration == null)
                     return null;
 
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Versioning
                     //TODO: This should generate an alert, so admin will know that something is very bad
                     //TODO: Or this should throw and we should have a config flag to ignore the error
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Cannot enable versioning for documents as the versioning configuration document {Constants.Versioning.RavenVersioningConfiguration} is not valid: {configuration.Data}", e);
+                        _logger.Operations($"Cannot enable versioning for documents as the versioning configuration document {Constants.Documents.Versioning.ConfigurationKey} is not valid: {configuration.Data}", e);
                     return null;
                 }
             }
@@ -119,26 +119,26 @@ namespace Raven.Server.Documents.Versioning
         {
             var enableVersioning = false;
             BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata.Key, out metadata))
+            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata))
             {
                 bool disableVersioning;
-                if (metadata.TryGet(Constants.Versioning.RavenDisableVersioning, out disableVersioning))
+                if (metadata.TryGet(Constants.Documents.Versioning.DisableVersioning, out disableVersioning))
                 {
                     DynamicJsonValue mutatedMetadata;
                     Debug.Assert(metadata.Modifications == null);
 
                     metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
-                    mutatedMetadata.Remove(Constants.Versioning.RavenDisableVersioning);
+                    mutatedMetadata.Remove(Constants.Documents.Versioning.DisableVersioning);
                     if (disableVersioning)
                         return false;
                 }
 
-                if (metadata.TryGet(Constants.Versioning.RavenEnableVersioning, out enableVersioning))
+                if (metadata.TryGet(Constants.Documents.Versioning.EnableVersioning, out enableVersioning))
                 {
                     DynamicJsonValue mutatedMetadata = metadata.Modifications;
                     if (mutatedMetadata == null)
                         metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
-                    mutatedMetadata.Remove(Constants.Versioning.RavenEnableVersioning);
+                    mutatedMetadata.Remove(Constants.Documents.Versioning.EnableVersioning);
                 }
             }
 

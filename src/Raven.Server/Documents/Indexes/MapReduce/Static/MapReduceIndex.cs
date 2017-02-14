@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
                 return;
 
-            if (index.Collections.Contains(Constants.Indexing.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase))
+            if (index.Collections.Contains(Constants.Documents.Indexing.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase))
             {
                 throw new IndexInvalidException($"Cannot output documents from index ({index.Name}) to the collection name ({outputReduceToCollection}) because the index is mapping all documents and this will result in an infinite loop.");
             }

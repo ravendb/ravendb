@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Indexes
                         //WIP 
                         if (definition.MinimumEtagBeforeReplace != null)
                         {
-                            definition.Name = Constants.SideBySideIndexNamePrefix + definition.Name;
+                            definition.Name = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
                             break;
                         }
                         DeleteIndex(existingIndex.IndexId);

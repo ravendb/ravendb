@@ -34,7 +34,7 @@ namespace Raven.Server.Web.Studio
         public async Task GetNewEncryption()
         {
             RandomNumberGenerator randomNumberGenerator = RandomNumberGenerator.Create();
-            var byteStruct = new byte[Constants.DefaultGeneratedEncryptionKeyLength];
+            var byteStruct = new byte[Constants.Documents.Encryption.DefaultGeneratedEncryptionKeyLength];
             randomNumberGenerator.GetBytes(byteStruct);
             var result = Convert.ToBase64String(byteStruct);
 

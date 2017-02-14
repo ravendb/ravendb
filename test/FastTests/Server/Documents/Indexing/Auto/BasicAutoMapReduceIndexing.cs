@@ -495,9 +495,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Name"] = $"User-{i}",
                             ["Location"] = locations[i % locations.Length],
                             ["Age"] = 20 + i,
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         }, $"users/{i}"))
                         {
@@ -556,9 +556,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Name"] = "modified",
                             ["Location"] = "Poland",
                             ["Age"] = 30,
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         }, "users/0"))
                         {
@@ -631,9 +631,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Name"] = "James",
                             ["Location"] = "Israel",
                             ["Age"] = 20,
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         }, "users/0"))
                         {
@@ -752,9 +752,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                                     ["Quantity"] = 2
                                 }
                             },
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Orders"
+                                [Constants.Documents.Metadata.Collection] = "Orders"
                             }
                         }, $"orders/{i}"))
                         {

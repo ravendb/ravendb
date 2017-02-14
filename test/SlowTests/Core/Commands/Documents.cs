@@ -112,7 +112,7 @@ namespace SlowTests.Core.Commands
                 {
                     await commands.PutAsync("items/1", null, new { Name = "testname" }, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "Items"}
+                        {Constants.Documents.Metadata.Collection, "Items"}
                     });
 
                     WaitForIndexing(store);

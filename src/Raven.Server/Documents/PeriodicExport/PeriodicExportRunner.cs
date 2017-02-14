@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.PeriodicExport
                                 var counter = 1;
                                 while (true)
                                 {
-                                    fileName = $"{now} - {counter}.${Constants.PeriodicExport.FullExportExtension}";
+                                    fileName = $"{now} - {counter}.${Constants.Documents.PeriodicExport.FullExportExtension}";
                                     exportFilePath = Path.Combine(_status.LastFullExportDirectory, fileName);
 
                                     if (File.Exists(exportFilePath) == false)
@@ -285,14 +285,14 @@ namespace Raven.Server.Documents.PeriodicExport
                         else
                         {
                             // create filename for incremental export
-                            fileName = $"{now}-0.${Constants.PeriodicExport.IncrementalExportExtension}";
+                            fileName = $"{now}-0.${Constants.Documents.PeriodicExport.IncrementalExportExtension}";
                             exportFilePath = Path.Combine(_status.LastFullExportDirectory, fileName);
                             if (File.Exists(exportFilePath))
                             {
                                 var counter = 1;
                                 while (true)
                                 {
-                                    fileName = $"{now}-{counter}.${Constants.PeriodicExport.IncrementalExportExtension}";
+                                    fileName = $"{now}-{counter}.${Constants.Documents.PeriodicExport.IncrementalExportExtension}";
                                     exportFilePath = Path.Combine(_status.LastFullExportDirectory, fileName);
 
                                     if (File.Exists(exportFilePath) == false)
@@ -409,8 +409,8 @@ namespace Raven.Server.Documents.PeriodicExport
                     ["LastFullExportAt"] = _status.LastFullExportAt.GetDefaultRavenFormat(),
                     ["LastFullExportDirectory"] = _status.LastFullExportDirectory
                 };
-                var readerObject = context.ReadObject(status, Constants.PeriodicExport.StatusDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                var putResult = _database.DocumentsStorage.Put(context, Constants.PeriodicExport.StatusDocumentKey, null, readerObject);
+                var readerObject = context.ReadObject(status, Constants.Documents.PeriodicExport.StatusKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                var putResult = _database.DocumentsStorage.Put(context, Constants.Documents.PeriodicExport.StatusKey, null, readerObject);
                 tx.Commit();
 
                 if (_status.LastDocsEtag + 1 == putResult.Etag) // the last etag is with just us
@@ -436,8 +436,8 @@ namespace Raven.Server.Documents.PeriodicExport
 
         private async Task UploadToS3(string exportPath, string fileName, bool isFullExport)
         {
-            if (_awsAccessKey == Constants.DataCouldNotBeDecrypted ||
-                _awsSecretKey == Constants.DataCouldNotBeDecrypted)
+            if (_awsAccessKey == Constants.Documents.Encryption.DataCouldNotBeDecrypted ||
+                _awsSecretKey == Constants.Documents.Encryption.DataCouldNotBeDecrypted)
             {
                 throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
             }
@@ -458,8 +458,8 @@ namespace Raven.Server.Documents.PeriodicExport
 
         private async Task UploadToGlacier(string exportPath, string fileName, bool isFullExport)
         {
-            if (_awsAccessKey == Constants.DataCouldNotBeDecrypted ||
-                _awsSecretKey == Constants.DataCouldNotBeDecrypted)
+            if (_awsAccessKey == Constants.Documents.Encryption.DataCouldNotBeDecrypted ||
+                _awsSecretKey == Constants.Documents.Encryption.DataCouldNotBeDecrypted)
             {
                 throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
             }
@@ -475,8 +475,8 @@ namespace Raven.Server.Documents.PeriodicExport
 
         private async Task UploadToAzure(string exportPath, string fileName, bool isFullExport)
         {
-            if (_azureStorageAccount == Constants.DataCouldNotBeDecrypted ||
-                _azureStorageKey == Constants.DataCouldNotBeDecrypted)
+            if (_azureStorageAccount == Constants.Documents.Encryption.DataCouldNotBeDecrypted ||
+                _azureStorageKey == Constants.Documents.Encryption.DataCouldNotBeDecrypted)
             {
                 throw new InvalidOperationException("Could not decrypt the Azure access settings, if you are running on IIS, make sure that load user profile is set to true.");
             }
@@ -541,7 +541,7 @@ namespace Raven.Server.Documents.PeriodicExport
             {
                 context.OpenReadTransaction();
 
-                var configuration = database.DocumentsStorage.Get(context, Constants.PeriodicExport.ConfigurationDocumentKey);
+                var configuration = database.DocumentsStorage.Get(context, Constants.Documents.PeriodicExport.ConfigurationKey);
                 if (configuration == null)
                     return null;
 
@@ -555,7 +555,7 @@ namespace Raven.Server.Documents.PeriodicExport
                         return null;
                     }
 
-                    var status = database.DocumentsStorage.Get(context, Constants.PeriodicExport.StatusDocumentKey);
+                    var status = database.DocumentsStorage.Get(context, Constants.Documents.PeriodicExport.StatusKey);
                     PeriodicExportStatus periodicExportStatus = null;
                     if (status != null)
                     {
@@ -566,7 +566,7 @@ namespace Raven.Server.Documents.PeriodicExport
                         catch (Exception e)
                         {
                             if (_logger.IsInfoEnabled)
-                                _logger.Info($"Unable to read the periodic export status as the status document {Constants.PeriodicExport.StatusDocumentKey} is not valid. We will start to export from scratch. Data: {configuration.Data}", e);
+                                _logger.Info($"Unable to read the periodic export status as the status document {Constants.Documents.PeriodicExport.StatusKey} is not valid. We will start to export from scratch. Data: {configuration.Data}", e);
                         }
                     }
 
@@ -577,7 +577,7 @@ namespace Raven.Server.Documents.PeriodicExport
                     //TODO: Raise alert, or maybe handle this via a db load error that can be turned off with 
                     //TODO: a config
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Cannot enable periodic export as the configuration document {Constants.PeriodicExport.ConfigurationDocumentKey} is not valid: {configuration.Data}", e);
+                        _logger.Info($"Cannot enable periodic export as the configuration document {Constants.Documents.PeriodicExport.ConfigurationKey} is not valid: {configuration.Data}", e);
                     /*
                      Database.AddAlert(new Alert
                                     {

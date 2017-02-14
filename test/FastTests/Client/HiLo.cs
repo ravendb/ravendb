@@ -283,7 +283,7 @@ namespace FastTests.Client
                         }
                     },
                     DocumentConflictResolution = StraightforwardConflictResolution.None
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }

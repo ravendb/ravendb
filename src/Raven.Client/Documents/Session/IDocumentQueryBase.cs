@@ -387,7 +387,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="shapeWKT">WKT formatted shape</param>
         /// <param name="rel">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
         /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
-        TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct);
+        TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
         ///     Perform a search for documents which fields that match the searchTerms.

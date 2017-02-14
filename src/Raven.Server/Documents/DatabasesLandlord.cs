@@ -43,7 +43,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     return database;
-                }                   
+                }
             }
 
             return CreateDatabase(databaseName);
@@ -69,21 +69,21 @@ namespace Raven.Server.Documents
                 if (database == task)
                 {
                     task.ContinueWith(completedTask =>
-                        {
-                            if (completedTask.IsCompleted)
-                                ServerStore.NotificationCenter.Add(ResourceChanged.Create(Constants.Database.Prefix + databaseName,ResourceChangeType.Load));                                                                          
+                    {
+                        if (completedTask.IsCompleted)
+                            ServerStore.NotificationCenter.Add(ResourceChanged.Create(Constants.Documents.Prefix + databaseName, ResourceChangeType.Load));
                         }, TaskContinuationOptions.OnlyOnRanToCompletion)
                         .ContinueWith(t =>
-                        {
-                            // if we are here, there is an error, and if there is an error, we need to clear it from the 
-                            // resource store cache so we can try to reload it.
-                            // Note that we return the faulted task anyway, because we need the user to look at the error
+                {
+                    // if we are here, there is an error, and if there is an error, we need to clear it from the 
+                    // resource store cache so we can try to reload it.
+                    // Note that we return the faulted task anyway, because we need the user to look at the error
                             if (database.Exception != null &&
                                 database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
-                            {
-                                Task<DocumentDatabase> val;
-                                ResourcesStoresCache.TryRemove(databaseName, out val);
-                            }
+                    {
+                        Task<DocumentDatabase> val;
+                        ResourcesStoresCache.TryRemove(databaseName, out val);
+                    }
                         }, TaskContinuationOptions.OnlyOnFaulted);
 
                     task.Start();
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
-                    databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
+                    databaseDocument.SecuredSettings[prop.Key] = Constants.Documents.Encryption.DataCouldNotBeDecrypted;
                 }
             }
         }
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents
             {
                 context.OpenReadTransaction();
 
-                var dbId = Constants.Database.Prefix + databaseName;
+                var dbId = Constants.Documents.Prefix + databaseName;
                 var jsonReaderObject = ServerStore.Read(context, dbId);
                 if (jsonReaderObject == null)
                     return null;

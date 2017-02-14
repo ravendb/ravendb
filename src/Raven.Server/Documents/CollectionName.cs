@@ -162,8 +162,8 @@ namespace Raven.Server.Documents
         {
             BlittableJsonReaderObject metadata;
             LazyStringValue collectionName;
-            if (document.TryGet(Constants.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Metadata.Collection, out collectionName) == false)
+            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Collection, out collectionName) == false)
             {
                 return context.GetLazyStringForFieldWithCaching(EmptyCollection);
             }
@@ -176,8 +176,8 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject metadata;
 
             if (document == null ||
-                document.TryGet(Constants.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Metadata.Collection, out collectionName) == false)
+                document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Collection, out collectionName) == false)
             {
                 collectionName = EmptyCollection;
             }

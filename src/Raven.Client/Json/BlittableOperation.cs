@@ -52,7 +52,7 @@ namespace Raven.Client.Json
             {
                 newBlittable.GetPropertyByIndex(propId, ref newProp);
 
-                if (newProp.Name.Equals(Constants.Metadata.LastModified))
+                if (newProp.Name.Equals(Constants.Documents.Metadata.LastModified))
                     continue;
 
                 if (newFields.Contains(newProp.Name))

@@ -35,10 +35,10 @@ namespace Raven.Server.Documents.Queries.Faceted
                     if (string.IsNullOrEmpty(facet.AggregationField))
                         throw new InvalidOperationException($"Facet {facet.Name} cannot have aggregation set to {facet.Aggregation} without having a value in AggregationField");
 
-                    if (facet.AggregationField.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix) == false)
+                    if (facet.AggregationField.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) == false)
                     {
                         if (FacetedQueryHelper.IsAggregationTypeNumerical(facet.AggregationType))
-                            facet.AggregationField = facet.AggregationField + Constants.Indexing.Fields.RangeFieldSuffix;
+                            facet.AggregationField = facet.AggregationField + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
                     }
 
                 }

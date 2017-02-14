@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Replication
                 ReplicationDocument replicationDocument = null;
                 using (context.OpenReadTransaction())
                 {
-                    var configurationDocument = tcp.DocumentDatabase.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
+                    var configurationDocument = tcp.DocumentDatabase.DocumentsStorage.Get(context, Constants.Documents.Replication.DocumentReplicationConfiguration);
                     if (configurationDocument != null)
                         replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
 

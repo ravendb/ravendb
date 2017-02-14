@@ -373,7 +373,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
 
-            var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Indexing.AllDocumentsCollection : mapRewriter.CollectionName;
+            var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Documents.Indexing.AllDocumentsCollection : mapRewriter.CollectionName;
 
             var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
             var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), rewrittenExpression);

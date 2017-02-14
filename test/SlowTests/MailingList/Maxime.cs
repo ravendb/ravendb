@@ -102,7 +102,7 @@ namespace SlowTests.MailingList
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
-                    .RelatesToShape(Constants.Indexing.Fields.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)
+                    .RelatesToShape(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)
                     .Where("(Name:(" + terms + ") OR Terms:(" + terms + "))")
                     .Take(10)
                     .ToList();

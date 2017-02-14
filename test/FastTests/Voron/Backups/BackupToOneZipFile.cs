@@ -56,9 +56,9 @@ namespace FastTests.Voron.Backups
                     var doc2 = CreateDocument(context, "users/2", new DynamicJsonValue
                     {
                         ["Name"] = "Edward",
-                        [Constants.Metadata.Key] = new DynamicJsonValue
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
-                            [Constants.Metadata.Collection] = "Users"
+                            [Constants.Documents.Metadata.Collection] = "Users"
                         }
                     });
 
@@ -141,9 +141,9 @@ namespace FastTests.Voron.Backups
                         var doc2 = CreateDocument(context, "users/2", new DynamicJsonValue
                         {
                             ["Name"] = "Edward",
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         });
 
@@ -182,9 +182,9 @@ namespace FastTests.Voron.Backups
                         var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                         {
                             ["Name"] = "Edward",
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         });
 

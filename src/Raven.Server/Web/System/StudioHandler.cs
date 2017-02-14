@@ -223,7 +223,7 @@ namespace Raven.Server.Web.System
 
         protected void WriteETag(string etag)
         {
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = etag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.Headers.Etag] = etag.ToInvariantString();
         }
 
         private void WriteEmbeddedFileNotFound(string docPath)

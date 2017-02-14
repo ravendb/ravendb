@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Replication
         /// </summary>
         protected ReplicationDocument()
         {
-            Id = Constants.RavenReplicationDestinations;
+            Id = Constants.Documents.Replication.ReplicationDestinationsId;
             Destinations = new List<TClass>();
         }
     }

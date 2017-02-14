@@ -42,9 +42,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -54,9 +54,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -273,9 +273,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -285,9 +285,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "people/1", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "People"
+                                    [Constants.Documents.Metadata.Collection] = "People"
                                 }
                             }))
                             {
@@ -363,9 +363,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -375,9 +375,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Bob",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -387,9 +387,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "people/1", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "People"
+                                    [Constants.Documents.Metadata.Collection] = "People"
                                 }
                             }))
                             {
@@ -435,9 +435,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/3", new DynamicJsonValue
                             {
                                 ["Name"] = "George",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -447,9 +447,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "people/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "People"
+                                    [Constants.Documents.Metadata.Collection] = "People"
                                 }
                             }))
                             {

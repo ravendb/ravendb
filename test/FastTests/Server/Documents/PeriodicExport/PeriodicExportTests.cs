@@ -42,7 +42,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                         LocalFolderName = _exportPath,
                         FullExportIntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds,
                         IntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds
-                    }, Constants.PeriodicExport.ConfigurationDocumentKey);
+                    }, Constants.Documents.PeriodicExport.ConfigurationKey);
                     await session.SaveChangesAsync();
                 }
 
@@ -65,7 +65,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
-                    }, Constants.PeriodicExport.ConfigurationDocumentKey);
+                    }, Constants.Documents.PeriodicExport.ConfigurationKey);
                     await session.SaveChangesAsync();
                 }
 
@@ -82,7 +82,7 @@ namespace FastTests.Server.Documents.PeriodicExport
 
                 using (var commands = store.Commands())
                 {
-                    SpinWait.SpinUntil(() => commands.Get(Constants.PeriodicExport.StatusDocumentKey) != null, 10000);
+                    SpinWait.SpinUntil(() => commands.Get(Constants.Documents.PeriodicExport.StatusKey) != null, 10000);
                 }
             }
 
@@ -111,14 +111,14 @@ namespace FastTests.Server.Documents.PeriodicExport
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
-                    }, Constants.PeriodicExport.ConfigurationDocumentKey);
+                    }, Constants.Documents.PeriodicExport.ConfigurationKey);
                     await session.SaveChangesAsync();
 
                 }
 
                 using (var commands = store.Commands())
                 {
-                    SpinWait.SpinUntil(() => commands.Get(Constants.PeriodicExport.StatusDocumentKey) != null, 10000);
+                    SpinWait.SpinUntil(() => commands.Get(Constants.Documents.PeriodicExport.StatusKey) != null, 10000);
                 }
             }
 
@@ -148,7 +148,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
-                    }, Constants.PeriodicExport.ConfigurationDocumentKey);
+                    }, Constants.Documents.PeriodicExport.ConfigurationKey);
 
                     await session.SaveChangesAsync();
                 }
@@ -157,7 +157,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                 {
                     SpinWait.SpinUntil(() =>
                     {
-                        var jsonDocument = commands.Get(Constants.PeriodicExport.StatusDocumentKey);
+                        var jsonDocument = commands.Get(Constants.Documents.PeriodicExport.StatusKey);
                         if (jsonDocument == null)
                             return false;
                         var periodicExportStatus = (PeriodicExportStatus)store.Conventions.DeserializeEntityFromBlittable(typeof(PeriodicExportStatus), jsonDocument.BlittableJson);
@@ -165,7 +165,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                     }, TimeSpan.FromSeconds(10));
 
 
-                    dynamic statusDocument = await commands.GetAsync(Constants.PeriodicExport.StatusDocumentKey);
+                    dynamic statusDocument = await commands.GetAsync(Constants.Documents.PeriodicExport.StatusKey);
                     var etagForExports = statusDocument.Etag;
                     using (var session = store.OpenAsyncSession())
                     {
@@ -175,7 +175,7 @@ namespace FastTests.Server.Documents.PeriodicExport
 
                     SpinWait.SpinUntil(() =>
                     {
-                        dynamic document = commands.Get(Constants.PeriodicExport.StatusDocumentKey);
+                        dynamic document = commands.Get(Constants.Documents.PeriodicExport.StatusKey);
                         return document.Etag != etagForExports;
                     }, 10000);
                 }
@@ -208,7 +208,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
-                    }, Constants.PeriodicExport.ConfigurationDocumentKey);
+                    }, Constants.Documents.PeriodicExport.ConfigurationKey);
 
                     await session.SaveChangesAsync();
                 }
@@ -228,14 +228,14 @@ namespace FastTests.Server.Documents.PeriodicExport
                 {
                     SpinWait.SpinUntil(() =>
                     {
-                        var jsonDocument = commands.Get(Constants.PeriodicExport.StatusDocumentKey);
+                        var jsonDocument = commands.Get(Constants.Documents.PeriodicExport.StatusKey);
                         if (jsonDocument == null)
                             return false;
                         var periodicExportStatus = (PeriodicExportStatus)store.Conventions.DeserializeEntityFromBlittable(typeof(PeriodicExportStatus), jsonDocument.BlittableJson);
                         return periodicExportStatus.LastDocsEtag > 0;
                     }, TimeSpan.FromSeconds(10));
 
-                    dynamic statusDocument = await commands.GetAsync(Constants.PeriodicExport.StatusDocumentKey);
+                    dynamic statusDocument = await commands.GetAsync(Constants.Documents.PeriodicExport.StatusKey);
                     var etagForExports = statusDocument.Etag;
                     using (var session = store.OpenAsyncSession())
                     {
@@ -245,7 +245,7 @@ namespace FastTests.Server.Documents.PeriodicExport
 
                     SpinWait.SpinUntil(() =>
                     {
-                        dynamic document = commands.Get(Constants.PeriodicExport.StatusDocumentKey);
+                        dynamic document = commands.Get(Constants.Documents.PeriodicExport.StatusKey);
                         return document.Etag != etagForExports;
                     }, 10000);
                 }

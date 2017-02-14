@@ -513,7 +513,7 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     dynamic doc = await commands.GetAsync("CustomTypes/1");
-                    dynamic metadata = doc[Constants.Metadata.Key];
+                    dynamic metadata = doc[Constants.Documents.Metadata.Key];
                     var clrType = metadata["Raven-Clr-Type"].ToString();
                     var pythonType = metadata["Raven-Python-Type"].ToString();
 
@@ -588,7 +588,7 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     dynamic doc = await commands.GetAsync("NewTypes/1");
-                    dynamic metadata = doc[Constants.Metadata.Key];
+                    dynamic metadata = doc[Constants.Documents.Metadata.Key];
                     var copiedValue = (int)doc.CopiedValue;
                     var createdBy = metadata.CreatedBy.ToString();
 
@@ -625,7 +625,7 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     dynamic doc = await commands.GetAsync("NewTypes/1");
-                    dynamic metadata = doc[Constants.Metadata.Key];
+                    dynamic metadata = doc[Constants.Documents.Metadata.Key];
                     var copiedValue = (int)doc.CopiedValue;
                     var createdBy = metadata.CreatedBy.ToString();
 
@@ -889,10 +889,10 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     dynamic resultDoc = await commands.GetAsync(_test.Id);
-                    var metadata = resultDoc[Constants.Metadata.Key];
+                    var metadata = resultDoc[Constants.Documents.Metadata.Key];
                     var result = commands.Deserialize<CustomType>(resultDoc.BlittableJson);
 
-                    Assert.NotEqual("Something new", metadata[Constants.Metadata.Id].ToString());
+                    Assert.NotEqual("Something new", metadata[Constants.Documents.Metadata.Id].ToString());
                     Assert.Equal(2, result.Comments.Count);
                     Assert.Equal("one test", result.Comments[0]);
                     Assert.Equal("two", result.Comments[1]);

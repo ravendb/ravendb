@@ -32,7 +32,7 @@ namespace Raven.Server.Web.Authentication
 
                 using (var tx = ctx.OpenWriteTransaction())
                 {
-                    ServerStore.Write(ctx, Constants.ApiKeyPrefix + name, apiKey);
+                    ServerStore.Write(ctx, Constants.ApiKeys.Prefix + name, apiKey);
 
                     tx.Commit();
                 }
@@ -58,7 +58,7 @@ namespace Raven.Server.Web.Authentication
             {
                 using (var tx = ctx.OpenWriteTransaction())
                 {
-                    ServerStore.Delete(ctx, Constants.ApiKeyPrefix + name);
+                    ServerStore.Delete(ctx, Constants.ApiKeys.Prefix + name);
 
                     tx.Commit();
                 }
@@ -91,11 +91,11 @@ namespace Raven.Server.Web.Authentication
                 {
                     if (string.IsNullOrEmpty(name))
                         apiKeys = ServerStore
-                            .StartingWith(context, Constants.ApiKeyPrefix, start, pageSize)
+                            .StartingWith(context, Constants.ApiKeys.Prefix, start, pageSize)
                             .ToArray();
                     else
                     {
-                        var key = Constants.ApiKeyPrefix + name;
+                        var key = Constants.ApiKeys.Prefix + name;
                         var apiKey = ServerStore.Read(context, key);
                         if (apiKey == null)
                         {
@@ -118,7 +118,7 @@ namespace Raven.Server.Web.Authentication
                         writer.WriteStartObject();
                         writer.WriteResults(context, apiKeys, (w, c, apiKey) =>
                         {
-                            var username = apiKey.Key.Substring(Constants.ApiKeyPrefix.Length);
+                            var username = apiKey.Key.Substring(Constants.ApiKeys.Prefix.Length);
 
                             apiKey.Data.Modifications = new DynamicJsonValue(apiKey.Data)
                             {

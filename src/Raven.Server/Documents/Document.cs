@@ -47,7 +47,7 @@ namespace Raven.Server.Documents
 
             DynamicJsonValue mutatedMetadata;
             BlittableJsonReaderObject metadata;
-            if (Data.TryGet(Constants.Metadata.Key, out metadata))
+            if (Data.TryGet(Constants.Documents.Metadata.Key, out metadata))
             {
                 if (metadata.Modifications == null)
                     metadata.Modifications = new DynamicJsonValue(metadata);
@@ -58,15 +58,15 @@ namespace Raven.Server.Documents
             {
                 Data.Modifications = new DynamicJsonValue(Data)
                 {
-                    [Constants.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
+                    [Constants.Documents.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
                 };
             }
 
-            mutatedMetadata[Constants.Metadata.Etag] = Etag;
-            mutatedMetadata[Constants.Metadata.Id] = Key;
+            mutatedMetadata[Constants.Documents.Metadata.Etag] = Etag;
+            mutatedMetadata[Constants.Documents.Metadata.Id] = Key;
 
             if (indexScore.HasValue)
-                mutatedMetadata[Constants.Metadata.IndexScore] = indexScore;
+                mutatedMetadata[Constants.Documents.Metadata.IndexScore] = indexScore;
 
             _hash = null;
         }
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents
         {
             foreach (var property in Data.GetPropertyNames())
             {
-                if (string.Equals(property, Constants.Metadata.Key, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(property, Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 if (Data.Modifications == null)
@@ -91,8 +91,8 @@ namespace Raven.Server.Documents
         {
             string expirationDate;
             BlittableJsonReaderObject metadata;
-            if (Data.TryGet(Constants.Metadata.Key, out metadata) &&
-                metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate))
+            if (Data.TryGet(Constants.Documents.Metadata.Key, out metadata) &&
+                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out expirationDate))
             {
                 var expirationDateTime = DateTime.ParseExact(expirationDate, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                 if (expirationDateTime < currentDate)
@@ -108,8 +108,8 @@ namespace Raven.Server.Documents
 
             BlittableJsonReaderObject myMetadata;
             BlittableJsonReaderObject objMetadata;
-            Data.TryGet(Constants.Metadata.Key, out myMetadata);
-            obj.TryGet(Constants.Metadata.Key, out objMetadata);
+            Data.TryGet(Constants.Documents.Metadata.Key, out myMetadata);
+            obj.TryGet(Constants.Documents.Metadata.Key, out objMetadata);
 
             if (myMetadata == null && objMetadata == null)
                 return true;
@@ -137,7 +137,7 @@ namespace Raven.Server.Documents
             foreach (var property in properties)
             {
                 if (isMetadata && property[0] == '@' && 
-                    property.Equals(Constants.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
+                    property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
                 object myProperty;

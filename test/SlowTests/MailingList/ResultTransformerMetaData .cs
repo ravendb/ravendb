@@ -71,7 +71,7 @@ namespace SlowTests.MailingList
                                                     Type = customer.CustomerType.ToString(),
                                                     CreatedOn = customer.CreatedOn.ToLocalTime(),
                                                     ChangedBy = this.MetadataFor(customer).Value<string>("Updated-By"),
-                                                    ChangedOn = this.MetadataFor(customer).Value<DateTime?>(Constants.Metadata.LastModified),
+                                                    ChangedOn = this.MetadataFor(customer).Value<DateTime?>(Constants.Documents.Metadata.LastModified),
                                                 };
 
             }

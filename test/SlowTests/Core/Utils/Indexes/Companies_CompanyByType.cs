@@ -28,7 +28,7 @@ namespace SlowTests.Core.Utils.Indexes
                                {
                                    Type = company.Type,
                                    ContactsCount = company.Contacts.Count,
-                                   LastModified = MetadataFor(company).Value<DateTime>(Constants.Metadata.LastModified)
+                                   LastModified = MetadataFor(company).Value<DateTime>(Constants.Documents.Metadata.LastModified)
                                };
 
             Reduce = results => from result in results

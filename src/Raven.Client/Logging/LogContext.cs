@@ -17,7 +17,7 @@ namespace Raven.Client.Logging
         public static IDisposable WithResource(string resourceName)
         {
             var old = LogContext.resourceName.Value;
-            var name = resourceName ?? Constants.SystemDatabase;
+            var name = resourceName ?? Constants.Documents.SystemDatabase;
             var disposable = LogManager.OpenMappedContext("resource", name);
             LogContext.resourceName.Value = name;
 

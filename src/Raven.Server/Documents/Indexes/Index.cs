@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes
             Definition = definition;
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
 
-            if (Collections.Contains(Constants.Indexing.AllDocumentsCollection))
+            if (Collections.Contains(Constants.Documents.Indexing.AllDocumentsCollection))
                 HandleAllDocs = true;
         }
 
@@ -1497,7 +1497,7 @@ namespace Raven.Server.Documents.Indexes
                             IEnumerable<Document> documents;
 
                             if (string.IsNullOrWhiteSpace(query.Query) ||
-                                query.Query.Contains(Constants.IntersectSeparator) == false)
+                                query.Query.Contains(Constants.Documents.Querying.IntersectSeparator) == false)
                             {
                                 documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
                                     GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
@@ -1818,14 +1818,14 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var sortedField in sortedFields)
                 {
                     var f = sortedField.Field;
-                    if (f == Constants.Indexing.Fields.IndexFieldScoreName)
+                    if (f == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                         continue;
 
-                    if (f.StartsWith(Constants.Indexing.Fields.RandomFieldName) ||
-                        f.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
+                    if (f.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
+                        f.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 
-                    if (f.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName))
+                    if (f.StartsWith(Constants.Documents.Indexing.Fields.AlphaNumericFieldName))
                     {
                         f = SortFieldHelper.ExtractName(f);
                         if (string.IsNullOrEmpty(f))
@@ -1833,7 +1833,7 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     if (IndexPersistence.ContainsField(f) == false &&
-                        f.StartsWith(Constants.Indexing.Fields.DistanceFieldName) == false &&
+                        f.StartsWith(Constants.Documents.Indexing.Fields.DistanceFieldName) == false &&
                         IndexPersistence.ContainsField("_") == false)
                         // the catch all field name means that we have dynamic fields names
                         throw new ArgumentException("The field '" + f +
@@ -2145,14 +2145,14 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetLastDocumentEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
-            return collection == Constants.Indexing.AllDocumentsCollection
+            return collection == Constants.Documents.Indexing.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
                 : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
         }
 
         public long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
-            return collection == Constants.Indexing.AllDocumentsCollection
+            return collection == Constants.Documents.Indexing.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
                 : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
         }

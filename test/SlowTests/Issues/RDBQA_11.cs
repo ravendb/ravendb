@@ -168,7 +168,7 @@ namespace SlowTests.Issues
                 {
                     Active = true,
                     DeleteFrequencySeconds = 100,
-                }, Constants.Expiration.ConfigurationDocumentKey);
+                }, Constants.Documents.Expiration.ConfigurationKey);
 
                 session.SaveChanges();
             }

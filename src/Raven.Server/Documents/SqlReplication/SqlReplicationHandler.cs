@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.SqlReplication
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                Database.DocumentsStorage.Delete(context, Constants.SqlReplication.RavenSqlReplicationStatusPrefix + name, null);
+                Database.DocumentsStorage.Delete(context, Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + name, null);
                 tx.Commit();
             }
 

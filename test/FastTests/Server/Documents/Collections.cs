@@ -18,17 +18,17 @@ namespace FastTests.Server.Documents
                 {
                     commands.Put("orders/1", null, new { }, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "Orders"}
+                        {Constants.Documents.Metadata.Collection, "Orders"}
                     });
 
                     commands.Put("orders/2", null, new { }, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "orders"}
+                        {Constants.Documents.Metadata.Collection, "orders"}
                     });
 
                     commands.Put("people/1", null, new { }, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "People"}
+                        {Constants.Documents.Metadata.Collection, "People"}
                     });
 
                     var collectionStats = store.Admin.Send(new GetCollectionStatisticsOperation());

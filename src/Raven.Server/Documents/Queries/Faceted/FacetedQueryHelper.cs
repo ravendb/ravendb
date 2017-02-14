@@ -72,8 +72,8 @@ namespace Raven.Server.Documents.Queries.Faceted
 
         public static SortOptions GetSortOptionsForFacet(string field, Dictionary<string, IndexField> fields)
         {
-            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - Constants.Indexing.Fields.RangeFieldSuffix.Length);
+            if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
+                field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length);
 
             IndexField value;
             if (fields.TryGetValue(field, out value) == false || value.SortOption.HasValue == false)
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Queries.Faceted
 
         public static string TryTrimRangeSuffix(string fieldName)
         {
-            return fieldName.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix) ? fieldName.Substring(0, fieldName.Length - Constants.Indexing.Fields.RangeFieldSuffix.Length) : fieldName;
+            return fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) ? fieldName.Substring(0, fieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length) : fieldName;
         }
 
         public static bool IsStringNumber(string value)

@@ -39,14 +39,14 @@ namespace Raven.Server.Web.System
             string resourcePrefix;
             switch (resourceType)
             {
-                case Constants.Database.UrlPrefix:
-                    resourcePrefix = Constants.Database.Prefix;
+                case Constants.Documents.UrlPrefix:
+                    resourcePrefix = Constants.Documents.Prefix;
                     break;
-                case Constants.FileSystem.UrlPrefix:
-                    resourcePrefix = Constants.FileSystem.Prefix;
+                case Constants.Files.UrlPrefix:
+                    resourcePrefix = Constants.Files.Prefix;
                     break;
-                case Constants.Counter.UrlPrefix:
-                    resourcePrefix = Constants.Counter.Prefix;
+                case Constants.Counters.UrlPrefix:
+                    resourcePrefix = Constants.Counters.Prefix;
                     break;
                 case Constants.TimeSeries.UrlPrefix:
                     resourcePrefix = Constants.TimeSeries.Prefix;
