@@ -8,7 +8,7 @@ using Xunit;
 namespace SlowTests.Bugs.Chripede
 {
 
-    public class IndexOnList : RavenNewTestBase
+    public class IndexOnList : RavenTestBase
     {
         private class Document
         {

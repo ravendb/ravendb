@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Samina3 : RavenNewTestBase
+    public class Samina3 : RavenTestBase
     {
 
         [Fact]

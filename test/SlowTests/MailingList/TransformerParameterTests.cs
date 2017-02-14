@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformerParameterTests : RavenNewTestBase
+    public class TransformerParameterTests : RavenTestBase
     {
         [Fact]
         public void CanCastTransformerParameter()

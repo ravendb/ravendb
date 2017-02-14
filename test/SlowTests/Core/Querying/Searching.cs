@@ -25,7 +25,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Querying
 {
-    public class Searching : RavenNewTestBase
+    public class Searching : RavenTestBase
     {
         [Fact]
         public void CanSearchByMultipleTerms()

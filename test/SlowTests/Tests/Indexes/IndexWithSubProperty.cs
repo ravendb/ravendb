@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class IndexWithSubProperty : RavenNewTestBase
+    public class IndexWithSubProperty : RavenTestBase
     {
         [Fact]
         public void IndexWithSubPropertyReturnAs_Property_SubProperty()

@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_1962 : RavenNewTestBase
+    public class RavenDB_1962 : RavenTestBase
     {
         private const int Cntr = 5;
 

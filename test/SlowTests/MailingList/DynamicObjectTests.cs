@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DynamicObjectTests : RavenNewTestBase
+    public class DynamicObjectTests : RavenTestBase
     {
         /// <summary>
         /// this test works but really slow

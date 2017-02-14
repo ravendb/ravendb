@@ -10,7 +10,7 @@ using Raven.Client.Documents.Queries.Facets;
 
 namespace SlowTests
 {
-    public abstract class FacetTestBase : RavenNewTestBase
+    public abstract class FacetTestBase : RavenTestBase
     {
         public static void CreateCameraCostIndex(IDocumentStore store)
         {

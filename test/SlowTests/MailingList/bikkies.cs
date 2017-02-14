@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class bikkies : RavenNewTestBase
+    public class bikkies : RavenTestBase
     {
         [Fact]
         public void ShouldGetCategoryValues()

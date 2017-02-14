@@ -15,7 +15,7 @@ using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Commands
 {
-    public class Other : RavenNewTestBase
+    public class Other : RavenTestBase
     {
         [Fact]
         public async Task CanGetBuildNumber()

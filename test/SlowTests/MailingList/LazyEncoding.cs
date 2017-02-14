@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LazyEncoding : RavenNewTestBase
+    public class LazyEncoding : RavenTestBase
     {
         private class User
         {

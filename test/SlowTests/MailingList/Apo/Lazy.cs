@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.Apo
 {
-    public class Lazy : RavenNewTestBase
+    public class Lazy : RavenTestBase
     {
         private class TestClass
         {

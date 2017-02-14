@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DistinctWithPaging : RavenNewTestBase
+    public class DistinctWithPaging : RavenTestBase
     {
         private class Item
         {

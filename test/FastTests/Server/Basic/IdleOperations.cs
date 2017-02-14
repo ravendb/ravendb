@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class IdleOperations : RavenNewTestBase
+    public class IdleOperations : RavenTestBase
     {
         private class Product
         {

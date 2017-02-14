@@ -24,7 +24,7 @@ using PostContent = SlowTests.Core.Utils.Entities.PostContent;
 
 namespace SlowTests.Core.Indexing
 {
-    public class ReferencedDocuments : RavenNewTestBase
+    public class ReferencedDocuments : RavenTestBase
     {
         [Fact]
         public void CanUseLoadDocumentToIndexReferencedDocs()

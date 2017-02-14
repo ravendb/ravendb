@@ -19,7 +19,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Expiration
 {
-    public class Expiration : RavenNewTestBase
+    public class Expiration : RavenTestBase
     {
         private static async Task SetupExpiration(DocumentStore store)
         {

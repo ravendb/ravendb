@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class CollectionTests : RavenNewTestBase
+    public class CollectionTests : RavenTestBase
     {
         [Fact]
         public async Task CanDeleteCollection()

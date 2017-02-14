@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class MoreLikeThisEvaluation : RavenNewTestBase
+    public class MoreLikeThisEvaluation : RavenTestBase
     {
         [Fact]
         public void ShouldMatchTwoMoviesWithSameCast()

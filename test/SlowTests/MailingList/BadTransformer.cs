@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class BadTransformer : RavenNewTestBase
+    public class BadTransformer : RavenTestBase
     {
         [Fact]
         public void CanCreateTransformer()

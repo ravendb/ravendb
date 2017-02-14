@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_72 : RavenNewTestBase
+    public class RavenDB_72 : RavenTestBase
     {
         [Fact]
         public void CanWork()

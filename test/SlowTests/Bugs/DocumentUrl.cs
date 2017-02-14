@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class DocumentUrl : RavenNewTestBase
+    public class DocumentUrl : RavenTestBase
     {
         [Fact]
         public void CanGetFullUrl_WithSlashOnTheEnd()

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class CanPassTypesProperlyToAggregation : RavenNewTestBase
+    public class CanPassTypesProperlyToAggregation : RavenTestBase
     {
         private class Coin
         {

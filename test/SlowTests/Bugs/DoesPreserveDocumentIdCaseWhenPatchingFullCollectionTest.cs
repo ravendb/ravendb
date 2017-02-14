@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest : RavenNewTestBase
+    public class DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest : RavenTestBase
     {
         private class FooBar
         {

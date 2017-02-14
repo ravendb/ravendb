@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Metadata
 {
-    public class LastModifiedRemote : RavenNewTestBase
+    public class LastModifiedRemote : RavenTestBase
     {
         [Fact]
         public void CanAccessLastModifiedAsMetadata()

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Client.Queries
 {
-    public class FullTextSearchOnTags : RavenNewTestBase
+    public class FullTextSearchOnTags : RavenTestBase
     {
         private class Image
         {

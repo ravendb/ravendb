@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class UsingDocumentQuery : RavenNewTestBase
+    public class UsingDocumentQuery : RavenTestBase
     {
         [Fact]
         public void CanUnderstandSimpleEquality()

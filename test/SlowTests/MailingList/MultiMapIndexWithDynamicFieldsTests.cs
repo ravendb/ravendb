@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class MultiMapIndexWithDynamicFieldsTests : RavenNewTestBase
+    public class MultiMapIndexWithDynamicFieldsTests : RavenTestBase
     {
         [Fact]
         public void CanSortDynamically()

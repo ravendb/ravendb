@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ItemsBySetIdIndexTests : RavenNewTestBase
+    public class ItemsBySetIdIndexTests : RavenTestBase
     {
         [Fact]
         public void CanQuery()

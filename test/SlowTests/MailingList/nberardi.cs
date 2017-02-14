@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Nberardi : RavenNewTestBase
+    public class Nberardi : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Spatial")]
         public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()

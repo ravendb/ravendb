@@ -8,7 +8,7 @@ using Raven.Client.Documents.Operations.Indexes;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_10 : RavenNewTestBase
+    public class RavenDB_10 : RavenTestBase
     {
         private class Item
         {

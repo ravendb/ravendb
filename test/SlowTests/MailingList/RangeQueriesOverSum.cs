@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RangeQueriesOverSum : RavenNewTestBase
+    public class RangeQueriesOverSum : RavenTestBase
     {
         [DataContract]
         private class Item

@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey
 {
-    public class spokeypokey2 : RavenNewTestBase
+    public class spokeypokey2 : RavenTestBase
     {
         private enum AddressTypeEnumPto2
         {

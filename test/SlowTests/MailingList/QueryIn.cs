@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class QueryIn : RavenNewTestBase
+    public class QueryIn : RavenTestBase
     {
         [Fact]
         public void ShouldWork()

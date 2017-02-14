@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LuceneSearchSample : RavenNewTestBase
+    public class LuceneSearchSample : RavenTestBase
     {
         [Fact]
         public void LuceneSearchTest()

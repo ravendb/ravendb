@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4904 : RavenNewTestBase
+    public class RavenDB_4904 : RavenTestBase
     {
         private const string IndexName = "testIndex";
 

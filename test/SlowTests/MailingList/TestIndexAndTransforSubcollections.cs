@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TestIndexAndTransforSubcollections : RavenNewTestBase
+    public class TestIndexAndTransforSubcollections : RavenTestBase
     {
         [Fact]
         public void CanTransformMultipleIndexResult()

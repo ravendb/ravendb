@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class IndexingOnDictionary : RavenNewTestBase
+    public class IndexingOnDictionary : RavenTestBase
     {
         [Fact]
         public void CanIndexValuesForDictionary()

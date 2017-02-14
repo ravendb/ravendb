@@ -3,7 +3,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class Arrays : RavenNewTestBase
+    public class Arrays : RavenTestBase
     {
         [Fact]
         public void CanRetrieveMultiDimensionalArray()

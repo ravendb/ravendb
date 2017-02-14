@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ProjectionShouldNotLoadDocument : RavenNewTestBase
+    public class ProjectionShouldNotLoadDocument : RavenTestBase
     {
         private class Index1 : AbstractIndexCreationTask
         {

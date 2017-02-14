@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Dmitry : RavenNewTestBase
+    public class Dmitry : RavenTestBase
     {
         [Fact]
         public void DeepEqualsWorksWithTimeSpan()

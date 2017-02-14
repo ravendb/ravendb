@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Suggestions
 {
-    public class SuggestionsLazy : RavenNewTestBase
+    public class SuggestionsLazy : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Suggestions")]
         public void UsingLinq()

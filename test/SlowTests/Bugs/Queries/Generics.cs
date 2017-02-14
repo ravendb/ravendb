@@ -3,7 +3,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Queries
 {
-    public class Generics : RavenNewTestBase
+    public class Generics : RavenTestBase
     {
         private class MyClass<T>
         {

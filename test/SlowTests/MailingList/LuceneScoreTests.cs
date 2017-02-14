@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LuceneScoreTests : RavenNewTestBase
+    public class LuceneScoreTests : RavenTestBase
     {
         private class Book
         {

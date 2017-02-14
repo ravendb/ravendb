@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Metadata
 {
-    public class EscapeQuotesRemote : RavenNewTestBase
+    public class EscapeQuotesRemote : RavenTestBase
     {
         [Fact]
         public void CanProperlyEscapeQuotesInMetadata_Remote_1()

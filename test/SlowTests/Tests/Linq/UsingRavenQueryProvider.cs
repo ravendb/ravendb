@@ -18,7 +18,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class UsingRavenQueryProvider : RavenNewTestBase
+    public class UsingRavenQueryProvider : RavenTestBase
     {
         private class User
         {

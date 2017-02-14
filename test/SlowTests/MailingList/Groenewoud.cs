@@ -18,7 +18,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Groenewoud : RavenNewTestBase
+    public class Groenewoud : RavenTestBase
     {
         private struct ZipCityStateCountry
         {

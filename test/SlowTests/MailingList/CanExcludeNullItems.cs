@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanExcludedNullItems : RavenNewTestBase
+    public class CanExcludedNullItems : RavenTestBase
     {
         [Fact]
         public void WillSupportLast()

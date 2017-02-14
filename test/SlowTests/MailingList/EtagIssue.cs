@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class EtagIssue : RavenNewTestBase
+    public class EtagIssue : RavenTestBase
     {
         #region Domain
 

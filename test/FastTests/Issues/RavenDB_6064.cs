@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_6064 : RavenNewTestBase
+    public class RavenDB_6064 : RavenTestBase
     {
         [Fact]
         public void MapOnSeveralCompressedStrings()

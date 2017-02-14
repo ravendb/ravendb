@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class RavenDB5743 : RavenNewTestBase
+    public class RavenDB5743 : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6193")]
         public async Task WillFilterMetadataPropertiesStartingWithAt()

@@ -19,7 +19,7 @@ using Xunit;
  */
 namespace SlowTests.Tests.Linq
 {
-    public class UsingWhereConditions : RavenNewTestBase
+    public class UsingWhereConditions : RavenTestBase
     {
         [Fact]
         public void Can_Use_Where()

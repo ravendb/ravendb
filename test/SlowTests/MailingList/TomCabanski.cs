@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TomCabanski : RavenNewTestBase
+    public class TomCabanski : RavenTestBase
     {
         [Fact]
         public void CanEscapeGetFacets()

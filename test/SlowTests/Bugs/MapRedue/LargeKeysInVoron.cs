@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MapRedue
 {
-    public class LargeKeysInVoron : RavenNewTestBase
+    public class LargeKeysInVoron : RavenTestBase
     {
         private class User
         {

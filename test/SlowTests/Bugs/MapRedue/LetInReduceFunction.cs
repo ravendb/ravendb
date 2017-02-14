@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MapRedue
 {
-    public class LetInReduceFunction : RavenNewTestBase
+    public class LetInReduceFunction : RavenTestBase
     {
         private class User
         {

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class Contains : RavenNewTestBase
+    public class Contains : RavenTestBase
     {
         private class TestDoc
         {

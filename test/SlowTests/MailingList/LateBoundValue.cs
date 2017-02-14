@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LateBoundValue : RavenNewTestBase
+    public class LateBoundValue : RavenTestBase
     {
         private class SampleData : AggregateBaseEx<string>
         {

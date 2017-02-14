@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.RobStats
 {
-    public class StatisticsBug : RavenNewTestBase
+    public class StatisticsBug : RavenTestBase
     {
         private class Entity
         {

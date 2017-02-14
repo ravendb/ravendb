@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class QueryCommaTest : RavenNewTestBase
+    public class QueryCommaTest : RavenTestBase
     {
         private class Employee
         {

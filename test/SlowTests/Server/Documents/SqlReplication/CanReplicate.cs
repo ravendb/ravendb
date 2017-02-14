@@ -23,7 +23,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.SqlReplication
 {
-    public class CanReplicate : RavenNewTestBase
+    public class CanReplicate : RavenTestBase
     {
         private static readonly Lazy<string> _masterDatabaseConnection = new Lazy<string>(() =>
         {

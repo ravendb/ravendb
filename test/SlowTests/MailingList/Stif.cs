@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Stif : RavenNewTestBase
+    public class Stif : RavenTestBase
     {
         [DataContract]
         private class MyDoc

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MultiMap
 {
-    public class SimpleMultiMap : RavenNewTestBase
+    public class SimpleMultiMap : RavenTestBase
     {
         [Fact]
         public void CanCreateMultiMapIndex()

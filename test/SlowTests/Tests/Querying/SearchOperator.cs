@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class SearchOperator : RavenNewTestBase
+    public class SearchOperator : RavenTestBase
     {
         private class Something
         {

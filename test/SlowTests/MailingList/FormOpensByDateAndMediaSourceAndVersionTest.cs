@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FormOpensByDateAndMediaSourceAndVersionTest : RavenNewTestBase
+    public class FormOpensByDateAndMediaSourceAndVersionTest : RavenTestBase
     {
         [Fact]
         public void ShouldWork()

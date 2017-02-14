@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Brett : RavenNewTestBase
+    public class Brett : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6124")]
         public void TestMultiMap()

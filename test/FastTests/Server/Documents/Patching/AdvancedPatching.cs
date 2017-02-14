@@ -14,7 +14,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Patching
 {
-    public class AdvancedPatching : RavenNewTestBase
+    public class AdvancedPatching : RavenTestBase
     {
         private class CustomType
         {

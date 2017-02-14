@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Adrian : RavenNewTestBase
+    public class Adrian : RavenTestBase
     {
         private class ContentDescriptorByMetadata : AbstractIndexCreationTask<ContentDescriptor>
         {

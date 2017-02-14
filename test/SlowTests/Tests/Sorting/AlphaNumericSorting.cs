@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Sorting
 {
-    public class AlphaNumericSorting : RavenNewTestBase
+    public class AlphaNumericSorting : RavenTestBase
     {
         [Fact]
         public void basic_alphanumeric_sort()

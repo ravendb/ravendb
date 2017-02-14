@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class WhatChanged : RavenNewTestBase
+    public class WhatChanged : RavenTestBase
     {
         [Fact]
         public void What_Changed_New_Field()

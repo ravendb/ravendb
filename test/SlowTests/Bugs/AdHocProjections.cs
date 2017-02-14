@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs
 {
-    public class AdHocProjections : RavenNewTestBase
+    public class AdHocProjections : RavenTestBase
     {
         [Fact]
         public void Query_can_project_to_a_different_model()

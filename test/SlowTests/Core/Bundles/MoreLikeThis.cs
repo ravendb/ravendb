@@ -12,7 +12,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Bundles
 {
-    public class MoreLikeThis : RavenNewTestBase
+    public class MoreLikeThis : RavenTestBase
     {
         [Fact]
         public void CanUseBasicMoreLikeThis()

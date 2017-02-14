@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class When_trying_to_load_a_non_existing_document : RavenNewTestBase
+    public class When_trying_to_load_a_non_existing_document : RavenTestBase
     {
         [Fact]
         public async Task Then_null_should_be_returned()

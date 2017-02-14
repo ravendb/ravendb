@@ -2,7 +2,7 @@
 
 namespace FastTests.Client.Blittable
 {
-    public class Serialization : RavenNewTestBase
+    public class Serialization : RavenTestBase
     {
         [Fact]
         public void Can_Store_And_Load_Boolean_And_Nullable_Boolean()

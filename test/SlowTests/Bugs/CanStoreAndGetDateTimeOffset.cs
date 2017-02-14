@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class CanStoreAndGetDateTimeOffset : RavenNewTestBase
+    public class CanStoreAndGetDateTimeOffset : RavenTestBase
     {
         [Fact]
         private void StoreAndGetDateTimeOffsetTest()

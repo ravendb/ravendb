@@ -10,7 +10,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class BulkInserts : RavenNewTestBase
+    public class BulkInserts : RavenTestBase
     {
         [Fact]
         public async Task Simple_Bulk_Insert()

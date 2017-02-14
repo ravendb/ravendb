@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4917 : RavenNewTestBase
+    public class RavenDB_4917 : RavenTestBase
     {
         [Fact(Skip = "RavenDB-5919")]
         public void side_by_side_doesnt_create_new_index()

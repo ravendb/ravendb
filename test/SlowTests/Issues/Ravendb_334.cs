@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_334 : RavenNewTestBase
+    public class RavenDB_334 : RavenTestBase
     {
         private class Foo
         {

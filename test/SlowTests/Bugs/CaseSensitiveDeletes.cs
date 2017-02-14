@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs
 {
-    public class CaseSensitiveDeletes : RavenNewTestBase
+    public class CaseSensitiveDeletes : RavenTestBase
     {
         private class Document
         {

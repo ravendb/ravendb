@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class DataContracts : RavenNewTestBase
+    public class DataContracts : RavenTestBase
     {
         [Fact]
         public void RespectsNameOnDataMemberAttribute()

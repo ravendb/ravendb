@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class RemoteIndexingOnDictionary : RavenNewTestBase
+    public class RemoteIndexingOnDictionary : RavenTestBase
     {
         [Fact]
         public void CanIndexOnRangeForNestedValuesForDictionaryAsPartOfDictionary()

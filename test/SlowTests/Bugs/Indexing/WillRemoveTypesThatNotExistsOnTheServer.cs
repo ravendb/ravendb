@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class WillRemoveTypesThatNotExistsOnTheServer : RavenNewTestBase
+    public class WillRemoveTypesThatNotExistsOnTheServer : RavenTestBase
     {
         [Fact]
         public void CanQueryAStronglyTypedIndex()

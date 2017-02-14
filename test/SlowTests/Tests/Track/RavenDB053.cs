@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Track
 {
-    public class LinqTest : RavenNewTestBase
+    public class LinqTest : RavenTestBase
     {
         private class JoinedChildTransport
         {

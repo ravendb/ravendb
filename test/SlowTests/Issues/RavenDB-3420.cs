@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3420 : RavenNewTestBase
+    public class RavenDB_3420 : RavenTestBase
     {
         [Theory(Skip = "RavenDB-6283")]
         [InlineData("ShardedDatabase", "ShardedDatabase")]

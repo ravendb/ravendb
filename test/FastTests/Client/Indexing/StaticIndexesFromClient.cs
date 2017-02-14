@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Client.Indexing
 {
-    public class StaticIndexesFromClient : RavenNewTestBase
+    public class StaticIndexesFromClient : RavenTestBase
     {
         [Fact]
         public async Task CanPut()

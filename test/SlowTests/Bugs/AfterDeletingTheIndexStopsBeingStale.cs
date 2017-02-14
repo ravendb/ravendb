@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs
 {
-    public class AfterDeletingTheIndexStopsBeingStale : RavenNewTestBase
+    public class AfterDeletingTheIndexStopsBeingStale : RavenTestBase
     {
         [Fact]
         public void Deletion()

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AsyncSpatial : RavenNewTestBase
+    public class AsyncSpatial : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Spatial")]
         public async Task SpatialIndexTest()

@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Bugs.TransformResults
 {
-    public class SortHintTester : RavenNewTestBase
+    public class SortHintTester : RavenTestBase
     {
         [Fact]
         public void will_fail_with_request_headers_too_long()

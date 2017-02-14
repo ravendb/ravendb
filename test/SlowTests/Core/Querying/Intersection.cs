@@ -12,7 +12,7 @@ using TShirtType = SlowTests.Core.Utils.Entities.TShirtType;
 
 namespace SlowTests.Core.Querying
 {
-    public class Intersection : RavenNewTestBase
+    public class Intersection : RavenTestBase
     {
         [Fact]
         public void CanPerformIntersectQuery()

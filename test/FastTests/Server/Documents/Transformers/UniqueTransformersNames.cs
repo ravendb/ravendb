@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Transformers
 {
-    public class UniqueTransformersNames : RavenNewTestBase
+    public class UniqueTransformersNames : RavenTestBase
     {
         [Fact]
         public void TransformersAndIndexesNameShouldBeUniqe()

@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_2660 : RavenNewTestBase
+    public class RavenDB_2660 : RavenTestBase
     {
         public class UsersByName : AbstractIndexCreationTask<User>
         {

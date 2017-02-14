@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Queries
 {
-    public class StatsOnDynamicQueries : RavenNewTestBase
+    public class StatsOnDynamicQueries : RavenTestBase
     {
         [Fact]
         public void WillGiveStats()

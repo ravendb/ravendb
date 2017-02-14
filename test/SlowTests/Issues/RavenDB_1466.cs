@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_1466 : RavenNewTestBase
+    public class RavenDB_1466 : RavenTestBase
     {
         public enum Region
         {

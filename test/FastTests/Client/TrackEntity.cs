@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class TrackEntity : RavenNewTestBase
+    public class TrackEntity : RavenTestBase
     {
         [Fact]
         public void Deleting_Entity_That_Is_Not_Tracked_Should_Throw()

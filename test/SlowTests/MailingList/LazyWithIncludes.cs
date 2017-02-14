@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LazyWithIncludes : RavenNewTestBase
+    public class LazyWithIncludes : RavenTestBase
     {
         [Fact]
         public void CanGetLazyWithIncludes()

@@ -13,7 +13,7 @@ namespace SlowTests.MailingList
     /// 
     /// Passes if you don't use it in a where clause, or if you call the reduce field something other than "Id".
     /// </summary>
-    public class RavenDB_859 : RavenNewTestBase
+    public class RavenDB_859 : RavenTestBase
     {
         private class Foo
         {

@@ -11,7 +11,7 @@ using Xunit;
 namespace FastTests.Server.Documents.Queries
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class WaitingForNonStaleResults : RavenNewTestBase
+    public class WaitingForNonStaleResults : RavenTestBase
     {
         [Fact]
         public async Task Cutoff_etag_usage()

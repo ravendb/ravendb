@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Mouhong : RavenNewTestBase
+    public class Mouhong : RavenTestBase
     {
         [Fact]
         public void CanSortDescending()

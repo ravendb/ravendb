@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Tests.MultiGet
 {
-    public class MultiGetBasic : RavenNewTestBase
+    public class MultiGetBasic : RavenTestBase
     {
         private class User
         {

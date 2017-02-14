@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Entities
 {
-    public class CanSaveUpdateAndRead : RavenNewTestBase
+    public class CanSaveUpdateAndRead : RavenTestBase
     {
         [Fact]
         public void Can_read_entity_name_after_update()

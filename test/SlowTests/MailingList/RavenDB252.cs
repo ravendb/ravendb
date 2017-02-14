@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RavenDB252 : RavenNewTestBase
+    public class RavenDB252 : RavenTestBase
     {
         [Fact]
         public void EntityNameIsNowCaseInsensitive()

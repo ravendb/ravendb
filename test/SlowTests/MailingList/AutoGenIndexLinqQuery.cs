@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AutoGenIndexLinqQuery : RavenNewTestBase
+    public class AutoGenIndexLinqQuery : RavenTestBase
     {
         private class Book
         {

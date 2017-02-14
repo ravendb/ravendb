@@ -13,7 +13,7 @@ using Sparrow.Collections;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_6199 : RavenNewTestBase
+    public class RavenDB_6199 : RavenTestBase
     {
         private class User
         {

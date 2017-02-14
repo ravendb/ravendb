@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Pfeffer : RavenNewTestBase
+    public class Pfeffer : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6305")]
         public void QueryingUsingObjects()

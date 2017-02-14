@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RavenDbBugs : RavenNewTestBase
+    public class RavenDbBugs : RavenTestBase
     {
         [Fact]
         public void CanUseEnumInMultiMapTransform()

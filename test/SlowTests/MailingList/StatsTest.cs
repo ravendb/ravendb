@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class StatsTest : RavenNewTestBase
+    public class StatsTest : RavenTestBase
     {
         // Audio POCO
         private class AudioTest

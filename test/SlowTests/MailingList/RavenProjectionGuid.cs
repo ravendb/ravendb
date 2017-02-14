@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RavenProjectionGuid : RavenNewTestBase
+    public class RavenProjectionGuid : RavenTestBase
     {
         [Fact]
         public void TestProjectedGuid()

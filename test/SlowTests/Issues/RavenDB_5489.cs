@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5489 : RavenNewTestBase
+    public class RavenDB_5489 : RavenTestBase
     {
         [Fact]
         public async Task IfIndexEncountersCorruptionItShouldBeMarkedAsErrored()

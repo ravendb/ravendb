@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WhenGroupinByLocation : RavenNewTestBase
+    public class WhenGroupinByLocation : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Spatial")]
         public void CanFindSale()

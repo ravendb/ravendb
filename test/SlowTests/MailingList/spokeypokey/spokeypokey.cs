@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey
 {
-    public class spokeypokey : RavenNewTestBase
+    public class spokeypokey : RavenTestBase
     {
         private class BarnIndex : AbstractIndexCreationTask<Barn, Barn>
         {

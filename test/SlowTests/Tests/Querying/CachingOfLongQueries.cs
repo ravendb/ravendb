@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class CachingOfLongQueries : RavenNewTestBase
+    public class CachingOfLongQueries : RavenTestBase
     {
         [Fact]
         public void ShouldWork()

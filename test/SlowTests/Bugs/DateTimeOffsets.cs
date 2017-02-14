@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs
 {
-    public class DateTimeOffsets : RavenNewTestBase
+    public class DateTimeOffsets : RavenTestBase
     {
         [Fact]
         public void Can_save_and_load()

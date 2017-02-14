@@ -24,7 +24,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Documents : RavenNewTestBase
+    public class Documents : RavenTestBase
     {
         [Fact]
         public void CanCancelPutDocument()

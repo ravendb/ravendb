@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class QueryingIntArray : RavenNewTestBase
+    public class QueryingIntArray : RavenTestBase
     {
         [Fact]
         public void Test()

@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SearchByMapReduceExample : RavenNewTestBase
+    public class SearchByMapReduceExample : RavenTestBase
     {
         [Fact]
         public void GivenAListOfLogEntriesAndAPartialClientName_Search_Returns1Player()

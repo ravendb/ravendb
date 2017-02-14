@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WhereInTests : RavenNewTestBase
+    public class WhereInTests : RavenTestBase
     {
         [Fact]
         public void WhereIn_using_index_notAnalyzed()

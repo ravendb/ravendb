@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanMultiMapIndexNullableValueTypes : RavenNewTestBase
+    public class CanMultiMapIndexNullableValueTypes : RavenTestBase
     {
         private class Company
         {

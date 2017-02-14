@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class indexes_error_CS1977_Cannot_use_a_lambda_expression_from_reduce : RavenNewTestBase
+    public class indexes_error_CS1977_Cannot_use_a_lambda_expression_from_reduce : RavenTestBase
     {
         private class Account
         {

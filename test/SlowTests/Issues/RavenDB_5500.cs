@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5500 : RavenNewTestBase
+    public class RavenDB_5500 : RavenTestBase
     {
         [Fact]
         public void WillThrowIfIndexPathIsNotDefinedInDatabaseConfiguration()

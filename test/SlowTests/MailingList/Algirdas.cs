@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Algirdas : RavenNewTestBase
+    public class Algirdas : RavenTestBase
     {
         [Fact]
         public void CheckForCorrectDateCompareBetweenLocalAndUtc()

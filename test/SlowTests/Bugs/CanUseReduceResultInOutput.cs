@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class CanUseReduceResultInOutput : RavenNewTestBase
+    public class CanUseReduceResultInOutput : RavenTestBase
     {
         private class CalendarWeek
         {

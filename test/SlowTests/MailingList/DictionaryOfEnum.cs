@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DictionaryOfEnum : RavenNewTestBase
+    public class DictionaryOfEnum : RavenTestBase
     {
         private enum MyEnum
         {

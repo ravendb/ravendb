@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LongIds : RavenNewTestBase
+    public class LongIds : RavenTestBase
     {
         [Fact]
         public void Embedded()

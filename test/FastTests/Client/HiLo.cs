@@ -12,7 +12,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Hilo : RavenNewTestBase
+    public class Hilo : RavenTestBase
     {
         private class HiloDoc
         {

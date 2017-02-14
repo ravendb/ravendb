@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IndexWithUnion : RavenNewTestBase
+    public class IndexWithUnion : RavenTestBase
     {
         private class Sermon
         {

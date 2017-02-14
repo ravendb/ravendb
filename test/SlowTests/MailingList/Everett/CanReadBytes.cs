@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.Everett
 {
-    public class CanReadBytes : RavenNewTestBase
+    public class CanReadBytes : RavenTestBase
     {
         [Fact]
         public void query_for_object_with_byte_array_with_TypeNameHandling_All()

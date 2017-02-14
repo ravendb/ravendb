@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DataSetIndexTest : RavenNewTestBase
+    public class DataSetIndexTest : RavenTestBase
     {
         private const int MaxNumberOfItemsInDataSet = 50;
 

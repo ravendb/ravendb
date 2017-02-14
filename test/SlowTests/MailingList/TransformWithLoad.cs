@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformWithLoad : RavenNewTestBase
+    public class TransformWithLoad : RavenTestBase
     {
         private IDocumentStore store;
 

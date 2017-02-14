@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CreateIndexesOnRemoteServer : RavenNewTestBase
+    public class CreateIndexesOnRemoteServer : RavenTestBase
     {
         [Fact]
         public void CanCreateIndex()

@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class ComplexIndexOnNotAnalyzedField : RavenNewTestBase
+    public class ComplexIndexOnNotAnalyzedField : RavenTestBase
     {
         [Fact]
         public void CanQueryOnKey()

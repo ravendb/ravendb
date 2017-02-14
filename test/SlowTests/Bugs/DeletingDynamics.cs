@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class DeletingDynamics : RavenNewTestBase
+    public class DeletingDynamics : RavenTestBase
     {
         [Fact]
         public void CanDeleteItemsUsingDynamic()

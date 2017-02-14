@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanHaveAnIndexNameThatStartsWithDynamic : RavenNewTestBase
+    public class CanHaveAnIndexNameThatStartsWithDynamic : RavenTestBase
     {
         private class SomeDoc
         {

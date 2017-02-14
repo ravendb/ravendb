@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Troy2 : RavenNewTestBase
+    public class Troy2 : RavenTestBase
     {
         [Fact]
         public void UsingDefaultFieldWithSelectFieldsFails()

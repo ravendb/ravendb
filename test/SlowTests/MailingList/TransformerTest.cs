@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformerTest : RavenNewTestBase
+    public class TransformerTest : RavenTestBase
     {
         private class Company
         {

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Async
 {
-    public class DynamicGeneratedIds : RavenNewTestBase
+    public class DynamicGeneratedIds : RavenTestBase
     {
         [Fact]
         public void AsyncMatchesSyncGeneratedIdForDynamicBehavior()

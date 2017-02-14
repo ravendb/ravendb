@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4300 : RavenNewTestBase
+    public class RavenDB_4300 : RavenTestBase
     {
         // The search text must 
         //    (1) contain a space

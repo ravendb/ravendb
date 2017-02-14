@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DynamicIndexSort3Specs : RavenNewTestBase
+    public class DynamicIndexSort3Specs : RavenTestBase
     {
         private class DataSet
         {

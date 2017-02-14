@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class HierarchyTests : RavenNewTestBase
+    public class HierarchyTests : RavenTestBase
     {
         [Fact]
         public void CanQueryByNavigationItemHierarchy()

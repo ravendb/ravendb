@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs
 {
-    public class ComplexDynamicQuery : RavenNewTestBase
+    public class ComplexDynamicQuery : RavenTestBase
     {
         [Fact(Skip = "Missing feature : RavenDB-6155 ")]
         public void UsingNestedCollections()

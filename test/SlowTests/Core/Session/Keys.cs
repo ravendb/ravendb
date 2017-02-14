@@ -18,7 +18,7 @@ using UserWithoutId = SlowTests.Core.Utils.Entities.UserWithoutId;
 
 namespace SlowTests.Core.Session
 {
-    public class Keys : RavenNewTestBase
+    public class Keys : RavenTestBase
     {
         [Fact]
         public void GetDocumentId()

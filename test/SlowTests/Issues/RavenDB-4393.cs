@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4393 : RavenNewTestBase
+    public class RavenDB_4393 : RavenTestBase
     {
         private class FailedMessage
         {

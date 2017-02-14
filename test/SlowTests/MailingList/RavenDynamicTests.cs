@@ -28,7 +28,7 @@ namespace SlowTests.MailingList
             }
         };
 
-        public class WhenUsingIdCopy : RavenNewTestBase
+        public class WhenUsingIdCopy : RavenTestBase
         {
             private readonly DocumentStore _store;
 
@@ -107,7 +107,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class When_using_Id : RavenNewTestBase
+        public class When_using_Id : RavenTestBase
         {
             private readonly DocumentStore _store;
 

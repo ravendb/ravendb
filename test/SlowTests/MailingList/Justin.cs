@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Justin : RavenNewTestBase
+    public class Justin : RavenTestBase
     {
         [Fact]
         public void ActualTest()

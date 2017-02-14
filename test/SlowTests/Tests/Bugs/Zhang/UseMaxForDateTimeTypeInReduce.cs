@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Bugs.Zhang
 {
-    public class UseMaxForDateTimeTypeInReduce : RavenNewTestBase
+    public class UseMaxForDateTimeTypeInReduce : RavenTestBase
     {
         private const string Map = @"
 from doc in docs.Items

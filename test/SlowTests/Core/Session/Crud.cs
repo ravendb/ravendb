@@ -22,7 +22,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Session
 {
-    public class Crud : RavenNewTestBase
+    public class Crud : RavenTestBase
     {
         [Fact]
         public async Task CanSaveAndLoad()

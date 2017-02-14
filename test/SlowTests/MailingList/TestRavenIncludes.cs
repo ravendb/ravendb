@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TestRavenIncludes : RavenNewTestBase
+    public class TestRavenIncludes : RavenTestBase
     {
         [Fact]
         public void CanIncludeRelatedDocuments()

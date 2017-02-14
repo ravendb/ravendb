@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4222 : RavenNewTestBase
+    public class RavenDB_4222 : RavenTestBase
     {
         [Fact]
         public void DontUpdateDisabledIndex()

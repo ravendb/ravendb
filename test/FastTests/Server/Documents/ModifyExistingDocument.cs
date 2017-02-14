@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents
 {
-    public class ModifyExistingDocument : RavenNewTestBase
+    public class ModifyExistingDocument : RavenTestBase
     {
         [Fact]
         public async Task ShouldThrowIfChangeCollection()

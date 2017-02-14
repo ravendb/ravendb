@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Update : RavenNewTestBase
+    public class Update : RavenTestBase
     {
         [Fact]
         public void Update_Document()

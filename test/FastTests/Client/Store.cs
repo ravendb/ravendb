@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Store : RavenNewTestBase
+    public class Store : RavenTestBase
     {
         [Fact]
         public void Store_Document()

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3465 : RavenNewTestBase
+    public class RavenDB_3465 : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6283")]
         public void get_metadata_for_sharded()

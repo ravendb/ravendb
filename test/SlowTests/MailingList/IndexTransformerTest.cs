@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IndexTransformerTest : RavenNewTestBase
+    public class IndexTransformerTest : RavenTestBase
     {
         [Fact]
         public void CanIndexAndQuery()

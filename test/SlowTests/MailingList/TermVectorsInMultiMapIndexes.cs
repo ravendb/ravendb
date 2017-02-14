@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TermVectorsInMultiMapIndexes : RavenNewTestBase
+    public class TermVectorsInMultiMapIndexes : RavenTestBase
     {
         [Fact]
         public void CanCreateTermVectorInIndex()

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents
 {
-    public class Collections : RavenNewTestBase
+    public class Collections : RavenTestBase
     {
         [Fact]
         public void CanSurviveRestart()

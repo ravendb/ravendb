@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LazilyLoadByIdsWithTransformer : RavenNewTestBase
+    public class LazilyLoadByIdsWithTransformer : RavenTestBase
     {
         [Fact]
         public void WithTransformer()

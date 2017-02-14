@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Suggestions
 {
-    public class SuggestionsUsingAnIndex : RavenNewTestBase
+    public class SuggestionsUsingAnIndex : RavenTestBase
     {
         private class User
         {

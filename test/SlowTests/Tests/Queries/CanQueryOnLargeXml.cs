@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Queries
 {
-    public class CanQueryOnLargeXml : RavenNewTestBase
+    public class CanQueryOnLargeXml : RavenTestBase
     {
         private class Item
         {

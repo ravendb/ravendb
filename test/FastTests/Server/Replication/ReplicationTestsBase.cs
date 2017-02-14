@@ -18,7 +18,7 @@ using Xunit;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationTestsBase : RavenNewTestBase
+    public class ReplicationTestsBase : RavenTestBase
     {
         protected Dictionary<string, object> GetReplicationStats(DocumentStore store)
         {

@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ResultTransformerMetaData : RavenNewTestBase
+    public class ResultTransformerMetaData : RavenTestBase
     {
         /// <summary>
         /// The only thing i could not recreate here is the fact that the versioning bundle is active.

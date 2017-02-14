@@ -16,7 +16,7 @@ using Raven.Client.Documents.Queries.Facets;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_302 : RavenNewTestBase
+    public class RavenDB_302 : RavenTestBase
     {
         [DataContract]
         private class Item

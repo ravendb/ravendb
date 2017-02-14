@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3758 : RavenNewTestBase
+    public class RavenDB_3758 : RavenTestBase
     {
         private class Orders_All : AbstractIndexCreationTask<Order>
         {

@@ -14,7 +14,7 @@ using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Querying
 {
-    public class Projections : RavenNewTestBase
+    public class Projections : RavenTestBase
     {
         [Fact]
         public void BasicProjections()

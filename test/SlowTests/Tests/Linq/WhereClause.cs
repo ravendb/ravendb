@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class WhereClause : RavenNewTestBase
+    public class WhereClause : RavenTestBase
     {
         private class Renamed
         {

@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class QueryingUsingOr : RavenNewTestBase
+    public class QueryingUsingOr : RavenTestBase
     {
         private class Foo
         {

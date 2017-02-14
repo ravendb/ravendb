@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_295 : RavenNewTestBase
+    public class RavenDB_295 : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Suggestions")]
         public void CanUpdateSuggestions()

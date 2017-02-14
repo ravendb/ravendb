@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy
 {
-    public class Basic : RavenNewTestBase
+    public class Basic : RavenTestBase
     {
         [Fact]
         public void CanCreateDatabaseUsingExtensionMethod()

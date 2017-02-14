@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_5669 : RavenNewTestBase
+    public class RavenDB_5669 : RavenTestBase
     {
         [Fact]
         public void WorkingTestWithDifferentSearchTermOrder()

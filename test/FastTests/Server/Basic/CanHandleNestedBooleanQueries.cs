@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class CanParseNestedBooleanQueries : RavenNewTestBase
+    public class CanParseNestedBooleanQueries : RavenTestBase
     {
         private static readonly LuceneASTQueryConfiguration Config = new LuceneASTQueryConfiguration
         {

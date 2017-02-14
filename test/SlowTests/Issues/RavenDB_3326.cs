@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3326 : RavenNewTestBase
+    public class RavenDB_3326 : RavenTestBase
     {
         [Fact]
         public void streaming_and_projections_with_property_rename()

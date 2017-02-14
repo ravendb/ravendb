@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IdentityUserDeserialization : RavenNewTestBase
+    public class IdentityUserDeserialization : RavenTestBase
     {
         [Fact]
         public void Can_Deserialize_IdentityUser()

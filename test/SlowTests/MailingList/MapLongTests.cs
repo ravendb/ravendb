@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class MapLongTests : RavenNewTestBase
+    public class MapLongTests : RavenTestBase
     {
         [Fact]
         public void CanMapADictionaryLong()

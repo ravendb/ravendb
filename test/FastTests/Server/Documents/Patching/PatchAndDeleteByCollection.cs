@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Patching
 {
-    public class PatchAndDeleteByCollection : RavenNewTestBase
+    public class PatchAndDeleteByCollection : RavenTestBase
     {
         [Fact]
         public void CanDeleteCollection()

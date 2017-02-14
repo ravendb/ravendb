@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Core.Subscriptions
 {
-    public class RavenDB_3193 : RavenNewTestBase
+    public class RavenDB_3193 : RavenTestBase
     {
         [Fact]
         public async Task ShouldRespectCollectionCriteria()

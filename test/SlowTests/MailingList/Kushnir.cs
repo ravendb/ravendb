@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Kushnir : RavenNewTestBase
+    public class Kushnir : RavenTestBase
     {
         private const string Alphabet = "abcdefghijklmnopqrstuvwxyz";
 

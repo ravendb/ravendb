@@ -10,7 +10,7 @@ using Xunit;
 
 namespace FastTests.Server
 {
-    public class ServerStore : RavenNewTestBase
+    public class ServerStore : RavenTestBase
     {
         [Fact]
         public void Admin_databases_endpoint_should_refuse_document_with_lower_etag_with_concurrency_Exception()

@@ -23,7 +23,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class LinqIndexesFromClient : RavenNewTestBase
+    public class LinqIndexesFromClient : RavenTestBase
     {
         [Fact]
         public void Convert_select_many_will_keep_doc_id()

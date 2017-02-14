@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class QueryingOnValueWithMultipleMinusAnalyzed : RavenNewTestBase
+    public class QueryingOnValueWithMultipleMinusAnalyzed : RavenTestBase
     {
         [Fact]
         public void CanPerformQueryWithDashesInTerm()

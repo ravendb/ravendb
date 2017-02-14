@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ScriptedPatchBug : RavenNewTestBase
+    public class ScriptedPatchBug : RavenTestBase
     {
         private class Index1 : AbstractIndexCreationTask<Compound>
         {

@@ -14,7 +14,7 @@ using Xunit;
 
 namespace FastTests.Client.MoreLikeThis
 {
-    public class MoreLikeThisTests : RavenNewTestBase
+    public class MoreLikeThisTests : RavenTestBase
     {
         private class Transformer1 : AbstractTransformerCreationTask<Data>
         {

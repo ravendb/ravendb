@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4085 : RavenNewTestBase
+    public class RavenDB_4085 : RavenTestBase
     {
         [Fact]
         public async Task can_export_all_documents()

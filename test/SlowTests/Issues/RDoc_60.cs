@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RDoc_60 : RavenNewTestBase
+    public class RDoc_60 : RavenTestBase
     {
         private class Order
         {

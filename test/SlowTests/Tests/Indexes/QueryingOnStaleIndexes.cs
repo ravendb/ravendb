@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class QueryingOnStaleIndexes : RavenNewTestBase
+    public class QueryingOnStaleIndexes : RavenTestBase
     {
         private class Users_ByName : AbstractIndexCreationTask<User>
         {

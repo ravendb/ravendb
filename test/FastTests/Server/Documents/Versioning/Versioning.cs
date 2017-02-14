@@ -13,7 +13,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Versioning
 {
-    public class Versioning : RavenNewTestBase
+    public class Versioning : RavenTestBase
     {
         [Fact]
         public async Task CanGetAllRevisionsFor()

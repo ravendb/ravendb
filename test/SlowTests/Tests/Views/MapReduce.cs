@@ -19,7 +19,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Views
 {
-    public class MapReduce : RavenNewTestBase
+    public class MapReduce : RavenTestBase
     {
         private const string Map =
             @"from post in docs.Blogs

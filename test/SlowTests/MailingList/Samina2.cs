@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Samina2 : RavenNewTestBase
+    public class Samina2 : RavenTestBase
     {
         private class PropertySearchingViewModel
         {

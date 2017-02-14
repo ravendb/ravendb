@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class IndexingEachFieldInEachDocumentSeparately : RavenNewTestBase
+    public class IndexingEachFieldInEachDocumentSeparately : RavenTestBase
     {
         [Fact(Skip = "Missing feature : RavenDB-6152 ")]
         public void ForIndexing()
