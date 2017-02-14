@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Indexes;
 using Raven.Server.Documents.Indexes;
 using Xunit;
@@ -59,7 +61,7 @@ namespace FastTests.Server.Documents.Indexing
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 var index = database.IndexStore.GetIndex("Users/ByName");
 
-                var collector = new LiveIndexingPerformanceCollector(database.Changes, database.DatabaseShutdown, new[] {index});
+                var collector = new LiveIndexingPerformanceCollector(database.Changes, database.DatabaseShutdown, new[] { index });
 
                 var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(1));
                 Assert.True(tuple.Item1);
@@ -107,17 +109,23 @@ namespace FastTests.Server.Documents.Indexing
                 }
 
                 WaitForIndexing(store);
-                
+
+
+                IndexPerformanceStats usersStats;
 
                 var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(5));
                 Assert.True(tuple.Item1);
-                var stats = tuple.Item2;
+                usersStats = tuple.Item2[0];
 
-                Assert.Equal(1, stats.Count);
-                var usersStats = stats[0];
+                while (true)
+                {
+                    tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(0));
+                    if (tuple.Item1 == false)
+                        break;
+                    Assert.Equal(1, tuple.Item2.Count);
+                    usersStats = tuple.Item2[0];
+                }
                 Assert.Equal("Users/ByName", usersStats.IndexName);
-
-                Assert.Equal(3, usersStats.Performance.Length);
 
                 Assert.Equal(2, usersStats.Performance.Select(x => x.InputCount).Sum());
             }

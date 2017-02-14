@@ -49,14 +49,14 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            const string name = "stackoverflow";
-            var doc = MultiDatabase.CreateDatabaseDocument(name);
-
-            using (var store = new DocumentStore { Url = "http://localhost:8080", DefaultDatabase = name })
+            for (int i = 0; i < 100; i++)
             {
-                store.Initialize();
+                Console.WriteLine(i);
 
-                store.Admin.Send(new CreateDatabaseOperation(doc));
+                using (var a = new FastTests.Server.Documents.Indexing.LiveIndexingPerformanceCollectorTests())
+                {
+                    a.CanObtainLiveIndexingPerformanceStats().Wait();
+                }
             }
         }
     }
