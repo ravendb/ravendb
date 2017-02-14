@@ -77,8 +77,7 @@ namespace Voron.Impl.FileHeaders
                 }
 
                 if (f1->Version != Constants.CurrentVersion)
-                    throw new InvalidDataException("Failed to load the system database "+ Environment.NewLine + 
-                        "The db file is for version " + f1->Version + ", which is not compatible with the current version " + Constants.CurrentVersion + Environment.NewLine +
+                    throw new InvalidDataException("The db file is for version " + f1->Version + ", which is not compatible with the current version " + Constants.CurrentVersion + Environment.NewLine +
                         "Error at " + _env.Options.BasePath); 
 
                 if (f1->TransactionId < 0)
