@@ -11,7 +11,7 @@ using System.Net.Http;
 
 namespace Raven.Client.Extensions
 {
-    public static class HttpExtensions
+    internal static class HttpExtensions
     {
         public static long? GetEtagHeader(this HttpResponseMessage response)
         {

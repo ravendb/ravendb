@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    public class MoreLikeThisOperation
+    internal class MoreLikeThisOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly MoreLikeThisQuery _query;

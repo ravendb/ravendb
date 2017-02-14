@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    public class BatchOperation
+    internal class BatchOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
 

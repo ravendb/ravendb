@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Json
 {
-    public class BlittableJsonContent : HttpContent
+    internal class BlittableJsonContent : HttpContent
     {
         private readonly Action<Stream> _writer;
 

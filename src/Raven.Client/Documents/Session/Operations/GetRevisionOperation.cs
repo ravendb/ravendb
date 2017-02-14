@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    public class GetRevisionOperation
+    internal class GetRevisionOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly string _id;

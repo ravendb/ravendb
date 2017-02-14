@@ -1,7 +1,6 @@
 using System;
 using System.Net.Sockets;
 using System.Threading;
-using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;

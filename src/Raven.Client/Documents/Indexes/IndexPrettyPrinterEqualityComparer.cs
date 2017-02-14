@@ -9,7 +9,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class IndexPrettyPrinterEqualityComparer : IEqualityComparer<string>
+    internal class IndexPrettyPrinterEqualityComparer : IEqualityComparer<string>
     {
         public static IndexPrettyPrinterEqualityComparer Instance = new IndexPrettyPrinterEqualityComparer();
 

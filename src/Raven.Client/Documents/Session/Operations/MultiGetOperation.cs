@@ -4,7 +4,7 @@ using Raven.Client.Json;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    public class MultiGetOperation
+    internal class MultiGetOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
 

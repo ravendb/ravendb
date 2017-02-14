@@ -22,7 +22,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Utils
 {
-    public static class ReplicationUtils
+    internal static class ReplicationUtils
     {
         public static NodeTopologyInfo GetLocalTopology(
             DocumentDatabase database,

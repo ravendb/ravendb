@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace Raven.Client.Logging.LogProviders
 {
-    public class NLogLogManager : LogManagerBase
+    internal class NLogLogManager : LogManagerBase
     {
         private static bool providerIsAvailableOverride = true;
         private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerTypeStatic, true);
@@ -65,7 +65,7 @@ namespace Raven.Client.Logging.LogProviders
             return log4NetAssembly != null ? log4NetAssembly.GetType("NLog.MappedDiagnosticsContext") : Type.GetType("NLog.MappedDiagnosticsContext, nlog");
         }
 
-        public class NLogLogger : ILog
+        internal class NLogLogger : ILog
         {
             private readonly dynamic logger;
 

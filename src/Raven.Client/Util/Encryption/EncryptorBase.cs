@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Util.Encryption
 {
-    public abstract class EncryptorBase<THashEncryptor, TSymmetricalEncryptor, TAsymmetricalEncryptor> : IEncryptor
+    internal abstract class EncryptorBase<THashEncryptor, TSymmetricalEncryptor, TAsymmetricalEncryptor> : IEncryptor
         where THashEncryptor : IHashEncryptor, new()
         where TSymmetricalEncryptor : ISymmetricalEncryptor, new()
         where TAsymmetricalEncryptor : IAsymmetricalEncryptor, new()

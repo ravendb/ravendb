@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.BulkInsert
 {
-    public class ConnectToServerResult
+    internal class ConnectToServerResult
     {
         public NetworkStream Stream { get; set; }
         public string OAuthToken { get; set; }

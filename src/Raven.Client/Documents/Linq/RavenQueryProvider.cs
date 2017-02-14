@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Linq
     /// <summary>
     /// An implementation of <see cref="IRavenQueryProvider"/>
     /// </summary>
-    public class RavenQueryProvider<T> : IRavenQueryProvider
+    internal class RavenQueryProvider<T> : IRavenQueryProvider
     {
         private Action<QueryResult> _afterQueryExecuted;
         private Action<object> _afterStreamExecuted;

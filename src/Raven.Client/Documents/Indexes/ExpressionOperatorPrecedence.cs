@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// Precedence values for operations
     /// </summary>
-    public enum ExpressionOperatorPrecedence
+    internal enum ExpressionOperatorPrecedence
     {
         /// <summary>
         /// x.y  f(x)  a[x]  x++  x--  new

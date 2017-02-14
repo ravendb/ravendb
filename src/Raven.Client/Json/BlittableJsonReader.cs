@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    public class BlittableJsonReader : JsonReader
+    internal class BlittableJsonReader : JsonReader
     {
         private readonly Stack<CurrentItem> _items = new Stack<CurrentItem>();
         private readonly Stack<BlittableJsonReaderObject.PropertiesInsertionBuffer> _buffers = new Stack<BlittableJsonReaderObject.PropertiesInsertionBuffer>();

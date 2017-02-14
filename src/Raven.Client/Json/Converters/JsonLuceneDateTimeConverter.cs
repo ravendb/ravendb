@@ -13,7 +13,7 @@ namespace Raven.Client.Json.Converters
     /// <summary>
     /// Convert a lucene data format to and from json values
     /// </summary>
-    public class JsonLuceneDateTimeConverter : JsonConverter
+    internal class JsonLuceneDateTimeConverter : JsonConverter
     {
         // 17 numeric characters on a datetime field == Lucene datetime
         private static readonly Regex LuceneDateTimePattern = new Regex(@"\d{17}", RegexOptions.Compiled);

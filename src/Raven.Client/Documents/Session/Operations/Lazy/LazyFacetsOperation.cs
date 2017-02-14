@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    public class LazyFacetsOperation : ILazyOperation
+    internal class LazyFacetsOperation : ILazyOperation
     {
         private readonly FacetQuery _query;
 

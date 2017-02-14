@@ -16,7 +16,7 @@ namespace Raven.Client.Util
     /// <summary>
     /// Helper class for reflection operations
     /// </summary>
-    public static class ReflectionUtil
+    internal static class ReflectionUtil
     {
         private static Dictionary<Type, string> _fullNameCache = new Dictionary<Type, string>();
 

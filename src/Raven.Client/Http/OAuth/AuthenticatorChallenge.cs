@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Http.OAuth
 {
-    public class AuthenticatorChallenge
+    internal class AuthenticatorChallenge
     {
         public string RSAExponent;
         public string RSAModulus;

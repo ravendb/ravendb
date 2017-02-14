@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Replication.Messages
 {
-    public class TopologyDiscoveryRequest
+    internal class TopologyDiscoveryRequest
     {
         //already visited db ids
         public List<string> AlreadyVisited;

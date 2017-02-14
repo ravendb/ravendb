@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes
 
         public const int MaxNumberOfKeptErrors = 500;
 
-        internal bool _simulateCorruption;
+        internal bool _simulateCorruption = false;
 
         public IndexStorage(Index index, TransactionContextPool contextPool, DocumentDatabase database)
         {

@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Http
 {
-    public static class TopologyLocalCache
+    internal static class TopologyLocalCache
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(TopologyLocalCache));
 

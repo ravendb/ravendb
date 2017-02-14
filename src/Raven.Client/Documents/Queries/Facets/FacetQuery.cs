@@ -16,10 +16,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
-#if !NET46
-#endif
-
-
 namespace Raven.Client.Documents.Queries.Facets
 {
     public class FacetQuery : IndexQueryBase

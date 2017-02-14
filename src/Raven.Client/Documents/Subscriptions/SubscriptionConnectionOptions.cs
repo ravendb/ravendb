@@ -10,9 +10,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionConnectionClientMessage
+    internal class SubscriptionConnectionClientMessage
     {
-        public enum MessageType
+        internal enum MessageType
         {
             None,
             Acknowledge
@@ -22,11 +22,11 @@ namespace Raven.Client.Documents.Subscriptions
         public long Etag { get; set; }
     }
 
-    public class SubscriptionConnectionServerMessage : IDisposable
+    internal class SubscriptionConnectionServerMessage : IDisposable
     {
         internal BlittableJsonReaderObject ParentObjectToDispose;
 
-        public enum MessageType
+        internal enum MessageType
         {
             None,
             CoonectionStatus,
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Subscriptions
             Error
         }
 
-        public enum ConnectionStatus
+        internal enum ConnectionStatus
         {
             None,
             Accepted,

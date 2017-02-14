@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace Raven.Client.Json.Converters
 {
-    public abstract class RavenJsonConverter : JsonConverter
+    internal abstract class RavenJsonConverter : JsonConverter
     {
         protected object DeferReadToNextConverter(JsonReader reader, Type objectType, JsonSerializer serializer, object existingValue)
         {

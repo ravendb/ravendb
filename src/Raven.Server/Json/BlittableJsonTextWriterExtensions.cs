@@ -22,7 +22,7 @@ using Voron.Data.BTrees;
 
 namespace Raven.Server.Json
 {
-    public static class BlittableJsonTextWriterExtensions
+    internal static class BlittableJsonTextWriterExtensions
     {
         public static void WriteChangeVector(this BlittableJsonTextWriter writer, JsonOperationContext context,
             ChangeVectorEntry[] changeVector)

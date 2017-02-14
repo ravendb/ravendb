@@ -9,7 +9,7 @@ using System.IO;
 
 namespace Raven.Client.Util
 {
-    public class CountingStream : Stream
+    internal class CountingStream : Stream
     {
         private readonly Stream _inner;
         private readonly Action<long> _updateNumberOfWrittenBytes;

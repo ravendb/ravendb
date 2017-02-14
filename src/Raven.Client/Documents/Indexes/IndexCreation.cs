@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// Helper class for creating indexes from implementations of <see cref="AbstractIndexCreationTask"/>.
     /// </summary>
-    public static class IndexCreation
+    internal static class IndexCreation
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(IndexCreation));
 

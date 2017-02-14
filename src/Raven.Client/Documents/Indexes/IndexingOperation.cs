@@ -6,11 +6,11 @@
 
 namespace Raven.Client.Documents.Indexes
 {
-    public static class IndexingOperation
+    internal static class IndexingOperation
     {
         public const string LoadDocument = "LoadDocument";
 
-        public static class Map
+        internal static class Map
         {
             public const string DocumentRead = "Storage/DocumentRead";
 
@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Indexes
             public const string Bloom = "Bloom";
         }
 
-        public static class Lucene
+        internal static class Lucene
         {
             public const string Delete = "Lucene/Delete";
             public const string Convert = "Lucene/Convert";
@@ -28,12 +28,12 @@ namespace Raven.Client.Documents.Indexes
             public const string RecreateSearcher = "Lucene/RecreateSearcher";
         }
 
-        public static class Storage
+        internal static class Storage
         {
             public const string Commit = "Storage/Commit";
         }
 
-        public static class Reduce
+        internal static class Reduce
         {
             public const string TreeScope = "Tree";
             public const string NestedValuesScope = "NestedValues";

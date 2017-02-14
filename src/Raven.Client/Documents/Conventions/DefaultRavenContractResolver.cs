@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Conventions
     /// <summary>
     /// The default json contract will serialize all properties and all public fields
     /// </summary>
-    public class DefaultRavenContractResolver : DefaultContractResolver
+    internal class DefaultRavenContractResolver : DefaultContractResolver
     {
         /// <summary>
         /// Gets the serializable members for the type.

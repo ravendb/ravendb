@@ -8,7 +8,7 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents
 {
-    public class CollectionRunner
+    internal class CollectionRunner
     {
         private readonly DocumentsOperationContext _context;
         private readonly DocumentDatabase _database;

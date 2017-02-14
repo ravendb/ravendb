@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     ///   Based off of System.Linq.Expressions.ExpressionStringBuilder
     /// </summary>
-    public class ExpressionStringBuilder : ExpressionVisitor
+    internal class ExpressionStringBuilder : ExpressionVisitor
     {
         // Fields
         private static readonly char[] LiteralSymbolsToEscape = new[] { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };

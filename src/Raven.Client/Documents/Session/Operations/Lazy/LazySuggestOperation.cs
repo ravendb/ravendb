@@ -6,7 +6,7 @@ using Raven.Client.Documents.Queries.Suggestion;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    public class LazySuggestOperation : ILazyOperation
+    internal class LazySuggestOperation : ILazyOperation
     {
         private readonly string _index;
         private readonly SuggestionQuery _suggestionQuery;

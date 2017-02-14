@@ -2,7 +2,7 @@ using Sparrow;
 
 namespace Raven.Client.Http
 {
-    public static class ServerHash
+    internal static class ServerHash
     {
         public static string GetServerHash(string url)
         {

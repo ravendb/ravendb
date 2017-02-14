@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Session.Loaders
     /// Fluent implementation for specifying include paths
     /// for loading documents
     /// </summary>
-    public class MultiLoaderWithInclude<T> : ILoaderWithInclude<T>
+    internal class MultiLoaderWithInclude<T> : ILoaderWithInclude<T>
     {
         private readonly IDocumentSessionImpl _session;
         private readonly List<string> _includes = new List<string>();

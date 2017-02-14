@@ -10,7 +10,7 @@ using Sparrow;
 
 namespace Raven.Client.Util.Encryption
 {
-    public sealed class DefaultEncryptor : EncryptorBase<DefaultEncryptor.DefaultHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
+    internal sealed class DefaultEncryptor : EncryptorBase<DefaultEncryptor.DefaultHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
     {
         public DefaultEncryptor()
         {
@@ -19,7 +19,7 @@ namespace Raven.Client.Util.Encryption
 
         public override IHashEncryptor Hash { get; protected set; }
 
-        public class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
+        internal class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
         {
             private readonly ObjectPool<MD5> md5Pool = new ObjectPool<MD5>(() => MD5.Create(), 16);
             private readonly ObjectPool<SHA1> sha1Pool = new ObjectPool<SHA1>(() => SHA1.Create(), 16);

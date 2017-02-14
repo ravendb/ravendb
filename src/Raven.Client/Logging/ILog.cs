@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Logging
 {
-    public interface ILog
+    internal interface ILog
     {
         bool IsInfoEnabled { get; }
 

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Replication.Messages
 {
-    public class ReplicationMessageHeader
+    internal class ReplicationMessageHeader
     {
         public string Type { get; set; }
 

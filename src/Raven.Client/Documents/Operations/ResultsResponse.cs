@@ -4,36 +4,36 @@ using Raven.Client.Server.Operations.ApiKeys;
 
 namespace Raven.Client.Documents.Operations
 {
-    public abstract class ResultsResponse<T>
+    internal abstract class ResultsResponse<T>
     {
         public T[] Results { get; set; }
     }
 
-    public class GetIndexNamesResponse : ResultsResponse<string>
+    internal class GetIndexNamesResponse : ResultsResponse<string>
     {
     }
 
-    public class GetTransformerNamesResponse : ResultsResponse<string>
+    internal class GetTransformerNamesResponse : ResultsResponse<string>
     {
     }
 
-    public class PutIndexesResponse : ResultsResponse<PutIndexResult>
+    internal class PutIndexesResponse : ResultsResponse<PutIndexResult>
     {
     }
 
-    public class GetIndexesResponse : ResultsResponse<IndexDefinition>
+    internal class GetIndexesResponse : ResultsResponse<IndexDefinition>
     {
     }
 
-    public class GetTransformersResponse : ResultsResponse<TransformerDefinition>
+    internal class GetTransformersResponse : ResultsResponse<TransformerDefinition>
     {
     }
 
-    public class GetIndexStatisticsResponse : ResultsResponse<IndexStats>
+    internal class GetIndexStatisticsResponse : ResultsResponse<IndexStats>
     {
     }
 
-    public class GetApiKeysResponse : ResultsResponse<NamedApiKeyDefinition>
+    internal class GetApiKeysResponse : ResultsResponse<NamedApiKeyDefinition>
     {
     }
 }

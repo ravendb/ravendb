@@ -6,7 +6,7 @@
 
 namespace Raven.Client.Documents.Queries.Spatial
 {
-    public class GeoJsonWktConverter
+    internal class GeoJsonWktConverter
     {
         /*public bool TryConvert(RavenJObject json, out string result)
         {

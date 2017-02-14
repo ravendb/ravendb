@@ -8,7 +8,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Util
 {
-    public class AtomicDictionary<TVal> : IEnumerable<KeyValuePair<string, TVal>>
+    internal class AtomicDictionary<TVal> : IEnumerable<KeyValuePair<string, TVal>>
     {
         private readonly ConcurrentDictionary<string, object> _locks;
         private readonly ConcurrentDictionary<string, TVal> _items;

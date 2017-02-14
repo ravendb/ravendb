@@ -4,7 +4,7 @@ using Sparrow.Collections;
 
 namespace Raven.Server.TrafficWatch
 {
-    public class TrafficWatchManager
+    internal class TrafficWatchManager
     {
         private static readonly ConcurrentSet<TrafficWatchConnection> ServerHttpTrace = new ConcurrentSet<TrafficWatchConnection>();
         

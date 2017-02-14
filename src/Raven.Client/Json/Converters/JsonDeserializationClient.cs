@@ -20,7 +20,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Converters
 {
-    public class JsonDeserializationClient : JsonDeserializationBase
+    internal class JsonDeserializationClient : JsonDeserializationBase
     {
         public static readonly Func<BlittableJsonReaderObject, GetDocumentResult> GetDocumentResult = GenerateJsonDeserializationRoutine<GetDocumentResult>();
 

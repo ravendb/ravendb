@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// Methods on the enum
     /// </summary>
-    public static class ExpressionOperatorPrecedenceExtension
+    internal static class ExpressionOperatorPrecedenceExtension
     {
         /// <summary>
         /// Needs parenthesis for the expression

@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    public class LazyQueryOperation<T> : ILazyOperation
+    internal class LazyQueryOperation<T> : ILazyOperation
     {
         private readonly QueryOperation _queryOperation;
         private readonly Action<QueryResult> _afterQueryExecuted;

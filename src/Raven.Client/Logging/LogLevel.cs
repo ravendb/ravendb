@@ -1,6 +1,6 @@
 namespace Raven.Client.Logging
 {
-    public enum LogLevel
+    internal enum LogLevel
     {
         Trace,
         Debug,

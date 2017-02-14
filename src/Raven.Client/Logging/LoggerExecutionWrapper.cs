@@ -4,7 +4,7 @@ using Sparrow.Collections;
 
 namespace Raven.Client.Logging
 {
-    public class LoggerExecutionWrapper : ILog
+    internal class LoggerExecutionWrapper : ILog
     {
         public const string FailedToGenerateLogMessage = "Failed to generate log message";
         private readonly ILog logger;

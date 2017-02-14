@@ -6,7 +6,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Logging.LogProviders
 {
-    public abstract class LogManagerBase : ILogManager
+    internal abstract class LogManagerBase : ILogManager
     {
         private readonly Func<object, ILog> loggerFactory;
         private readonly Func<string, object> getLoggerByNameDelegate;

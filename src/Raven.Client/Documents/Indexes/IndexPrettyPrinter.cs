@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public static class IndexPrettyPrinter
+    internal static class IndexPrettyPrinter
     {
         public static string TryFormat(string code)
         {

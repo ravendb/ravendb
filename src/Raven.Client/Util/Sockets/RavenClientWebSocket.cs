@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Platform;
 
-// TODO: Move to Raven.NewClient.Client.Http
 namespace Raven.Client.Util.Sockets
 {
     public class RavenClientWebSocket : IDisposable

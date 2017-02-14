@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    public class StreamOperation
+    internal class StreamOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
 

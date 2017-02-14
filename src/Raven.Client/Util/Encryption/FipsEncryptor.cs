@@ -10,7 +10,7 @@ using System.Security.Cryptography;
 
 namespace Raven.Client.Util.Encryption
 {
-    public sealed class FipsEncryptor : EncryptorBase<FipsEncryptor.FipsHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
+    internal sealed class FipsEncryptor : EncryptorBase<FipsEncryptor.FipsHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
     {
         public FipsEncryptor()
         {
@@ -19,7 +19,7 @@ namespace Raven.Client.Util.Encryption
 
         public override IHashEncryptor Hash { get; protected set; }
 
-        public class FipsHashEncryptor : HashEncryptorBase, IHashEncryptor
+        internal class FipsHashEncryptor : HashEncryptorBase, IHashEncryptor
         {
             public FipsHashEncryptor()
                 : this(true)
@@ -153,7 +153,7 @@ namespace Raven.Client.Util.Encryption
             }
         }
 
-        public class FipsSymmetricalEncryptor : ISymmetricalEncryptor
+        internal class FipsSymmetricalEncryptor : ISymmetricalEncryptor
         {
             private readonly SymmetricAlgorithm _algorithm;
 
@@ -231,7 +231,7 @@ namespace Raven.Client.Util.Encryption
                 _algorithm?.Dispose();
             }
         }
-        public class FipsAsymmetricalEncryptor : IAsymmetricalEncryptor
+        internal class FipsAsymmetricalEncryptor : IAsymmetricalEncryptor
         {
             private readonly RSACng _algorithm;
 

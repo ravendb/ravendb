@@ -8,9 +8,9 @@ using Raven.Client.Util.Encryption;
 
 namespace Raven.Client.Http.OAuth
 {
-    public static class OAuthHelper
+    internal static class OAuthHelper
     {
-        public static class Keys
+        internal static class Keys
         {
             public const string EncryptedData = "data";
             public const string APIKeyName = "api key name";

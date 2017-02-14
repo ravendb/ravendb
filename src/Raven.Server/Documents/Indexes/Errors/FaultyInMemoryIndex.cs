@@ -19,7 +19,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
-    public class FaultyInMemoryIndex : Index
+    internal class FaultyInMemoryIndex : Index
     {
         private readonly Exception _e;
 

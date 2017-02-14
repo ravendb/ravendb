@@ -3,9 +3,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Replication.Messages
 {
-    public class ReplicationMessageReply
+    internal class ReplicationMessageReply
     {
-        public enum ReplyType
+        internal enum ReplyType
         {
             None,
             Ok,

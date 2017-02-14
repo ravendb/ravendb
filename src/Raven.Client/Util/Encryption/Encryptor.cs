@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Util.Encryption
 {
-    public static class Encryptor
+    internal static class Encryptor
     {
         static Encryptor()
         {

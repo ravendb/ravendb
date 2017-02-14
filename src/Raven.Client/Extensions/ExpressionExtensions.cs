@@ -111,7 +111,7 @@ namespace Raven.Client.Extensions
             return builder.ToString().Trim(propertySeparator, collectionSeparator);
         }
 
-        public class PropertyPathExpressionVisitor : ExpressionVisitor
+        internal class PropertyPathExpressionVisitor : ExpressionVisitor
         {
             private readonly string _propertySeparator;
             private readonly string _collectionSeparator;

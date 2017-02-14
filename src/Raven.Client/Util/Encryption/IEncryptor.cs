@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 
 namespace Raven.Client.Util.Encryption
 {
-    public interface IEncryptor
+    internal interface IEncryptor
     {
         IHashEncryptor Hash { get; }
 
@@ -21,7 +21,7 @@ namespace Raven.Client.Util.Encryption
         IAsymmetricalEncryptor CreateAsymmetrical(int keySize);
     }
 
-    public interface IHashEncryptor : IDisposable
+    internal interface IHashEncryptor : IDisposable
     {
         int StorageHashSize { get; }
 
@@ -38,7 +38,7 @@ namespace Raven.Client.Util.Encryption
         byte[] Compute20(byte[] bytes, int offset, int size);
     }
 
-    public interface ISymmetricalEncryptor : IDisposable
+    internal interface ISymmetricalEncryptor : IDisposable
     {
         byte[] Key { get; set; }
 
@@ -57,7 +57,7 @@ namespace Raven.Client.Util.Encryption
         ICryptoTransform CreateDecryptor(byte[] key, byte[] iv);
     }
 
-    public interface IAsymmetricalEncryptor : IDisposable
+    internal interface IAsymmetricalEncryptor : IDisposable
     {
         int KeySize { get; set; }
 

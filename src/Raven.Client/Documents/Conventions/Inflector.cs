@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Conventions
     /// The Inflector class transforms words from one 
     /// form to another. For example, from singular to plural.
     /// </summary>
-    public class Inflector
+    internal class Inflector
     {
         private static readonly List<Rule> Plurals = new List<Rule>();
         private static readonly List<Rule> Singulars = new List<Rule>();

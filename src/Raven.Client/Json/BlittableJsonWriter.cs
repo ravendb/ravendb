@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    public class BlittableJsonWriter : JsonWriter
+    internal class BlittableJsonWriter : JsonWriter
     {
         private readonly ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> _manualBlittalbeJsonDocumentBuilder;
         private bool _first;

@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Queries.Spatial
     /// <summary>
     /// Converts shape objects to strings, if they are not already a string
     /// </summary>
-    public class ShapeConverter
+    internal class ShapeConverter
     {
         private static readonly GeoJsonWktConverter GeoJsonConverter = new GeoJsonWktConverter();
         private static readonly Regex RegexX = new Regex("^(?:X|Longitude|Lng|Lon|Long)$", RegexOptions.IgnoreCase);

@@ -99,7 +99,7 @@ namespace Raven.Client.Documents.Conventions
             DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
         }
 
-        public class JsonNetBlittableEntitySerializer
+        internal class JsonNetBlittableEntitySerializer
         {
             private readonly DocumentConventions _conventions;
 

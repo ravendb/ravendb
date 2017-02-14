@@ -7,7 +7,7 @@ using Sparrow.Collections;
 
 namespace Raven.Client.Logging
 {
-    public static class LogManager
+    internal static class LogManager
     {
         private static readonly ConcurrentSet<Target> Targets = new ConcurrentSet<Target>();
 
@@ -68,7 +68,7 @@ namespace Raven.Client.Logging
             return Targets.OfType<T>().FirstOrDefault();
         }
 
-        public class NoOpLogger : ILog
+        internal class NoOpLogger : ILog
         {
             public bool IsInfoEnabled { get { return false; } }
 
@@ -124,7 +124,7 @@ namespace Raven.Client.Logging
         }
     }
 
-    public abstract class Target : IDisposable
+    internal abstract class Target : IDisposable
     {
         public abstract void Write(LogEventInfo logEvent);
 
@@ -135,7 +135,7 @@ namespace Raven.Client.Logging
         }
     }
 
-    public class LogEventInfo
+    internal class LogEventInfo
     {
         public string Database { get; set; }
         public LogLevel Level { get; set; }
@@ -146,7 +146,7 @@ namespace Raven.Client.Logging
         public string StackTrace { get; set; }
     }
 
-    public class LogEventInfoFormatted
+    internal class LogEventInfoFormatted
     {
         public String Level { get; set; }
         public string Database { get; set; }

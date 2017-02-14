@@ -5,7 +5,7 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Json.Converters
 {
-    public class JsonDateTimeISO8601Converter : RavenJsonConverter
+    internal class JsonDateTimeISO8601Converter : RavenJsonConverter
     {
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {

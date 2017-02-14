@@ -5,7 +5,7 @@ using Raven.Client.Documents.Operations;
 
 namespace Raven.Client.Documents.Changes
 {
-    public class DatabaseConnectionState : ConnectionStateBase
+    internal class DatabaseConnectionState : ConnectionStateBase
     {
         private readonly Func<DatabaseConnectionState, Task> _ensureConnection;
 

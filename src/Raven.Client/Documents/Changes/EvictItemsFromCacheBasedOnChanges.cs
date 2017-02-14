@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Changes
 {
-    public class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IDisposable
+    internal class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IDisposable
     {
         private readonly string databaseName;
         private readonly IDatabaseChanges changes;

@@ -48,7 +48,7 @@ namespace Raven.Client.Json.Converters
     /// index this as a numeric value with {@link NumericField}
     /// and use {@link NumericRangeQuery} to query it.
     /// </summary>
-    public class DateTools
+    internal class DateTools
     {
 
         private static readonly string YEAR_FORMAT = "yyyy";
@@ -304,7 +304,7 @@ namespace Raven.Client.Json.Converters
         }
 
         /// <summary>Specifies the time granularity. </summary>
-        public class Resolution
+        internal class Resolution
         {
 
             /// <summary>

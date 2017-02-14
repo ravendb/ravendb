@@ -6,7 +6,7 @@ using Raven.Client.Documents.Queries.Facets;
 
 namespace Raven.Client.Documents.Linq
 {
-    public class AggregationQuery<T> : AggregationQuery
+    internal class AggregationQuery<T> : AggregationQuery
     {
         public List<Expression<Func<T, bool>>> Ranges { get; set; }
 
@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Linq
         }
     }
 
-    public class AggregationQuery
+    internal class AggregationQuery
     {
         public string Name { get; set; }
         public string DisplayName { get; set; }

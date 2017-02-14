@@ -31,18 +31,8 @@ namespace Raven.Client.Util
         }
     }
 
-    public class CounterConnectionStringOptions : ConnectionStringOptions
-    {
-        public string CounterStoreId { get; set; }
-    }
-
     public class RavenConnectionStringOptions : ConnectionStringOptions
     {
-        public RavenConnectionStringOptions()
-        {
-
-        }
-
         public string DefaultDatabase { get; set; }
 
         public FailoverServers FailoverServers { get; set; }

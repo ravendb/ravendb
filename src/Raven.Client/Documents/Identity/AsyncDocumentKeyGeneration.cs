@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Identity
 {
-    public class AsyncDocumentKeyGeneration
+    internal class AsyncDocumentKeyGeneration
     {
         private readonly LinkedList<object> _entitiesStoredWithoutIDs = new LinkedList<object>();
 

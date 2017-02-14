@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Util.Sockets
 {
-    public class RavenUnixClientWebSocket : WebSocket
+    internal class RavenUnixClientWebSocket : WebSocket
     {
         private const int MessageTypeText = 1;
         private const int MessageTypeBinary = 2;

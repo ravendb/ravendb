@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Session
 {
-    public class DocumentsById : IEnumerable<KeyValuePair<string, DocumentInfo>>
+    internal class DocumentsById : IEnumerable<KeyValuePair<string, DocumentInfo>>
     {
         private readonly Dictionary<string, DocumentInfo> _inner;
 

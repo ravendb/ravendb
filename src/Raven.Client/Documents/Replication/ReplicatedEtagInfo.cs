@@ -6,7 +6,7 @@
 
 namespace Raven.Client.Documents.Replication
 {
-    public class ReplicatedEtagInfo
+    internal class ReplicatedEtagInfo
     {
         public string DestinationUrl { get; set; }
         public long? DocumentEtag { get; set; }

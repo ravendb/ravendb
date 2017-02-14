@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Replication.Messages
 {
-    public class TopologyDiscoveryResponseHeader
+    internal class TopologyDiscoveryResponseHeader
     {
         public Status Type;
 
@@ -8,7 +8,7 @@
 
         public string Message;
 
-        public enum Status
+        internal enum Status
         {
             AlreadyKnown = 1,
             Ok = 2,

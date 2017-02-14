@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Linq
     /// <summary>
     /// Process a Linq expression to a Lucene query
     /// </summary>
-    public class RavenQueryProviderProcessor<T>
+    internal class RavenQueryProviderProcessor<T>
     {
         private readonly Action<IDocumentQueryCustomization> _customizeQuery;
         /// <summary>
@@ -2118,7 +2118,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         #endregion
     }
 
-    public class RenamedField
+    internal class RenamedField
     {
         public string OriginalField { get; set; }
         public string NewField { get; set; }

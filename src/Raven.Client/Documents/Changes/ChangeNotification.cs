@@ -210,7 +210,7 @@ namespace Raven.Client.Documents.Changes
         Delete = 2,
     }
 
-    public class TrafficWatchChange : DatabaseChange
+    internal class TrafficWatchChange : DatabaseChange
     {
         public DateTime TimeStamp { get; set; }
         public int RequestId { get; set; }

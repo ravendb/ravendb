@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    public class LazyTransformerLoadOperation<T> : ILazyOperation
+    internal class LazyTransformerLoadOperation<T> : ILazyOperation
     {
         private readonly string[] _ids;
         private readonly string _transformer;

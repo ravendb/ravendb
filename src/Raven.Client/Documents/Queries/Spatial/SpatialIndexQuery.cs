@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Queries.Spatial
     /// <summary>
     /// A query using spatial filtering
     /// </summary>
-    public class SpatialIndexQuery : IndexQuery
+    internal class SpatialIndexQuery : IndexQuery
     {
         public static string GetQueryShapeFromLatLon(double lat, double lng, double radius)
         {

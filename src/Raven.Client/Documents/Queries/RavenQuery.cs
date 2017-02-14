@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Queries
     /// <summary>
     /// Helper class that provide a way to escape query terms
     /// </summary>
-    public static class RavenQuery
+    internal static class RavenQuery
     {
         /// <summary>
         /// Escapes Lucene operators and quotes phrases

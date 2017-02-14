@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    public class LazyMoreLikeThisOperation<T> : ILazyOperation
+    internal class LazyMoreLikeThisOperation<T> : ILazyOperation
     {
         private readonly MoreLikeThisQuery _query;
         private readonly MoreLikeThisOperation _operation;

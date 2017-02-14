@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Indexes
     /// https://raw.github.com/einars/js-beautify/master/attic/unmaintained/c-sharp/JSBeautify.cs
     /// Used under the BSD license: https://github.com/einars/js-beautify/blob/master/license.txt
     /// </summary>
-    public class JSBeautify
+    internal class JSBeautify
     {
         public static string Apply(string origin)
         {
@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Indexes
             return jsBeautify.GetResult();
         }
 
-        public class JSBeautifyOptions
+        internal class JSBeautifyOptions
         {
             public int? indent_size { get; set; }
             public char? indent_char { get; set; }

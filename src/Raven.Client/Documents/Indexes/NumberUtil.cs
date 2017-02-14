@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// Helper function for numeric to indexed string and vice versa
     /// </summary>
-    public class NumberUtil
+    internal class NumberUtil
     {
         /// <summary>
         /// Translate a number to an indexable string

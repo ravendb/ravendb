@@ -15,7 +15,7 @@ using Sparrow.Logging;
 
 namespace Raven.Client.Http.OAuth
 {
-    public class ApiKeyAuthenticator : IDisposable
+    internal class ApiKeyAuthenticator : IDisposable
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ApiKeyAuthenticator>("Client");
         private readonly CancellationTokenSource _disposedToken = new CancellationTokenSource();
