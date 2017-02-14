@@ -3,7 +3,7 @@ using System.Linq;
 
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Raven.Client.Data;
+using Raven.Client;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 {

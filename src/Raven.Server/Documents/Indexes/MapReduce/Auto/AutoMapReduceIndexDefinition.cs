@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Extensions.Internal;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 using Voron;
 
@@ -144,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             var priority = ReadPriority(reader);
             BlittableJsonReaderArray jsonArray;
 
-            if (reader.TryGet(nameof(Collections), out jsonArray) == false)
+            if(reader.TryGet(nameof(Collections), out jsonArray) == false)
                 throw new InvalidOperationException("No persisted collections");
 
             var collection = jsonArray.GetStringByIndex(0);

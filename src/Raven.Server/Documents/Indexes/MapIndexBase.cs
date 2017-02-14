@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Runtime.CompilerServices;
-using Raven.Client.Data.Indexes;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;

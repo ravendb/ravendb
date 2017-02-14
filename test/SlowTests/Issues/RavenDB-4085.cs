@@ -9,9 +9,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Operations.Databases;
-using Raven.Client.Smuggler;
+using Raven.Client;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Utils;
 using Xunit;
 

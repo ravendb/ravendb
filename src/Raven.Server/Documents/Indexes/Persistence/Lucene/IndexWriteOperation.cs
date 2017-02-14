@@ -2,10 +2,8 @@
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
-using Raven.Client.Blittable;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Document;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;

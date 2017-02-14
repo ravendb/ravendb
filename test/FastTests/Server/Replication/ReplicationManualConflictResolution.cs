@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Document;
+using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

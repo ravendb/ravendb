@@ -1,9 +1,12 @@
 ﻿using System;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-using Raven.Client.Replication;
-using Raven.Client.Replication.Messages;
-using Raven.Client.Smuggler;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Server.Commands;
+using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
@@ -12,8 +15,8 @@ using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
-using Facet = Raven.Client.Data.Facet;
-using FacetSetup = Raven.Client.Data.FacetSetup;
+using Facet = Raven.Client.Documents.Queries.Facets.Facet;
+using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 
 namespace Raven.Server.Json
 {

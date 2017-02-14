@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Extensions;
-using Raven.Client.Operations.Databases;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Xunit;
 
 namespace FastTests.Issues

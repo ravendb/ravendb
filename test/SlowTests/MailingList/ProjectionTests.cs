@@ -8,7 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList

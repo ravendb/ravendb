@@ -2,9 +2,9 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Replication;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Subscriptions;
 
 namespace SubscriptionsBenchmark
 {
@@ -82,9 +82,6 @@ namespace SubscriptionsBenchmark
                 DefaultDatabase = databaseName,
                 Url = url,
                 Conventions = new DocumentConventions()
-                {
-                    FailoverBehavior = FailoverBehavior.FailImmediately
-                }
             };
             _store.Initialize();
 

@@ -2,11 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Exceptions.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
-using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;

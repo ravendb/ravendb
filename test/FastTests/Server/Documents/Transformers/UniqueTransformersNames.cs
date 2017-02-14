@@ -1,14 +1,14 @@
-﻿using Raven.Client.Exceptions;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
-using Raven.Client.Operations.Databases.Transformers;
+﻿using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions;
 using Xunit;
 
 namespace FastTests.Server.Documents.Transformers
 {
     public class UniqueTransformersNames : RavenNewTestBase
     {
-
         [Fact]
         public void TransformersAndIndexesNameShouldBeUniqe()
         {

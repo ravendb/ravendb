@@ -1,4 +1,4 @@
-﻿using Raven.Client.Replication.Messages;
+﻿using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Replication

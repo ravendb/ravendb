@@ -9,8 +9,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Operations.Databases.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Xunit;
 
@@ -34,7 +35,7 @@ namespace SlowTests.SlowTests.Bugs
             {
                 string lastUserId = null;
 
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 using (var session = store.OpenSession())
                 {
                     session.Query<User>()

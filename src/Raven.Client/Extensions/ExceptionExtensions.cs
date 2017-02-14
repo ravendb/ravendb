@@ -1,15 +1,12 @@
 using System;
-using System.Linq;
 using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Extensions
 {
     ///<summary>
     /// Extension methods to handle common scenarios
     ///</summary>
-    public static class ExceptionExtensions
+    internal static class ExceptionExtensions
     {
         /// <summary>
         /// Recursively examines the inner exceptions of an <see cref="AggregateException"/> and returns a single child exception.

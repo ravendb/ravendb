@@ -9,9 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -38,7 +39,7 @@ namespace SlowTests.MailingList
                 var searchResults = session.Query<Product>().Customize(x => x.WaitForNonStaleResults());
                 Assert.True(searchResults.Count() == 5);
 
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
 
                 // *****************************************************************************************************************************************
                 // We fail to find any Products as expected - Note Phrase is not a match
@@ -100,7 +101,7 @@ namespace SlowTests.MailingList
                 var searchResults = session.Query<Product>().Customize(x => x.WaitForNonStaleResults());
                 Assert.True(searchResults.Count() == 5);
 
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
 
                 // *****************************************************************************************************************************************
                 // We fail to find any Products as expected - Note Phrase is not a match

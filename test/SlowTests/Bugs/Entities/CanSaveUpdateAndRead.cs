@@ -1,6 +1,6 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Data;
+using Raven.Client;
 using Xunit;
 
 namespace SlowTests.Bugs.Entities

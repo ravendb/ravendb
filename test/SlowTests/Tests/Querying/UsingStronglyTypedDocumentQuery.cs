@@ -1,7 +1,7 @@
 using System;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Tests.Querying

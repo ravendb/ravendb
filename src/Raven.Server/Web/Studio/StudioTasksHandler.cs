@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Data;
+using Raven.Client;
 using Raven.Server.Routing;
 
 namespace Raven.Server.Web.Studio

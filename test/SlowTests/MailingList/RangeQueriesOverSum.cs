@@ -1,8 +1,8 @@
 using System.Linq;
 using System.Runtime.Serialization;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList

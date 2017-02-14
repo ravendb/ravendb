@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
-using Raven.Client.Data;
-using Raven.Client.Data.Collections;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

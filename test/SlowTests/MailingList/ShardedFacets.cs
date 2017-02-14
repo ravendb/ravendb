@@ -6,20 +6,13 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Replication;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
     public class ShardedFacets : RavenNewTestBase
     {
-        protected override void ModifyStore(DocumentStore store)
-        {
-            store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
-        }
-
         [Fact(Skip = "RavenDB-6283")]
         public void FacetTest()
         {

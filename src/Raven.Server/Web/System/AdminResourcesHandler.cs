@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Data;
+using Raven.Client;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 
 namespace Raven.Client.Extensions
 {
-    public static class ConcurrentDictionaryExtensions
+    internal static class ConcurrentDictionaryExtensions
     {
         public static TVal GetOrDefault<TKey,TVal>(this ConcurrentDictionary<TKey, TVal> self, TKey key, TVal value = default(TVal))
         {

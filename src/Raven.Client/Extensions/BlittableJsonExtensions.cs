@@ -1,10 +1,9 @@
 ﻿using System;
-using Raven.Client.Data;
 using Sparrow.Json;
 
 namespace Raven.Client.Extensions
 {
-    public static class BlittableJsonExtensions
+    internal static class BlittableJsonExtensions
     {
         public static BlittableJsonReaderObject GetMetadata(this BlittableJsonReaderObject document)
         {

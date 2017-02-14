@@ -1,8 +1,9 @@
 ﻿using System.Linq;
 using Indexing.Benchmark.Entities;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+
 #if v35
 using Raven.NewClient.Abstractions.Indexing;
 #else

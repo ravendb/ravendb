@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions.Indexes;
+using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

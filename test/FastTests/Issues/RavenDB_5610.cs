@@ -1,5 +1,4 @@
-﻿using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
+﻿using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Xunit;

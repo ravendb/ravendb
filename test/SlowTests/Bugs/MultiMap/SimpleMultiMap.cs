@@ -1,8 +1,8 @@
 using System;
 using FastTests;
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiMap

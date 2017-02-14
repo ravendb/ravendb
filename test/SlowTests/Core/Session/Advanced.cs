@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
-using Raven.Client.Data.Commands;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
 using Xunit;

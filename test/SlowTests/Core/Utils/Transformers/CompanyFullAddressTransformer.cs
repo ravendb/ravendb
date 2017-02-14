@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Utils.Transformers

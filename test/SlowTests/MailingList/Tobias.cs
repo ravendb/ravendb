@@ -8,8 +8,8 @@ using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -34,7 +34,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
 
                     var tst = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>()
                         .SetResultTransformer("Data/SearchTransformer")

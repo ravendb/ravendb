@@ -10,6 +10,7 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList

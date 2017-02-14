@@ -8,11 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -85,7 +85,7 @@ namespace SlowTests.MailingList
             {
                 using (var session = _store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<Advice_Search.Result, Advice_Search>()
                         .Statistics(out stats)
                         // Optimize loading of section facets

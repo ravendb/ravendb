@@ -10,11 +10,10 @@ using FastTests;
 using Xunit;
 using System.Linq;
 using Lucene.Net.Analysis;
-using Raven.Client.Data.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases;
-using Raven.Client.Operations.Databases.Indexes;
 
 namespace SlowTests.Bugs.Indexing
 {

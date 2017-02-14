@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using FastTests;
-using Raven.Client.Commands;
-using Raven.Client.Data;
+using Raven.Client.Documents.Commands.MultiGet;
 using Sparrow.Json;
 using Xunit;
 

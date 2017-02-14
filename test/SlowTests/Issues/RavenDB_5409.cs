@@ -3,9 +3,8 @@ using System.Linq;
 using System.Threading;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexes;
-using Raven.Client.Operations.Databases;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

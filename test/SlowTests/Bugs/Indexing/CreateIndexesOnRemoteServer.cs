@@ -1,9 +1,10 @@
 ﻿using System.Linq;
 using FastTests;
-using Raven.Client.Document;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
-using Raven.Client.Indexes;
-using Raven.Client.Operations.Databases;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing

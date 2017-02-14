@@ -3,9 +3,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.Bugs.Caching

@@ -1,7 +1,6 @@
 using System;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Operations.Databases.Documents;
+using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Xunit;
 using Post = SlowTests.Core.Utils.Entities.Post;

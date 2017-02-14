@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Extensions.Internal;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;

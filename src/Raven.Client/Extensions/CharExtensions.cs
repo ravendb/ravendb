@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace Raven.Client.Extensions
 {
-    public static class CharExtensions
+    internal static class CharExtensions
     {
         public static string ToInvariantString(this object obj)
         {

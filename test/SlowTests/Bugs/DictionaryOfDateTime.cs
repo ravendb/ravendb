@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.Client.Document;
+using Raven.Client.Documents.Conventions;
 using Xunit;
 
 namespace SlowTests.Bugs

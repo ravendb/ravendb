@@ -3,7 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.Client;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -342,7 +343,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var names = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)

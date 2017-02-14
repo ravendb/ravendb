@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Raven.Client.Data;
+using Raven.Client;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Server.Operations;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;

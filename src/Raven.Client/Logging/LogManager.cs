@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Raven.Client.Extensions;
 using Raven.Client.Logging.LogProviders;
+using Raven.Client.Util;
 using Sparrow.Collections;
 
 namespace Raven.Client.Logging

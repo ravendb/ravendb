@@ -7,13 +7,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Lucene.Net.Util;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
-using Constants = Raven.Client.Data.Constants;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {

@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -57,7 +59,7 @@ namespace SlowTests.MailingList
 
         private static int ThirdQuery(IDocumentSession session, out string indexName)
         {
-            RavenQueryStatistics stats;
+            QueryStatistics stats;
             var results = session
                 .Query<Logfile>()
                 .Statistics(out stats)
@@ -70,7 +72,7 @@ namespace SlowTests.MailingList
 
         private static int SecondQuery(IDocumentSession session, out string indexName)
         {
-            RavenQueryStatistics stats;
+            QueryStatistics stats;
             var results = session
                 .Query<Logfile>()
                 .Statistics(out stats)
@@ -85,7 +87,7 @@ namespace SlowTests.MailingList
         {
             var now = DateTime.UtcNow;
 
-            RavenQueryStatistics stats;
+            QueryStatistics stats;
             var results = session.Query<Logfile>()
                 .Statistics(out stats)
                 .Where(x => x.UploadDate >= now.AddMonths(-1))

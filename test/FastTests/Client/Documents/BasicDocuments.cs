@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Commands;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;

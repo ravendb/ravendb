@@ -2,8 +2,8 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.Bugs.Queries

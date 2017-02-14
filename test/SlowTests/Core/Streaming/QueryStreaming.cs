@@ -7,10 +7,9 @@
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Linq.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
+using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;

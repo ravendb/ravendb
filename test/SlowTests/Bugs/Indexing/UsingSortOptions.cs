@@ -1,6 +1,6 @@
 using FastTests;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing

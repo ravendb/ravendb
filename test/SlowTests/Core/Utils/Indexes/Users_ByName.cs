@@ -5,9 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Linq.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
 using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Utils.Indexes

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using Raven.Client.Data;
+using Raven.Client;
 using Sparrow.Logging;
 
 using Sparrow.Collections;

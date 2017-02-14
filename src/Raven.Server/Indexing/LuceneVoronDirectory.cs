@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Voron;
 using Voron.Data;
 using Voron.Impl;

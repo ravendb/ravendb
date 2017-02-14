@@ -2,9 +2,9 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Bugs.LiveProjections

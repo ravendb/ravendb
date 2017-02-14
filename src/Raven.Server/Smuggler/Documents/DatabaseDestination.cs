@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Smuggler;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
@@ -13,7 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Voron;
+using Size = Raven.Server.Config.Settings.Size;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -264,18 +264,18 @@ namespace Raven.Server.Smuggler.Documents
 
             public override void Execute(DocumentsOperationContext context)
             {
-                if(_log.IsInfoEnabled)
+                if (_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#} documents");
 
                 foreach (var document in Documents)
                 {
                     var key = document.Key;
-             
+
                     using (document.Data)
                     {
                         if (IsRevision)
                         {
-                            _database.BundleLoader.VersioningStorage.PutDirect(context, key,  document.Data);
+                            _database.BundleLoader.VersioningStorage.PutDirect(context, key, document.Data);
                         }
                         else if (_buildVersion < 40000 && key.Contains("/revisions/"))
                         {

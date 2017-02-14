@@ -6,12 +6,12 @@
 
 using System.Linq;
 using FastTests;
-using Microsoft.Extensions.Testing.Abstractions;
-using Raven.Client.Document;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Extensions;
-using Raven.Client.Indexes;
-using Raven.Client.Operations.Databases;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy
@@ -31,9 +31,9 @@ namespace SlowTests.Bugs.MultiTenancy
                 store.DefaultDatabase = "Test";
 
                 var indexDefinition = new IndexDefinitionBuilder<Test, Test>("TestIndex")
-                {
-                    Map = movies => from movie in movies
-                        select new {movie.Name}
+                                                        {
+                                                            Map = movies => from movie in movies
+                                                                            select new { movie.Name }
                 }.ToIndexDefinition(new DocumentConventions());
                 indexDefinition.Name = "TestIndex";
                 store.Admin.ForDatabase("Test").Send(new PutIndexesOperation(new[] {indexDefinition}));

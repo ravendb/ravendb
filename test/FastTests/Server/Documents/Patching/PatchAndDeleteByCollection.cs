@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Data;
-using Raven.Client.Operations.Databases;
-using Raven.Client.Operations.Databases.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

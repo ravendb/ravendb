@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;

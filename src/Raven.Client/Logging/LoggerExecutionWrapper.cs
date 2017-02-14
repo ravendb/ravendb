@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.Util;
 using Sparrow.Collections;
 
 namespace Raven.Client.Logging

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
 

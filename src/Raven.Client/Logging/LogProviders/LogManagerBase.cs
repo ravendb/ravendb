@@ -2,6 +2,7 @@ using System;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 
 namespace Raven.Client.Logging.LogProviders
 {

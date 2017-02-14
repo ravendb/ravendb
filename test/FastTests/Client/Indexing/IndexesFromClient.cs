@@ -5,15 +5,15 @@ using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Lucene.Net.Analysis;
 using Raven.Client;
-using Raven.Client.Commands;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Data.Queries;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases;
-using Raven.Client.Operations.Databases.Documents;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Exceptions;
@@ -380,7 +380,7 @@ namespace FastTests.Client.Indexing
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -417,7 +417,7 @@ namespace FastTests.Client.Indexing
                 string indexName2;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -469,7 +469,7 @@ namespace FastTests.Client.Indexing
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -542,7 +542,7 @@ namespace FastTests.Client.Indexing
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -587,7 +587,7 @@ namespace FastTests.Client.Indexing
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -618,7 +618,7 @@ namespace FastTests.Client.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var users = session.Query<User>()
                         .Statistics(out stats)
                         .Where(x => x.Name == "Arek")

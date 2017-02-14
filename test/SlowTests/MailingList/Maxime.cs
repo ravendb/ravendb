@@ -1,10 +1,10 @@
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Linq.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Linq.Indexing;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
 
                 // places/2: perfect match + boost
                 var terms = "UQAM";
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
@@ -98,7 +98,7 @@ namespace SlowTests.MailingList
 
                 // places/1: perfect match + boost
                 const string terms = "Université Québec Montréal";
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)

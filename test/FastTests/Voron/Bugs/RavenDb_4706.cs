@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

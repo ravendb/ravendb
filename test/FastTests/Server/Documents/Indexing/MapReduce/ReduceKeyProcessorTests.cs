@@ -1,4 +1,5 @@
 ﻿using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.ServerWide;
 using Sparrow;

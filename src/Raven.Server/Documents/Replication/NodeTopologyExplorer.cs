@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Raven.Client.Data;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
-using Raven.Client.Replication;
-using Raven.Client.Replication.Messages;
+using Raven.Client.Http.OAuth;
+using Raven.Client.Server.Commands;
+using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

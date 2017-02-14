@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Reflection;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;

@@ -9,9 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -55,7 +56,7 @@ namespace SlowTests.MailingList
                     session.Store(new FacetSetup { Id = "facets/PropertySearchingFacets", Facets = facets });
                     session.SaveChanges();
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<SearchingViewModel, PropertiesSearchIndex>()
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Raven.Client.Data.Indexes;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
 
 namespace Raven.Server.Documents.Indexes.Static

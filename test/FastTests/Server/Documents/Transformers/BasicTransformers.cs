@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Transformers;
 using Raven.Server.Documents.Transformers;
 using Xunit;
 

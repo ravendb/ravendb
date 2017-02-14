@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Errors

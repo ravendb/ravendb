@@ -4,7 +4,7 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Data;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Logging;
 using Raven.Server.Utils;
 using Sparrow;

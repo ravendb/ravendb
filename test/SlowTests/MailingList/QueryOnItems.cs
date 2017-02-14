@@ -11,7 +11,8 @@ using Newtonsoft.Json;
 using Xunit;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 
 namespace SlowTests.MailingList
 {
@@ -36,7 +37,7 @@ namespace SlowTests.MailingList
             using (var documentStore = GetDocumentStore())
             using (var session = documentStore.OpenSession())
             {
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 session.Query<FeedItem>()
                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
                        .Statistics(out stats)

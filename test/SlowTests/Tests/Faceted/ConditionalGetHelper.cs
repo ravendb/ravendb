@@ -1,9 +1,8 @@
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client.Commands;
-using Raven.Client.Connection;
-using Raven.Client.Document;
+using Raven.Client.Documents;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Sparrow.Json;
 

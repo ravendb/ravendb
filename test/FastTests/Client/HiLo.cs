@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Document.Async;
-using Raven.Client.Replication;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Identity;
+using Raven.Client.Documents.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

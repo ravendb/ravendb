@@ -5,9 +5,10 @@
 //-----------------------------------------------------------------------
 
 using FastTests;
-using Raven.Client.Document;
+using Raven.Client.Documents;
 using Raven.Client.Extensions;
-using Raven.Client.Operations.Databases;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.Metadata

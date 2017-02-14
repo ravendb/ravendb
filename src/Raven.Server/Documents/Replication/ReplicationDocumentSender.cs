@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Raven.Client.Replication.Messages;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Json;

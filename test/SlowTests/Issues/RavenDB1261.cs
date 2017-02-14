@@ -7,8 +7,8 @@
 using System.Linq;
 using System.Threading;
 using FastTests;
-using Raven.Client.Commands;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 using Xunit;
 

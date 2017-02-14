@@ -7,7 +7,7 @@
 using System;
 using System.Net;
 using NDesk.Options;
-using Raven.Client.Data;
+using Raven.Client.Util;
 
 namespace Raven.Traffic
 {

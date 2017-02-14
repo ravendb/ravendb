@@ -3,8 +3,8 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using SlowTests.Utils;
 using Xunit;
 

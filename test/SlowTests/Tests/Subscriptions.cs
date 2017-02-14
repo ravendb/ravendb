@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents.Notifications;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Operations.Databases;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Subscriptions;
 using Xunit;
 
 namespace SlowTests.Tests

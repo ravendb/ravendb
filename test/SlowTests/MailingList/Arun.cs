@@ -10,9 +10,9 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -22,7 +22,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void SaveDynamicEntityWithStronglyTypedProperties()
         {
-            RavenQueryStatistics stats = null;
+            QueryStatistics stats = null;
             using (var store = GetDocumentStore())
             {
                 new BookSearch().Execute(store);

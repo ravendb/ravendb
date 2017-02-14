@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Exceptions;
-using Raven.Client.Operations.Databases.ApiKeys;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Server.Operations.ApiKeys;
 using Xunit;
 
 namespace FastTests.Client.Queries

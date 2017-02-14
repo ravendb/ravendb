@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Raven.Client.Replication.Messages;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Processors;

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Data;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted

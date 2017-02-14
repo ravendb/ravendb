@@ -7,7 +7,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Exceptions.Versioning;
+using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

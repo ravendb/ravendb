@@ -9,7 +9,8 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -56,7 +57,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var count = session.Query<PropertySearchingViewModel, PropertiesSearchIndex>()
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())

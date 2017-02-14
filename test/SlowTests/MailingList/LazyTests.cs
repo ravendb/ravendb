@@ -8,8 +8,9 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -50,7 +51,7 @@ namespace SlowTests.MailingList
             new Simple_Index().Execute(store);
             using (var session = store.OpenSession())
             {
-                RavenQueryStatistics stats = null;
+                QueryStatistics stats = null;
                 session.Query<Simple, Simple_Index>().Statistics(out stats).Take(0).ToArray();
                 if (stats.TotalResults > 0) return;
             }

@@ -10,8 +10,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -96,7 +97,7 @@ namespace SlowTests.MailingList
                 }
 
                 //Get all results
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 List<TestItem> result = null;
                 using (var session = store.OpenSession())
                 {
@@ -111,7 +112,7 @@ namespace SlowTests.MailingList
 
                 //Get all results, paged
                 List<TestItem> pagedResult = new List<TestItem>();
-                RavenQueryStatistics stats2;
+                QueryStatistics stats2;
 
                 int skip = 0;
                 var take = 10;

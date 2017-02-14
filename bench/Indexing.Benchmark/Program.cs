@@ -5,10 +5,12 @@ using System.Linq;
 using System.Threading;
 using Indexing.Benchmark.Entities;
 using Raven.Client;
-using Raven.Client.Document;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Extensions;
-using Raven.Client.Operations.Databases;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 
 #if v35
 using Raven.NewClient.Abstractions.Data;

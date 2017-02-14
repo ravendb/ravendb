@@ -7,8 +7,7 @@
 using System.Collections.Generic;
 using FastTests;
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs

@@ -4,9 +4,12 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Exceptions.Compilation;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Exceptions

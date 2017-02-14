@@ -5,7 +5,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Function;
 using Lucene.Net.Search.Spans;
-using Raven.Client.Data;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 

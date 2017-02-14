@@ -9,7 +9,7 @@ using System.Reflection;
 
 namespace Raven.Client.Extensions
 {
-    public static class MemberInfoExtensions
+    internal static class MemberInfoExtensions
     {
         public static bool CanWrite(this MemberInfo memberInfo)
         {

@@ -7,10 +7,11 @@
 using System;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Document;
+using Raven.Client.Documents;
 using Raven.Client.Extensions;
-using Raven.Client.Operations.Databases;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
+using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Bugs.Metadata

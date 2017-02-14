@@ -10,8 +10,9 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Operations.Databases.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -24,7 +25,7 @@ namespace SlowTests.SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 using (var session = store.OpenSession())
                 {
                     session.Query<User>()

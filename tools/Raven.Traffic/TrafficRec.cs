@@ -13,10 +13,11 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
-using Raven.Client.Data;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Raven.Client.Logging;
-using Raven.Client.Platform;
+using Raven.Client.Util.Sockets;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

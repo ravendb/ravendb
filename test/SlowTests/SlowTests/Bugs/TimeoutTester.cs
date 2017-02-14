@@ -2,10 +2,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
@@ -109,7 +109,7 @@ namespace SlowTests.SlowTests.Bugs
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())

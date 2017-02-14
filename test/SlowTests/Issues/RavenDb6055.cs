@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Linq;
-using Raven.Client.Operations.Databases.Indexes;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues

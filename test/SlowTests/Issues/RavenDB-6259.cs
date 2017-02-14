@@ -2,8 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Indexes;
-using Raven.Client.Replication;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

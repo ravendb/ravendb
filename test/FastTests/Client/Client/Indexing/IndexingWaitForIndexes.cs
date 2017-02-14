@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace FastTests.Client.Client.Indexing

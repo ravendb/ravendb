@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Extensions;
-using Raven.Client.Indexing;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {

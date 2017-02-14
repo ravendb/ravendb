@@ -1,12 +1,10 @@
 using System;
-using System.Net;
-using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Client.Extensions
 {
-    public static class TaskExtensions
+    internal static class TaskExtensions
     {
         public static Task AssertNotFailed(this Task task)
         {

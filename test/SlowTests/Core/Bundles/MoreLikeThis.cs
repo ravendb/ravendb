@@ -1,5 +1,5 @@
 using FastTests;
-using Raven.Client.Data.Queries;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
 

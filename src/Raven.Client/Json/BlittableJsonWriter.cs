@@ -1,7 +1,6 @@
 ﻿using System;
 using Newtonsoft.Json;
-using Raven.Client.Data;
-using Raven.Client.Document;
+using Raven.Client.Documents.Session;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
