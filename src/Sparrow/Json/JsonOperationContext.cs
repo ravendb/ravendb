@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Collections;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -30,8 +31,8 @@ namespace Sparrow.Json
         private AllocatedMemoryData _tempBuffer;
         private List<GCHandle> _pinnedObjects;
 
-        private readonly Dictionary<string, LazyStringValue> _fieldNames =
-            new Dictionary<string, LazyStringValue>(StringComparer.Ordinal);
+        private readonly FastDictionary<string, LazyStringValue> _fieldNames =
+            new FastDictionary<string, LazyStringValue>(StringComparer.Ordinal);
 
         private bool _disposed;
 
