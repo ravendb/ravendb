@@ -7,8 +7,8 @@
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -36,7 +36,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats = null;
+                    QueryStatistics stats = null;
                     var tst = session.Advanced.DocumentQuery<SortOnNullableEntity, SortOnNullableEntity_Search>()
                         .WaitForNonStaleResults()
                         .Statistics(out stats)

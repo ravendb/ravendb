@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Indexes;
 
 using Xunit;

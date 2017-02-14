@@ -8,11 +8,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client.Data;
-using Raven.Client.Document;
+using Raven.Client.Documents;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
-using Raven.Client.Operations.Databases.ApiKeys;
+using Raven.Client.Http.OAuth;
+using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Config.Attributes;
 using Xunit;
 

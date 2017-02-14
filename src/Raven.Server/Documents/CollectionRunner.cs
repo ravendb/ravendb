@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
-using Raven.Client.Data;
-using Raven.Client.Data.Collections;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -9,7 +8,7 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents
 {
-    public class CollectionRunner
+    internal class CollectionRunner
     {
         private readonly DocumentsOperationContext _context;
         private readonly DocumentDatabase _database;

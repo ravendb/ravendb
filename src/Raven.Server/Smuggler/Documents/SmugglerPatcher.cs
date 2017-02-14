@@ -1,7 +1,7 @@
 ﻿using System;
 using Jint;
 using Jint.Native;
-using Raven.Client.Smuggler;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Sparrow.Json;

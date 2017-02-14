@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Util
 {
-    public interface IDisposableAsync
+    internal interface IDisposableAsync
     {
         Task DisposeAsync();
     }

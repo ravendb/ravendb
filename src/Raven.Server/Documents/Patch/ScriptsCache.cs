@@ -4,6 +4,7 @@ using System.Linq;
 using Jint;
 using Jint.Parser;
 using Raven.Client;
+using Raven.Client.Util;
 
 namespace Raven.Server.Documents.Patch
 {

@@ -9,9 +9,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList.RobStats
@@ -114,7 +115,7 @@ namespace SlowTests.MailingList.RobStats
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<Summary, TheIndex>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)

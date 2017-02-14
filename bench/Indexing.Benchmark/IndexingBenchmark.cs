@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using Raven.Client;
-using Raven.Client.Data.Queries;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Queries;
+
 #if v35
 using Raven.NewClient.Abstractions.Data;
 #else

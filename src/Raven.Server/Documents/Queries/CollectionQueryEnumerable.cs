@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client.Data;
+using Raven.Client;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;

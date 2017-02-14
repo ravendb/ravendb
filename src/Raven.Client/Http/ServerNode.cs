@@ -1,4 +1,4 @@
-﻿using Raven.Client.Metrics;
+﻿using Raven.Client.Util.Metrics;
 
 namespace Raven.Client.Http
 {

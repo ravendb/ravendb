@@ -1,7 +1,8 @@
 ﻿using System;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Operations.Databases;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Util;
 
 namespace Raven.Traffic
 {

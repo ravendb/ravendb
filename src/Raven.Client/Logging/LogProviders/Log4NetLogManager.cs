@@ -3,9 +3,9 @@ using System.Reflection;
 
 namespace Raven.Client.Logging.LogProviders
 {
-    public class Log4NetLogManager : LogManagerBase
+    internal class Log4NetLogManager : LogManagerBase
     {
-        private static bool providerIsAvailableOverride = true;
+        private static bool _providerIsAvailableOverride = true;
         private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerTypeStatic, true);
 
         public Log4NetLogManager()
@@ -19,8 +19,8 @@ namespace Raven.Client.Logging.LogProviders
 
         public static bool ProviderIsAvailableOverride
         {
-            get { return providerIsAvailableOverride; }
-            set { providerIsAvailableOverride = value; }
+            get { return _providerIsAvailableOverride; }
+            set { _providerIsAvailableOverride = value; }
         }
 
         public static bool IsLoggerAvailable()
@@ -65,7 +65,7 @@ namespace Raven.Client.Logging.LogProviders
             }
         }
 
-        public class Log4NetLogger : ILog
+        internal class Log4NetLogger : ILog
         {
             private readonly dynamic logger;
 
@@ -74,20 +74,11 @@ namespace Raven.Client.Logging.LogProviders
                 this.logger = logger;
             }
 
-            public bool IsInfoEnabled
-            {
-                get { return logger.IsInfoEnabled; }
-            }
+            public bool IsInfoEnabled => logger.IsInfoEnabled;
 
-            public bool IsDebugEnabled
-            {
-                get { return logger.IsDebugEnabled; }
-            }
+            public bool IsDebugEnabled => logger.IsDebugEnabled;
 
-            public bool IsWarnEnabled
-            {
-                get { return logger.IsWarnEnabled; }
-            }
+            public bool IsWarnEnabled => logger.IsWarnEnabled;
 
             public void Log(LogLevel logLevel, Func<string> messageFunc)
             {

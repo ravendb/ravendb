@@ -1,8 +1,8 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Linq;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
 

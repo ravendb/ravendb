@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 

@@ -10,9 +10,10 @@ using FastTests;
 using Xunit;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 
 namespace SlowTests.Tests.Querying
 {
@@ -58,7 +59,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var stats = new RavenQueryStatistics();
+                    var stats = new QueryStatistics();
                     var results = s.Query<Blog>()
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5)))

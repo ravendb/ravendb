@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Raven.Client.Data;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.Bugs.Facets

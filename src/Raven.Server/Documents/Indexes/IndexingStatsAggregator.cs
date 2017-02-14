@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Data.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Exceptions;
 
 namespace Raven.Server.Documents.Indexes

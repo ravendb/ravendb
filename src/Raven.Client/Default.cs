@@ -1,6 +1,6 @@
 namespace Raven.Client
 {
-    public static class Default
+    internal static class Default
     {
 
         public static readonly string[] OnlyDateTimeFormat = {

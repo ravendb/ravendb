@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 
 namespace FastTests.Server.Documents.Notifications
 {

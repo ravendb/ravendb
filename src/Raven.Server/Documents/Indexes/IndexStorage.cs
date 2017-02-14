@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -37,7 +36,7 @@ namespace Raven.Server.Documents.Indexes
 
         public const int MaxNumberOfKeptErrors = 500;
 
-        internal bool _simulateCorruption;
+        internal bool _simulateCorruption = false;
 
         public IndexStorage(Index index, TransactionContextPool contextPool, DocumentDatabase database)
         {

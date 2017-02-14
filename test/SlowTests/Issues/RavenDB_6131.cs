@@ -4,8 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Indexes;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Xunit;
 

@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList

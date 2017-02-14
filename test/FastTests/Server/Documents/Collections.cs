@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Data;
-using Raven.Client.Operations.Databases.Collections;
+using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Xunit;
 
 namespace FastTests.Server.Documents

@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList

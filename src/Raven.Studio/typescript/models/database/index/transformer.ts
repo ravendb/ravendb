@@ -5,7 +5,7 @@ import appUrl = require("common/appUrl");
 class transformer {
     name = ko.observable<string>();
     transformResults = ko.observable<string>();
-    lockMode = ko.observable<Raven.Client.Indexing.TransformerLockMode>();
+    lockMode = ko.observable<Raven.Client.Documents.Transformers.TransformerLockMode>();
     temporary = ko.observable<boolean>();
     transformerId = ko.observable<number>();
 
@@ -14,7 +14,7 @@ class transformer {
 
     filteredOut = ko.observable<boolean>(false); //UI only property
     
-    constructor(dto: Raven.Client.Indexing.TransformerDefinition) {
+    constructor(dto: Raven.Client.Documents.Transformers.TransformerDefinition) {
         this.updateUsing(dto);
 
         this.initializeObservables();
@@ -27,7 +27,7 @@ class transformer {
         this.temporary(false);
     }
 
-    updateUsing(dto: Raven.Client.Indexing.TransformerDefinition) {
+    updateUsing(dto: Raven.Client.Documents.Transformers.TransformerDefinition) {
         this.name(dto.Name);
         this.lockMode(dto.LockMode);
         this.temporary(dto.Temporary);
@@ -41,7 +41,7 @@ class transformer {
         this.editUrl = urls.editTransformer(this.name());
     }
 
-    toDto(): Raven.Client.Indexing.TransformerDefinition {
+    toDto(): Raven.Client.Documents.Transformers.TransformerDefinition {
         return {
             LockMode: this.lockMode(),
             Name: this.name(),
@@ -84,7 +84,7 @@ class transformer {
             LockMode: "Unlock",
             Name: "",
             TransformResults: ""
-        } as Raven.Client.Indexing.TransformerDefinition);
+        } as Raven.Client.Documents.Transformers.TransformerDefinition);
     }
     
 }

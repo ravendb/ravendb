@@ -1,13 +1,12 @@
 ﻿using System;
 using Newtonsoft.Json;
-using Raven.Client.Data;
-using Raven.Client.Document;
+using Raven.Client.Documents.Session;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    public class BlittableJsonWriter : JsonWriter
+    internal class BlittableJsonWriter : JsonWriter
     {
         private readonly ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> _manualBlittalbeJsonDocumentBuilder;
         private bool _first;

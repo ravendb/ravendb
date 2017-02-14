@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Raven.Client.Data;
+using Raven.Client;
 using Sparrow;
 
 namespace Raven.Server.Documents.Indexes

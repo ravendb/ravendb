@@ -1,7 +1,7 @@
 ﻿using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using SlowTests.Utils;
 using Xunit;
 

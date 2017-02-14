@@ -15,9 +15,10 @@ using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using System.Threading;
-using Raven.Client.Data;
+using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Utils;
 using Raven.Server.Web;
+using Raven.Server.Web.Authentication;
 
 namespace Raven.Server.Routing
 {

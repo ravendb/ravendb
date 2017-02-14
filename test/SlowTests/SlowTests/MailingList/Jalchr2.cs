@@ -4,9 +4,10 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.SlowTests.MailingList
@@ -51,7 +52,7 @@ namespace SlowTests.SlowTests.MailingList
                 // Warm-up
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<User, User_Entity>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats);
@@ -68,7 +69,7 @@ namespace SlowTests.SlowTests.MailingList
                 var orderedList = list.OrderBy(x => x.CreatedDate).ToList();
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<User, User_Entity>()
                         .Statistics(out stats);
 

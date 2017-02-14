@@ -32,7 +32,7 @@ class databaseCreationModel extends resourceCreationModel {
         this.setupPathValidation(this.indexesPath, "Indexes");
     }
 
-    toDto(): Raven.Client.Data.DatabaseDocument {
+    toDto(): Raven.Client.Server.DatabaseDocument {
         const settings: dictionary<string> = {};
         const securedSettings: dictionary<string> = {};
 

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Replication;
-using Raven.Client.Replication.Messages;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Extensions;
 using Raven.Server.Utils;
 

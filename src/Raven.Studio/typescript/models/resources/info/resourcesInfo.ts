@@ -12,7 +12,7 @@ class resourcesInfo {
     filesystemCount: KnockoutComputed<number>;
 
 
-    constructor(dto: Raven.Client.Data.ResourcesInfo) {
+    constructor(dto: Raven.Client.Server.Operations.ResourcesInfo) {
 
         const databases = dto.Databases.map(db => new databaseInfo(db));
         //TODO: fs, cs, ts
@@ -29,7 +29,7 @@ class resourcesInfo {
         return this.sortedResources().find(x => x.qualifiedName.toLowerCase() === qualifiedName.toLowerCase());
     }
 
-    updateResource(newResourceInfo: Raven.Client.Data.ResourceInfo, resourceType: string) {
+    updateResource(newResourceInfo: Raven.Client.Server.Operations.ResourceInfo, resourceType: string) {
         let resourceToUpdate = this.getByQualifiedName(resourceType + "/" + newResourceInfo.Name);
 
         if (resourceToUpdate) {
@@ -39,7 +39,7 @@ class resourcesInfo {
             switch (resourceType) {
                 case "db":
 
-                    let dto = newResourceInfo as Raven.Client.Data.DatabaseInfo;
+                    let dto = newResourceInfo as Raven.Client.Server.Operations.DatabaseInfo;
                     resourceToAdd = new databaseInfo(dto);
                     break;
 

@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Indexes;
 using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Indexes
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
-            
+
         }
 
         private List<IndexPerformanceStats> PreparePerformanceStats()
@@ -133,5 +133,5 @@ namespace Raven.Server.Documents.Indexes
             }
         }
     }
-   
+
 }

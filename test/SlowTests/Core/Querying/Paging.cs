@@ -8,6 +8,7 @@ using System.Linq;
 
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -33,7 +34,7 @@ namespace SlowTests.Core.Querying
                     session.Store(new Company { Name = "ompany7" });
                     session.SaveChanges();
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
 
                     var companies = session.Query<Company>()
                         .Customize(x => x.WaitForNonStaleResults())

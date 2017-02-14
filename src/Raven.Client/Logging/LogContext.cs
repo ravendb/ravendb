@@ -6,12 +6,11 @@
 
 using System;
 using System.Threading;
-using Raven.Client.Data;
-using Raven.Client.Extensions;
+using Raven.Client.Util;
 
 namespace Raven.Client.Logging
 {
-    public static class LogContext
+    internal static class LogContext
     {
         private static readonly ThreadLocal<string> resourceName = new ThreadLocal<string>();
 

@@ -1,4 +1,4 @@
-﻿using Raven.Client.Data.Queries;
+﻿using Raven.Client.Documents.Queries;
 
 namespace Raven.Server.Documents.Queries
 {

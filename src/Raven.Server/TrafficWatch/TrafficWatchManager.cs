@@ -1,10 +1,10 @@
 ﻿using System;
-using Raven.Client.Data;
+using Raven.Client.Documents.Changes;
 using Sparrow.Collections;
 
 namespace Raven.Server.TrafficWatch
 {
-    public class TrafficWatchManager
+    internal class TrafficWatchManager
     {
         private static readonly ConcurrentSet<TrafficWatchConnection> ServerHttpTrace = new ConcurrentSet<TrafficWatchConnection>();
         

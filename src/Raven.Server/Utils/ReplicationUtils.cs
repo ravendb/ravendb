@@ -5,11 +5,11 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Client.Commands;
-using Raven.Client.Data;
+using Raven.Client;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
-using Raven.Client.Replication;
-using Raven.Client.Replication.Messages;
+using Raven.Client.Server.Commands;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
@@ -22,7 +22,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Utils
 {
-    public static class ReplicationUtils
+    internal static class ReplicationUtils
     {
         public static NodeTopologyInfo GetLocalTopology(
             DocumentDatabase database,

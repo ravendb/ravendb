@@ -1,5 +1,5 @@
 using FastTests;
-using Raven.Client.Data;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
 namespace SlowTests.MailingList

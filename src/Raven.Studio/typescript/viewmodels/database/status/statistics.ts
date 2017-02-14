@@ -31,7 +31,7 @@ class statistics extends viewModelBase {
         }
     }
    
-    fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
+    fetchStats(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
         var db = this.activeDatabase();
 
         const dbStatsTask = new getDatabaseStatsCommand(db)
@@ -41,7 +41,7 @@ class statistics extends viewModelBase {
             .execute();
 
         return $.when<any>(dbStatsTask, indexesStatsTask)
-            .done(([dbStats]: [Raven.Client.Data.DatabaseStatistics], [indexesStats]: [Raven.Client.Data.Indexes.IndexStats[]]) => {
+            .done(([dbStats]: [Raven.Client.Documents.Operations.DatabaseStatistics], [indexesStats]: [Raven.Client.Documents.Indexes.IndexStats[]]) => {
                 this.processStatsResults(dbStats, indexesStats);
                 });
     }
@@ -52,7 +52,7 @@ class statistics extends viewModelBase {
         //TODO: this.addNotification(changesApi.watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime())))
     }
 
-    processStatsResults(dbStats: Raven.Client.Data.DatabaseStatistics, indexesStats: Raven.Client.Data.Indexes.IndexStats[]) {
+    processStatsResults(dbStats: Raven.Client.Documents.Operations.DatabaseStatistics, indexesStats: Raven.Client.Documents.Indexes.IndexStats[]) {
         this.stats(new statsModel(dbStats, indexesStats));
     }
     

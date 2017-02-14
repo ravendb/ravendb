@@ -1,7 +1,8 @@
 ﻿using System.Linq;
 using FastTests;
+using Raven.Client.Documents.Exceptions.Compilation;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Compilation;
-using Raven.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

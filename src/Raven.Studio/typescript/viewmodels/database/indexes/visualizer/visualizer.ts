@@ -75,7 +75,7 @@ class visualizer extends viewModelBase {
         this.detailsGraph.init(() => this.globalGraph.restoreView(), this.trees);
     }
 
-    private onIndexesLoaded(indexes: Raven.Client.Data.Indexes.IndexStats[]) {
+    private onIndexesLoaded(indexes: Raven.Client.Documents.Indexes.IndexStats[]) {
         this.indexes(indexes.filter(x => x.Type === "AutoMapReduce" || x.Type === "MapReduce").map(x => x.Name));
     }
 

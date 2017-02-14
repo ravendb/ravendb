@@ -2,8 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using Lucene.Net.Documents;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
 

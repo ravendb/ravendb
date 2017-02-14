@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -106,7 +107,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var pagingInformation = new RavenPagingInformation();
+                var pagingInformation = new PagingInformation();
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -191,7 +192,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var pagingInformation = new RavenPagingInformation();
+                var pagingInformation = new PagingInformation();
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -273,7 +274,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var pagingInformation = new RavenPagingInformation();
+                var pagingInformation = new PagingInformation();
 
                 using (var session = documentStore.OpenSession())
                 {

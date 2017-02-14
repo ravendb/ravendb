@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Util.RateLimiting
 {
-    public static class RateGateExtensions
+    internal static class RateGateExtensions
     {
         public static IEnumerable<T> LimitRate<T>(this IEnumerable<T> source, int count, TimeSpan timeUnit)
         {

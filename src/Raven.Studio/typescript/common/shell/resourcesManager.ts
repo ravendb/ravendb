@@ -113,7 +113,7 @@ class resourcesManager {
         }
     }
 
-    init(): JQueryPromise<Raven.Client.Data.ResourcesInfo> {
+    init(): JQueryPromise<Raven.Client.Server.Operations.ResourcesInfo> {
         return this.refreshResources()
             .done(() => {
                 this.activateBasedOnCurrentUrl();
@@ -126,7 +126,7 @@ class resourcesManager {
         this.resourceToActivate(rsQualifier + "/" + resourceName);
     }
 
-    private refreshResources(): JQueryPromise<Raven.Client.Data.ResourcesInfo> {
+    private refreshResources(): JQueryPromise<Raven.Client.Server.Operations.ResourcesInfo> {
         return new getResourcesCommand()
             .execute()
             .done(result => {
@@ -220,7 +220,7 @@ class resourcesManager {
             }*/
     }
 
-    private updateResources(incomingData: Raven.Client.Data.ResourcesInfo) {
+    private updateResources(incomingData: Raven.Client.Server.Operations.ResourcesInfo) {
         this.deleteRemovedResources(incomingData);
 
         incomingData.Databases.forEach(dbInfo => {
@@ -233,7 +233,7 @@ class resourcesManager {
         });*/
     }
 
-    private deleteRemovedResources(incomingData: Raven.Client.Data.ResourcesInfo) {
+    private deleteRemovedResources(incomingData: Raven.Client.Server.Operations.ResourcesInfo) {
         const existingResources = this.resources;
 
         const toDelete = [] as resource[];
@@ -256,7 +256,7 @@ class resourcesManager {
         existingResources.removeAll(toDelete);
     }
 
-    private updateResource(incomingResource: Raven.Client.Data.ResourceInfo, existingResourceFinder: (name: string) => resource, resourceQualifer: string): resource {
+    private updateResource(incomingResource: Raven.Client.Server.Operations.ResourceInfo, existingResourceFinder: (name: string) => resource, resourceQualifer: string): resource {
         const matchedExistingRs = existingResourceFinder(incomingResource.Name);
 
         if (matchedExistingRs) {
@@ -270,11 +270,11 @@ class resourcesManager {
         }
     }
 
-    private createResource(qualifer: string, resourceInfo: Raven.Client.Data.ResourceInfo): resource {
+    private createResource(qualifer: string, resourceInfo: Raven.Client.Server.Operations.ResourceInfo): resource {
         if (database.qualifier === qualifer) {
-            return new database(resourceInfo as Raven.Client.Data.DatabaseInfo);
+            return new database(resourceInfo as Raven.Client.Server.Operations.DatabaseInfo);
         } else if (filesystem.qualifier === qualifer) {
-            return new filesystem(resourceInfo as Raven.Client.Data.FileSystemInfo);
+            return new filesystem(resourceInfo as Raven.Client.Server.Operations.FileSystemInfo);
         }
 
         //TODO: ts, cs
@@ -304,7 +304,7 @@ class resourcesManager {
             const [prefix, name] = event.ResourceName.split("/", 2);
             new getResourceCommand(prefix, name)
                 .execute()
-                .done((rsInfo: Raven.Client.Data.ResourceInfo) => {
+                .done((rsInfo: Raven.Client.Server.Operations.ResourceInfo) => {
 
                     if (rsInfo.Disabled) {
                         changesContext.default.disconnectIfCurrent(resource, "ResourceDisabled");

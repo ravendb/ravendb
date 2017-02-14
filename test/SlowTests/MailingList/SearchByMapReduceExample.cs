@@ -9,9 +9,9 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -142,7 +142,7 @@ namespace SlowTests.MailingList
 
             using (IDocumentSession documentSession = documentStore.OpenSession())
             {
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 List<LogEntries_Search.ReduceResult> reduceResults = documentSession.Query<LogEntries_Search.ReduceResult, LogEntries_Search>()
                     .Statistics(out stats)
                     .Customize(x => x.WaitForNonStaleResults())

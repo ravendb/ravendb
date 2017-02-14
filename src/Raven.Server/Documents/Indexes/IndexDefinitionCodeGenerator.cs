@@ -5,8 +5,8 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
-using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 

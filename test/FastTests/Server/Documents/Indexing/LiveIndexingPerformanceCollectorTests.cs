@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexes;
 using Raven.Server.Documents.Indexes;
@@ -61,7 +62,7 @@ namespace FastTests.Server.Documents.Indexing
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 var index = database.IndexStore.GetIndex("Users/ByName");
 
-                var collector = new LiveIndexingPerformanceCollector(database.Changes, database.DatabaseShutdown, new[] { index });
+                var collector = new LiveIndexingPerformanceCollector(database.Changes, database.DatabaseShutdown, new[] {index});
 
                 var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(1));
                 Assert.True(tuple.Item1);
@@ -109,7 +110,7 @@ namespace FastTests.Server.Documents.Indexing
                 }
 
                 WaitForIndexing(store);
-
+                
 
                 IndexPerformanceStats usersStats;
 

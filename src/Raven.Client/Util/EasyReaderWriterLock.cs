@@ -1,10 +1,9 @@
 using System;
 using System.Threading;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Util
 {
-    public class EasyReaderWriterLock
+    internal class EasyReaderWriterLock
     {
         readonly ReaderWriterLockSlim _inner = new ReaderWriterLockSlim();
 

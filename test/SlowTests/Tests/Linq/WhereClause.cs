@@ -10,8 +10,8 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Tests.Linq

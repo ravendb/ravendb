@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Operations.Databases;
-using Raven.Client.Replication;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -13,11 +10,6 @@ namespace FastTests.Server.Documents.Notifications
 {
     public class ChangesTests : RavenNewTestBase
     {
-        protected override void ModifyStore(DocumentStore store)
-        {
-            store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
-        }
-
         [Fact(Skip = "RavenDB-6285")]
         public async Task CanGetNotificationAboutDocumentPut()
         {

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Util
 {
-    public static class ConfigurationManager
+    internal static class ConfigurationManager
     {
         public static string GetAppSetting(string key)
         {

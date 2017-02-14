@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using FastTests;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;

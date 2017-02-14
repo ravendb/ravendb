@@ -1,6 +1,6 @@
 ﻿using System.IO;
 using System.Text;
-using Raven.Client.Data;
+using Raven.Client;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;

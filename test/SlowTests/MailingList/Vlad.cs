@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -36,7 +37,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stat1;
+                    QueryStatistics stat1;
                     var q = session.Query<SampleDoc>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stat1)
@@ -47,7 +48,7 @@ namespace SlowTests.MailingList
                     Assert.Equal(query1.Value.Count(), 1);
                     Assert.Equal(stat1.TotalResults, 1);
 
-                    RavenQueryStatistics stat2;
+                    QueryStatistics stat2;
                     var query2 = session.Query<SampleDoc>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stat2).Where(x => x.Number == doc.Number)
@@ -139,7 +140,7 @@ namespace SlowTests.MailingList
 
                     var posts = new List<Post>();
 
-                    RavenQueryStatistics stat;
+                    QueryStatistics stat;
                     while (true)
                     {
                         List<Post> results = session.Query<Post_ByTag.Result, Post_ByTag>()

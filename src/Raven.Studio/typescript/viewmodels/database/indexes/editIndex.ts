@@ -171,7 +171,7 @@ class editIndex extends viewModelBase {
         const db = this.activeDatabase();
         return new getTransformersCommand(db)
             .execute()
-            .done((transformers: Raven.Client.Indexing.TransformerDefinition[]) => {
+            .done((transformers: Raven.Client.Documents.Transformers.TransformerDefinition[]) => {
                 this.transformersNames(transformers.map(t => t.Name));
             });
     }
@@ -360,7 +360,7 @@ class editIndex extends viewModelBase {
         });
     }
 
-    private fetchIndexToEdit(indexName: string): JQueryPromise<Raven.Client.Indexing.IndexDefinition> {
+    private fetchIndexToEdit(indexName: string): JQueryPromise<Raven.Client.Documents.Indexes.IndexDefinition> {
         return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
             .done(result => {
@@ -438,29 +438,29 @@ class editIndex extends viewModelBase {
         //TODO: }
     }
 
-    private saveIndex(indexDto: Raven.Client.Indexing.IndexDefinition): JQueryPromise<Raven.Client.Data.Indexes.PutIndexResult> {
+    private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {
         eventsCollector.default.reportEvent("index", "save");
 
         return new saveIndexDefinitionCommand(indexDto, this.activeDatabase())
             .execute()
             .done(() => {
-                this.dirtyFlag().reset();
-                this.editedIndex().name.valueHasMutated();
-                //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
+            this.dirtyFlag().reset();
+            this.editedIndex().name.valueHasMutated();
+            //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
 
-                if (!this.isEditingExistingIndex()) {
-                    this.isEditingExistingIndex(true);
-                    this.editExistingIndex(indexDto.Name);
-                }
-                /* TODO merge suggestion
-                if (isSavingMergedIndex) {
-                    var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
-                    this.deleteMergedIndexes(indexesToDelete);
-                    this.mergeSuggestion(null);
-                }*/
+            if (!this.isEditingExistingIndex()) {
+                this.isEditingExistingIndex(true);
+                this.editExistingIndex(indexDto.Name);
+            }
+            /* TODO merge suggestion
+            if (isSavingMergedIndex) {
+                var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
+                this.deleteMergedIndexes(indexesToDelete);
+                this.mergeSuggestion(null);
+            }*/
 
-                this.updateUrl(indexDto.Name, false /* TODO isSavingMergedIndex */);
-            });
+            this.updateUrl(indexDto.Name, false /* TODO isSavingMergedIndex */);
+        });
     }
 
     updateUrl(indexName: string, isSavingMergedIndex: boolean = false) {
@@ -660,6 +660,6 @@ class editIndex extends viewModelBase {
         dialog.show(deleteViewModel);
     }*/
 
-}
+    }
 
 export = editIndex;

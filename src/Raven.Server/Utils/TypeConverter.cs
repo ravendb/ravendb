@@ -7,8 +7,6 @@ using System.Linq;
 using System.Reflection;
 using Lucene.Net.Documents;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Transformers;

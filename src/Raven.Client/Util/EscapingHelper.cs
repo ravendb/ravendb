@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Raven.Client.Util
 {
-    public static class EscapingHelper
+    internal static class EscapingHelper
     {
          public static string EscapeLongDataString(string data)
          {

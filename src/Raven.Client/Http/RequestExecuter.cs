@@ -10,10 +10,10 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Commands;
-using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Http.OAuth;
+using Raven.Client.Server.Commands;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -259,7 +259,10 @@ namespace Raven.Client.Http
                     if (++command.AuthenticationRetries > 1)
                         throw AuthorizationException.Unauthorized(url);
 
-                    var oauthSource = response.Headers.GetFirstValue("OAuth-Source");
+                    string oauthSource = null;
+                    IEnumerable<string> values;
+                    if (response.Headers.TryGetValues("OAuth-Source", out values))
+                        oauthSource = values.FirstOrDefault();
 
 #if DEBUG && FIDDLER
 // Make sure to avoid a cross DNS security issue, when running with Fiddler

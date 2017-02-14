@@ -4,8 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues
@@ -79,7 +79,7 @@ namespace SlowTests.SlowTests.Issues
             {
                 for (int i = 0; i < 5; i++)
                 {
-                    var stats = new RavenQueryStatistics();
+                    var stats = new QueryStatistics();
 
                     var results = session
                         .Query<User, UsersAndFiendsIndex>()

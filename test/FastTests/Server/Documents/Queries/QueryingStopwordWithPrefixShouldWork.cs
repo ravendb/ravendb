@@ -1,7 +1,6 @@
 ﻿using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.PublicExtensions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries

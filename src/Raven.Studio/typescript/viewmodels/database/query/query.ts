@@ -58,7 +58,7 @@ class query extends viewModelBase {
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
 
     recentQueries = ko.observableArray<storedQueryDto>();
-    allTransformers = ko.observableArray<Raven.Client.Indexing.TransformerDefinition>();
+    allTransformers = ko.observableArray<Raven.Client.Documents.Transformers.TransformerDefinition>();
 
     collections = ko.observableArray<collection>([]);
     indexes = ko.observableArray<indexItem>();
@@ -91,7 +91,7 @@ class query extends viewModelBase {
     uiTransformerParameters = ko.observableArray<queryTransformerParameter>(); // represents UI value, which might not be yet applied to criteria 
 
     queryResults = ko.observable<pagedList>();
-    queryStats = ko.observable<Raven.Client.Data.Queries.QueryResult<any>>();
+    queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any>>();
     requestedIndexForQuery = ko.observable<string>();
     staleResult: KnockoutComputed<boolean>;
 
@@ -338,7 +338,7 @@ class query extends viewModelBase {
             .done(queries => this.recentQueries(queries));
     }
 
-    private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Client.Indexing.TransformerDefinition>> {
+    private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Client.Documents.Transformers.TransformerDefinition>> {
         return new getTransformersCommand(db)
             .execute()
             .done(transformers => this.allTransformers(transformers));
@@ -355,7 +355,7 @@ class query extends viewModelBase {
     private fetchAllIndexes(db: database): JQueryPromise<any> {
         return new getDatabaseStatsCommand(db)
             .execute()
-            .done((results: Raven.Client.Data.DatabaseStatistics) => {
+            .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
                 this.indexes(results.Indexes.map(indexDto => {
                     return {
                         name: indexDto.Name,
@@ -607,7 +607,7 @@ class query extends viewModelBase {
         });
     }
 
-    selectTransformer(transformer: Raven.Client.Indexing.TransformerDefinition) {
+    selectTransformer(transformer: Raven.Client.Documents.Transformers.TransformerDefinition) {
         if (transformer) {
             this.uiTransformer(transformer.Name);
             const inputs = transformerType.extractInputs(transformer.TransformResults);

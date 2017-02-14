@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
                     testClasses.ForEach(session.Store);
                     session.SaveChanges();
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Advanced.DocumentQuery<Tester, TesterSearch>()
                                        .WaitForNonStaleResults()
                                        .Statistics(out stats)

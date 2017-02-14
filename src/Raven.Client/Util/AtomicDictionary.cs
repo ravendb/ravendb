@@ -4,11 +4,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Util
 {
-    public class AtomicDictionary<TVal> : IEnumerable<KeyValuePair<string, TVal>>
+    internal class AtomicDictionary<TVal> : IEnumerable<KeyValuePair<string, TVal>>
     {
         private readonly ConcurrentDictionary<string, object> _locks;
         private readonly ConcurrentDictionary<string, TVal> _items;
@@ -30,10 +29,7 @@ namespace Raven.Client.Util
             _locks = new ConcurrentDictionary<string, object>(comparer);
         }
 
-        public IEnumerable<TVal> Values
-        {
-            get { return _items.Values; }
-        }
+        public IEnumerable<TVal> Values => _items.Values;
 
         public TVal GetOrAdd(string key, Func<string, TVal> valueGenerator)
         {

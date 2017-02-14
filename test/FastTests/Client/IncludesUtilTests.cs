@@ -2,8 +2,8 @@
 using System.Threading.Tasks;
 using Xunit;
 using System;
-using Raven.Client.Blittable;
-using Raven.Client.Document;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Sparrow.Json;
 

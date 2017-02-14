@@ -1,7 +1,7 @@
 using System;
 using System.Net.Sockets;
 using System.Threading;
-using Raven.Client.Data;
+using Raven.Client.Server.Tcp;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;

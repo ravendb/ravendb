@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using Raven.Client.Data;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations;
 
 namespace Raven.Server.Documents
 {

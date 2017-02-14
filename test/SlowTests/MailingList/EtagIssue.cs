@@ -4,10 +4,11 @@ using System.Linq;
 using System.Reflection;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Data.Commands;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList

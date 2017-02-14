@@ -1,13 +1,13 @@
 /// <reference path="../../typescript/common/constants.ts"/>
 
-interface collectionInfoDto extends Raven.Client.Data.Queries.QueryResult<Array<documentDto>> {
+interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>> {
 }
 
 interface documentDto extends metadataAwareDto {
     [key:string]: any;
 }
 
-interface conflictsInfoDto extends Raven.Client.Data.Queries.QueryResult<Array<conflictDto>> {
+interface conflictsInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<conflictDto>> {
 }
 
 

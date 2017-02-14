@@ -73,7 +73,7 @@ class resources extends viewModelBase {
         return true;
     }
 
-    activate(args: any): JQueryPromise<Raven.Client.Data.ResourcesInfo> {
+    activate(args: any): JQueryPromise<Raven.Client.Server.Operations.ResourcesInfo> {
         super.activate(args);
 
         // we can't use createNotifications here, as it is called after *resource changes API* is connected, but user
@@ -94,7 +94,7 @@ class resources extends viewModelBase {
         this.updateUrl(appUrl.forResources());
     }
 
-    private fetchResources(): JQueryPromise<Raven.Client.Data.ResourcesInfo> {
+    private fetchResources(): JQueryPromise<Raven.Client.Server.Operations.ResourcesInfo> {
         return new getResourcesCommand()
             .execute()
             .done(info => this.resources(new resourcesInfo(info)));
@@ -121,7 +121,7 @@ class resources extends viewModelBase {
     private updateResourceInfo(qualifer: string, resourceName: string) {
         new getResourceCommand(qualifer, resourceName)
             .execute()
-            .done((result: Raven.Client.Data.ResourceInfo) => {
+            .done((result: Raven.Client.Server.Operations.ResourceInfo) => {
                 this.resources().updateResource(result, qualifer);
                 this.filterResources();
             });

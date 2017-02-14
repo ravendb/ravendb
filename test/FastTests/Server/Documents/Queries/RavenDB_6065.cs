@@ -1,5 +1,5 @@
 ﻿using System.Linq;
-using Raven.Client.Data;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries

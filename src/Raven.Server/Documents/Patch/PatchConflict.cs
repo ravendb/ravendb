@@ -11,7 +11,7 @@ using Jint.Parser;
 using Jint.Parser.Ast;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
-using Raven.Client.Data;
+using Raven.Client;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow;

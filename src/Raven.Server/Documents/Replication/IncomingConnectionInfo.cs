@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Client.Replication.Messages;
+using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Server.Documents.Replication
 {

@@ -1,4 +1,4 @@
-﻿using Raven.Client.Document;
+﻿using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

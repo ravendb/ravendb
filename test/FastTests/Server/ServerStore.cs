@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Net.Http;
-using Raven.Client.Blittable;
-using Raven.Client.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

@@ -5,7 +5,7 @@ class indexStatistics {
     indexId: number;
     isStale: boolean;
     indexName: string;
-    indexType: Raven.Client.Data.Indexes.IndexType;
+    indexType: Raven.Client.Documents.Indexes.IndexType;
 
     entriesCount: string; 
     errorsCount: string;  
@@ -25,7 +25,7 @@ class indexStatistics {
     isReduceIndex: boolean;
     isFaultyIndex: boolean;
     
-    constructor(dto: Raven.Client.Data.Indexes.IndexStats) {
+    constructor(dto: Raven.Client.Documents.Indexes.IndexStats) {
         this.indexName = dto.Name;
         this.indexType = dto.Type;
         this.indexId = dto.Id;

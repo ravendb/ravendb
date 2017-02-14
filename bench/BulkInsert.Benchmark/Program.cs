@@ -4,9 +4,11 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Document;
+using Raven.Client.Documents;
 using Raven.Client.Extensions;
-using Raven.Client.Operations.Databases;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
+using Raven.Client.Util;
 
 namespace BulkInsert.Benchmark
 {

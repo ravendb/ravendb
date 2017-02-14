@@ -9,9 +9,9 @@ class getDatabaseStatsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
         var url = this.getQueryUrlFragment();
-        return this.query<Raven.Client.Data.DatabaseStatistics>(url, null, this.db, null, this.getTimeToAlert(this.longWait));
+        return this.query<Raven.Client.Documents.Operations.DatabaseStatistics>(url, null, this.db, null, this.getTimeToAlert(this.longWait));
     }
 
     getQueryUrl(): string {

@@ -10,7 +10,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Threading;
-using Raven.Client.Data;
+using Raven.Client;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

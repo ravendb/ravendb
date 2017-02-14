@@ -8,7 +8,7 @@ class filesystemInfo extends resourceInfo {
 
     filesCount = ko.observable<number>();
 
-    constructor(dto: Raven.Client.Data.FileSystemInfo) {
+    constructor(dto: Raven.Client.Server.Operations.FileSystemInfo) {
         super(dto);
         this.update(dto);
     }
@@ -24,7 +24,7 @@ class filesystemInfo extends resourceInfo {
     asResource(): filesystem {
         return resourcesManager.default.getFileSystemByName(this.name);
     }
-    update(fileSystemInfo: Raven.Client.Data.FileSystemInfo): void {
+    update(fileSystemInfo: Raven.Client.Server.Operations.FileSystemInfo): void {
         super.update(fileSystemInfo);
 
         this.filesCount(fileSystemInfo.FilesCount);

@@ -5,8 +5,8 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Transformers;
+using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Issues

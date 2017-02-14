@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client.Extensions;
+using Raven.Client.Extensions.Streams;
 using Raven.Server.Utils;
 using Sparrow;
 using Voron;

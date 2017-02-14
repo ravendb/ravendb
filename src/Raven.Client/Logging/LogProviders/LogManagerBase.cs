@@ -1,11 +1,11 @@
 using System;
 using System.Linq.Expressions;
 using System.Reflection;
-using Raven.Client.Extensions;
+using Raven.Client.Util;
 
 namespace Raven.Client.Logging.LogProviders
 {
-    public abstract class LogManagerBase : ILogManager
+    internal abstract class LogManagerBase : ILogManager
     {
         private readonly Func<object, ILog> loggerFactory;
         private readonly Func<string, object> getLoggerByNameDelegate;
@@ -22,22 +22,11 @@ namespace Raven.Client.Logging.LogProviders
             mdcRemoveMethodCall = GetMdcRemoveMethodCall();
         }
 
-        public Func<string, object> GetLoggerByNameDelegate
-        {
-            get { return getLoggerByNameDelegate; }
-        }
-        public Func<string, IDisposable> NdcPushMethodCall
-        {
-            get { return ndcPushMethodCall; }
-        }
-        public Action<string, string> MdcSetMethodCall
-        {
-            get { return mdcSetMethodCall; }
-        }
-        public Action<string> MdcRemoveMethodCall
-        {
-            get { return mdcRemoveMethodCall; }
-        }
+        public Func<string, object> GetLoggerByNameDelegate => getLoggerByNameDelegate;
+        public Func<string, IDisposable> NdcPushMethodCall => ndcPushMethodCall;
+        public Action<string, string> MdcSetMethodCall => mdcSetMethodCall;
+
+        public Action<string> MdcRemoveMethodCall => mdcRemoveMethodCall;
 
         protected abstract Type GetLogManagerType();
 
@@ -67,8 +56,8 @@ namespace Raven.Client.Logging.LogProviders
             MethodInfo method = logManagerType.GetMethod("GetLogger", new[] {typeof (string)});
             ParameterExpression resultValue;
             ParameterExpression keyParam = Expression.Parameter(typeof (string), "key");
-            MethodCallExpression methodCall = Expression.Call(null, method, new Expression[] {resultValue = keyParam});
-            return Expression.Lambda<Func<string, object>>(methodCall, new[] {resultValue}).Compile();
+            MethodCallExpression methodCall = Expression.Call(null, method, resultValue = keyParam);
+            return Expression.Lambda<Func<string, object>>(methodCall, resultValue).Compile();
         }
 
         private Func<string, IDisposable> GetNdcPushMethodCall()
@@ -77,8 +66,8 @@ namespace Raven.Client.Logging.LogProviders
             MethodInfo method = ndcType.GetMethod("Push", new[] {typeof (string)});
             ParameterExpression resultValue;
             ParameterExpression keyParam = Expression.Parameter(typeof (string), "key");
-            MethodCallExpression methodCall = Expression.Call(null, method, new Expression[] {resultValue = keyParam});
-            return Expression.Lambda<Func<string, IDisposable>>(methodCall, new[] {resultValue}).Compile();
+            MethodCallExpression methodCall = Expression.Call(null, method, resultValue = keyParam);
+            return Expression.Lambda<Func<string, IDisposable>>(methodCall, resultValue).Compile();
         }
 
         private Action<string, string> GetMdcSetMethodCall()
@@ -88,7 +77,7 @@ namespace Raven.Client.Logging.LogProviders
             ParameterExpression keyParam = Expression.Parameter(typeof (string), "key");
             ParameterExpression valueParam = Expression.Parameter(typeof (string), "value");
             MethodCallExpression methodCall = Expression.Call(null, method, new Expression[] {keyParam, valueParam});
-            return Expression.Lambda<Action<string, string>>(methodCall, new[] {keyParam, valueParam}).Compile();
+            return Expression.Lambda<Action<string, string>>(methodCall, keyParam, valueParam).Compile();
         }
 
         private Action<string> GetMdcRemoveMethodCall()
@@ -96,8 +85,8 @@ namespace Raven.Client.Logging.LogProviders
             Type mdcType = GetMdcType();
             MethodInfo method = mdcType.GetMethod("Remove", new[] {typeof (string)});
             ParameterExpression keyParam = Expression.Parameter(typeof (string), "key");
-            MethodCallExpression methodCall = Expression.Call(null, method, new Expression[] {keyParam});
-            return Expression.Lambda<Action<string>>(methodCall, new[] {keyParam}).Compile();
+            MethodCallExpression methodCall = Expression.Call(null, method, keyParam);
+            return Expression.Lambda<Action<string>>(methodCall, keyParam).Compile();
         }
     }
 }

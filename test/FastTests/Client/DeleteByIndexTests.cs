@@ -2,10 +2,9 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Data.Queries;
-using Raven.Client.Operations.Databases;
-using Raven.Client.Operations.Databases.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -29,7 +28,7 @@ namespace FastTests.Client
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -67,7 +66,7 @@ namespace FastTests.Client
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)

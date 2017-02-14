@@ -8,7 +8,7 @@ using System.Net.Http;
 
 namespace Raven.Client.Util
 {
-    public static class HttpMethods
+    internal static class HttpMethods
     {
         public static readonly HttpMethod Reset = new HttpMethod("RESET");
 

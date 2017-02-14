@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Logging
 {
-    public interface ILogManager
+    internal interface ILogManager
     {
         ILog GetLogger(string name);
 

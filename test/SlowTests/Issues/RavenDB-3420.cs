@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
+using Raven.Client.Documents;
 using Xunit;
 
 namespace SlowTests.Issues

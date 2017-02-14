@@ -15,7 +15,7 @@ namespace Raven.Client.Extensions
     ///<summary>
     /// Extensions for Linq expressions
     ///</summary>
-    public static class ExpressionExtensions
+    internal static class ExpressionExtensions
     {
         public static Type ExtractTypeFromPath<T>(this Expression<Func<T, object>> path)
         {
@@ -31,14 +31,9 @@ namespace Raven.Client.Extensions
                 {
                     var normalizedProperty = property.Replace(collectionSeparatorAsString, string.Empty);
 
-                    if (type.IsArray)
-                    {
-                        type = type.GetElementType().GetProperty(normalizedProperty).PropertyType;
-                    }
-                    else
-                    {
-                        type = type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
-                    }
+                    type = type.IsArray
+                        ? type.GetElementType().GetProperty(normalizedProperty).PropertyType
+                        : type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
                 }
                 else
                 {
@@ -116,7 +111,7 @@ namespace Raven.Client.Extensions
             return builder.ToString().Trim(propertySeparator, collectionSeparator);
         }
 
-        public class PropertyPathExpressionVisitor : ExpressionVisitor
+        internal class PropertyPathExpressionVisitor : ExpressionVisitor
         {
             private readonly string _propertySeparator;
             private readonly string _collectionSeparator;

@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Client.Exceptions.Session;
+using Raven.Client.Documents.Exceptions.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

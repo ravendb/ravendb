@@ -12,9 +12,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
-using Raven.Client.Data;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Json;
+using Raven.Client.Json.Converters;
+using Raven.Client.Server.Commands;
+using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
@@ -29,8 +31,8 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using AccessModes = Raven.Client.Data.AccessModes;
-using AccessToken = Raven.Client.Data.AccessToken;
+using AccessModes = Raven.Client.Server.Operations.ApiKeys.AccessModes;
+using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 
 namespace Raven.Server
 {

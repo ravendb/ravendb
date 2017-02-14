@@ -47,7 +47,7 @@ class indexMergeSuggestions extends viewModelBase {
         this.addNotification(changesApi.watchAllIndexes(e => this.fetchIndexMergeSuggestions()));
     }
 
-    private fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
+    private fetchStats(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
         var db = this.activeDatabase();
         if (db) {
             return new getDatabaseStatsCommand(db)

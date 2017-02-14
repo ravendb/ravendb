@@ -1,47 +1,36 @@
 using System;
+using Raven.Client.Util;
 using Sparrow.Collections;
 
 namespace Raven.Client.Logging
 {
-    public class LoggerExecutionWrapper : ILog
+    internal class LoggerExecutionWrapper : ILog
     {
         public const string FailedToGenerateLogMessage = "Failed to generate log message";
-        private readonly ILog logger;
-        private readonly string loggerName;
-        private readonly ConcurrentSet<Target> targets;
+        private readonly ILog _logger;
+        private readonly string _loggerName;
+        private readonly ConcurrentSet<Target> _targets;
 
         public LoggerExecutionWrapper(ILog logger, string loggerName, ConcurrentSet<Target> targets)
         {
-            this.logger = logger;
-            this.loggerName = loggerName;
-            this.targets = targets;
+            _logger = logger;
+            _loggerName = loggerName;
+            _targets = targets;
         }
 
-        public ILog WrappedLogger
-        {
-            get { return logger; }
-        }
+        public ILog WrappedLogger => _logger;
 
         #region ILog Members
 
-        public bool IsInfoEnabled
-        {
-            get { return LogManager.EnableDebugLogForTargets || logger.IsInfoEnabled; }
-        }
+        public bool IsInfoEnabled => LogManager.EnableDebugLogForTargets || _logger.IsInfoEnabled;
 
-        public bool IsDebugEnabled
-        {
-            get { return LogManager.EnableDebugLogForTargets || logger.IsDebugEnabled; }
-        }
+        public bool IsDebugEnabled => LogManager.EnableDebugLogForTargets || _logger.IsDebugEnabled;
 
-        public bool IsWarnEnabled
-        {
-            get { return LogManager.EnableDebugLogForTargets || logger.IsWarnEnabled; }
-        }
+        public bool IsWarnEnabled => LogManager.EnableDebugLogForTargets || _logger.IsWarnEnabled;
 
         public void Log(LogLevel logLevel, Func<string> messageFunc)
         {
-            if (logger.ShouldLog(logLevel))
+            if (_logger.ShouldLog(logLevel))
             {
                 Func<string> wrappedMessageFunc = () =>
                 {
@@ -55,16 +44,16 @@ namespace Raven.Client.Logging
                     }
                     return null;
                 };
-                logger.Log(logLevel, wrappedMessageFunc);
+                _logger.Log(logLevel, wrappedMessageFunc);
             }
 
-            if (targets.Count == 0)
+            if (_targets.Count == 0)
                 return;
             var shouldLog = false;
             // ReSharper disable once LoopCanBeConvertedToQuery - perf
-            foreach (var target in targets)
+            foreach (var target in _targets)
             {
-                shouldLog |= target.ShouldLog(logger, logLevel);
+                shouldLog |= target.ShouldLog(_logger, logLevel);
             }
             if (shouldLog == false)
                 return;
@@ -80,7 +69,7 @@ namespace Raven.Client.Logging
             }
 
             var resourceName = LogContext.ResourceName;
-            foreach (var target in targets)
+            foreach (var target in _targets)
             {
                 target.Write(new LogEventInfo
                 {
@@ -88,7 +77,7 @@ namespace Raven.Client.Logging
                     Exception = null,
                     FormattedMessage = formattedMessage,
                     Level = logLevel,
-                    LoggerName = loggerName,
+                    LoggerName = _loggerName,
                     TimeStamp = SystemTime.UtcNow,
                 });
             }
@@ -109,15 +98,15 @@ namespace Raven.Client.Logging
                 }
                 return null;
             };
-            logger.Log(logLevel, wrappedMessageFunc, exception);
-            foreach (var target in targets)
+            _logger.Log(logLevel, wrappedMessageFunc, exception);
+            foreach (var target in _targets)
             {
                 target.Write(new LogEventInfo
                 {
                     Exception = exception,
                     FormattedMessage = wrappedMessageFunc(),
                     Level = logLevel,
-                    LoggerName = loggerName,
+                    LoggerName = _loggerName,
                     TimeStamp = SystemTime.UtcNow,
                 });
             }
@@ -125,7 +114,7 @@ namespace Raven.Client.Logging
 
         public bool ShouldLog(LogLevel logLevel)
         {
-            return logger.ShouldLog(logLevel);
+            return _logger.ShouldLog(logLevel);
         }
 
         #endregion

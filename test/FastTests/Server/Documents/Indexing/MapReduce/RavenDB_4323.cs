@@ -2,12 +2,11 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Exceptions.Indexes;
-using Raven.Client.Indexes;
-using Raven.Client.Operations.Databases.Collections;
-using Raven.Client.Operations.Databases.Documents;
-using Raven.Client.PublicExtensions;
-using Raven.Client.Replication;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Replication;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Xunit;

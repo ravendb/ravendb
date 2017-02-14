@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Transformers;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;

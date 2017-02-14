@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Tests.Bugs.QueryOptimizer
@@ -365,7 +366,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
 
                 using (IDocumentSession session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var list = session.Query<SomeObject>()
                         .Statistics(out stats)
                         .Where(p => p.StringField == "user 1")
@@ -376,7 +377,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
 
                 using (IDocumentSession session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var list = session.Query<SomeObject>()
                         .Statistics(out stats)
                         .Where(p => p.IntField > 150000 && p.IntField < 300000)
@@ -387,7 +388,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
 
                 using (IDocumentSession session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var list = session.Query<SomeObject>()
                         .Statistics(out stats)
                         .Where(p => p.StringField == "user 1" && p.IntField > 150000 && p.IntField < 300000)

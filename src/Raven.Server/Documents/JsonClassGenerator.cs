@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
-using Raven.Client.Data;
+using Raven.Client;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents

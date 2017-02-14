@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Raven.Client.Data;
+using Raven.Client;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
-using Raven.Client.Replication;
-using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Routing;

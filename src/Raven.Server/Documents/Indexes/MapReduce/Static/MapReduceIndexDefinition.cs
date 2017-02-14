@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static

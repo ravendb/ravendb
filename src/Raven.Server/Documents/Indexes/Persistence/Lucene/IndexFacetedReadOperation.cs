@@ -14,8 +14,9 @@ using Sparrow;
 using Sparrow.Logging;
 using Voron.Impl;
 using System.Linq;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene

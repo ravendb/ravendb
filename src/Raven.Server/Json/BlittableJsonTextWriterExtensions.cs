@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
-using Raven.Client.Commands;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Data.Queries;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
-using Raven.Client.Indexing;
-using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
@@ -21,7 +22,7 @@ using Voron.Data.BTrees;
 
 namespace Raven.Server.Json
 {
-    public static class BlittableJsonTextWriterExtensions
+    internal static class BlittableJsonTextWriterExtensions
     {
         public static void WriteChangeVector(this BlittableJsonTextWriter writer, JsonOperationContext context,
             ChangeVectorEntry[] changeVector)

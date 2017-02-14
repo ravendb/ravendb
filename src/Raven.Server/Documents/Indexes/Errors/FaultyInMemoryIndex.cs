@@ -3,10 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Commands;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -20,7 +19,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
-    public class FaultyInMemoryIndex : Index
+    internal class FaultyInMemoryIndex : Index
     {
         private readonly Exception _e;
 

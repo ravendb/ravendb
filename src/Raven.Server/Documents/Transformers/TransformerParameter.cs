@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.Transformers
 {
-    public class TransformerParameter : Client.Data.Transformers.TransformerParameter
+    public class TransformerParameter : Client.Documents.Transformers.TransformerParameter
     {
         public TransformerParameter(object value)
         {

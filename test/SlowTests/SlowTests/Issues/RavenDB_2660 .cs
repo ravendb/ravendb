@@ -6,7 +6,7 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

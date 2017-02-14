@@ -142,13 +142,13 @@ class editTransformer extends viewModelBase {
         });
     }
 
-    private editExistingTransformer(transformerName: string): JQueryPromise<Raven.Client.Indexing.TransformerDefinition> {
+    private editExistingTransformer(transformerName: string): JQueryPromise<Raven.Client.Documents.Transformers.TransformerDefinition> {
         this.loadedTransformerName(transformerName);
         return this.fetchTransformerToEdit(transformerName)
-            .done((trans: Raven.Client.Indexing.TransformerDefinition) => this.editedTransformer().updateUsing(trans)); 
+            .done((trans: Raven.Client.Documents.Transformers.TransformerDefinition) => this.editedTransformer().updateUsing(trans)); 
     }
 
-    private fetchTransformerToEdit(transformerName: string): JQueryPromise<Raven.Client.Indexing.TransformerDefinition> {
+    private fetchTransformerToEdit(transformerName: string): JQueryPromise<Raven.Client.Documents.Transformers.TransformerDefinition> {
         return new getSingleTransformerCommand(transformerName, this.activeDatabase()).execute();
     }
 

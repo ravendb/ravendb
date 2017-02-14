@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Linq;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Extensions;

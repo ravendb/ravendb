@@ -1,6 +1,7 @@
 using FastTests;
 using System.Linq;
 using Raven.Client;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Bugs.Queries
@@ -24,7 +25,7 @@ namespace SlowTests.Bugs.Queries
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     session.Query<User>()
                         .Statistics(out stats)
                         .Where(x=>x.Email == "ayende")
@@ -52,7 +53,7 @@ namespace SlowTests.Bugs.Queries
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Advanced.DocumentQuery<User>()
                         .Statistics(out stats)
                         .Where("Email:ayende");

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Changes
 {
-    public interface IChangesConnectionState
+    internal interface IChangesConnectionState
     {
         Task Task { get; }
 

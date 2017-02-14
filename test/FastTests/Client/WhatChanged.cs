@@ -1,4 +1,4 @@
-﻿using Raven.Client.Data;
+﻿using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace FastTests.Client

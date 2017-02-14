@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using Raven.Client.Linq;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Binary;

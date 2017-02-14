@@ -15,7 +15,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Constants = Raven.Client.Data.Constants;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {

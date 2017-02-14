@@ -29,7 +29,7 @@ class hitTest {
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
     private onToggleIndex: (indexName: string) => void;
-    private handleTrackTooltip: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;
+    private handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;
     private handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void;
     private removeTooltip: () => void;
    
@@ -39,7 +39,7 @@ class hitTest {
 
     init(container: d3.Selection<any>,
         onToggleIndex: (indeName: string) => void,
-        handleTrackTooltip: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,
+        handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,
         handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void,
         removeTooltip: () => void) {       
         this.container = container;
@@ -49,7 +49,7 @@ class hitTest {
         this.removeTooltip = removeTooltip;        
     }
 
-    registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Client.Data.Indexes.IndexingPerformanceOperation) {
+    registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation) {
         const data = {
             minX: x,
             minY: y,
@@ -107,7 +107,7 @@ class hitTest {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);              
 
-        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation)[0];
+        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Documents.Indexes.IndexingPerformanceOperation)[0];
         if (currentItem) {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);           
         }
@@ -193,7 +193,7 @@ class metrics extends viewModelBase {
     private static readonly maxRecursion = 5;
     private static readonly minGapSize = 10 * 1000; // 10 seconds
 
-    private data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
+    private data: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
     private totalWidth: number;
     private totalHeight: number;
 
@@ -225,7 +225,7 @@ class metrics extends viewModelBase {
     private currentYOffset = 0;
     private maxYOffset = 0;
     private hitTest = new hitTest();
-    private tooltip: d3.Selection<Raven.Client.Data.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap>;   
+    private tooltip: d3.Selection<Raven.Client.Documents.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap>;   
 
     private inProgressAnimator: inProgressAnimator;
     private inProgressMarkerCanvas: HTMLCanvasElement;
@@ -421,7 +421,7 @@ class metrics extends viewModelBase {
     private enableLiveView() {
         let firstTime = true;
 
-        const onDataUpdate = (data: Raven.Client.Data.Indexes.IndexPerformanceStats[]) => {
+        const onDataUpdate = (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => {
             let timeRange: [Date, Date];
             if (!firstTime) {
                 const timeToRemap = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
@@ -834,10 +834,10 @@ class metrics extends viewModelBase {
         });
     }
 
-    private findInProgressAction(context: CanvasRenderingContext2D, perf: Raven.Client.Data.Indexes.IndexingPerformanceStats, extentFunc: (duration: number) => number,
+    private findInProgressAction(context: CanvasRenderingContext2D, perf: Raven.Client.Documents.Indexes.IndexingPerformanceStats, extentFunc: (duration: number) => number,
         xStart: number, yStart: number, yOffset: number): void {
 
-        const extractor = (perfs: Raven.Client.Data.Indexes.IndexingPerformanceOperation[], xStart: number, yStart: number, yOffset: number) => {
+        const extractor = (perfs: Raven.Client.Documents.Indexes.IndexingPerformanceOperation[], xStart: number, yStart: number, yOffset: number) => {
 
             let currentX = xStart;
 
@@ -869,7 +869,7 @@ class metrics extends viewModelBase {
         throw new Error("Unable to find color for: " + operationName);
     }
 
-    private drawStripes(context: CanvasRenderingContext2D, operations: Array<Raven.Client.Data.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
+    private drawStripes(context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
         yOffset: number, extentFunc: (duration: number) => number) {
 
         let currentX = xStart;
@@ -979,7 +979,7 @@ class metrics extends viewModelBase {
         }
     } 
 
-    private handleTrackTooltip(element: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) {
+    private handleTrackTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
@@ -1015,7 +1015,7 @@ class metrics extends viewModelBase {
         }
     }
 
-    private handleTooltip(element: Raven.Client.Data.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap, x: number, y: number, tooltipHtml: string) {
+    private handleTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap, x: number, y: number, tooltipHtml: string) {
         if (element && !this.dialogVisible) {
             const tooltipWidth = $("#indexingPerformance .tooltip").width() + 30;
             x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));

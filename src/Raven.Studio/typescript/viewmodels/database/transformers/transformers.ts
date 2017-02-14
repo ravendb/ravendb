@@ -99,7 +99,7 @@ class transformers extends viewModelBase {
     private fetchTransformers(db: database) {
         return new getTransformersCommand(db)
             .execute()
-            .done((transformers: Raven.Client.Indexing.TransformerDefinition[]) => {
+            .done((transformers: Raven.Client.Documents.Transformers.TransformerDefinition[]) => {
                 transformers
                     .map(t => new transformer(t))
                     .forEach(i => this.putTransformerIntoGroup(i));
@@ -111,7 +111,7 @@ class transformers extends viewModelBase {
         this.addNotification(changesApi.watchAllTransformers((e) => this.processTransformerEvent(e)));
     }
 
-    private processTransformerEvent(e: Raven.Client.Data.TransformerChange) {
+    private processTransformerEvent(e: Raven.Client.Documents.Changes.TransformerChange) {
         if (e.Type === "TransformerRemoved") {
             const existingTransformer = this.findTransformerByName(e.Name);
             if (existingTransformer) {
@@ -200,7 +200,7 @@ class transformers extends viewModelBase {
         this.setLockModeSelectedTransformers("LockedIgnore", "Lock");
     }
 
-    private setLockModeSelectedTransformers(lockModeString: Raven.Client.Indexing.TransformerLockMode,
+    private setLockModeSelectedTransformers(lockModeString: Raven.Client.Documents.Transformers.TransformerLockMode,
         localModeString: string) {
 
         if (this.lockModeCommon() === lockModeString)
@@ -235,7 +235,7 @@ class transformers extends viewModelBase {
         this.updateTransformerLockMode(t, "Unlock");
     }
 
-    private updateTransformerLockMode(t: transformer, lockMode: Raven.Client.Indexing.TransformerLockMode) {
+    private updateTransformerLockMode(t: transformer, lockMode: Raven.Client.Documents.Transformers.TransformerLockMode) {
         if (t.lockMode() !== lockMode) {
             this.localLockChangesInProgress.push(t.name());
 

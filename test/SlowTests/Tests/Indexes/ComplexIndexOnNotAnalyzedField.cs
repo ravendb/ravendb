@@ -8,10 +8,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Data.Queries;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
 

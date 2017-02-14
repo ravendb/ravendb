@@ -9,8 +9,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using System.Linq;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 
 namespace FastTests.Server.Documents.Indexing.Debugging
 {

@@ -3,7 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -55,7 +56,7 @@ namespace SlowTests.MailingList
 
                     Assert.Equal(2, goodResult.Select(i => i.Name).ToArray().Length);
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var badResult = session.Query<BlogPost>()
                         .Statistics(out stats)
                         .Where(i => i.Id.In(myGroupOfIds)).Select(i => new { i.Name }).ToArray();

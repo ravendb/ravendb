@@ -3,12 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using Newtonsoft.Json;
-using Raven.Client.Json.Utilities;
 using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    public class BlittableJsonReader : JsonReader
+    internal class BlittableJsonReader : JsonReader
     {
         private readonly Stack<CurrentItem> _items = new Stack<CurrentItem>();
         private readonly Stack<BlittableJsonReaderObject.PropertiesInsertionBuffer> _buffers = new Stack<BlittableJsonReaderObject.PropertiesInsertionBuffer>();
@@ -22,8 +21,8 @@ namespace Raven.Client.Json
             public BlittableJsonReaderObject.PropertyDetails PropertyDetails;
         }
 
-        private readonly Action<JsonReader, State> _setState = ExpressionHelpers.CreateFieldSetter<JsonReader, State>("_currentState");
-        private readonly Action<JsonReader, JsonToken> _setToken = ExpressionHelpers.CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
+        private readonly Action<JsonReader, State> _setState = ExpressionHelper.CreateFieldSetter<JsonReader, State>("_currentState");
+        private readonly Action<JsonReader, JsonToken> _setToken = ExpressionHelper.CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
 
         public void Init(BlittableJsonReaderObject root)
         {

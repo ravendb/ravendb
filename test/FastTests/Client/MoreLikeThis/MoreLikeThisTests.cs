@@ -6,11 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
-using Raven.Client.Data;
-using Raven.Client.Data.Queries;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

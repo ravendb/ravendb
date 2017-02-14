@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Operations.Databases.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 
 
 namespace SlowTests

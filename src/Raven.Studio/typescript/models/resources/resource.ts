@@ -10,7 +10,7 @@ abstract class resource {
     errored = ko.observable<boolean>(false);
     isAdminCurrentTenant = ko.observable<boolean>(false);
 
-    protected constructor(rsInfo: Raven.Client.Data.ResourceInfo) {
+    protected constructor(rsInfo: Raven.Client.Server.Operations.ResourceInfo) {
     }
 
     activate() {
@@ -28,7 +28,7 @@ abstract class resource {
 
     abstract get type(): string;
 
-    updateUsing(incomingCopy: Raven.Client.Data.ResourceInfo) {
+    updateUsing(incomingCopy: Raven.Client.Server.Operations.ResourceInfo) {
         this.isAdminCurrentTenant(incomingCopy.IsAdmin);
         this.activeBundles(incomingCopy.Bundles);
         this.name = incomingCopy.Name;

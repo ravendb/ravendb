@@ -7,10 +7,10 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Linq.Indexing;
-using Raven.Client.PublicExtensions;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
 using Xunit;
 
 namespace SlowTests.MailingList

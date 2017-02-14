@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
-using Raven.Client.Data;
+using Raven.Client;
 
 namespace Raven.Server.Documents.Queries.Results
 {
