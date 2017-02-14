@@ -204,6 +204,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.Voron.ScratchBufferSizeNotificationThreshold.Value, actual => actual.Storage.Voron.ScratchBufferSizeNotificationThreshold);
             configurationComparer.Assert(expected => expected.Voron.MaxBufferPoolSize.Value, actual => actual.Storage.Voron.MaxBufferPoolSize);
             configurationComparer.Assert(expected => expected.Voron.MaxScratchBufferSize.Value, actual => actual.Storage.Voron.MaxScratchBufferSize);
+            configurationComparer.Assert(expected => expected.Voron.MaxSizePerScratchBufferFile.Value, actual => actual.Storage.Voron.MaxSizePerScratchBufferFile);
             configurationComparer.Assert(expected => expected.Voron.TempPath.Value, actual => actual.Storage.Voron.TempPath);
             configurationComparer.Assert(expected => expected.Esent.CacheSizeMax.Value, actual => actual.Storage.Esent.CacheSizeMax);
             configurationComparer.Assert(expected => expected.Esent.MaxVerPages.Value, actual => actual.Storage.Esent.MaxVerPages);
