@@ -1,6 +1,5 @@
 using System;
 using System.Threading;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Util
 {

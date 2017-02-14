@@ -1682,8 +1682,7 @@ If you really want to do in memory filtering on the data returned from the query
         public void InvokeAfterQueryExecuted(QueryResult result)
         {
             var queryExecuted = AfterQueryExecutedCallback;
-            if (queryExecuted != null)
-                queryExecuted(result);
+            queryExecuted?.Invoke(result);
         }
 
         /// <summary>

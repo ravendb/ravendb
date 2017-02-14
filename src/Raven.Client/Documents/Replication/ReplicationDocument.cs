@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Replication
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplicationDocument"/> class.
         /// </summary>
-        public ReplicationDocument()
+        protected ReplicationDocument()
         {
             Id = Constants.RavenReplicationDestinations;
             Destinations = new List<TClass>();

@@ -229,8 +229,8 @@ namespace Raven.Client.Documents
 
         public abstract BulkInsertOperation BulkInsert(string database = null);
 
-        public IAsyncReliableSubscriptions AsyncSubscriptions { get; private set; }
-        public IReliableSubscriptions Subscriptions { get; private set; }
+        public IAsyncReliableSubscriptions AsyncSubscriptions { get; }
+        public IReliableSubscriptions Subscriptions { get; }
 
         protected void EnsureNotClosed()
         {
@@ -247,8 +247,7 @@ namespace Raven.Client.Documents
         protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
         {
             var onSessionCreatedInternal = SessionCreatedInternal;
-            if (onSessionCreatedInternal != null)
-                onSessionCreatedInternal(session);
+            onSessionCreatedInternal?.Invoke(session);
         }
 
         ///<summary>

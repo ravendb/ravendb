@@ -50,7 +50,6 @@ namespace Raven.Client.Documents.Operations
 
         public class PatchCommand : RavenCommand<PatchResult>
         {
-            private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;
             private readonly string _id;
             private readonly long? _etag;
@@ -73,7 +72,6 @@ namespace Raven.Client.Documents.Operations
                 if (patchIfMissing != null && string.IsNullOrWhiteSpace(patchIfMissing.Script))
                     throw new ArgumentNullException(nameof(patchIfMissing.Script));
 
-                _conventions = conventions;
                 _context = context;
                 _id = id;
                 _etag = etag;

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Queries.Facets;
 
 namespace Raven.Client.Documents.Commands
 {

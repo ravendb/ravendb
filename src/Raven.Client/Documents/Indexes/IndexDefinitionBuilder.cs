@@ -261,7 +261,7 @@ namespace Raven.Client.Documents.Indexes
 
         private class WhereEntityIsVisitor : ExpressionVisitor
         {
-            public bool HasWhereEntityIs { get; set; }
+            public bool HasWhereEntityIs { get; private set; }
 
             protected override Expression VisitMethodCall(MethodCallExpression node)
             {

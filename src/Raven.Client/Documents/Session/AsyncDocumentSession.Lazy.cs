@@ -12,7 +12,6 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
@@ -24,7 +23,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implementation for async document session 
     /// </summary>
-    public partial class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
+    public partial class AsyncDocumentSession
     {
         internal Lazy<Task<T>> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval, CancellationToken token = default(CancellationToken))
         {
@@ -74,7 +73,7 @@ namespace Raven.Client.Documents.Session
 
                 while (await ExecuteLazyOperationsSingleStep(responseTimeDuration).WithCancellation(token).ConfigureAwait(false))
                 {
-                    await Task.Delay(100).WithCancellation(token).ConfigureAwait(false);
+                    await Task.Delay(100, token).ConfigureAwait(false);
                 }
 
                 responseTimeDuration.ComputeServerTotal();
@@ -228,8 +227,7 @@ namespace Raven.Client.Documents.Session
             var ids = new[] { id };
 
             var configuration = new LoadConfiguration();
-            if (configure != null)
-                configure(configuration);
+            configure?.Invoke(configuration);
 
             var lazyLoadOperation = new LazyTransformerLoadOperation<T>(
                 ids,

@@ -52,19 +52,19 @@ namespace Raven.Client.Documents.Indexes
             public bool? preserve_newlines { get; set; }
         }
 
-        private StringBuilder output;
-        private string indent_string;
+        private readonly StringBuilder output;
+        private readonly string indent_string;
         private int indent_level;
-        private string token_text;
-        private Stack<string> modes;
+        private readonly string token_text;
+        private readonly Stack<string> modes;
         private string current_mode;
-        private int opt_indent_size;
-        private char opt_indent_char;
-        private int opt_indent_level;
-        private bool opt_preserve_newlines;
+        private readonly int opt_indent_size;
+        private readonly char opt_indent_char;
+        private readonly int opt_indent_level;
+        private readonly bool opt_preserve_newlines;
         private bool if_line_flag;
         private bool do_block_just_closed;
-        private string input;
+        private readonly string input;
 
 
         private void trim_output()
@@ -187,21 +187,21 @@ namespace Raven.Client.Documents.Indexes
             return false;
         }
 
-        private string whitespace;
-        private string wordchar;
-        private int parser_pos;
-        private string last_type;
-        private string last_text;
-        private string digits;
-        private string[] punct;
-        private string prefix;
+        private readonly string whitespace;
+        private readonly string wordchar;
+        private readonly int parser_pos;
+        private readonly string last_type;
+        private readonly string last_text;
+        private readonly string digits;
+        private readonly string[] punct;
+        private readonly string prefix;
         private string[] get_next_token(ref int parser_pos)
         {
             var n_newlines = 0;
 
             if (parser_pos >= input.Length)
             {
-                return new string[] { "", "TK_EOF" };
+                return new[] { "", "TK_EOF" };
             }
 
             string c = input[parser_pos].ToString();
@@ -211,7 +211,7 @@ namespace Raven.Client.Documents.Indexes
             {
                 if (parser_pos >= input.Length)
                 {
-                    return new string[] { "", "TK_EOF" };
+                    return new[] { "", "TK_EOF" };
                 }
 
                 if (c == "\n")
@@ -257,43 +257,43 @@ namespace Raven.Client.Documents.Indexes
 
                     var t = get_next_token(ref parser_pos);
                     c += sign + t[0];
-                    return new string[] { c, "TK_WORD" };
+                    return new[] { c, "TK_WORD" };
                 }
 
                 if (c == "in")
                 {
-                    return new string[] { c, "TK_OPERATOR" };
+                    return new[] { c, "TK_OPERATOR" };
                 }
 
                 if (wanted_newline && last_type != "TK_OPERATOR" && !if_line_flag)
                 {
                     print_newline(null);
                 }
-                return new string[] { c, "TK_WORD" };
+                return new[] { c, "TK_WORD" };
 
             }
 
             if ((c == "(") || (c == "["))
-                return new string[] { c, "TK_START_EXPR" };
+                return new[] { c, "TK_START_EXPR" };
 
             if (c == ")" || c == "]")
             {
-                return new string[] { c, "TK_END_EXPR" };
+                return new[] { c, "TK_END_EXPR" };
             }
 
             if (c == "{")
             {
-                return new string[] { c, "TK_START_BLOCK" };
+                return new[] { c, "TK_START_BLOCK" };
             }
 
             if (c == "}")
             {
-                return new string[] { c, "TK_END_BLOCK" };
+                return new[] { c, "TK_END_BLOCK" };
             }
 
             if (c == ";")
             {
-                return new string[] { c, "TK_SEMICOLON" };
+                return new[] { c, "TK_SEMICOLON" };
             }
 
             if (c == "/")
@@ -316,7 +316,7 @@ namespace Raven.Client.Documents.Indexes
                     }
 
                     parser_pos += 2;
-                    return new string[] { "/*" + comment + "*/", "TK_BLOCK_COMMENT" };
+                    return new[] { "/*" + comment + "*/", "TK_BLOCK_COMMENT" };
                 }
 
                 if (input[parser_pos] == '/')
@@ -337,7 +337,7 @@ namespace Raven.Client.Documents.Indexes
                     {
                         print_newline(null);
                     }
-                    return new string[] { comment, "TK_COMMENT" };
+                    return new[] { comment, "TK_COMMENT" };
 
                 }
             }
@@ -378,7 +378,7 @@ namespace Raven.Client.Documents.Indexes
                             parser_pos++;
                             if (parser_pos >= input.Length)
                             {
-                                return new string[] { resulting_string, "TK_STRING" };
+                                return new[] { resulting_string, "TK_STRING" };
                             }
                         }
                     }
@@ -398,7 +398,7 @@ namespace Raven.Client.Documents.Indexes
                             parser_pos++;
                             if (parser_pos >= input.Length)
                             {
-                                return new string[] { resulting_string, "TK_STRING" };
+                                return new[] { resulting_string, "TK_STRING" };
                             }
                         }
                     }
@@ -417,7 +417,7 @@ namespace Raven.Client.Documents.Indexes
                         parser_pos += 1;
                     }
                 }
-                return new string[] { resulting_string, "TK_STRING" };
+                return new[] { resulting_string, "TK_STRING" };
 
 
             }
@@ -435,11 +435,11 @@ namespace Raven.Client.Documents.Indexes
                     } while ((parser_pos < input.Length) && (c != "#") && (c != "="));
                     if (c == "#")
                     {
-                        return new string[] { sharp, "TK_WORD" };
+                        return new[] { sharp, "TK_WORD" };
                     }
                     else
                     {
-                        return new string[] { sharp, "TK_OPERATOR" };
+                        return new[] { sharp, "TK_OPERATOR" };
                     }
                 }
             }
@@ -448,7 +448,7 @@ namespace Raven.Client.Documents.Indexes
             if ((c == "<") && (input.Substring(parser_pos - 1, 3) == "<!--"))
             {
                 parser_pos += 3;
-                return new string[] { "<!--", "TK_COMMENT" };
+                return new[] { "<!--", "TK_COMMENT" };
             }
 
             if ((c == "-") && (input.Substring(parser_pos - 1, 2) == "-->"))
@@ -458,7 +458,7 @@ namespace Raven.Client.Documents.Indexes
                 {
                     print_newline(null);
                 }
-                return new string[] { "-->", "TK_COMMENT" };
+                return new[] { "-->", "TK_COMMENT" };
             }
 
             if (punct.Contains(c))
@@ -473,20 +473,20 @@ namespace Raven.Client.Documents.Indexes
                     }
                 }
 
-                return new string[] { c, "TK_OPERATOR" };
+                return new[] { c, "TK_OPERATOR" };
             }
 
-            return new string[] { c, "TK_UNKNOWN" };
+            return new[] { c, "TK_UNKNOWN" };
 
 
         }
 
-        private string last_word;
-        private bool var_line;
-        private bool var_line_tainted;
-        private string[] line_starters;
-        private bool in_case;
-        private string token_type;
+        private readonly string last_word;
+        private readonly bool var_line;
+        private readonly bool var_line_tainted;
+        private readonly string[] line_starters;
+        private readonly bool in_case;
+        private readonly string token_type;
 
         public string GetResult()
         {
@@ -498,7 +498,7 @@ namespace Raven.Client.Documents.Indexes
             return output.ToString();
         }
 
-        private bool add_script_tags;
+        private readonly bool add_script_tags;
         public JSBeautify(string js_source_text, JSBeautifyOptions options)
         {
             opt_indent_size = options.indent_size ?? 4;
@@ -671,7 +671,7 @@ namespace Raven.Client.Documents.Indexes
 
                         if (last_type == "TK_END_BLOCK")
                         {
-                            if (!(new string[] { "else", "catch", "finally" }).Contains(token_text.ToLower()))
+                            if (!(new[] { "else", "catch", "finally" }).Contains(token_text.ToLower()))
                             {
                                 prefix = "NEWLINE";
                             }
@@ -707,7 +707,7 @@ namespace Raven.Client.Documents.Indexes
                             prefix = "NEWLINE";
                         }
 
-                        if ((last_type != "TK_END_BLOCK") && ((new string[] { "else", "catch", "finally" }).Contains(token_text.ToLower())))
+                        if ((last_type != "TK_END_BLOCK") && ((new[] { "else", "catch", "finally" }).Contains(token_text.ToLower())))
                         {
                             print_newline(null);
                         }

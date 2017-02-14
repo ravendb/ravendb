@@ -444,7 +444,7 @@ namespace Raven.Client.Documents.Conventions
                     break;
             }
 
-            var item = new Tuple<Type, Func<ValueType, string>>(typeof(TEntity), o => func(o));
+            var item = new Tuple<Type, Func<ValueType, string>>(typeof(TEntity), func);
             _listOfRegisteredIdLoadConventions.Insert(index, item);
 
             return this;

@@ -21,9 +21,9 @@ namespace Raven.Client.Util.Encryption
 
         internal class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
         {
-            private readonly ObjectPool<MD5> md5Pool = new ObjectPool<MD5>(() => MD5.Create(), 16);
-            private readonly ObjectPool<SHA1> sha1Pool = new ObjectPool<SHA1>(() => SHA1.Create(), 16);
-            private readonly ObjectPool<SHA256> sha256Pool = new ObjectPool<SHA256>(() => SHA256.Create(), 16);
+            private readonly ObjectPool<MD5> md5Pool = new ObjectPool<MD5>(MD5.Create, 16);
+            private readonly ObjectPool<SHA1> sha1Pool = new ObjectPool<SHA1>(SHA1.Create, 16);
+            private readonly ObjectPool<SHA256> sha256Pool = new ObjectPool<SHA256>(SHA256.Create, 16);
 
             public DefaultHashEncryptor()
                 : this(true)
@@ -35,10 +35,7 @@ namespace Raven.Client.Util.Encryption
             {
             }
 
-            public int StorageHashSize
-            {
-                get { return 32; }
-            }
+            public int StorageHashSize => 32;
 
             public void Dispose()
             {

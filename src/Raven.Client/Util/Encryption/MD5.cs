@@ -24,10 +24,9 @@ namespace Raven.Client.Util.Encryption
         public uint D;
     }
 
-    public sealed class MD5Core
+    public static class MD5Core
     {
         //Prevent CSC from adding a default public constructor
-        private MD5Core() { }
 
         public static byte[] GetHash(string input, Encoding encoding)
         {
@@ -89,7 +88,7 @@ namespace Raven.Client.Util.Encryption
         public static byte[] GetHash(byte[] input)
         {
             if (null == input)
-                throw new ArgumentNullException("input", "Unable to calculate hash over null input data");
+                throw new ArgumentNullException(nameof(input), "Unable to calculate hash over null input data");
 
             //Initial values defined in RFC 1321
             var abcd = GetInitialStruct();
@@ -108,7 +107,7 @@ namespace Raven.Client.Util.Encryption
         public static byte[] GetHash(byte[] input, int offset, int length)
         {
             if (null == input)
-                throw new ArgumentNullException("input", "Unable to calculate hash over null input data");
+                throw new ArgumentNullException(nameof(input), "Unable to calculate hash over null input data");
 
             //Initial values defined in RFC 1321
             ABCDStruct abcd = new ABCDStruct();
@@ -248,7 +247,6 @@ namespace Raven.Client.Util.Encryption
             ABCDValue.B = unchecked(b + ABCDValue.B);
             ABCDValue.C = unchecked(c + ABCDValue.C);
             ABCDValue.D = unchecked(d + ABCDValue.D);
-            return;
         }
 
         //Manually unrolling these equations nets us a 20% performance improvement
@@ -298,13 +296,13 @@ namespace Raven.Client.Util.Encryption
         private static uint[] Converter(byte[] input, int ibStart)
         {
             if (null == input)
-                throw new ArgumentNullException("input", "Unable convert null array to array of uInts");
+                throw new ArgumentNullException(nameof(input), "Unable convert null array to array of uInts");
 
             uint[] result = new uint[16];
 
             for (int i = 0; i < 16; i++)
             {
-                result[i] = (uint)input[ibStart + i * 4];
+                result[i] = input[ibStart + i * 4];
                 result[i] += (uint)input[ibStart + i * 4 + 1] << 8;
                 result[i] += (uint)input[ibStart + i * 4 + 2] << 16;
                 result[i] += (uint)input[ibStart + i * 4 + 3] << 24;

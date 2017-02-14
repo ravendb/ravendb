@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Sparrow.Json;
 

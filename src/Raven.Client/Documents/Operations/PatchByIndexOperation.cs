@@ -40,7 +40,6 @@ namespace Raven.Client.Documents.Operations
 
         private class PatchByIndexCommand : RavenCommand<OperationIdResult>
         {
-            private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;
             private readonly string _indexName;
             private readonly IndexQuery _queryToUpdate;
@@ -60,7 +59,6 @@ namespace Raven.Client.Documents.Operations
                 if (patch == null)
                     throw new ArgumentNullException(nameof(patch));
 
-                _conventions = conventions;
                 _context = context;
                 _indexName = indexName;
                 _queryToUpdate = queryToUpdate;

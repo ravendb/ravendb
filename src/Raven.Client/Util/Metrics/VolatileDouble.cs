@@ -1,4 +1,5 @@
 using System.Threading;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Util.Metrics
 {
@@ -66,7 +67,7 @@ namespace Raven.Client.Util.Metrics
 
         public override string ToString()
         {
-            return Get().ToString();
+            return Get().ToInvariantString();
         }
     }
 }

@@ -7,7 +7,6 @@
 using System;
 using System.Globalization;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 
 namespace Raven.Client.Documents.Queries.Spatial

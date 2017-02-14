@@ -24,8 +24,8 @@ namespace Raven.Client.Documents.Indexes
     internal class ExpressionStringBuilder : ExpressionVisitor
     {
         // Fields
-        private static readonly char[] LiteralSymbolsToEscape = new[] { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };
-        private static readonly string[] LiteralEscapedSymbols = new[] { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
+        private static readonly char[] LiteralSymbolsToEscape = { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };
+        private static readonly string[] LiteralEscapedSymbols = { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
 
         private readonly StringBuilder _out = new StringBuilder();
         private readonly DocumentConventions convention;
@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Indexes
         private readonly bool translateIdentityProperty;
         private ExpressionOperatorPrecedence _currentPrecedence;
         private Dictionary<object, int> _ids;
-        private Dictionary<string, object> _duplicatedParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, object> _duplicatedParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         private bool castLambdas;
 
 
@@ -732,7 +732,7 @@ namespace Raven.Client.Documents.Indexes
             if (node.Value is string)
             {
                 Out("\"");
-                OutLiteral(node.Value as string);
+                OutLiteral((string)node.Value);
                 Out("\"");
                 return node;
             }
@@ -977,8 +977,7 @@ namespace Raven.Client.Documents.Indexes
         /// </returns>
         protected override Expression VisitDebugInfo(DebugInfoExpression node)
         {
-            var s = string.Format(CultureInfo.CurrentCulture, "<DebugInfo({0}: {1}, {2}, {3}, {4})>",
-                                  new object[] { node.Document.FileName, node.StartLine, node.StartColumn, node.EndLine, node.EndColumn });
+            var s = string.Format(CultureInfo.CurrentCulture, "<DebugInfo({0}: {1}, {2}, {3}, {4})>", node.Document.FileName, node.StartLine, node.StartColumn, node.EndLine, node.EndColumn);
             Out(s);
             return node;
         }
@@ -1048,7 +1047,7 @@ namespace Raven.Client.Documents.Indexes
         protected override Expression VisitExtension(Expression node)
         {
             throw new NotImplementedException();
-            
+
             /*const BindingFlags bindingAttr = BindingFlags.Public | BindingFlags.Instance;
 
             if (node.GetType().GetMethod("ToString", bindingAttr, null, ReflectionUtils.EmptyTypes, null).DeclaringType !=
@@ -1407,7 +1406,7 @@ namespace Raven.Client.Documents.Indexes
                     {
                         Out(methodInfo.Name);
                     }
-                    
+
                     Out("))");
                     return node;
                 }
@@ -1687,7 +1686,7 @@ namespace Raven.Client.Documents.Indexes
                 {
                     Out(", ");
                 }
-                if (node.Members != null && node.Members[i] != null)
+                if (node.Members?[i] != null)
                 {
                     Out(node.Members[i].Name);
                     Out(" = ");
@@ -1787,25 +1786,25 @@ namespace Raven.Client.Documents.Indexes
 
         private void OutputAppropriateArrayType(NewArrayExpression node)
         {
-                    if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
-                    {
-                        Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
-                    }
+            if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
+            {
+                Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
+            }
             else
-                    {
+            {
                 switch (node.NodeType)
                 {
                     case ExpressionType.NewArrayInit:
                         if (node.Expressions.Count == 0)
                         {
-                        Out("object");
-                    }
+                            Out("object");
+                        }
                         break;
-                case ExpressionType.NewArrayBounds:
+                    case ExpressionType.NewArrayBounds:
                         Out("object");
                         break;
+                }
             }
-        }
         }
 
         private static bool CheckIfAnonymousType(Type type)

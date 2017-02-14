@@ -65,12 +65,12 @@ namespace Raven.Client.Extensions
 
         public static Task<T> ContinueWithTask<T>(this Task task, Func<Task<T>> result)
         {
-            return task.WithResult<Task<T>>(result).Unwrap();
+            return task.WithResult(result).Unwrap();
         }
 
         public static Task ContinueWithTask(this Task task, Func<Task> result)
         {
-            return task.WithResult<Task>(result).Unwrap();
+            return task.WithResult(result).Unwrap();
         }
     }
 }

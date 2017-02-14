@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Session
@@ -15,7 +14,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implementation for async document session 
     /// </summary>
-    public partial class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
+    public partial class AsyncDocumentSession
     {
         /// <summary>
         /// Begin a load while including the specified path 

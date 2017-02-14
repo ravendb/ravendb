@@ -83,7 +83,7 @@ namespace Raven.Client.Logging
         {
             if(logger == null)
             {
-                throw new ArgumentException("logger is null", "logger");
+                throw new ArgumentException("logger is null", nameof(logger));
             }
         }
     }

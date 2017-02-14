@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using Raven.Client.Extensions;
 using Raven.Client.Logging.LogProviders;
 using Raven.Client.Util;
 using Sparrow.Collections;
@@ -70,11 +69,11 @@ namespace Raven.Client.Logging
 
         internal class NoOpLogger : ILog
         {
-            public bool IsInfoEnabled { get { return false; } }
+            public bool IsInfoEnabled => false;
 
-            public bool IsDebugEnabled { get { return false; } }
+            public bool IsDebugEnabled => false;
 
-            public bool IsWarnEnabled { get { return false; } }
+            public bool IsWarnEnabled => false;
 
             public void Log(LogLevel logLevel, Func<string> messageFunc)
             { }

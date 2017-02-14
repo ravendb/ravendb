@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
@@ -20,7 +19,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, IDocumentSessionImpl
+    public partial class DocumentSession
     {
         /// <summary>
         /// Begin a load while including the specified path 
@@ -116,8 +115,7 @@ namespace Raven.Client.Documents.Session
             var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
             var ids = new[] { id };
             var configuration = new LoadConfiguration();
-            if (configure != null)
-                configure(configuration);
+            configure?.Invoke(configuration);
 
             var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
                 ids,
@@ -138,8 +136,7 @@ namespace Raven.Client.Documents.Session
             var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
             var configuration = new LoadConfiguration();
-            if (configure != null)
-                configure(configuration);
+            configure?.Invoke(configuration);
 
             var idsArray = ids.ToArray();
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 
 namespace Raven.Client.Exceptions.Security

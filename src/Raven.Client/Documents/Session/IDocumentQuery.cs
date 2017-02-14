@@ -100,7 +100,6 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Sets a transformer to use after executing a query
         /// </summary>
-        /// <param name="resultsTransformer"></param>
         IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
             where TTransformer : AbstractTransformerCreationTask, new();
 

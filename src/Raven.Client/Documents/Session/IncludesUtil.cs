@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Session
             //Convert.ToDecimal()
             if (token is BlittableJsonReaderArray)
             {
-                var blitArray = token as BlittableJsonReaderArray;
+                var blitArray = (BlittableJsonReaderArray)token;
 
                 for (var i = 0; i < blitArray.Length; i++)
                 {
@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Session
             }
             else if (token is string)
             {
-                var value = token as string;
+                var value = (string)token;
 
                 // we need to check on both of them, with id & without id
                 // because people will do products/1 and detaisl/products/1 and want to be able

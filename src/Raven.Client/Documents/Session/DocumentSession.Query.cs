@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, IDocumentSessionImpl
+    public partial class DocumentSession
     {
         /// <summary>
         /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.

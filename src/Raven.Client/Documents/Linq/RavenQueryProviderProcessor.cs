@@ -1398,7 +1398,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private bool _insideSelect;
         private readonly bool _isMapReduce;
-        private Type _originalQueryType;
+        private readonly Type _originalQueryType;
         private bool _isNotEqualCheckBoundsToAndAlso;
 
         private void VisitSelect(Expression operand)

@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Spatial;

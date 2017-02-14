@@ -376,17 +376,11 @@ namespace Raven.Client.Documents
             EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();
-            try
-            {
-                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-                var requestExecuter = GetRequestExecuter(databaseName);
-                var session = new AsyncDocumentSession(databaseName, this, requestExecuter, sessionId);
-                //AfterSessionCreated(session);
-                return session;
-            }
-            finally
-            {
-            }
+            var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
+            var requestExecuter = GetRequestExecuter(databaseName);
+            var session = new AsyncDocumentSession(databaseName, this, requestExecuter, sessionId);
+            //AfterSessionCreated(session);
+            return session;
         }
 
         /// <summary>

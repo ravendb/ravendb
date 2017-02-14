@@ -31,10 +31,7 @@ namespace Raven.Client.Documents.Changes
             connectionTask = Task.Factory.ContinueWhenAll(new Task[] { docSub.Task, indexSub.Task }, tasks => { });
         }
 
-        public Task ConnectionTask
-        {
-            get { return connectionTask; }
-        }
+        public Task ConnectionTask => connectionTask;
 
         public void OnNext(DocumentChange change)
         {

@@ -138,11 +138,11 @@ namespace Raven.Client.Documents.Queries.Facets
             var name = string.Empty;
             if (other.Name.Body is MemberExpression)
             {
-                name = (other.Name.Body as MemberExpression).Member.Name;
+                name = ((MemberExpression)other.Name.Body).Member.Name;
             }
             else if (other.Name.Body is UnaryExpression)
             {
-                var operand = (other.Name.Body as UnaryExpression).Operand;
+                var operand = ((UnaryExpression)other.Name.Body).Operand;
                 if (operand is MemberExpression)
                 {
                     name = (operand as MemberExpression).Member.Name;

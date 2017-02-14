@@ -38,7 +38,6 @@ namespace Raven.Client.Documents.Operations
             {
                 ["Progress"] = Progress
             };
-            ;
         }
     }
 }

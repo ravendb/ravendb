@@ -6,7 +6,6 @@
 
 using System;
 using System.Threading;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Logging

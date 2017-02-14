@@ -36,10 +36,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public bool IsSetForDefaultDatabase
-        {
-            get { return forDefaultDatabase.Count > 0; }
-        }
+        public bool IsSetForDefaultDatabase => forDefaultDatabase.Count > 0;
 
         public bool IsSetForDatabase(string databaseName)
         {

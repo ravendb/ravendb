@@ -212,7 +212,7 @@ namespace Raven.Client.Documents.Indexes
                 var admin = new AdminOperationExecuter(store, requestExecuter, context);
                 indexDefinition.MinimumEtagBeforeReplace = minimumEtagBeforeReplace;
                 indexDefinition.Name = IndexName;
-                var putIndexOperation = new PutIndexesOperation(new []{indexDefinition});
+                var putIndexOperation = new PutIndexesOperation(indexDefinition);
                 admin.Send(putIndexOperation);
 
                 if (Priority != null)
@@ -236,7 +236,7 @@ namespace Raven.Client.Documents.Indexes
                 var admin = new AdminOperationExecuter(store, requestExecuter, context);
                 indexDefinition.MinimumEtagBeforeReplace = minimumEtagBeforeReplace;
                 indexDefinition.Name = IndexName;
-                var putIndexOperation = new PutIndexesOperation(new[] { indexDefinition });
+                var putIndexOperation = new PutIndexesOperation(indexDefinition);
 
                 await admin.SendAsync(putIndexOperation).ConfigureAwait(false);
 

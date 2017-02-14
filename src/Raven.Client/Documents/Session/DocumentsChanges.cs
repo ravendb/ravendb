@@ -54,18 +54,18 @@ namespace Raven.Client.Documents.Session
                    && string.Equals(FieldOldType, other.FieldOldType)
                    && string.Equals(FieldName, other.FieldName)
                    && string.Equals(FieldNewType, other.FieldNewType)
-                   && Change ==  other.Change;
+                   && Change == other.Change;
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                int hashCode = (FieldOldValue != null ? FieldOldValue.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (FieldNewValue != null ? FieldNewValue.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (FieldOldType != null ? FieldOldType.GetHashCode() : 0);
+                int hashCode = FieldOldValue?.GetHashCode() ?? 0;
+                hashCode = (hashCode * 397) ^ (FieldNewValue?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (FieldOldType != null ? FieldOldType.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (FieldNewType != null ? FieldNewType.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (FieldName != null ? FieldName.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (FieldName?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Change.GetHashCode());
                 return hashCode;
             }
@@ -76,8 +76,8 @@ namespace Raven.Client.Documents.Session
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((DocumentsChanges) obj);
+            return Equals((DocumentsChanges)obj);
         }
     }
-    
+
 }

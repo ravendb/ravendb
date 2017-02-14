@@ -38,7 +38,7 @@ namespace Raven.Client.Json
 
                     if (prop.Value is BlittableJsonReaderBase)
                     {
-                        var itemAsBlittable = prop.Value as BlittableJsonReaderBase;
+                        var itemAsBlittable = (BlittableJsonReaderBase)prop.Value;
                         foreach (var subItem in itemAsBlittable.SelectTokenWithRavenSyntaxReturningFlatStructure(string.Join(",", pathParts.Skip(1).ToArray())))
                         {
                             yield return subItem;

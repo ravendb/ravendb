@@ -142,10 +142,7 @@ namespace Raven.Client.Documents.Session
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
         public EntityToBlittable EntityToBlittable { get; }
 
-        public BlittableOperation BlittableOperation
-        {
-            get { return _blittableOperation; }
-        }
+        public BlittableOperation BlittableOperation => _blittableOperation;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.

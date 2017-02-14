@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Session
@@ -15,7 +14,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, IDocumentSessionImpl
+    public partial class DocumentSession
     {
         /// <summary>
         /// Begin a load while including the specified path

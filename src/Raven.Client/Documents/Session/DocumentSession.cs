@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Session
         public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
-            return DeleteByIndex<T>(indexCreator.IndexName, expression);
+            return DeleteByIndex(indexCreator.IndexName, expression);
         }
 
         public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)

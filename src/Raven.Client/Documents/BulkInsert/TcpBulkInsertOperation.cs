@@ -38,7 +38,6 @@ namespace Raven.Client.Documents.BulkInsert
         private bool _isThrottling;
         private readonly long _maxDiffSizeBeforeThrottling = 20L * 1024 * 1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
         private TcpClient _tcpClient;
-        private string _url;
         private readonly JsonContextPool _contextPool;
 
         private readonly ManualResetEventSlim _headerResponseFinished = new ManualResetEventSlim();
