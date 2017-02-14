@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using FastTests.Server.Replication;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Replication;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Replication;
 using Xunit;
 
 namespace FastTests.Issues
