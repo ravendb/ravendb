@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private bool TryGetByName(string name, out object result)
         {
             // Using ordinal ignore case versions to avoid the cast of calling String.Equals with non interned values.
-            if (string.Compare(name, Constants.Indexing.Fields.DocumentIdFieldName, StringComparison.Ordinal) == 0 || 
+            if (string.Compare(name, Constants.Documents.Indexing.Fields.DocumentIdFieldName, StringComparison.Ordinal) == 0 || 
                 string.Compare(name, "Id", StringComparison.Ordinal) == 0 )
             {
                 if (BlittableJson.TryGetMember(name, out result))
@@ -76,15 +76,15 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 switch (name)
                 {
-                    case Constants.Metadata.Id:
+                    case Constants.Documents.Metadata.Id:
                         result = _doc.Key;
                         getResult = true;
                         break;
-                    case Constants.Metadata.Etag:
+                    case Constants.Documents.Metadata.Etag:
                         result = _doc.Etag;
                         getResult = true;
                         break;
-                    case Constants.Metadata.LastModified:
+                    case Constants.Documents.Metadata.LastModified:
                         result = _doc.LastModified;
                         getResult = true;
                         break;
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             result = TypeConverter.ToDynamicType(result);
 
-            if (string.Compare(name,Constants.Metadata.Key, StringComparison.Ordinal) == 0)
+            if (string.Compare(name,Constants.Documents.Metadata.Key, StringComparison.Ordinal) == 0)
             {
                 ((DynamicBlittableJson) result)._doc = _doc;
             }

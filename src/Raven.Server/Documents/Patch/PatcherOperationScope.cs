@@ -146,8 +146,8 @@ namespace Raven.Server.Documents.Patch
         {
             foreach (var property in jsObject.GetOwnProperties())
             {
-                if (property.Key == Constants.Indexing.Fields.ReduceKeyFieldName ||
-                    property.Key == Constants.Indexing.Fields.DocumentIdFieldName)
+                if (property.Key == Constants.Documents.Indexing.Fields.ReduceKeyFieldName ||
+                    property.Key == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     continue;
 
                 var value = property.Value.Value;
@@ -290,7 +290,7 @@ namespace Raven.Server.Documents.Patch
             var obj = new DynamicJsonValue();
             foreach (var property in jsObject.GetOwnProperties())
             {
-                if (property.Key == Constants.Indexing.Fields.ReduceKeyFieldName || property.Key == Constants.Indexing.Fields.DocumentIdFieldName)
+                if (property.Key == Constants.Documents.Indexing.Fields.ReduceKeyFieldName || property.Key == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     continue;
 
                 var value = property.Value.Value;

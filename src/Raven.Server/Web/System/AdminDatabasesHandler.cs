@@ -35,7 +35,7 @@ namespace Raven.Server.Web.System
             {
                 context.OpenReadTransaction();
 
-                var dbId = Constants.Database.Prefix + name;
+                var dbId = Constants.Documents.Prefix + name;
                 long etag;
                 using (var dbDoc = ServerStore.Read(context, dbId, out etag))
                 {
@@ -93,7 +93,7 @@ namespace Raven.Server.Web.System
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                var dbId = Constants.Database.Prefix + name;
+                var dbId = Constants.Documents.Prefix + name;
 
                 var etagAsString = HttpContext.Request.Headers["ETag"];
                 long etag;
@@ -235,7 +235,7 @@ namespace Raven.Server.Web.System
         {
             ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
             {
-                var dbId = Constants.Database.Prefix + name;
+                var dbId = Constants.Documents.Prefix + name;
                 using (var tx = context.OpenWriteTransaction())
                 {
                     ServerStore.Delete(context, dbId);

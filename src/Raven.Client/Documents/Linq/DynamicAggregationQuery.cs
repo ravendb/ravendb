@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Linq
             var propertyPath = path.ToPropertyPath('_');
             if (IsNumeric(path))
             {
-                var tmp = propertyPath + Constants.Indexing.Fields.RangeFieldSuffix;
+                var tmp = propertyPath + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
                 _renames[propertyPath] = tmp;
                 propertyPath = tmp;
             }

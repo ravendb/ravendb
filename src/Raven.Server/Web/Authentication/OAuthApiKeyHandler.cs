@@ -236,7 +236,7 @@ namespace Raven.Server.Web.Authentication
             {
                 context.OpenReadTransaction();
 
-                var apiDoc = ServerStore.Read(context, Constants.ApiKeyPrefix + apiKeyName);
+                var apiDoc = ServerStore.Read(context, Constants.ApiKeys.Prefix + apiKeyName);
 
                 if (apiDoc == null)
                 {

@@ -1108,7 +1108,7 @@ namespace Raven.Server.Json
 
             writer.WriteStartObject();
             BlittableJsonReaderObject metadata;
-            document.Data.TryGet(Constants.Metadata.Key, out metadata);
+            document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
             WriteMetadata(writer, document, metadata);
 
             writer.WriteEndObject();
@@ -1116,7 +1116,7 @@ namespace Raven.Server.Json
 
         private static void WriteMetadata(BlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata)
         {
-            writer.WritePropertyName(Constants.Metadata.Key);
+            writer.WritePropertyName(Constants.Documents.Metadata.Key);
             writer.WriteStartObject();
             bool first = true;
             if (metadata != null)
@@ -1143,7 +1143,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 }
                 first = false;
-                writer.WritePropertyName(Constants.Metadata.Flags);
+                writer.WritePropertyName(Constants.Documents.Metadata.Flags);
                 writer.WriteString(document.Flags.ToString());
             }
             if (document.Etag != 0)
@@ -1153,7 +1153,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 }
                 first = false;
-                writer.WritePropertyName(Constants.Metadata.Etag);
+                writer.WritePropertyName(Constants.Documents.Metadata.Etag);
                 writer.WriteInteger(document.Etag);
             }
             if (document.Key != null)
@@ -1163,7 +1163,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 }
                 first = false;
-                writer.WritePropertyName(Constants.Metadata.Id);
+                writer.WritePropertyName(Constants.Documents.Metadata.Id);
                 writer.WriteString(document.Key);
 
             }
@@ -1174,7 +1174,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 }
                 first = false;
-                writer.WritePropertyName(Constants.Metadata.IndexScore);
+                writer.WritePropertyName(Constants.Documents.Metadata.IndexScore);
                 writer.WriteDouble(document.IndexScore.Value);
             }
             if (document.LastModified != DateTime.MinValue)
@@ -1184,7 +1184,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 }
                 first = false;
-                writer.WritePropertyName(Constants.Metadata.LastModified);
+                writer.WritePropertyName(Constants.Documents.Metadata.LastModified);
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }
             writer.WriteEndObject();
@@ -1197,7 +1197,7 @@ namespace Raven.Server.Json
 
             writer.WriteStartObject();
 
-            var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Metadata.Key);
+            var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
             bool first = true;
             BlittableJsonReaderObject metadata = null;
             var size = document.Data.GetPropertiesByInsertionOrder(_buffers);

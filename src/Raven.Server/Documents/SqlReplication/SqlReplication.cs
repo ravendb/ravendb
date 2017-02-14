@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         private void LoadLastEtag(DocumentsOperationContext context)
         {
-            var sqlReplicationStatus = _database.DocumentsStorage.Get(context, Constants.SqlReplication.RavenSqlReplicationStatusPrefix + ReplicationUniqueName);
+            var sqlReplicationStatus = _database.DocumentsStorage.Get(context, Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + ReplicationUniqueName);
             if (sqlReplicationStatus == null)
             {
                 Statistics.LastReplicatedEtag = 0;
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         private void WriteLastEtag(DocumentsOperationContext context)
         {
-            var key = Constants.SqlReplication.RavenSqlReplicationStatusPrefix + ReplicationUniqueName;
+            var key = Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + ReplicationUniqueName;
             var document = context.ReadObject(new DynamicJsonValue
             {
                 ["Name"] = ReplicationUniqueName,

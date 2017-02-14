@@ -46,9 +46,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                             {
                                 ["Location"] = "Poland",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -58,9 +58,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
                             {
                                 ["Location"] = "Poland",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -152,9 +152,9 @@ select new
                                         ["Price"] = 10.7
                                     }
                                 },
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Orders"
+                                    [Constants.Documents.Metadata.Collection] = "Orders"
                                 }
                             }))
                             {
@@ -171,9 +171,9 @@ select new
                                         ["Price"] = 10.5
                                     }
                                 },
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Orders"
+                                    [Constants.Documents.Metadata.Collection] = "Orders"
                                 }
                             }))
                             {
@@ -256,9 +256,9 @@ select new
                         using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                         {
                             ["Location"] = "Poland",
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         }))
                         {

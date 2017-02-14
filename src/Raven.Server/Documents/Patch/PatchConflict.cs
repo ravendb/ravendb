@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Patch
                 writer.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                 writer.StartWriteObjectDocument();
                 writer.StartWriteObject();
-                var resolvedMetadata = obj.Get(Constants.Metadata.Key);
+                var resolvedMetadata = obj.Get(Constants.Documents.Metadata.Key);
                 if (resolvedMetadata == null ||
                     resolvedMetadata == JsValue.Undefined)
                 {
@@ -131,12 +131,12 @@ namespace Raven.Server.Documents.Patch
                     foreach (var doc in _docs)
                     {
                         BlittableJsonReaderObject metadata;
-                        if (doc.Doc.TryGet(Constants.Metadata.Key, out metadata) == false)
+                        if (doc.Doc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                         {
                             continue;
                         }
 
-                        writer.WritePropertyName(Constants.Metadata.Key);
+                        writer.WritePropertyName(Constants.Documents.Metadata.Key);
                         writer.StartWriteObject();
 
                         var prop = new BlittableJsonReaderObject.PropertyDetails();

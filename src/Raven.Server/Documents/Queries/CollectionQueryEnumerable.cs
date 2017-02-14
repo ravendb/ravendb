@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Queries
             _documents = documents;
             _fieldsToFetch = fieldsToFetch;
             _collection = collection;
-            _isAllDocsCollection = collection == Constants.Indexing.AllDocumentsCollection;
+            _isAllDocsCollection = collection == Constants.Documents.Indexing.AllDocumentsCollection;
             _query = query;
             _context = context;
         }
@@ -45,8 +45,8 @@ namespace Raven.Server.Documents.Queries
         private class Enumerator : IEnumerator<Document>
         {
             private static readonly char[] InSeparator = { ',' };
-            private static readonly string InPrefix = $"@in<{Constants.Indexing.Fields.DocumentIdFieldName}>:";
-            private static readonly string EqualPrefix = $"{Constants.Indexing.Fields.DocumentIdFieldName}:";
+            private static readonly string InPrefix = $"@in<{Constants.Documents.Indexing.Fields.DocumentIdFieldName}>:";
+            private static readonly string EqualPrefix = $"{Constants.Documents.Indexing.Fields.DocumentIdFieldName}:";
 
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Queries
 
                 var randomField = query.SortedFields[0];
 
-                Debug.Assert(randomField.Field.StartsWith(Constants.Indexing.Fields.RandomFieldName));
+                Debug.Assert(randomField.Field.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName));
 
                 var customFieldName = SortFieldHelper.ExtractName(randomField.Field);
 
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Queries
                 if (string.IsNullOrWhiteSpace(query.Query))
                     return null;
 
-                return SimpleQueryParser.GetTermValuesForField(query, Constants.Indexing.Fields.DocumentIdFieldName)
+                return SimpleQueryParser.GetTermValuesForField(query, Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     .Select(id =>
                     {
                         Slice key;

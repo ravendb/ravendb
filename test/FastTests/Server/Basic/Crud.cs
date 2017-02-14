@@ -51,7 +51,7 @@ namespace FastTests.Server.Basic
                     {
                         ["Name"] = "Fitzchak",
                         ["LastName"] = "Very big value here, so can reproduce the issue",
-                        [Constants.Metadata.Key] = new DynamicJsonValue
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
                             ["SomeMoreData"] = "Make this object bigger",
                             ["SomeMoreData2"] = "Make this object bigger",

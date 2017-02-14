@@ -22,7 +22,7 @@ namespace SlowTests.MailingList
                         FirstName = "Oren"
                     }, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "Users"}
+                        {Constants.Documents.Metadata.Collection, "Users"}
                     });
 
                     commands.Put("b", null, new
@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
                         FirstName = "Ayende"
                     }, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "users"}
+                        {Constants.Documents.Metadata.Collection, "users"}
                     });
                 }
 
@@ -55,7 +55,7 @@ namespace SlowTests.MailingList
                         FirstName = "Oren"
                     }, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "Users"}
+                        {Constants.Documents.Metadata.Collection, "Users"}
                     });
 
                     commands.Put("b", null, new
@@ -63,7 +63,7 @@ namespace SlowTests.MailingList
                         FirstName = "Ayende"
                     }, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "users"}
+                        {Constants.Documents.Metadata.Collection, "users"}
                     });
                 }
 

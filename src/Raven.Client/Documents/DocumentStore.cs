@@ -426,7 +426,7 @@ namespace Raven.Client.Documents
 
         public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
         {
-            var databaseName = database ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.SystemDatabase;
+            var databaseName = database ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.Documents.SystemDatabase;
             var changes = _observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
 
             return changes == null ? new CompletedTask() : changes.ConnectionTask;

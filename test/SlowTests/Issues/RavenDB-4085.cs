@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                         {
                             commands.Put("users/" + (i + 1), null, new { Name = "test #" + i }, new Dictionary<string, string>
                             {
-                                { Constants.Metadata.Collection, "Users" }
+                                { Constants.Documents.Metadata.Collection, "Users" }
                             });
                         }
                     }

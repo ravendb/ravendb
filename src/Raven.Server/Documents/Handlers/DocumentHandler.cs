@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Handlers
                     if (etag == document.Etag)
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     else
-                        HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + document.Etag + "\"";
+                        HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + document.Etag + "\"";
                 }
 
                 return Task.CompletedTask;
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + actualEtag + "\"";
+            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
             var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
 

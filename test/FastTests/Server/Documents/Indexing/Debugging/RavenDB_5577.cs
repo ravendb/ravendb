@@ -216,9 +216,9 @@ select new
                         ["Price"] = 10.7
                     }
                 },
-                [Constants.Metadata.Key] = new DynamicJsonValue
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                 {
-                    [Constants.Metadata.Collection] = "Orders"
+                    [Constants.Documents.Metadata.Collection] = "Orders"
                 }
             };
         }

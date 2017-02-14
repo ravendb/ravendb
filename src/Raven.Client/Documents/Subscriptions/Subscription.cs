@@ -456,11 +456,11 @@ namespace Raven.Client.Documents.Subscriptions
             BlittableJsonReaderObject metadata;
             string id;
 
-            if (curDoc.TryGet(Constants.Metadata.Key, out metadata) == false)
+            if (curDoc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                 ThrowMetadataRequired();
-            if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
                 ThrowIdRequired();
-            if (metadata.TryGet(Constants.Metadata.Etag, out lastReceivedEtag) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Etag, out lastReceivedEtag) == false)
                 ThrowEtagRequired();
 
             if (_logger.IsInfoEnabled)

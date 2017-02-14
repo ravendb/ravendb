@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Expiration
             {
                 context.OpenReadTransaction();
 
-                var configuration = database.DocumentsStorage.Get(context, Constants.Expiration.ConfigurationDocumentKey);
+                var configuration = database.DocumentsStorage.Get(context, Constants.Documents.Expiration.ConfigurationKey);
                 if (configuration == null)
                     return null;
 
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Expiration
                     //TODO: Raise alert, or maybe handle this via a db load error that can be turned off with 
                     //TODO: a config
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Cannot enable expired documents cleaner as the configuration document {Constants.Expiration.ConfigurationDocumentKey} is not valid: {configuration.Data}", e);
+                        _logger.Operations($"Cannot enable expired documents cleaner as the configuration document {Constants.Documents.Expiration.ConfigurationKey} is not valid: {configuration.Data}", e);
                     return null;
                 }
             }
@@ -157,8 +157,8 @@ namespace Raven.Server.Documents.Expiration
                                     // We have to check this as the user can update this valud.
                                     string expirationDate;
                                     BlittableJsonReaderObject metadata;
-                                    if (document.Data.TryGet(Constants.Metadata.Key, out metadata) == false ||
-                                        metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate) == false)
+                                    if (document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+                                        metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out expirationDate) == false)
                                         continue;
 
                                     DateTime date;
@@ -205,8 +205,8 @@ namespace Raven.Server.Documents.Expiration
         {
             string expirationDate;
             BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate) == false)
+            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out expirationDate) == false)
                 return;
 
             DateTime date;

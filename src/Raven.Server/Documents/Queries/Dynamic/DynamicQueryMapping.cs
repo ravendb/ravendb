@@ -122,28 +122,28 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         var field = sortedField.Field;
 
-                        if (field == Constants.Indexing.Fields.IndexFieldScoreName)
+                        if (field == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                             continue;
 
-                        if (field.StartsWith(Constants.Indexing.Fields.RandomFieldName) ||
-                            field.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
+                        if (field.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
+                            field.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                             continue;
 
-                        if (InvariantCompare.IsPrefix(field, Constants.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
+                        if (InvariantCompare.IsPrefix(field, Constants.Documents.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
                         {
                             field = SortFieldHelper.ExtractName(field);
                         }
 
-                        if (InvariantCompare.IsSuffix(field, Constants.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
-                            field = field.Substring(0, field.Length - Constants.Indexing.Fields.RangeFieldSuffix.Length);
+                        if (InvariantCompare.IsSuffix(field, Constants.Documents.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
+                            field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length);
 
                         fields.Add(Tuple.Create(SimpleQueryParser.TranslateField(field), field));
                     }
                 }
 
-                dynamicMapFields = fields.Select(x => new DynamicQueryMappingItem(x.Item1.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix) ? x.Item1.Substring(0, x.Item1.Length - Constants.Indexing.Fields.RangeFieldSuffix.Length) : x.Item1, FieldMapReduceOperation.None));
+                dynamicMapFields = fields.Select(x => new DynamicQueryMappingItem(x.Item1.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) ? x.Item1.Substring(0, x.Item1.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length) : x.Item1, FieldMapReduceOperation.None));
 
-                numericFields = fields.Where(x => x.Item1.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix)).Select(x => x.Item1).Distinct().ToArray();
+                numericFields = fields.Where(x => x.Item1.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix)).Select(x => x.Item1).Distinct().ToArray();
             }
             else
             {
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             result.MapFields = dynamicMapFields
-                .Where(x => x.Name != Constants.Indexing.Fields.DocumentIdFieldName)
+                .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 .OrderByDescending(x => x.Name.Length)
                 .ToArray();
 
@@ -178,15 +178,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 foreach (var key in numericFields)
                 {
-                    if (key == Constants.Indexing.Fields.IndexFieldScoreName)
+                    if (key == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                         continue;
 
-                    if (InvariantCompare.IsPrefix(key, Constants.Indexing.Fields.RandomFieldName, CompareOptions.None))
+                    if (InvariantCompare.IsPrefix(key, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
                         continue;
 
                     sortInfo.Add(new DynamicSortInfo
                     {
-                        Name = key.Substring(0, key.Length - Constants.Indexing.Fields.RangeFieldSuffix.Length),
+                        Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length),
                         FieldType = SortOptions.NumericDefault
                     });
                 }
@@ -198,17 +198,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     var key = sortOptions.Field;
 
-                    if (key == Constants.Indexing.Fields.IndexFieldScoreName)
+                    if (key == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                         continue;
 
-                    if (InvariantCompare.IsPrefix(key, Constants.Indexing.Fields.RandomFieldName, CompareOptions.None))
+                    if (InvariantCompare.IsPrefix(key, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
                         continue;
 
-                    if (InvariantCompare.IsSuffix(key, Constants.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
+                    if (InvariantCompare.IsSuffix(key, Constants.Documents.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
                     {
                         sortInfo.Add(new DynamicSortInfo
                         {
-                            Name = key.Substring(0, key.Length - Constants.Indexing.Fields.RangeFieldSuffix.Length),
+                            Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length),
                             FieldType = SortOptions.NumericDefault
                         });
                     }

@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
 
                         Assert.NotNull(enumerator.Current.Key);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
                     }
                 }
             }
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
 
                         Assert.NotNull(enumerator.Current.Key);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
                     }
                 }
             }

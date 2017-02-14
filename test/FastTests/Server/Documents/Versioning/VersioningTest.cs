@@ -36,7 +36,7 @@ namespace FastTests.Server.Documents.Versioning
                             Active = false,
                         },
                     }
-                }, Constants.Versioning.RavenVersioningConfiguration);
+                }, Constants.Documents.Versioning.ConfigurationKey);
 
                 await session.SaveChangesAsync();
             }

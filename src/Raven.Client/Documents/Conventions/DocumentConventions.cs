@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Conventions
             {
                 BlittableJsonReaderObject metadata;
                 string clrType;
-                if (doc.TryGet(Constants.Metadata.Key, out metadata) && metadata.TryGet(Constants.Headers.RavenClrType, out clrType))
+                if (doc.TryGet(Constants.Documents.Metadata.Key, out metadata) && metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out clrType))
                 {
                     return clrType;
                 }

@@ -158,7 +158,7 @@ namespace Raven.Client.Documents.Queries.Facets
                     type == typeof(short) ||
                     type == typeof(float) ||
                     type == typeof(decimal))
-                    name += Constants.Indexing.Fields.RangeFieldSuffix;
+                    name += Constants.Documents.Indexing.Fields.RangeFieldSuffix;
             }
 
             return new Facet

@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Queries.Spatial
         /// </summary>
         public SpatialUnits? RadiusUnitOverride { get; set; }
 
-        public string SpatialFieldName { get; set; } = Constants.Indexing.Fields.DefaultSpatialFieldName;
+        public string SpatialFieldName { get; set; } = Constants.Documents.Indexing.Fields.DefaultSpatialFieldName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Queries.Spatial
         /// </summary>
         public SpatialIndexQuery(DocumentConventions conventions) : base(conventions)
         {
-            DistanceErrorPercentage = Constants.DefaultSpatialDistanceErrorPct;
+            DistanceErrorPercentage = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
         }
 
         /// <summary>

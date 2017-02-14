@@ -58,7 +58,7 @@ namespace SlowTests.MailingList
 
                     commands.Put("patrons/1", null, json, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "patrons"}
+                        {Constants.Documents.Metadata.Collection, "patrons"}
                     });
                 }
 

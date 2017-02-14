@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection)
         {
-            var isAllDocsCollection = collection == Constants.Indexing.AllDocumentsCollection;
+            var isAllDocsCollection = collection == Constants.Documents.Indexing.AllDocumentsCollection;
 
             // we optimize for empty queries without sorting options
             resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : collection;
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var buffer = stackalloc long[3];
 
-            if (collection == Constants.Indexing.AllDocumentsCollection)
+            if (collection == Constants.Documents.Indexing.AllDocumentsCollection)
             {
                 var numberOfDocuments = _documents.GetNumberOfDocuments(_context);
                 buffer[0] = DocumentsStorage.ReadLastDocumentEtag(_context.Transaction.InnerTransaction);
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         private Index MatchIndex(string dynamicIndexName, IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, out string collection)
         {
             collection = dynamicIndexName.Length == DynamicIndex.Length
-                ? Constants.Indexing.AllDocumentsCollection
+                ? Constants.Documents.Indexing.AllDocumentsCollection
                 : dynamicIndexName.Substring(DynamicIndexPrefix.Length);
 
             var map = DynamicQueryMapping.Create(collection, query);

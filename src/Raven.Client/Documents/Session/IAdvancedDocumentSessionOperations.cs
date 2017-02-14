@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Sparrow.Json;
 

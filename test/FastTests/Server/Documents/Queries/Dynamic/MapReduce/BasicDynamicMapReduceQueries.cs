@@ -330,7 +330,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                         var json = (DynamicBlittableJson)r;
                         Assert.Equal(2, json.BlittableJson.Count);
                         Assert.True(json.ContainsKey("City"));
-                        Assert.True(json.ContainsKey(Constants.Metadata.Key));
+                        Assert.True(json.ContainsKey(Constants.Documents.Metadata.Key));
 
                         var city = r.City;
                         Assert.True(cities.Remove(city));

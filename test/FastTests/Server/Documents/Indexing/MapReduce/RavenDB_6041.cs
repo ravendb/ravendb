@@ -51,9 +51,9 @@ select new
                                 var user = new DynamicJsonValue()
                                 {
                                     ["Location"] = randomLocation,
-                                    [Constants.Metadata.Key] = new DynamicJsonValue
+                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                     {
-                                        [Constants.Metadata.Collection] = "Users"
+                                        [Constants.Documents.Metadata.Collection] = "Users"
                                     }
                                 };
 

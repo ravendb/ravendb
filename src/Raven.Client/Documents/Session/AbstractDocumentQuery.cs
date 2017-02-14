@@ -220,17 +220,12 @@ namespace Raven.Client.Documents.Session
         protected AfterStreamExecutedDelegate AfterStreamExecutedCallback;
         protected long? CutoffEtag;
 
-        private int? _defaultTimeout;
-
         private TimeSpan DefaultTimeout
         {
             get
             {
                 if (Debugger.IsAttached) // increase timeout if we are debugging
                     return TimeSpan.FromMinutes(15);
-
-                if (_defaultTimeout.HasValue)
-                    return TimeSpan.FromSeconds(_defaultTimeout.Value);
 
                 return TimeSpan.FromSeconds(15);
             }
@@ -256,13 +251,6 @@ namespace Raven.Client.Documents.Session
 
             _conventions = theSession == null ? new DocumentConventions() : theSession.Conventions;
             _linqPathProvider = new LinqPathProvider(_conventions);
-
-            var timeoutAsString = Environment.GetEnvironmentVariable(Constants.RavenDefaultQueryTimeout);
-            int defaultTimeout;
-            if (!string.IsNullOrEmpty(timeoutAsString) && int.TryParse(timeoutAsString, out defaultTimeout))
-            {
-                _defaultTimeout = defaultTimeout;
-            }
         }
 
         private void UpdateStatsAndHighlightings(QueryResult queryResult)
@@ -336,7 +324,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance()
         {
-            OrderBy(Constants.Indexing.Fields.DistanceFieldName);
+            OrderBy(Constants.Documents.Indexing.Fields.DistanceFieldName);
             return this;
         }
 
@@ -345,7 +333,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng)));
+            OrderBy(string.Format("{0};{1};{2}", Constants.Documents.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng)));
             return this;
         }
 
@@ -354,7 +342,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng, string sortedFieldName)
         {
-            OrderBy($"{Constants.Indexing.Fields.DistanceFieldName};{CharExtensions.ToInvariantString(lat)};{CharExtensions.ToInvariantString(lng)};{sortedFieldName}");
+            OrderBy($"{Constants.Documents.Indexing.Fields.DistanceFieldName};{CharExtensions.ToInvariantString(lat)};{CharExtensions.ToInvariantString(lng)};{sortedFieldName}");
             return this;
         }
 
@@ -367,7 +355,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="distErrorPercent">Gets the error distance that specifies how precise the query shape is.</param>
         IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, double distErrorPercent)
         {
-            GenerateQueryWithinRadiusOf(Constants.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent);
+            GenerateQueryWithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent);
             return this;
         }
 
@@ -387,7 +375,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="distErrorPercent">Gets the error distance that specifies how precise the query shape is</param>
         IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
         {
-            GenerateQueryWithinRadiusOf(Constants.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent, radiusUnits);
+            GenerateQueryWithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent, radiusUnits);
             return this;
         }
 
@@ -744,7 +732,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void AlphaNumericOrdering(string fieldName, bool descending)
         {
-            AddOrder(Constants.Indexing.Fields.AlphaNumericFieldName + ";" + fieldName, descending);
+            AddOrder(Constants.Documents.Indexing.Fields.AlphaNumericFieldName + ";" + fieldName, descending);
         }
 
         /// <summary>
@@ -752,7 +740,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering()
         {
-            AddOrder(Constants.Indexing.Fields.RandomFieldName + ";" + Guid.NewGuid(), false);
+            AddOrder(Constants.Documents.Indexing.Fields.RandomFieldName + ";" + Guid.NewGuid(), false);
         }
 
         /// <summary>
@@ -761,12 +749,12 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering(string seed)
         {
-            AddOrder(Constants.Indexing.Fields.RandomFieldName + ";" + seed, false);
+            AddOrder(Constants.Documents.Indexing.Fields.RandomFieldName + ";" + seed, false);
         }
 
         public void CustomSortUsing(string typeName, bool descending)
         {
-            AddOrder(Constants.Indexing.Fields.CustomSortFieldName + ";" + typeName, descending);
+            AddOrder(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName, descending);
         }
 
         public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
@@ -1147,7 +1135,7 @@ If you really want to do in memory filtering on the data returned from the query
                 {
                     DynamicMapReduceField renamedField;
 
-                    if (whereParams.FieldName.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
+                    if (whereParams.FieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
                     {
                         var name = whereParams.FieldName.Substring(0, whereParams.FieldName.Length - 6);
 
@@ -1155,7 +1143,7 @@ If you really want to do in memory filtering on the data returned from the query
 
                         if (renamedField != null)
                         {
-                            return whereParams.FieldName = renamedField.Name + Constants.Indexing.Fields.RangeFieldSuffix;
+                            return whereParams.FieldName = renamedField.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
                         }
                     }
                     else
@@ -1176,7 +1164,7 @@ If you really want to do in memory filtering on the data returned from the query
                 if (identityProperty != null && identityProperty.Name == whereParams.FieldName)
                 {
                     whereParams.FieldTypeForIdentifier = rootType;
-                    return whereParams.FieldName = Constants.Indexing.Fields.DocumentIdFieldName;
+                    return whereParams.FieldName = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
                 }
             }
 
@@ -1364,12 +1352,12 @@ If you really want to do in memory filtering on the data returned from the query
         {
             fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
 
-            if (fieldName == Constants.Indexing.Fields.DocumentIdFieldName)
+            if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 return fieldName;
 
             var val = (start ?? end);
-            if (_conventions.UsesRangeType(val) && !fieldName.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
-                fieldName = fieldName + Constants.Indexing.Fields.RangeFieldSuffix;
+            if (_conventions.UsesRangeType(val) && !fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
+                fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
             return fieldName;
         }
 
@@ -1836,11 +1824,11 @@ If you really want to do in memory filtering on the data returned from the query
         {
             if (whereParams.Value == null)
             {
-                return Constants.NullValueNotAnalyzed;
+                return Constants.Documents.Indexing.Fields.NullValueNotAnalyzed;
             }
             if (Equals(whereParams.Value, string.Empty))
             {
-                return Constants.EmptyStringNotAnalyzed;
+                return Constants.Documents.Indexing.Fields.EmptyStringNotAnalyzed;
             }
 
             var type = whereParams.Value.GetType().GetNonNullableType();
@@ -1960,9 +1948,9 @@ If you really want to do in memory filtering on the data returned from the query
         private string TransformToRangeValue(WhereParams whereParams)
         {
             if (whereParams.Value == null)
-                return Constants.NullValueNotAnalyzed;
+                return Constants.Documents.Indexing.Fields.NullValueNotAnalyzed;
             if (Equals(whereParams.Value, string.Empty))
-                return Constants.EmptyStringNotAnalyzed;
+                return Constants.Documents.Indexing.Fields.EmptyStringNotAnalyzed;
 
             if (whereParams.Value is DateTime)
             {
@@ -2036,7 +2024,7 @@ If you really want to do in memory filtering on the data returned from the query
 
         public void Intersect()
         {
-            QueryText.Append(Constants.IntersectSeparator);
+            QueryText.Append(Constants.Documents.Querying.IntersectSeparator);
         }
 
         public void ContainsAny(string fieldName, IEnumerable<object> values)
@@ -2176,7 +2164,7 @@ If you really want to do in memory filtering on the data returned from the query
             var memberQueryPath = GetMemberQueryPath(expression);
             var memberExpression = _linqPathProvider.GetMemberExpression(expression);
             if (DocumentConventions.UsesRangeType(memberExpression.Type))
-                return memberQueryPath + Constants.Indexing.Fields.RangeFieldSuffix;
+                return memberQueryPath + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
             return memberQueryPath;
         }
 
