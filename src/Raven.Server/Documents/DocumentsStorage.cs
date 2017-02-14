@@ -262,7 +262,7 @@ namespace Raven.Server.Documents
                     _documentDatabase.Configuration.Storage.JournalsStoragePath?.FullPath
                     );
 
-            options.ForceUsing32BitPager = _documentDatabase.Configuration.Storage.ForceUsing32BitPager;
+            options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
             try
             {

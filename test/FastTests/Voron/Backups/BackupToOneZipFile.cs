@@ -205,12 +205,12 @@ namespace FastTests.Voron.Backups
                     database.IncrementalBackupTo(Path.Combine(tempFileName,
                         string.Format("voron-test.{0}-incremental-backup.zip", 1)));
 
-                    var forceUsing32BitPager = database.Configuration.Storage.ForceUsing32BitPager;
+                    var forceUsing32BitsPager = database.Configuration.Storage.ForceUsing32BitsPager;
                     BackupMethods.Incremental.Restore(Path.Combine(tempFileName, "backup-test.data"), new[]
                     {
                         Path.Combine(tempFileName, "voron-test.0-incremental-backup.zip"),
                         Path.Combine(tempFileName, "voron-test.1-incremental-backup.zip")
-                    }, options => options.ForceUsing32BitPager = forceUsing32BitPager);
+                    }, options => options.ForceUsing32BitsPager = forceUsing32BitsPager);
                 }
             }
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: Path.Combine(tempFileName, "backup-test.data")))

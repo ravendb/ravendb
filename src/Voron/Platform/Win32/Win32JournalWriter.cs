@@ -138,7 +138,7 @@ namespace Voron.Platform.Win32
         public AbstractPager CreatePager()
         {
             if (_options.RunningOn32Bits)
-                return new Windows32BitMemoryMapPager(_options, _filename);
+                return new Windows32BitsMemoryMapPager(_options, _filename);
 
             return new WindowsMemoryMapPager(_options, _filename);
         }

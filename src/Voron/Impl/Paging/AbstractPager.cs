@@ -283,12 +283,15 @@ namespace Voron.Impl.Paging
         public abstract void TryPrefetchingWholeFile();
         public abstract void MaybePrefetchMemory(List<long> pagesToPrefetch);
 
-        public virtual void EnsureMapped(IPagerLevelTransactionState tx, long page, int numberOfPages)
+        public virtual bool EnsureMapped(IPagerLevelTransactionState tx, long page, int numberOfPages)
         {
             // nothing to do
+            return false;
         }
 
-        public virtual int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
+        public abstract int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState);
+
+        protected int CopyPageImpl(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
         {
             var src = AcquirePagePointer(null, p, pagerState);
             var pageHeader = (PageHeader*)src;

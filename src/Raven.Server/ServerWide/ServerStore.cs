@@ -118,7 +118,7 @@ namespace Raven.Server.ServerWide
                 : StorageEnvironmentOptions.ForPath(path.FullPath);
 
             options.SchemaVersion = 2;
-            options.ForceUsing32BitPager = Configuration.Storage.ForceUsing32BitPager;
+            options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;

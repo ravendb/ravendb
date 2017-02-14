@@ -29,7 +29,7 @@ namespace Voron
         public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabaleFileSystemError;
         private long _reuseCounter;
         public abstract override string ToString();
-        public bool ForceUsing32BitPager { get; set; }
+        public bool ForceUsing32BitsPager { get; set; }
 
         public void InvokeRecoveryError(object sender, string message, Exception e)
         {
@@ -151,11 +151,11 @@ namespace Voron
 
             _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(tempPath);
 
-            var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitPager");
+            var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
 
             bool result;
             if (bool.TryParse(shouldForceEnvVar, out result))
-                ForceUsing32BitPager = result;
+                ForceUsing32BitsPager = result;
         }
 
 
@@ -479,7 +479,7 @@ namespace Voron
                 {
                     if (RunningOn32Bits)
                     {
-                        return new Posix32BitMemoryMapPager(options, file, initialSize,
+                        return new Posix32BitsMemoryMapPager(options, file, initialSize,
                             usePageProtection: usePageProtection)
                         {
                             DeleteOnClose = deleteOnClose
@@ -496,7 +496,7 @@ namespace Voron
                     : Win32NativeFileAttributes.Normal;
 
                 if (RunningOn32Bits)
-                    return new Windows32BitMemoryMapPager(options, file, initialSize, attributes, usePageProtection: usePageProtection);
+                    return new Windows32BitsMemoryMapPager(options, file, initialSize, attributes, usePageProtection: usePageProtection);
 
                 return new WindowsMemoryMapPager(options, file, initialSize, attributes, usePageProtection: usePageProtection);
             }
@@ -517,12 +517,12 @@ namespace Voron
                 if (RunningOnPosix)
                 {
                     if (RunningOn32Bits)
-                        return new Posix32BitMemoryMapPager(this, path);
+                        return new Posix32BitsMemoryMapPager(this, path);
                     return new PosixMemoryMapPager(this, path);
                 }
 
                 if (RunningOn32Bits)
-                    return new Windows32BitMemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
+                    return new Windows32BitsMemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
                         fileAttributes: Win32NativeFileAttributes.SequentialScan);
                 
                 var windowsMemoryMapPager = new WindowsMemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
@@ -683,7 +683,7 @@ namespace Voron
                     return new PosixTempMemoryMapPager(options, path, intialSize);
                 }
                 if (RunningOn32Bits)
-                    return new Windows32BitMemoryMapPager(options, path, intialSize,
+                    return new Windows32BitsMemoryMapPager(options, path, intialSize,
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
 
                 return new WindowsMemoryMapPager(options, path, intialSize,
@@ -703,12 +703,12 @@ namespace Voron
                 if (RunningOnPosix)
                 {
                     if (RunningOn32Bits)
-                        return new Posix32BitMemoryMapPager(this, filename);
+                        return new Posix32BitsMemoryMapPager(this, filename);
                     return new PosixMemoryMapPager(this, filename);
                 }
 
                 if (RunningOn32Bits)
-                    return new Windows32BitMemoryMapPager(this, filename);
+                    return new Windows32BitsMemoryMapPager(this, filename);
 
                 return new WindowsMemoryMapPager(this, filename);
             }
@@ -761,7 +761,7 @@ namespace Voron
             => RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
-        public bool RunningOn32Bits => IntPtr.Size == sizeof(int) || ForceUsing32BitPager;
+        public bool RunningOn32Bits => IntPtr.Size == sizeof(int) || ForceUsing32BitsPager;
 
 
         public TransactionsMode TransactionsMode { get; set; }
