@@ -24,7 +24,9 @@ namespace Raven.Server.Utils
         public MeterMetric MapReduceMappedPerSecond { get; private set; }
         public MeterMetric MapReduceReducedPerSecond { get; private set; }
         public MeterMetric SqlReplicationBatchSizeMeter { get; private set; }
-        
+
+        public MeterMetric FilePutsPerSecond { get; private set; }
+        public MeterMetric FileBytesPutsPerSecond { get; private set; }
 
         public long ConcurrentRequestsCount;
 
@@ -42,6 +44,8 @@ namespace Raven.Server.Utils
             MapReduceMappedPerSecond?.Dispose();
             MapReduceReducedPerSecond?.Dispose();
             SqlReplicationBatchSizeMeter?.Dispose();
+            FilePutsPerSecond?.Dispose();
+            FileBytesPutsPerSecond?.Dispose();
         }
 
         public void Reset()
@@ -59,6 +63,8 @@ namespace Raven.Server.Utils
             MapReduceMappedPerSecond = new MeterMetric();
             MapReduceReducedPerSecond = new MeterMetric();
             SqlReplicationBatchSizeMeter = new MeterMetric();
+            FilePutsPerSecond = new MeterMetric();
+            FileBytesPutsPerSecond = new MeterMetric();
         }
     }
 
@@ -76,6 +82,9 @@ namespace Raven.Server.Utils
                 ["MapReduceMappedPerSecond"] = self.MapReduceMappedPerSecond.CreateMeterData(),
                 ["MapReduceReducedPerSecond"] = self.MapReduceReducedPerSecond.CreateMeterData(),
                 ["ConcurrentRequestsCount"] = self.ConcurrentRequestsCount,
+
+                ["FilePutsPerSecond"] = self.FilePutsPerSecond.CreateMeterData(),
+                ["FileBytesPutsPerSecond"] = self.FileBytesPutsPerSecond.CreateMeterData(),
                 
             };
             return metricsStatsJsonValue;
