@@ -16,7 +16,6 @@ namespace Raven.Server.Documents
         [ThreadStatic]
         private static JsonParserState _jsonParserState;
 
-
         public static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromKey<TTransaction>(
             TransactionOperationContext<TTransaction> context, string key, out Slice keySlice)
             where TTransaction : RavenTransaction

@@ -43,7 +43,6 @@ namespace Voron.Data.BTrees
             private FixedSizeTree _tree;
             private int _version;
 
-
             public void Init(Tree parent, Slice key, int? initialNumberOfPagesPerChunk)
             {
                 _parent = parent;
@@ -143,6 +142,7 @@ namespace Voron.Data.BTrees
             using (Slice.From(_tx.Allocator, key, out str))
                 AddStream(str, stream, initialNumberOfPagesPerChunk);
         }
+
         public void AddStream(Slice key, Stream stream, int? initialNumberOfPagesPerChunk = null)
         {
             var writer = new StreamToPageWriter();
