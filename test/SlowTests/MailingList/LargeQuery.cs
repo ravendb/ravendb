@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LargeQuery : RavenNewTestBase
+    public class LargeQuery : RavenTestBase
     {
         [Fact]
         public void CanExecuteLargeQuery()

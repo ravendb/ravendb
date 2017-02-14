@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize : RavenNewTestBase
+    public class CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize : RavenTestBase
     {
         private class User
         {

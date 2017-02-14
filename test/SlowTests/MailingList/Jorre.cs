@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Jorre : RavenNewTestBase
+    public class Jorre : RavenTestBase
     {
         [Fact]
         public void CanQueryOnNegativeDecimal()

@@ -13,7 +13,7 @@ using Raven.Client.Documents.Operations.Indexes;
 
 namespace SlowTests.Bugs
 {
-    public class AnalyzerPerField : RavenNewTestBase
+    public class AnalyzerPerField : RavenTestBase
     {
         [Fact]
         public void CanUseAnalyzerPerField()

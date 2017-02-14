@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class SelectDictionaryItem : RavenNewTestBase
+    public class SelectDictionaryItem : RavenTestBase
     {
         [Fact]
         public void SupportProjectionOnDictionaryField()

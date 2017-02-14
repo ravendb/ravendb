@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Queries
 {
-    public class NameStartsWith : RavenNewTestBase
+    public class NameStartsWith : RavenTestBase
     {
         [Fact]
         public void can_search_for_mrs_shaba()

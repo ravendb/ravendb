@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class MaxSecondsForTaskToWaitForDatabaseToLoad : RavenNewTestBase
+    public class MaxSecondsForTaskToWaitForDatabaseToLoad : RavenTestBase
     {
         [Fact]
         public void ShouldThrow_DatabaseLoadTimeout()

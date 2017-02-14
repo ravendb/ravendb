@@ -15,7 +15,7 @@ using Xunit;
 
 namespace FastTests.Smuggler
 {
-    public class SmugglerApiTests : RavenNewTestBase
+    public class SmugglerApiTests : RavenTestBase
     {
         private class Users_ByName : AbstractIndexCreationTask<User>
         {

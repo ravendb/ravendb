@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class DynamicQueriesWithStaticIndexes : RavenNewTestBase
+    public class DynamicQueriesWithStaticIndexes : RavenTestBase
     {
         [Fact]
         public void DynamicQueryWillInterpretFieldNamesProperly()

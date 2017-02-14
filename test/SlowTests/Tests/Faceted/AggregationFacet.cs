@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Faceted
 {
-    public class AggregationFacet : RavenNewTestBase
+    public class AggregationFacet : RavenTestBase
     {
         private class Car
         {

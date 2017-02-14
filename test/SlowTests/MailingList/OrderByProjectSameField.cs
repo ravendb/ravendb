@@ -19,7 +19,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class OrderByProjectSameField : RavenNewTestBase
+    public class OrderByProjectSameField : RavenTestBase
     {
         private class CategoryIndex : AbstractMultiMapIndexCreationTask<CategoryIndexResult>
         {

@@ -20,7 +20,7 @@ using Raven.Tests.Core.Utils.Entities;
 
 namespace FastTests.Server.Documents.PeriodicExport
 {
-    public class PeriodicExportTests : RavenNewTestBase
+    public class PeriodicExportTests : RavenTestBase
     {
         private readonly string _exportPath;
 

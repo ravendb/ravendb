@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Tests.NestedIndexing
 {
-    public class WithMapReduce : RavenNewTestBase
+    public class WithMapReduce : RavenTestBase
     {
         private class Product
         {

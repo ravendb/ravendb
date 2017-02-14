@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy
 {
-    public class CreatingIndexes : RavenNewTestBase
+    public class CreatingIndexes : RavenTestBase
     {
 
         [Fact]

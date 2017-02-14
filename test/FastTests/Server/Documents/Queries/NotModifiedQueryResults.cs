@@ -9,7 +9,7 @@ using Xunit;
 namespace FastTests.Server.Documents.Queries
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class NotModifiedQueryResults : RavenNewTestBase
+    public class NotModifiedQueryResults : RavenTestBase
     {
         [Fact]
         public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified()

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy
 {
-    public class NoCaseSensitive : RavenNewTestBase
+    public class NoCaseSensitive : RavenTestBase
     {
         [Fact]
         public void CanAccessDbUsingDifferentNames()

@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class CanSelectFieldsFromIndex : RavenNewTestBase
+    public class CanSelectFieldsFromIndex : RavenTestBase
     {
         [Fact]
         public void SelectFieldsFromIndex()

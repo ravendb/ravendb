@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MultiMap
 {
-    public class Errors : RavenNewTestBase
+    public class Errors : RavenTestBase
     {
         [Fact]
         public void MultiMapsMustHaveSameOutput()

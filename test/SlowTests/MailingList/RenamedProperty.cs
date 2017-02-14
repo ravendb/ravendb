@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RenamedProperty : RavenNewTestBase
+    public class RenamedProperty : RavenTestBase
     {
         [Fact]
         public void OrderByWithAttributeShouldStillWork()

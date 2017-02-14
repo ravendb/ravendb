@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Core.Commands
 {
-    public class Transformers : RavenNewTestBase
+    public class Transformers : RavenTestBase
     {
         [Fact]
         public async Task CanPutUpdateAndDeleteTransformer()

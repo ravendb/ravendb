@@ -9,7 +9,7 @@ using Enumerable = System.Linq.Enumerable;
 
 namespace SlowTests.MailingList.Stacey
 {
-    public class InServerTesting : RavenNewTestBase
+    public class InServerTesting : RavenTestBase
     {
         private class Image
         {

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class KeyLength : RavenNewTestBase
+    public class KeyLength : RavenTestBase
     {
         private class User
         {

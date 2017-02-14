@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Events : RavenNewTestBase
+    public class Events : RavenTestBase
     {
         [Fact]
         public void Before_Store_Listerner()

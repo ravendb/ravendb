@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Zeitler : RavenNewTestBase
+    public class Zeitler : RavenTestBase
     {
         private class PersistentCacheKey
         {

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DateTimeOffsetIssues : RavenNewTestBase
+    public class DateTimeOffsetIssues : RavenTestBase
     {
         private class Book
         {

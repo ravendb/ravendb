@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_422 : RavenNewTestBase
+    public class RavenDB_422 : RavenTestBase
     {
         [Fact]
         public void UsingStoreAllFields()

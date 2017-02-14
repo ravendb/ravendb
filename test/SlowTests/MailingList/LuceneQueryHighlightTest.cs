@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LuceneQueryHighlightTest : RavenNewTestBase
+    public class LuceneQueryHighlightTest : RavenTestBase
     {
         private const string Q = "What words rhyme with concurrency and asymptotic?";
 

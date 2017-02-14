@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanTransformWithDynamicFields : RavenNewTestBase
+    public class CanTransformWithDynamicFields : RavenTestBase
     {
         private readonly IDocumentStore _store;
 

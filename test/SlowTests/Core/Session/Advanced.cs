@@ -11,7 +11,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Session
 {
-    public class Advanced : RavenNewTestBase
+    public class Advanced : RavenTestBase
     {
         [Fact]
         public void CanGetChangesInformation()

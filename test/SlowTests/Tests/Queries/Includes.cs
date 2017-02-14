@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Queries
 {
-    public class Includes : RavenNewTestBase
+    public class Includes : RavenTestBase
     {
         [Fact]
         public void Can_use_includes_within_multi_load()

@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class AccurateCount : RavenNewTestBase
+    public class AccurateCount : RavenTestBase
     {
         [Fact] 
         public void QueryableCountIsAccurate()

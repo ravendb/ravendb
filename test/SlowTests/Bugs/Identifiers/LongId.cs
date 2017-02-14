@@ -3,7 +3,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Identifiers
 {
-    public class LongId : RavenNewTestBase
+    public class LongId : RavenTestBase
     {
         private class Entity
         {

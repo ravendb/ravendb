@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class HierarchicalInheritanceIndexing : RavenNewTestBase
+    public class HierarchicalInheritanceIndexing : RavenTestBase
     {
         [Fact]
         public void CanCreateIndex()

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Includes :  RavenNewTestBase
+    public class Includes :  RavenTestBase
     {
         [Fact]
         public void Can_Load_With_Include()

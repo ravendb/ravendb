@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Tests
 {
-    public class InflectorTests : RavenNewTestBase
+    public class InflectorTests : RavenTestBase
     {
         [Theory]
         [InlineData("User", "Users")]

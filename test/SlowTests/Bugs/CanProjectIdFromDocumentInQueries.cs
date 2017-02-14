@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class CanProjectIdFromDocumentInQueries : RavenNewTestBase
+    public class CanProjectIdFromDocumentInQueries : RavenTestBase
     {
         [Fact]
         public void SelectIdFromDocumentWithIndexedQuery()

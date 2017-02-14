@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Everett616 : RavenNewTestBase
+    public class Everett616 : RavenTestBase
     {
         [Fact]
         public void CanIndexWithNoErrors_DatetimeOffset()

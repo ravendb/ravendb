@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class gjerster : RavenNewTestBase
+    public class gjerster : RavenTestBase
     {
         [Theory]
         [InlineData("singa*")]

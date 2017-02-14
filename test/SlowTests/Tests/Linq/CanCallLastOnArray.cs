@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class CanCallLastOnArray : RavenNewTestBase
+    public class CanCallLastOnArray : RavenTestBase
     {
         private class Student
         {

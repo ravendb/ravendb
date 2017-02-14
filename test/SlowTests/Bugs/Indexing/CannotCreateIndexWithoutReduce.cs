@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class QueryWithStaticIndexesAndCommonBaseClass : RavenNewTestBase
+    public class QueryWithStaticIndexesAndCommonBaseClass : RavenTestBase
     {
         [Fact]
         public void CanCreateCorrectIndexForNestedObjectWithReferenceId()

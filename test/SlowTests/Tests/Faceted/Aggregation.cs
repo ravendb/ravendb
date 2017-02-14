@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Faceted
 {
-    public class Aggregation : RavenNewTestBase
+    public class Aggregation : RavenTestBase
     {
         private class Orders_All : AbstractIndexCreationTask<Order>
         {

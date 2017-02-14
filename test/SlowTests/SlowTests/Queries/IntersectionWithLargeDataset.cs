@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.Queries
 {
-    public class IntersectionQueryWithLargeDataset : RavenNewTestBase
+    public class IntersectionQueryWithLargeDataset : RavenTestBase
     {
         [Fact]
         public void CanPerformIntersectionQuery_Embedded()

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AddMapForAllTest : RavenNewTestBase
+    public class AddMapForAllTest : RavenTestBase
     {
         // Parent class whose children will be indexed.
         private abstract class Animal

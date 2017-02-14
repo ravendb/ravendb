@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class BoostingDuringIndexing : RavenNewTestBase
+    public class BoostingDuringIndexing : RavenTestBase
     {
         private class User
         {

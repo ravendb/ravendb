@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Core.Indexing
 {
-    public class IndexFieldsValidation : RavenNewTestBase
+    public class IndexFieldsValidation : RavenTestBase
     {
         private class InvalidMultiMapIndex : AbstractMultiMapIndexCreationTask
         {

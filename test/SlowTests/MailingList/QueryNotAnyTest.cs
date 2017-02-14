@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class QueryNotAny : RavenNewTestBase
+    public class QueryNotAny : RavenTestBase
     {
         [Fact]
         public void Query_NotAny_WithEnumComparison()

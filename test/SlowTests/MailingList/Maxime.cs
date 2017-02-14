@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Maxime : RavenNewTestBase
+    public class Maxime : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Spatial")]
         public void WithingRadiusOf_Should_Not_Break_Relevance()

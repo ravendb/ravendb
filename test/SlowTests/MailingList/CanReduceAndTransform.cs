@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanReduceAndTransform : RavenNewTestBase
+    public class CanReduceAndTransform : RavenTestBase
     {
         private class Personnel
         {

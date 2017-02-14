@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5241 : RavenNewTestBase
+    public class RavenDB_5241 : RavenTestBase
     {
         [Fact]
         public void loading_documents_with_transformer_duplicate_ids()

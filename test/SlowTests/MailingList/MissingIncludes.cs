@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class MissingIncludes : RavenNewTestBase
+    public class MissingIncludes : RavenTestBase
     {
         private class Item
         {

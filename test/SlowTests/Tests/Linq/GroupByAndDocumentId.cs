@@ -14,7 +14,7 @@ using SlowTests.Utils;
 
 namespace SlowTests.Tests.Linq
 {
-    public class GroupByAndDocumentId : RavenNewTestBase
+    public class GroupByAndDocumentId : RavenTestBase
     {
         private class Client
         {

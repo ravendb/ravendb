@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FacetQueryNotCorrectWithDefaultFieldSpecified : RavenNewTestBase
+    public class FacetQueryNotCorrectWithDefaultFieldSpecified : RavenTestBase
     {
         /// <summary>
         /// Works

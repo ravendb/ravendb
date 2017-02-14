@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TroyMapReduce : RavenNewTestBase
+    public class TroyMapReduce : RavenTestBase
     {
         private Guid _appKey;
         private Guid _privateKey;

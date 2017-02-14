@@ -12,7 +12,7 @@ using Post = SlowTests.Core.Utils.Entities.Post;
 
 namespace SlowTests.Core.Indexing
 {
-    public class IndexDefinitionMethods : RavenNewTestBase
+    public class IndexDefinitionMethods : RavenTestBase
     {
         [Fact]
         public void CanUseMetadataFor()

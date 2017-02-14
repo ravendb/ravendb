@@ -11,7 +11,7 @@ using Raven.Client.Documents;
 
 namespace SlowTests.MailingList
 {
-    public class Vicente : RavenNewTestBase
+    public class Vicente : RavenTestBase
     {
         public const string query =
             @"CTOTurning a dream into a web :)

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_5178 : RavenNewTestBase
+    public class RavenDB_5178 : RavenTestBase
     {
         [NonLinuxFact]
         public void CanUsePathLongerThan260Chars()

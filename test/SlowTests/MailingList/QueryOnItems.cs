@@ -16,7 +16,7 @@ using Raven.Client.Documents.Session;
 
 namespace SlowTests.MailingList
 {
-    public class QueryOnItems : RavenNewTestBase
+    public class QueryOnItems : RavenTestBase
     {
         private class ProviderIdentifier
         {

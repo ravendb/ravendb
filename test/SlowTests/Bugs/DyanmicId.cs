@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class DyanmicId : RavenNewTestBase
+    public class DyanmicId : RavenTestBase
     {
         private class Article
         {

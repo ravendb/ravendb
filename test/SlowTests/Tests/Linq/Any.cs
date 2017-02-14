@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class Any : RavenNewTestBase
+    public class Any : RavenTestBase
     {
         private class TestDoc
         {

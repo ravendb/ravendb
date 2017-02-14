@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Class7 : RavenNewTestBase
+    public class Class7 : RavenTestBase
     {
         [Fact]
         public void ThrowsOnUnindexedSorts()

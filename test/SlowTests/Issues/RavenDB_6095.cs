@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_6095 : RavenNewTestBase
+    public class RavenDB_6095 : RavenTestBase
     {
         [Fact]
         public void ShouldCompile()

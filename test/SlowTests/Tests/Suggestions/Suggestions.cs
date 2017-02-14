@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Suggestions
 {
-    public class Suggestions : RavenNewTestBase
+    public class Suggestions : RavenTestBase
     {
         private class User
         {

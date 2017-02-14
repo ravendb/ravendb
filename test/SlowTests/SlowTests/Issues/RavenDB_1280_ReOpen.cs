@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_1280_ReOpen : RavenNewTestBase
+    public class RavenDB_1280_ReOpen : RavenTestBase
     {
         [Fact]
         public void Can_Index_With_Missing_LoadDocument_References()

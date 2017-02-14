@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class OfTypeSupport2 : RavenNewTestBase
+    public class OfTypeSupport2 : RavenTestBase
     {
         [Fact]
         public void ShouldCorrectlyMatchTheTypeName()

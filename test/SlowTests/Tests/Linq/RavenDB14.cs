@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class RavenDB14 : RavenNewTestBase
+    public class RavenDB14 : RavenTestBase
     {
         private readonly List<string> _queries = new List<string>();
 

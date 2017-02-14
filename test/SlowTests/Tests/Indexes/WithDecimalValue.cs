@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class WithDecimalValue : RavenNewTestBase
+    public class WithDecimalValue : RavenTestBase
     {
         private class Item
         {

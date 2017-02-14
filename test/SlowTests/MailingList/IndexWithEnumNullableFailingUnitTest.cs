@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IndexWithEnumNullableFailingUnitTest : RavenNewTestBase
+    public class IndexWithEnumNullableFailingUnitTest : RavenTestBase
     {
         private class CultureDataIndex : AbstractIndexCreationTask<CultureData>
         {

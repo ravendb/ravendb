@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Queries
 {
-    public class Fetching : RavenNewTestBase
+    public class Fetching : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6155")]
         public void CanFetchMultiplePropertiesFromCollection()

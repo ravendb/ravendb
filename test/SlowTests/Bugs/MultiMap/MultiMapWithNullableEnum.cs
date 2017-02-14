@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MultiMap
 {
-    public class MultiMapWithNullableEnum : RavenNewTestBase
+    public class MultiMapWithNullableEnum : RavenTestBase
     {
         [Fact]
         public void Can_create_index()

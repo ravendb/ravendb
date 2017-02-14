@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ShardedFacets : RavenNewTestBase
+    public class ShardedFacets : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6283")]
         public void FacetTest()

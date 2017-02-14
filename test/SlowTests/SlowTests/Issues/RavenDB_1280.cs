@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_1280 : RavenNewTestBase
+    public class RavenDB_1280 : RavenTestBase
     {
         [Fact]
         public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()

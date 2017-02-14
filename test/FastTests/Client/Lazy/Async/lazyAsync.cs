@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Client.Lazy.Async
 {
-    public class lazyAsync : RavenNewTestBase
+    public class lazyAsync : RavenTestBase
     {
         [Fact]
         public async Task CanLazilyLoadEntity()

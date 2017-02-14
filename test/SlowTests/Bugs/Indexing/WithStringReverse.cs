@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class WithStringReverse : RavenNewTestBase
+    public class WithStringReverse : RavenTestBase
     {
         private class User
         {

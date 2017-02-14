@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IndexCompilation : RavenNewTestBase
+    public class IndexCompilation : RavenTestBase
     {
         [Fact]
         public void CanCompileIndex()

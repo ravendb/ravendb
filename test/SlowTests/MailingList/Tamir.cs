@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Tamir : RavenNewTestBase
+    public class Tamir : RavenTestBase
     {
         private class Developer
         {

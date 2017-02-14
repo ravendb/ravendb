@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Caching
 {
-    public class CachingOfPostQueries : RavenNewTestBase
+    public class CachingOfPostQueries : RavenTestBase
     {
         private class Person
         {

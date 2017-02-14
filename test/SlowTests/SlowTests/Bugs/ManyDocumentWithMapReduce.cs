@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
 {
-    public class ManyDocumentBeingIndexed : RavenNewTestBase
+    public class ManyDocumentBeingIndexed : RavenTestBase
     {
         private class TestDocument
         {

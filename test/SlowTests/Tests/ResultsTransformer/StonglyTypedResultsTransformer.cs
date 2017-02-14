@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Tests.ResultsTransformer
 {
-    public class StronglyTypedResultsTransformer : RavenNewTestBase
+    public class StronglyTypedResultsTransformer : RavenTestBase
     {
         private class Product
         {

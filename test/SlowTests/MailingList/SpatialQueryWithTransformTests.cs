@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SpatialQueryWithTransformTests : RavenNewTestBase
+    public class SpatialQueryWithTransformTests : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Spatial")]
         public void CanQuery()

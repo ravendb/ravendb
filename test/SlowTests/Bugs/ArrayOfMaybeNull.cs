@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class ArrayOfMaybeNull : RavenNewTestBase
+    public class ArrayOfMaybeNull : RavenTestBase
     {
         private class Orders_Search : AbstractIndexCreationTask<Order>
         {

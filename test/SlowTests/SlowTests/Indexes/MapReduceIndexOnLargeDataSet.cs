@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.Indexes
 {
-    public class MapReduceIndexOnLargeDataSet : RavenNewTestBase
+    public class MapReduceIndexOnLargeDataSet : RavenTestBase
     {
         [Fact]
         public void WillNotProduceAnyErrors()

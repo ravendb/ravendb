@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class DeserializationAcrossTypes : RavenNewTestBase
+    public class DeserializationAcrossTypes : RavenTestBase
     {
         [Fact]
         public void can_deserialize_across_types_when_origin_type_doesnt_exist()

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class Crud : RavenNewTestBase
+    public class Crud : RavenTestBase
     {
         [Fact]
         public async Task CanSaveAndLoad()

@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SkippedResults : RavenNewTestBase
+    public class SkippedResults : RavenTestBase
     {
         [Fact]
         public void Can_page_when_using_nested_property_index()

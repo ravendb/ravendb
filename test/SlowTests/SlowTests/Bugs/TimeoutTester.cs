@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
 {
-    public class TimeoutTester : RavenNewTestBase
+    public class TimeoutTester : RavenTestBase
     {
         private class AnswerVote
         {

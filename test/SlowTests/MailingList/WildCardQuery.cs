@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WildCardQuery : RavenNewTestBase
+    public class WildCardQuery : RavenTestBase
     {
         [Fact]
         public void CanQuery()

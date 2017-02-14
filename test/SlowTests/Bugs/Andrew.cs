@@ -15,7 +15,7 @@ using Task = System.Threading.Tasks.Task;
 
 namespace SlowTests.Bugs
 {
-    public class Andrew :  RavenNewTestBase
+    public class Andrew :  RavenTestBase
     {
         private class User { }
         private class Car { }

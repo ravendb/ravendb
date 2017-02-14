@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class ConflictsWithRemote: RavenNewTestBase
+    public class ConflictsWithRemote: RavenTestBase
     {
         private class DeviceStatusRecord
         {

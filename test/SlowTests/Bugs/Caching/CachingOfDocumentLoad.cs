@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Caching
 {
-    public class CachingOfDocumentLoad : RavenNewTestBase
+    public class CachingOfDocumentLoad : RavenTestBase
     {
         private class User
         {

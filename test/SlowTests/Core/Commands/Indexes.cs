@@ -22,7 +22,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Indexes : RavenNewTestBase
+    public class Indexes : RavenTestBase
     {
         [Fact]
         public async Task CanPutUpdateAndDeleteMapIndex()

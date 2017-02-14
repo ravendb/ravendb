@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ProjectingIdFromNestedClass : RavenNewTestBase
+    public class ProjectingIdFromNestedClass : RavenTestBase
     {
         private class Document
         {

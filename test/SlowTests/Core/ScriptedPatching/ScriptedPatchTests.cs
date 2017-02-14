@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Core.ScriptedPatching
 {
-    public class ScriptedPatchTests : RavenNewTestBase
+    public class ScriptedPatchTests : RavenTestBase
     {
         public class Foo
         {

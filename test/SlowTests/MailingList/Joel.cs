@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Joel : RavenNewTestBase
+    public class Joel : RavenTestBase
     {
         private class Item
         {

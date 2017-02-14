@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TertiaryOperator : RavenNewTestBase
+    public class TertiaryOperator : RavenTestBase
     {
         [Fact]
         public void Breaks()

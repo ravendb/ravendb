@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class ListIndexOf : RavenNewTestBase
+    public class ListIndexOf : RavenTestBase
     {
         [Fact]
         public void CanUseIndexOf()

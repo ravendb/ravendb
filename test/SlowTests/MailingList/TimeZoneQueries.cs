@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TimeZoneQueries : RavenNewTestBase
+    public class TimeZoneQueries : RavenTestBase
     {
         private class Item
         {

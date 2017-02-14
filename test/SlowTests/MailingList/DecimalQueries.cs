@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DecimalQueries : RavenNewTestBase
+    public class DecimalQueries : RavenTestBase
     {
         private class Money
         {

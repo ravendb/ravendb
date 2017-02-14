@@ -11,7 +11,7 @@ using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class RavenDB_3491 : RavenNewTestBase
+    public class RavenDB_3491 : RavenTestBase
     {
         private readonly TimeSpan _waitForDocTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
 

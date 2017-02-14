@@ -18,7 +18,7 @@ using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Indexing
 {
-    public class CustomAnalyzers : RavenNewTestBase
+    public class CustomAnalyzers : RavenTestBase
     {
         [Fact]
         public void CreateAndQuerySimpleIndexWithSortingAndCustomCollateral()

@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class OfTypeSupport : RavenNewTestBase
+    public class OfTypeSupport : RavenTestBase
     {
         [Fact]
         public void OfTypeWillBeConvertedToWhere()

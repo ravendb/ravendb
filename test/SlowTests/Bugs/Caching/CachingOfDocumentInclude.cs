@@ -15,7 +15,7 @@ using Raven.Client.Documents.Operations.Indexes;
 
 namespace SlowTests.Bugs.Caching
 {
-    public class CachingOfDocumentInclude : RavenNewTestBase
+    public class CachingOfDocumentInclude : RavenTestBase
     {
         private class User
         {

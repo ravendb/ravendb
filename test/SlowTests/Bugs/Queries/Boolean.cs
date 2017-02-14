@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs.Queries
 {
-    public class Boolean : RavenNewTestBase
+    public class Boolean : RavenTestBase
     {
         [Fact]
         public void CanQueryOnNegation()

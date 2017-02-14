@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Async
 {
-    public class Querying : RavenNewTestBase
+    public class Querying : RavenTestBase
     {
         [Fact]
         public async Task Can_query_using_async_session()

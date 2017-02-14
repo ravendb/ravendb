@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RavenDeserializationBug : RavenNewTestBase
+    public class RavenDeserializationBug : RavenTestBase
     {
         [Fact]
         public void ShouldBeAbleToIndexChildrenWithUris()

@@ -12,7 +12,7 @@ using ISearchable = SlowTests.Core.Utils.Entities.ISearchable;
 
 namespace SlowTests.Core.Indexing
 {
-    public class MultiMap : RavenNewTestBase
+    public class MultiMap : RavenTestBase
     {
         [Fact]
         public void CanCreateAndSearchMultiMapIndex()

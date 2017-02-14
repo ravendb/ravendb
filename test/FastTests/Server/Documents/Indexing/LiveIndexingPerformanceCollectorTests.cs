@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
 {
-    public class LiveIndexingPerformanceCollectorTests : RavenNewTestBase
+    public class LiveIndexingPerformanceCollectorTests : RavenTestBase
     {
         private class User
         {

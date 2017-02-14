@@ -3,7 +3,7 @@ using Raven.Client.Documents;
 
 namespace FastTests.Client.Subscriptions
 {
-    public abstract class SubscriptionTestBase : RavenNewTestBase
+    public abstract class SubscriptionTestBase : RavenTestBase
     {
         protected class Thing
         {

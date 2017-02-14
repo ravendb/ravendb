@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IdsaTest : RavenNewTestBase
+    public class IdsaTest : RavenTestBase
     {
         [Fact]
         public void CanGetEmptyCollection()

@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class ShardingTransformerTests : RavenNewTestBase
+    public class ShardingTransformerTests : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6283")]
         public void TransformerOverShardedLoad_IdIsNotNull()

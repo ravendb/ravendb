@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IndexMetadata : RavenNewTestBase
+    public class IndexMetadata : RavenTestBase
     {
         private class Users_DeleteStatus : AbstractMultiMapIndexCreationTask
         {

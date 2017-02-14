@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DynamicFieldNoAnalysisStillAnalyzesTest : RavenNewTestBase
+    public class DynamicFieldNoAnalysisStillAnalyzesTest : RavenTestBase
     {
 
         [Fact]

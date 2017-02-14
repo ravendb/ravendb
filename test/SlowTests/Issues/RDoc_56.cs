@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RDoc_56 : RavenNewTestBase
+    public class RDoc_56 : RavenTestBase
     {
         private class Post
         {

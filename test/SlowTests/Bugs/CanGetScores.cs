@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class CanGetScores : RavenNewTestBase
+    public class CanGetScores : RavenTestBase
     {
         private IndexFieldOptions filedOptions = new IndexFieldOptions {Indexing = FieldIndexing.Analyzed};
 

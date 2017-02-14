@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class NullableGuidIndexTest : RavenNewTestBase
+    public class NullableGuidIndexTest : RavenTestBase
     {
         private class TestDocument
         {

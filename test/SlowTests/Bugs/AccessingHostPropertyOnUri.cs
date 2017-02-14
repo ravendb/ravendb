@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class AccessingHostPropertyOnUri : RavenNewTestBase
+    public class AccessingHostPropertyOnUri : RavenTestBase
     {
         private class WebItem
         {

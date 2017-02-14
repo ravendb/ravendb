@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FacetTest : RavenNewTestBase
+    public class FacetTest : RavenTestBase
     {
         [Fact]
         public void CanFacetOnList()

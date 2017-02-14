@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class ReduceCanUseExtensionMethods : RavenNewTestBase
+    public class ReduceCanUseExtensionMethods : RavenTestBase
     {
         private class InputData
         {

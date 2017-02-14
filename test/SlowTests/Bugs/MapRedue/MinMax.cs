@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MapRedue
 {
-    public class MinMax : RavenNewTestBase
+    public class MinMax : RavenTestBase
     {
         private class User
         {

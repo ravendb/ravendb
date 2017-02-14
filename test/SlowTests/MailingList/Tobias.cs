@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Tobias : RavenNewTestBase
+    public class Tobias : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Collation")]
         public void CanWork()

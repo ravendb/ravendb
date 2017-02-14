@@ -17,7 +17,7 @@ using Voron;
 
 namespace SlowTests.Tests.NestedIndexing
 {
-    public class CanTrackWhatCameFromWhat : RavenNewTestBase
+    public class CanTrackWhatCameFromWhat : RavenTestBase
     {
         private class Item
         {

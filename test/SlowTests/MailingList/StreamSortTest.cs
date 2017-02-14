@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class StreamSortTest : RavenNewTestBase
+    public class StreamSortTest : RavenTestBase
     {
         [Fact]
         public void Streaming_Results_Should_Sort_Properly()

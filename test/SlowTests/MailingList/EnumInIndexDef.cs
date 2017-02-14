@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class EnumInIndexDef : RavenNewTestBase
+    public class EnumInIndexDef : RavenTestBase
     {
         [Fact]
         public void QueryById()

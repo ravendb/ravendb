@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey
 {
-    public class Spokey5 : RavenNewTestBase
+    public class Spokey5 : RavenTestBase
     {
         private class Reference
         {

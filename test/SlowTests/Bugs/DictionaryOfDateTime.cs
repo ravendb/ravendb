@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class DictionaryOfDateTime : RavenNewTestBase
+    public class DictionaryOfDateTime : RavenTestBase
     {
         private class WithDic
         {

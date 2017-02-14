@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FacetCountTest : RavenNewTestBase
+    public class FacetCountTest : RavenTestBase
     {
         private class WodsProjection
         {

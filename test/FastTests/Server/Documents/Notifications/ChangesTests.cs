@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Notifications
 {
-    public class ChangesTests : RavenNewTestBase
+    public class ChangesTests : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6285")]
         public async Task CanGetNotificationAboutDocumentPut()

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class IndexBuilderShouldCastNull : RavenNewTestBase
+    public class IndexBuilderShouldCastNull : RavenTestBase
     {
         [Fact]
         public void ShouldCastNullToThePropertyType()

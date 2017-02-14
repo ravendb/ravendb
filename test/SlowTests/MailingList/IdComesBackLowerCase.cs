@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IdComesBackLowerCase : RavenNewTestBase
+    public class IdComesBackLowerCase : RavenTestBase
     {
         private readonly IDocumentStore _store;
 

@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Tony : RavenNewTestBase
+    public class Tony : RavenTestBase
     {
         [Fact]
         public void TestSortBys()

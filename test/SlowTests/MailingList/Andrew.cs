@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Andrew : RavenNewTestBase
+    public class Andrew : RavenTestBase
     {
         [Fact]
         public void CanCompile()

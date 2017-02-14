@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.LiveProjections
 {
-    public class LiveProjectionOnTasks : RavenNewTestBase
+    public class LiveProjectionOnTasks : RavenTestBase
     {
         [Fact]
         public void TaskLiveProjection()

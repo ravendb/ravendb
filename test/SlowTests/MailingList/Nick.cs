@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Nick : RavenNewTestBase
+    public class Nick : RavenTestBase
     {
         [Flags]
         private enum MyEnum

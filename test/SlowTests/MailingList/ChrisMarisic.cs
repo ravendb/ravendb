@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ChrisMarisic : RavenNewTestBase
+    public class ChrisMarisic : RavenTestBase
     {
         private static readonly Leasee[] CarLeasees = new[]
         {

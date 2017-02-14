@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Tests
 {
-    public class Subscriptions : RavenNewTestBase
+    public class Subscriptions : RavenTestBase
     {
         [Fact]
         public async Task BasicSusbscriptionTest()

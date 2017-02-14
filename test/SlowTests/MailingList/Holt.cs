@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Holt : RavenNewTestBase
+    public class Holt : RavenTestBase
     {
         [Theory]
         [InlineData(100.0, 100.0, 0)]

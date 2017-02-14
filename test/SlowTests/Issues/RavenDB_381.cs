@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_381 : RavenNewTestBase
+    public class RavenDB_381 : RavenTestBase
     {
         [Fact]
         public async Task CanChangeConventionJustForOneType_Async()

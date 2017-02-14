@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Tests.ResultsTransformer
 {
-    public class AsyncTransformWith : RavenNewTestBase
+    public class AsyncTransformWith : RavenTestBase
     {
         [Fact] // Passes on build 2550
         public void CanRunTransformerOnSession()

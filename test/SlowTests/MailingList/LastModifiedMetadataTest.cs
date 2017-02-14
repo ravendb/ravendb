@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LastModifiedMetadataTest : RavenNewTestBase
+    public class LastModifiedMetadataTest : RavenTestBase
     {
         private class AmazingIndex2 : AbstractIndexCreationTask<User>
         {

@@ -11,7 +11,7 @@ using Xunit;
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class BasicDynamicMapQueries : RavenNewTestBase
+    public class BasicDynamicMapQueries : RavenTestBase
     {
         [Fact]
         public async Task String_where_clause()

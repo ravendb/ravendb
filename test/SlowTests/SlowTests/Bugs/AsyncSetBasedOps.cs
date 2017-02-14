@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
 {
-    public class AsyncSetBasedOps : RavenNewTestBase
+    public class AsyncSetBasedOps : RavenTestBase
     {
         private class User
         {

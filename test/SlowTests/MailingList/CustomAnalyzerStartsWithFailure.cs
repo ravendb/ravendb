@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CustomAnalyzerStartsWithFailure : RavenNewTestBase
+    public class CustomAnalyzerStartsWithFailure : RavenTestBase
     {
         public void Fill(IDocumentStore store)
         {

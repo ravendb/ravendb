@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5256 : RavenNewTestBase
+    public class RavenDB_5256 : RavenTestBase
     {
         [Theory(Skip = "RavenDB-5918, RavenDB-6283")]
         [InlineData("ShardA")]

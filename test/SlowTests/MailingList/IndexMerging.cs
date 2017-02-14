@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AutoIndexMerging : RavenNewTestBase
+    public class AutoIndexMerging : RavenTestBase
     {
         private const string SampleLogfileStoreId = "123";
 

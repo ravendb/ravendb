@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Bugs.Vlko
 {
-    public class QueryWithMultipleWhere : RavenNewTestBase
+    public class QueryWithMultipleWhere : RavenTestBase
     {
         [Fact]
         public void ShouldGenerateProperPrecedence()

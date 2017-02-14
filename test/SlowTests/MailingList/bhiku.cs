@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Bhiku : RavenNewTestBase
+    public class Bhiku : RavenTestBase
     {
         [Fact]
         public void CanUseBoost_StartsWith()

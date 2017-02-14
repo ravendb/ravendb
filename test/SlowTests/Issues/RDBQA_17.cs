@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RDBQA_17 : RavenNewTestBase
+    public class RDBQA_17 : RavenTestBase
     {
         [Fact]
         public void WhenOverridingTransformerOldOneShouldBeDeleted()

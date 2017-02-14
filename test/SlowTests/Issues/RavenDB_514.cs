@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_514 : RavenNewTestBase
+    public class RavenDB_514 : RavenTestBase
     {
         [Fact]
         public void BoostWithLinq()

@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class NoTracking : RavenNewTestBase
+    public class NoTracking : RavenTestBase
     {
         private static readonly string One = Guid.Parse("00000000-0000-0000-0000-000000000001").ToString();
         private static readonly string Two = Guid.Parse("00000000-0000-0000-0000-000000000002").ToString();

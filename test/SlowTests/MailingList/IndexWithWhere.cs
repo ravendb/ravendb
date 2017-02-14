@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IndexWithWhere : RavenNewTestBase
+    public class IndexWithWhere : RavenTestBase
     {
         private class Document
         {

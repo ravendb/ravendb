@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Chad : RavenNewTestBase
+    public class Chad : RavenTestBase
     {
         private class Location
         {

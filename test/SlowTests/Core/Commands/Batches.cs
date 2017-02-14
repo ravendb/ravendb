@@ -11,7 +11,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Batches : RavenNewTestBase
+    public class Batches : RavenTestBase
     {
         [Fact]
         public async Task CanDoBatchOperations()

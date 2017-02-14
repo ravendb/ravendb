@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Queries
 {
-    public class LuceneQueryCustomMetadata : RavenNewTestBase
+    public class LuceneQueryCustomMetadata : RavenTestBase
     {
         private const string PropertyName = "MyCustomProperty";
 

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class SkipDuplicates : RavenNewTestBase
+    public class SkipDuplicates : RavenTestBase
     {
         [Fact]
         public void WillSkipDuplicates()

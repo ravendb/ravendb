@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Arun : RavenNewTestBase
+    public class Arun : RavenTestBase
     {
         [Fact]
         public void SaveDynamicEntityWithStronglyTypedProperties()

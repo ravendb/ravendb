@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class linmouhong3 : RavenNewTestBase
+    public class linmouhong3 : RavenTestBase
     {
         private class ShortUrlMap
         {

@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class WithNullableDateTime : RavenNewTestBase
+    public class WithNullableDateTime : RavenTestBase
     {
         [Fact]
         public void CanCreate()

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.PhilJones
 {
-    public class Projections : RavenNewTestBase
+    public class Projections : RavenTestBase
     {
         [Fact]
         public void WorkWithRealTypes()

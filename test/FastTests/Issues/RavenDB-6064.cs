@@ -5,7 +5,7 @@ using Raven.Client.Documents.Operations.Indexes;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_6064_2 : RavenNewTestBase
+    public class RavenDB_6064_2 : RavenTestBase
     {
         private class User
         {

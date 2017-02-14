@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WhereStringEqualsInCollection : RavenNewTestBase
+    public class WhereStringEqualsInCollection : RavenTestBase
     {
         private readonly DocumentStore store;
 

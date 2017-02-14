@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5686 : RavenNewTestBase
+    public class RavenDB_5686 : RavenTestBase
     {
         [Fact]
         public void CanSerializeAndDeserializeMeterValue()

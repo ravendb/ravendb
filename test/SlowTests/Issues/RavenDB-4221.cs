@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4221 : RavenNewTestBase
+    public class RavenDB_4221 : RavenTestBase
     {
         [Fact]
         public void DisabledIndexIsUpdatedAfterSettingPriority()

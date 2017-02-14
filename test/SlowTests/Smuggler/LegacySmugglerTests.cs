@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Smuggler
 {
-    public class LegacySmugglerTests : RavenNewTestBase
+    public class LegacySmugglerTests : RavenTestBase
     {
         [Theory]
         [InlineData("SlowTests.Smuggler.Northwind_3.5.35168.ravendbdump")]

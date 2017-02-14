@@ -14,7 +14,7 @@ using Raven.Client.Json.Converters;
 
 namespace SlowTests.Bugs
 {
-    public class DateRanges : RavenNewTestBase
+    public class DateRanges : RavenTestBase
     {
         [Fact]
         public void CanQueryByDate()

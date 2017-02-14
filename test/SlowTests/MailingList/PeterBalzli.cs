@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class PeterBalzli : RavenNewTestBase
+    public class PeterBalzli : RavenTestBase
     {
         protected override void ModifyStore(DocumentStore store)
         {

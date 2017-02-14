@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4041 : RavenNewTestBase
+    public class RavenDB_4041 : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6124")]
         public void streaming_returns_metadata()

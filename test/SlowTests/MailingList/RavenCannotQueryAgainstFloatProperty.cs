@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RavenCannotQueryAgainstFloatProperty : RavenNewTestBase
+    public class RavenCannotQueryAgainstFloatProperty : RavenTestBase
     {
         [Fact]
         public void CanQueryAgainstFloatProperties()

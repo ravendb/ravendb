@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class DynamicFields : RavenNewTestBase
+    public class DynamicFields : RavenTestBase
     {
         private class Product
         {

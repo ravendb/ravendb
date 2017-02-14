@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Client.Client.Indexing
 {
-    public class IndexingWaitForIndexes : RavenNewTestBase
+    public class IndexingWaitForIndexes : RavenTestBase
     {
         public class User
         {

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Oregon : RavenNewTestBase
+    public class Oregon : RavenTestBase
     {
         [Fact]
         public void CanQueryForOregon()

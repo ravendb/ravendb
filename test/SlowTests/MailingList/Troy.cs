@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Troy : RavenNewTestBase
+    public class Troy : RavenTestBase
     {
         private DocumentStore _store;
 

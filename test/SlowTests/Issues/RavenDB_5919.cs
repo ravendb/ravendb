@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5919 : RavenNewTestBase
+    public class RavenDB_5919 : RavenTestBase
     {
         [Fact]
         public void ChangingLockModeOrPriorityOnlyShouldNotResetIndex()

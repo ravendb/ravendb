@@ -4,7 +4,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Load :  RavenNewTestBase
+    public class Load :  RavenTestBase
     {
         [Fact]
         public void Load_Document_By_id()

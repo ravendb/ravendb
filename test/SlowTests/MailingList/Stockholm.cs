@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Stockholm : RavenNewTestBase
+    public class Stockholm : RavenTestBase
     {
         private class Courses_Search2 : AbstractIndexCreationTask<Course>
         {

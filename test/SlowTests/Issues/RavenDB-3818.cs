@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3818 : RavenNewTestBase
+    public class RavenDB_3818 : RavenTestBase
     {
         [Fact(Skip = "RavenDB-5988")]
         public void SparialSearchWithDistanceErrorPercent()

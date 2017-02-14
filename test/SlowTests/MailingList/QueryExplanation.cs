@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class QueryExplanation : RavenNewTestBase
+    public class QueryExplanation : RavenTestBase
     {
         [Fact]
         public void AutoIndexWhenStaticExists()

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class WiseShrek : RavenNewTestBase
+    public class WiseShrek : RavenTestBase
     {
         private class Soft
         {

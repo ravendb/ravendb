@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Bugs.QueryOptimizer
 {
-    public class QueryOptimizeTests : RavenNewTestBase
+    public class QueryOptimizeTests : RavenTestBase
     {
         private class User
         {

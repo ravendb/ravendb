@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class NimaHa : RavenNewTestBase
+    public class NimaHa : RavenTestBase
     {
         [Fact]
         public void NullValueTest()

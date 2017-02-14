@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class IndexLocking : RavenNewTestBase
+    public class IndexLocking : RavenTestBase
     {
         [Fact]
         public async Task LockingIndexesInMemoryWillNotFail()

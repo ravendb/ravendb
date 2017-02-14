@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs
 {
-    public class CanHandleDocumentRemoval : RavenNewTestBase
+    public class CanHandleDocumentRemoval : RavenTestBase
     {
         [Fact]
         public void CanHandleDocumentDeletion()

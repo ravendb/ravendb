@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Client.Queries
 {
-    public class Take : RavenNewTestBase
+    public class Take : RavenTestBase
     {
         [Fact]
         public async Task ExplictTakeWhichIsGreaterThanMaxPageSizeShouldThrow()

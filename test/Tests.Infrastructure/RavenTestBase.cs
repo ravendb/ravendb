@@ -26,7 +26,7 @@ using Sparrow.Json.Parsing;
 
 namespace FastTests
 {
-    public class RavenNewTestBase : TestBase
+    public class RavenTestBase : TestBase
     {
         private static int _counter;
 

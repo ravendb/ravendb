@@ -19,7 +19,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Querying : RavenNewTestBase
+    public class Querying : RavenTestBase
     {
         [Fact]
         public void CanDoSimpleQueryOnDatabase()

@@ -12,7 +12,7 @@ using Raven.Client.Documents.Operations.Indexes;
 
 namespace SlowTests.Bugs
 {
-    public class DecimalPrecision : RavenNewTestBase
+    public class DecimalPrecision : RavenTestBase
     {
         [Fact]
         public void CanDetectHighPrecision_Decimal()

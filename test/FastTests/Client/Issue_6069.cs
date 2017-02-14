@@ -2,7 +2,7 @@
 
 namespace FastTests.Client
 {
-    public class Issue_6069 : RavenNewTestBase
+    public class Issue_6069 : RavenTestBase
     {
         [Fact]
         public void CRUD_Operations()

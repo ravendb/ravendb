@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Jonas : RavenNewTestBase
+    public class Jonas : RavenTestBase
     {
         [Fact]
         public void CanCreateIndexWithGenerics()

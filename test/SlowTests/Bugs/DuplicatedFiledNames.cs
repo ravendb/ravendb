@@ -6,7 +6,7 @@ using Raven.Client.Documents.Operations.Indexes;
 
 namespace SlowTests.Bugs
 {
-    public class DuplicatedFiledNames : RavenNewTestBase
+    public class DuplicatedFiledNames : RavenTestBase
     {
         [Fact]
         public void ShouldNotDoThat()

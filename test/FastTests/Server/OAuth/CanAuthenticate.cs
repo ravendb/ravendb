@@ -18,7 +18,7 @@ using Xunit;
 
 namespace FastTests.Server.OAuth
 {
-    public class CanAuthenticate : RavenNewTestBase
+    public class CanAuthenticate : RavenTestBase
     {
         private readonly ApiKeyDefinition _apiKey = new ApiKeyDefinition
         {

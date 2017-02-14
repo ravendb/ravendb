@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class UsingDynamicQueryWithLocalServer : RavenNewTestBase
+    public class UsingDynamicQueryWithLocalServer : RavenTestBase
     {
         [Fact]
         public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()

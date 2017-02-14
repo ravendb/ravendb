@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class BadQuery : RavenNewTestBase
+    public class BadQuery : RavenTestBase
     {
         private class Entity
         {

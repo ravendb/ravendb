@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MapRedue
 {
-    public class MapReduceIndex : RavenNewTestBase
+    public class MapReduceIndex : RavenTestBase
     {
         private readonly String[] m_documentIds;
 

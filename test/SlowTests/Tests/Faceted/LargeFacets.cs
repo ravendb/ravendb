@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Faceted
 {
-    public class LargeFacets : RavenNewTestBase
+    public class LargeFacets : RavenTestBase
     {
         private class Item
         {

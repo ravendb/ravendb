@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class AnonymousClasses : RavenNewTestBase
+    public class AnonymousClasses : RavenTestBase
     {
         [Fact]
         public void WillNotCreateNastyIds()

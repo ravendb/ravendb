@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SumTests : RavenNewTestBase
+    public class SumTests : RavenTestBase
     {
         private class Vacancy
         {

@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class PhilJones_SelectMany_NoResults : RavenNewTestBase
+    public class PhilJones_SelectMany_NoResults : RavenTestBase
     {
         private class Service
         {

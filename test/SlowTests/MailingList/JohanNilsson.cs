@@ -7,7 +7,7 @@ using Raven.Client.Documents.Linq;
 
 namespace SlowTests.MailingList
 {
-    public class JohanNilsson : RavenNewTestBase
+    public class JohanNilsson : RavenTestBase
     {
         private interface IEntity
         {

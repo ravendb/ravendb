@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class DynamicQueriesCanSort : RavenNewTestBase
+    public class DynamicQueriesCanSort : RavenTestBase
     {
         [Fact]
         public void CanSortOnDynamicIndexOnFieldWhichWeDontQuery()

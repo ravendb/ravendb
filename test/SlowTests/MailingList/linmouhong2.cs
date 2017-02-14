@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class linmouhong2 : RavenNewTestBase
+    public class linmouhong2 : RavenTestBase
     {
         public class Product
         {

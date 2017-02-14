@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class CreateIndexesWithCasting : RavenNewTestBase
+    public class CreateIndexesWithCasting : RavenTestBase
     {
         [Fact]
         public void WillPreserverTheCasts()

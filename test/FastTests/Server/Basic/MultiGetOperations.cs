@@ -4,7 +4,7 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class MultiGetOperations : RavenNewTestBase
+    public class MultiGetOperations : RavenTestBase
     {
         [Fact]
         public void UnlessAccessedLazyLoadsAreNoOp()

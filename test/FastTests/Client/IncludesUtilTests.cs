@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace FastTests.Client
 {
-    public class IncludesUtilTests : RavenNewTestBase
+    public class IncludesUtilTests : RavenTestBase
     {
         [Fact]
         public void include_with_prefix()

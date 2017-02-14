@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Bugs.Vlko
 {
-    public class RelationIdIndex : RavenNewTestBase
+    public class RelationIdIndex : RavenTestBase
     {
         [Fact]
         public void CanBeUsedForTransformResultsWithDocumentId()

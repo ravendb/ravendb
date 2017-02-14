@@ -12,7 +12,7 @@ using SlowTests.Core.Utils.Entities;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_425 : RavenNewTestBase
+    public class RavenDB_425 : RavenTestBase
     {
         [Fact]
         public void WillGetErrorWhenQueryingById()

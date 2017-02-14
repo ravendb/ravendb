@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformWithConversionListener : RavenNewTestBase
+    public class TransformWithConversionListener : RavenTestBase
     {
         private class Item
         {

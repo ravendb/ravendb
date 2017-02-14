@@ -2,7 +2,7 @@
 
 namespace FastTests.Issues
 {
-    public class RavenDB_5418 : RavenNewTestBase
+    public class RavenDB_5418 : RavenTestBase
     {
         private class Order
         {

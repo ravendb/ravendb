@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class QueryAsync : RavenNewTestBase
+    public class QueryAsync : RavenTestBase
     {
         [Fact]
         public async Task QueryAsync_Simple()
