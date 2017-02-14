@@ -88,12 +88,6 @@ namespace Raven.Client.Documents
         IDisposable SetRequestsTimeoutFor(TimeSpan timeout);
 
         /// <summary>
-        /// Gets the shared operations headers.
-        /// </summary>
-        /// <value>The shared operations headers.</value>
-        NameValueCollection SharedOperationsHeaders { get; }
-
-        /// <summary>
         /// Gets or sets the identifier for this store.
         /// </summary>
         /// <value>The identifier.</value>

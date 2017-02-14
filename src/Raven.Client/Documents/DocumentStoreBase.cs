@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
@@ -54,12 +53,6 @@ namespace Raven.Client.Documents
         public abstract IDisposable DisableAggressiveCaching();
 
         public abstract IDisposable SetRequestsTimeoutFor(TimeSpan timeout);
-
-        /// <summary>
-        /// Gets the shared operations headers.
-        /// </summary>
-        /// <value>The shared operations headers.</value>
-        public virtual NameValueCollection SharedOperationsHeaders { get; protected set; }
 
         public abstract string Identifier { get; set; }
         public abstract IDocumentStore Initialize();
@@ -191,7 +184,7 @@ namespace Raven.Client.Documents
             }
         }
 
-        private DocumentConventions conventions;
+        private DocumentConventions _conventions;
 
         /// <summary>
         /// Gets the conventions.
@@ -199,19 +192,19 @@ namespace Raven.Client.Documents
         /// <value>The conventions.</value>
         public virtual DocumentConventions Conventions
         {
-            get { return conventions ?? (conventions = new DocumentConventions()); }
-            set { conventions = value; }
+            get { return _conventions ?? (_conventions = new DocumentConventions()); }
+            set { _conventions = value; }
         }
 
-        private string url;
+        private string _url;
 
         /// <summary>
         /// Gets or sets the URL.
         /// </summary>
         public virtual string Url
         {
-            get { return url; }
-            set { url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value; }
+            get { return _url; }
+            set { _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value; }
         }
 
         /// <summary>
@@ -225,7 +218,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public bool UseFipsEncryptionAlgorithms { get; set; }
 
-        protected bool initialized;
+        protected bool Initialized;
 
         public abstract BulkInsertOperation BulkInsert(string database = null);
 
@@ -240,7 +233,7 @@ namespace Raven.Client.Documents
 
         protected void AssertInitialized()
         {
-            if (!initialized)
+            if (Initialized == false)
                 throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
         }
 

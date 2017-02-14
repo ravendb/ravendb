@@ -28,10 +28,6 @@ namespace Raven.Client.Documents
     /// </summary>
     public class DocumentStore : DocumentStoreBase
     {
-        //private readonly ConcurrentDictionary<string, IDocumentStoreReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IDocumentStoreReplicationInformer>(StringComparer.OrdinalIgnoreCase);
-
-        //private readonly ConcurrentDictionary<string, ClusterAwareRequestExecuter> clusterAwareRequestExecuters = new ConcurrentDictionary<string, ClusterAwareRequestExecuter>(StringComparer.OrdinalIgnoreCase);
-
         private readonly AtomicDictionary<IDatabaseChanges> _databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
         private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> _observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
@@ -45,15 +41,6 @@ namespace Raven.Client.Documents
         private OperationExecuter _operationExecuter;
 
         private DatabaseSmuggler _smuggler;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DocumentStore"/> class.
-        /// </summary>
-        public DocumentStore()
-        {
-            SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
-            Conventions = new DocumentConventions();
-        }
 
         private string _identifier;
 
@@ -218,8 +205,7 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public IDocumentStore Initialize(bool ensureDatabaseExists)
         {
-
-            if (initialized)
+            if (Initialized)
                 return this;
 
             AssertValidConfiguration();
@@ -238,7 +224,7 @@ namespace Raven.Client.Documents
                     Conventions.AsyncDocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, entity);
                 }
 
-                initialized = true;
+                Initialized = true;
             }
             catch (Exception)
             {
