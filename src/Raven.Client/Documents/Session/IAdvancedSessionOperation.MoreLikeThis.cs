@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced synchronous session operations
     /// </summary>
-    public partial interface ISyncAdvancedSessionOperation
+    public partial interface IAdvancedSessionOperation
     {
         List<T> MoreLikeThis<T, TIndexCreator>(string documentId) where TIndexCreator : AbstractIndexCreationTask, new();
 

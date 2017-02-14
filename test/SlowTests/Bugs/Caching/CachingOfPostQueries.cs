@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
@@ -145,7 +146,7 @@ namespace SlowTests.Bugs.Caching
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.Advanced.MultiFacetedSearchAsync(new FacetQuery(store.Conventions)
+                    await session.Advanced.DocumentStore.Operations.SendAsync(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
                     {
                         Query = "Name:Johnny",
                         IndexName = "PersonsIndex",
@@ -158,11 +159,11 @@ namespace SlowTests.Bugs.Caching
                                 Name = "Age"
                             }
                         }
-                    });
+                    }));
 
                     Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
 
-                    await session.Advanced.MultiFacetedSearchAsync(new FacetQuery(store.Conventions)
+                    await session.Advanced.DocumentStore.Operations.SendAsync(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
                     {
                         Query = "Name:Johnny",
                         IndexName = "PersonsIndex",
@@ -175,7 +176,7 @@ namespace SlowTests.Bugs.Caching
                                 Name = "Age"
                             }
                         }
-                    });
+                    }));
 
                     Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
                 }

@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, IDocumentSessionImpl
+    public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, IAdvancedSessionOperation, IDocumentSessionImpl
     {
         private OperationExecuter _operations;
 
@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Session
         /// Those operations are rarely needed, and have been moved to a separate 
         /// property to avoid cluttering the API
         /// </remarks>
-        public ISyncAdvancedSessionOperation Advanced => this;
+        public IAdvancedSessionOperation Advanced => this;
 
         /// <summary>
         /// Access the lazy operations
@@ -135,32 +135,6 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("Could not figure out identifier for transient instance");
 
             return RequestExecuter.UrlFor(document.Id);
-        }
-
-        public FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] queries)
-        {
-            IncrementRequestCount();
-            var requests = new List<GetRequest>();
-            var results = new List<FacetedQueryResult>();
-            foreach (var q in queries)
-            {
-                var method = q.CalculateHttpMethod();
-                requests.Add(new GetRequest()
-                {
-                    Url = "/queries/" + q.IndexName,
-                    Query = "?" + q.GetQueryString(method),
-                    Method = method.Method,
-                    Content = method == HttpMethod.Post ? q.GetFacetsAsJson() : null
-                });
-            }
-            var multiGetOperation = new MultiGetOperation(this);
-            var command = multiGetOperation.CreateRequest(requests);
-            RequestExecuter.Execute(command, Context);
-            foreach (var result in command.Result)
-            {
-                results.Add(JsonDeserializationClient.FacetedQueryResult((BlittableJsonReaderObject)result.Result));
-            }
-            return results.ToArray();
         }
 
         /// <summary>
