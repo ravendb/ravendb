@@ -104,7 +104,7 @@ namespace Raven.Server.Files
                     _fileSystem.Configuration.Storage.JournalsStoragePath?.FullPath
                     );
 
-            options.ForceUsing32BitPager = _fileSystem.Configuration.Storage.ForceUsing32BitPager;
+            options.ForceUsing32BitsPager = _fileSystem.Configuration.Storage.ForceUsing32BitsPager;
 
             try
             {

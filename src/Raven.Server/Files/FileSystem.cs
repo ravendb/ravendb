@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
