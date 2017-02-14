@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using FastTests.Server.Replication;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Data;
+using Raven.Client.Document;
+using Raven.Client.Replication;
 using Xunit;
 
 namespace FastTests.Issues

@@ -13,10 +13,9 @@ namespace Raven.Server.Commercial
 {
     public class LicenseStorage
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseStorage>(null);
+        private static readonly Logger _log = LoggingSource.Instance.GetLogger<LicenseStorage>(null);
 
-        private StorageEnvironment _environment;
-
+        private StorageEnvironment _environment;        
         private TransactionContextPool _contextPool;
 
         private readonly TableSchema _licenseStorageSchema = new TableSchema();
@@ -36,7 +35,7 @@ namespace Raven.Server.Commercial
         {
             _environment = environment;
             _contextPool = contextPool;
-
+            
             TransactionOperationContext context;
             using (contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
@@ -47,8 +46,21 @@ namespace Raven.Server.Commercial
             }
         }
 
+        private void ThrowObjectDisposedException()
+        {
+            throw new ObjectDisposedException(nameof(LicenseStorage));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ThrowObjectDisposedIfRelevant()
+        {
+            if (_environment.Disposed)
+                ThrowObjectDisposedException();
+        }
+
         public unsafe void SetFirstServerStartDate(DateTime date)
         {
+            ThrowObjectDisposedIfRelevant();
             var firstServerStartDate = new DynamicJsonValue
             {
                 [FirstServerStartDateKey] = date
@@ -78,6 +90,7 @@ namespace Raven.Server.Commercial
 
         public DateTime? GetFirstServerStartDate()
         {
+            ThrowObjectDisposedIfRelevant();
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
@@ -114,6 +127,8 @@ namespace Raven.Server.Commercial
 
         public unsafe void SaveLicense(License license)
         {
+            ThrowObjectDisposedIfRelevant();
+
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
@@ -138,6 +153,8 @@ namespace Raven.Server.Commercial
 
         public License LoadLicense()
         {
+            ThrowObjectDisposedIfRelevant();
+
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
