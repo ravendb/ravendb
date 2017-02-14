@@ -89,7 +89,7 @@ namespace FastTests
             ModifyStore(store);
             store.Initialize();
 
-            store.Admin.Send(new CreateDatabaseOperation(doc));
+            store.Admin.Server.Send(new CreateDatabaseOperation(doc));
             store.AfterDispose += (sender, args) =>
             {
                 if (CreatedStores.TryRemove(store) == false)
@@ -102,7 +102,7 @@ namespace FastTests
                         databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-                    store.Admin.Send(new DeleteDatabaseOperation(name, hardDelete));
+                    store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
                 }
             };
             CreatedStores.Add(store);

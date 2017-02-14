@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -9,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations.ApiKeys
 {
-    public class PutApiKeyOperation : IAdminOperation
+    public class PutApiKeyOperation : IServerOperation
     {
         private readonly string _name;
         private readonly ApiKeyDefinition _apiKey;

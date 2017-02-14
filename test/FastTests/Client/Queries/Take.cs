@@ -28,7 +28,7 @@ namespace FastTests.Client.Queries
 
                 exception = await Assert.ThrowsAsync<RavenException>(async () =>
                 {
-                    await store.Admin.SendAsync(new GetApiKeysOperation(0, 2048));
+                    await store.Admin.Server.SendAsync(new GetApiKeysOperation(0, 2048));
                 });
                 Assert.Contains("Your page size (2048) is more than the max page size which is 1024.", exception.Message);
                 Assert.DoesNotContain("Stream", exception.Message);

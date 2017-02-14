@@ -72,7 +72,7 @@ namespace BulkInsert.Benchmark
                 if (dbname == null)
                     dbname = "test";
                 var doc = MultiDatabase.CreateDatabaseDocument(dbname);
-                store.Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
             }
             catch (Exception ex)
             {

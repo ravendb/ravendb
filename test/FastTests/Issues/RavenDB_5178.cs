@@ -21,7 +21,7 @@ namespace FastTests.Issues
 
                 var doc = MultiDatabase.CreateDatabaseDocument(longName);
 
-                store.Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 store.DefaultDatabase = longName;
 
