@@ -52,6 +52,9 @@ namespace Raven.Server.Config.Settings
             if (result.Length > 260 && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 result = @"\\?\" + result;
 
+            if (result.EndsWith(@"\") || result.EndsWith(@"/"))
+                result = result.TrimEnd('\\', '/');
+
             if (PlatformDetails.RunningOnPosix)
                 return PosixHelper.FixLinuxPath(result);
 
