@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Voron.Trees;
 using Voron.Util.Conversion;
@@ -8,6 +9,17 @@ namespace Voron.Impl.FreeSpace
     {
         internal const int NumberOfPagesInSection = 256 * 8; // 256 bytes, 8 bits per byte = 2,048 - each section 8 MB in size
 
+        private readonly FreeSpaceHandlingDisabler _disableStatus = new FreeSpaceHandlingDisabler();
+
+        private readonly FreeSpaceRecursiveCallGuard _guard;
+
+        public FreeSpaceHandling()
+        {
+            _guard = new FreeSpaceRecursiveCallGuard(this);
+        }
+
+        public event Action<long> PageFreed;
+
         public long? TryAllocateFromFreeSpace(Transaction tx, int num)
         {
             if (tx.State.FreeSpaceRoot == null)
@@ -16,16 +28,25 @@ namespace Voron.Impl.FreeSpace
             if (tx.FreeSpaceRoot.State.EntriesCount == 0)
                 return null;
 
-            using (var it = tx.FreeSpaceRoot.Iterate())
-            {
-                if (it.Seek(Slice.BeforeAllKeys) == false)
-                    return null;
+            if (_disableStatus.DisableCount > 0)
+                return null;
 
-                if (num < NumberOfPagesInSection)
+            if (_guard.IsEntered)
+                return null;
+
+            using (_guard.Enter(tx))
+            {
+                using (var it = tx.FreeSpaceRoot.Iterate())
                 {
-                    return TryFindSmallValue(tx, it, num);
+                    if (it.Seek(Slice.BeforeAllKeys) == false)
+                        return null;
+
+                    if (num < NumberOfPagesInSection)
+                    {
+                        return TryFindSmallValue(tx, it, num);
+                    }
+                    return TryFindLargeValue(tx, it, num);
                 }
-                return TryFindLargeValue(tx, it, num);
             }
         }
 
@@ -292,12 +313,32 @@ namespace Voron.Impl.FreeSpace
 
         public void FreePage(Transaction tx, long pageNumber)
         {
-            var section = pageNumber / NumberOfPagesInSection;
-            var sectionKey = new Slice(EndianBitConverter.Big.GetBytes(section));
-            var result = tx.FreeSpaceRoot.Read(sectionKey);
-            var sba = result == null ? new StreamBitArray() : new StreamBitArray(result.Reader);
-            sba.Set((int)(pageNumber % NumberOfPagesInSection), true);
-            tx.FreeSpaceRoot.Add(sectionKey, sba.ToStream());
+            if (_guard.IsEntered)
+            {
+                _guard.PagesFreed.Add(pageNumber);
+                return;
+            }
+
+            using (_guard.Enter(tx))
+            {
+                var section = pageNumber / NumberOfPagesInSection;
+                var sectionKey = new Slice(EndianBitConverter.Big.GetBytes(section));
+                var result = tx.FreeSpaceRoot.Read(sectionKey);
+                var sba = result == null ? new StreamBitArray() : new StreamBitArray(result.Reader);
+                sba.Set((int) (pageNumber % NumberOfPagesInSection), true);
+                tx.FreeSpaceRoot.Add(sectionKey, sba.ToStream());
+
+                var onPageFreed = PageFreed;
+
+                if (onPageFreed != null)
+                    onPageFreed.Invoke(pageNumber);
+            }
+        }
+
+        public FreeSpaceHandlingDisabler Disable()
+        {
+            _disableStatus.DisableCount++;
+            return _disableStatus;
         }
     }
 }

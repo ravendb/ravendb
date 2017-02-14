@@ -32,6 +32,8 @@ namespace Voron.Trees
 
         public string Name { get; set; }
 
+        public bool IsFreeSpaceTree { get; set; }
+
         public TreeMutableState State
         {
             get { return _state; }
@@ -553,7 +555,11 @@ namespace Voron.Trees
 
         internal Page NewPage(PageFlags flags, int num)
         {
-            var page = _tx.AllocatePage(num, flags);
+            Page page;
+            using (IsFreeSpaceTree ? _tx.Environment.FreeSpaceHandling.Disable() : null)
+            {
+                page = _tx.AllocatePage(num, flags);
+            }
 
             State.RecordNewPage(page, num);
 
@@ -567,14 +573,20 @@ namespace Voron.Trees
                 var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(p.OverflowSize);
                 for (int i = 0; i < numberOfPages; i++)
                 {
-                    _tx.FreePage(p.PageNumber + i);
+                    if (IsFreeSpaceTree)
+                        _tx.FreePageOnCommit(p.PageNumber + i);
+                    else
+                        _tx.FreePage(p.PageNumber + i);
                 }
 
                 State.RecordFreedPage(p, numberOfPages);
             }
             else
             {
-                _tx.FreePage(p.PageNumber);
+                if (IsFreeSpaceTree)
+                    _tx.FreePageOnCommit(p.PageNumber);
+                else
+                    _tx.FreePage(p.PageNumber);
                 State.RecordFreedPage(p, 1);
             }
         }

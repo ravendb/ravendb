@@ -7,5 +7,6 @@ namespace Voron.Impl.FreeSpace
         long? TryAllocateFromFreeSpace(Transaction tx, int num);
         List<long> AllPages(Transaction tx);
         void FreePage(Transaction tx, long pageNumber);
+        FreeSpaceHandlingDisabler Disable();
     }
 }

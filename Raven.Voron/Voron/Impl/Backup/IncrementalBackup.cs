@@ -329,6 +329,7 @@ namespace Voron.Impl.Backup
                             var root = Tree.Open(txw, &lastTxHeader->Root);
                             var freeSpaceRoot = Tree.Open(txw, &lastTxHeader->FreeSpace);
                             freeSpaceRoot.Name = Constants.FreeSpaceTreeName;
+                            freeSpaceRoot.IsFreeSpaceTree = true;
                             root.Name = Constants.RootTreeName;
 
                             txw.UpdateRootsIfNeeded(root, freeSpaceRoot);

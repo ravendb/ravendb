@@ -74,6 +74,7 @@ namespace Voron.Impl
         private PageFromScratchBuffer _transactionHeaderPage;
         private readonly HashSet<PageFromScratchBuffer> _transactionPages = new HashSet<PageFromScratchBuffer>();
         private readonly HashSet<long> _freedPages = new HashSet<long>();
+        private readonly Stack<long> _pagesToFreeOnCommit = new Stack<long>();
         private readonly List<PageFromScratchBuffer> _unusedScratchPages = new List<PageFromScratchBuffer>();
         private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
@@ -144,7 +145,7 @@ namespace Voron.Impl
             if (_state.FreeSpaceRoot != null)
             {
                 _state.FreeSpaceRoot.InWriteTransaction = Flags == TransactionFlags.ReadWrite;
-                _freeSpace = new Tree(this, _state.FreeSpaceRoot) {Name = Constants.FreeSpaceTreeName};
+                _freeSpace = new Tree(this, _state.FreeSpaceRoot) {Name = Constants.FreeSpaceTreeName, IsFreeSpaceTree = true };
             }
         }
 
@@ -428,6 +429,11 @@ namespace Voron.Impl
 
             FlushAllMultiValues();
 
+            while (_pagesToFreeOnCommit.Count > 0)
+            {
+                FreePage(_pagesToFreeOnCommit.Pop());
+            }
+
             State.Root.InWriteTransaction = false;
             State.FreeSpaceRoot.InWriteTransaction = false;
 
@@ -553,6 +559,11 @@ namespace Voron.Impl
             }
         }
 
+        internal void FreePageOnCommit(long pageNumber)
+        {
+            _pagesToFreeOnCommit.Push(pageNumber);
+        }
+
         internal void FreePage(long pageNumber)
         {
             if (_disposed)
@@ -593,6 +604,8 @@ namespace Voron.Impl
 
         internal void UpdateRootsIfNeeded(Tree root, Tree freeSpace)
         {
+            Debug.Assert(freeSpace.IsFreeSpaceTree);
+
             //can only happen during initial transaction that creates Root and FreeSpaceRoot trees
             if (State.Root != null || State.FreeSpaceRoot != null) 
                 return;
