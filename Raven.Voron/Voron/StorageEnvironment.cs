@@ -135,6 +135,7 @@ namespace Voron
             {
                 var root = Tree.Open(tx, header->TransactionId == 0 ? &entry.Root : &header->Root);
                 var freeSpace = Tree.Open(tx, header->TransactionId == 0 ? &entry.FreeSpace : &header->FreeSpace);
+                freeSpace.IsFreeSpaceTree = true;
 
                 tx.UpdateRootsIfNeeded(root, freeSpace);
                 tx.Commit();
@@ -153,6 +154,7 @@ namespace Voron
             {
                 var root = Tree.Create(tx, false);
                 var freeSpace = Tree.Create(tx, false);
+                freeSpace.IsFreeSpaceTree = true;
 
                 // important to first create the two trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root, freeSpace);

@@ -1,8 +1,8 @@
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using Voron.Impl;
+using Voron.Impl.FreeSpace;
 using Voron.Impl.Paging;
 
 namespace Voron.Trees
@@ -44,103 +44,84 @@ namespace Voron.Trees
 
         public byte* Execute()
         {
-            Page rightPage = _tree.NewPage(_page.Flags, 1);
-
-            if (_cursor.PageCount == 0) // we need to do a root split
+            using (_tree.IsFreeSpaceTree ? _tx.Environment.FreeSpaceHandling.Disable() : null)
             {
-                Page newRootPage = _tree.NewPage(_tree.KeysPrefixing ? PageFlags.Branch | PageFlags.KeysPrefixed : PageFlags.Branch, 1);
-                _cursor.Push(newRootPage);
-                _tree.State.RootPageNumber = newRootPage.PageNumber;
-                _tree.State.Depth++;
+                Page rightPage = _tree.NewPage(_page.Flags, 1);
 
-                // now add implicit left page
-                newRootPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice) PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, _page.PageNumber);
-                _parentPage = newRootPage;
-                _parentPage.LastSearchPosition++;
-            }
-            else
-            {
-                // we already popped the page, so the current one on the stack is the parent of the page
-
-                if (_tree.Name == Constants.FreeSpaceTreeName)
+                if (_cursor.PageCount == 0) // we need to do a root split
                 {
-                    // a special case for FreeSpaceTree because the allocation of a new page called above
-                    // can cause a delete of a free space section resulting in a run of the tree rebalancer
-                    // and here the parent page that exists in cursor can be outdated
+                    Page newRootPage = _tree.NewPage(_tree.KeysPrefixing ? PageFlags.Branch | PageFlags.KeysPrefixed : PageFlags.Branch, 1);
+                    _cursor.Push(newRootPage);
+                    _tree.State.RootPageNumber = newRootPage.PageNumber;
+                    _tree.State.Depth++;
 
-                    _parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _tree, null); // pass _null_ to make sure we'll get the most updated parent page
-                    _parentPage.LastSearchPosition = _cursor.CurrentPage.LastSearchPosition;
-                    _parentPage.LastMatch = _cursor.CurrentPage.LastMatch;
+                    // now add implicit left page
+                    newRootPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice) PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, _page.PageNumber);
+                    _parentPage = newRootPage;
+                    _parentPage.LastSearchPosition++;
                 }
                 else
                 {
+                    // we already popped the page, so the current one on the stack is the parent of the page
+
                     _parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _tree, _cursor.CurrentPage);
+
+                    _cursor.Update(_cursor.Pages.First, _parentPage);
                 }
 
-                _cursor.Update(_cursor.Pages.First, _parentPage);
-            }
-
-            if (_page.IsLeaf)
-            {
-                _tree.ClearRecentFoundPages();
-            }
-
-            if (_tree.Name == Constants.FreeSpaceTreeName)
-            {
-                // we need to refresh the LastSearchPosition of the split page which is used by the free space handling
-                // because the allocation of a new page called above could remove some sections
-                // from the page that is being split
-
-                _page.NodePositionFor(_newKey);
-            }
-
-            if (_page.LastSearchPosition >= _page.NumberOfEntries)
-            {
-                // when we get a split at the end of the page, we take that as a hint that the user is doing 
-                // sequential inserts, at that point, we are going to keep the current page as is and create a new 
-                // page, this will allow us to do minimal amount of work to get the best density
-
-                Page branchOfSeparator;
-
-                byte* pos;
-                if (_page.IsBranch)
+                if (_page.IsLeaf)
                 {
-                    if (_page.NumberOfEntries > 2)
+                    _tree.ClearRecentFoundPages();
+                }
+
+                if (_page.LastSearchPosition >= _page.NumberOfEntries)
+                {
+                    // when we get a split at the end of the page, we take that as a hint that the user is doing 
+                    // sequential inserts, at that point, we are going to keep the current page as is and create a new 
+                    // page, this will allow us to do minimal amount of work to get the best density
+
+                    Page branchOfSeparator;
+
+                    byte* pos;
+                    if (_page.IsBranch)
                     {
-                        // here we steal the last entry from the current page so we maintain the implicit null left entry
+                        if (_page.NumberOfEntries > 2)
+                        {
+                            // here we steal the last entry from the current page so we maintain the implicit null left entry
 
-                        NodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
-                        Debug.Assert(node->Flags == NodeFlags.PageRef);
-                        rightPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice)PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, node->PageNumber);
-                        pos = AddNodeToPage(rightPage, 1);
+                            NodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
+                            Debug.Assert(node->Flags == NodeFlags.PageRef);
+                            rightPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice) PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, node->PageNumber);
+                            pos = AddNodeToPage(rightPage, 1);
 
-                        var separatorKey = _page.GetNodeKey(node);
+                            var separatorKey = _page.GetNodeKey(node);
 
-                        AddSeparatorToParentPage(rightPage.PageNumber, separatorKey, out branchOfSeparator);
+                            AddSeparatorToParentPage(rightPage.PageNumber, separatorKey, out branchOfSeparator);
 
-                        _page.RemoveNode(_page.NumberOfEntries - 1);
+                            _page.RemoveNode(_page.NumberOfEntries - 1);
+                        }
+                        else
+                        {
+                            _tree.FreePage(rightPage); // return the unnecessary right page
+                            pos = AddSeparatorToParentPage(_pageNumber, _newKey, out branchOfSeparator);
+
+                            if (_cursor.CurrentPage.PageNumber != branchOfSeparator.PageNumber)
+                                _cursor.Push(branchOfSeparator);
+
+                            return pos;
+                        }
                     }
                     else
                     {
-                        _tree.FreePage(rightPage); // return the unnecessary right page
-                        pos = AddSeparatorToParentPage(_pageNumber, _newKey, out branchOfSeparator);
-
-                        if (_cursor.CurrentPage.PageNumber != branchOfSeparator.PageNumber)
-                            _cursor.Push(branchOfSeparator);
-
-                        return pos;
+                        AddSeparatorToParentPage(rightPage.PageNumber, _newKey, out branchOfSeparator);
+                        pos = AddNodeToPage(rightPage, 0);
                     }
+                    _cursor.Push(rightPage);
+                    return pos;
                 }
-                else
-                {
-                    AddSeparatorToParentPage(rightPage.PageNumber, _newKey, out branchOfSeparator);
-                    pos = AddNodeToPage(rightPage, 0);
-                }
-                _cursor.Push(rightPage);
-                return pos;
-            }
 
-            return SplitPageInHalf(rightPage);
+                return SplitPageInHalf(rightPage);
+            }
         }
 
         private byte* AddNodeToPage(Page page, int index, MemorySlice alreadyPreparedNewKey = null)
