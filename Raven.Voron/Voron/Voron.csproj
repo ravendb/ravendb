@@ -69,6 +69,8 @@
     <Compile Include="Exceptions\VoronUnrecoverableErrorException.cs" />
     <Compile Include="Impl\Backup\MinimalIncrementalBackup.cs" />
     <Compile Include="Impl\Compaction\StorageCompaction.cs" />
+    <Compile Include="Impl\FreeSpace\FreeSpaceHandlingDisabler.cs" />
+    <Compile Include="Impl\FreeSpace\FreeSpaceRecursiveCallGuard.cs" />
     <Compile Include="Impl\PagePosition.cs" />
     <Compile Include="Impl\Scratch\PageFromScratchBuffer.cs" />
     <Compile Include="Impl\Scratch\ScratchBufferFile.cs" />
