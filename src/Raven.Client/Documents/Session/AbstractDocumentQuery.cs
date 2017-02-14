@@ -495,10 +495,10 @@ namespace Raven.Client.Documents.Session
 
         public IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path)
         {
-            var idPrefix = DocumentConventions.GetTypeTagName(typeof(TInclude));
+            var idPrefix = DocumentConventions.GetCollectionName(typeof(TInclude));
             if (idPrefix != null)
             {
-                idPrefix = DocumentConventions.TransformTypeTagNameToDocumentKeyPrefix(idPrefix);
+                idPrefix = DocumentConventions.TransformTypeCollectionNameToDocumentIdPrefix(idPrefix);
                 idPrefix += DocumentConventions.IdentityPartsSeparator;
             }
 

@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Conventions
 
         internal static DocumentConventions Default = new DocumentConventions();
 
-        private static IDictionary<Type, string> _cachedDefaultTypeTagNames = new Dictionary<Type, string>();
+        private static IDictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
         private readonly Dictionary<string, SortOptions> _customDefaultSortOptions = new Dictionary<string, SortOptions>();
         private readonly List<Type> _customRangeTypes = new List<Type>();
 
@@ -50,6 +50,7 @@ namespace Raven.Client.Documents.Conventions
         {
             FindIdentityProperty = q => q.Name == "Id";
             IdentityPartsSeparator = "/";
+            FindIdentityPropertyNameFromEntityName = entityName => "Id";
 
             FindClrType = (id, doc) =>
             {
@@ -62,9 +63,8 @@ namespace Raven.Client.Documents.Conventions
             };
             FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
 
-            TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;
-            FindIdentityPropertyNameFromEntityName = entityName => "Id";
-            FindTypeTagName = DefaultTypeTagName;
+            TransformTypeCollectionNameToDocumentIdPrefix = DefaultTransformCollectionNameToDocumentIdPrefix;
+            FindCollectionName = DefaultGetCollectionName;
 
             FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace(",", "_").Replace(".", "_");
             FindPropertyNameForDynamicIndex = (indexedType, indexedName, path, prop) => path + prop;
@@ -147,16 +147,14 @@ namespace Raven.Client.Documents.Conventions
         public IContractResolver JsonContractResolver { get; set; }
 
         /// <summary>
-        ///     Gets or sets the function to find the type tag.
+        ///     Gets or sets the function to find the collection name for given type.
         /// </summary>
-        /// <value>The name of the find type tag.</value>
-        public Func<Type, string> FindTypeTagName { get; set; }
+        public Func<Type, string> FindCollectionName { get; set; }
 
         /// <summary>
-        ///     Gets or sets the function to find the tag name if the object is dynamic.
+        ///     Gets or sets the function to find the collection name for dynamic type.
         /// </summary>
-        /// <value>The tag name.</value>
-        public Func<dynamic, string> FindDynamicTagName { get; set; }
+        public Func<dynamic, string> FindCollectionNameForDynamic { get; set; }
 
         /// <summary>
         ///     Gets or sets the function to find the indexed property name
@@ -179,12 +177,12 @@ namespace Raven.Client.Documents.Conventions
         ///     Gets or sets the document key generator.
         /// </summary>
         /// <value>The document key generator.</value>
-        public Func<string, object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
+        public Func<string, object, Task<string>> AsyncDocumentIdGenerator { get; set; }
 
         /// <summary>
-        ///     Translate the type tag name to the document key prefix
+        ///     Translates the types collection name to the document id prefix
         /// </summary>
-        public Func<string, string> TransformTypeTagNameToDocumentKeyPrefix { get; set; }
+        public Func<string, string> TransformTypeCollectionNameToDocumentIdPrefix { get; set; }
 
         /// <summary>
         ///     Attempts to prettify the generated linq expressions for indexes and transformers
@@ -198,12 +196,12 @@ namespace Raven.Client.Documents.Conventions
         public Func<MemberInfo, bool> FindIdentityProperty { get; set; }
 
         /// <summary>
-        ///     Get the default tag name for the specified type.
+        ///     Default method used when finding a collection name for a type
         /// </summary>
-        public static string DefaultTypeTagName(Type t)
+        public static string DefaultGetCollectionName(Type t)
         {
             string result;
-            if (_cachedDefaultTypeTagNames.TryGetValue(t, out result))
+            if (_cachedDefaultTypeCollectionNames.TryGetValue(t, out result))
                 return result;
 
             if (t.Name.Contains("<>"))
@@ -216,75 +214,71 @@ namespace Raven.Client.Documents.Conventions
                 var sb = new StringBuilder(Inflector.Pluralize(name));
                 foreach (var argument in t.GetGenericArguments())
                     sb.Append("Of")
-                        .Append(DefaultTypeTagName(argument));
+                        .Append(DefaultGetCollectionName(argument));
                 result = sb.ToString();
             }
             else
             {
                 result = Inflector.Pluralize(t.Name);
             }
-            var temp = new Dictionary<Type, string>(_cachedDefaultTypeTagNames)
+            var temp = new Dictionary<Type, string>(_cachedDefaultTypeCollectionNames)
             {
                 [t] = result
             };
 
-            _cachedDefaultTypeTagNames = temp;
+            _cachedDefaultTypeCollectionNames = temp;
             return result;
         }
 
         /// <summary>
-        ///     Gets the name of the type tag.
+        ///     Gets the collection name for a given type.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <returns></returns>
-        public string GetTypeTagName(Type type)
+        public string GetCollectionName(Type type)
         {
-            return FindTypeTagName(type) ?? DefaultTypeTagName(type);
+            return FindCollectionName(type) ?? DefaultGetCollectionName(type);
         }
 
         /// <summary>
-        ///     If object is dynamic, try to load a tag name.
+        ///     Gets the collection name for a given dynamic type.
         /// </summary>
-        /// <param name="entity">Current entity.</param>
-        /// <returns>Dynamic tag name if available.</returns>
-        public string GetDynamicTagName(object entity)
+        public string GetCollectionName(object entity)
         {
             if (entity == null)
                 return null;
 
-            if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
+            if (FindCollectionNameForDynamic != null && entity is IDynamicMetaObjectProvider)
             {
                 try
                 {
-                    return FindDynamicTagName(entity);
+                    return FindCollectionNameForDynamic(entity);
                 }
                 catch (RuntimeBinderException)
                 {
                 }
             }
 
-            return GetTypeTagName(entity.GetType());
+            return GetCollectionName(entity.GetType());
         }
 
         /// <summary>
-        ///     Generates the document key.
+        ///     Generates the document id.
         /// </summary>
         /// <param name="entity">The entity.</param>
-        /// <param name="dbName">Name of the database</param>
+        /// <param name="databaseName">Name of the database</param>
         /// <returns></returns>
-        public string GenerateDocumentKey(string dbName, object entity)
+        public string GenerateDocumentId(string databaseName, object entity)
         {
-            return AsyncHelpers.RunSync(() => GenerateDocumentKeyAsync(dbName, entity));
+            return AsyncHelpers.RunSync(() => GenerateDocumentIdAsync(databaseName, entity));
         }
 
-        public Task<string> GenerateDocumentKeyAsync(string dbName, object entity)
+        public Task<string> GenerateDocumentIdAsync(string databaseName, object entity)
         {
             var type = entity.GetType();
             foreach (var typeToRegisteredIdConvention in _listOfRegisteredIdConventionsAsync
                 .Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
-                return typeToRegisteredIdConvention.Item2(dbName, entity);
+                return typeToRegisteredIdConvention.Item2(databaseName, entity);
 
-            return AsyncDocumentKeyGenerator(dbName, entity);
+            return AsyncDocumentIdGenerator(databaseName, entity);
         }
 
         /// <summary>
@@ -484,15 +478,15 @@ namespace Raven.Client.Documents.Conventions
             return identityProperty;
         }
 
-        public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
+        public static string DefaultTransformCollectionNameToDocumentIdPrefix(string collectionName)
         {
-            var count = typeTagName.Count(char.IsUpper);
+            var count = collectionName.Count(char.IsUpper);
 
             if (count <= 1) // simple name, just lower case it
-                return typeTagName.ToLowerInvariant();
+                return collectionName.ToLowerInvariant();
 
             // multiple capital letters, so probably something that we want to preserve caps on.
-            return typeTagName;
+            return collectionName;
         }
 
         private static IEnumerable<MemberInfo> GetPropertiesForType(Type type)

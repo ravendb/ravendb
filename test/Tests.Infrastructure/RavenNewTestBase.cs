@@ -243,7 +243,7 @@ namespace FastTests
                 Entity = entity,
                 Id = id
             };
-            var tag = session.Advanced.DocumentStore.Conventions.GetDynamicTagName(entity);
+            var tag = session.Advanced.DocumentStore.Conventions.GetCollectionName(entity);
 
             var metadata = new DynamicJsonValue();
             if (tag != null)

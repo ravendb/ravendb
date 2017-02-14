@@ -554,7 +554,7 @@ more responsive application.
             // to detect if they generate duplicates.
             AssertNoNonUniqueInstance(entity, id);
 
-            var tag = _documentStore.Conventions.GetDynamicTagName(entity);
+            var tag = _documentStore.Conventions.GetCollectionName(entity);
             var metadata = new DynamicJsonValue();
             if (tag != null)
                 metadata[Constants.Documents.Metadata.Collection] = tag;
@@ -1066,7 +1066,7 @@ more responsive application.
             var indexName = "dynamic";
             if (typeof(T) != typeof(object))
             {
-                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+                indexName += "/" + Conventions.GetCollectionName(typeof(T));
             }
             return indexName;
         }

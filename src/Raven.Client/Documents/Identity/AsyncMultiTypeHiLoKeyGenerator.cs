@@ -32,10 +32,10 @@ namespace Raven.Client.Documents.Identity
 
         public Task<string> GenerateDocumentKeyAsync(object entity)
         {
-            var typeTagName = _conventions.GetDynamicTagName(entity);
+            var typeTagName = _conventions.GetCollectionName(entity);
             if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
                 return CompletedTask.With<string>(null);
-            var tag = _conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
+            var tag = _conventions.TransformTypeCollectionNameToDocumentIdPrefix(typeTagName);
             AsyncHiLoKeyGenerator value;
             if (_keyGeneratorsByTag.TryGetValue(tag, out value))
                 return value.GenerateDocumentKeyAsync(entity);

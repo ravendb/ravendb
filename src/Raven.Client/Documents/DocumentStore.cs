@@ -217,11 +217,11 @@ namespace Raven.Client.Documents
                 // TODO iftah
                 //SecurityExtensions.InitializeSecurity(Conventions, jsonRequestFactory, Url, Credentials);
 
-                if (Conventions.AsyncDocumentKeyGenerator == null) // don't overwrite what the user is doing
+                if (Conventions.AsyncDocumentIdGenerator == null) // don't overwrite what the user is doing
                 {
                     var generator = new AsyncMultiDatabaseHiLoKeyGenerator(this, Conventions);
                     _asyncMultiDbHiLo = generator;
-                    Conventions.AsyncDocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, entity);
+                    Conventions.AsyncDocumentIdGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, entity);
                 }
 
                 Initialized = true;

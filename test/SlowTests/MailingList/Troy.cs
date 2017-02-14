@@ -174,8 +174,8 @@ namespace SlowTests.MailingList
         {
             store.Conventions = new DocumentConventions
             {
-                TransformTypeTagNameToDocumentKeyPrefix = tag => tag,
-                FindTypeTagName = type => type.Name
+                TransformTypeCollectionNameToDocumentIdPrefix = tag => tag,
+                FindCollectionName = type => type.Name
             };
         }
 

@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.BulkInsert
             database = database ?? MultiDatabase.GetDatabaseName(store.Url);
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(store.Conventions, entity =>
-                AsyncHelpers.RunSync(() => store.Conventions.GenerateDocumentKeyAsync(database, entity)));
+                AsyncHelpers.RunSync(() => store.Conventions.GenerateDocumentIdAsync(database, entity)));
 
             // ReSharper disable once VirtualMemberCallInContructor
             Operation = GetBulkInsertOperation(database, store.GetRequestExecuter(database));
