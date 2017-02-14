@@ -31,8 +31,8 @@ namespace Voron.Data.Tables
         public long NumberOfEntries { get; private set; }
 
         private long _overflowPageCount;
-        private NewPageAllocator _tablePageAllocator;
-        private NewPageAllocator _globalPageAllocator;
+        private readonly NewPageAllocator _tablePageAllocator;
+        private readonly NewPageAllocator _globalPageAllocator;
 
         public FixedSizeTree FixedSizeKey
         {
@@ -102,6 +102,9 @@ namespace Voron.Data.Tables
         /// </summary>
         public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, bool doSchemaValidation = false)
         {
+            if (name.Content.HasValue == false) //precaution...
+                ThrowObjectDisposedException(name);
+
             Name = name;
 
             _schema = schema;
@@ -141,6 +144,9 @@ namespace Voron.Data.Tables
 
         public bool ReadByKey(Slice key, out TableValueReader reader)
         {
+            if (key.Content.HasValue == false)
+                ThrowObjectDisposedException(key);
+
             long id;
             if (TryFindIdFromPrimaryKey(key, out id) == false)
             {
@@ -603,6 +609,9 @@ namespace Voron.Data.Tables
 
         internal Tree GetTree(Slice name)
         {
+            if (name.Content.HasValue == false)
+                ThrowObjectDisposedException(name);
+
             Tree tree;
             if (_treesBySliceCache.TryGetValue(name, out tree))
                 return tree;
@@ -626,6 +635,9 @@ namespace Voron.Data.Tables
 
         public bool DeleteByKey(Slice key)
         {
+            if (key.Content.HasValue == false)
+                ThrowObjectDisposedException(key);
+
             var pkTree = GetTree(_schema.Key);
 
             var readResult = pkTree.Read(key);
@@ -643,8 +655,10 @@ namespace Voron.Data.Tables
 
         private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value)
         {
-            var result = new TableValueHolder();
-            
+            if (value.Content.HasValue == false)
+                ThrowObjectDisposedException(value);
+
+            var result = new TableValueHolder();            
             try
             {
                 var fstIndex = GetFixedSizeTree(tree, value, 0);
@@ -722,6 +736,9 @@ namespace Voron.Data.Tables
 
         public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith = false)
         {
+            if (value.Content.HasValue == false)
+                ThrowObjectDisposedException(value);
+
             var tree = GetTree(index);
             using (var it = tree.Iterate(false))
             {
@@ -742,6 +759,12 @@ namespace Voron.Data.Tables
             }
         }
 
+        // ReSharper disable once UnusedParameter.Local
+        private static void ThrowObjectDisposedException(Slice value)
+        {
+            throw new ObjectDisposedException(nameof(value));
+        }
+
         public class TableValueHolder
         {
             // we need this so we'll not have to create a new allocation
@@ -751,6 +774,9 @@ namespace Voron.Data.Tables
 
         public IEnumerable<TableValueHolder> SeekByPrimaryKey(Slice value, bool startsWith = false)
         {
+            if (value.Content.HasValue == false)
+                ThrowObjectDisposedException(value);
+
             var result = new TableValueHolder();
             var pk = _schema.Key;
             var tree = GetTree(pk);
@@ -898,6 +924,9 @@ namespace Voron.Data.Tables
         {
             if (numberOfEntriesToDelete < 0)
                 ThrowNonNegativeNumberOfEntriesToDelete();
+
+            if (value.Content.HasValue == false)
+                ThrowObjectDisposedException(value);
 
             int deleted = 0;
             var tree = GetTree(index);

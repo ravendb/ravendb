@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -15,6 +16,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
@@ -31,13 +33,13 @@ namespace FastTests
         private static int _counter;
 
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
-
         protected Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(DocumentStore store)
         {
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
         }
 
         protected virtual DocumentStore GetDocumentStore(
+            RavenServer server = null,
             [CallerMemberName] string caller = null,
             string dbSuffixIdentifier = null,
             string path = null,
@@ -45,7 +47,9 @@ namespace FastTests
             Func<string, string> modifyName = null,
             string apiKey = null)
         {
-            var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
+            var name = caller != null
+                ? $"{caller}_{Interlocked.Increment(ref _counter)}"
+                : Guid.NewGuid().ToString("N");
 
             if (dbSuffixIdentifier != null)
                 name = $"{name}_{dbSuffixIdentifier}";
@@ -63,7 +67,7 @@ namespace FastTests
                 hardDelete = false;
                 runInMemory = false;
             }
-            
+
             var doc = MultiDatabase.CreateDatabaseDocument(name);
             doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "10";
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
@@ -72,17 +76,19 @@ namespace FastTests
             doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString();
             modifyDatabaseDocument?.Invoke(doc);
 
+            var currentServer = server ?? Server;
+
             TransactionOperationContext context;
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (currentServer.ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
-                if (Server.ServerStore.Read(context, Constants.Database.Prefix + name) != null)
+                if (currentServer.ServerStore.Read(context, Constants.Database.Prefix + name) != null)
                     throw new InvalidOperationException($"Database '{name}' already exists");
             }
 
             var store = new DocumentStore
             {
-                Url = UseFiddler(Server.WebUrls[0]),
+                Url = UseFiddler(currentServer.WebUrls[0]),
                 DefaultDatabase = name,
                 ApiKey = apiKey
             };
@@ -95,13 +101,14 @@ namespace FastTests
                 if (CreatedStores.TryRemove(store) == false)
                     return; // can happen if we are wrapping the store inside sharded one
 
-                if (Server.Disposed == false)
+                if (currentServer.Disposed == false)
                 {
-                    var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+                    var databaseTask = currentServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
                     if (databaseTask != null && databaseTask.IsCompleted == false)
-                        databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
+                        databaseTask.Wait();
+                    // if we are disposing store before database had chance to load then we need to wait
 
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                    currentServer.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                     store.Admin.Send(new DeleteDatabaseOperation(name, hardDelete));
                 }
             };
@@ -267,6 +274,7 @@ namespace FastTests
         {
             foreach (var store in CreatedStores)
                 exceptionAggregator.Execute(store.Dispose);
+
             CreatedStores.Clear();
         }
     }

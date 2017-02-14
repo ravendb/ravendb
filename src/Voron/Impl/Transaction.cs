@@ -134,7 +134,8 @@ namespace Voron.Impl
             // intentionally not disposing the name here, it is valid for the lifetime of the table
             openTable = OpenTable(schema, nameSlice, throwIfDoesNotExist);
 
-            _tables.Add(name, openTable);
+            if(openTable != null) //otherwise there will be a null in cache, causing NREs
+                _tables.Add(name, openTable);
 
             return openTable;
         }

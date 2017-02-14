@@ -636,6 +636,9 @@ namespace Raven.Server.Documents.Replication
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
+
+            destination.Url = destination.Url.Trim();
+
             _outgoingFailureInfo.TryAdd(destination, new ConnectionShutdownInfo
             {
                 Destination = destination

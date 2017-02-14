@@ -46,7 +46,8 @@ namespace FastTests
         public Task<DocumentDatabase> GetDatabase(string databaseName)
         {
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-        }
+        }        
+
 
         public RavenServer Server
         {
@@ -57,7 +58,7 @@ namespace FastTests
 
                 if (_doNotReuseServer)
                 {
-                    _localServer = GetNewServer(_customServerSettings);
+                    UseNewLocalServer();
                     return _localServer;
                 }
 
@@ -70,7 +71,8 @@ namespace FastTests
                 {
                     if (_globalServer == null)
                     {
-                        Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
+                        Console.WriteLine("\tTo attach debugger to test process, use process id: {0}",
+                            Process.GetCurrentProcess().Id);
                         var globalServer = GetNewServer();
                         AssemblyLoadContext.Default.Unloading += context =>
                         {
@@ -93,7 +95,19 @@ namespace FastTests
             }
         }
 
-        protected static RavenServer GetNewServer(IDictionary<string, string> customSettings = null)
+        private readonly object _newServerSyncObj = new object();
+
+
+        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, Action<RavenConfiguration> modifyConfig = null)
+        {
+            lock (_newServerSyncObj) //precaution, not strictly necessary
+            {
+                _localServer?.Dispose();
+                _localServer = GetNewServer(customSettings ?? _customServerSettings, modifyConfig);
+            }
+        }
+
+        protected static RavenServer GetNewServer(IDictionary<string, string> customSettings = null, Action<RavenConfiguration> modifyConfig = null)
         {
             var configuration = new RavenConfiguration(null, ResourceType.Server);
 
@@ -109,9 +123,11 @@ namespace FastTests
             configuration.DebugLog.LogMode = LogMode.None;
             configuration.Core.ServerUrl = "http://127.0.0.1:0";
             configuration.Server.Name = ServerName;
-            configuration.Core.RunInMemory = true;
+            configuration.Core.RunInMemory = true;            
             configuration.Core.DataDirectory = configuration.Core.DataDirectory.Combine($"Tests{Interlocked.Increment(ref _serverCounter)}");
             configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
+
+            modifyConfig?.Invoke(configuration);
 
             IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
