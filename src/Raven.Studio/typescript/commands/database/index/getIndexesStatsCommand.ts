@@ -8,9 +8,9 @@ class getIndexesStatsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Data.Indexes.IndexStats[]> {
+    execute(): JQueryPromise<Raven.Client.Documents.Indexes.IndexStats[]> {
         const url = endpoints.databases.index.indexesStats;
-        const extractor = (response: resultsDto<Raven.Client.Data.Indexes.IndexStats>) => response.Results;
+        const extractor = (response: resultsDto<Raven.Client.Documents.Indexes.IndexStats>) => response.Results;
         return this.query(url, null, this.db, extractor);
     }
 } 

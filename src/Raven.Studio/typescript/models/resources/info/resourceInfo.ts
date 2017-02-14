@@ -43,7 +43,7 @@ abstract class resourceInfo {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };
     }
 
-    protected constructor(dto: Raven.Client.Data.ResourceInfo) {
+    protected constructor(dto: Raven.Client.Server.Operations.ResourceInfo) {
         this.initializeObservables();
     }
 
@@ -55,7 +55,7 @@ abstract class resourceInfo {
         return this.qualifier + "/" + this.name;
     }
 
-    static findLastBackupDate(dto: Raven.Client.Data.BackupInfo) {
+    static findLastBackupDate(dto: Raven.Client.Server.Operations.BackupInfo) {
         const lastFull = dto.LastFullBackup;
         const lastIncrementalBackup = dto.LastIncrementalBackup;
 
@@ -69,7 +69,7 @@ abstract class resourceInfo {
 
     abstract asResource(): resource;
 
-    update(dto: Raven.Client.Data.ResourceInfo): void {
+    update(dto: Raven.Client.Server.Operations.ResourceInfo): void {
         this.name = dto.Name;
         this.disabled(dto.Disabled);
         this.isAdmin(dto.IsAdmin);
@@ -87,7 +87,7 @@ abstract class resourceInfo {
         }
     }
 
-    private computeBackupStatus(dto: Raven.Client.Data.BackupInfo) {
+    private computeBackupStatus(dto: Raven.Client.Server.Operations.BackupInfo) {
         if (!dto.LastFullBackup && !dto.LastIncrementalBackup) {
             return "text-danger";
         }

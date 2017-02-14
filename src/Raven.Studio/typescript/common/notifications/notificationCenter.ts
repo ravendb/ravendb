@@ -177,8 +177,8 @@ class notificationCenter {
         return rs ? this.resourceOperationsWatch : this.globalOperationsWatch;
     }
 
-    monitorOperation<TProgress extends Raven.Client.Data.IOperationProgress,
-        TResult extends Raven.Client.Data.IOperationResult>(rs: resource,
+    monitorOperation<TProgress extends Raven.Client.Documents.Operations.IOperationProgress,
+        TResult extends Raven.Client.Documents.Operations.IOperationResult>(rs: resource,
         operationId: number,
         onProgress: (progress: TProgress) => void = null): JQueryPromise<TResult> {
 

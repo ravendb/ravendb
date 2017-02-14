@@ -8,7 +8,7 @@ class filesystem extends resource {
     static readonly type = "filesystem";
     static readonly qualifier = "fs";
 
-    constructor(fsInfo: Raven.Client.Data.FileSystemInfo) {
+    constructor(fsInfo: Raven.Client.Server.Operations.FileSystemInfo) {
         super(fsInfo);
 
         this.updateUsing(fsInfo);

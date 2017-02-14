@@ -8,7 +8,7 @@ class getIndexTermsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Data.Queries.TermsQueryResult> {
+    execute(): JQueryPromise<Raven.Client.Documents.Queries.TermsQueryResult> {
         const args = {
             field: this.field,
             name: this.indexName, 

@@ -11,7 +11,7 @@ class filesystemCreationModel extends resourceCreationModel {
         return "file system";
     } 
 
-    toDto(): Raven.Client.Data.DatabaseDocument { //TODO: update returned type
+    toDto(): Raven.Client.Server.DatabaseDocument { //TODO: update returned type
         const settings: dictionary<string> = {};
         const securedSettings: dictionary<string> = {};
 

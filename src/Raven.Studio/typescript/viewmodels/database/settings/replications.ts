@@ -143,7 +143,7 @@ class replications extends viewModelBase {
 
         new getReplicationsCommand(db)
             .execute()
-            .done((repSetup: Raven.Client.Replication.ReplicationDocument<Raven.Client.Replication.ReplicationDestination>) => {
+            .done((repSetup: Raven.Client.Documents.Replication.ReplicationDocument<Raven.Client.Documents.Replication.ReplicationDestination>) => {
                 if (repSetup) {
                     this.replicationsSetup(new replicationsSetup(repSetup));    
                 }

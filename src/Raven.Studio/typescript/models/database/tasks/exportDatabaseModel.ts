@@ -17,8 +17,8 @@
     transformScript = ko.observable<string>();
 
 
-    toDto(): Raven.Client.Smuggler.DatabaseSmugglerOptions {
-        const operateOnTypes: Array<Raven.Client.Smuggler.DatabaseItemType> = [];
+    toDto(): Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions {
+        const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
         if (this.includeDocuments()) {
             operateOnTypes.push("Documents");
         }
@@ -41,8 +41,8 @@
             IncludeExpired: this.includeExpiredDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
-            OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Smuggler.DatabaseItemType
-        } as Raven.Client.Smuggler.DatabaseSmugglerOptions;
+            OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType
+        } as Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions;
     }
 }
 

@@ -188,7 +188,7 @@ class exportDatabase extends viewModelBase {
             });
     }
 
-    private startDownload(args: Raven.Client.Smuggler.DatabaseSmugglerOptions) {
+    private startDownload(args: Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions) {
         const $form = $("#exportDownloadForm");
         let db = this.activeDatabase();
         const $downloadOptions = $("[name=DownloadOptions]", $form);
@@ -210,7 +210,7 @@ class exportDatabase extends viewModelBase {
                 notificationCenter.instance.openDetailsForOperationById(db, operationId);
 
                 notificationCenter.instance.monitorOperation(db, operationId)
-                    .fail((exception: Raven.Client.Data.OperationExceptionResult) => {
+                    .fail((exception: Raven.Client.Documents.Operations.OperationExceptionResult) => {
                         messagePublisher.reportError("Could not export database: " + exception.Message, exception.Error, null, false);
                     }).always(() => exportDatabase.isExporting(false));
 

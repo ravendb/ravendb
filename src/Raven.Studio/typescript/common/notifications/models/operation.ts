@@ -6,9 +6,9 @@ import resource = require("models/resources/resource");
 class operation extends abstractNotification {
 
     operationId = ko.observable<number>();
-    progress = ko.observable<Raven.Client.Data.IOperationProgress>();
-    result = ko.observable<Raven.Client.Data.IOperationResult>();
-    status = ko.observable<Raven.Client.Data.OperationStatus>();
+    progress = ko.observable<Raven.Client.Documents.Operations.IOperationProgress>();
+    result = ko.observable<Raven.Client.Documents.Operations.IOperationResult>();
+    status = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     killable = ko.observable<boolean>();
 
     isCompleted: KnockoutComputed<boolean>;
@@ -34,7 +34,7 @@ class operation extends abstractNotification {
     }
 
     percentageProgress(): number {
-        const progress = this.progress() as Raven.Client.Data.DeterminateProgress;
+        const progress = this.progress() as Raven.Client.Documents.Operations.DeterminateProgress;
         return Math.round(progress.Processed * 100.0 / progress.Total);
     }
 

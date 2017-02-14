@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 
 class saveIndexLockModeCommand extends commandBase {
 
-    constructor(private indexes: Array<index>, private lockMode: Raven.Client.Indexing.IndexLockMode, private db: database, private lockTitle: string) {
+    constructor(private indexes: Array<index>, private lockMode: Raven.Client.Documents.Indexes.IndexLockMode, private db: database, private lockTitle: string) {
         super();
     }
 

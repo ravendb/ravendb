@@ -13,7 +13,7 @@ class statistics {
     // The observable indexes array, ordered by type
     indexesByType = ko.observableArray<indexesWithType>(); 
     
-    constructor(dbStats: Raven.Client.Data.DatabaseStatistics, indexStats: Raven.Client.Data.Indexes.IndexStats[]) {
+    constructor(dbStats: Raven.Client.Documents.Operations.DatabaseStatistics, indexStats: Raven.Client.Documents.Indexes.IndexStats[]) {
         this.dataBaseId = dbStats.DatabaseId; 
         this.lastDocEtag = dbStats.LastDocEtag;
         this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();

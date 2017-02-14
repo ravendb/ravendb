@@ -14,7 +14,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
 
     json = ko.observable<string>("");
-    indexes = ko.observableArray<Raven.Client.Indexing.IndexDefinition>([]);
+    indexes = ko.observableArray<Raven.Client.Documents.Indexes.IndexDefinition>([]);
     //TODO: transformers = ko.observableArray<transformerDto>([]);
     pasteDeferred = $.Deferred();
 

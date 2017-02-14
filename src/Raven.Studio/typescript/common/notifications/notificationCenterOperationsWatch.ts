@@ -12,8 +12,8 @@ class notificationCenterOperationsWatch {
 
     private resource: resource;
 
-    private operations = new Map<number, JQueryDeferred<Raven.Client.Data.IOperationResult>>();
-    private watchedProgresses = new Map<number, Array<(progress: Raven.Client.Data.IOperationProgress) => void>>();
+    private operations = new Map<number, JQueryDeferred<Raven.Client.Documents.Operations.IOperationResult>>();
+    private watchedProgresses = new Map<number, Array<(progress: Raven.Client.Documents.Operations.IOperationProgress) => void>>();
 
     configureFor(resource: resource) {
         this.resource = resource;
@@ -21,13 +21,13 @@ class notificationCenterOperationsWatch {
         this.watchedProgresses.clear();
     }
 
-    monitorOperation<TProgress extends Raven.Client.Data.IOperationProgress, TResult extends Raven.Client.Data.IOperationResult>
+    monitorOperation<TProgress extends Raven.Client.Documents.Operations.IOperationProgress, TResult extends Raven.Client.Documents.Operations.IOperationResult>
         (operationId: number, onProgress: (progress: TProgress) => void = null): JQueryPromise<TResult> {
 
         if (onProgress) {
             let progresses = this.watchedProgresses.get(operationId);
             if (!progresses) {
-                progresses = [] as Array<(progress: Raven.Client.Data.IOperationProgress) => void>;
+                progresses = [] as Array<(progress: Raven.Client.Documents.Operations.IOperationProgress) => void>;
                 this.watchedProgresses.set(operationId, progresses);
             }
 
@@ -37,11 +37,11 @@ class notificationCenterOperationsWatch {
         return this.getOrCreateOperation(operationId).promise();
     }
 
-    private getOrCreateOperation(operationId: number): JQueryDeferred<Raven.Client.Data.IOperationResult> {
+    private getOrCreateOperation(operationId: number): JQueryDeferred<Raven.Client.Documents.Operations.IOperationResult> {
         if (this.operations.has(operationId)) {
             return this.operations.get(operationId);
         } else {
-            const task = $.Deferred<Raven.Client.Data.IOperationResult>();
+            const task = $.Deferred<Raven.Client.Documents.Operations.IOperationResult>();
             this.operations.set(operationId, task);
             return task;
         }

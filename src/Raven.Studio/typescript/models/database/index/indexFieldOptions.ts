@@ -13,7 +13,7 @@ function yesNoLabelProvider(arg: boolean) {
 class indexFieldOptions {
 
     static readonly DefaultFieldOptions = "__all_fields";
-    static readonly SortOptions: Array<valueAndLabelItem<Raven.Client.Indexing.SortOptions, string>> = [{
+    static readonly SortOptions: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.SortOptions, string>> = [{
             label: "None",
             value: "None"
         }, {
@@ -33,7 +33,7 @@ class indexFieldOptions {
             value: "StringVal"
         }];
 
-    static readonly TermVectors: Array<valueAndLabelItem<Raven.Client.Indexing.FieldTermVector, string>> = [{
+    static readonly TermVectors: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.FieldTermVector, string>> = [{
             label: "No",
             value: "No"
         }, {
@@ -51,7 +51,7 @@ class indexFieldOptions {
         }
     ];
 
-    static readonly Indexing: Array<valueAndLabelItem<Raven.Client.Indexing.FieldIndexing, string>> = [{
+    static readonly Indexing: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.FieldIndexing, string>> = [{
             label: "Analyzed", 
             value: "Analyzed"
         }, {
@@ -71,15 +71,15 @@ class indexFieldOptions {
 
     analyzer = ko.observable<string>();
 
-    indexing = ko.observable<Raven.Client.Indexing.FieldIndexing>();
+    indexing = ko.observable<Raven.Client.Documents.Indexes.FieldIndexing>();
     effectiveIndexing = this.effectiveComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
     defaultIndexing = this.defaultComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
 
-    sort = ko.observable<Raven.Client.Indexing.SortOptions>();
+    sort = ko.observable<Raven.Client.Documents.Indexes.SortOptions>();
     effectiveSort = this.effectiveComputed(x => x.sort(), labelMatcher(indexFieldOptions.SortOptions));
     defaultSort = this.defaultComputed(x => x.sort(), labelMatcher(indexFieldOptions.SortOptions));
 
-    storage = ko.observable<Raven.Client.Indexing.FieldStorage>();
+    storage = ko.observable<Raven.Client.Documents.Indexes.FieldStorage>();
     effectiveStorage = this.effectiveComputed(x => x.storage());
     defaultStorage = this.defaultComputed(x => x.storage());
 
@@ -87,7 +87,7 @@ class indexFieldOptions {
     effectiveSuggestions = this.effectiveComputed(x => x.suggestions(), yesNoLabelProvider);
     defaultSuggestions = this.defaultComputed(x => x.suggestions(), yesNoLabelProvider);
 
-    termVector = ko.observable<Raven.Client.Indexing.FieldTermVector>();
+    termVector = ko.observable<Raven.Client.Documents.Indexes.FieldTermVector>();
     effectiveTermVector = this.effectiveComputed(x => x.termVector(), labelMatcher(indexFieldOptions.TermVectors));
     defaultTermVector = this.defaultComputed(x => x.termVector(), labelMatcher(indexFieldOptions.TermVectors));
 
@@ -103,7 +103,7 @@ class indexFieldOptions {
 
     validationGroup: KnockoutObservable<any>;
 
-    constructor(name: string, dto: Raven.Client.Indexing.IndexFieldOptions, parentFields?: indexFieldOptions) {
+    constructor(name: string, dto: Raven.Client.Documents.Indexes.IndexFieldOptions, parentFields?: indexFieldOptions) {
         this.name(name);
         this.parent(parentFields);
         this.analyzer(dto.Analyzer);
@@ -212,7 +212,7 @@ class indexFieldOptions {
             Sort: "None",
             Analyzer: "StandardAnalyzer",
             Suggestions: false,
-            Spatial: null as Raven.Client.Indexing.SpatialOptions,
+            Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
             TermVector: "No"
         });
         field.fullTextSearch(false);
@@ -227,9 +227,9 @@ class indexFieldOptions {
             Sort: null,
             Analyzer: null,
             Suggestions: null,
-            Spatial: null as Raven.Client.Indexing.SpatialOptions,
+            Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
             TermVector: null
-        } as Raven.Client.Indexing.IndexFieldOptions;
+        } as Raven.Client.Documents.Indexes.IndexFieldOptions;
     }
 
     toggleAdvancedOptions() {
@@ -240,7 +240,7 @@ class indexFieldOptions {
         return this.name() === indexFieldOptions.DefaultFieldOptions;
     }
 
-    toDto(): Raven.Client.Indexing.IndexFieldOptions {
+    toDto(): Raven.Client.Documents.Indexes.IndexFieldOptions {
         return {
             Analyzer: this.analyzer(),
             Indexing: this.indexing(),

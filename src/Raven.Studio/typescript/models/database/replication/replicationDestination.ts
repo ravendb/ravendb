@@ -79,7 +79,7 @@ class replicationDestination {
         $(event.target).next().toggle();
     }
 
-    constructor(dto: Raven.Client.Replication.ReplicationDestination) {
+    constructor(dto: Raven.Client.Documents.Replication.ReplicationDestination) {
         this.url(dto.Url);
         this.username(dto.Username);
         this.password(dto.Password);
@@ -154,13 +154,13 @@ class replicationDestination {
             ApiKey: null,
             
             Database: databaseName,
-            TransitiveReplicationBehavior: "Replicate" as Raven.Client.Replication.TransitiveReplicationOptions,
+            TransitiveReplicationBehavior: "Replicate" as Raven.Client.Documents.Replication.TransitiveReplicationOptions,
             IgnoredClient: false,
             Disabled: false,
             ClientVisibleUrl: null,
             SkipIndexReplication: false,
             SpecifiedCollections: {} as { [key: string]: string; }
-        } as Raven.Client.Replication.ReplicationDestination);
+        } as Raven.Client.Documents.Replication.ReplicationDestination);
     }
 
     enable() {
@@ -179,7 +179,7 @@ class replicationDestination {
         this.ignoredClient(true);
     }
 
-    toDto(): Raven.Client.Replication.ReplicationDestination {
+    toDto(): Raven.Client.Documents.Replication.ReplicationDestination {
         return {
             Url: this.prepareUrl(),
             Username: this.username(),
@@ -193,7 +193,7 @@ class replicationDestination {
             ClientVisibleUrl: this.clientVisibleUrl(),
             SkipIndexReplication: this.skipIndexReplication(),
             SpecifiedCollections: this.enableReplicateOnlyFromCollections() ? this.specifiedCollectionsToMap() : null
-        } as Raven.Client.Replication.ReplicationDestination;
+        } as Raven.Client.Documents.Replication.ReplicationDestination;
     }
 
     specifiedCollectionsToMap(): dictionary<string> {

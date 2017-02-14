@@ -6,18 +6,18 @@ import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenComm
 import messagePublisher = require("common/messagePublisher");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 
-class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.Client.Data.Indexes.IndexPerformanceStats[]> {
+class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.Client.Documents.Indexes.IndexPerformanceStats[]> {
 
-    private readonly onData: (data: Raven.Client.Data.Indexes.IndexPerformanceStats[]) => void;
+    private readonly onData: (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => void;
 
     private isoParser = d3.time.format.iso;
 
-    private mergedData: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
+    private mergedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
 
-    private pendingDataToApply: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
+    private pendingDataToApply: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
     private updatesPaused = false;
 
-    constructor(db: database, onData: (data: Raven.Client.Data.Indexes.IndexPerformanceStats[]) => void) {
+    constructor(db: database, onData: (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => void) {
         super(db);
         this.onData = onData;
     }
@@ -49,7 +49,7 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
         this.onData(this.mergedData);
     }
 
-    protected onMessage(e: Raven.Client.Data.Indexes.IndexPerformanceStats[]) {
+    protected onMessage(e: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) {
         if (this.updatesPaused) {
             this.pendingDataToApply.push(...e);
         } else {
@@ -58,7 +58,7 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
         }
     }
 
-    private mergeIncomingData(e: Raven.Client.Data.Indexes.IndexPerformanceStats[]) {
+    private mergeIncomingData(e: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) {
         e.forEach(incomingIndexStats => {
             const indexName = incomingIndexStats.IndexName;
 

@@ -8,9 +8,9 @@ class getIndexesPerformance extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Data.Indexes.IndexPerformanceStats[]> {
+    execute(): JQueryPromise<Raven.Client.Documents.Indexes.IndexPerformanceStats[]> {
         const url = endpoints.databases.index.indexesPerformance;
-        return this.query<Raven.Client.Data.Indexes.IndexPerformanceStats[]>(url, null, this.db);
+        return this.query<Raven.Client.Documents.Indexes.IndexPerformanceStats[]>(url, null, this.db);
     }
 }
 

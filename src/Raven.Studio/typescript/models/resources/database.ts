@@ -7,7 +7,7 @@ class database extends resource {
     static readonly type = "database";
     static readonly qualifier = "db";
 
-    constructor(dbInfo: Raven.Client.Data.DatabaseInfo) {
+    constructor(dbInfo: Raven.Client.Server.Operations.DatabaseInfo) {
         super(dbInfo);
 
         this.updateUsing(dbInfo);
@@ -63,7 +63,7 @@ class database extends resource {
         return database.type;
     }
 
-    updateUsing(incomingCopy: Raven.Client.Data.DatabaseInfo): void {
+    updateUsing(incomingCopy: Raven.Client.Server.Operations.DatabaseInfo): void {
         super.updateUsing(incomingCopy);
 
         //TODO: assign other props

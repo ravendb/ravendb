@@ -190,7 +190,7 @@ declare module studio.settings {
     type usageEnvironment = "Default" | "Dev" | "Test" | "Prod";
 }
 
-interface IndexingPerformanceStatsWithCache extends Raven.Client.Data.Indexes.IndexingPerformanceStats {
+interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Indexes.IndexingPerformanceStats {
     StartedAsDate: Date; // used for caching
     CompletedAsDate: Date; // user for caching
 }

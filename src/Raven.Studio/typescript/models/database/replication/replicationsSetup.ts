@@ -9,17 +9,17 @@ class replicationsSetup {
     requestTimeSlaThreshold = ko.observable<number>(null);
     hasAnyReplicationDestination: KnockoutComputed<boolean>;
 
-    constructor(dto: Raven.Client.Replication.ReplicationDocument<Raven.Client.Replication.ReplicationDestination>) {
+    constructor(dto: Raven.Client.Documents.Replication.ReplicationDocument<Raven.Client.Documents.Replication.ReplicationDestination>) {
         this.source(dto.Source);
 
         this.destinations(dto.Destinations.map(d => new replicationDestination(d)));
 
         const clientConfiguration = dto.ClientConfiguration;
-        if (clientConfiguration) {
-            if (clientConfiguration.FailoverBehavior) {
-                this.clientFailoverBehaviour(clientConfiguration.FailoverBehavior);
-            }
-        }
+        //if (clientConfiguration) {
+        //    if (clientConfiguration.FailoverBehavior) {
+        //        this.clientFailoverBehaviour(clientConfiguration.FailoverBehavior);
+        //    }
+        //}
         this.showRequestTimeSlaThreshold = ko.computed(() => {
             return this.clientFailoverBehaviour() && this.clientFailoverBehaviour().includes("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
         });

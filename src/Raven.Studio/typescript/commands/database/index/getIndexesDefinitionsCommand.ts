@@ -7,13 +7,13 @@ class getIndexesDefinitionsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Array<Raven.Client.Indexing.IndexDefinition>> {
+    execute(): JQueryPromise<Array<Raven.Client.Documents.Indexes.IndexDefinition>> {
         const args = {
           start: this.skip,
           pageSize: this.take
         };
         const url = endpoints.databases.index.indexes;
-        const extractor = (response: resultsDto<Raven.Client.Indexing.IndexDefinition>) => response.Results;
+        const extractor = (response: resultsDto<Raven.Client.Documents.Indexes.IndexDefinition>) => response.Results;
         return this.query(url, args, this.db, extractor);
     }
 }

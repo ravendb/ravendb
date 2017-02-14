@@ -7,13 +7,13 @@ import resourcesManager = require("common/shell/resourcesManager");
 class databaseInfo extends resourceInfo {
 
     rejectClients = ko.observable<boolean>();
-    indexingStatus = ko.observable<Raven.Client.Data.Indexes.IndexRunningStatus>();
+    indexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
     indexingDisabled = ko.observable<boolean>();
     indexingPaused = ko.observable<boolean>();
     documentsCount = ko.observable<number>();
     indexesCount = ko.observable<number>();
 
-    constructor(dto: Raven.Client.Data.DatabaseInfo) {
+    constructor(dto: Raven.Client.Server.Operations.DatabaseInfo) {
         super(dto);
 
         this.update(dto);
@@ -35,7 +35,7 @@ class databaseInfo extends resourceInfo {
         return resourcesManager.default.getDatabaseByName(this.name);
     }
 
-    update(databaseInfo: Raven.Client.Data.DatabaseInfo): void {
+    update(databaseInfo: Raven.Client.Server.Operations.DatabaseInfo): void {
         super.update(databaseInfo);
         this.rejectClients(databaseInfo.RejectClients);
         this.indexingStatus(databaseInfo.IndexingStatus);

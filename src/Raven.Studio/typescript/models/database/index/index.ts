@@ -6,7 +6,7 @@ class index {
 
     static readonly DefaultIndexGroupName = "Other";
 
-    collections: { [index: string]: Raven.Client.Data.Indexes.CollectionStats; };
+    collections: { [index: string]: Raven.Client.Documents.Indexes.CollectionStats; };
     collectionNames: Array<string>;
     createdTimestamp: string;
     entriesCount: number;
@@ -17,19 +17,19 @@ class index {
     isTestIndex: boolean;
     lastIndexingTime?: string;
     lastQueryingTime?: string;
-    lockMode = ko.observable<Raven.Client.Indexing.IndexLockMode>();
+    lockMode = ko.observable<Raven.Client.Documents.Indexes.IndexLockMode>();
     mapAttempts: number;
     mapErrors: number;
     mapSuccesses: number;
-    memory: Raven.Client.Data.Indexes.MemoryStats;
+    memory: Raven.Client.Documents.Indexes.MemoryStats;
     name: string;
-    priority = ko.observable<Raven.Client.Data.Indexes.IndexPriority>();
-    state = ko.observable<Raven.Client.Data.Indexes.IndexState>();
-    status = ko.observable<Raven.Client.Data.Indexes.IndexRunningStatus>();
+    priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
+    state = ko.observable<Raven.Client.Documents.Indexes.IndexState>();
+    status = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
     reduceAttempts?: number;
     reduceErrors?: number;
     reduceSuccesses?: number;
-    type: Raven.Client.Data.Indexes.IndexType;
+    type: Raven.Client.Documents.Indexes.IndexType;
 
     filteredOut = ko.observable<boolean>(false); //UI only property
     badgeClass: KnockoutComputed<string>;
@@ -48,13 +48,13 @@ class index {
     isPausedState: KnockoutComputed<boolean>;
 
     isFaulty: KnockoutComputed<boolean>;
-    globalIndexingStatus: KnockoutObservable<Raven.Client.Data.Indexes.IndexRunningStatus>;
+    globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>;
     canBePaused: KnockoutComputed<boolean>;
     canBeResumed: KnockoutComputed<boolean>;
     canBeEnabled: KnockoutComputed<boolean>;
     canBeDisabled: KnockoutComputed<boolean>;
 
-    constructor(dto: Raven.Client.Data.Indexes.IndexStats, globalIndexingStatus: KnockoutObservable<Raven.Client.Data.Indexes.IndexRunningStatus>) {
+    constructor(dto: Raven.Client.Documents.Indexes.IndexStats, globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>) {
         this.collections = dto.Collections;
         this.collectionNames = index.extractCollectionNames(dto.Collections);
         this.createdTimestamp = dto.CreatedTimestamp;
@@ -149,7 +149,7 @@ class index {
         });
 
         this.isFaulty = ko.pureComputed(() => {
-            const faultyType = "Faulty" as Raven.Client.Data.Indexes.IndexType;
+            const faultyType = "Faulty" as Raven.Client.Documents.Indexes.IndexType;
             return this.type === faultyType;
         });
 
@@ -202,7 +202,7 @@ class index {
         });
     }
 
-    private static extractCollectionNames(collections: { [index: string]: Raven.Client.Data.Indexes.CollectionStats; }): string[] {
+    private static extractCollectionNames(collections: { [index: string]: Raven.Client.Documents.Indexes.CollectionStats; }): string[] {
         return collections ? Object.keys(collections) : [];
     }
 
