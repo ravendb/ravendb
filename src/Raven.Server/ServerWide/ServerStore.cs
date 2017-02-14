@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Util;
+using Raven.Client.Exceptions.Database;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -122,7 +123,17 @@ namespace Raven.Server.ServerWide
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;
-                _env = new StorageEnvironment(options);
+
+                try
+                {
+                    _env = new StorageEnvironment(options);
+                }
+
+                catch (Exception e)
+                {
+                    throw new DatabaseLoadFailureException("Failed to load the system database" , e);
+                }
+
                 using (var tx = _env.WriteTransaction())
                 {
                     tx.DeleteTree("items");// note the different casing, we remove the old items tree 
