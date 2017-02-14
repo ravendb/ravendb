@@ -19,9 +19,9 @@ using Voron.Platform.Win32;
 
 namespace Voron.Platform.Posix
 {
-    public unsafe class Posix32BitMemoryMapPager : PosixAbstractPager
+    public unsafe class Posix32BitsMemoryMapPager : PosixAbstractPager
     {
-        public Posix32BitMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null,
+        public Posix32BitsMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null,
                     bool usePageProtection = false) : base(options, usePageProtection)
         {
         }

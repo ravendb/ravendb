@@ -7,6 +7,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Utils;
+using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Exceptions;
@@ -22,7 +23,7 @@ namespace Voron.Impl
 {
     public interface IPagerLevelTransactionState : IDisposable
     {
-        Dictionary<AbstractPager, Windows32BitMemoryMapPager.TransactionState> Windows32BitPagerTransactionState { get; set; }
+        Dictionary<AbstractPager, TransactionState> Windows32BitsPagerTransactionState { get; set; }
         event Action<IPagerLevelTransactionState> OnDispose;
         void EnsurePagerStateReference(PagerState state);
         StorageEnvironment Environment { get; }
@@ -50,7 +51,7 @@ namespace Voron.Impl
         private readonly WriteAheadJournal _journal;
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
-        Dictionary<AbstractPager, Windows32BitMemoryMapPager.TransactionState> IPagerLevelTransactionState.Windows32BitPagerTransactionState
+        Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.Windows32BitsPagerTransactionState
         {
             get;
             set;
@@ -504,15 +505,18 @@ namespace Voron.Impl
                     pageFromScratchBuffer.PositionInScratchBuffer,
                     numberOfPages);
             }
-
-            var newPage = _env.ScratchBufferPool.ReadPage(this, pageFromScratchBuffer.ScratchFileNumber,
+            
+            var newPagePointer = _env.ScratchBufferPool.AcquirePagePointer(this, pageFromScratchBuffer.ScratchFileNumber,
                 pageFromScratchBuffer.PositionInScratchBuffer);
 
             if (zeroPage)
-                UnmanagedMemory.Set(newPage.Pointer, 0, Constants.Storage.PageSize * numberOfPages);
+                UnmanagedMemory.Set(newPagePointer, 0, Constants.Storage.PageSize * numberOfPages);
 
-            newPage.PageNumber = pageNumber;
-            newPage.Flags = PageFlags.Single;
+            var newPage = new Page(newPagePointer)
+            {
+                PageNumber = pageNumber,
+                Flags = PageFlags.Single
+            };
 
             TrackWritablePage(newPage);
 

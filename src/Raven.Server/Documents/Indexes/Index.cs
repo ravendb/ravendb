@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 options.SchemaVersion = 1;
-                options.ForceUsing32BitPager = documentDatabase.Configuration.Storage.ForceUsing32BitPager;
+                options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                 environment = new StorageEnvironment(options);
 
@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.Indexes
                     : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath);
 
                 options.SchemaVersion = 1;
-                options.ForceUsing32BitPager = documentDatabase.Configuration.Storage.ForceUsing32BitPager;
+                options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                 try
                 {
@@ -2099,7 +2099,7 @@ namespace Raven.Server.Documents.Indexes
                     var environmentOptions =
                         (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
                     var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath);
-                    srcOptions.ForceUsing32BitPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitPager;
+                    srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                     var wasRunning = _indexingThread != null;
 
@@ -2109,7 +2109,7 @@ namespace Raven.Server.Documents.Indexes
 
                     using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath.FullPath))
                     {
-                        compactOptions.ForceUsing32BitPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitPager;
+                        compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {

@@ -10,7 +10,7 @@ namespace Voron.Impl.Paging
             OnDispose?.Invoke(this);
         }
 
-        public Dictionary<AbstractPager, Windows32BitMemoryMapPager.TransactionState> Windows32BitPagerTransactionState
+        public Dictionary<AbstractPager, TransactionState> Windows32BitsPagerTransactionState
         {
             get; set;
         }
