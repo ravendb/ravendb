@@ -87,7 +87,7 @@ namespace Raven.Server.Documents
 
         public readonly PatchDocument Patch;
 
-        public TransactionOperationsMerger TxMerger;
+        public readonly TransactionOperationsMerger TxMerger;
 
         public SubscriptionStorage SubscriptionStorage { get; }
 

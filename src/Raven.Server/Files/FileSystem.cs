@@ -36,6 +36,7 @@ namespace Raven.Server.Files
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<FileSystem>(Name);
             FilesStorage = new FilesStorage(this);
+            TxMerger = new FilesTransactionsMerger(FilesStorage.ContextPool);
             Metrics = new MetricsCountersManager();
             IoMetrics = serverStore?.IoMetrics ?? new IoMetrics(256, 256);
         }
@@ -61,6 +62,8 @@ namespace Raven.Server.Files
         public IoMetrics IoMetrics { get; }
 
         public DateTime StartTime { get; }
+
+        public FilesTransactionsMerger TxMerger;
 
         public void Initialize()
         {
