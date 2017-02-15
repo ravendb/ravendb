@@ -371,7 +371,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Key = id,
                     Database = Database,
-                    ExepctedEtag = etag
+                    ExpectedEtag = etag
                 };
 
                 await Database.TxMerger.Enqueue(cmd);
@@ -596,7 +596,7 @@ namespace Raven.Server.Documents.Handlers
         private class MergedDeleteCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public string Key;
-            public long? ExepctedEtag;
+            public long? ExpectedEtag;
             public DocumentDatabase Database;
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
@@ -604,7 +604,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    Database.DocumentsStorage.Delete(context, Key, ExepctedEtag);
+                    Database.DocumentsStorage.Delete(context, Key, ExpectedEtag);
                 }
                 catch (ConcurrencyException e)
                 {
