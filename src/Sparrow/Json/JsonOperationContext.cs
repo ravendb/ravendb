@@ -31,8 +31,24 @@ namespace Sparrow.Json
         private AllocatedMemoryData _tempBuffer;
         private List<GCHandle> _pinnedObjects;
 
-        private readonly FastDictionary<string, LazyStringValue> _fieldNames =
-            new FastDictionary<string, LazyStringValue>(StringComparer.Ordinal);
+        private struct StringEqualityStructComparer : IEqualityComparer<string>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Equals(string x, string y)
+            {
+                return string.Compare(x, y, StringComparison.OrdinalIgnoreCase) == 0;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int GetHashCode(string str)
+            {
+                return str.GetHashCode();                
+            }
+        }
+
+        private readonly FastDictionary<string, LazyStringValue, StringEqualityStructComparer> _fieldNames = new FastDictionary<string, LazyStringValue, StringEqualityStructComparer>(default(StringEqualityStructComparer));
+
+
 
         private bool _disposed;
 

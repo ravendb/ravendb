@@ -6,6 +6,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -23,8 +24,50 @@ namespace Sparrow.Json
 
         public DynamicJsonValue Modifications;
 
-        private Dictionary<StringSegment, object> _objectsPathCache;
-        private Dictionary<int, object> _objectsPathCacheByIndex;
+        private struct StringSegmentEqualityStructComparer : IEqualityComparer<StringSegment>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Equals(StringSegment x, StringSegment y)
+            {
+                if (x.Length != y.Length)
+                    return false;
+
+                fixed (char* pX = x.String)
+                fixed (char* pY = y.String)
+                {
+                    return Memory.Compare((byte*)pX + x.Start * sizeof(char), (byte*)pY + y.Start * sizeof(char), x.Length * sizeof(char)) == 0;
+                }
+
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int GetHashCode(StringSegment str)
+            {
+                fixed (char* p = str.String)
+                {
+                    return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
+                }
+            }
+        }
+
+        public struct IntEqualityStructComparer : IEqualityComparer<int>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Equals(int x, int y)
+            {
+                return x == y;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int GetHashCode(int obj)
+            {
+                return obj;
+            }
+        }
+
+
+        private FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> _objectsPathCache;
+        private FastDictionary<int, object, IntEqualityStructComparer> _objectsPathCacheByIndex;
         public string _allocation;
         public bool NoCache { get; set; }
 
@@ -383,6 +426,7 @@ namespace Sparrow.Json
             return false;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetMember(string name, out object result)
         {
             return TryGetMember(new StringSegment(name, name.Length), out result);
@@ -425,8 +469,8 @@ namespace Sparrow.Json
         {
             if (_objectsPathCache == null)
             {
-                _objectsPathCache = new Dictionary<StringSegment, object>();
-                _objectsPathCacheByIndex = new Dictionary<int, object>();
+                _objectsPathCache = new FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer>(default(StringSegmentEqualityStructComparer));
+                _objectsPathCacheByIndex = new FastDictionary<int, object, IntEqualityStructComparer>(default(IntEqualityStructComparer));
             }
             _objectsPathCache[name] = result;
             _objectsPathCacheByIndex[index] = result;
@@ -602,11 +646,24 @@ namespace Sparrow.Json
             return props;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal object GetObject(BlittableJsonToken type, int position)
         {
             if (_mem == null)
                 ThrowObjectDisposed();
-            switch (type & TypesMask)
+
+            BlittableJsonToken actualType = type & TypesMask;
+            if (actualType == BlittableJsonToken.String)
+                return ReadStringLazily(position);
+            if (actualType == BlittableJsonToken.Integer)
+                return ReadVariableSizeLong(position);
+
+            return GetObjectUnlikely(type, position, actualType);
+        }
+
+        private object GetObjectUnlikely(BlittableJsonToken type, int position, BlittableJsonToken actualType)
+        {
+            switch (actualType)
             {
                 case BlittableJsonToken.EmbeddedBlittable:
                     return ReadNestedObject(position);
@@ -614,10 +671,6 @@ namespace Sparrow.Json
                     return new BlittableJsonReaderObject(position, _parent ?? this, type);
                 case BlittableJsonToken.StartArray:
                     return new BlittableJsonReaderArray(position, _parent ?? this, type);
-                case BlittableJsonToken.Integer:
-                    return ReadVariableSizeLong(position);
-                case BlittableJsonToken.String:
-                    return ReadStringLazily(position);
                 case BlittableJsonToken.CompressedString:
                     return ReadCompressStringLazily(position);
                 case BlittableJsonToken.Boolean:
@@ -626,11 +679,10 @@ namespace Sparrow.Json
                     return null;
                 case BlittableJsonToken.Float:
                     return new LazyDoubleValue(ReadStringLazily(position));
-                default:
-                    throw new ArgumentOutOfRangeException((type).ToString());
             }
-        }
 
+            throw new ArgumentOutOfRangeException((type).ToString());
+        }
 
         public void Dispose()
         {
