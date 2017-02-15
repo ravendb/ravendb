@@ -211,7 +211,7 @@ namespace Sparrow.Json
 
         public bool TryGet<T>(string name, out T obj)
         {
-            return TryGet(new StringSegment(name, 0, name.Length), out obj);
+            return TryGet(new StringSegment(name, name.Length), out obj);
         }
 
         public bool TryGet<T>(StringSegment name, out T obj)
@@ -299,7 +299,7 @@ namespace Sparrow.Json
 
         public bool TryGet(string name, out double? nullableDbl)
         {
-            return TryGet(new StringSegment(name, 0, name.Length), out nullableDbl);
+            return TryGet(new StringSegment(name, name.Length), out nullableDbl);
         }
 
         public bool TryGet(StringSegment name, out double? nullableDbl)
@@ -317,7 +317,7 @@ namespace Sparrow.Json
 
         public bool TryGet(string name, out double dbl)
         {
-            return TryGet(new StringSegment(name, 0, name.Length), out dbl);
+            return TryGet(new StringSegment(name, name.Length), out dbl);
         }
 
         public bool TryGet(StringSegment name, out double dbl)
@@ -348,7 +348,7 @@ namespace Sparrow.Json
 
         public bool TryGet(string name, out string str)
         {
-            return TryGet(new StringSegment(name, 0, name.Length), out str);
+            return TryGet(new StringSegment(name, name.Length), out str);
         }
 
         public bool TryGet(StringSegment name, out string str)
@@ -385,7 +385,7 @@ namespace Sparrow.Json
 
         public bool TryGetMember(string name, out object result)
         {
-            return TryGetMember(new StringSegment(name, 0, name.Length), out result);
+            return TryGetMember(new StringSegment(name, name.Length), out result);
         }
 
 
@@ -393,27 +393,31 @@ namespace Sparrow.Json
         {
             if (_mem == null)
                 ThrowObjectDisposed();
+
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
-            {
                 return true;
-            }
+
             var index = GetPropertyIndex(name);
             if (index == -1)
             {
                 result = null;
                 return false;
             }
-            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+
             BlittableJsonToken token;
             int position;
             int propertyId;
             GetPropertyTypeAndPosition(index, metadataSize, out token, out position, out propertyId);
             result = GetObject(token, (int)(_objStart - _mem - position));
+
             if (NoCache == false && result is BlittableJsonReaderBase)
             {
                 AddToCache(name, result, index);
             }
+
             return true;
         }
 
@@ -428,7 +432,7 @@ namespace Sparrow.Json
             _objectsPathCacheByIndex[index] = result;
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void GetPropertyTypeAndPosition(int index, long metadataSize, out BlittableJsonToken token, out int position, out int propertyId)
         {
             var propPos = _metadataPtr + index * metadataSize;
@@ -486,7 +490,7 @@ namespace Sparrow.Json
 
         public int GetPropertyIndex(string name)
         {
-            return GetPropertyIndex(new StringSegment(name, 0, name.Length));
+            return GetPropertyIndex(new StringSegment(name, name.Length));
         }
 
 

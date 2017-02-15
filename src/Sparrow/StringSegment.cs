@@ -72,15 +72,61 @@ namespace Sparrow
         private string _valueString;
         public string Value => _valueString ?? (_valueString = String.Substring(Start, Length));
 
-        public StringSegment(string s, int start, int count = -1)
+
+        // PERF: Included this version to exploit the knowledge that we are going to get a full string.
+        public StringSegment(string s)
         {
             String = s;
-            Start = start;
-            Length = count == -1 ? String.Length - start : count;
-            _valueString = start == 0 && Length == s.Length ? s : null;
+            Start = 0;
+            Length = s.Length;
+            _valueString = s;
+        }
 
-            if (Start + Length > String.Length)
-                throw new IndexOutOfRangeException();
+        // PERF: Included this version to exploit the knowledge that we are going to get a substring starting at 0.
+        public StringSegment(string source, int length)
+        {
+            String = source;
+            Start = 0;
+
+            int stringLength = String.Length;
+            Length = length;
+
+            if (length <= stringLength)
+            {
+                // PERF: Inverted the condition to ensure the layout of the code will be continuous
+                _valueString = length == stringLength ? source : null;
+            }
+            else
+            {
+                ThrowIndexOutOfRangeException();
+                _valueString = null; // will never reach, this exist to fool the compiler.
+            }
+        }
+
+        // PERF: Rearranged the parameters to make the other constructors available.
+        public StringSegment(string source, int length, int start)
+        {
+            String = source;
+            Start = start;
+
+            int stringLength = String.Length;
+            Length = length;
+
+            if (start + length <= stringLength)
+            {
+                // PERF: Inverted the condition to ensure the layout of the code will be continuous
+                _valueString = start == 0 && length == stringLength ? source : null;
+            }
+            else
+            {
+                ThrowIndexOutOfRangeException();
+                _valueString = null; // will never reach, this exist to fool the compiler.
+            }
+        }
+
+        private static void ThrowIndexOutOfRangeException()
+        {
+            throw new IndexOutOfRangeException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -91,7 +137,7 @@ namespace Sparrow
             else if (start + length > String.Length)
                 throw new ArgumentOutOfRangeException(nameof(length));
 
-            return new StringSegment(String, Start + start, length);
+            return new StringSegment(String, length, Start + start);
         }
 
         public char this[int index]
@@ -108,7 +154,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator StringSegment(string str)
         {
-            return new StringSegment(str, 0);
+            return new StringSegment(str);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

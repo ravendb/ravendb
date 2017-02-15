@@ -37,7 +37,9 @@ namespace Raven.Server.Web.System
              "wwwroot",
             "../Raven.Studio/wwwroot",
             "../src/Raven.Studio/wwwroot",
-            "../../../../../src/Raven.Studio/wwwroot"
+            "../../../../src/Raven.Studio/wwwroot",
+            "../../../../../src/Raven.Studio/wwwroot",
+            "../../../../../../src/Raven.Studio/wwwroot"
         };
 
         public static readonly Dictionary<string, string> FileExtensionToContentTypeMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -126,8 +128,7 @@ namespace Raven.Server.Web.System
         {
             var fileName = new StringSegment(
                 RouteMatch.Url,
-                RouteMatch.MatchLength,
-                RouteMatch.Url.Length - RouteMatch.MatchLength);
+                RouteMatch.Url.Length - RouteMatch.MatchLength, RouteMatch.MatchLength);
 
             var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
 
