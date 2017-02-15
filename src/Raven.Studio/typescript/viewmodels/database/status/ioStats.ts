@@ -137,24 +137,23 @@ class metrics extends viewModelBase {
     static readonly colors = {
         axis: "#546175",
         gaps: "#ca1c59",              
-        trackBackground: "#2c343a",
+        trackBackground: "#2c343a",       
         trackNameBg: "rgba(57, 67, 79, 0.8)",
         trackNameFg: "#98a7b7",
         openedTrackArrow: "#ca1c59",
         closedTrackArrow: "#98a7b7"        
     }
 
-    // Can't use 'static' here, it is not recognized in the html....
-    readonly eventsColors = {
-        "JournalWriteLowSizeColor": "#93c47d",
+    static readonly eventsColors = {       
+        "JournalWriteLowSizeColor": "#38761d",
         "JournalWriteMedSizeColor": "#6aa84f",
-        "JournalWriteHighSizeColor": "#38761d",
-        "DataSyncLowSizeColor": "#6fa8dc",
-        "DataSyncMedSizeColor": "#597eaa",
-        "DataSyncHighSizeColor": "#085394",
-        "DataFlushLowSizeColor": "#f6b26b",
-        "DataFlushMedSizeColor": "#e69138",
-        "DataFlushHighSizeColor": "#b45f06"
+        "JournalWriteHighSizeColor": "#93c47d",
+        "DataFlushLowSizeColor": "#085394",
+        "DataFlushMedSizeColor": "#597eaa",
+        "DataFlushHighSizeColor": "#6fa8dc",
+        "DataSyncLowSizeColor": "#b45f06",
+        "DataSyncMedSizeColor": "#e69138",
+        "DataSyncHighSizeColor": "#f6b26b"
     }
    
     private static readonly trackHeight = 18; 
@@ -166,8 +165,8 @@ class metrics extends viewModelBase {
     static readonly brushSectionHeight = metrics.openedTrackHeight;       
 
     private static readonly itemHeight = 19;
-    private static readonly itemMargin = 1;
-    private static readonly minItemWidth = 0.6;
+    private static readonly itemMargin = 1;    
+    private static readonly minItemWidth = 1;
    
     private static readonly minGapSize = 10 * 1000; // 10 seconds      
     private static readonly axisHeight = 35; 
@@ -179,30 +178,24 @@ class metrics extends viewModelBase {
     private static readonly dataFlushString = "DataFlush";       
 
      /* observables */
-
+       
+    private importFileName = ko.observable<string>();   
     private isImport = ko.observable<boolean>(false);
-    private importFileName = ko.observable<string>();
+    private hasIndexes = ko.observable<boolean>(false);
     private isIndexesExpanded = ko.observable<boolean>(false);
 
     private searchText = ko.observable<string>();
     private trackNames = ko.observableArray<string>();
     private filteredIndexesTracksNames = ko.observableArray<string>();   
 
-    journalWriteLowHumanSizeLevel = ko.observable<string>();
-    journalWriteHighHumanSizeLevel = ko.observable<string>();
-    dataSyncLowHumanSizeLevel = ko.observable<string>();
-    dataSyncHighHumanSizeLevel = ko.observable<string>();
-    dataFlushLowHumanSizeLevel = ko.observable<string>();
-    dataFlushHighHumanSizeLevel = ko.observable<string>();
+    private journalWriteLowSizeLevel = ko.observable<number>();
+    private journalWriteHighSizeLevel = ko.observable<number>();
+    private dataSyncLowSizeLevel = ko.observable<number>();
+    private dataSyncHighSizeLevel = ko.observable<number>();
+    private dataFlushLowSizeLevel = ko.observable<number>();
+    private dataFlushHighSizeLevel = ko.observable<number>();
 
-     /* private */
-
-    private journalWriteLowSizeLevel: number;
-    private journalWriteHighSizeLevel: number;
-    private dataSyncLowSizeLevel: number;
-    private dataSyncHighSizeLevel: number;
-    private dataFlushLowSizeLevel: number;
-    private dataFlushHighSizeLevel: number;
+    /* private */
 
     private data: Raven.Server.Documents.Handlers.IOMetricsResponse;    
     private commonPathsPrefix: string;     
@@ -235,7 +228,7 @@ class metrics extends viewModelBase {
         this.searchText.throttle(200).subscribe(() => this.filterTracks());
     }
 
-    activate(args: { indexName: string, database: string }): JQueryPromise<any> {
+    activate(args: { indexName: string, database: string }): JQueryPromise<Raven.Server.Documents.Handlers.IOMetricsResponse> {
         super.activate(args);
         return this.getIOMetricsData();
     }
@@ -267,12 +260,25 @@ class metrics extends viewModelBase {
         // 1. Find common paths prefix
         this.commonPathsPrefix = this.findPrefix(this.data.Environments.map(env => env.Path));
 
-        // 2. Loop on info from EndPoint and retrieve data for legend:
-        this.data.Environments.forEach(env => {
+        // 2. Loop on info from EndPoint 
+        this.data.Environments.forEach(env => {           
+
+            // 2.0 Set the track name for the database path
+            let trackName = env.Path.substring(this.commonPathsPrefix.length + 1);
+            if (trackName === "") {
+                env.Path = `${env.Path}\\${metrics.documentsString}`;
+            }
+
+            // 2.1 Check if indexes exist
+            if (env.Path.substring(this.commonPathsPrefix.length + 1).startsWith(metrics.indexesString)) {              
+                this.hasIndexes(true);
+            } 
+
+            // 2.2 Retrieve data for legend
             env.Files.forEach(file => {
                 file.Recent.forEach(recentItem => {
                    
-                    // 2.1 Calc highest batch size for each type
+                    // 2.3 Calc highest batch size for each type
                     if (recentItem.Type === metrics.journalWriteString) {
                         maxJournalWriteSize = recentItem.Size > maxJournalWriteSize ? recentItem.Size : maxJournalWriteSize;
                     }
@@ -287,20 +293,14 @@ class metrics extends viewModelBase {
         });
 
         // 3. Calc levels so we know what color to use for the data in UI (low/med/high)
-        this.journalWriteLowSizeLevel = maxJournalWriteSize / 3;
-        this.journalWriteLowHumanSizeLevel(generalUtils.formatBytesToSize(this.journalWriteLowSizeLevel));
-        this.journalWriteHighSizeLevel = (maxJournalWriteSize / 3) * 2;
-        this.journalWriteHighHumanSizeLevel(generalUtils.formatBytesToSize(this.journalWriteHighSizeLevel));
+        this.journalWriteLowSizeLevel(maxJournalWriteSize / 3);
+        this.journalWriteHighSizeLevel((maxJournalWriteSize / 3) * 2);
 
-        this.dataSyncLowSizeLevel = maxVoronDataSyncSize / 3;
-        this.dataSyncLowHumanSizeLevel(generalUtils.formatBytesToSize(this.dataSyncLowSizeLevel));
-        this.dataSyncHighSizeLevel = (maxVoronDataSyncSize / 3) * 2;
-        this.dataSyncHighHumanSizeLevel(generalUtils.formatBytesToSize(this.dataSyncHighSizeLevel));
+        this.dataSyncLowSizeLevel(maxVoronDataSyncSize / 3);
+        this.dataSyncHighSizeLevel((maxVoronDataSyncSize / 3) * 2);
 
-        this.dataFlushLowSizeLevel = maxVoronDataFlushSize / 3;
-        this.dataFlushLowHumanSizeLevel(generalUtils.formatBytesToSize(this.dataFlushLowSizeLevel));
-        this.dataFlushHighSizeLevel = (maxVoronDataFlushSize / 3) * 2;
-        this.dataFlushHighHumanSizeLevel(generalUtils.formatBytesToSize(this.dataFlushHighSizeLevel));
+        this.dataFlushLowSizeLevel(maxVoronDataFlushSize / 3);
+        this.dataFlushHighSizeLevel((maxVoronDataFlushSize / 3) * 2);
     }
 
     private initCanvas() {
@@ -386,11 +386,11 @@ class metrics extends viewModelBase {
         const criteria = this.searchText().toLowerCase();                
 
         const indexesTracks = this.data.Environments.filter((x) => {
-            let temp = x.Path.substring(this.commonPathsPrefix.length);
-            if (temp.startsWith(metrics.indexesString)) { return x;  }
+            let temp = x.Path.substring(this.commonPathsPrefix.length + 1);           
+            return temp.startsWith(metrics.indexesString);
         });                 
 
-        const indexesTracksNames = indexesTracks.map(x => x.Path.substring(this.commonPathsPrefix.length + metrics.indexesString.length + 1));
+        const indexesTracksNames = indexesTracks.map(x => x.Path.substring(this.commonPathsPrefix.length + 1 + metrics.indexesString.length + 1));
 
         // filteredIndexesTracksNames will be indexes tracks names that are NOT SUPPOSED TO BE SEEN ....
         this.filteredIndexesTracksNames(indexesTracksNames.filter(x => !(x.toLowerCase().includes(criteria))));       
@@ -453,12 +453,12 @@ class metrics extends viewModelBase {
                         case metrics.journalWriteString:
                             yStartItem = metrics.closedTrackHeight;
                             break;
-                        case metrics.dataSyncString:
-                            yStartItem = metrics.closedTrackHeight * 2;       
-                            break;
                         case metrics.dataFlushString:
-                            yStartItem = metrics.closedTrackHeight * 3;
+                            yStartItem = metrics.closedTrackHeight * 2;
                             break;
+                        case metrics.dataSyncString:
+                            yStartItem = metrics.closedTrackHeight * 3;       
+                            break;                        
                     }
                    
                     // 3. Draw item in main canvas area 
@@ -476,16 +476,17 @@ class metrics extends viewModelBase {
     }
 
     private drawBrushGaps(context: CanvasRenderingContext2D) {
+        context.strokeStyle = metrics.colors.gaps;
+
         for (let i = 0; i < this.gapFinder.gapsPositions.length; i++) {
             const gap = this.gapFinder.gapsPositions[i];
-
-            context.strokeStyle = metrics.colors.gaps;
-
+           
             const gapX = this.xBrushTimeScale(gap.start);
             context.moveTo(gapX, 1);
-            context.lineTo(gapX, metrics.brushSectionHeight - 2);
-            context.stroke();
+            context.lineTo(gapX, metrics.brushSectionHeight - 2);            
         }
+
+        context.stroke();
     }
 
     private prepareBrush() {
@@ -505,7 +506,7 @@ class metrics extends viewModelBase {
     }
 
     private prepareMainSection() {
-        this.trackNames(this.findTrackNames());
+        this.trackNames(this.findTrackNamesWithoutCommonPrefix());
         this.filteredIndexesTracksNames([]);       
     }
 
@@ -513,12 +514,15 @@ class metrics extends viewModelBase {
         this.currentYOffset = Math.min(Math.max(0, this.currentYOffset), this.maxYOffset);
     }
 
-    private constructYScale() {
+    private constructYScale() {              
         let currentOffset = metrics.axisHeight - this.currentYOffset;  
       
         let domain = [] as Array<string>;
         let range = [] as Array<number>;
-        let firstIndex = true;
+        let firstIndex = true;        
+
+        // TODO: Maybe refactor this method so it can handle any incoming number of environments,
+        // But, as discussed, this will be left out for now inorder to avoid extra string comparisons
 
         // 1. Database main path
         domain.push(this.data.Environments[0].Path);
@@ -526,39 +530,41 @@ class metrics extends viewModelBase {
         currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
 
         // 2. We want indexes to show in second track even though they are last in the endpoint info..
-        for (let i = 3; i < this.data.Environments.length; i++) {
+        if (this.hasIndexes()) {
+            for (let i = 3; i < this.data.Environments.length; i++) {
 
-            // 2.1 indexes closed
-            if (!this.isIndexesExpanded()) {
-                if (firstIndex) {
-                    domain.push(metrics.indexesString);
-                    range.push(currentOffset);                   
-                    firstIndex = false;
-                }
-                domain.push(this.data.Environments[i].Path);
-                range.push(currentOffset);               
-            }
-            // 2.2 indexes opened
-            else {
-                // If first index.... push the special indexes header ...
-                if (firstIndex) {
-                    domain.push(metrics.indexesString);
-                    range.push(currentOffset);
-                    currentOffset += metrics.closedTrackHeight + metrics.trackMargin;
-                    firstIndex = false;
-                }
-                // Push the index path - only if not filtered out..
-                if (!this.Filtered(this.data.Environments[i].Path)) {
+                // 2.1 indexes closed
+                if (!this.isIndexesExpanded()) {
+                    if (firstIndex) {
+                        domain.push(metrics.indexesString);
+                        range.push(currentOffset);
+                        firstIndex = false;
+                    }
                     domain.push(this.data.Environments[i].Path);
                     range.push(currentOffset);
-                    currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
+                }
+                // 2.2 indexes opened
+                else {
+                    // If first index.... push the special indexes header ...
+                    if (firstIndex) {
+                        domain.push(metrics.indexesString);
+                        range.push(currentOffset);
+                        currentOffset += metrics.closedTrackHeight + metrics.trackMargin;
+                        firstIndex = false;
+                    }
+                    // Push the index path - only if not filtered out..
+                    if (!this.filtered(this.data.Environments[i].Path)) {
+                        domain.push(this.data.Environments[i].Path);
+                        range.push(currentOffset);
+                        currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
+                    }
                 }
             }
-        }
 
-        if (!this.isIndexesExpanded()) {
-            currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
-        }
+            if (!this.isIndexesExpanded()) {
+                currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
+            }
+        }        
 
         // 3. Subscription path
         domain.push(this.data.Environments[1].Path);
@@ -590,12 +596,11 @@ class metrics extends viewModelBase {
         this.maxYOffset = Math.max(offset + extraBottomMargin - availableHeightForTracks, 0);
     }
 
-    private findTrackNames(): string[] {
+    private findTrackNamesWithoutCommonPrefix(): string[] {
         const result = new Set<string>();              
 
         this.data.Environments.forEach(track => {
-            let trackName = track.Path.substring(this.commonPathsPrefix.length);
-            if (trackName === "") { trackName = metrics.documentsString }
+            let trackName = track.Path.substring(this.commonPathsPrefix.length + 1);           
             result.add(trackName);
         });
 
@@ -676,43 +681,33 @@ class metrics extends viewModelBase {
             context.clip();
 
             // 1. Draw tracks background 
-            context.fillStyle = metrics.colors.trackBackground;
-            this.data.Environments.forEach(env => {  
-                if (!this.Filtered(env.Path)) {
-                    context.fillRect(0, this.yScale(env.Path), this.totalWidth, metrics.openedTrackHeight);
-                }               
-            });
+            this.drawTracksBackground(context, xScale);           
 
-            // 1.1 The special case...draw the additional index heading when in expanded state
-            if (this.isIndexesExpanded()) {
-                context.fillRect(0, this.yScale(metrics.indexesString), context.measureText(metrics.indexesString).width + 30, metrics.closedTrackHeight);
-                this.drawTrackName(context, metrics.indexesString, this.yScale(metrics.indexesString));
-            }
-
-            // 2. Draw the vertical dotted lines
+            // 2. Draw the vertical dotted lines                  
             if (xScale.domain().length) {
                 this.drawXaxis(context, xScale, this.totalHeight);
-            }
-          
-            context.beginPath();  
+            }          
 
             // 3. Draw all other data (track name + items on track)                                 
+            context.beginPath();        
+            context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+            context.clip(); 
+            
             const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
 
             this.data.Environments.forEach(env => {
 
                 // 3.1. Check if this is an index track 
-                let trackName = env.Path.substring(this.commonPathsPrefix.length);
-                let isIndexTrack = trackName.startsWith(metrics.indexesString) ? true : false;                               
+                let trackName = env.Path.substring(this.commonPathsPrefix.length + 1);               
+                let isIndexTrack = trackName.startsWith(metrics.indexesString) ? true : false;                                 
                
                 // 3.2 Draw track name   
-                const yStart = this.yScale(env.Path);                                                                  
-                if (trackName === "") { trackName = metrics.documentsString }
+                const yStart = this.yScale(env.Path);                                                                                 
                 this.drawTrackName(context, trackName, yStart);               
                
                 env.Files.forEach(file => {
                     file.Recent.forEach(recentItem => {                                                              
-                        if (!this.Filtered(env.Path)) {
+                        if (!this.filtered(env.Path)) {
 
                             // 3.3 Determine color for item                       
                             let calcColorBasedOnSize = true;
@@ -725,9 +720,9 @@ class metrics extends viewModelBase {
 
                             // 3.4 Determine yStart for item
                             switch (recentItem.Type) {
-                                case metrics.journalWriteString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin; break;
-                                case metrics.dataSyncString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin * 2 + metrics.itemHeight; break;
-                                case metrics.dataFlushString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin * 3 + metrics.itemHeight * 2; break;
+                                case metrics.journalWriteString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin; break;                             
+                                case metrics.dataFlushString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin * 2 + metrics.itemHeight; break;
+                                case metrics.dataSyncString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin * 3 + metrics.itemHeight * 2; break;
                             }
 
                             // 3.5 Draw item in main canvas area 
@@ -767,9 +762,33 @@ class metrics extends viewModelBase {
         }
     }
 
-    private Filtered(envPath: string): boolean {
+    private filtered(envPath: string): boolean {
 
-        return _.includes(this.filteredIndexesTracksNames(), envPath.substring(this.commonPathsPrefix.length + metrics.indexesString.length + 1));        
+        return _.includes(this.filteredIndexesTracksNames(), envPath.substring(this.commonPathsPrefix.length + 1 + metrics.indexesString.length + 1));        
+    }
+
+    private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
+        context.save();
+        context.beginPath();
+
+        context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+        context.clip();
+
+        context.fillStyle = metrics.colors.trackBackground;
+        this.data.Environments.forEach(env => {  
+             if (!this.filtered(env.Path)) {
+                - context.fillRect(0, this.yScale(env.Path), this.totalWidth, metrics.openedTrackHeight);
+             }               
+        });
+
+        // The special case...draw the additional index heading when in expanded state
+        if (this.isIndexesExpanded()) {
+            context.fillRect(0, this.yScale(metrics.indexesString), context.measureText(metrics.indexesString).width + 30, metrics.closedTrackHeight);
+            this.drawTrackName(context, metrics.indexesString, this.yScale(metrics.indexesString));
+        }
+
+        context.closePath();
+        context.restore();
     }
 
     private drawTrackName(context: CanvasRenderingContext2D, trackName: string, yStart: number) {
@@ -789,7 +808,7 @@ class metrics extends viewModelBase {
 
             trackName = trackName.substring(metrics.indexesString.length + 1);
 
-            // 1.1 The first indexes track has the track name of: 'Indexes' (both when opend or closed..)
+            // 1.1 The first indexes track has the track name of: 'Indexes' (both when opened or closed..)
             if ((trackName === "") || (!this.isIndexesExpanded())) {
                 trackName = metrics.indexesString;                
                 addedWidth = 23;
@@ -966,39 +985,39 @@ class metrics extends viewModelBase {
 
         switch (recentItem.Type) {
             case metrics.journalWriteString: {
-                color = this.eventsColors.JournalWriteLowSizeColor;
-                if (recentItem.Size > this.journalWriteLowSizeLevel) {
-                    color = this.eventsColors.JournalWriteMedSizeColor;
+                color = metrics.eventsColors.JournalWriteLowSizeColor;
+                if (recentItem.Size > this.journalWriteLowSizeLevel()) {
+                    color = metrics.eventsColors.JournalWriteMedSizeColor;
                 }
-                if (recentItem.Size > this.journalWriteHighSizeLevel) {
-                    color = this.eventsColors.JournalWriteHighSizeColor;
+                if (recentItem.Size > this.journalWriteHighSizeLevel()) {
+                    color = metrics.eventsColors.JournalWriteHighSizeColor;
                 }
                 if (!calcColorBasedOnSize) {
-                    color = this.eventsColors.JournalWriteHighSizeColor;
+                    color = metrics.eventsColors.JournalWriteHighSizeColor;
                 }
             } break;
             case metrics.dataSyncString: {
-                color = this.eventsColors.DataSyncLowSizeColor;
-                if (recentItem.Size > this.dataSyncLowSizeLevel) {
-                    color = this.eventsColors.DataSyncMedSizeColor;
+                color = metrics.eventsColors.DataSyncLowSizeColor;
+                if (recentItem.Size > this.dataSyncLowSizeLevel()) {
+                    color = metrics.eventsColors.DataSyncMedSizeColor;
                 }
-                if (recentItem.Size > this.dataSyncHighSizeLevel) {
-                    color = this.eventsColors.DataSyncHighSizeColor;
+                if (recentItem.Size > this.dataSyncHighSizeLevel()) {
+                    color = metrics.eventsColors.DataSyncHighSizeColor;
                 }
                 if (!calcColorBasedOnSize) {
-                    color = this.eventsColors.DataSyncHighSizeColor;
+                    color = metrics.eventsColors.DataSyncHighSizeColor;
                 }
             } break;
             case metrics.dataFlushString: {
-                color = this.eventsColors.DataFlushLowSizeColor;
-                if (recentItem.Size > this.dataFlushLowSizeLevel) {
-                    color = this.eventsColors.DataFlushMedSizeColor;
+                color = metrics.eventsColors.DataFlushLowSizeColor;
+                if (recentItem.Size > this.dataFlushLowSizeLevel()) {
+                    color = metrics.eventsColors.DataFlushMedSizeColor;
                 }
-                if (recentItem.Size > this.dataFlushHighSizeLevel) {
-                    color = this.eventsColors.DataFlushHighSizeColor;
+                if (recentItem.Size > this.dataFlushHighSizeLevel()) {
+                    color = metrics.eventsColors.DataFlushHighSizeColor;
                 }
                 if (!calcColorBasedOnSize) {
-                    color = this.eventsColors.DataFlushHighSizeColor;
+                    color = metrics.eventsColors.DataFlushHighSizeColor;
                 }
             } break;
         }
@@ -1020,6 +1039,12 @@ class metrics extends viewModelBase {
         });  
 
         return result;      
+    }
+
+    private computedHumanSize(input: KnockoutObservable<number>): KnockoutComputed<string> {
+        return ko.pureComputed(() => {
+            return generalUtils.formatBytesToSize(input());
+        });
     }
 
     /*
