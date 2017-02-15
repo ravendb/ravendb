@@ -131,7 +131,7 @@ namespace Raven.Server.ServerWide
 
                 catch (Exception e)
                 {
-                    throw new DatabaseLoadFailureException("Failed to load the system database" , e);
+                    throw new DatabaseLoadFailureException("Failed to load system database "+ Environment.NewLine + $"At {options.BasePath}" , e);
                 }
 
                 using (var tx = _env.WriteTransaction())

@@ -129,7 +129,8 @@ namespace Raven.Server.Documents
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to start database {config.ResourceName}", e);
-                throw new DatabaseLoadFailureException($"Failed to start database {config.ResourceName}" , e);
+                throw new DatabaseLoadFailureException($"Failed to start database {config.ResourceName}" + Environment.NewLine + 
+                                                       $"At {config.Core.DataDirectory}" , e);
             }
         }
 
@@ -230,12 +231,8 @@ namespace Raven.Server.Documents
 
         public override DateTime LastWork(DocumentDatabase resource)
         {
-            // this allow us to increase the time large databases will be held in memory
-            // because they are more expensive to unload & reload. Using this method, we'll
-            // add 0.5 ms per each KB, or roughly half a second of idle time per MB.
-            // A DB with 1GB will remain live another 16 minutes after being idle. Given the default idle time
-            // that means that we'll keep it alive for about 30 minutes without shutting down.
-            // A database with 50GB will take roughly 8 hours of idle time to shut down.
+            // This allows us to increase the time large databases will be held in memory
+            // Using this method, we'll add 0.5 ms per KB, or roughly half a second of idle time per MB.
 
             var envs = resource.GetAllStoragesEnvironment();
 
