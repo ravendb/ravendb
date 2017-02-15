@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.TcpHandlers
     public class SubscriptionConnection : IDisposable
     {
         public readonly TcpConnectionOptions TcpConnection;
+        public readonly string ClientUri;
         private readonly MemoryStream _buffer = new MemoryStream();
         private readonly Logger _logger;
         public readonly SubscriptionConnectionStats Stats;
@@ -46,6 +47,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public SubscriptionConnection(TcpConnectionOptions connectionOptions)
         {
             TcpConnection = connectionOptions;
+            ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
             _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
 
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);

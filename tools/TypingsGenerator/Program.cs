@@ -7,10 +7,12 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
@@ -83,6 +85,11 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OperationChanged));
             scripter.AddType(typeof(ResourceChanged));
             scripter.AddType(typeof(PerformanceHint));
+
+            // subscriptions
+            scripter.AddType(typeof(SubscriptionCriteria));
+            scripter.AddType(typeof(SubscriptionConnectionStats));
+            scripter.AddType(typeof(SubscriptionConnectionOptions));
 
             // changes
             scripter.AddType(typeof(OperationStatusChange));

@@ -15,7 +15,6 @@ class statusDebug extends viewModelBase {
         var durandalConfigurationArray: DurandalRouteConfiguration[] =
             [
                 { route: 'databases/status/debug', moduleId: 'viewmodels/database/status/debug/statusDebugChanges', title: 'Changes', tooltip: 'Shows information about active changes API subscriptions', nav: true, dynamicHash: appUrl.forCurrentDatabase().statusDebugChanges },
-                { route: 'databases/status/debug/dataSubscriptions', moduleId: 'viewmodels/database/status/debug/statusDebugDataSubscriptions', title: 'Data subscriptions', tooltip: "Shows information about data subscriptions", nav: true, dynamicHash: appUrl.forCurrentDatabase().dataSubscriptions },
                 { route: 'databases/status/debug/metrics', moduleId: 'viewmodels/database/status/debug/statusDebugMetrics', title: 'Metrics', tooltip: "Shows database metrics", nav: true, dynamicHash: appUrl.forCurrentDatabase().statusDebugMetrics },
                 { route: 'databases/status/debug/config', moduleId: 'viewmodels/database/status/debug/statusDebugConfig', title: 'Config', tooltip: "Displays server configuration", nav: true, dynamicHash: appUrl.forCurrentDatabase().statusDebugConfig },
                 { route: 'databases/status/debug/docrefs', moduleId: 'viewmodels/database/status/debug/statusDebugDocrefs', title: 'Doc refs', tooltip: "Allows to find documents referenced by given document id", nav: true, dynamicHash: appUrl.forCurrentDatabase().statusDebugDocrefs },
