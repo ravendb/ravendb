@@ -247,6 +247,9 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            if (_databaseShutdown.IsCancellationRequested)
+                return; // double dispose?
+
             //before we dispose of the database we take its latest info to be displayed in the studio
             var databaseInfo = GenerateDatabaseInfo();
             if (databaseInfo!= null)

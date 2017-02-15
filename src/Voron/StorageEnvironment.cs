@@ -348,6 +348,7 @@ namespace Voron
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
+            _txCommit.EnterWriteLock();
             try
             {
                 if (_journal != null) // error during ctor
@@ -385,6 +386,7 @@ namespace Voron
             }
             finally
             {
+                _txCommit.ExitWriteLock();
                 var errors = new List<Exception>();
                 foreach (var disposable in new IDisposable[]
                 {
@@ -438,6 +440,8 @@ namespace Voron
 
         internal LowLevelTransaction NewLowLevelTransaction(TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
         {
+            _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+            
             bool txLockTaken = false;
             bool flushInProgressReadLockTaken = false;
             try
@@ -477,6 +481,8 @@ namespace Voron
                 _txCommit.EnterReadLock();
                 try
                 {
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
                     tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
                         context)
