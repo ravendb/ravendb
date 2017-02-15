@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -85,6 +86,7 @@ namespace Raven.Server.Files
             catch (Exception)
             {
                 Dispose();
+                throw;
             }
         }
 
@@ -107,7 +109,7 @@ namespace Raven.Server.Files
                     _waitForUsagesOnDisposal.Reset();
             }
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(FileSystem)}");
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(FileSystem)} {Name}");
 
             exceptionAggregator.Execute(() =>
             {
