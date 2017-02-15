@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using FastTests;
-using Raven.Client.Data;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Files;
