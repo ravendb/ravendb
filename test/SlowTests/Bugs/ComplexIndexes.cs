@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class ComplexIndexes : RavenNewTestBase
+    public class ComplexIndexes : RavenTestBase
     {
 
         [Fact]

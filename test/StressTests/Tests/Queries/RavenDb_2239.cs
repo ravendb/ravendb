@@ -9,7 +9,7 @@ using Xunit;
 
 namespace StressTests.Tests.Queries
 {
-    public class RavenDb_2239 : RavenNewTestBase
+    public class RavenDb_2239 : RavenTestBase
     {
         private class Document
         {

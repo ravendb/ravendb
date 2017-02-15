@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5927 : RavenNewTestBase
+    public class RavenDB_5927 : RavenTestBase
     {
         private class RavenConflictDocumentsTransformer : AbstractTransformerCreationTask
         {

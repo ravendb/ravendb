@@ -261,12 +261,12 @@ namespace Voron.Impl.Scratch
                 pagerRef.Pager = _scratchPager;
                 pagerRef.PagerPageNumber = p;
             }
-            return new Page(_scratchPager.AcquirePagePointer(tx, p, pagerState));
+            return new Page(_scratchPager.AcquirePagePointerWithOverflowHandling(tx, p, pagerState));
         }
 
         public byte* AcquirePagePointer(LowLevelTransaction tx, long p)
         {
-            return _scratchPager.AcquirePagePointer(tx, p);
+            return _scratchPager.AcquirePagePointerWithOverflowHandling(tx, p);
         }
 
         internal Dictionary<long, long> GetMostAvailableFreePagesBySize()

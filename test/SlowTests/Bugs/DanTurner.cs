@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class DanTurner : RavenNewTestBase
+    public class DanTurner : RavenTestBase
     {
         private readonly IDocumentStore _store;
 

@@ -17,7 +17,7 @@ using Raven.Client.Exceptions;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class ThrowingAnalyzer : RavenNewTestBase
+    public class ThrowingAnalyzer : RavenTestBase
     {
         private class User
         {

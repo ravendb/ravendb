@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LowerCaseIdIndexTest : RavenNewTestBase
+    public class LowerCaseIdIndexTest : RavenTestBase
     {
         [Fact]
         public void CanIndexAndQuery()

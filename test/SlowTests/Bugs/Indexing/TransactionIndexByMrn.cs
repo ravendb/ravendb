@@ -5,7 +5,7 @@ using Raven.Client.Documents.Indexes;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class TransactionIndexByMrn : RavenNewTestBase
+    public class TransactionIndexByMrn : RavenTestBase
     {
         private class Transaction
         {

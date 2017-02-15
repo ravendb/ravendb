@@ -217,11 +217,11 @@ namespace Raven.Client.Documents
                 // TODO iftah
                 //SecurityExtensions.InitializeSecurity(Conventions, jsonRequestFactory, Url, Credentials);
 
-                if (Conventions.AsyncDocumentKeyGenerator == null) // don't overwrite what the user is doing
+                if (Conventions.AsyncDocumentIdGenerator == null) // don't overwrite what the user is doing
                 {
                     var generator = new AsyncMultiDatabaseHiLoKeyGenerator(this, Conventions);
                     _asyncMultiDbHiLo = generator;
-                    Conventions.AsyncDocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, entity);
+                    Conventions.AsyncDocumentIdGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, entity);
                 }
 
                 Initialized = true;
@@ -402,7 +402,7 @@ namespace Raven.Client.Documents
 
         public override AdminOperationExecuter Admin => _adminOperationExecuter ?? (_adminOperationExecuter = new AdminOperationExecuter(this));
 
-        public OperationExecuter Operations => _operationExecuter ?? (_operationExecuter = new OperationExecuter(this));
+        public override OperationExecuter Operations => _operationExecuter ?? (_operationExecuter = new OperationExecuter(this));
 
         public override BulkInsertOperation BulkInsert(string database = null)
         {
@@ -426,7 +426,7 @@ namespace Raven.Client.Documents
 
         public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
         {
-            var databaseName = database ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.SystemDatabase;
+            var databaseName = database ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.Documents.SystemDatabase;
             var changes = _observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
 
             return changes == null ? new CompletedTask() : changes.ConnectionTask;

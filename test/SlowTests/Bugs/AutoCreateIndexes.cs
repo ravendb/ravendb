@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class AutoCreateIndexes : RavenNewTestBase
+    public class AutoCreateIndexes : RavenTestBase
     {
         [Fact]
         public void CanAutomaticallyCreateIndexes()

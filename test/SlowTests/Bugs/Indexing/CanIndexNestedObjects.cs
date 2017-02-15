@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanIndexNestedObjects : RavenNewTestBase
+    public class CanIndexNestedObjects : RavenTestBase
     {
         private class NestedObject
         {

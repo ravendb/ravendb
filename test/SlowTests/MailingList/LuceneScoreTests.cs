@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LuceneScoreTests : RavenNewTestBase
+    public class LuceneScoreTests : RavenTestBase
     {
         private class Book
         {
@@ -109,7 +109,7 @@ namespace SlowTests.MailingList
                         session.Advanced.DocumentQuery<Book, BooksSearch>().Where("Text: wire each time").WaitForNonStaleResultsAsOfNow().
                             ToList();
                     var scores = from result in results
-                                 select session.Advanced.GetMetadataFor(result)[Constants.Metadata.IndexScore];
+                                 select session.Advanced.GetMetadataFor(result)[Constants.Documents.Metadata.IndexScore];
                     Assert.False(string.IsNullOrWhiteSpace(scores.First()));
                 }
             }

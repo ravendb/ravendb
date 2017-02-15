@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class StreamingHalfWay : RavenNewTestBase
+    public class StreamingHalfWay : RavenTestBase
     {
         [Fact(Skip = "Missing feature: /docs/stream")]
         public void ShouldWork()

@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations.ApiKeys
 {
-    public class GetApiKeyOperation : IAdminOperation<NamedApiKeyDefinition>
+    public class GetApiKeyOperation : IServerOperation<NamedApiKeyDefinition>
     {
         private readonly string _name;
 

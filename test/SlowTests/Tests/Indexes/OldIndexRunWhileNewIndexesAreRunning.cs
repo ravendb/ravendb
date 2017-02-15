@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class OldIndexRunWhileNewIndexesAreRunning : RavenNewTestBase
+    public class OldIndexRunWhileNewIndexesAreRunning : RavenTestBase
     {
         [Fact]
         public void OneBigSave()

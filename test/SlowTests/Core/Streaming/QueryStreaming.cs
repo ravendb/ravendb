@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Core.Streaming
 {
-    public class QueryStreaming : RavenNewTestBase
+    public class QueryStreaming : RavenTestBase
     {
         [Fact]
         public void CanStreamQueryResults()

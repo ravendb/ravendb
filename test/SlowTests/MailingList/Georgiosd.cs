@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Georgiosd : RavenNewTestBase
+    public class Georgiosd : RavenTestBase
     {
         [Fact]
         public void CanGet304FromLazyFacets()

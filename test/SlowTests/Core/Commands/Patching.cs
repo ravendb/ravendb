@@ -7,7 +7,7 @@ using Post = SlowTests.Core.Utils.Entities.Post;
 
 namespace SlowTests.Core.Commands
 {
-    public class Patching : RavenNewTestBase
+    public class Patching : RavenTestBase
     {
         [Fact]
         public void CanDoScriptedPatching()

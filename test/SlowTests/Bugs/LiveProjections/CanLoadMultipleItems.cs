@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.LiveProjections
 {
-    public class CanLoadMultipleItems : RavenNewTestBase
+    public class CanLoadMultipleItems : RavenTestBase
     {
         private class Person
         {

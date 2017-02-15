@@ -28,9 +28,9 @@ namespace FastTests.Server.Documents.Tombstones
                         using (var doc = CreateDocument(context, "key/1", new DynamicJsonValue
                         {
                             ["Name"] = "John",
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         }))
                         {
@@ -86,9 +86,9 @@ namespace FastTests.Server.Documents.Tombstones
                             using (var doc = CreateDocument(context, "key/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -98,9 +98,9 @@ namespace FastTests.Server.Documents.Tombstones
                             using (var doc = CreateDocument(context, "key/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -110,9 +110,9 @@ namespace FastTests.Server.Documents.Tombstones
                             using (var doc = CreateDocument(context, "key/3", new DynamicJsonValue
                             {
                                 ["Name"] = "William",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {

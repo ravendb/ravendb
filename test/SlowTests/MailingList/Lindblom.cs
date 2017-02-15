@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Lindblom : RavenNewTestBase
+    public class Lindblom : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6124")]
         public void Test()

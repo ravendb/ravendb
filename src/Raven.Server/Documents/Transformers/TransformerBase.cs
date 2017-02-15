@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Transformers
         {
             var json = (DynamicBlittableJson)doc;
             json.EnsureMetadata();
-            return doc[Constants.Metadata.Key];
+            return doc[Constants.Documents.Metadata.Key];
         }
 
         public dynamic AsDocument(dynamic doc)

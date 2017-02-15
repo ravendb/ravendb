@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Tests.NestedIndexing
 {
-    public class CanIndexReferencedEntity : RavenNewTestBase
+    public class CanIndexReferencedEntity : RavenTestBase
     {
         private class Item
         {

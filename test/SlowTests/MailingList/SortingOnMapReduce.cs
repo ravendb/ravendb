@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SortingOnMapReduce : RavenNewTestBase
+    public class SortingOnMapReduce : RavenTestBase
     {
         private class Tag
         {

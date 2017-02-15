@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SlowTests.Tests.Linq
 {
-    public class IsNullOrEmpty : RavenNewTestBase
+    public class IsNullOrEmpty : RavenTestBase
     {
         private class TestDoc
         {

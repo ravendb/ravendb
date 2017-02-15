@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_535 : RavenNewTestBase
+    public class RavenDB_535 : RavenTestBase
     {
         [Fact]
         public async Task CheapGetNextIdentityValueWithoutOverwritingOnExistingDocuments()

@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Delete : RavenNewTestBase
+    public class Delete : RavenTestBase
     {
         [Fact]
         public void Delete_Document_By_entity()

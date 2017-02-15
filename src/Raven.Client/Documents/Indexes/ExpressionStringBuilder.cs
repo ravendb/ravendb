@@ -136,7 +136,7 @@ namespace Raven.Client.Documents.Indexes
             var name = GetPropertyName(member.Name, exprType);
             if (TranslateToDocumentId(instance, member, exprType))
             {
-                name = Constants.Indexing.Fields.DocumentIdFieldName;
+                name = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
             }
             if (instance != null)
             {
@@ -1398,7 +1398,7 @@ namespace Raven.Client.Documents.Indexes
                     if (methodInfo.Name == nameof(AbstractIndexCreationTask.LoadDocument))
                     {
                         var type = methodInfo.GetGenericArguments()[0];
-                        var collection = convention.GetTypeTagName(type);
+                        var collection = convention.GetCollectionName(type);
 
                         Out($"k1 => {methodInfo.Name}(k1, \"{collection}\")");
                     }
@@ -1544,7 +1544,7 @@ namespace Raven.Client.Documents.Indexes
             if (node.Method.Name == nameof(AbstractIndexCreationTask.LoadDocument))
             {
                 var type = node.Method.GetGenericArguments()[0];
-                var collection = convention.GetTypeTagName(type);
+                var collection = convention.GetCollectionName(type);
                 Out($", \"{collection}\"");
             }
 

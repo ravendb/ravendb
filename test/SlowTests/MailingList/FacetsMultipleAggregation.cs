@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FacetsMultipleAggregation : RavenNewTestBase
+    public class FacetsMultipleAggregation : RavenTestBase
     {
         [Fact]
         public void CanAggregateByMinAndMaxOnSameField()

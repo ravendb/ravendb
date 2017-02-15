@@ -18,7 +18,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Session;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -158,7 +157,7 @@ namespace Raven.Client.Documents.Session
             _documentStore = documentStore;
             _requestExecuter = requestExecuter;
             _releaseOperationContext = requestExecuter.ContextPool.AllocateOperationContext(out _context);
-            UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
+            UseOptimisticConcurrency = documentStore.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
             EntityToBlittable = new EntityToBlittable(this);
@@ -307,13 +306,6 @@ more responsive application.
         /// <returns></returns>
         public object TrackEntity(Type entityType, DocumentInfo documentFound)
         {
-            bool documentDoesNotExist;
-            if (documentFound.Metadata.TryGet(Constants.Headers.RavenDocumentDoesNotExists, out documentDoesNotExist))
-            {
-                if (documentDoesNotExist)
-                    return null;
-            }
-
             return TrackEntity(entityType, documentFound.Id, documentFound.Document, documentFound.Metadata, noTracking: false);
         }
 
@@ -366,7 +358,7 @@ more responsive application.
             var entity = ConvertToEntity(entityType, key, document);
 
             long etag;
-            if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Etag, out etag) == false)
                 throw new InvalidOperationException("Document must have an ETag");
 
             if (noTracking == false)
@@ -562,14 +554,14 @@ more responsive application.
             // to detect if they generate duplicates.
             AssertNoNonUniqueInstance(entity, id);
 
-            var tag = _documentStore.Conventions.GetDynamicTagName(entity);
+            var tag = _documentStore.Conventions.GetCollectionName(entity);
             var metadata = new DynamicJsonValue();
             if (tag != null)
-                metadata[Constants.Metadata.Collection] = tag;
+                metadata[Constants.Documents.Metadata.Collection] = tag;
 
             var clrType = _documentStore.Conventions.GetClrTypeName(entity.GetType());
             if (clrType != null)
-                metadata[Constants.Headers.RavenClrType] = clrType;
+                metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
 
             if (id != null)
                 KnownMissingIds.Remove(id);
@@ -937,7 +929,7 @@ more responsive application.
         /// <param name="entity">The entity.</param>
         public void ExplicitlyVersion(object entity)
         {
-            GetMetadataFor(entity)[Constants.Versioning.RavenEnableVersioning] = "true";
+            GetMetadataFor(entity)[Constants.Documents.Versioning.EnableVersioning] = "true";
         }
 
         private void Dispose(bool isDisposing)
@@ -1013,8 +1005,8 @@ more responsive application.
             // Implant a property with "id" value ... if it doesn't exist
             BlittableJsonReaderObject metadata;
             string id;
-            if (result.TryGet(Constants.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Metadata.Id, out id) == false)
+            if (result.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
             {
                 // if the item doesn't have meta data, then nested items might have, so we need to check them
                 var propDetail = new BlittableJsonReaderObject.PropertyDetails();
@@ -1038,7 +1030,7 @@ more responsive application.
             }
 
             string entityName;
-            if (metadata.TryGet(Constants.Metadata.Collection, out entityName) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Collection, out entityName) == false)
                 return;
 
             var idPropName = Conventions.FindIdentityPropertyNameFromEntityName(entityName);
@@ -1074,7 +1066,7 @@ more responsive application.
             var indexName = "dynamic";
             if (typeof(T) != typeof(object))
             {
-                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+                indexName += "/" + Conventions.GetCollectionName(typeof(T));
             }
             return indexName;
         }
@@ -1126,11 +1118,11 @@ more responsive application.
                                                     "' no longer exists and was probably deleted");
 
             object value;
-            document.TryGetMember(Constants.Metadata.Key, out value);
+            document.TryGetMember(Constants.Documents.Metadata.Key, out value);
             documentInfo.Metadata = value as BlittableJsonReaderObject;
 
             object etag;
-            document.TryGetMember(Constants.Metadata.Etag, out etag);
+            document.TryGetMember(Constants.Documents.Metadata.Etag, out etag);
             documentInfo.ETag = etag as long?;
 
             documentInfo.Document = document;
@@ -1279,11 +1271,11 @@ more responsive application.
             string id;
             long etag;
 
-            if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
+            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                 throw new InvalidOperationException("Document must have a metadata");
-            if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
                 throw new InvalidOperationException("Document must have an id");
-            if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Etag, out etag) == false)
                 throw new InvalidOperationException("Document must have an ETag");
 
             var newDocumentInfo = new DocumentInfo

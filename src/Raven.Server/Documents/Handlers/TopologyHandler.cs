@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers
                     using (context.OpenReadTransaction())
                     {
                         configurationDocument = Database.DocumentsStorage.Get(context,
-                            Constants.Replication.DocumentReplicationConfiguration);
+                            Constants.Documents.Replication.DocumentReplicationConfiguration);
                         configurationDocumentData = configurationDocument?.Data.Clone(context);
                     }
                     //This is the case where we don't have real replication topology.
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Handlers
                 ReplicationDocument replicationDocument;
                 using (context.OpenReadTransaction())
                 {
-                    var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
+                    var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Documents.Replication.DocumentReplicationConfiguration);
                     if (configurationDocument == null)
                     {
                         WriteEmptyTopology(context);

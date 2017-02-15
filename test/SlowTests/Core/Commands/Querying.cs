@@ -4,6 +4,7 @@ using System.Text;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
@@ -19,7 +20,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Querying : RavenNewTestBase
+    public class Querying : RavenTestBase
     {
         [Fact]
         public void CanDoSimpleQueryOnDatabase()
@@ -247,7 +248,7 @@ namespace SlowTests.Core.Commands
 
                     using (var session = store.OpenSession())
                     {
-                        var multiFacetResults = session.Advanced.MultiFacetedSearch(new FacetQuery(store.Conventions)
+                        var multiFacetResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
                         {
                             IndexName = index.IndexName,
                             Query = "Cost:{NULL TO 200}",
@@ -257,7 +258,7 @@ namespace SlowTests.Core.Commands
                             IndexName = index.IndexName,
                             Query = "Megapixels:{NULL TO 3}",
                             FacetSetupDoc = "facets/CameraFacets"
-                        });
+                        }));
 
                         Assert.Equal(3, multiFacetResults[0].Results.Count);
 

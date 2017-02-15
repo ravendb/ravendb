@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5968 : RavenNewTestBase
+    public class RavenDB_5968 : RavenTestBase
     {
         [Fact]
         public void EtagNullShouldOverrideDocument()

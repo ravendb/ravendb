@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Wallace : RavenNewTestBase
+    public class Wallace : RavenTestBase
     {
         [Fact]
         public void CanGetProperErrorFromComputedOrderBy()

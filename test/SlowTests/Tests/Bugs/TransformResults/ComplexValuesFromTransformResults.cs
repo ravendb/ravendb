@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Bugs.TransformResults
 {
-    public class ComplexValuesFromTransformResults : RavenNewTestBase
+    public class ComplexValuesFromTransformResults : RavenTestBase
     {
         [Fact]
         public void CanCreateQueriesWithNestedSelected()

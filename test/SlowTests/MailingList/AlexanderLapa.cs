@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class AlexanderLapa : RavenNewTestBase
+    public class AlexanderLapa : RavenTestBase
     {
         [Fact]
         public void ExecuteIndex_Success()

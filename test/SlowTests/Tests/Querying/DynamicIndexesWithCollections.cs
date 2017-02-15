@@ -17,7 +17,7 @@ using Raven.Client.Documents.Session;
 
 namespace SlowTests.Tests.Querying
 {
-    public class DynamicIndexesWithCollections : RavenNewTestBase
+    public class DynamicIndexesWithCollections : RavenTestBase
     {
         [Fact]
         public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()

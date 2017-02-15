@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
             {
                 context.OpenReadTransaction();
                 var versioningConfiguration = _database.DocumentsStorage.Get(context,
-                    Constants.Versioning.RavenVersioningConfiguration);
+                    Constants.Documents.Versioning.ConfigurationKey);
                 if (versioningConfiguration != null)
                 {
                     VersioningStorage = VersioningStorage.LoadConfigurations(_database);
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents
                 }
 
                 var expirationConfiguration = _database.DocumentsStorage.Get(context,
-                    Constants.Expiration.ConfigurationDocumentKey);
+                    Constants.Documents.Expiration.ConfigurationKey);
                 if (expirationConfiguration != null)
                 {
                     ExpiredDocumentsCleaner?.Dispose();
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents
                 }
 
                 var periodicExportConfiguration = _database.DocumentsStorage.Get(context,
-                    Constants.PeriodicExport.ConfigurationDocumentKey);
+                    Constants.Documents.PeriodicExport.ConfigurationKey);
                 if (periodicExportConfiguration != null)
                 {
                     PeriodicExportRunner?.Dispose();
@@ -73,14 +73,14 @@ namespace Raven.Server.Documents
         public void HandleSystemDocumentChange(DocumentChange change)
         {
             var key = change.Key;
-            if (key.Equals(Constants.Versioning.RavenVersioningConfiguration, StringComparison.OrdinalIgnoreCase))
+            if (key.Equals(Constants.Documents.Versioning.ConfigurationKey, StringComparison.OrdinalIgnoreCase))
             {
                 VersioningStorage = VersioningStorage.LoadConfigurations(_database);
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Versioning configuration was {(VersioningStorage != null ? "disabled" : "enabled")}");
             }
-            else if (key.Equals(Constants.Expiration.ConfigurationDocumentKey, StringComparison.OrdinalIgnoreCase))
+            else if (key.Equals(Constants.Documents.Expiration.ConfigurationKey, StringComparison.OrdinalIgnoreCase))
             {
                 ExpiredDocumentsCleaner?.Dispose();
                 ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database);
@@ -88,7 +88,7 @@ namespace Raven.Server.Documents
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Expiration configuration was {(ExpiredDocumentsCleaner != null ? "enabled" : "disabled")}");
             }
-            else if (key.Equals(Constants.PeriodicExport.ConfigurationDocumentKey, StringComparison.OrdinalIgnoreCase))
+            else if (key.Equals(Constants.Documents.PeriodicExport.ConfigurationKey, StringComparison.OrdinalIgnoreCase))
             {
                 PeriodicExportRunner?.Dispose();
                 PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database);

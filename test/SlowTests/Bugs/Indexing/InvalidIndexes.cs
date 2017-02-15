@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class InvalidIndexes : RavenNewTestBase
+    public class InvalidIndexes : RavenTestBase
     {
         [Fact(Skip = "Missing feature: RavenDB-6153")]
         public void CannotCreateIndexesUsingDateTimeNow()

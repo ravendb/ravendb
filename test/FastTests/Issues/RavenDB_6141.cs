@@ -153,5 +153,12 @@ namespace FastTests.Issues
             Assert.Equal(new PathSetting(@"C:\RavenData\Items").FullPath, database.Core.DataDirectory.FullPath);
             Assert.Equal(new PathSetting($@"C:\RavenData\Items\Indexes").FullPath, database.Indexing.StoragePath.FullPath);
         }
+
+        [Fact]
+        public void Should_trim_last_directory_separator_character()
+        {
+            Assert.False(new PathSetting("~\\Items\\").FullPath.EndsWith(@"\\"));
+            Assert.False(new PathSetting("~/Items/").FullPath.EndsWith(@"/"));
+        }
     }
 }

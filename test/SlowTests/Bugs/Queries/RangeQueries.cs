@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Queries
 {
-    public class RangeQueries : RavenNewTestBase
+    public class RangeQueries : RavenTestBase
     {
         [Fact]
         public void LinqTranslateCorrectly()

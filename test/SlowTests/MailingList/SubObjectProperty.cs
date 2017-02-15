@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SubObjectProperty : RavenNewTestBase
+    public class SubObjectProperty : RavenTestBase
     {
         [Fact]
         public void CanProjectProperly()

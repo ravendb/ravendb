@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Context
 
         protected override DocumentsOperationContext CreateContext()
         {
-            if (sizeof(int) == IntPtr.Size || _database.Configuration.Storage.ForceUsing32BitPager)
+            if (sizeof(int) == IntPtr.Size || _database.Configuration.Storage.ForceUsing32BitsPager)
                 return new DocumentsOperationContext(_database, 32 * 1024, 4 * 1024);
             return new DocumentsOperationContext(_database, 1024 * 1024, 16 * 1024);
         }

@@ -26,7 +26,7 @@ using Sparrow.Json.Parsing;
 
 namespace FastTests
 {
-    public class RavenNewTestBase : TestBase
+    public class RavenTestBase : TestBase
     {
         private static int _counter;
 
@@ -76,7 +76,7 @@ namespace FastTests
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
-                if (Server.ServerStore.Read(context, Constants.Database.Prefix + name) != null)
+                if (Server.ServerStore.Read(context, Constants.Documents.Prefix + name) != null)
                     throw new InvalidOperationException($"Database '{name}' already exists");
             }
 
@@ -89,7 +89,7 @@ namespace FastTests
             ModifyStore(store);
             store.Initialize();
 
-            store.Admin.Send(new CreateDatabaseOperation(doc));
+            store.Admin.Server.Send(new CreateDatabaseOperation(doc));
             store.AfterDispose += (sender, args) =>
             {
                 if (CreatedStores.TryRemove(store) == false)
@@ -102,7 +102,7 @@ namespace FastTests
                         databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-                    store.Admin.Send(new DeleteDatabaseOperation(name, hardDelete));
+                    store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
                 }
             };
             CreatedStores.Add(store);
@@ -212,13 +212,13 @@ namespace FastTests
             session.Advanced.RequestExecuter.Execute(command, session.Advanced.Context);
             var document = (BlittableJsonReaderObject)command.Result.Results[0];
             BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
+            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                 throw new InvalidOperationException("Document must have a metadata");
             string id;
-            if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
                 throw new InvalidOperationException("Document must have an id");
             long? etag;
-            if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Etag, out etag) == false)
                 throw new InvalidOperationException("Document must have an etag");
             documentInfo = new DocumentInfo
             {
@@ -243,11 +243,11 @@ namespace FastTests
                 Entity = entity,
                 Id = id
             };
-            var tag = session.Advanced.DocumentStore.Conventions.GetDynamicTagName(entity);
+            var tag = session.Advanced.DocumentStore.Conventions.GetCollectionName(entity);
 
             var metadata = new DynamicJsonValue();
             if (tag != null)
-                metadata[Constants.Metadata.Collection] = tag;
+                metadata[Constants.Documents.Metadata.Collection] = tag;
 
             documentInfo.Metadata = session.Advanced.Context.ReadObject(metadata, id);
 

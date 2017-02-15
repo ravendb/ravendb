@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanQueryOnTrue : RavenNewTestBase
+    public class CanQueryOnTrue : RavenTestBase
     {
         private class Item
         {

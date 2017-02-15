@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DeserializationToObjectTests : RavenNewTestBase
+    public class DeserializationToObjectTests : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6124")]
         public void Query_GivenDbWithComplexObjects_ShouldDeserializePropertiesToOriginalType()

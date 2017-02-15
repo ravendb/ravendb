@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey
 {
-    public class spokeypokey3 : RavenNewTestBase
+    public class spokeypokey3 : RavenTestBase
     {
         private class ProviderSearchIndex2 : AbstractIndexCreationTask<Provider>
         {

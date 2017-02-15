@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Tests.ResultsTransformer
 {
-    public class NestingTransformers : RavenNewTestBase
+    public class NestingTransformers : RavenTestBase
     {
         private class Product
         {

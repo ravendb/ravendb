@@ -38,9 +38,9 @@ namespace Raven.Server.Documents.SqlReplication
         protected bool ShouldReloadConfiguration(string systemDocumentKey)
         {
             return
-                systemDocumentKey.StartsWith(Constants.SqlReplication.SqlReplicationConfigurationPrefix,
+                systemDocumentKey.StartsWith(Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix,
                     StringComparison.OrdinalIgnoreCase) ||
-                systemDocumentKey.Equals(Constants.SqlReplication.SqlReplicationConnections, StringComparison.OrdinalIgnoreCase);
+                systemDocumentKey.Equals(Constants.Documents.SqlReplication.SqlReplicationConnections, StringComparison.OrdinalIgnoreCase);
         }
 
         protected void LoadConfigurations()
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.SqlReplication
             {
                 context.OpenReadTransaction();
 
-                var sqlReplicationConnections = _database.DocumentsStorage.Get(context, Constants.SqlReplication.SqlReplicationConnections);
+                var sqlReplicationConnections = _database.DocumentsStorage.Get(context, Constants.Documents.SqlReplication.SqlReplicationConnections);
                 if (sqlReplicationConnections != null)
                 {
                     object connections;
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.SqlReplication
                     }
                 }
 
-                var documents = _database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.SqlReplication.SqlReplicationConfigurationPrefix, null, null, 0, MaxSupportedSqlReplication);
+                var documents = _database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix, null, null, 0, MaxSupportedSqlReplication);
                 foreach (var document in documents)
                 {
                     var configuration = JsonDeserializationServer.SqlReplicationConfiguration(document.Data);

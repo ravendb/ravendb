@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs.MultiMap
 {
-    public class MultiMapWithoutReduce : RavenNewTestBase
+    public class MultiMapWithoutReduce : RavenTestBase
     {
         [Fact]
         public void CanQueryFromMultipleSources()

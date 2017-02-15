@@ -79,8 +79,8 @@ namespace Raven.Client.Documents.Smuggler
                 {
                     var extension = Path.GetExtension(file);
                     return
-                        Constants.PeriodicExport.IncrementalExportExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        Constants.PeriodicExport.FullExportExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+                        Constants.Documents.PeriodicExport.IncrementalExportExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                        Constants.Documents.PeriodicExport.FullExportExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
                 })
                 .OrderBy(File.GetLastWriteTimeUtc)
                 .ToArray();

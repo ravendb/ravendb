@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced synchronous session operations
     /// </summary>
-    public partial interface ISyncAdvancedSessionOperation
+    public partial interface IAdvancedSessionOperation
     {
         /// <summary>
         /// Returns all previous document revisions for specified document (with paging).

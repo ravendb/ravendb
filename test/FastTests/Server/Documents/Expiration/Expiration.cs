@@ -19,7 +19,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Expiration
 {
-    public class Expiration : RavenNewTestBase
+    public class Expiration : RavenTestBase
     {
         private static async Task SetupExpiration(DocumentStore store)
         {
@@ -29,7 +29,7 @@ namespace FastTests.Server.Documents.Expiration
                 {
                     Active = true,
                     DeleteFrequencySeconds = 100,
-                }, Constants.Expiration.ConfigurationDocumentKey);
+                }, Constants.Documents.Expiration.ConfigurationKey);
 
                 await session.SaveChangesAsync();
             }
@@ -48,7 +48,7 @@ namespace FastTests.Server.Documents.Expiration
                 {
                     await session.StoreAsync(company);
                     var metadata = session.Advanced.GetMetadataFor(company);
-                    metadata[Constants.Expiration.RavenExpirationDate] = expiry.ToString(Default.DateTimeOffsetFormatsToWrite);
+                    metadata[Constants.Documents.Expiration.ExpirationDate] = expiry.ToString(Default.DateTimeOffsetFormatsToWrite);
                     await session.SaveChangesAsync();
                 }
 
@@ -57,7 +57,7 @@ namespace FastTests.Server.Documents.Expiration
                     var company2 = await session.LoadAsync<Company>(company.Id);
                     Assert.NotNull(company2);
                     var metadata = session.Advanced.GetMetadataFor(company2);
-                    var expirationDate = metadata[Constants.Expiration.RavenExpirationDate];
+                    var expirationDate = metadata[Constants.Documents.Expiration.ExpirationDate];
                     Assert.NotNull(expirationDate);
                     var dateTime = DateTime.ParseExact(expirationDate, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                     Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
@@ -92,11 +92,11 @@ namespace FastTests.Server.Documents.Expiration
                 var expiry = SystemTime.UtcNow.AddMinutes(5);
                 var metadata = new Dictionary<string, string>
                 {
-                    [Constants.Expiration.RavenExpirationDate] = expiry.ToString(Default.DateTimeOffsetFormatsToWrite)
+                    [Constants.Documents.Expiration.ExpirationDate] = expiry.ToString(Default.DateTimeOffsetFormatsToWrite)
                 };
                 var metadata2 = new Dictionary<string, string>
                 {
-                    [Constants.Expiration.RavenExpirationDate] = expiry.AddMinutes(1).ToString(Default.DateTimeOffsetFormatsToWrite)
+                    [Constants.Documents.Expiration.ExpirationDate] = expiry.AddMinutes(1).ToString(Default.DateTimeOffsetFormatsToWrite)
                 };
 
                 using (var commands = store.Commands())

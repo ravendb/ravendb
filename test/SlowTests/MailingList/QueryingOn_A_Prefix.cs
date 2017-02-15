@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class QueryingOn_A_Prefix : RavenNewTestBase
+    public class QueryingOn_A_Prefix : RavenTestBase
     {
         private class SampleData
         {

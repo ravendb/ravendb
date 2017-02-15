@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FilterIndexTest : RavenNewTestBase
+    public class FilterIndexTest : RavenTestBase
     {
         private class Appointment
         {

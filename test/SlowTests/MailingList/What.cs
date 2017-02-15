@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class What : RavenNewTestBase
+    public class What : RavenTestBase
     {
         [Fact]
         public void Y_U_No_Work()

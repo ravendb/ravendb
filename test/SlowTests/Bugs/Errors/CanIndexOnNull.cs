@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Errors
 {
-    public class CanIndexOnNull : RavenNewTestBase
+    public class CanIndexOnNull : RavenTestBase
     {
         [Fact]
         public void CanIndexOnMissingProps()

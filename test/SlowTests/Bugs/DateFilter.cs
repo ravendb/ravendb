@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class DateFilter : RavenNewTestBase
+    public class DateFilter : RavenTestBase
     {
         [Fact]
         public void WhenDefiningIndexWithSystemType_IndexShouldGetDefined()

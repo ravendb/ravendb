@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Debugging
 {
-    public class UniqueIndexesNames : RavenNewTestBase
+    public class UniqueIndexesNames : RavenTestBase
     {
         [Fact]
         public void TransformersAndIndexesNameShouldBeUniqe()

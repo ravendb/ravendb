@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformerLoadCaching : RavenNewTestBase
+    public class TransformerLoadCaching : RavenTestBase
     {
         private class Contact
         {

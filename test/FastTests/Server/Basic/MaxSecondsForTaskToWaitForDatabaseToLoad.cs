@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class MaxSecondsForTaskToWaitForDatabaseToLoad : RavenNewTestBase
+    public class MaxSecondsForTaskToWaitForDatabaseToLoad : RavenTestBase
     {
         [Fact]
         public void ShouldThrow_DatabaseLoadTimeout()
@@ -27,7 +27,26 @@ namespace FastTests.Server.Basic
 
             Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
 
-            tryLoad.Invoke();
+            int retries = 3;
+            //in case that there is alot of stuff is going on concurrently with this test,
+            //give several chances for the load to pass successfully 
+            bool didPassAtLeastOnce = false;
+            for (int i = 0; i < 3; i++)
+            {
+                try
+                {
+                    tryLoad.Invoke();
+                    didPassAtLeastOnce = true;
+                    break;
+                }
+                catch (DatabaseLoadTimeoutException)
+                {
+                    if (--retries == 0)
+                        throw;
+                }
+            }
+
+            Assert.True(didPassAtLeastOnce);
         }
     }
 }

@@ -151,7 +151,7 @@ namespace Raven.Client.Documents.Indexes
                 if (Reduce != null)
                     IndexDefinitionHelper.ValidateReduce(Reduce);
 
-                string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
+                string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + convention.GetCollectionName(typeof(TDocument));
                 var indexDefinition = new IndexDefinition
                 {
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),

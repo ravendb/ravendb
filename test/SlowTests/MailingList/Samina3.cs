@@ -11,13 +11,14 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Samina3 : RavenNewTestBase
+    public class Samina3 : RavenTestBase
     {
 
         [Fact]
@@ -64,12 +65,12 @@ namespace SlowTests.MailingList
 
                     var result = query.ToList();
 
-                    var facetResults = session.Advanced.MultiFacetedSearch(new FacetQuery(store.Conventions)
+                    var facetResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
                     {
                         IndexName = "PropertiesSearchIndex",
                         Query = query.ToString(),
                         FacetSetupDoc = "facets/PropertySearchingFacets"
-                    })[0];
+                    }))[0];
 
                     var facetedCount = facetResults.Results["Feature"];
 

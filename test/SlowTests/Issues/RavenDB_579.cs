@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_579 : RavenNewTestBase
+    public class RavenDB_579 : RavenTestBase
     {
         private readonly IList<string> _shardNames = new List<string>
         {

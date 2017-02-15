@@ -125,9 +125,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var value = property.Value.GetValue(reduceObject);
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value);
                 }
-                djv[Constants.Metadata.Key] = new DynamicJsonValue
+                djv[Constants.Documents.Metadata.Key] = new DynamicJsonValue
                 {
-                    [Constants.Metadata.Collection] = _outputReduceToCollection
+                    [Constants.Documents.Metadata.Collection] = _outputReduceToCollection
                 };
 
                 _reduceDocuments.Add(new OutputReduceDocument

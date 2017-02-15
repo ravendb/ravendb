@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ValerioBorioni : RavenNewTestBase
+    public class ValerioBorioni : RavenTestBase
     {
         [Fact]
         public void RavenJValue_recognize_NAN_Float_isEqual_to_NAN_String()

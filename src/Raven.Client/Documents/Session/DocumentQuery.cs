@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Session
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
             var identityProperty = DocumentConventions.GetIdentityProperty(typeof(TProjection));
-            var fields = propertyInfos.Select(p => (p == identityProperty) ? Constants.Indexing.Fields.DocumentIdFieldName : p.Name).ToArray();
+            var fields = propertyInfos.Select(p => (p == identityProperty) ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : p.Name).ToArray();
             return SelectFields<TProjection>(fields, projections);
         }
 
@@ -118,13 +118,13 @@ namespace Raven.Client.Documents.Session
         }
         public IDocumentQuery<T> OrderByScore()
         {
-            AddOrder(Constants.Indexing.Fields.IndexFieldScoreName, false);
+            AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, false);
             return this;
         }
 
         public IDocumentQuery<T> OrderByScoreDescending()
         {
-            AddOrder(Constants.Indexing.Fields.IndexFieldScoreName, true);
+            AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, true);
             return this;
         }
 
@@ -809,7 +809,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="radiusUnits">The units of the <paramref name="radius"/>.</param>
         public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = Indexes.Spatial.SpatialUnits.Kilometers)
         {
-            return GenerateQueryWithinRadiusOf(Constants.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
+            return GenerateQueryWithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
         }
 
         public IDocumentQuery<T> WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = Indexes.Spatial.SpatialUnits.Kilometers)
@@ -827,7 +827,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance()
         {
-            OrderBy(Constants.Indexing.Fields.DistanceFieldName);
+            OrderBy(Constants.Documents.Indexing.Fields.DistanceFieldName);
             return this;
         }
 
@@ -836,7 +836,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng)));
+            OrderBy(string.Format("{0};{1};{2}", Constants.Documents.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng)));
             return this;
         }
 
@@ -845,7 +845,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng, string sortedFieldName)
         {
-            OrderBy($"{Constants.Indexing.Fields.DistanceFieldName};{CharExtensions.ToInvariantString(lat)};{CharExtensions.ToInvariantString(lng)};{sortedFieldName}");
+            OrderBy($"{Constants.Documents.Indexing.Fields.DistanceFieldName};{CharExtensions.ToInvariantString(lat)};{CharExtensions.ToInvariantString(lng)};{sortedFieldName}");
             return this;
         }
 

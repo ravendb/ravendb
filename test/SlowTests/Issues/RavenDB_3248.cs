@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3248 : RavenNewTestBase
+    public class RavenDB_3248 : RavenTestBase
     {
         [Fact]
         public void StreamQueryShouldWorkEvenIfWaitForNoneStaleResualtIsSet()

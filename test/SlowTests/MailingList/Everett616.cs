@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Everett616 : RavenNewTestBase
+    public class Everett616 : RavenTestBase
     {
         [Fact]
         public void CanIndexWithNoErrors_DatetimeOffset()
@@ -33,7 +33,7 @@ namespace SlowTests.MailingList
   'SourceId': '00000000-0000-0000-0000-000000000000'
 }");
 
-                    commands.Put("test/1", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "ClickAllocations" } });
+                    commands.Put("test/1", null, json, new Dictionary<string, string> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
 
                     json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
@@ -51,7 +51,7 @@ namespace SlowTests.MailingList
   'SourceId': '00000000-0000-0000-0000-000000000000'
 }");
 
-                    commands.Put("test/2", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "ClickAllocations" } });
+                    commands.Put("test/2", null, json, new Dictionary<string, string> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
                 }
 
                 store.Admin.Send(new PutIndexesOperation(new[] {
@@ -97,7 +97,7 @@ namespace SlowTests.MailingList
   'SourceId': '00000000-0000-0000-0000-000000000000'
 }");
 
-                    commands.Put("test/1", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "ClickAllocations" } });
+                    commands.Put("test/1", null, json, new Dictionary<string, string> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
 
                     json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
@@ -115,7 +115,7 @@ namespace SlowTests.MailingList
   'SourceId': '00000000-0000-0000-0000-000000000000'
 }");
 
-                    commands.Put("test/2", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "ClickAllocations" } });
+                    commands.Put("test/2", null, json, new Dictionary<string, string> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
                 }
 
                 store.Admin.Send(new PutIndexesOperation(new[] {

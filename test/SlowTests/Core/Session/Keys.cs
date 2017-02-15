@@ -18,7 +18,7 @@ using UserWithoutId = SlowTests.Core.Utils.Entities.UserWithoutId;
 
 namespace SlowTests.Core.Session
 {
-    public class Keys : RavenNewTestBase
+    public class Keys : RavenTestBase
     {
         [Fact]
         public void GetDocumentId()
@@ -65,11 +65,11 @@ namespace SlowTests.Core.Session
                     Assert.Equal("def/Bob", user.Id);
                 }
 
-                Assert.Equal("def/", store.Conventions.GenerateDocumentKey(store.DefaultDatabase, new User()));
-                Assert.Equal("def/", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase, new User()));
+                Assert.Equal("def/", store.Conventions.GenerateDocumentId(store.DefaultDatabase, new User()));
+                Assert.Equal("def/", await store.Conventions.GenerateDocumentIdAsync(store.DefaultDatabase, new User()));
 
-                Assert.Equal("addresses/1", store.Conventions.GenerateDocumentKey(store.DefaultDatabase, new Address()));
-                Assert.Equal("companies/1", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase, new Company()));
+                Assert.Equal("addresses/1", store.Conventions.GenerateDocumentId(store.DefaultDatabase, new Address()));
+                Assert.Equal("companies/1", await store.Conventions.GenerateDocumentIdAsync(store.DefaultDatabase, new Company()));
             }
         }
 

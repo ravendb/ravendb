@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ProjectionTests : RavenNewTestBase
+    public class ProjectionTests : RavenTestBase
     {
         private readonly DocumentStore _store;
         private readonly IDocumentSession _session;

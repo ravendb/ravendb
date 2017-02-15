@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_542 : RavenNewTestBase
+    public class RavenDB_542 : RavenTestBase
     {
         [Fact]
         public void MapWithMinValueComparison()

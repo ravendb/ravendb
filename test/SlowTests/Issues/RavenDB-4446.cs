@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4446 : RavenNewTestBase
+    public class RavenDB_4446 : RavenTestBase
     {
         [Fact]
         public void can_index_collections_larger_than_32768()

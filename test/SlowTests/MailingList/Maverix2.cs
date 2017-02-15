@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Maverix2 : RavenNewTestBase
+    public class Maverix2 : RavenTestBase
     {
         private readonly string _path;
 

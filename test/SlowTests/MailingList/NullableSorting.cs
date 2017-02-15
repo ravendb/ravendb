@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class NullableSorting : RavenNewTestBase
+    public class NullableSorting : RavenTestBase
     {
         private class Blog
         {

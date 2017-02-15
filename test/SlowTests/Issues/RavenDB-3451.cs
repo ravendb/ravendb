@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3451 : RavenNewTestBase
+    public class RavenDB_3451 : RavenTestBase
     {
         [Fact]
         public async Task GetMetadataForAsyncForAsyncSession()

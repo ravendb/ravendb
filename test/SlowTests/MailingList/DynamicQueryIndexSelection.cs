@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DynamicQueryIndexSelection : RavenNewTestBase
+    public class DynamicQueryIndexSelection : RavenTestBase
     {
         [Fact]
         public void DynamicQueryWillChooseStaticIndex()

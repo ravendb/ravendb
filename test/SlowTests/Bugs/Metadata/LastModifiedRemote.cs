@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Metadata
 {
-    public class LastModifiedRemote : RavenNewTestBase
+    public class LastModifiedRemote : RavenTestBase
     {
         [Fact]
         public void CanAccessLastModifiedAsMetadata()
@@ -27,7 +27,7 @@ namespace SlowTests.Bugs.Metadata
             DoNotReuseServer();
             using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name }.Initialize())
             {
-                ((DocumentStore)store).Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
                 DateTime before;
                 DateTime after;
 
@@ -43,7 +43,7 @@ namespace SlowTests.Bugs.Metadata
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    var lastModified = Convert.ToDateTime(session.Advanced.GetMetadataFor(user)[Constants.Metadata.LastModified]);
+                    var lastModified = Convert.ToDateTime(session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.LastModified]);
 
                     Assert.NotNull(lastModified);
                     int msPrecision = 1000;

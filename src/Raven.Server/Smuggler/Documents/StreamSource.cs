@@ -258,7 +258,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (*(long*)state.StringBuffer == 7945807069737017682 &&
                                *(long*)(state.StringBuffer + sizeof(long)) == 7881666780093245812)
                             {
-                                var collection = _ctx.GetLazyStringForFieldWithCaching(Constants.Metadata.Collection);
+                                var collection = _ctx.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection);
                                 state.StringBuffer = collection.AllocatedMemoryData.Address;
                                 state.StringSize = collection.Size;
                             }

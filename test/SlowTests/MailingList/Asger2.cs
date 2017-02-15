@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ravendb_failing_query_with_static_indexes_and_common_base_class : RavenNewTestBase
+    public class ravendb_failing_query_with_static_indexes_and_common_base_class : RavenTestBase
     {
         [Fact]
         public void it_fails_but_should_not()

@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class BooleanAndDateTimeNullables : RavenNewTestBase
+    public class BooleanAndDateTimeNullables : RavenTestBase
     {
         private class ObjectWithNullables
         {

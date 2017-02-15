@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class FilterOnMissingProperty : RavenNewTestBase
+    public class FilterOnMissingProperty : RavenTestBase
     {
         [Fact]
         public void CanFilter()

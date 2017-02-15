@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ConcurrencyTests : RavenNewTestBase
+    public class ConcurrencyTests : RavenTestBase
     {
         [Fact]
         public void CanSaveReferencingAndReferencedDocumentsInOneGo()

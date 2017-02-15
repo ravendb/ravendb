@@ -8,6 +8,10 @@ namespace Raven.Client.Documents.Conventions
 {
     public abstract class QueryConventions : Client.Conventions
     {
+        public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
+
+        private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
+
         /// <summary>
         /// Gets or sets the identity parts separator used by the HiLo generators
         /// </summary>
@@ -19,10 +23,6 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public bool SaveEnumsAsIntegers { get; set; }
 
-        public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
-
-        private readonly Dictionary<MemberInfo, CustomQueryTranslator> customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
-
         public void RegisterCustomQueryTranslator<T>(Expression<Func<T, object>> member, CustomQueryTranslator translator)
         {
             var body = member.Body as UnaryExpression;
@@ -31,8 +31,8 @@ namespace Raven.Client.Documents.Conventions
 
             var info = GetMemberInfoFromExpression(body.Operand);
 
-            if (!customQueryTranslators.ContainsKey(info))
-                customQueryTranslators.Add(info, translator);
+            if (_customQueryTranslators.ContainsKey(info) == false)
+                _customQueryTranslators.Add(info, translator);
         }
 
         internal LinqPathProvider.Result TranslateCustomQueryExpression(LinqPathProvider provider, Expression expression)
@@ -40,10 +40,9 @@ namespace Raven.Client.Documents.Conventions
             var member = GetMemberInfoFromExpression(expression);
 
             CustomQueryTranslator translator;
-            if (!customQueryTranslators.TryGetValue(member, out translator))
-                return null;
-
-            return translator.Invoke(provider, expression);
+            return _customQueryTranslators.TryGetValue(member, out translator) == false
+                ? null
+                : translator.Invoke(provider, expression);
         }
 
         private static MemberInfo GetMemberInfoFromExpression(Expression expression)

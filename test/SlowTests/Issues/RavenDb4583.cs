@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDb4583 : RavenNewTestBase
+    public class RavenDb4583 : RavenTestBase
     {
         private static async Task CreateUsersAsync(IAsyncDocumentSession session)
         {

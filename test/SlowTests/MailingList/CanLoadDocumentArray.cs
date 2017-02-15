@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanLoadDocumentArray : RavenNewTestBase
+    public class CanLoadDocumentArray : RavenTestBase
     {
         private class Student
         {

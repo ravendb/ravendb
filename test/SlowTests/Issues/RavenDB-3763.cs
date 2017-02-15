@@ -12,7 +12,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_3736
     {
-        public class IsInTriggersSyncFromAsync : RavenNewTestBase
+        public class IsInTriggersSyncFromAsync : RavenTestBase
         {
             private readonly DocumentStore _store;
 

@@ -32,7 +32,7 @@ namespace Voron.Platform.Win32
         private readonly Win32NativeFileAttributes _fileAttributes;
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
-        private bool _copyOnWriteMode;
+        private readonly bool _copyOnWriteMode;
         private readonly Logger _logger;
         public override long TotalAllocationSize => _totalAllocationSize;
         [StructLayout(LayoutKind.Explicit)]
@@ -425,6 +425,11 @@ namespace Voron.Platform.Win32
                 Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
                     (UIntPtr)PagerState.AllocationInfos.Length, entriesPtr, 0);
             }
+        }
+
+        public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
+        {
+            return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
         }
 
         public override void TryPrefetchingWholeFile()

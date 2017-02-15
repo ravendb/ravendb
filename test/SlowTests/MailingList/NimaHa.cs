@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class NimaHa : RavenNewTestBase
+    public class NimaHa : RavenTestBase
     {
         [Fact]
         public void NullValueTest()
@@ -35,7 +35,7 @@ namespace SlowTests.MailingList
 
                 var metadata = new Dictionary<string, string>
                 {
-                    {Constants.Metadata.Collection, "Houses" }
+                    {Constants.Documents.Metadata.Collection, "Houses" }
                 };
 
                 store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition

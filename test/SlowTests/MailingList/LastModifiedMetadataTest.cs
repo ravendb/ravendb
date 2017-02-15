@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LastModifiedMetadataTest : RavenNewTestBase
+    public class LastModifiedMetadataTest : RavenTestBase
     {
         private class AmazingIndex2 : AbstractIndexCreationTask<User>
         {
@@ -18,7 +18,7 @@ namespace SlowTests.MailingList
                       from doc in docs
                       select new
                       {
-                          LastModified = MetadataFor(doc)[Constants.Metadata.LastModified],
+                          LastModified = MetadataFor(doc)[Constants.Documents.Metadata.LastModified],
                       };
             }
         }
@@ -36,8 +36,8 @@ namespace SlowTests.MailingList
                 TransformResults = results => from doc in results
                                               select new
                                               {
-                                                  InternalId = MetadataFor(doc)[Constants.Metadata.Id],
-                                                  LastModified = MetadataFor(doc)[Constants.Metadata.LastModified],
+                                                  InternalId = MetadataFor(doc)[Constants.Documents.Metadata.Id],
+                                                  LastModified = MetadataFor(doc)[Constants.Documents.Metadata.LastModified],
                                               };
             }
         }
@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
                     var user3 = session.Load<User>(user1.InternalId);
                     Assert.NotNull(user3);
                     var metadata = session.Advanced.GetMetadataFor(user3);
-                    var lastModified = DateTime.Parse(metadata[Constants.Metadata.LastModified]);
+                    var lastModified = DateTime.Parse(metadata[Constants.Documents.Metadata.LastModified]);
 
                     var modifiedDocuments = (from u in session.Query<User, AmazingIndex2>()
                                                 .TransformWith<AmazingTransformer2, AmazingTransformer2.ModifiedDocuments>()

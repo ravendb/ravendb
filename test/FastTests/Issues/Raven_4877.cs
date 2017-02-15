@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_4877 : RavenNewTestBase
+    public class RavenDB_4877 : RavenTestBase
     {
         private class User
         {

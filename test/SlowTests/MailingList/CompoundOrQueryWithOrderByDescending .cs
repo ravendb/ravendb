@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CompoundOrQueryWithOrderByDescending : RavenNewTestBase
+    public class CompoundOrQueryWithOrderByDescending : RavenTestBase
     {
         [Fact]
         public void ThreeOrClauses_works()

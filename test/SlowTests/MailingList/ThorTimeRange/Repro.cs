@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.ThorTimeRange
 {
-    public class Repro : RavenNewTestBase
+    public class Repro : RavenTestBase
     {
         private static class Utility
         {

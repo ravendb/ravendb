@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_556 : RavenNewTestBase
+    public class RavenDB_556 : RavenTestBase
     {
         public class Person
         {

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WhereInQueryTests : RavenNewTestBase
+    public class WhereInQueryTests : RavenTestBase
     {
         private readonly DocumentStore documentStore;
 

@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Tests.DistinctFacets
 {
-    public class DistinctAndFacets : RavenNewTestBase
+    public class DistinctAndFacets : RavenTestBase
     {
         private class Book
         {

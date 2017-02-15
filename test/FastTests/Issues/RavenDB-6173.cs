@@ -48,7 +48,7 @@ namespace FastTests.Issues
                 using (var session = storeA.OpenSession())
                 {
                     var replicationDocument =
-                        session.Load<ReplicationDocument>(Constants.Replication.DocumentReplicationConfiguration);
+                        session.Load<ReplicationDocument>(Constants.Documents.Replication.DocumentReplicationConfiguration);
 
                     //add non-etl destination
                     replicationDocument.Destinations.Add(new ReplicationDestination

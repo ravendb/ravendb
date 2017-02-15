@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Queries
 {
-    public class QueryProvider : RavenNewTestBase
+    public class QueryProvider : RavenTestBase
     {
         [Fact]
         public void CanCreateQuery()

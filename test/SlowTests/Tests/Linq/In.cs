@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class In : RavenNewTestBase
+    public class In : RavenTestBase
     {
         private class Document
         {

@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Indexes
         {
             _maps.Add(() =>
             {
-                string querySource = typeof(TSource) == typeof(object) ? "docs" : "docs." + Conventions.GetTypeTagName(typeof(TSource));
+                string querySource = typeof(TSource) == typeof(object) ? "docs" : "docs." + Conventions.GetCollectionName(typeof(TSource));
                 return IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TSource, TReduceResult>(expression, Conventions, querySource, translateIdentityProperty: true);
             });
         }

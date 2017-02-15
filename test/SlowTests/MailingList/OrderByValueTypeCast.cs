@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class OrderByValueTypeCast : RavenNewTestBase
+    public class OrderByValueTypeCast : RavenTestBase
     {
         [Fact]
         public void Test()

@@ -3,14 +3,14 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Kwoodard : RavenNewTestBase
+    public class Kwoodard : RavenTestBase
     {
         [Fact]
         public void CanSetUseOptimisticConcurrencyGlobally()
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.DefaultUseOptimisticConcurrency = true;
+                store.Conventions.UseOptimisticConcurrency = true;
 
                 using (var session = store.OpenSession())
                 {

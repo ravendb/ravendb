@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class WhereClauseTest : RavenNewTestBase
+    public class WhereClauseTest : RavenTestBase
     {
         [Fact]
         public void ATest()

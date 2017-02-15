@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5151 : RavenNewTestBase
+    public class RavenDB_5151 : RavenTestBase
     {
         [Fact]
         public void CanDoPrefixQueryOnAnalyzedFields()

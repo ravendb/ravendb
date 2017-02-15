@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class DicWithDateTimeKeys : RavenNewTestBase
+    public class DicWithDateTimeKeys : RavenTestBase
     {
         private class A
         {

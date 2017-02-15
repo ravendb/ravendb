@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class AutoDetectAnalyzersForQuery : RavenNewTestBase
+    public class AutoDetectAnalyzersForQuery : RavenTestBase
     {
         [Fact]
         public void WillDetectAnalyzerAutomatically()

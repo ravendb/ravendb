@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class SecialCharactersInDefinition : RavenNewTestBase
+    public class SecialCharactersInDefinition : RavenTestBase
     {
         private const string FooIndexName = "SomeFooIndexWithSpecialCharacters";
 

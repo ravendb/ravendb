@@ -307,18 +307,6 @@ namespace Raven.Client.Documents.Indexes
     /// </summary>
     public class AbstractIndexCreationTask<TDocument, TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
     {
-        protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
-        {
-            if (Reduce == null)
-                return enumerable.Take(indexQuery.PageSize);
-
-            return Conventions.ApplyReduceFunction(GetType(), typeof(TReduceResult), enumerable, () =>
-            {
-                var compile = Reduce.Compile();
-                return (objects => compile(objects.Cast<TReduceResult>()));
-            }).Take(indexQuery.PageSize);
-        }
-
         /// <summary>
         /// Creates the index definition.
         /// </summary>

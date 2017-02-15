@@ -2,7 +2,7 @@
 
 namespace FastTests.Client.Indexing
 {
-    public class DebugIndexing : RavenNewTestBase
+    public class DebugIndexing : RavenTestBase
     {
         private class Person
         {

@@ -13,7 +13,7 @@ using ListExtensions = Raven.Client.Extensions.ListExtensions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDb3973 : RavenNewTestBase
+    public class RavenDb3973 : RavenTestBase
     {
         [Fact]
         public void VerifyNegateQueryOptimization()

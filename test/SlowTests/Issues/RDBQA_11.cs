@@ -19,7 +19,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RDBQA_11 : RavenNewTestBase
+    public class RDBQA_11 : RavenTestBase
     {
         private class Product
         {
@@ -168,7 +168,7 @@ namespace SlowTests.Issues
                 {
                     Active = true,
                     DeleteFrequencySeconds = 100,
-                }, Constants.Expiration.ConfigurationDocumentKey);
+                }, Constants.Documents.Expiration.ConfigurationKey);
 
                 session.SaveChanges();
             }

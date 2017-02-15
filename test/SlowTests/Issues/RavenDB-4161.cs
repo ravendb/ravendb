@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4161 : RavenNewTestBase
+    public class RavenDB_4161 : RavenTestBase
     {
         [Fact]
         public void CanUseTransfromer()

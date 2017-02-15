@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MultiMapSearch
 {
-    public class MultiMapWildCardSearch : RavenNewTestBase
+    public class MultiMapWildCardSearch : RavenTestBase
     {
         [Fact]
         public void CanSearch()

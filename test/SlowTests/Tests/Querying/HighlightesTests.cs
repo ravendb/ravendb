@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class HighlightesTests : RavenNewTestBase
+    public class HighlightesTests : RavenTestBase
     {
         private interface ISearchable
         {

@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class EtagIssue : RavenNewTestBase
+    public class EtagIssue : RavenTestBase
     {
         #region Domain
 
@@ -145,7 +145,7 @@ namespace SlowTests.MailingList
                         Id = doc.Id,
                         Slug = doc.Slug,
                         Status = LoadDocument<Credentials>(doc.Id + "/credentials").Status,
-                        DateUpdated = MetadataFor(doc).Value<DateTime>(Constants.Metadata.LastModified),
+                        DateUpdated = MetadataFor(doc).Value<DateTime>(Constants.Documents.Metadata.LastModified),
                         ManagedItems =
                             from r in doc.Relations
                             where r.Type == "CaseManagerOf"

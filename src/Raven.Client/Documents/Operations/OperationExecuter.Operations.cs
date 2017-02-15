@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations
             JsonOperationContext context;
             using (GetContext(out context))
             {
-                var command = operation.GetCommand(_store.Conventions, context);
+                var command = operation.GetCommand(_store.Conventions, context, _requestExecuter.Cache);
 
                 await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
                 return new Operation(_requestExecuter, _store.Conventions, command.Result.OperationId);

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class FirstOrDefault : RavenNewTestBase
+    public class FirstOrDefault : RavenTestBase
     {
         private class User
         {

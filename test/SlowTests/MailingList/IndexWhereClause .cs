@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IndexWhereClause : RavenNewTestBase
+    public class IndexWhereClause : RavenTestBase
     {
         [Fact]
         public void Where_clause_with_greater_than_or_less_than()

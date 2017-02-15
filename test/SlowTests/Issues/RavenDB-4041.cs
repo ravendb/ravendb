@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4041 : RavenNewTestBase
+    public class RavenDB_4041 : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6124")]
         public void streaming_returns_metadata()
@@ -40,9 +40,9 @@ namespace SlowTests.Issues
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenClrType]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.Collection]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.LastModified]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.LastModified]);
                     }
                 }
             }
@@ -76,9 +76,9 @@ namespace SlowTests.Issues
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenClrType]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.Collection]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.LastModified]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.LastModified]);
                     }
                 }
             }
@@ -113,10 +113,10 @@ namespace SlowTests.Issues
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenClrType]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.Collection]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.LastModified]); ;
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.LastModified]); ;
                     }
                 }
             }
@@ -151,10 +151,10 @@ namespace SlowTests.Issues
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenClrType]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.Collection]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.LastModified]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.LastModified]);
                     }
                 }
             }
@@ -186,9 +186,9 @@ namespace SlowTests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata["@etag"]);
-                    Assert.NotNull(metadata[Constants.Headers.RavenClrType]);
-                    Assert.NotNull(metadata[Constants.Metadata.Collection]);
-                    Assert.NotNull(metadata[Constants.Metadata.LastModified]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
                 }
             }
         }
@@ -220,9 +220,9 @@ namespace SlowTests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata["@etag"]);
-                    Assert.NotNull(metadata[Constants.Headers.RavenClrType]);
-                    Assert.NotNull(metadata[Constants.Metadata.Collection]);
-                    Assert.NotNull(metadata[Constants.Metadata.LastModified]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
                 }
             }
         }
@@ -253,9 +253,9 @@ namespace SlowTests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata["@etag"]);
-                    Assert.NotNull(metadata[Constants.Headers.RavenClrType]);
-                    Assert.NotNull(metadata[Constants.Metadata.Collection]);
-                    Assert.NotNull(metadata[Constants.Metadata.LastModified]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
                 }
             }
         }
@@ -286,9 +286,9 @@ namespace SlowTests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata["@etag"]);
-                    Assert.NotNull(metadata[Constants.Headers.RavenClrType]);
-                    Assert.NotNull(metadata[Constants.Metadata.Collection]);
-                    Assert.NotNull(metadata[Constants.Metadata.LastModified]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
                 }
             }
         }
@@ -329,9 +329,9 @@ namespace SlowTests.Issues
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;
-                    Assert.NotNull(metadata.TryGetMember(Constants.Headers.RavenClrType, out _));
-                    Assert.NotNull(metadata.TryGetMember(Constants.Metadata.Collection, out _));
-                    Assert.NotNull(metadata.TryGetMember(Constants.Metadata.LastModified, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.RavenClrType, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.Collection, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.LastModified, out _));
                 }
             }
         }
@@ -372,9 +372,9 @@ namespace SlowTests.Issues
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;
-                    Assert.NotNull(metadata.TryGetMember(Constants.Headers.RavenClrType, out _));
-                    Assert.NotNull(metadata.TryGetMember(Constants.Metadata.Collection, out _));
-                    Assert.NotNull(metadata.TryGetMember(Constants.Metadata.LastModified, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.RavenClrType, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.Collection, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.LastModified, out _));
                 }
             }
         }
@@ -409,9 +409,9 @@ namespace SlowTests.Issues
 
                         var metadata = session.Advanced.GetMetadataFor(customer);
                         Assert.NotNull(metadata["@etag"]);
-                        Assert.NotNull(metadata[Constants.Headers.RavenClrType]);
-                        Assert.NotNull(metadata[Constants.Metadata.Collection]);
-                        Assert.NotNull(metadata[Constants.Metadata.LastModified]);
+                        Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
+                        Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
+                        Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
                     }
                 }
             }
@@ -444,9 +444,9 @@ namespace SlowTests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata["@etag"]);
-                    Assert.NotNull(metadata[Constants.Headers.RavenClrType]);
-                    Assert.NotNull(metadata[Constants.Metadata.Collection]);
-                    Assert.NotNull(metadata[Constants.Metadata.LastModified]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
                 }
             }
         }
@@ -478,9 +478,9 @@ namespace SlowTests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata["@etag"]);
-                    Assert.NotNull(metadata[Constants.Headers.RavenClrType]);
-                    Assert.NotNull(metadata[Constants.Metadata.Collection]);
-                    Assert.NotNull(metadata[Constants.Metadata.LastModified]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
                 }
             }
         }
@@ -520,9 +520,9 @@ namespace SlowTests.Issues
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;
-                    Assert.NotNull(metadata.TryGetMember(Constants.Headers.RavenClrType, out _));
-                    Assert.NotNull(metadata.TryGetMember(Constants.Metadata.Collection, out _));
-                    Assert.NotNull(metadata.TryGetMember(Constants.Metadata.LastModified, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.RavenClrType, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.Collection, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.LastModified, out _));
                 }
             }
         }
@@ -562,9 +562,9 @@ namespace SlowTests.Issues
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;
-                    Assert.NotNull(metadata.TryGetMember(Constants.Headers.RavenClrType, out _));
-                    Assert.NotNull(metadata.TryGetMember(Constants.Metadata.Collection, out _));
-                    Assert.NotNull(metadata.TryGetMember(Constants.Metadata.LastModified, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.RavenClrType, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.Collection, out _));
+                    Assert.NotNull(metadata.TryGetMember(Constants.Documents.Metadata.LastModified, out _));
                 }
             }
         }

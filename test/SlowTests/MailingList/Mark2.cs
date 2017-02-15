@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Mark2 : RavenNewTestBase
+    public class Mark2 : RavenTestBase
     {
         [Fact]
         public void ShouldNotGetErrors()
@@ -44,7 +44,7 @@ namespace SlowTests.MailingList
 
                     commands.Put("TestCases/TST00001", null, json, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "TestCases"}
+                        {Constants.Documents.Metadata.Collection, "TestCases"}
                     });
 
                     json = commands.ParseJson(@"{
@@ -57,7 +57,7 @@ namespace SlowTests.MailingList
                         json,
                         new Dictionary<string, string>
                         {
-                            {Constants.Metadata.Collection, "TestCases"}
+                            {Constants.Documents.Metadata.Collection, "TestCases"}
                         });
                 }
 

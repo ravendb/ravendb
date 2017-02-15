@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ResultTransformerMetaData : RavenNewTestBase
+    public class ResultTransformerMetaData : RavenTestBase
     {
         /// <summary>
         /// The only thing i could not recreate here is the fact that the versioning bundle is active.
@@ -71,7 +71,7 @@ namespace SlowTests.MailingList
                                                     Type = customer.CustomerType.ToString(),
                                                     CreatedOn = customer.CreatedOn.ToLocalTime(),
                                                     ChangedBy = this.MetadataFor(customer).Value<string>("Updated-By"),
-                                                    ChangedOn = this.MetadataFor(customer).Value<DateTime?>(Constants.Metadata.LastModified),
+                                                    ChangedOn = this.MetadataFor(customer).Value<DateTime?>(Constants.Documents.Metadata.LastModified),
                                                 };
 
             }

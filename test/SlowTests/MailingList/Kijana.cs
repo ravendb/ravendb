@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Kijana : RavenNewTestBase
+    public class Kijana : RavenTestBase
     {
         private class Scratch
         {

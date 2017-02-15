@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_505 : RavenNewTestBase
+    public class RavenDB_505 : RavenTestBase
     {
         [Fact]
         public void CreateDeleteCreateIndex()

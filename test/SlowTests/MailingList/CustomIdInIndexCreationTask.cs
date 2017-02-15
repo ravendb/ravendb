@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CustomIdInIndexCreationTask : RavenNewTestBase
+    public class CustomIdInIndexCreationTask : RavenTestBase
     {
         private class Task
         {

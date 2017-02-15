@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Queries
 {
-    public class IntersectionQuery : RavenNewTestBase
+    public class IntersectionQuery : RavenTestBase
     {
         [Fact]
         public void CanPerformIntersectionQuery_Remotely()

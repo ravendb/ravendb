@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
     /// 
     /// Current Build: 2073
     /// </summary>
-    public class NullableExample : RavenNewTestBase
+    public class NullableExample : RavenTestBase
     {
         private class Doc
         {

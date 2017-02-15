@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.Jabber
 {
-    public class Games : RavenNewTestBase
+    public class Games : RavenTestBase
     {
         private class GameServer
         {

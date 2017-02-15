@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CoalescingOperatorWithStringArray : RavenNewTestBase
+    public class CoalescingOperatorWithStringArray : RavenTestBase
     {
         [Fact]
         public void CanQueryIndexContainingStringArray()

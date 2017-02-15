@@ -44,9 +44,12 @@ namespace Raven.Server.Documents
         private static readonly Slice AllDocsEtagsSlice;
         private static readonly Slice TombstonesSlice;
         private static readonly Slice KeyAndChangeVectorSlice;
-        private static readonly Slice AllConflictedDocsEtags;
-        private static readonly Slice ConflictedCollection;
+        private static readonly Slice AllConflictedDocsEtagsSlice;
+        private static readonly Slice ConflictedCollectionSlice;
+        private static readonly Slice EtagsSlice;
+        private static readonly Slice LastEtagSlice;
 
+        private static readonly Slice AllTombstonesEtagsSlice;
         public static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
@@ -69,20 +72,22 @@ namespace Raven.Server.Documents
             Collection = 5,
             LastModified = 6,
         }
+
         static DocumentsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "AllTombstonesEtags", ByteStringType.Immutable, out AllTombstonesEtagsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Etags", ByteStringType.Immutable, out EtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Key", ByteStringType.Immutable, out KeySlice);
             Slice.From(StorageEnvironment.LabelsContext, "Docs", ByteStringType.Immutable, out DocsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "AllConflictedDocsEtags", ByteStringType.Immutable, out AllConflictedDocsEtags);
+            Slice.From(StorageEnvironment.LabelsContext, "AllConflictedDocsEtags", ByteStringType.Immutable, out AllConflictedDocsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Tombstones", ByteStringType.Immutable, out TombstonesSlice);
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndChangeVector", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollection);
+            Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
 
             /*
             Collection schema is:
@@ -127,7 +132,7 @@ namespace Raven.Server.Documents
             {
                 StartIndex = (int)ConflictsTable.Etag,
                 IsGlobal = true,
-                Name = AllConflictedDocsEtags
+                Name = AllConflictedDocsEtagsSlice
             });
 
             ConflictsSchema.DefineIndex(new TableSchema.SchemaIndexDef
@@ -135,7 +140,7 @@ namespace Raven.Server.Documents
                 StartIndex = (int)ConflictsTable.Collection,
                 Count = 1,
                 IsGlobal = true,
-                Name = ConflictedCollection
+                Name = ConflictedCollectionSlice
             });
 
             // The documents schema is as follows
@@ -195,8 +200,6 @@ namespace Raven.Server.Documents
 
         private readonly Logger _logger;
         private readonly string _name;
-        private static readonly Slice AllTombstonesEtagsSlice;
-        private static readonly Slice LastEtagSlice;
 
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
@@ -204,9 +207,7 @@ namespace Raven.Server.Documents
 
         private readonly StringBuilder _keyBuilder = new StringBuilder();
 
-        public string DataDirectory;
         public DocumentsContextPool ContextPool;
-        private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         private long _conflictCount;
         public long ConflictsCount => _conflictCount;
@@ -223,12 +224,6 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentsStorage)}");
-
-            exceptionAggregator.Execute(() =>
-            {
-                _unmanagedBuffersPool?.Dispose();
-                _unmanagedBuffersPool = null;
-            });
 
             exceptionAggregator.Execute(() =>
             {
@@ -262,7 +257,7 @@ namespace Raven.Server.Documents
                     _documentDatabase.Configuration.Storage.JournalsStoragePath?.FullPath
                     );
 
-            options.ForceUsing32BitPager = _documentDatabase.Configuration.Storage.ForceUsing32BitPager;
+            options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
             try
             {
@@ -289,7 +284,7 @@ namespace Raven.Server.Documents
                         tx.LowLevelTransaction.RootObjects,
                         tx.LowLevelTransaction);
 
-                    tx.CreateTree("Docs");
+                    tx.CreateTree(DocsSlice);
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
                     tx.CreateTree("ChangeVector");
@@ -348,7 +343,7 @@ namespace Raven.Server.Documents
 
         public static long ReadLastCoflictsEtag(Transaction tx)
         {
-            return ReadLastEtagFrom(tx, AllConflictedDocsEtags);
+            return ReadLastEtagFrom(tx, AllConflictedDocsEtagsSlice);
         }
 
         public static long ReadLastRevisionsEtag(Transaction tx)
@@ -375,7 +370,7 @@ namespace Raven.Server.Documents
 
         public static long ReadLastEtag(Transaction tx)
         {
-            var tree = tx.CreateTree("Etags");
+            var tree = tx.CreateTree(EtagsSlice);
             var readResult = tree.Read(LastEtagSlice);
             long lastEtag = 0;
             if (readResult != null)
@@ -609,7 +604,7 @@ namespace Raven.Server.Documents
         public IEnumerable<DocumentConflict> GetConflictsFrom(DocumentsOperationContext context, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
-            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtags], etag))
+            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag))
             {
                 yield return TableValueToConflictDocument(context, ref tvr.Reader);
             }
@@ -1157,7 +1152,7 @@ namespace Raven.Server.Documents
         {
             if (docEtag != _lastEtag)
                 return;
-            var etagTree = context.Transaction.InnerTransaction.ReadTree("Etags");
+            var etagTree = context.Transaction.InnerTransaction.ReadTree(EtagsSlice);
             var etag = _lastEtag;
             Slice etagSlice;
             using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
@@ -2008,7 +2003,7 @@ namespace Raven.Server.Documents
                     {
                         if (expectedEtag != null && expectedEtag != 0)
                         {
-                            ThrowConcurrentExceptionOnMissingDoc(key, expectedEtag);
+                            ThrowConcurrentExceptionOnMissingDoc(key, expectedEtag.Value);
                         }
                         table.Insert(tbv);
                     }
@@ -2059,12 +2054,12 @@ namespace Raven.Server.Documents
             };
         }
 
-        private static void ThrowConcurrentExceptionOnMissingDoc(string key, long? expectedEtag)
+        private static void ThrowConcurrentExceptionOnMissingDoc(string key, long expectedEtag)
         {
             throw new ConcurrencyException(
                 $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
             {
-                ExpectedETag = (long)expectedEtag
+                ExpectedETag = expectedEtag
             };
         }
 

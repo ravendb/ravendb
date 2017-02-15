@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Ronne : RavenNewTestBase
+    public class Ronne : RavenTestBase
     {
         private class Index : AbstractMultiMapIndexCreationTask
         {

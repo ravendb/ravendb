@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Voron.Bugs
 {
-    public class RavenDb_4706 : RavenNewTestBase
+    public class RavenDb_4706 : RavenTestBase
     {
         [Fact]
         public async Task SupportRandomOrder()

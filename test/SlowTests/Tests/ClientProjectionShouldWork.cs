@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Tests
 {
-    public class ClientProjectionShouldWork : RavenNewTestBase
+    public class ClientProjectionShouldWork : RavenTestBase
     {
         private class Employee
         {

@@ -15,14 +15,14 @@ using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Commands
 {
-    public class Other : RavenNewTestBase
+    public class Other : RavenTestBase
     {
         [Fact]
         public async Task CanGetBuildNumber()
         {
             using (var store = GetDocumentStore())
             {
-                var buildNumber = await store.Admin.SendAsync(new GetBuildNumberOperation());
+                var buildNumber = await store.Admin.Server.SendAsync(new GetBuildNumberOperation());
 
                 Assert.NotNull(buildNumber);
             }
@@ -46,7 +46,7 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                var names = await store.Admin.SendAsync(new GetDatabaseNamesOperation(0, 25));
+                var names = await store.Admin.Server.SendAsync(new GetDatabaseNamesOperation(0, 25));
                 Assert.Contains(store.DefaultDatabase, names);
             }
         }

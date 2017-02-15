@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList.Thor
 {
-    public class LinqTest : RavenNewTestBase
+    public class LinqTest : RavenTestBase
     {
         private class Child
         {

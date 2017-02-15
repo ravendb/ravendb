@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SpecialChars : RavenNewTestBase
+    public class SpecialChars : RavenTestBase
     {
         [Fact]
         public void ShouldWork()

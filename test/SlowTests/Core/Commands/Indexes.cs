@@ -22,7 +22,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Indexes : RavenNewTestBase
+    public class Indexes : RavenTestBase
     {
         [Fact]
         public async Task CanPutUpdateAndDeleteMapIndex()
@@ -160,7 +160,7 @@ namespace SlowTests.Core.Commands
                     {
                         Assert.Equal(1, item.Count);
                         BlittableJsonReaderObject _;
-                        Assert.True(item.TryGet(Constants.Metadata.Key, out _));
+                        Assert.True(item.TryGet(Constants.Documents.Metadata.Key, out _));
                     }
 
                     var entriesOnly = commands.Query("test", new IndexQuery(store.Conventions)
@@ -179,7 +179,7 @@ namespace SlowTests.Core.Commands
                         Assert.Equal("user" + i, name);
 
                         string id;
-                        Assert.True(item.TryGet(Constants.Indexing.Fields.DocumentIdFieldName, out id));
+                        Assert.True(item.TryGet(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out id));
                         Assert.Equal("users/" + (i + 1), id);
                     }
                 }

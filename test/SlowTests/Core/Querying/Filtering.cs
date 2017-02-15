@@ -16,7 +16,7 @@ using Contact = SlowTests.Core.Utils.Entities.Contact;
 
 namespace SlowTests.Core.Querying
 {
-    public class Filtering : RavenNewTestBase
+    public class Filtering : RavenTestBase
     {
         [Fact]
         public void BasicFiltering()

@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Scott : RavenNewTestBase
+    public class Scott : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Spatial")]
         public void CanQueryMapReduceIndexGeo()

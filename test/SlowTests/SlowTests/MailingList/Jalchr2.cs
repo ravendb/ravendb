@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.MailingList
 {
-    public class Jalchr2 : RavenNewTestBase
+    public class Jalchr2 : RavenTestBase
     {
         [Fact]
         public void Streaming_documents_will_respect_the_sorting_order()

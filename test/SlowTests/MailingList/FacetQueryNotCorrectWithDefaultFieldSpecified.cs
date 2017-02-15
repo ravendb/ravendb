@@ -5,13 +5,14 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FacetQueryNotCorrectWithDefaultFieldSpecified : RavenNewTestBase
+    public class FacetQueryNotCorrectWithDefaultFieldSpecified : RavenTestBase
     {
         /// <summary>
         /// Works
@@ -67,13 +68,13 @@ namespace SlowTests.MailingList
         {
             using (var session = store.OpenSession())
             {
-                return session.Advanced.MultiFacetedSearch(new FacetQuery(store.Conventions)
+                return session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
                 {
                     IndexName = "Product/AvailableForSale2",
                     Query = "MyName1",
                     DefaultField = "Any",
                     FacetSetupDoc = "facets/ProductFacets"
-                })[0];
+                }))[0];
             }
         }
 

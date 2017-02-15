@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.LiveProjections
 {
-    public class LiveProjectionOnProducts : RavenNewTestBase
+    public class LiveProjectionOnProducts : RavenTestBase
     {
         [Fact]
         public void SimpleLiveProjection()

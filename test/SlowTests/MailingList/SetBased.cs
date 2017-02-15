@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SetBased : RavenNewTestBase
+    public class SetBased : RavenTestBase
     {
         private class Index1 : AbstractIndexCreationTask
         {
@@ -58,7 +58,7 @@ namespace SlowTests.MailingList
 
                     commands.Put("patrons/1", null, json, new Dictionary<string, string>
                     {
-                        {Constants.Metadata.Collection, "patrons"}
+                        {Constants.Documents.Metadata.Collection, "patrons"}
                     });
                 }
 

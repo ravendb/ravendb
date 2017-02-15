@@ -4,6 +4,7 @@ using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Voron.Data.BTrees;
 using Voron.Global;
+using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Platform.Win32;
 
@@ -11,6 +12,10 @@ namespace Voron.Platform.Posix
 {
     public abstract class PosixAbstractPager : AbstractPager
     {
+        public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
+        {
+            return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
+        }
 
         private unsafe void PrefetchRanges(List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY> ranges)
         {

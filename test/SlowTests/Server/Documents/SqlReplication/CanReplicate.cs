@@ -23,7 +23,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.SqlReplication
 {
-    public class CanReplicate : RavenNewTestBase
+    public class CanReplicate : RavenTestBase
     {
         private static readonly Lazy<string> _masterDatabaseConnection = new Lazy<string>(() =>
         {
@@ -676,7 +676,7 @@ var nameArr = this.StepName.split('.');");
             {
                 await session.StoreAsync(new SqlConnections
                 {
-                    Id = Constants.SqlReplication.SqlReplicationConnections,
+                    Id = Constants.Documents.SqlReplication.SqlReplicationConnections,
                     Connections =
                     {
                         ["Ci1"] = new PredefinedSqlConnection
@@ -688,7 +688,7 @@ var nameArr = this.StepName.split('.');");
                 });
                 await session.StoreAsync(new SqlReplicationConfiguration
                 {
-                    Id = Constants.SqlReplication.SqlReplicationConfigurationPrefix + "OrdersAndLines",
+                    Id = Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix + "OrdersAndLines",
                     Name = "OrdersAndLines",
                     ConnectionStringName = "Ci1",
                     Collection = "Orders",

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MapRedue
 {
-    public class TreeWithChildrenCount : RavenNewTestBase
+    public class TreeWithChildrenCount : RavenTestBase
     {
         private class Category
         {

@@ -25,7 +25,7 @@ namespace Raven.Imports.Newtonsoft.Json.Sample
 
 namespace SlowTests.MailingList
 {
-    public class IndexesIgnoreNewtonsoftJsonPropertyAttributes : RavenNewTestBase
+    public class IndexesIgnoreNewtonsoftJsonPropertyAttributes : RavenTestBase
     {
         private class StudentDto
         {

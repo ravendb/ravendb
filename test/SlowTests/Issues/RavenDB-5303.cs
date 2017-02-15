@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5303 : RavenNewTestBase
+    public class RavenDB_5303 : RavenTestBase
     {
         [Fact]
         public void can_load_documents_with_transformer_with_load_document_documents_starting_with()

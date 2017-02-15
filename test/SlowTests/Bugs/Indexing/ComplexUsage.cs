@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class ComplexUsage : RavenNewTestBase
+    public class ComplexUsage : RavenTestBase
     {
         [Fact]
         public void ShouldNotOutputNull()

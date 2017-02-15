@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class CustomizingIndexQuery : RavenNewTestBase
+    public class CustomizingIndexQuery : RavenTestBase
     {
         [Fact]
         public void CanSkipTransformResults()

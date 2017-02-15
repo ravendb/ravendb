@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Mare : RavenNewTestBase
+    public class Mare : RavenTestBase
     {
         [Fact]
         public void CanUnderstandEqualsMethod()

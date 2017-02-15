@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanHaveNullableDoubleProperty : RavenNewTestBase
+    public class CanHaveNullableDoubleProperty : RavenTestBase
     {
         [Fact]
         public void WillSupportNullableDoubles()

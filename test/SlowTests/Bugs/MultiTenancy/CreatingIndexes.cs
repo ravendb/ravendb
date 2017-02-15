@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy
 {
-    public class CreatingIndexes : RavenNewTestBase
+    public class CreatingIndexes : RavenTestBase
     {
 
         [Fact]
@@ -27,7 +27,7 @@ namespace SlowTests.Bugs.MultiTenancy
             using (var store = GetDocumentStore())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument("Test");
-                store.Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
                 store.DefaultDatabase = "Test";
 
                 var indexDefinition = new IndexDefinitionBuilder<Test, Test>("TestIndex")

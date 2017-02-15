@@ -4,7 +4,7 @@ using Xunit;
 
 namespace FastTests.Client.Queries
 {
-    public class AnalyzersThatRemovesStarShouldNotCutTheLastChar : RavenNewTestBase
+    public class AnalyzersThatRemovesStarShouldNotCutTheLastChar : RavenTestBase
     {
         [Fact]
         public void CanDoPrefixQueryOnAnalyzedFields()

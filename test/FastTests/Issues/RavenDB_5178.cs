@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_5178 : RavenNewTestBase
+    public class RavenDB_5178 : RavenTestBase
     {
         [NonLinuxFact]
         public void CanUsePathLongerThan260Chars()
@@ -21,7 +21,7 @@ namespace FastTests.Issues
 
                 var doc = MultiDatabase.CreateDatabaseDocument(longName);
 
-                store.Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 store.DefaultDatabase = longName;
 

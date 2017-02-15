@@ -154,10 +154,10 @@ namespace Raven.Client.Documents.BulkInsert
                         var documentInfo = new DocumentInfo();
 
                         var metadata = new DynamicJsonValue();
-                        var tag = _store.Conventions.GetDynamicTagName(doc.Item1);
+                        var tag = _store.Conventions.GetCollectionName(doc.Item1);
                         if (tag != null)
-                            metadata[Constants.Metadata.Collection] = tag;
-                        metadata[Constants.Metadata.Id] = doc.Item2;
+                            metadata[Constants.Documents.Metadata.Collection] = tag;
+                        metadata[Constants.Documents.Metadata.Id] = doc.Item2;
 
                         documentInfo.Metadata = context.ReadObject(metadata, doc.Item2);
                         var data = _entityToBlittable.ConvertEntityToBlittable(doc.Item1, _store.Conventions, context, documentInfo);

@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Session
         ///     Those operations are rarely needed, and have been moved to a separate
         ///     property to avoid cluttering the API
         /// </remarks>
-        ISyncAdvancedSessionOperation Advanced { get; }
+        IAdvancedSessionOperation Advanced { get; }
 
         /// <summary>
         ///     Marks the specified entity for deletion. The entity will be deleted when

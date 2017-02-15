@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MultiMap
 {
-    public class MultiMapCrudeJoin : RavenNewTestBase
+    public class MultiMapCrudeJoin : RavenTestBase
     {
         [Fact]
         public void CanUseMultimapAsASimpleJoin()

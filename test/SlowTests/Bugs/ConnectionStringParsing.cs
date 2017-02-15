@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class ConnectionStringParsing : RavenNewTestBase
+    public class ConnectionStringParsing : RavenTestBase
     {
         [Fact]
         public void EnsureWellFormedConnectionStrings_ParsingWithEndingSemicolons_Successful()

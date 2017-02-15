@@ -1,13 +1,12 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations.ApiKeys
 {
-    public class GetApiKeysOperation : IAdminOperation<NamedApiKeyDefinition[]>
+    public class GetApiKeysOperation : IServerOperation<NamedApiKeyDefinition[]>
     {
         private readonly int _start;
         private readonly int _pageSize;

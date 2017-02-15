@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Jon : RavenNewTestBase
+    public class Jon : RavenTestBase
     {
         [Fact]
         public void CanQueryUsingDistintOnIndex()

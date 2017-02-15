@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MapRedue
 {
-    public class Chris : RavenNewTestBase
+    public class Chris : RavenTestBase
     {
         [Fact]
         public void CanMakeIndexWork()

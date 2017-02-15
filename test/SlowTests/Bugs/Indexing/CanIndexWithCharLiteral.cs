@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanIndexWithCharLiteral : RavenNewTestBase
+    public class CanIndexWithCharLiteral : RavenTestBase
     {
         [Fact]
         public void CanQueryDocumentsIndexWithCharLiteral()

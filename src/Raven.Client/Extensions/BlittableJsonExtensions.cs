@@ -8,8 +8,8 @@ namespace Raven.Client.Extensions
         public static BlittableJsonReaderObject GetMetadata(this BlittableJsonReaderObject document)
         {
             BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata.Key, out metadata) == false || metadata == null)
-                throw new InvalidOperationException($"Document does not contain '{Constants.Metadata.Key}' field.");
+            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false || metadata == null)
+                throw new InvalidOperationException($"Document does not contain '{Constants.Documents.Metadata.Key}' field.");
 
             return metadata;
         }
@@ -17,21 +17,21 @@ namespace Raven.Client.Extensions
         public static string GetId(this BlittableJsonReaderObject metadata)
         {
             string id;
-            if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                throw new InvalidOperationException($"Metadata does not contain '{Constants.Metadata.Id}' field.");
+            if (metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
+                throw new InvalidOperationException($"Metadata does not contain '{Constants.Documents.Metadata.Id}' field.");
 
             return id;
         }
 
         public static bool TryGetId(this BlittableJsonReaderObject metadata, out string id)
         {
-            return metadata.TryGet(Constants.Metadata.Id, out id) && id != null;
+            return metadata.TryGet(Constants.Documents.Metadata.Id, out id) && id != null;
         }
 
         public static long GetEtag(this BlittableJsonReaderObject metadata)
         {
             long etag;
-            if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Etag, out etag) == false)
                 InvalidMissingEtag();
 
             return etag;
@@ -40,7 +40,7 @@ namespace Raven.Client.Extensions
         public static DateTime GetLastModified(this BlittableJsonReaderObject metadata)
         {
             DateTime lastModified;
-            if (metadata.TryGet(Constants.Metadata.LastModified, out lastModified) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.LastModified, out lastModified) == false)
                 InvalidMissingLastModified();
 
             return lastModified;
@@ -49,7 +49,7 @@ namespace Raven.Client.Extensions
         public static bool TryGetEtag(this BlittableJsonReaderObject metadata, out long etag)
         {
             object etagAsObject;
-            if (metadata.TryGetMember(Constants.Metadata.Etag, out etagAsObject) == false)
+            if (metadata.TryGetMember(Constants.Documents.Metadata.Etag, out etagAsObject) == false)
             {
                 etag = 0;
                 return false;
@@ -66,12 +66,12 @@ namespace Raven.Client.Extensions
 
         private static void InvalidMissingEtag()
         {
-            throw new InvalidOperationException($"Metadata does not contain '{Constants.Metadata.Etag}' field.");
+            throw new InvalidOperationException($"Metadata does not contain '{Constants.Documents.Metadata.Etag}' field.");
         }
 
         private static void InvalidMissingLastModified()
         {
-            throw new InvalidOperationException($"Metadata does not contain '{Constants.Metadata.LastModified}' field.");
+            throw new InvalidOperationException($"Metadata does not contain '{Constants.Documents.Metadata.LastModified}' field.");
         }
     }
 }

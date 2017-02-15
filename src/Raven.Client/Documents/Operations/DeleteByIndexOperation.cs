@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Operations
             _options = options;
         }
 
-        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new DeleteByIndexCommand(_indexName, _queryToDelete, _options);
         }

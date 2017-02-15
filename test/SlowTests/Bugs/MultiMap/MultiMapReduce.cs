@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.MultiMap
 {
-    public class MultiMapReduce : RavenNewTestBase
+    public class MultiMapReduce : RavenTestBase
     {
         [Fact]
         public void CanGetDataFromMultipleDocumentSources()

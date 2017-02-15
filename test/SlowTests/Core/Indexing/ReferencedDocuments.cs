@@ -24,7 +24,7 @@ using PostContent = SlowTests.Core.Utils.Entities.PostContent;
 
 namespace SlowTests.Core.Indexing
 {
-    public class ReferencedDocuments : RavenNewTestBase
+    public class ReferencedDocuments : RavenTestBase
     {
         [Fact]
         public void CanUseLoadDocumentToIndexReferencedDocs()
@@ -289,7 +289,7 @@ namespace SlowTests.Core.Indexing
                     session.Store(address1);
                     session.Store(address2);
 
-                    session.Advanced.GetMetadataFor(address2)[Constants.Metadata.Collection] = "addresses";
+                    session.Advanced.GetMetadataFor(address2)[Constants.Documents.Metadata.Collection] = "addresses";
 
                     var user1 = new User
                     {

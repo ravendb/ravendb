@@ -123,7 +123,7 @@ namespace Raven.Server.Smuggler.Documents
                 _isRevision = isRevision;
                 _log = log;
                 _enqueueThreshold = new Size(
-                    (sizeof(int) == IntPtr.Size || database.Configuration.Storage.ForceUsing32BitPager) ? 2 : 32,
+                    (sizeof(int) == IntPtr.Size || database.Configuration.Storage.ForceUsing32BitsPager) ? 2 : 32,
                     SizeUnit.Megabytes);
 
                 _command = new MergedBatchPutCommand(database, buildVersion, log)
@@ -264,30 +264,27 @@ namespace Raven.Server.Smuggler.Documents
 
             public override void Execute(DocumentsOperationContext context)
             {
-                if (_log.IsInfoEnabled)
+                if(_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#} documents");
 
                 foreach (var document in Documents)
                 {
                     var key = document.Key;
-
-                    using (document.Data)
+             
+                    if (IsRevision)
                     {
-                        if (IsRevision)
-                        {
                             _database.BundleLoader.VersioningStorage.PutDirect(context, key, document.Data);
-                        }
-                        else if (_buildVersion < 40000 && key.Contains("/revisions/"))
-                        {
-                            var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
-                            var newKey = key.Substring(0, endIndex);
+                    }
+                    else if (_buildVersion < 40000 && key.Contains("/revisions/"))
+                    {
+                        var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
+                        var newKey = key.Substring(0, endIndex);
 
-                            _database.BundleLoader.VersioningStorage.PutDirect(context, newKey, document.Data);
-                        }
-                        else
-                        {
-                            _database.DocumentsStorage.Put(context, key, null, document.Data);
-                        }
+                        _database.BundleLoader.VersioningStorage.PutDirect(context, newKey, document.Data);
+                    }
+                    else
+                    {
+                        _database.DocumentsStorage.Put(context, key, null, document.Data);
                     }
                 }
             }

@@ -13,7 +13,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Streaming
 {
-    public class DocumentStreaming : RavenNewTestBase
+    public class DocumentStreaming : RavenTestBase
     {
         [Fact]
         public void CanStreamDocumentsStartingWith()

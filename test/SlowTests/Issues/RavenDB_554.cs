@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_554 : RavenNewTestBase
+    public class RavenDB_554 : RavenTestBase
     {
         private class Person
         {
@@ -61,7 +61,7 @@ namespace SlowTests.Issues
                             string q;
                             if (result.TryGet("Query", out q))
                             {
-                                Assert.False(q.Contains(Constants.NullValue));
+                                Assert.False(q.Contains(Constants.Documents.Indexing.Fields.NullValue));
                             }
                         }
                     }

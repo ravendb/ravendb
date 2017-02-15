@@ -12,7 +12,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Hilo : RavenNewTestBase
+    public class Hilo : RavenTestBase
     {
         private class HiloDoc
         {
@@ -283,7 +283,7 @@ namespace FastTests.Client
                         }
                     },
                     DocumentConflictResolution = StraightforwardConflictResolution.None
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }

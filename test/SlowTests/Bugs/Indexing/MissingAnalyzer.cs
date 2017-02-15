@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class MissingAnalyzer : RavenNewTestBase
+    public class MissingAnalyzer : RavenTestBase
     {
         [Fact(Skip = "Missing feature: RavenDB-6153")]
         public void Should_give_clear_error_when_starting()

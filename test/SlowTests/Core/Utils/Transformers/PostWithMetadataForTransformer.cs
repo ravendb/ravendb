@@ -26,7 +26,7 @@ namespace SlowTests.Core.Utils.Transformers
                                         select new Result
                                         {
                                             Title = post.Title,
-                                            LastModified = MetadataFor(post).Value<DateTime>(Constants.Metadata.LastModified)
+                                            LastModified = MetadataFor(post).Value<DateTime>(Constants.Documents.Metadata.LastModified)
                                         };
         }
     }

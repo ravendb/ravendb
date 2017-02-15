@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations
             _patch = patch;
         }
 
-        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new PatchCollectionCommand(conventions, context, _collectionName, _patch);
         }

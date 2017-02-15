@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformerDictionaryOrderTests : RavenNewTestBase
+    public class TransformerDictionaryOrderTests : RavenTestBase
     {
         [Fact]
         public void CanOrderADictionary()

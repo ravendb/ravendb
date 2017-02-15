@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Util;
+using Raven.Client.Exceptions.Database;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -118,11 +119,21 @@ namespace Raven.Server.ServerWide
                 : StorageEnvironmentOptions.ForPath(path.FullPath);
 
             options.SchemaVersion = 2;
-            options.ForceUsing32BitPager = Configuration.Storage.ForceUsing32BitPager;
+            options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;
-                _env = new StorageEnvironment(options);
+
+                try
+                {
+                    _env = new StorageEnvironment(options);
+                }
+
+                catch (Exception e)
+                {
+                    throw new DatabaseLoadFailureException("Failed to load the system database" , e);
+                }
+
                 using (var tx = _env.WriteTransaction())
                 {
                     tx.DeleteTree("items");// note the different casing, we remove the old items tree 
@@ -344,7 +355,17 @@ namespace Raven.Server.ServerWide
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
 
             foreach (var disposable in toDispose)
-                exceptionAggregator.Execute(() => disposable?.Dispose());
+                exceptionAggregator.Execute(() =>
+                {
+                    try
+                    {
+                        disposable?.Dispose();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        //we are disposing, so don't care
+                    }
+                });
 
             exceptionAggregator.ThrowIfNeeded();
         }

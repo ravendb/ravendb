@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class CastingInIndexDefinition : RavenNewTestBase
+    public class CastingInIndexDefinition : RavenTestBase
     {
         [Fact]
         public void CanCastValuesToString()

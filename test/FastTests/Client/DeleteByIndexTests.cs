@@ -11,7 +11,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class IndexesDeleteByIndexTests : RavenNewTestBase
+    public class IndexesDeleteByIndexTests : RavenTestBase
     {
         [Fact]
         public void Delete_By_Index()

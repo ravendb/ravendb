@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class ProjectionShouldNotLoadDocument : RavenNewTestBase
+    public class ProjectionShouldNotLoadDocument : RavenTestBase
     {
         private class Index1 : AbstractIndexCreationTask
         {
@@ -46,7 +46,7 @@ namespace SlowTests.MailingList
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Put("FOO", null, new { Name = "Ayende" }, new Dictionary<string, string> { { Constants.Metadata.Collection, "Foos" } });
+                    commands.Put("FOO", null, new { Name = "Ayende" }, new Dictionary<string, string> { { Constants.Documents.Metadata.Collection, "Foos" } });
 
                     var result = commands.Query("dynamic", new IndexQuery(store.Conventions)
                     {
@@ -57,7 +57,7 @@ namespace SlowTests.MailingList
                     // if this is upper case, then we loaded this from the db, because we used Auto-Index that is not storing fields
                     var json = (BlittableJsonReaderObject)result.Results[0];
                     string documentId;
-                    Assert.True(json.TryGet(Constants.Indexing.Fields.DocumentIdFieldName, out documentId));
+                    Assert.True(json.TryGet(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out documentId));
                     Assert.Equal("FOO", documentId);
                     Assert.True(result.IndexName.StartsWith("Auto"));
 
@@ -72,7 +72,7 @@ namespace SlowTests.MailingList
 
                     // if this is lower case, then we loaded this from the index, not from the db, because w used Static-Index with stored field
                     json = (BlittableJsonReaderObject)result.Results[0];
-                    Assert.True(json.TryGet(Constants.Indexing.Fields.DocumentIdFieldName, out documentId));
+                    Assert.True(json.TryGet(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out documentId));
                     Assert.Equal("foo", documentId);
                     Assert.True(result.IndexName.StartsWith("Index1"));
                 }

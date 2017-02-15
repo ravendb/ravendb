@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_301 : RavenNewTestBase
+    public class RavenDB_301 : RavenTestBase
     {
         [Fact]
         public void CanUseTertiaryIncludes()

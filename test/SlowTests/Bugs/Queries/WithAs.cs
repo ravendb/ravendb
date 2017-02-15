@@ -5,7 +5,7 @@ using Raven.Client.Documents;
 
 namespace SlowTests.Bugs.Queries
 {
-    public class WithAs : RavenNewTestBase
+    public class WithAs : RavenTestBase
     {
         [Fact]
         public void WillAutomaticallyGenerateSelect()

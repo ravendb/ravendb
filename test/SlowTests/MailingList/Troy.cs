@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Troy : RavenNewTestBase
+    public class Troy : RavenTestBase
     {
         private DocumentStore _store;
 
@@ -174,8 +174,8 @@ namespace SlowTests.MailingList
         {
             store.Conventions = new DocumentConventions
             {
-                TransformTypeTagNameToDocumentKeyPrefix = tag => tag,
-                FindTypeTagName = type => type.Name
+                TransformTypeCollectionNameToDocumentIdPrefix = tag => tag,
+                FindCollectionName = type => type.Name
             };
         }
 

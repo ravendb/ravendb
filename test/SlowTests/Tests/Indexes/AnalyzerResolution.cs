@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class AnalyzerResolution : RavenNewTestBase
+    public class AnalyzerResolution : RavenTestBase
     {
         [Fact]
         public void can_resolve_internal_analyzer()

@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class SelectManyShouldWork : RavenNewTestBase
+    public class SelectManyShouldWork : RavenTestBase
     {
         private void Fill(DocumentStore store)
         {

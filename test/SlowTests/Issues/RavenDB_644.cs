@@ -17,7 +17,7 @@ namespace SlowTests.Issues
     /// <remarks>
     /// Similar to RavenDB_783
     /// </remarks>
-    public class RavenDB_644 : RavenNewTestBase
+    public class RavenDB_644 : RavenTestBase
     {
         private class Item
         {

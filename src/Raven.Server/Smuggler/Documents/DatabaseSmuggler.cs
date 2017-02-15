@@ -364,11 +364,11 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_options.DisableVersioningBundle)
                     {
-                        var metadata = (BlittableJsonReaderObject)document.Data[Constants.Metadata.Key];
+                        var metadata = (BlittableJsonReaderObject)document.Data[Constants.Documents.Metadata.Key];
                         if (metadata.Modifications == null)
                             metadata.Modifications = new DynamicJsonValue(metadata);
 
-                        metadata.Modifications[Constants.Versioning.RavenDisableVersioning] = true;
+                        metadata.Modifications[Constants.Documents.Versioning.DisableVersioning] = true;
                     }
 
                     actions.WriteDocument(document);

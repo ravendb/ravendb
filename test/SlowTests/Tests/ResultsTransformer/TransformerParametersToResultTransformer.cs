@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Tests.ResultsTransformer
 {
-    public class TransformerParametersToResultTransformer : RavenNewTestBase
+    public class TransformerParametersToResultTransformer : RavenTestBase
     {
         private class Product
         {

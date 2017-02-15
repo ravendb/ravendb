@@ -23,7 +23,7 @@ namespace Raven.Client.Server
             if (name == null)
                 throw new ArgumentNullException(nameof(name));
 
-            if (name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+            if (name.Equals(Constants.Documents.SystemDatabase, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("<system> is not valid name. We don't have system database anymore.");
 
             var result = Regex.Matches(name, ValidDbNameChars);
@@ -42,7 +42,7 @@ namespace Raven.Client.Server
         /// <returns></returns>
         public static string GetDatabaseUrl(string url, string database)
         {
-            if (database == Constants.SystemDatabase)
+            if (database == Constants.Documents.SystemDatabase)
             {
                 return GetRootDatabaseUrl(url);
             }
@@ -84,7 +84,7 @@ namespace Raven.Client.Server
                 return Regex.Match(databaseUrl, ValidDbNameChars).Value;
             }
 
-            return Constants.SystemDatabase;
+            return Constants.Documents.SystemDatabase;
         }
     }
 }

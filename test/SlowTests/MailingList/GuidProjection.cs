@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class GuidProjection : RavenNewTestBase
+    public class GuidProjection : RavenTestBase
     {
         private class TestView
         {

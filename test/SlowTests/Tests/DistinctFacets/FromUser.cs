@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.Tests.DistinctFacets
 {
-    public class FromUser : RavenNewTestBase
+    public class FromUser : RavenTestBase
     {
         [Fact]
         public void ShouldFacetsWork()

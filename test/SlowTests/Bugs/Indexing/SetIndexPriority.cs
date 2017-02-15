@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class SetIndexPriority : RavenNewTestBase
+    public class SetIndexPriority : RavenTestBase
     {
         private class FakeIndex : AbstractIndexCreationTask
         {

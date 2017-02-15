@@ -15,7 +15,7 @@ using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Querying
 {
-    public class Paging : RavenNewTestBase
+    public class Paging : RavenTestBase
     {
         [Fact]
         public void BasicPaging()

@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4144 : RavenNewTestBase
+    public class RavenDB_4144 : RavenTestBase
     {
         [Fact]
         public void can_save_javascript_array_values()

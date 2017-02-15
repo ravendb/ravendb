@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Bruno : RavenNewTestBase
+    public class Bruno : RavenTestBase
     {
         [Fact]
         public void StrangeReduceOnNestedItems()

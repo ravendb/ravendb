@@ -18,7 +18,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_2134 : RavenNewTestBase
+    public class RavenDB_2134 : RavenTestBase
     {
         [Fact]
         public async Task ShouldWork()

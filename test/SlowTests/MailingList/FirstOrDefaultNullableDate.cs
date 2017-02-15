@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class FirstOrDefaultNullableDate : RavenNewTestBase
+    public class FirstOrDefaultNullableDate : RavenTestBase
     {
         private class Item
         {

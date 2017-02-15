@@ -23,7 +23,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Indexing
 {
-    public class ResultTransformers : RavenNewTestBase
+    public class ResultTransformers : RavenTestBase
     {
         [Fact]
         public void BasicTransformer()

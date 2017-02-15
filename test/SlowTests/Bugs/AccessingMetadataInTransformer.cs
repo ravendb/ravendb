@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class AccessingMetadataInTransformer : RavenNewTestBase
+    public class AccessingMetadataInTransformer : RavenTestBase
     {
         [Fact(Skip = "AbstractIndexCreationTask.MetadataFor() is not supported")]
         public void ShouldNotResultInNullReferenceException()

@@ -7,7 +7,7 @@ using Raven.Client.Documents.Linq;
 
 namespace SlowTests.MailingList
 {
-    public class JohanNilsson : RavenNewTestBase
+    public class JohanNilsson : RavenTestBase
     {
         private interface IEntity
         {
@@ -38,10 +38,10 @@ namespace SlowTests.MailingList
                       ? property.Name == "Id2"
                       : defaultFindIdentityProperty(property);
 
-                store.Conventions.FindTypeTagName = type =>
+                store.Conventions.FindCollectionName = type =>
                                                     typeof(IDomainObject).IsAssignableFrom(type)
                                                         ? "domainobjects"
-                                                        : DocumentConventions.DefaultTypeTagName(type);
+                                                        : DocumentConventions.DefaultGetCollectionName(type);
 
                 using (var session = store.OpenSession())
                 {

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class DateTimeInLocalTime : RavenNewTestBase
+    public class DateTimeInLocalTime : RavenTestBase
     {
         [Fact]
         public void CanSaveAndLoadSameTimeLocalTurnsIntoUnspecified()

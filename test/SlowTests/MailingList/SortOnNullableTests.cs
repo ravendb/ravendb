@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class SortOnNullableTests : RavenNewTestBase
+    public class SortOnNullableTests : RavenTestBase
     {
         private readonly SortOnNullableEntity[] _data = new[]
         {

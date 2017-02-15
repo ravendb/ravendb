@@ -16,7 +16,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TransformResultsWithProjection : RavenNewTestBase
+    public class TransformResultsWithProjection : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Spatial")]
         public void CanGetProjectedResultsWhenUsingTransformWithInMemory()

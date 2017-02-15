@@ -18,7 +18,7 @@ using Xunit;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationTestsBase : RavenNewTestBase
+    public class ReplicationTestsBase : RavenTestBase
     {
         protected Dictionary<string, object> GetReplicationStats(DocumentStore store)
         {
@@ -308,7 +308,7 @@ namespace FastTests.Server.Replication
                                 }
                             }
                         }
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
 
                 session.SaveChanges();
             }
@@ -324,7 +324,7 @@ namespace FastTests.Server.Replication
                 {
                     Destinations = destinations,
                     DocumentConflictResolution = conflictResolution
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }
@@ -346,7 +346,7 @@ namespace FastTests.Server.Replication
                 {
                     Destinations = destinations,
                     DocumentConflictResolution = builtinConflictResolution
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }
@@ -367,7 +367,7 @@ namespace FastTests.Server.Replication
                 session.Store(new ReplicationDocument
                 {
                     Destinations = destinations
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }
@@ -400,7 +400,7 @@ namespace FastTests.Server.Replication
                 }
 
                 configOptions.Destinations = destinations;
-                session.Store(configOptions, Constants.Replication.DocumentReplicationConfiguration);
+                session.Store(configOptions, Constants.Documents.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }
@@ -412,7 +412,7 @@ namespace FastTests.Server.Replication
             using (var session = fromStore.OpenSession())
             {
                 replicationConfigDocument =
-                    session.Load<ReplicationDocument>(Constants.Replication.DocumentReplicationConfiguration);
+                    session.Load<ReplicationDocument>(Constants.Documents.Replication.DocumentReplicationConfiguration);
 
                 if (replicationConfigDocument == null)
                     return;
@@ -443,7 +443,7 @@ namespace FastTests.Server.Replication
                 session.Store(new ReplicationDocument
                 {
                     Destinations = toDestinations.ToList()
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }

@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class DefaultOperatorTest : RavenNewTestBase
+    public class DefaultOperatorTest : RavenTestBase
     {
         private class Blog
         {

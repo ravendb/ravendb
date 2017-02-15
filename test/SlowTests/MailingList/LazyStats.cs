@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanSearchLazily : RavenNewTestBase
+    public class CanSearchLazily : RavenTestBase
     {
         [Fact]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex()

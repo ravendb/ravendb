@@ -45,7 +45,7 @@ namespace Raven.Server.Documents
 
             options.SchemaVersion = 1;
             options.TransactionsMode = TransactionsMode.Lazy;
-            options.ForceUsing32BitPager = db.Configuration.Storage.ForceUsing32BitPager;
+            options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
 
             _environment = new StorageEnvironment(options);
             var databaseName = db.Name;

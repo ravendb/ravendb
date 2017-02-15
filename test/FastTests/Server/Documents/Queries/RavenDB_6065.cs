@@ -4,7 +4,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries
 {
-    public class DocumentQueryWithDefaultOperator : RavenNewTestBase
+    public class DocumentQueryWithDefaultOperator : RavenTestBase
     {
         private class Person
         {

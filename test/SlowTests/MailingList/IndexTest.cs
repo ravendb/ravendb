@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class IndexTest : RavenNewTestBase
+    public class IndexTest : RavenTestBase
     {
         [Fact]
         public void FloatArrayIndexTest()

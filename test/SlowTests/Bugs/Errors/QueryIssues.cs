@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Errors
 {
-    public class QueryIssues : RavenNewTestBase
+    public class QueryIssues : RavenTestBase
     {
         [Fact]
         public void PrestonThinksLoadStartingWithShouldBeCaseInsensitive()

@@ -1,12 +1,13 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class TomCabanski : RavenNewTestBase
+    public class TomCabanski : RavenTestBase
     {
         [Fact]
         public void CanEscapeGetFacets()
@@ -38,12 +39,12 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.MultiFacetedSearch(new FacetQuery(store.Conventions)
+                    session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
                     {
                         IndexName = "test",
                         Query = "(IsActive:true)  AND (BookVendor:\"stroheim & romann\")",
                         FacetSetupDoc = "facets/test"
-                    });
+                    }));
                 }
             }
         }

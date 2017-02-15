@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class BoundingBox : RavenNewTestBase
+    public class BoundingBox : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Spatial")]
         public void ShouldGetRightResults()

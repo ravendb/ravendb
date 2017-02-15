@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Failing_lucene_query_where_in_tests : RavenNewTestBase
+    public class Failing_lucene_query_where_in_tests : RavenTestBase
     {
         private class Contract
         {

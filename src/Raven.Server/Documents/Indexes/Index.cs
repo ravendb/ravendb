@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes
             Definition = definition;
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
 
-            if (Collections.Contains(Constants.Indexing.AllDocumentsCollection))
+            if (Collections.Contains(Constants.Documents.Indexing.AllDocumentsCollection))
                 HandleAllDocs = true;
         }
 
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 options.SchemaVersion = 1;
-                options.ForceUsing32BitPager = documentDatabase.Configuration.Storage.ForceUsing32BitPager;
+                options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                 environment = new StorageEnvironment(options);
 
@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.Indexes
                     : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath);
 
                 options.SchemaVersion = 1;
-                options.ForceUsing32BitPager = documentDatabase.Configuration.Storage.ForceUsing32BitPager;
+                options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                 try
                 {
@@ -1497,7 +1497,7 @@ namespace Raven.Server.Documents.Indexes
                             IEnumerable<Document> documents;
 
                             if (string.IsNullOrWhiteSpace(query.Query) ||
-                                query.Query.Contains(Constants.IntersectSeparator) == false)
+                                query.Query.Contains(Constants.Documents.Querying.IntersectSeparator) == false)
                             {
                                 documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
                                     GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
@@ -1818,14 +1818,14 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var sortedField in sortedFields)
                 {
                     var f = sortedField.Field;
-                    if (f == Constants.Indexing.Fields.IndexFieldScoreName)
+                    if (f == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                         continue;
 
-                    if (f.StartsWith(Constants.Indexing.Fields.RandomFieldName) ||
-                        f.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
+                    if (f.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
+                        f.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 
-                    if (f.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName))
+                    if (f.StartsWith(Constants.Documents.Indexing.Fields.AlphaNumericFieldName))
                     {
                         f = SortFieldHelper.ExtractName(f);
                         if (string.IsNullOrEmpty(f))
@@ -1833,7 +1833,7 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     if (IndexPersistence.ContainsField(f) == false &&
-                        f.StartsWith(Constants.Indexing.Fields.DistanceFieldName) == false &&
+                        f.StartsWith(Constants.Documents.Indexing.Fields.DistanceFieldName) == false &&
                         IndexPersistence.ContainsField("_") == false)
                         // the catch all field name means that we have dynamic fields names
                         throw new ArgumentException("The field '" + f +
@@ -2099,7 +2099,7 @@ namespace Raven.Server.Documents.Indexes
                     var environmentOptions =
                         (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
                     var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath);
-                    srcOptions.ForceUsing32BitPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitPager;
+                    srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                     var wasRunning = _indexingThread != null;
 
@@ -2109,7 +2109,7 @@ namespace Raven.Server.Documents.Indexes
 
                     using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath.FullPath))
                     {
-                        compactOptions.ForceUsing32BitPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitPager;
+                        compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {
@@ -2145,14 +2145,14 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetLastDocumentEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
-            return collection == Constants.Indexing.AllDocumentsCollection
+            return collection == Constants.Documents.Indexing.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
                 : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
         }
 
         public long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
-            return collection == Constants.Indexing.AllDocumentsCollection
+            return collection == Constants.Documents.Indexing.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
                 : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
         }

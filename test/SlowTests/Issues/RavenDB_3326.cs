@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3326 : RavenNewTestBase
+    public class RavenDB_3326 : RavenTestBase
     {
         [Fact]
         public void streaming_and_projections_with_property_rename()
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
 
                         Assert.NotNull(enumerator.Current.Key);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
                     }
                 }
             }
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
 
                         Assert.NotNull(enumerator.Current.Key);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
                     }
                 }
             }

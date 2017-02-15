@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Faceted
 {
-    public class LazyFacets : RavenNewTestBase
+    public class LazyFacets : RavenTestBase
     {
         [Fact]
         public void Default_operator_not_honoured_remote_store_ToFacetsLazy()

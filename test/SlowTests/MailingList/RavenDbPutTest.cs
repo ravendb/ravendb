@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class RavenDbPutTest : RavenNewTestBase
+    public class RavenDbPutTest : RavenTestBase
     {
         public class Book
         {

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class LinqInExtensionTests : RavenNewTestBase
+    public class LinqInExtensionTests : RavenTestBase
     {
         [Fact]
         public void InListOver256Chars()

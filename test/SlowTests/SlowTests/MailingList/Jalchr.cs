@@ -15,7 +15,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.MailingList
 {
-    public class Jalchr : RavenNewTestBase
+    public class Jalchr : RavenTestBase
     {
         [Fact]
         public void CanGetIdWithCorrectCase()

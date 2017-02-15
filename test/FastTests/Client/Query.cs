@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Query : RavenNewTestBase
+    public class Query : RavenTestBase
     {
 
         [Fact]

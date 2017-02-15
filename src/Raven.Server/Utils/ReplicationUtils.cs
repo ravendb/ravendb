@@ -345,8 +345,8 @@ namespace Raven.Server.Utils
         {
             string actualCollection;
             BlittableJsonReaderObject metadata;
-            if (obj.TryGet(Constants.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Metadata.Collection, out actualCollection) == false ||
+            if (obj.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Collection, out actualCollection) == false ||
                 actualCollection != collection)
             {
                 if (collection == CollectionName.EmptyCollection)

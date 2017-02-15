@@ -16,7 +16,7 @@ namespace Raven.Client.Extensions
         public static long? GetEtagHeader(this HttpResponseMessage response)
         {
             IEnumerable<string> values;
-            if (response.Headers.TryGetValues(Constants.MetadataEtagField, out values) == false || values == null)
+            if (response.Headers.TryGetValues(Constants.Headers.Etag, out values) == false || values == null)
                 return null;
 
             var value = values.FirstOrDefault();
@@ -29,7 +29,7 @@ namespace Raven.Client.Extensions
         public static long? GetEtagHeader(this Dictionary<string, string> headers)
         {
             string value;
-            if (headers.TryGetValue(Constants.MetadataEtagField, out value) == false || value == null)
+            if (headers.TryGetValue(Constants.Headers.Etag, out value) == false || value == null)
                 return null;
 
             return EtagHeaderToEtag(value);

@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_4085 : RavenNewTestBase
+    public class RavenDB_4085 : RavenTestBase
     {
         [Fact]
         public async Task can_export_all_documents()
@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                         {
                             commands.Put("users/" + (i + 1), null, new { Name = "test #" + i }, new Dictionary<string, string>
                             {
-                                { Constants.Metadata.Collection, "Users" }
+                                { Constants.Documents.Metadata.Collection, "Users" }
                             });
                         }
                     }

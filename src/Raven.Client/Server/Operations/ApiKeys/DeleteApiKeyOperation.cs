@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations.ApiKeys
 {
-    public class DeleteApiKeyOperation : IAdminOperation
+    public class DeleteApiKeyOperation : IServerOperation
     {
         private readonly string _name;
 

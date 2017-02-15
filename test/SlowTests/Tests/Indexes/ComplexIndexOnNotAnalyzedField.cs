@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class ComplexIndexOnNotAnalyzedField : RavenNewTestBase
+    public class ComplexIndexOnNotAnalyzedField : RavenTestBase
     {
         [Fact]
         public void CanQueryOnKey()
@@ -29,7 +29,7 @@ namespace SlowTests.Tests.Indexes
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}")))
                     {
                         var json = commands.Context.ReadForMemory(stream, "doc");
-                        commands.Put("companies/", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "Companies" } });
+                        commands.Put("companies/", null, json, new Dictionary<string, string> { { Constants.Documents.Metadata.Collection, "Companies" } });
                     }
 
                     store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition

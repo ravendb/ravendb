@@ -295,9 +295,9 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         "sport", "books"
                     },
-                    [Constants.Metadata.Key] = new DynamicJsonValue
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Metadata.Collection] = "Users"
+                        [Constants.Documents.Metadata.Collection] = "Users"
                     }
                 }))
                 {
@@ -319,9 +319,9 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         "music", "sport"
                     },
-                    [Constants.Metadata.Key] = new DynamicJsonValue
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Metadata.Collection] = "Users"
+                        [Constants.Documents.Metadata.Collection] = "Users"
                     }
                 }))
                 {
@@ -343,9 +343,9 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         ["Country"] = "UK"
                     },
-                    [Constants.Metadata.Key] = new DynamicJsonValue
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Metadata.Collection] = "Users"
+                        [Constants.Documents.Metadata.Collection] = "Users"
                     }
                 }))
                 {

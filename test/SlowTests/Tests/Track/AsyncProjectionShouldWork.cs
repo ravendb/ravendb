@@ -12,7 +12,7 @@ namespace SlowTests.Tests.Track
     /// Issue RavenDB-191
     /// http://issues.hibernatingrhinos.com/issue/RavenDB-191
     /// </summary>
-    public class AsyncProjectionShouldWork : RavenNewTestBase
+    public class AsyncProjectionShouldWork : RavenTestBase
     {
         private class TestObj
         {

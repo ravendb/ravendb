@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class VacancyCampaignsTests : RavenNewTestBase
+    public class VacancyCampaignsTests : RavenTestBase
     {
         private DocumentStore Store;
 

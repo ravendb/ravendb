@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class EnumAsInts : RavenNewTestBase
+    public class EnumAsInts : RavenTestBase
     {
         private enum Flags
         {

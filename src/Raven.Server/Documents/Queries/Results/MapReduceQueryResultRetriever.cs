@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id)
         {
-            var reduceValue = input.GetField(Constants.Indexing.Fields.ReduceValueFieldName).GetBinaryValue();
+            var reduceValue = input.GetField(Constants.Documents.Indexing.Fields.ReduceValueFieldName).GetBinaryValue();
 
             var result = new BlittableJsonReaderObject((byte*)_context.PinObjectAndGetAddress(reduceValue), reduceValue.Length, _context);
 

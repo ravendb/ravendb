@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class WhereStringEquals : RavenNewTestBase
+    public class WhereStringEquals : RavenTestBase
     {
         [Fact]
         public void QueryString_CaseSensitive_ShouldWork()

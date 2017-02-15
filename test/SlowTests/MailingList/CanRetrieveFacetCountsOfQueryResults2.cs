@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class CanRetrieveFacetCountsOfQueryResults2 : RavenNewTestBase
+    public class CanRetrieveFacetCountsOfQueryResults2 : RavenTestBase
     {
         private enum Tag
         {

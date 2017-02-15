@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class FlagsEnum : RavenNewTestBase
+    public class FlagsEnum : RavenTestBase
     {
         [Flags]
         private enum CustomEnum

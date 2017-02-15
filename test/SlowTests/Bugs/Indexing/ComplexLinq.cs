@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class ComplexLinq : RavenNewTestBase
+    public class ComplexLinq : RavenTestBase
     {
         [Fact]
         public void QueryOnNegation()

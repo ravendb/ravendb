@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class RavenDB_3082 : RavenNewTestBase
+    public class RavenDB_3082 : RavenTestBase
     {
         [Fact]
         public async Task StronglyTypedDataSubscriptions()

@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
 
-        private readonly Field _reduceValueField = new Field(Constants.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
+        private readonly Field _reduceValueField = new Field(Constants.Documents.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
         protected readonly ConversionScope Scope = new ConversionScope();
 
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.Null)
             {
-                yield return GetOrCreateField(path, Constants.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                yield return GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
                 yield break;
             }
 
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         //|| sort.Value == SortOptions.Custom // TODO arek
                         )
                     {
-                        yield return GetOrCreateField(path, Constants.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                        yield return GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
                     }
 
                     foreach (var numericField in GetOrCreateNumericField(field, GetNullValueForSorting(sort), storage))
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.EmptyString)
             {
-                yield return GetOrCreateField(path, Constants.EmptyString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                yield return GetOrCreateField(path, Constants.Documents.Indexing.Fields.EmptyString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
                 yield break;
             }
 
@@ -391,9 +391,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected Field GetOrCreateKeyField(LazyStringValue key)
         {
             if (_reduceOutput == false)
-                return GetOrCreateField(Constants.Indexing.Fields.DocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                return GetOrCreateField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 
-            return GetOrCreateField(Constants.Indexing.Fields.ReduceKeyFieldName, null, key, null, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+            return GetOrCreateField(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, null, key, null, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
         }
 
         protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, BlittableJsonReaderObject blittableValue, Field.Store store, Field.Index index, Field.TermVector termVector)
@@ -469,7 +469,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private IEnumerable<AbstractField> GetOrCreateNumericField(IndexField field, object value, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)
         {
-            var fieldName = field.Name + Constants.Indexing.Fields.RangeFieldSuffix;
+            var fieldName = field.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
 
             var cacheKey = new FieldCacheKey(field.Name, null, storage, termVector,
                 _multipleItemsSameFieldCount.ToArray());

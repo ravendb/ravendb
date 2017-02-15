@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class UsingSortOptions : RavenNewTestBase
+    public class UsingSortOptions : RavenTestBase
     {
         [Fact]
         public void CanCreateIndexWithSortOptionsOnStringVal()

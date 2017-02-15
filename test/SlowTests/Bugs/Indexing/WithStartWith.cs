@@ -6,7 +6,7 @@ using Raven.Client.Documents.Operations.Indexes;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class WithStartWith : RavenNewTestBase
+    public class WithStartWith : RavenTestBase
     {
         [Fact]
         public void CanQueryDocumentsFilteredByMap()

@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class ShardingWithAsyncTransformer : RavenNewTestBase
+    public class ShardingWithAsyncTransformer : RavenTestBase
     {
         private class Profile
         {

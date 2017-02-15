@@ -4,7 +4,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
 {
-    public class UsingUnicode : RavenNewTestBase
+    public class UsingUnicode : RavenTestBase
     {
         [Theory]
         [InlineData("לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ")]

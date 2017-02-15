@@ -44,32 +44,6 @@ namespace Raven.Client.Documents.Session
             GenerateDocumentKeysOnStore = false;
         }
 
-        public async Task<FacetedQueryResult[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
-        {
-            IncrementRequestCount();
-            var requests = new List<GetRequest>();
-            var results = new List<FacetedQueryResult>();
-            foreach (var q in queries)
-            {
-                var method = q.CalculateHttpMethod();
-                requests.Add(new GetRequest
-                {
-                    Url = "/queries/" + q.IndexName,
-                    Query = "?" + q.GetQueryString(method),
-                    Method = method.Method,
-                    Content = method == HttpMethod.Post ? q.GetFacetsAsJson() : null
-                });
-            }
-            var multiGetOperation = new MultiGetOperation(this);
-            var command = multiGetOperation.CreateRequest(requests);
-            await RequestExecuter.ExecuteAsync(command, Context).ConfigureAwait(false);
-            foreach (var result in command.Result)
-            {
-                results.Add(JsonDeserializationClient.FacetedQueryResult((BlittableJsonReaderObject)result.Result));
-            }
-            return results.ToArray();
-        }
-
         public string GetDocumentUrl(object entity)
         {
             throw new NotImplementedException();
@@ -92,13 +66,13 @@ namespace Raven.Client.Documents.Session
             RefreshInternal(entity, command, documentInfo);
         }
 
-        public async Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        public Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression, CancellationToken token = default(CancellationToken)) where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
-            return await DeleteByIndexAsync(indexCreator.IndexName, expression).ConfigureAwait(false);
+            return DeleteByIndexAsync(indexCreator.IndexName, expression, token);
         }
 
-        public async Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
+        public Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression, CancellationToken token = default(CancellationToken))
         {
             var query = Query<T>(indexName).Where(expression);
             var indexQuery = new IndexQuery(Conventions)
@@ -108,7 +82,7 @@ namespace Raven.Client.Documents.Session
             if (_operations == null)
                 _operations = new OperationExecuter(_documentStore, _requestExecuter, Context);
 
-            return await _operations.SendAsync(new DeleteByIndexOperation(indexName, indexQuery));
+            return _operations.SendAsync(new DeleteByIndexOperation(indexName, indexQuery), token);
         }
 
         /// <summary>
@@ -140,7 +114,7 @@ namespace Raven.Client.Documents.Session
 
         protected override Task<string> GenerateKeyAsync(object entity)
         {
-            return Conventions.GenerateDocumentKeyAsync(DatabaseName, entity);
+            return Conventions.GenerateDocumentIdAsync(DatabaseName, entity);
         }
 
         public IAsyncEagerSessionOperations Eagerly => this;

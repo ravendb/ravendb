@@ -99,7 +99,7 @@ namespace FastTests
                         {
                             documentJson.Modifications = new DynamicJsonValue(documentJson)
                             {
-                                [Constants.Metadata.Key] = metadataJson
+                                [Constants.Documents.Metadata.Key] = metadataJson
                             };
 
                             documentJson = session.Advanced.Context.ReadObject(documentJson, id);

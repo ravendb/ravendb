@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
 {
-    public class VeryBigResultSet : RavenNewTestBase
+    public class VeryBigResultSet : RavenTestBase
     {
         [Fact]
         public void CanGetVeryBigResultSetsEvenThoughItIsBadForYou()
