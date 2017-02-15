@@ -21,14 +21,6 @@ using Voron.Util;
 
 namespace Voron.Impl
 {
-    public interface IPagerLevelTransactionState : IDisposable
-    {
-        Dictionary<AbstractPager, TransactionState> Windows32BitsPagerTransactionState { get; set; }
-        event Action<IPagerLevelTransactionState> OnDispose;
-        void EnsurePagerStateReference(PagerState state);
-        StorageEnvironment Environment { get; }
-    }
-
     public unsafe class LowLevelTransaction : IPagerLevelTransactionState
     {
         private const int PagesTakenByHeader = 1;
@@ -51,7 +43,7 @@ namespace Voron.Impl
         private readonly WriteAheadJournal _journal;
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
-        Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.Windows32BitsPagerTransactionState
+        Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.PagerTransactionState32Bits
         {
             get;
             set;

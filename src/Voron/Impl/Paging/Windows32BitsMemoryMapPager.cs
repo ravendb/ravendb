@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -6,8 +7,10 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Data;
@@ -15,7 +18,6 @@ using Voron.Global;
 using Voron.Platform.Win32;
 using static Voron.Platform.Win32.Win32MemoryMapNativeMethods;
 using static Voron.Platform.Win32.Win32NativeFileMethods;
-using static Voron.Platform.Win32.Win32NativeMethods;
 
 
 namespace Voron.Impl.Paging
@@ -24,13 +26,16 @@ namespace Voron.Impl.Paging
     {
         public Dictionary<long, LoadedPage> LoadedPages = new Dictionary<long, LoadedPage>();
         public List<MappedAddresses> AddressesToUnload = new List<MappedAddresses>();
+        public long TotalLoadedSize;
     }
 
     public unsafe class MappedAddresses
     {
         public string File;
-        public byte* Address;
+        public IntPtr Address;
+        public long StartPage;
         public long Size;
+        public int Usages;
     }
 
     public unsafe class LoadedPage
@@ -42,7 +47,12 @@ namespace Voron.Impl.Paging
 
     public unsafe class Windows32BitsMemoryMapPager : AbstractPager
     {
-        public const int AllocationGranularity = 64*Constants.Size.Kilobyte;
+        private readonly ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>> _globalMapping = new ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>>(NumericEqualityComparer.Instance);
+        private long _totalMapped;
+        private int _concurrentTransactions;
+        private readonly ReaderWriterLockSlim _globalMemory = new ReaderWriterLockSlim();
+
+        public const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
         private const int NumberOfPagesInAllocationGranularity = AllocationGranularity / Constants.Storage.PageSize;
         private readonly FileInfo _fileInfo;
         private readonly FileStream _fileStream;
@@ -50,7 +60,6 @@ namespace Voron.Impl.Paging
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
         private readonly NativeFileMapAccessType _mmFileAccessType;
 
-        private Logger _logger;
         private long _totalAllocationSize;
         private IntPtr _hFileMappingObject;
         private long _fileStreamLength;
@@ -71,12 +80,10 @@ namespace Voron.Impl.Paging
                   NativeFileMapAccessType.Write;
 
             FileName = file;
-            _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
 
             if (Options.CopyOnWriteMode)
-                throw new NotImplementedException("CopyOnWriteMode using spare memory is currently not supported on " +
-                                                  file);
-            
+                ThrowNotSupportedOption(file);
+
             _handle = CreateFile(file, access,
                 Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
                 Win32NativeFileCreationDisposition.OpenAlways,
@@ -124,6 +131,13 @@ namespace Voron.Impl.Paging
             SetPagerState(CreatePagerState());
         }
 
+        private static void ThrowNotSupportedOption(string file)
+        {
+            throw new NotSupportedException(
+                "CopyOnWriteMode using spare memory is currently not supported for 32 bits, error on " +
+                file);
+        }
+
         public override long TotalAllocationSize => _totalAllocationSize;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -165,7 +179,7 @@ namespace Voron.Impl.Paging
             var result = MapViewOfFileEx(_hFileMappingObject, _mmFileAccessType, offset.High,
                 offset.Low,
                 (UIntPtr)AllocationGranularity, null);
-            
+
             if (result == null)
             {
                 var lastWin32Error = Marshal.GetLastWin32Error();
@@ -233,12 +247,35 @@ namespace Voron.Impl.Paging
             }
 
             page = MapPages(state, allocationStartPosition, AllocationGranularity);
-            return page.Pointer + (distanceFromStart*Constants.Storage.PageSize);
+            return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
         }
 
         private LoadedPage MapPages(TransactionState state, long startPage, long size)
         {
-            var offset = new WindowsMemoryMapPager.SplitValue { Value = (ulong)startPage * (ulong)Constants.Storage.PageSize };
+            var addresses = _globalMapping.GetOrAdd(startPage,
+                _ => new ConcurrentSet<MappedAddresses>());
+
+            _globalMemory.EnterReadLock();
+            try
+            {
+                foreach (var addr in addresses)
+                {
+                    if (addr.Size < size)
+                        continue;
+
+                    Interlocked.Increment(ref addr.Usages);
+                    return AddMappingToTransaction(state, startPage, size, addr);
+                }
+            }
+            finally
+            {
+                _globalMemory.ExitReadLock();
+            }
+
+            var offset = new WindowsMemoryMapPager.SplitValue
+            {
+                Value = (ulong)startPage * Constants.Storage.PageSize
+            };
 
             if ((long)offset.Value + size > _fileStreamLength)
             {
@@ -252,21 +289,32 @@ namespace Voron.Impl.Paging
             if (result == null)
             {
                 var lastWin32Error = Marshal.GetLastWin32Error();
-                throw new Win32Exception($"Unable to map {size/Constants.Size.Kilobyte:#,#} kb starting at {startPage} on {FileName}", 
+                throw new Win32Exception(
+                    $"Unable to map {size / Constants.Size.Kilobyte:#,#} kb starting at {startPage} on {FileName}",
                     new Win32Exception(lastWin32Error));
             }
 
             NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size);
-
-            state.AddressesToUnload.Add(new MappedAddresses
+            Interlocked.Add(ref _totalMapped, size);
+            var mappedAddresses = new MappedAddresses
             {
-                Address = result,
+                Address = (IntPtr)result,
                 File = _fileInfo.FullName,
-                Size = size
-            });
+                Size = size,
+                StartPage = startPage,
+                Usages = 1
+            };
+            addresses.Add(mappedAddresses);
+            return AddMappingToTransaction(state, startPage, size, mappedAddresses);
+        }
+
+        private LoadedPage AddMappingToTransaction(TransactionState state, long startPage, long size, MappedAddresses mappedAddresses)
+        {
+            state.TotalLoadedSize += size;
+            state.AddressesToUnload.Add(mappedAddresses);
             var loadedPage = new LoadedPage
             {
-                Pointer = result,
+                Pointer = (byte*)mappedAddresses.Address,
                 NumberOfPages = (int)(size / Constants.Storage.PageSize),
                 StartPage = startPage
             };
@@ -277,16 +325,17 @@ namespace Voron.Impl.Paging
         private void ThrowInvalidMappingRequested(long startPage, long size)
         {
             throw new InvalidOperationException(
-                $"Was asked to map page {startPage} + {size/1024:#,#} kb, but the file size is only {_fileStreamLength}, can't do that.");
+                $"Was asked to map page {startPage} + {size / 1024:#,#} kb, but the file size is only {_fileStreamLength}, can't do that.");
         }
 
         private TransactionState GetTransactionState(IPagerLevelTransactionState tx)
         {
             TransactionState transactionState;
-            if (tx.Windows32BitsPagerTransactionState == null)
+            if (tx.PagerTransactionState32Bits == null)
             {
+                Interlocked.Increment(ref _concurrentTransactions);
                 transactionState = new TransactionState();
-                tx.Windows32BitsPagerTransactionState = new Dictionary<AbstractPager, TransactionState>
+                tx.PagerTransactionState32Bits = new Dictionary<AbstractPager, TransactionState>
                 {
                     {this, transactionState}
                 };
@@ -294,10 +343,12 @@ namespace Voron.Impl.Paging
                 return transactionState;
             }
 
-            if (tx.Windows32BitsPagerTransactionState.TryGetValue(this, out transactionState) == false)
+            if (tx.PagerTransactionState32Bits.TryGetValue(this, out transactionState) == false)
             {
+                Interlocked.Increment(ref _concurrentTransactions);
                 transactionState = new TransactionState();
-                tx.Windows32BitsPagerTransactionState[this] = transactionState;
+                tx.PagerTransactionState32Bits[this] = transactionState;
+                tx.OnDispose += TxOnOnDispose;
             }
             return transactionState;
         }
@@ -321,17 +372,58 @@ namespace Voron.Impl.Paging
 
         private void TxOnOnDispose(IPagerLevelTransactionState lowLevelTransaction)
         {
-            if (lowLevelTransaction.Windows32BitsPagerTransactionState == null)
+            if (lowLevelTransaction.PagerTransactionState32Bits == null)
                 return;
-            foreach (var state in lowLevelTransaction.Windows32BitsPagerTransactionState.Values)
+
+            TransactionState value;
+            if (lowLevelTransaction.PagerTransactionState32Bits.TryGetValue(this, out value) == false)
+                return; // nothing mapped here
+
+            lowLevelTransaction.PagerTransactionState32Bits.Remove(this);
+
+            var canCleanup = false;
+            foreach (var addr in value.AddressesToUnload)
             {
-                foreach (var addr in state.AddressesToUnload)
+                canCleanup |= Interlocked.Decrement(ref addr.Usages) == 0;
+            }
+
+            Interlocked.Decrement(ref _concurrentTransactions);
+
+            if (canCleanup == false)
+                return;
+
+            CleanupMemory();
+        }
+
+        private void CleanupMemory()
+        {
+            _globalMemory.EnterWriteLock();
+            try
+            {
+                foreach (var maps in _globalMapping)
                 {
-                    UnmapViewOfFile(addr.Address);
-                    NativeMemory.UnregisterFileMapping(addr.File, (IntPtr)addr.Address, addr.Size);
+                    foreach (var map in maps.Value)
+                    {
+                        if (map.Usages != 0)
+                            continue;
+
+                        UnmapViewOfFile((byte*) map.Address);
+                        NativeMemory.UnregisterFileMapping(map.File, map.Address, map.Size);
+
+                        maps.Value.TryRemove(map);
+                        if (maps.Value.Count != 0)
+                            continue;
+
+                        ConcurrentSet<MappedAddresses> _;
+                        _globalMapping.TryRemove(maps.Key, out _);
+                        break;
+                    }
                 }
             }
-            lowLevelTransaction.Windows32BitsPagerTransactionState.Clear();
+            finally
+            {
+                _globalMemory.ExitWriteLock();
+            }
         }
 
         private class Windows32Bit4KbBatchWrites : I4KbBatchWrites
@@ -366,10 +458,9 @@ namespace Voron.Impl.Paging
                 {
                     if (page.NumberOfPages < distanceFromStart + numberOfPages)
                     {
-                        UnmapViewOfFile(page.Pointer);
                         for (int i = 0; i < _state.AddressesToUnload.Count; i++)
                         {
-                            if (_state.AddressesToUnload[i].Address == page.Pointer)
+                            if (_state.AddressesToUnload[i].Address == (IntPtr)page.Pointer)
                             {
                                 NativeMemory.UnregisterFileMapping(_state.AddressesToUnload[i].File,
                                     (IntPtr) _state.AddressesToUnload[i].Address, 
@@ -389,8 +480,8 @@ namespace Voron.Impl.Paging
 
                 var toWrite = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
                 byte* destination = page.Pointer +
-                                    (distanceFromStart*Constants.Storage.PageSize) +
-                                    offsetBy4Kb*(4*Constants.Size.Kilobyte);
+                                    (distanceFromStart * Constants.Storage.PageSize) +
+                                    offsetBy4Kb * (4 * Constants.Size.Kilobyte);
 
                 _parent.UnprotectPageRange(destination, (ulong)toWrite);
 
@@ -409,17 +500,17 @@ namespace Voron.Impl.Paging
                     FlushViewOfFile(loadedPage.Pointer, new IntPtr(loadedPage.NumberOfPages * Constants.Storage.PageSize));
                 }
 
+                var canCleanup = false;
                 foreach (var addr in _state.AddressesToUnload)
                 {
-                    UnmapViewOfFile(addr.Address);
-                    NativeMemory.UnregisterFileMapping(addr.File, (IntPtr)addr.Address, addr.Size);
+                    canCleanup |= Interlocked.Decrement(ref addr.Usages) == 0;
                 }
-                _state.AddressesToUnload.Clear();
-                _state.LoadedPages.Clear();
+                if(canCleanup)
+                    _parent.CleanupMemory();
             }
         }
 
-        public override void Sync(long totalUnsynced)
+        public override void Sync()
         {
             if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
             {
