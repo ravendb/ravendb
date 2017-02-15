@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Includes
                 _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var include in _includes)
-                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include, 0), _includedIds);
+                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedIds);
         }
 
         public void Fill(List<Document> result)

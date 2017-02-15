@@ -259,7 +259,7 @@ namespace FastTests.Client.Indexing
                 }
 
                 var database = await Server.ServerStore.DatabasesLandlord
-                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0))
+                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase))
                     ;
 
                 var index = database.IndexStore.GetIndexes().First();
@@ -324,7 +324,7 @@ namespace FastTests.Client.Indexing
                 }
 
                 var database = await Server.ServerStore.DatabasesLandlord
-                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0));
+                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase));
 
                 var index = database.IndexStore.GetIndexes().First();
                 var serverDefinition = index.GetIndexDefinition();
@@ -662,7 +662,7 @@ namespace FastTests.Client.Indexing
                     var database = await Server
                         .ServerStore
                         .DatabasesLandlord
-                        .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0));
+                        .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase));
 
                     var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Posts", new[]
                     {

@@ -260,7 +260,7 @@ namespace Sparrow.Json
 
             if (!_fieldNames.TryGetValue(field, out value))
             {
-                var key = new StringSegment(field, 0, field.Length);
+                var key = new StringSegment(field, field.Length);
                 value = GetLazyString(key, longLived: true);
                 _fieldNames[field] = value;
             }
