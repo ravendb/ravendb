@@ -70,8 +70,6 @@ namespace FastTests.Server.Documents.Indexing
                 var usersStats = stats[0];
                 Assert.Equal("Users/ByName", usersStats.IndexName);
 
-                Assert.Equal(3, usersStats.Performance.Length);
-
                 Assert.Equal(2, usersStats.Performance.Select(x => x.InputCount).Sum());
             }
         }
@@ -119,7 +117,7 @@ namespace FastTests.Server.Documents.Indexing
                     if (usersStats.Performance.Select(x => x.InputCount).Sum() == 2)
                         break;
 
-                    tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(1));
+                    tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(5));
                     if (tuple.Item1 == false)
                         break;
                     Assert.Equal(1, tuple.Item2.Count);
