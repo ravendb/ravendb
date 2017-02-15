@@ -104,7 +104,6 @@ class documents extends viewModelBase {
             return !!collection && !collection.isAllDocuments && !collection.isSystemDocuments;
         });
 
-        this.updateAuthToken();
         this.currentExportUrl = ko.computed(() => {
             var collection: collection = this.selectedCollection();
             if (this.isRegularCollection()) {
@@ -139,6 +138,7 @@ class documents extends viewModelBase {
         if (args.withStop) {
             shell.hasContinueTestOption(true);
         }
+        this.updateAuthToken();
         this.fetchCustomFunctions();
         this.updateHelpLink('G8CDCP');
 
