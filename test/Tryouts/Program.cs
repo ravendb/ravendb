@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading.Tasks;
+using FastTests.Server.Basic;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -9,15 +11,25 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            Parallel.For(0, 1000, i =>
             {
-                Console.WriteLine(i);
+                Console.Write(".");
 
-                using (var a = new SlowTests.Tests.Querying.SkipDuplicates())
+                using (var a = new MaxSecondsForTaskToWaitForDatabaseToLoad())
                 {
-                    a.WillSkipDuplicates();
+                    a.Should_throw_when_there_is_timeout();
                 }
-            }
+            });
+
+            //for(int i = 0; i < 10000; i++)
+            //{
+            //    Console.WriteLine(i);
+
+            //    using (var a = new MaxSecondsForTaskToWaitForDatabaseToLoad())
+            //    {
+            //        a.Should_throw_when_there_is_timeout();
+            //    }
+            //}
         }
     }
 }

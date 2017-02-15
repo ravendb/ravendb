@@ -64,12 +64,6 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// The API Key to use when authenticating against a RavenDB server that
-        /// supports API Key authentication
-        /// </summary>
-        public string ApiKey { get; set; }
-
-        /// <summary>
         /// Set document store settings based on a given connection string.
         /// </summary>
         /// <param name="connString">The connection string to parse</param>
@@ -95,12 +89,6 @@ namespace Raven.Client.Documents
                 FailoverServers = options.FailoverServers;
 
         }
-
-        /// <summary>
-        /// Gets or sets the default database name.
-        /// </summary>
-        /// <value>The default database name.</value>
-        public override string DefaultDatabase { get; set; }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
