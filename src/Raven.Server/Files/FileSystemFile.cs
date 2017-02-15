@@ -1,6 +1,6 @@
 using System;
+using System.IO;
 using Sparrow.Json;
-using Voron.Data;
 
 namespace Raven.Server.Files
 {
@@ -14,6 +14,6 @@ namespace Raven.Server.Files
 
         public DateTime LastModifed;
 
-        public VoronStream Stream;
+        public Stream Stream;
     }
 }

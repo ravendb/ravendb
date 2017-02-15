@@ -159,6 +159,7 @@ namespace Raven.Server.Documents
             catch (Exception)
             {
                 Dispose();
+                throw;
             }
         }
 
@@ -269,7 +270,7 @@ namespace Raven.Server.Documents
                     _waitForUsagesOnDisposal.Reset();
             }
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)}");
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
             foreach (var connection in RunningTcpConnections)
             {

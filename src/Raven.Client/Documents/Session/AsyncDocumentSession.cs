@@ -5,25 +5,16 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Identity;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -64,25 +55,6 @@ namespace Raven.Client.Documents.Session
             await RequestExecuter.ExecuteAsync(command, Context, token);
 
             RefreshInternal(entity, command, documentInfo);
-        }
-
-        public Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression, CancellationToken token = default(CancellationToken)) where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            var indexCreator = new TIndexCreator();
-            return DeleteByIndexAsync(indexCreator.IndexName, expression, token);
-        }
-
-        public Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression, CancellationToken token = default(CancellationToken))
-        {
-            var query = Query<T>(indexName).Where(expression);
-            var indexQuery = new IndexQuery(Conventions)
-            {
-                Query = query.ToString()
-            };
-            if (_operations == null)
-                _operations = new OperationExecuter(_documentStore, _requestExecuter, Context);
-
-            return _operations.SendAsync(new DeleteByIndexOperation(indexName, indexQuery), token);
         }
 
         /// <summary>

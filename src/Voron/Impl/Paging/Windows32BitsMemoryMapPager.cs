@@ -419,7 +419,7 @@ namespace Voron.Impl.Paging
             }
         }
 
-        public override void Sync()
+        public override void Sync(long totalUnsynced)
         {
             if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
             {

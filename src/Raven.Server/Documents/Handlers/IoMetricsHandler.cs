@@ -76,6 +76,8 @@ namespace Raven.Server.Documents.Handlers
                     Start = recentMetric.Start.GetDefaultRavenFormat(),
                     Size = recentMetric.Size,
                     HumanSize = Sizes.Humane(recentMetric.Size),
+                    FileSize = recentMetric.FileSize,
+                    HumanFileSize = Sizes.Humane(recentMetric.FileSize),
                     Duration = Math.Round(recentMetric.Duration.TotalMilliseconds, 2),
                     Type = recentMetric.Type
                 });
@@ -89,6 +91,8 @@ namespace Raven.Server.Documents.Handlers
                     End = historyMetric.TotalTimeEnd.GetDefaultRavenFormat(),
                     Size = historyMetric.TotalSize,
                     HumanSize = Sizes.Humane(historyMetric.TotalSize),
+                    FileSize = historyMetric.TotalFileSize,
+                    HumanFileSize = Sizes.Humane(historyMetric.TotalFileSize),
                     Duration = Math.Round((historyMetric.TotalTimeEnd - historyMetric.TotalTimeStart).TotalMilliseconds, 2),
                     ActiveDuration = Math.Round(historyMetric.TotalTime.TotalMilliseconds, 2),
                     MaxDuration = Math.Round(historyMetric.MaxTime.TotalMilliseconds, 2),
@@ -107,6 +111,8 @@ namespace Raven.Server.Documents.Handlers
         public string End { get; set; }
         public long Size { get; set; }
         public string HumanSize { get; set; }
+        public long FileSize { get; set; }
+        public string HumanFileSize { get; set; }
         public double Duration { get; set; }
         public double ActiveDuration { get; set; }
         public double MaxDuration { get; set; }
@@ -121,6 +127,8 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(End)] = End,
                 [nameof(Size)] = Size,
                 [nameof(HumanSize)] = HumanSize,
+                [nameof(FileSize)] = FileSize,
+                [nameof(HumanFileSize)] = HumanFileSize,
                 [nameof(Duration)] = Duration,
                 [nameof(ActiveDuration)] = ActiveDuration,
                 [nameof(MaxDuration)] = MaxDuration,
@@ -135,6 +143,8 @@ namespace Raven.Server.Documents.Handlers
         public string Start { get; set; }
         public long Size { get; set; }
         public string HumanSize { get; set; }
+        public long FileSize { get; set; }
+        public string HumanFileSize { get; set; }
         public double Duration { get; set; }
         public IoMetrics.MeterType Type { get; set; }
 
@@ -145,6 +155,8 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(Start)] = Start,
                 [nameof(Size)] = Size,
                 [nameof(HumanSize)] = HumanSize,
+                [nameof(FileSize)] = FileSize,
+                [nameof(HumanFileSize)] = HumanFileSize,
                 [nameof(Duration)] = Duration,
                 [nameof(Type)] = Type
             };

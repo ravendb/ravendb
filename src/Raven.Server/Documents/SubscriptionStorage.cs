@@ -266,18 +266,43 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void SetSubscriptionConnectionStats(SubscriptionConnection connection, DynamicJsonValue config)
+        private DynamicJsonValue GetSubscriptionConnection(SubscriptionConnection connection)
         {
-            config["ClientUri"] = connection.TcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
-            config["ConnectedAt"] = connection.Stats.ConnectedAt;
-            config["ConnectionException"] = connection.ConnectionException;
+            return new DynamicJsonValue
+            {
+                [nameof(SubscriptionConnection.ClientUri)] = connection.ClientUri,
+                [nameof(SubscriptionConnection.ConnectionException)] = connection.ConnectionException?.ToString(),
+                [nameof(SubscriptionConnection.Stats)] = GetSubscriptionConnectionStats(connection.Stats),
+                [nameof(SubscriptionConnection.Options)] = GetSubscriptionConnectionOptions(connection.Options)
+            };
+        }
 
-            config["LastMessageSentAt"] = connection.Stats.LastMessageSentAt;
-            config["LastAckReceivedAt"] = connection.Stats.LastAckReceivedAt;
+        private DynamicJsonValue GetSubscriptionConnectionStats(SubscriptionConnectionStats stats)
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(SubscriptionConnectionStats.ConnectedAt)] = stats.ConnectedAt,
+                [nameof(SubscriptionConnectionStats.LastMessageSentAt)] = stats.LastMessageSentAt,
+                [nameof(SubscriptionConnectionStats.LastAckReceivedAt)] = stats.LastAckReceivedAt,
 
-            config["DocsRate"] = connection.Stats.DocsRate.CreateMeterData();
-            config["BytesRate"] = connection.Stats.BytesRate.CreateMeterData();
-            config["AckRate"] = connection.Stats.AckRate.CreateMeterData();
+
+                [nameof(SubscriptionConnectionStats.DocsRate)] = stats.DocsRate.CreateMeterData(),
+                [nameof(SubscriptionConnectionStats.BytesRate)] = stats.BytesRate.CreateMeterData(),
+                [nameof(SubscriptionConnectionStats.AckRate)] = stats.AckRate.CreateMeterData()
+            };
+        }
+
+        private DynamicJsonValue GetSubscriptionConnectionOptions(SubscriptionConnectionOptions options)
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(SubscriptionConnectionOptions.SubscriptionId)] = options.SubscriptionId,
+                [nameof(SubscriptionConnectionOptions.TimeToWaitBeforeConnectionRetryMilliseconds)] = options.TimeToWaitBeforeConnectionRetryMilliseconds,
+                [nameof(SubscriptionConnectionOptions.IgnoreSubscribersErrors)] = options.IgnoreSubscribersErrors,
+                [nameof(SubscriptionConnectionOptions.Strategy)] = options.Strategy,
+                [nameof(SubscriptionConnectionOptions.MaxDocsPerBatch)] = options.MaxDocsPerBatch,
+                [nameof(SubscriptionConnectionOptions.ClientSubscriptionId)] = options.ClientSubscriptionId
+            };
         }
 
         public IEnumerable<DynamicJsonValue> GetAllRunningSubscriptions(DocumentsOperationContext context, bool history, int start, int take)
@@ -410,10 +435,7 @@ namespace Raven.Server.Documents
         private void SetSubscriptionStateData(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData)
         {
             var subscriptionConnection = subscriptionState.Connection;
-            if (subscriptionConnection != null)
-                SetSubscriptionConnectionStats(subscriptionConnection, subscriptionData);
-
-            SetSubscriptionHistory(subscriptionState, subscriptionData);
+            subscriptionData[nameof(SubscriptionState.Connection)] = subscriptionConnection != null ? GetSubscriptionConnection(subscriptionConnection) : null;
         }
 
         private void SetSubscriptionHistory(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData)
@@ -423,19 +445,14 @@ namespace Raven.Server.Documents
 
             foreach (var connection in subscriptionState.RecentConnections)
             {
-                var connectionStats = new DynamicJsonValue();
-                SetSubscriptionConnectionStats(connection, connectionStats);
-                recentConnections.Add(connectionStats);
+                recentConnections.Add(GetSubscriptionConnection(connection));
             }
-
 
             var rejectedConnections = new DynamicJsonArray();
             subscriptionData["RecentRejectedConnections"] = rejectedConnections;
             foreach (var connection in subscriptionState.RecentRejectedConnections)
             {
-                var connectionStats = new DynamicJsonValue();
-                SetSubscriptionConnectionStats(connection, connectionStats);
-                rejectedConnections.Add(connectionStats);
+                rejectedConnections.Add(GetSubscriptionConnection(connection));
             }
 
         }
@@ -467,6 +484,11 @@ namespace Raven.Server.Documents
 
                 if (history)
                     SetSubscriptionHistory(subscriptionState, subscriptionData);
+            }
+            else
+            {
+                // always include property in output json
+                subscriptionData[nameof(SubscriptionState.Connection)] = null;
             }
 
             return subscriptionData;
@@ -513,3 +535,4 @@ namespace Raven.Server.Documents
         }
     }
 }
+ 

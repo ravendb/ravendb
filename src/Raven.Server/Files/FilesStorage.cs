@@ -145,8 +145,8 @@ namespace Raven.Server.Files
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations("Could not open server store for " + _name, e);
 
-                options.Dispose();
                 Dispose();
+                options.Dispose();
                 throw;
             }
         }
