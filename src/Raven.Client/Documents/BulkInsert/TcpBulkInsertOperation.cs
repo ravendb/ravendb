@@ -12,7 +12,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
-using Raven.Client.Logging;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Client.Util;
@@ -20,12 +19,14 @@ using Raven.Client.Util.Sockets;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Client.Documents.BulkInsert
 {
     public class TcpBulkInsertOperation : IDisposable
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(TcpBulkInsertOperation));
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TcpBulkInsertOperation>("Client");
+
         private readonly CancellationTokenSource _cts;
         private readonly Task _getServerResponseTask;
         private readonly BlockingCollection<Tuple<object, string>> _documents = new BlockingCollection<Tuple<object, string>>();
@@ -46,12 +47,19 @@ namespace Raven.Client.Documents.BulkInsert
         {
             try
             {
-                Log.Warn("Web socket bulk insert was not disposed, and is cleaned via finalizer");
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Web socket bulk insert was not disposed, and is cleaned via finalizer");
+                }
+
                 Dispose();
             }
             catch (Exception e)
             {
-                Log.WarnException("Failed to dispose web socket bulk operation from finalizer", e);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Failed to dispose web socket bulk operation from finalizer", e);
+                }
             }
         }
 

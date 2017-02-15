@@ -5,7 +5,7 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Logging;
+using Sparrow.Logging;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -16,7 +16,8 @@ namespace Raven.Server.TrafficWatch
 {
     internal class TrafficWatchConnection : IDisposable
     {
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(TrafficWatchConnection));
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchConnection>("Raven/Server");
+
         readonly JsonContextPool _jsonContextPool = new JsonContextPool();
 
         private readonly WebSocket _websocket;
@@ -68,7 +69,8 @@ namespace Raven.Server.TrafficWatch
             }
             catch (Exception e)
             {
-                Logger.Info("Error when handling web socket connection", e);
+                if(_logger.IsInfoEnabled)
+                    _logger.Info("Error when handling web socket connection", e);
                 _cancellationTokenSource.Cancel();
             }
             finally
