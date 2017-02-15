@@ -74,6 +74,7 @@ namespace Sparrow
 
 
         // PERF: Included this version to exploit the knowledge that we are going to get a full string.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StringSegment(string s)
         {
             String = s;
@@ -83,13 +84,14 @@ namespace Sparrow
         }
 
         // PERF: Included this version to exploit the knowledge that we are going to get a substring starting at 0.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StringSegment(string source, int length)
         {
             String = source;
             Start = 0;
-
-            int stringLength = String.Length;
             Length = length;
+
+            int stringLength = source.Length;            
 
             if (length <= stringLength)
             {
@@ -104,14 +106,14 @@ namespace Sparrow
         }
 
         // PERF: Rearranged the parameters to make the other constructors available.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public StringSegment(string source, int length, int start)
         {
             String = source;
             Start = start;
-
-            int stringLength = String.Length;
             Length = length;
 
+            int stringLength = source.Length;
             if (start + length <= stringLength)
             {
                 // PERF: Inverted the condition to ensure the layout of the code will be continuous

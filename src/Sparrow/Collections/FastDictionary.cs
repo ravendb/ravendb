@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
+using Sparrow.Binary;
 
 namespace Sparrow.Collections
 {
@@ -20,49 +21,59 @@ namespace Sparrow.Collections
         /// By default, if you don't specify a hashtable size at construction-time, we use this size.  Must be a power of two, and  at least kMinBuckets.
         /// </summary>
         internal const int KInitialCapacity = 32;
-
-        internal const int KPowerOfTableSize = 2048;
-
-        private static readonly int[] NextPowerOf2Table = new int[KPowerOfTableSize];
-
-        static DictionaryHelper()
-        {
-            for (int i = 0; i <= KMinBuckets; i++)
-                NextPowerOf2Table[i] = KMinBuckets;
-
-            for (int i = KMinBuckets + 1; i < KPowerOfTableSize; i++)
-                NextPowerOf2Table[i] = NextPowerOf2Internal(i);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int NextPowerOf2(int v)
-        {
-            if (v < KPowerOfTableSize)
-            {
-                return NextPowerOf2Table[v];
-            }
-            else
-            {
-                return NextPowerOf2Internal(v);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int NextPowerOf2Internal(int v)
-        {
-            v--;
-            v |= v >> 1;
-            v |= v >> 2;
-            v |= v >> 4;
-            v |= v >> 8;
-            v |= v >> 16;
-            v++;
-
-            return v;
-        }
     }
 
-    public sealed class FastDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
+    // PERF: CoreCLR 2.0 JIT will pickup this is a sealed class and will try to devirtualize all method calls to comparers.
+    public sealed class FastDictionary<TKey, TValue> : FastDictionaryBase<TKey, TValue, IEqualityComparer<TKey>>
+    {
+        public FastDictionary(int initialBucketCount, IEnumerable<KeyValuePair<TKey, TValue>> src, IEqualityComparer<TKey> comparer) : base(initialBucketCount, src, comparer ?? EqualityComparer<TKey>.Default)
+        { }
+
+        public FastDictionary(FastDictionary<TKey, TValue> src, IEqualityComparer<TKey> comparer) : base(src, comparer ?? EqualityComparer<TKey>.Default)
+        { }
+
+        public FastDictionary(FastDictionary<TKey, TValue> src) : base(src)
+        { }
+
+        public FastDictionary(int initialBucketCount, FastDictionary<TKey, TValue> src, IEqualityComparer<TKey> comparer) : base(initialBucketCount, src, comparer ?? EqualityComparer<TKey>.Default)
+        { }
+
+        public FastDictionary(IEqualityComparer<TKey> comparer) : base(comparer ?? EqualityComparer<TKey>.Default)
+        { }
+
+        public FastDictionary(int initialBucketCount, IEqualityComparer<TKey> comparer) : base(initialBucketCount, comparer ?? EqualityComparer<TKey>.Default)
+        { }
+
+        public FastDictionary(int initialBucketCount = DictionaryHelper.KInitialCapacity) : base(initialBucketCount, EqualityComparer<TKey>.Default)
+        { }
+    }
+
+    // PERF: CoreCLR 2.0 JIT will pickup this is a sealed class and will try to devirtualize all method calls to comparers.
+    public sealed class FastDictionary<TKey, TValue, TComparer> : FastDictionaryBase<TKey, TValue, TComparer>
+        where TComparer : IEqualityComparer<TKey>
+    {
+        public FastDictionary(int initialBucketCount, IEnumerable<KeyValuePair<TKey, TValue>> src, TComparer comparer) : base(initialBucketCount, src, comparer)
+        { }
+
+        public FastDictionary(FastDictionary<TKey, TValue, TComparer> src, TComparer comparer) : base(src, comparer)
+        { }
+
+        public FastDictionary(FastDictionary<TKey, TValue, TComparer> src) : base(src)
+        { }
+
+        public FastDictionary(int initialBucketCount, FastDictionary<TKey, TValue, TComparer> src, TComparer comparer) : base(initialBucketCount, src, comparer)
+        { }
+
+        public FastDictionary(TComparer comparer) : base(comparer)
+        { }
+
+        public FastDictionary(int initialBucketCount, TComparer comparer) : base(initialBucketCount, comparer)
+        { }
+    }
+
+    // PERF: This base class is introduced in order to allow generic specialization.
+    public abstract class FastDictionaryBase<TKey, TValue, TComparer> : IEnumerable<KeyValuePair<TKey, TValue>>
+        where TComparer : IEqualityComparer<TKey>
     {
         const int InvalidNodePosition = -1;
 
@@ -91,18 +102,19 @@ namespace Sparrow.Collections
 
         private Entry[] _entries;
 
+        private readonly int _initialCapacity; // This is the initial capacity of the dictionary, we will never shrink beyond this point.
         private int _capacity;
         private int _capacityMask;
-
-        private readonly int _initialCapacity; // This is the initial capacity of the dictionary, we will never shrink beyond this point.
+        
         private int _size; // This is the real counter of how many items are in the hash-table (regardless of buckets)
         private int _numberOfUsed; // How many used buckets. 
         private int _numberOfDeleted; // how many occupied buckets are marked deleted
         private int _nextGrowthThreshold;
 
 
-        private readonly IEqualityComparer<TKey> _comparer;
-        public IEqualityComparer<TKey> Comparer => _comparer;
+        // PERF: Comparer is readonly to allow devirtualization on sealed classes to kick in (JIT 2.0). 
+        private readonly TComparer _comparer;
+        public TComparer Comparer => _comparer;
 
         public int Capacity => _capacity;
 
@@ -110,7 +122,7 @@ namespace Sparrow.Collections
 
         public bool IsEmpty => Count == 0;
 
-        public FastDictionary(int initialBucketCount, IEnumerable<KeyValuePair<TKey, TValue>> src, IEqualityComparer<TKey> comparer)
+        protected FastDictionaryBase(int initialBucketCount, IEnumerable<KeyValuePair<TKey, TValue>> src, TComparer comparer)
             : this(initialBucketCount, comparer)
         {
             Contract.Requires(src != null);
@@ -121,33 +133,33 @@ namespace Sparrow.Collections
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public FastDictionary(FastDictionary<TKey, TValue> src, IEqualityComparer<TKey> comparer)
+        protected FastDictionaryBase(FastDictionaryBase<TKey, TValue, TComparer> src, TComparer comparer)
             : this(src._capacity, src, comparer)
         { }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public FastDictionary(FastDictionary<TKey, TValue> src)
+        protected FastDictionaryBase(FastDictionaryBase<TKey, TValue, TComparer> src)
             : this(src._capacity, src, src._comparer)
         { }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public FastDictionary(int initialBucketCount, FastDictionary<TKey, TValue> src, IEqualityComparer<TKey> comparer)
+        protected FastDictionaryBase(int initialBucketCount, FastDictionaryBase<TKey, TValue, TComparer> src, TComparer comparer)
         {
             Contract.Requires(src != null);
+            Contract.Requires(comparer != null);
             Contract.Ensures(_capacity >= initialBucketCount);
-            Contract.Ensures(_capacity >= src._capacity);
+            Contract.Ensures(_capacity >= src._capacity);            
 
-            this._comparer = comparer ?? EqualityComparer<TKey>.Default;
+            this._comparer = comparer;
 
-            this._initialCapacity = DictionaryHelper.NextPowerOf2(initialBucketCount);
+            this._initialCapacity = Bits.NextPowerOf2(initialBucketCount);
             this._capacity = Math.Max(src._capacity, initialBucketCount);
-            this._capacityMask = this._capacity - 1; 
+            this._capacityMask = this._capacity - 1;
             this._size = src._size;
             this._numberOfUsed = src._numberOfUsed;
             this._numberOfDeleted = src._numberOfDeleted;
-            this._nextGrowthThreshold = src._nextGrowthThreshold;           
+            this._nextGrowthThreshold = src._nextGrowthThreshold;
 
-            if (comparer == src._comparer)
+            if (comparer.Equals(src._comparer))
             {
                 // Initialization through copy (very efficient) because the comparer is the same.
                 this._entries = new Entry[_capacity];
@@ -168,20 +180,20 @@ namespace Sparrow.Collections
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public FastDictionary(IEqualityComparer<TKey> comparer)
+        protected FastDictionaryBase(TComparer comparer)
             : this(DictionaryHelper.KInitialCapacity, comparer)
         { }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public FastDictionary(int initialBucketCount, IEqualityComparer<TKey> comparer)
+        protected FastDictionaryBase(int initialBucketCount, TComparer comparer)
         {
+            Contract.Requires(comparer != null);
             Contract.Ensures(_capacity >= initialBucketCount);
 
-            this._comparer = comparer ?? EqualityComparer<TKey>.Default;
+            this._comparer = comparer;
 
             // Calculate the next power of 2.
             int newCapacity = initialBucketCount >= DictionaryHelper.KMinBuckets ? initialBucketCount : DictionaryHelper.KMinBuckets;
-            newCapacity = DictionaryHelper.NextPowerOf2(newCapacity);
+            newCapacity = Bits.NextPowerOf2(newCapacity);
 
             this._initialCapacity = newCapacity;
 
@@ -198,10 +210,6 @@ namespace Sparrow.Collections
 
             this._nextGrowthThreshold = _capacity * 4 / KLoadFactor;
         }
-
-        public FastDictionary(int initialBucketCount = DictionaryHelper.KInitialCapacity)
-            : this(initialBucketCount, EqualityComparer<TKey>.Default)
-        { }
 
         public void Add(TKey key, TValue value)
         {
@@ -318,7 +326,7 @@ namespace Sparrow.Collections
             Contract.Ensures(this._numberOfUsed < this._capacity);
 
             // Calculate the next power of 2.
-            newCapacity = Math.Max(DictionaryHelper.NextPowerOf2(newCapacity), _initialCapacity);
+            newCapacity = Math.Max(Bits.NextPowerOf2(newCapacity), _initialCapacity);
 
             var entries = new Entry[newCapacity];
             BlockCopyMemoryHelper.Memset(entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
@@ -595,14 +603,14 @@ namespace Sparrow.Collections
 
         public struct Enumerator : IEnumerator<KeyValuePair<TKey, TValue>>
         {
-            private readonly FastDictionary<TKey, TValue> _dictionary;
+            private readonly FastDictionaryBase<TKey, TValue, TComparer> _dictionary;
             private int _index;
             private KeyValuePair<TKey, TValue> _current;
 
             internal const int DictEntry = 1;
             internal const int KeyValuePair = 2;
 
-            internal Enumerator(FastDictionary<TKey, TValue> dictionary)
+            internal Enumerator(FastDictionaryBase<TKey, TValue, TComparer> dictionary)
             {
                 this._dictionary = dictionary;
                 this._index = 0;
@@ -696,9 +704,9 @@ namespace Sparrow.Collections
 
         public sealed class KeyCollection : IEnumerable<TKey>
         {
-            private readonly FastDictionary<TKey, TValue> _dictionary;
+            private readonly FastDictionaryBase<TKey, TValue, TComparer> _dictionary;
 
-            public KeyCollection(FastDictionary<TKey, TValue> dictionary)
+            public KeyCollection(FastDictionaryBase<TKey, TValue, TComparer> dictionary)
             {
                 Contract.Requires(dictionary != null);
 
@@ -747,11 +755,11 @@ namespace Sparrow.Collections
 
             public struct Enumerator : IEnumerator<TKey>
             {
-                private readonly FastDictionary<TKey, TValue> _dictionary;
+                private readonly FastDictionaryBase<TKey, TValue, TComparer> _dictionary;
                 private int _index;
                 private TKey _currentKey;
 
-                internal Enumerator(FastDictionary<TKey, TValue> dictionary)
+                internal Enumerator(FastDictionaryBase<TKey, TValue, TComparer> dictionary)
                 {
                     this._dictionary = dictionary;
                     _index = 0;
@@ -808,9 +816,9 @@ namespace Sparrow.Collections
 
         public sealed class ValueCollection : IEnumerable<TValue>
         {
-            private readonly FastDictionary<TKey, TValue> _dictionary;
+            private readonly FastDictionaryBase<TKey, TValue, TComparer> _dictionary;
 
-            public ValueCollection(FastDictionary<TKey, TValue> dictionary)
+            public ValueCollection(FastDictionaryBase<TKey, TValue, TComparer> dictionary)
             {
                 Contract.Requires(dictionary != null);
 
@@ -858,11 +866,11 @@ namespace Sparrow.Collections
 
             public struct Enumerator : IEnumerator<TValue>
             {
-                private readonly FastDictionary<TKey, TValue> _dictionary;
+                private readonly FastDictionaryBase<TKey, TValue, TComparer> _dictionary;
                 private int _index;
                 private TValue _currentValue;
 
-                internal Enumerator(FastDictionary<TKey, TValue> dictionary)
+                internal Enumerator(FastDictionaryBase<TKey, TValue, TComparer> dictionary)
                 {
                     _dictionary = dictionary;
                     _index = 0;
