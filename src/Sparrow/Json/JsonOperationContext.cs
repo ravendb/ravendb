@@ -350,6 +350,9 @@ namespace Sparrow.Json
             if (_documentBuilder.Read() == false)
                 throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
             _documentBuilder.FinalizeDocument();
+            
+            _objectJsonParser.Reset(null);
+
             var reader = _documentBuilder.CreateReader();
             return reader;
         }
@@ -597,6 +600,8 @@ namespace Sparrow.Json
             _objectJsonParser.Read();
 
             WriteObject(writer, _jsonParserState, _objectJsonParser);
+
+            _objectJsonParser.Reset(null);
         }
 
         public void Write(BlittableJsonTextWriter writer, DynamicJsonValue json)
@@ -612,6 +617,8 @@ namespace Sparrow.Json
             _objectJsonParser.Read();
 
             WriteArray(writer, _jsonParserState, _objectJsonParser);
+
+            _objectJsonParser.Reset(null);
         }
 
         public unsafe void WriteObject(BlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
