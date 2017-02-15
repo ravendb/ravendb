@@ -24,7 +24,7 @@ namespace Voron.Platform.Win32
 {
     public unsafe class WindowsMemoryMapPager : AbstractPager
     {
-        public readonly long AllocationGranularity;
+        public const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
         private long _totalAllocationSize;
         private readonly FileInfo _fileInfo;
         private readonly FileStream _fileStream;
@@ -59,7 +59,7 @@ namespace Voron.Platform.Win32
             GetSystemInfo(out systemInfo);
             FileName = file;
             _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
-            AllocationGranularity = systemInfo.allocationGranularity;
+
             _access = access;
             _copyOnWriteMode = Options.CopyOnWriteMode && FileName.EndsWith(Constants.DatabaseFilename);
             if (_copyOnWriteMode)

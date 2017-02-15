@@ -264,10 +264,16 @@ namespace Voron.Impl.Scratch
             return new Page(_scratchPager.AcquirePagePointerWithOverflowHandling(tx, p, pagerState));
         }
 
-        public byte* AcquirePagePointer(LowLevelTransaction tx, long p)
+        public byte* AcquirePagePointerWithOverflowHandling(LowLevelTransaction tx, long p)
         {
             return _scratchPager.AcquirePagePointerWithOverflowHandling(tx, p);
         }
+
+        public byte* AcquirePagePointer(LowLevelTransaction tx, long p)
+        {
+            return _scratchPager.AcquirePagePointer(tx, p);
+        }
+
 
         internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
         {

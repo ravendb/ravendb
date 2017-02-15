@@ -51,6 +51,7 @@ using Sparrow.Utils;
 using Size = Raven.Server.Config.Settings.Size;
 using Voron.Debugging;
 using Voron.Exceptions;
+using Voron.Impl;
 using Voron.Impl.Compaction;
 
 namespace Raven.Server.Documents.Indexes
@@ -2045,7 +2046,10 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public bool CanContinueBatch(IndexingStatsScope stats)
+        public bool CanContinueBatch(
+            IndexingStatsScope stats,
+            DocumentsOperationContext documentsOperationContext,
+            TransactionOperationContext indexingContext)
         {
             stats.RecordMapAllocations(_threadAllocations.Allocations);
 
@@ -2066,6 +2070,18 @@ namespace Raven.Server.Documents.Indexes
                     return false;
                 }
             }
+
+            if (sizeof(int) == IntPtr.Size)
+            {
+                IPagerLevelTransactionState pagerLevelTransactionState = documentsOperationContext.Transaction?.InnerTransaction?.LowLevelTransaction;
+                if (pagerLevelTransactionState?.GetTotal32BitsMappedSize() > 8 * Voron.Global.Constants.Size.Megabyte)
+                    return false;
+
+                pagerLevelTransactionState = indexingContext.Transaction?.InnerTransaction?.LowLevelTransaction;
+                if (pagerLevelTransactionState?.GetTotal32BitsMappedSize() > 8 * Voron.Global.Constants.Size.Megabyte)
+                    return false;
+            }
+
             return true;
         }
 
