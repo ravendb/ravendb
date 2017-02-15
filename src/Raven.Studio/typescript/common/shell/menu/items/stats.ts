@@ -78,14 +78,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                 dynamicHash: appUrls.statusDebugChanges
             }),
             new leafMenuItem({
-                route: 'databases/status/debug/dataSubscriptions',
-                moduleId: 'viewmodels/database/status/debug/statusDebugDataSubscriptions',
-                title: 'Data subscriptions',
-                tooltip: "Shows information about data subscriptions",
-                nav: true,
-                dynamicHash: appUrls.dataSubscriptions
-            }),
-            new leafMenuItem({
                 route: 'databases/status/debug/metrics',
                 moduleId: 'viewmodels/database/status/debug/statusDebugMetrics',
                 title: 'Metrics',
@@ -215,6 +207,15 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-stats',
             dynamicHash: appUrls.status
+        }),
+
+        new leafMenuItem({
+            route: 'databases/status/subscriptions',
+            moduleId: 'viewmodels/database/status/subscriptions',
+            title: 'Subscriptions',
+            nav: true,
+            css: 'icon-plus',
+            dynamicHash: appUrls.subscriptions
         }),
         /* TODO: 
         new leafMenuItem({

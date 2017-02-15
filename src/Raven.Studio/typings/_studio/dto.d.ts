@@ -195,3 +195,19 @@ interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Index
     CompletedAsDate: Date; // user for caching
 }
 
+interface subscriptionResponseItemDto {
+    SubscriptionId: number;
+    Criteria: Raven.Client.Documents.Subscriptions.SubscriptionCriteria;
+    AckEtag: number;
+    TimeOfReceivingLastAck: string;
+    Connection: subscriptionConnectionInfoDto;
+    RecentConnections: Array<subscriptionConnectionInfoDto>;
+    RecentRejectedConnections: Array<subscriptionConnectionInfoDto>;
+}
+
+interface subscriptionConnectionInfoDto {
+    ClientUri: string;
+    ConnectionException: string;
+    Stats: Raven.Server.Documents.SubscriptionConnectionStats;
+    Options: Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions;
+}
