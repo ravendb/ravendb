@@ -119,12 +119,14 @@ namespace Voron.Platform.Win32
 
             bool writeSuccess;
             var nNumberOfBytesToWrite = numberOf4Kb*(4*Constants.Size.Kilobyte);
-            using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.JournalWrite, nNumberOfBytesToWrite))
+            using (var metrics = _options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.JournalWrite, nNumberOfBytesToWrite))
             {
                 int written;
                 writeSuccess = Win32NativeFileMethods.WriteFile(_handle, p, nNumberOfBytesToWrite,
                     out written,
                     _nativeOverlapped);
+
+                metrics.IncrementFileSize(NumberOfAllocated4Kb*(4*Constants.Size.Kilobyte));
             }
 
             if (writeSuccess == false)

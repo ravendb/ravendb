@@ -429,11 +429,11 @@ namespace Voron.Impl.Journal
 
             private long _lastFlushedTransactionId;
             private long _lastFlushedJournalId;
-            private long _lastSyncJournalId;
             private JournalFile _lastFlushedJournal;
             private bool _ignoreLockAlreadyTaken;
             private long _totalWrittenButUnsyncedBytes;
             private DateTime _lastSyncTime;
+            private long _lastSyncJournalId;
 
             public long TotalWrittenButUnsyncedBytes => Volatile.Read(ref _totalWrittenButUnsyncedBytes);
 
@@ -794,7 +794,7 @@ namespace Voron.Impl.Journal
                     {
                         // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
                         var sp = Stopwatch.StartNew();
-                        _waj._dataPager.Sync();
+                        _waj._dataPager.Sync(_totalWrittenButUnsyncedBytes);
                         if (_waj._logger.IsInfoEnabled)
                         {
                             var sizeInKb = (_waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
@@ -860,6 +860,7 @@ namespace Voron.Impl.Journal
                             }
                         }
 
+                        meter.IncrementFileSize(_waj._dataPager.TotalAllocationSize);
                         meter.IncrementSize(written);
                     }
 

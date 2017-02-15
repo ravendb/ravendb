@@ -32,7 +32,7 @@ namespace Voron.Platform.Posix
             throw new NotImplementedException();
         }
 
-        public override unsafe void Sync()
+        public override unsafe void Sync(long totoalUnsynced)
         {
             throw new NotImplementedException();
         }

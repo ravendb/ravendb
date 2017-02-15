@@ -64,7 +64,7 @@ namespace Sparrow
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
-            return new IoMeterBuffer.DurationMeasurement(buffer, type, size);
+            return new IoMeterBuffer.DurationMeasurement(buffer, type, size, 0);
         }
 
         public class FileIoMetrics
