@@ -46,10 +46,10 @@
     <div class="col-md-4">
         <div class="form-inline toolbar" role="form">
             <div class="input-group">
-                <input type="text" accesskey="/" class="form-control" placeholder="Filter indexes" title="Filter Indexes (Alt+/)" data-bind="textInput: searchText"/>
+                <input type="text" accesskey="/" class="form-control" placeholder="Filter indexes" title="Filter Indexes (Alt+/)" data-bind="textInput: searchText, enable: hasIndexes"/>
             </div>
 
-            <button class="btn btn-default" data-bind="click: expandIndexes, visible: !isIndexesExpanded()" title="Expand indexes IO stats details"><span>Expand</span></button>
+            <button class="btn btn-default" data-bind="click: expandIndexes, visible: !isIndexesExpanded(), enable: hasIndexes" title="Expand indexes IO stats details"><span>Expand</span></button>
             <button class="btn btn-default" data-bind="click: collapseIndexes, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><span>Collapse</span></button>
 
             <button class="btn btn-default" data-bind="click: exportAsJson" title="Export current IO stats graph to a file">
@@ -74,50 +74,51 @@
     </div>
 
     <div class="col-md-7">
-        <div id="#IOMetricsLegend">
+        <div id="IOMetricsLegend">
             <div class="row">
                 <label class="col-md-1">Legend:</label>
-                <small><strong class="col-md-2" data-bind="style: {color: 'black', 'background-color': eventsColors.JournalWriteLowSizeColor}">Journal Write</strong></small>
-                <small><strong class="col-md-offset-1 col-md-2" data-bind="style: {color: 'black', 'background-color': eventsColors.DataSyncLowSizeColor}">Voron Data Sync</strong></small>
-                <small><strong class="col-md-offset-1 col-md-2" data-bind="style: {color: 'black', 'background-color': eventsColors.DataFlushLowSizeColor}">Voron Data Flush</strong></small>
+                <small><strong class="col-md-2" data-bind="style: {color: 'black', 'background-color': $data.constructor.eventsColors.JournalWriteHighSizeColor}">Journal Write</strong></small>
+                <small><strong class="col-md-offset-1 col-md-2" data-bind="style: {color: 'black', 'background-color': $data.constructor.eventsColors.DataFlushHighSizeColor}">Voron Data Flush</strong></small>
+                <small><strong class="col-md-offset-1 col-md-2" data-bind="style: {color: 'black', 'background-color': $data.constructor.eventsColors.DataSyncHighSizeColor}">Voron Data Sync</strong></small>
             </div>
             <div class="row">
                 <span class="col-md-offset-1 col-md-3">
-                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.JournalWriteLowSizeColor}"></span>
-                    <small>&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: journalWriteLowHumanSizeLevel"></span></small>
+                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.JournalWriteHighSizeColor}"></span>
+                    &nbsp;&gt;&nbsp;<small><span data-bind="text: $root.computedHumanSize(journalWriteHighSizeLevel)"></span></small>
                 </span>
                 <span class="col-md-3">
-                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.DataSyncLowSizeColor}"></span>
-                    <small>&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: dataSyncLowHumanSizeLevel"></span></small>
+                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataFlushHighSizeColor}"></span>
+                    &nbsp;&gt;&nbsp;<small><span data-bind="text: $root.computedHumanSize(dataFlushHighSizeLevel)"></span></small>
                 </span>
                 <span class="col-md-3">
-                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.DataFlushLowSizeColor}"></span>
-                    <small>&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: dataFlushLowHumanSizeLevel"></span></small>
+                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataSyncHighSizeColor}"></span>
+                    &nbsp;&gt;&nbsp;<small><span data-bind="text: $root.computedHumanSize(dataSyncHighSizeLevel)"></span></small>
                 </span>
             </div>
             <div class="row">
-                <span class="col-md-offset-1 col-md-3"><span class="legendColor" data-bind="style: {'background-color': eventsColors.JournalWriteMedSizeColor}"></span>
-                    <small>&nbsp;<span data-bind="text: journalWriteLowHumanSizeLevel"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: journalWriteHighHumanSizeLevel"></span></small>
+                <span class="col-md-offset-1 col-md-3"><span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.JournalWriteMedSizeColor}"></span>
+                    <small>&nbsp;<span data-bind="text: $root.computedHumanSize(journalWriteLowSizeLevel)"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(journalWriteHighSizeLevel)"></span></small>
                 </span>
-                <span class="col-md-3"><span class="legendColor" data-bind="style: {'background-color': eventsColors.DataSyncMedSizeColor}"></span>
-                    <small>&nbsp;<span data-bind="text: dataSyncLowHumanSizeLevel"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: dataSyncHighHumanSizeLevel"></span></small>
+                <span class="col-md-3"><span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataFlushMedSizeColor}"></span>
+                    <small>&nbsp;<span data-bind="text: $root.computedHumanSize(dataFlushLowSizeLevel)"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(dataFlushHighSizeLevel)"></span></small>
                 </span>
-                <span class="col-md-3"><span class="legendColor" data-bind="style: {'background-color': eventsColors.DataFlushMedSizeColor}"></span>
-                    <small>&nbsp;<span data-bind="text: dataFlushLowHumanSizeLevel"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: dataFlushHighHumanSizeLevel"></span></small>
+                <span class="col-md-3">
+                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataSyncMedSizeColor}"></span>
+                    <small>&nbsp;<span data-bind="text: $root.computedHumanSize(dataSyncLowSizeLevel)"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(dataSyncHighSizeLevel)"></span></small>
                 </span>
             </div>
             <div class="row">
                 <span class="col-md-offset-1 col-md-3">
-                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.JournalWriteHighSizeColor}"></span>
-                    &nbsp;&gt;&nbsp;<small><span data-bind="text: journalWriteHighHumanSizeLevel"></span></small>
+                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.JournalWriteLowSizeColor}"></span>
+                    <small>&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(journalWriteLowSizeLevel)"></span></small>
                 </span>
                 <span class="col-md-3">
-                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.DataSyncHighSizeColor}"></span>
-                    &nbsp;&gt;&nbsp;<small><span data-bind="text: dataSyncHighHumanSizeLevel"></span></small>
+                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataFlushLowSizeColor}"></span>
+                    <small>&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(dataFlushLowSizeLevel)"></span></small>
                 </span>
                 <span class="col-md-3">
-                    <span class="legendColor" data-bind="style: {'background-color': eventsColors.DataFlushHighSizeColor}"></span>
-                    &nbsp;&gt;&nbsp;<small><span data-bind="text: dataFlushHighHumanSizeLevel"></span></small>
+                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataSyncLowSizeColor}"></span>
+                    <small>&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(dataSyncLowSizeLevel)"></span></small>
                 </span>
             </div>
         </div>
