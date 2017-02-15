@@ -86,6 +86,7 @@ namespace Raven.Server.Files
             catch (Exception)
             {
                 Dispose();
+                throw;
             }
         }
 
@@ -108,7 +109,7 @@ namespace Raven.Server.Files
                     _waitForUsagesOnDisposal.Reset();
             }
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(FileSystem)}");
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(FileSystem)} {Name}");
 
             exceptionAggregator.Execute(() =>
             {
