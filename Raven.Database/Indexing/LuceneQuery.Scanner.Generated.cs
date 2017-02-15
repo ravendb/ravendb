@@ -6,7 +6,7 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  TAL-PC
-//  DateTime: 1/8/2017 5:16:34 PM
+//  DateTime: 2/15/2017 3:23:57 PM
 //  UserName: Tal
 //  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 12/6/2016 2:02:18 PM>
 //  GPLEX frame file <embedded resource>

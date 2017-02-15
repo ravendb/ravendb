@@ -531,8 +531,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
             if (rightHandBooleanNode == null || 
                 rightHandBooleanNode.Op == Operator.AND || 
                 rightHandBooleanNode.Op == Operator.INTERSECT || 
-                (rightHandBooleanNode.Op == Operator.Implicit && isDefaultOperatorAnd) ||
-                rightHandBooleanNode.Op == Operator.NOT)
+                (rightHandBooleanNode.Op == Operator.Implicit && isDefaultOperatorAnd))
             {
                 LeftNode = leftNode;
                 RightNode = rightNode;
@@ -570,9 +569,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 case Operator.OR:
                     LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
                     RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
-                    break;
-                case Operator.NOT:
-                    query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
                     break;
                 case Operator.Implicit:
                     switch (configuration.DefaultOperator)
@@ -626,9 +622,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
                     LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
                     RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
                     break;
-                case Operator.NOT:
-                    query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
-                    break;
                 case Operator.Implicit:
                     switch (configuration.DefaultOperator)
                     {
@@ -657,7 +650,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
         {
             AND,
             OR,
-            NOT,
             Implicit,
             INTERSECT
         }
@@ -668,10 +660,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public Operator Op { get; set; }
         public override string ToString()
         {
-            if (Op == Operator.NOT)
-            {
-                return "NOT " + LeftNode.ToString();
-            }
             if (Op == Operator.Implicit)
             {
                 return LeftNode + " " + RightNode;
