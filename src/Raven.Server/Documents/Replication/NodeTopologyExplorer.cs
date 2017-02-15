@@ -4,9 +4,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Http;
 using Raven.Client.Http.OAuth;
-using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -52,11 +50,8 @@ namespace Raven.Server.Documents.Replication
             JsonOperationContext context;
             using (_pool.AllocateOperationContext(out context))
             {
-                _tcpUrl = await ReplicationUtils.GetTcpInfoAsync(
-                context,
-                _destination.Url,
-                _destination.Database,
-                _destination.ApiKey);
+                var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(_destination.Url, _destination.Database, _destination.ApiKey);
+                _tcpUrl = connectionInfo.Url;
                 var token = await _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey, _destination.Url, context);
                 await ConnectSocketAsync();
                 using (var stream = _tcpClient.GetStream())
@@ -65,8 +60,7 @@ namespace Raven.Server.Documents.Replication
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _destination.Database,
-                        [nameof(TcpConnectionHeaderMessage.Operation)] =
-                            TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery.ToString(),
+                        [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery.ToString(),
                         [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = token
                     });
                     writer.Flush();
