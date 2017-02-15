@@ -1,14 +1,14 @@
 using System;
 using System.IO;
 using Raven.Client.Json.Converters;
-using Raven.Client.Logging;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Client.Http
 {
     internal static class TopologyLocalCache
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(TopologyLocalCache));
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Client", typeof(TopologyLocalCache).FullName);
 
         public static void ClearTopologyFromLocalCache(string serverHash)
         {
@@ -23,7 +23,10 @@ namespace Raven.Client.Http
             }
             catch (Exception e)
             {
-                Log.ErrorException("Could not clear the persisted replication information", e);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Could not clear the persisted replication information", e);
+                }
             }
         }
 
@@ -50,7 +53,10 @@ namespace Raven.Client.Http
             }
             catch (Exception e)
             {
-                Log.ErrorException("Could not understand the persisted replication information", e);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Could not understand the persisted replication information", e);
+                }
                 return null;
             }
         }
@@ -91,7 +97,11 @@ namespace Raven.Client.Http
             }
             catch (Exception e)
             {
-                Log.ErrorException("Could not persist the replication information", e);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Could not persist the replication information", e);
+                }
+
             }
         }
 
