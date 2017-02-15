@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using FastTests.Voron.FixedSize;
 using Xunit;
-using Voron;
 using Voron.Impl.FreeSpace;
 
 namespace FastTests.Voron.Trees
@@ -75,12 +75,12 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
-        public void CanReuseMostOfFreePages_RemainingOnesCanBeTakenToHandleFreeSpace()
+        [Theory]
+        [InlineData(400, 10, 3)]
+        [InlineDataWithRandomSeed(400, 10)]
+        public void CanReuseMostOfFreePages_RemainingOnesCanBeTakenToHandleFreeSpace(int maxPageNumber, int numberOfFreedPages, int seed)
         {
-            const int maxPageNumber = 400;
-            const int numberOfFreedPages = 10;
-            var random = new Random(3);
+            var random = new Random(seed);
             var freedPages = new HashSet<long>();
 
             using (var tx = Env.WriteTransaction())
@@ -126,13 +126,18 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
-        public void FreeSpaceHandlingShouldNotReturnPagesThatAreAlreadyAllocated()
+        [Theory]
+        [InlineData(400, 6, 2)]
+        public void FreeSpaceHandlingShouldNotReturnPagesThatAreAlreadyAllocated(int maxPageNumber, int numberOfFreedPages, int seed)
         {
-            const int maxPageNumber = 400;
-            const int numberOfFreedPages = 6;
-            var random = new Random(2);
+            var random = new Random(seed);
             var freedPages = new HashSet<long>();
+
+            if (maxPageNumber == -1)
+                maxPageNumber = random.Next(0, 40000);
+
+            if (numberOfFreedPages == -1)
+                numberOfFreedPages = random.Next(0, maxPageNumber);
 
             using (var tx = Env.WriteTransaction())
             {
@@ -186,12 +191,11 @@ namespace FastTests.Voron.Trees
             } while (true);
         }
 
-        [Fact]
-        public void CanGetListOfAllFreedPages()
+        [Theory]
+        [InlineDataWithRandomSeed(100, 500)]
+        public void CanGetListOfAllFreedPages(int maxPageNumber, int numberOfFreedPages, int seed)
         {
-            const int maxPageNumber = 100;
-            const int numberOfFreedPages = 500;
-            var random = new Random();
+            var random = new Random(seed);
             var freedPages = new HashSet<long>();
             var allocatedPages = new List<long>(maxPageNumber);
 
