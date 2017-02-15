@@ -18,6 +18,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Linq
