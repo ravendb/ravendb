@@ -1,7 +1,16 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Serialization;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Http;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
+using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Server.Basic
@@ -9,22 +18,9 @@ namespace FastTests.Server.Basic
     public class MaxSecondsForTaskToWaitForDatabaseToLoad : RavenTestBase
     {
         [Fact]
-        public void ShouldThrow_DatabaseLoadTimeout()
+        public void Should_not_throw_when_there_no_timeout()
         {
-            DoNotReuseServer();
-            Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(0, TimeUnit.Milliseconds);
-            Server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += s => Thread.Sleep(100);// force timeout
-            var tryLoad = new Action(delegate
-            {
-                using (var store = GetDocumentStore())
-                using (var session = store.OpenSession())
-                {
-                    session.Load<object>("Raven/ServerPrefixForHilo");
-                }
-            });
-
-            Assert.Throws<DatabaseLoadTimeoutException>(tryLoad);
-
+            UseNewLocalServer();
             Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
 
             int retries = 3;
@@ -35,7 +31,11 @@ namespace FastTests.Server.Basic
             {
                 try
                 {
-                    tryLoad.Invoke();
+                    using (var store = GetDocumentStore())
+                    using (var session = store.OpenSession())
+                    {
+                        session.Load<object>("Raven/ServerPrefixForHilo");
+                    }
                     didPassAtLeastOnce = true;
                     break;
                 }
@@ -47,6 +47,52 @@ namespace FastTests.Server.Basic
             }
 
             Assert.True(didPassAtLeastOnce);
+        }
+
+        [Fact]
+        public void Should_throw_when_there_is_timeout()
+        {
+            UseNewLocalServer();
+            Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(0, TimeUnit.Milliseconds);
+            Server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += s => Thread.Sleep(100); // force timeout          
+
+            var url = Server.WebUrls[0];
+            var name = Guid.NewGuid().ToString();
+            var doc = GenerateDatabaseDoc(name);
+
+            try
+            {
+                Assert.Throws<DatabaseLoadTimeoutException>(() =>
+                {
+                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                    using (var reqExecuter = RequestExecuter.ShortTermSingleUse(url, name, null))
+                    {
+                        reqExecuter.Execute(
+                            new CreateDatabaseOperation(doc).GetCommand(new DocumentConventions(), ctx), ctx);
+                        reqExecuter.Execute(new GetDocumentCommand
+                        {
+                            Id = "Raven/HiloPrefix"
+                        }, ctx);
+                    }
+                });
+            }
+            catch (TaskCanceledException e)
+            {
+                Console.WriteLine(e.InnerException);
+                throw;
+            }
+        }
+
+        private static DatabaseDocument GenerateDatabaseDoc(string name)
+        {
+            var doc = MultiDatabase.CreateDatabaseDocument(name);
+            doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "10";
+            doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true";
+            doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = $"\\{name}";
+            doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
+            doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString();
+
+            return doc;
         }
     }
 }

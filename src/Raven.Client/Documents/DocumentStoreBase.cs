@@ -201,7 +201,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Gets or sets the URL.
         /// </summary>
-        public virtual string Url
+        public string Url
         {
             get { return _url; }
             set { _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value; }
@@ -252,7 +252,17 @@ namespace Raven.Client.Documents
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
         public event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
 
-        public abstract string DefaultDatabase { get; set; }
+        /// <summary>
+        /// Gets or sets the default database name.
+        /// </summary>
+        /// <value>The default database name.</value>
+        public string DefaultDatabase { get; set; }
+
+        /// <summary>
+        /// The API Key to use when authenticating against a RavenDB server that
+        /// supports API Key authentication
+        /// </summary>
+        public string ApiKey { get; set; }
 
         public abstract RequestExecuter GetRequestExecuter(string databaseName = null);
 

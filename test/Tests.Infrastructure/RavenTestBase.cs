@@ -37,6 +37,8 @@ namespace FastTests
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
         }
 
+        private readonly object _getDocumentStoreSync = new object();
+
         protected virtual DocumentStore GetDocumentStore(
             [CallerMemberName] string caller = null,
             string dbSuffixIdentifier = null,
@@ -45,68 +47,78 @@ namespace FastTests
             Func<string, string> modifyName = null,
             string apiKey = null)
         {
-            var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
-
-            if (dbSuffixIdentifier != null)
-                name = $"{name}_{dbSuffixIdentifier}";
-
-            if (modifyName != null)
-                name = modifyName(name);
-
-            var hardDelete = true;
-            var runInMemory = true;
-
-            if (path == null)
-                path = NewDataPath(name);
-            else
+            lock (_getDocumentStoreSync)
             {
-                hardDelete = false;
-                runInMemory = false;
-            }
-            
-            var doc = MultiDatabase.CreateDatabaseDocument(name);
-            doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "10";
-            doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
-            doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
-            doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
-            doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString();
-            modifyDatabaseDocument?.Invoke(doc);
+                var name = caller != null
+                    ? $"{caller}_{Interlocked.Increment(ref _counter)}"
+                    : Guid.NewGuid().ToString("N");
 
-            TransactionOperationContext context;
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
-            {
-                context.OpenReadTransaction();
+                if (dbSuffixIdentifier != null)
+                    name = $"{name}_{dbSuffixIdentifier}";
+
+                if (modifyName != null)
+                    name = modifyName(name);
+
+                var hardDelete = true;
+                var runInMemory = true;
+
+                if (path == null)
+                    path = NewDataPath(name);
+                else
+                {
+                    hardDelete = false;
+                    runInMemory = false;
+                }
+
+                var doc = MultiDatabase.CreateDatabaseDocument(name);
+                doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "10";
+                doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
+                doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
+                doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] =
+                    "true";
+                doc.Settings[
+                        RavenConfiguration.GetKey(
+                            x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] =
+                    int.MaxValue.ToString();
+                modifyDatabaseDocument?.Invoke(doc);
+
+                TransactionOperationContext context;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    context.OpenReadTransaction();
                 if (Server.ServerStore.Read(context, Constants.Documents.Prefix + name) != null)
-                    throw new InvalidOperationException($"Database '{name}' already exists");
-            }
+                        throw new InvalidOperationException($"Database '{name}' already exists");
+                }
 
-            var store = new DocumentStore
-            {
-                Url = UseFiddler(Server.WebUrls[0]),
-                DefaultDatabase = name,
-                ApiKey = apiKey
-            };
-            ModifyStore(store);
-            store.Initialize();
+                var store = new DocumentStore
+                {
+                    Url = UseFiddler(Server.WebUrls[0]),
+                    DefaultDatabase = name,
+                    ApiKey = apiKey
+                };
+                ModifyStore(store);
+                store.Initialize();
 
             store.Admin.Server.Send(new CreateDatabaseOperation(doc));
-            store.AfterDispose += (sender, args) =>
-            {
-                if (CreatedStores.TryRemove(store) == false)
-                    return; // can happen if we are wrapping the store inside sharded one
-
-                if (Server.Disposed == false)
+                store.AfterDispose += (sender, args) =>
                 {
-                    var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
-                    if (databaseTask != null && databaseTask.IsCompleted == false)
-                        databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
+                    if (CreatedStores.TryRemove(store) == false)
+                        return; // can happen if we are wrapping the store inside sharded one
 
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                    if (Server.Disposed == false)
+                    {
+                        var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+                        if (databaseTask != null && databaseTask.IsCompleted == false)
+                            databaseTask.Wait();
+                                // if we are disposing store before database had chance to load then we need to wait
+
+                        Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                     store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
-                }
-            };
-            CreatedStores.Add(store);
-            return store;
+                    }
+                };
+                CreatedStores.Add(store);
+                return store;
+            }
         }
 
         protected virtual void ModifyStore(DocumentStore store)
