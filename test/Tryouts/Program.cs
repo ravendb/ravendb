@@ -15,9 +15,9 @@ namespace Tryouts
             {
                 Console.Write(".");
 
-                using (var a = new MaxSecondsForTaskToWaitForDatabaseToLoad())
+                using (var a = new FastTests.Server.Replication.ReplicationResolveToDatabase())
                 {
-                    a.Should_throw_when_there_is_timeout();
+                    a.UnsetDatabaseResolver();
                 }
             });
 

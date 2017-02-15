@@ -58,48 +58,62 @@ namespace Raven.Server.Documents
             if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
                 throw new DatabaseConcurrentLoadTimeoutException(
                     "Too much databases loading concurrently, timed out waiting for them to load.");
-
-            var task = new Task<DocumentDatabase>(() =>
+            try
             {
-                var sp = Stopwatch.StartNew();
+                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config));
+
+                var database = ResourcesStoresCache.GetOrAdd(databaseName, task);
+                if (database == task)
+                {
+                    task.Start(); // the semaphore will be released here at the end of the task
+                }
+                else
+                {
+                    // the other task will release it
+                    ResourceSemaphore.Release();
+                }
+
+                return database;
+            }
+            catch (Exception)
+            {
+                ResourceSemaphore.Release();
+                throw;
+            }
+        }
+
+        private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config)
+        {
+            try
+            {
+                var db = CreateDocumentsStorage(databaseName, config);
+                ServerStore.NotificationCenter.Add(
+                    ResourceChanged.Create(Constants.Documents.Prefix + databaseName,
+                        ResourceChangeType.Load));
+                return db;
+            }
+            catch (Exception e)
+            {
+                // if we are here, there is an error, and if there is an error, we need to clear it from the 
+                // resource store cache so we can try to reload it.
+                // Note that we return the faulted task anyway, because we need the user to look at the error
+                if (e.Data.Contains("Raven/KeepInResourceStore") == false)
+                {
+                    Task<DocumentDatabase> val;
+                    ResourcesStoresCache.TryRemove(databaseName, out val);
+                }
+                throw;
+            }
+            finally
+            {
                 try
                 {
-                    var db = CreateDocumentsStorage(databaseName, config);
-                    ServerStore.NotificationCenter.Add(
-                        ResourceChanged.Create(Constants.Documents.Prefix + databaseName,
-                            ResourceChangeType.Load));
-                    return db;
+                    ResourceSemaphore.Release();
                 }
-                catch (Exception e)
+                catch (ObjectDisposedException)
                 {
-                    // if we are here, there is an error, and if there is an error, we need to clear it from the 
-                    // resource store cache so we can try to reload it.
-                    // Note that we return the faulted task anyway, because we need the user to look at the error
-                    if (e.Data.Contains("Raven/KeepInResourceStore") == false)
-                    {
-                        Task<DocumentDatabase> val;
-                        ResourcesStoresCache.TryRemove(databaseName, out val);
-                    }
-                    throw;
                 }
-                finally
-                {
-                    try
-                    {
-                        ResourceSemaphore.Release();
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                    }                    
-                }
-            });
-            var database = ResourcesStoresCache.GetOrAdd(databaseName, task);
-            if (database == task)
-            {
-                task.Start();
             }
-
-            return database;
         }
 
         private void AssertLocks(string databaseName)
