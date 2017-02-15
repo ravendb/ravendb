@@ -876,7 +876,7 @@ namespace Voron
                 if (oldMode == TransactionsMode.Danger)
                 {
                     Journal.TruncateJournal();
-                    _dataPager.Sync();
+                    _dataPager.Sync(Journal.Applicator.TotalWrittenButUnsyncedBytes);
                 }
 
                 switch (mode)

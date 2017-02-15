@@ -344,7 +344,7 @@ namespace Voron.Platform.Win32
             return "MemMap: " + _fileInfo.FullName;
         }
 
-        public override void Sync()
+        public override void Sync(long totalUnsynced)
         {
             if (Disposed)
                 ThrowAlreadyDisposedException();
@@ -361,12 +361,15 @@ namespace Voron.Platform.Win32
                 {
                     foreach (var allocationInfo in currentState.AllocationInfos)
                     {
-                        metric.IncrementSize(allocationInfo.Size);
+                        metric.IncrementFileSize(allocationInfo.Size);
+
                         if (
                             Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress,
                                 new IntPtr(allocationInfo.Size)) == false)
                             throw new Win32Exception();
                     }
+
+                    metric.IncrementSize(totalUnsynced);
 
                     if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
                         throw new Win32Exception();
