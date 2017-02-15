@@ -348,7 +348,6 @@ namespace Voron
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
-            _txCommit.EnterWriteLock();
             try
             {
                 if (_journal != null) // error during ctor
@@ -386,7 +385,6 @@ namespace Voron
             }
             finally
             {
-                _txCommit.ExitWriteLock();
                 var errors = new List<Exception>();
                 foreach (var disposable in new IDisposable[]
                 {
