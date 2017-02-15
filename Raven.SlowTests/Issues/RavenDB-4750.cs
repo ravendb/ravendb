@@ -1,14 +1,14 @@
 ﻿using System.Collections.Generic;
- using System.Diagnostics;
- using System.Linq;
- using System.Threading;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
- using Raven.Abstractions.Replication;
- using Raven.Client;
- using Raven.Client.Document;
- using Raven.Json.Linq;
+using Raven.Abstractions.Replication;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Json.Linq;
 using Raven.Tests.Helpers;
- using Xunit;
+using Xunit;
  
  namespace Raven.Tests.Issues
  {
@@ -65,7 +65,7 @@ using Raven.Tests.Helpers;
                      session.Store(new BarFoo(),"test/1");
                      session.SaveChanges();
                  }
- 
+
                  Assert.True(WaitForReplicationOfDocument<BarFoo>(r2, "testDB", "test/1"));
                  Assert.True(WaitForReplicationOfDocument<BarFoo>(r3, "testDB", "test/1"));
                  Assert.True(WaitForReplicationOfDocument<BarFoo>(r1, "testDB", "test/1"));

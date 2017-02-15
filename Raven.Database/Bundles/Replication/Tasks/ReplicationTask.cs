@@ -94,13 +94,10 @@ namespace Raven.Bundles.Replication.Tasks
 
         public DatabaseIdsCache DatabaseIdsCache { get; private set; }
 
-        private Etag _lastReplicatedDocumentOrTombstoneEtag;
-        private Etag _lastReplicatedAttachmentOrTombstoneEtag;
+        private readonly ConcurrentDictionary<string, Etag> lastReplicatedDocumentOrTombstoneEtag = new ConcurrentDictionary<string, Etag>();
+        private readonly ConcurrentDictionary<string, Etag> lastReplicatedAttachmentOrTombstoneEtag = new ConcurrentDictionary<string, Etag>();
 
         private bool _hasReplicationRanAtLeastOnce;
-
-        private int _documentCountInLastBatch;
-        private int _attachmentCountInLastBatch;
 
         /// <summary>
         /// Indicates that this thread is doing replication.
@@ -114,12 +111,13 @@ namespace Raven.Bundles.Replication.Tasks
             DatabaseIdsCache = new DatabaseIdsCache(database, log);
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.WorkContext.CancellationToken);
-            _propagationTimeoutTimer = new Timer() {AutoReset = false,Interval = docDb.Configuration.Replication.ReplicationPropagationDelayInSeconds*1000};
+            _propagationTimeoutTimer = new Timer {AutoReset = false, Interval = docDb.Configuration.Replication.ReplicationPropagationDelayInSeconds * 1000};
             _propagationTimeoutTimer.Elapsed += (o, s) =>
             {
                 if (Interlocked.CompareExchange(ref _needToPropogateToSiblings, 0, 1) == 1)
                     docDb.WorkContext.ReplicationResetEvent.Set();
             };
+
             docDb.Notifications.OnIndexChange += (_, indexChangeNotification) =>
             {
                 if (indexChangeNotification.Type == IndexChangeTypes.MapCompleted ||
@@ -130,11 +128,13 @@ namespace Raven.Bundles.Replication.Tasks
                 lastWorkIsIndexOrTransformer = true;
                 docDb.WorkContext.ReplicationResetEvent.Set();
             };
+
             docDb.Notifications.OnTransformerChange += (_, __) =>
             {
                 lastWorkIsIndexOrTransformer = true;
                 docDb.WorkContext.ReplicationResetEvent.Set();
             };
+
             docDb.Notifications.OnAttachmentChange += (_, attachmentChangeNotification, ___) =>
             {
                 if (IsThreadProcessingReplication.Value)
@@ -142,31 +142,39 @@ namespace Raven.Bundles.Replication.Tasks
                     Interlocked.Exchange(ref _needToPropogateToSiblings, 1);
                     return;
                 }
-                lastWorkIsIndexOrTransformer = false;                
+
+                lastWorkIsIndexOrTransformer = false;    
+                            
                 //There is no need to be thread safe this is only used to prevent unnecessary work
                 lastWorkAttachmentEtag = attachmentChangeNotification.Etag??Etag.InvalidEtag;                
                 docDb.WorkContext.ReplicationResetEvent.Set();
             };
+
             docDb.Notifications.OnBulkInsertChange += (_, BulkInsertChangeNotification) =>
             {
                 lastWorkIsIndexOrTransformer = false;
+
                 //There is no need to be thread safe this is only used to prevent unnecessary work
                 lastWorkDocumentEtag = BulkInsertChangeNotification.Etag ?? Etag.InvalidEtag;
                 docDb.WorkContext.ReplicationResetEvent.Set();
             };
+
             docDb.Notifications.OnDocumentChange += (_, dcn, ___) =>
-            {                
+            {
                 if (dcn.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // ignore sys docs
                                                                                        // but we do update for replication destination
                     string.Equals(dcn.Id, Constants.RavenReplicationDestinations, StringComparison.OrdinalIgnoreCase) == false &&
                     dcn.Id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilo documents
                     return;
+
                 if (IsThreadProcessingReplication.Value)
                 {
                     Interlocked.Exchange(ref _needToPropogateToSiblings, 1);
                     return;
                 }
+
                 lastWorkIsIndexOrTransformer = false;
+
                 //There is no need to be thread safe this is only used to prevent unnecessary work
                 lastWorkDocumentEtag = dcn.Etag ?? Etag.InvalidEtag;
                 docDb.WorkContext.ReplicationResetEvent.Set();
@@ -300,14 +308,15 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-
         private bool HasAttachmentEtagChanged()
         {
             if (_hasReplicationRanAtLeastOnce == false)
                 return true;
 
-            if (_lastReplicatedAttachmentOrTombstoneEtag == null)
-                return _attachmentCountInLastBatch > 0;
+            if (lastReplicatedAttachmentOrTombstoneEtag.Count == 0)
+                return false;
+
+            var lastReplicatedAttachmentEtag = lastReplicatedAttachmentOrTombstoneEtag.Min(x => x.Value);
 
             var lastTombstoneEtag = Etag.Empty;
             docDb.TransactionalStorage.Batch(actions =>
@@ -321,16 +330,16 @@ namespace Raven.Bundles.Replication.Tasks
                 }
             });
 
-            //since tombstones always come last in replication batches, 
-            //if last tombstone etag is greater then last replicated etag, it is enough.
-            if (EtagUtil.IsGreaterThan(lastTombstoneEtag, _lastReplicatedAttachmentOrTombstoneEtag))
+            // since tombstones always come last in replication batches, 
+            // if last tombstone etag is greater then last replicated etag, it is enough.
+            if (EtagUtil.IsGreaterThan(lastTombstoneEtag, lastReplicatedAttachmentEtag))
                 return true;
 
             var lastAttachmentEtag = Etag.Empty;
             docDb.TransactionalStorage.Batch(accessor =>
                 lastAttachmentEtag = accessor.Staleness.GetMostRecentAttachmentEtag());
 
-            return EtagUtil.IsGreaterThan(lastAttachmentEtag, _lastReplicatedAttachmentOrTombstoneEtag);
+            return EtagUtil.IsGreaterThan(lastAttachmentEtag, lastReplicatedAttachmentEtag);
         }
 
         private bool HasDocumentOrTombstoneEtagChanged()
@@ -338,9 +347,10 @@ namespace Raven.Bundles.Replication.Tasks
             if (_hasReplicationRanAtLeastOnce == false)
                 return true;
 
-            if (_lastReplicatedDocumentOrTombstoneEtag == null)
-                return _documentCountInLastBatch > 0;
+            if (lastReplicatedDocumentOrTombstoneEtag.Count == 0)
+                return false;
 
+            var lastReplicatedDocumentEtag = lastReplicatedDocumentOrTombstoneEtag.Min(x => x.Value);
 
             var lastTombstoneEtag = Etag.Empty;
             docDb.TransactionalStorage.Batch(actions =>
@@ -354,22 +364,25 @@ namespace Raven.Bundles.Replication.Tasks
                 }
             });
 
-            //since tombstones always come last in replication batches, 
-            //if last tombstone etag is greater then last replicated etag, it is enough.
-            if (EtagUtil.IsGreaterThan(lastTombstoneEtag, _lastReplicatedDocumentOrTombstoneEtag))
+            // since tombstones always come last in replication batches, 
+            // if last tombstone etag is greater then last replicated etag, it is enough.
+            if (EtagUtil.IsGreaterThan(lastTombstoneEtag, lastReplicatedDocumentEtag))
                 return true;
 
             var lastDocumentEtag = Etag.Empty;
             docDb.TransactionalStorage.Batch(accessor =>
                 lastDocumentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
 
-            return EtagUtil.IsGreaterThan(lastDocumentEtag, _lastReplicatedDocumentOrTombstoneEtag);
+            return EtagUtil.IsGreaterThan(lastDocumentEtag, lastReplicatedDocumentEtag);
         }
+
         public Task ExecuteReplicationOnce(bool runningBecauseOfDataModifications)
         {
             using (docDb.DisableAllTriggersForCurrentThread())
             {
                 var destinations = GetReplicationDestinations();
+
+                ClearCachedLastEtagForRemovedServers(destinations);
 
                 NumberOfActiveReplicationDestinations = destinations.Length;
 
@@ -393,24 +406,23 @@ namespace Raven.Bundles.Replication.Tasks
 
                 var startedTasks = new List<Task>();
 
-                var lastReplicatedDocumentEtags = new ConcurrentDictionary<string, Etag>();
-                var lastReplicatedAttachmentEtags = new ConcurrentDictionary<string, Etag>();
                 foreach (var dest in destinationForReplication)
                 {
                     DestinationStats stat;
-                    //local copy for the replication task to use
+                    // local copy for the replication task to use
                     var destUrl = dest.ConnectionStringOptions.Url;
-                    //If last change is due to index or transformer we continue replicating normally.
-                    //If we can't verify work needs to be done we asume there is work to be done.
+                    // if last change is due to index or transformer we continue replicating normally.
+                    // if we can't verify work needs to be done we asume there is work to be done.
                     var lastWorkNotificationIsIndexOrTransformer = lastWorkIsIndexOrTransformer;
-                    if (!lastWorkNotificationIsIndexOrTransformer && destinationStats.TryGetValue(dest.ConnectionStringOptions.Url, out stat))
+                    if (lastWorkNotificationIsIndexOrTransformer == false && destinationStats.TryGetValue(dest.ConnectionStringOptions.Url, out stat))
                     {
-                        //If we didn't get any work to do and the destination can't be stale for more than 5 minutes
-                        //We will skip querying the destination for its last Etag until we get some real work.
+                        // if we didn't get any work to do and the destination can't be stale for more than 5 minutes
+                        // we will skip querying the destination for its last Etag until we get some real work.
                         if (stat.LastReplicatedEtag == lastWorkDocumentEtag && stat.LastReplicatedAttachmentEtag == lastWorkAttachmentEtag
                             && (SystemTime.UtcNow - (stat.LastSuccessTimestamp ?? DateTime.MinValue)).TotalMinutes <= 5)
                             continue;
                     }
+
                     var holder = activeReplicationTasks.GetOrAdd(dest.ConnectionStringOptions.Url, s => new SemaphoreSlim(1));
                     if (holder.Wait(0) == false)
                     {
@@ -431,15 +443,26 @@ namespace Raven.Bundles.Replication.Tasks
                             {
                                 try
                                 {
-                                    Etag lastDocumentEtag;
-                                    Etag lastAttachmentEtag;
+                                    var lastDocumentEtag = Etag.InvalidEtag;
+                                    var lastAttachmentEtag = Etag.InvalidEtag;
                                     _hasReplicationRanAtLeastOnce = true;
-                                    if (ReplicateTo(destination, out lastDocumentEtag, out lastAttachmentEtag))
+
+                                    try
                                     {
-                                        docDb.WorkContext.NotifyAboutWork();
-                                        lastReplicatedDocumentEtags[destUrl] = lastDocumentEtag;
-                                        lastReplicatedAttachmentEtags[destUrl] = lastAttachmentEtag;
-                                        return new LastReplicatedEtags {LastReplicatedDocumentEtag = lastDocumentEtag, LastReplicatedAttachmentEtag = lastAttachmentEtag};
+                                        if (ReplicateTo(destination, out lastDocumentEtag, out lastAttachmentEtag) == false)
+                                        {
+                                            docDb.WorkContext.NotifyAboutWork();
+
+                                            return new LastReplicatedEtags {LastReplicatedDocumentEtag = lastDocumentEtag, LastReplicatedAttachmentEtag = lastAttachmentEtag};
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        if (lastDocumentEtag != Etag.InvalidEtag)
+                                            lastReplicatedDocumentOrTombstoneEtag[destUrl] = lastDocumentEtag;
+
+                                        if (lastAttachmentEtag != Etag.InvalidEtag)
+                                            lastReplicatedAttachmentOrTombstoneEtag[destUrl] = lastAttachmentEtag;
                                     }
                                 }
                                 catch (Exception e)
@@ -478,44 +501,89 @@ namespace Raven.Bundles.Replication.Tasks
                             });                            
                         });
                 }
+
                 Task.WhenAll(startedTasks)
                     .ContinueWith(t =>
                     {
-                        if (lastReplicatedDocumentEtags.Count > 0 || lastReplicatedAttachmentEtags.Count > 0)
-                        {
-                            if (!startedTasks.Any(st => st.IsFaulted))
-                            {
-                                try
-                                {
-                                    //purge tombstones that are not needed anymore
-                                    docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationDocsTombstones,
-                                        lastReplicatedDocumentEtags.Values.Min());
+                        if (lastReplicatedDocumentOrTombstoneEtag.Count == 0 && lastReplicatedAttachmentOrTombstoneEtag.Count == 0)
+                            return;
 
+                        if (startedTasks.Any(st => st.IsFaulted) == false)
+                        {
+                            try
+                            {
+                                // purge tombstones that are not needed anymore
+                                if (lastReplicatedDocumentOrTombstoneEtag.Count > 0)
+                                {
+                                    docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationDocsTombstones,
+                                        lastReplicatedDocumentOrTombstoneEtag.Values.Min());
+                                }
+
+                                if (lastReplicatedAttachmentOrTombstoneEtag.Count > 0)
+                                {
                                     docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones,
-                                        lastReplicatedAttachmentEtags.Values.Min());
-                                }
-                                catch (ConcurrencyException)
-                                {
-                                    //We are ignoring concurrency exception this may happen if two batches compelete before
-                                    //The first batch finishes to cleanup the tombstones.
-                                }
-                                catch (Exception e)
-                                {
-                                    log.ErrorException("Unexpected error during tombstones purging",e);
+                                        lastReplicatedAttachmentOrTombstoneEtag.Values.Min());
                                 }
                             }
-                            else
+                            catch (ConcurrencyException)
                             {
-                                log.Error("One or more of replication (sub)tasks have failed, in this case I prefer not to delete tombstones.");
-                                var faultedTasks = startedTasks.Where(stt => stt.IsFaulted).ToList();
-                                for (int i = 0; i < faultedTasks.Count; i++)
-                                    log.ErrorException($"Task id={faultedTasks[i].Id} exception",
-                                        faultedTasks[i].Exception.SimplifyException());
+                                // we are ignoring concurrency exception this may happen if two batches compelete before
+                                // the first batch finishes to cleanup the tombstones.
+                            }
+                            catch (Exception e)
+                            {
+                                log.ErrorException("Unexpected error during tombstones purging",e);
                             }
                         }
+                        else
+                        {
+                            log.Error("One or more of replication (sub)tasks have failed, in this case I prefer not to delete tombstones.");
+                            var faultedTasks = startedTasks.Where(stt => stt.IsFaulted).ToList();
+                            for (int i = 0; i < faultedTasks.Count; i++)
+                                log.ErrorException($"Task id={faultedTasks[i].Id} exception",
+                                    faultedTasks[i].Exception.SimplifyException());
+                        }
                     });
-                if (!startedTasks.Any()) return completedTask;
+
+                if (startedTasks.Any() == false)
+                    return completedTask;
+
                 return Task.WhenAny(startedTasks.ToArray()).AssertNotFailed();
+            }
+        }
+
+        private void ClearCachedLastEtagForRemovedServers(ReplicationStrategy[] destinations)
+        {
+            var serverUrls = destinations.Select(x => x.ConnectionStringOptions.Url).ToHashSet();
+
+            var serversToRemove = new List<string>();
+            foreach (var server in lastReplicatedDocumentOrTombstoneEtag)
+            {
+                if (serverUrls.Contains(server.Key))
+                    continue;
+
+                serversToRemove.Add(server.Key);
+            }
+
+            foreach (var serverUrl in serversToRemove)
+            {
+                Etag _;
+                lastReplicatedDocumentOrTombstoneEtag.TryRemove(serverUrl, out _);
+            }
+
+            serversToRemove.Clear();
+            foreach (var server in lastReplicatedAttachmentOrTombstoneEtag)
+            {
+                if (serverUrls.Contains(server.Key))
+                    continue;
+
+                serversToRemove.Add(server.Key);
+            }
+
+            foreach (var serverUrl in serversToRemove)
+            {
+                Etag _;
+                lastReplicatedAttachmentOrTombstoneEtag.TryRemove(serverUrl, out _);
             }
         }
 
@@ -718,6 +786,10 @@ namespace Raven.Bundles.Replication.Tasks
                                     return false;
                                 }
                             }
+
+                            // update the last replicated etag to the one that we get from the destination server
+                            lastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
+                            lastAttachmentEtag = destinationsReplicationInformationForSource.LastAttachmentEtag;
 
                             if (destination.IsETL == false &&
                                 destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty &&
@@ -971,11 +1043,6 @@ namespace Raven.Bundles.Replication.Tasks
             }
             finally
             {
-                if (documentsToReplicate != null) //precaution 'if'
-                {
-                    _lastReplicatedDocumentOrTombstoneEtag = documentsToReplicate.LastEtag;
-                }
-
                 if (documentsToReplicate?.LoadedDocs != null)
                 {
                     prefetchingBehavior.UpdateAutoThrottler(documentsToReplicate.LoadedDocs, sp.Elapsed);
@@ -1085,7 +1152,6 @@ namespace Raven.Bundles.Replication.Tasks
                     stats.LastReplicatedEtag = lastReplicatedEtag;
                 else
                     stats.LastReplicatedAttachmentEtag = lastReplicatedEtag;
-
             }
 
             if (lastReplicatedLastModified.HasValue)
@@ -1513,9 +1579,7 @@ namespace Raven.Bundles.Replication.Tasks
             if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
                 results = results.Take(maxNumberOfItemsToReceiveInSingleBatch.Value);
 
-            var resultsList = results.ToList();
-            _documentCountInLastBatch = resultsList.Count;
-            return resultsList;
+            return results.ToList();
         }
 
         [Obsolete("Use RavenFS instead.")]
@@ -1668,16 +1732,8 @@ namespace Raven.Bundles.Replication.Tasks
             if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
                 results = results.Take(maxNumberOfItemsToReceiveInSingleBatch.Value);
 
-            var resultsList = results.ToList();
-
-            if (resultsList.Count > 0)
-            {
-                _lastReplicatedAttachmentOrTombstoneEtag = resultsList[resultsList.Count - 1].Etag;
-            }
-            _attachmentCountInLastBatch = resultsList.Count;
-            return resultsList;
+            return results.ToList();
         }
-
 
         internal SourceReplicationInformationWithBatchInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
         {
@@ -1758,7 +1814,7 @@ namespace Raven.Bundles.Replication.Tasks
 
             if (replicationDocument.Source != docDb.TransactionalStorage.Id.ToString())
             {
-                if (!wrongReplicationSourceAlertSent)
+                if (wrongReplicationSourceAlertSent == false)
                 {
                     var dbName = string.IsNullOrEmpty(docDb.Name) ? "<system>" : docDb.Name;
 
