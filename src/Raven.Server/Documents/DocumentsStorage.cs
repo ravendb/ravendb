@@ -508,7 +508,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchDocumentItem> GetDocumentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -601,7 +601,7 @@ namespace Raven.Server.Documents
             return list;
         }
 
-        public IEnumerable<DocumentConflict> GetConflictsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchDocumentItem> GetConflictsFrom(DocumentsOperationContext context, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag))
@@ -736,6 +736,19 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     yield break;
 
+                yield return TableValueToTombstone(context, ref result.Reader);
+            }
+        }
+
+        public IEnumerable<ReplicationBatchDocumentItem> GetTombstonesFrom(
+            DocumentsOperationContext context,
+            long etag)
+        {
+            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag))
+            {
                 yield return TableValueToTombstone(context, ref result.Reader);
             }
         }
