@@ -23,12 +23,10 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
     public abstract class MoreLikeThisQuery<T> : IIndexQuery
         where T : class
     {
-        public DocumentConventions Conventions { get; }
-
         protected MoreLikeThisQuery(DocumentConventions conventions)
         {
-            Conventions = conventions;
-            PageSize = conventions.ImplicitTakeAmount;
+            if (conventions != null)
+                PageSize = conventions.ImplicitTakeAmount;
             MapGroupFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 

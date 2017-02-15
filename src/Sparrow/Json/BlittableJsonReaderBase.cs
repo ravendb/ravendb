@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 
 namespace Sparrow.Json
 {
-    public unsafe class BlittableJsonReaderBase
+    public abstract unsafe class BlittableJsonReaderBase
     {
         protected BlittableJsonReaderObject _parent;
         protected byte* _mem;
