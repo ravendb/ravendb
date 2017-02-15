@@ -8,6 +8,7 @@ using System;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session
 {
@@ -20,13 +21,32 @@ namespace Raven.Client.Documents.Session
         ///     DeleteByIndex using linq expression
         /// </summary>
         /// <param name="expression">The linq expression</param>
-        Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new();
+        /// <param name="patch"></param>
+        /// <param name="options"></param>
+        Operation PatchByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression, PatchRequest patch, QueryOperationOptions options = null) where TIndexCreator : AbstractIndexCreationTask, new();
+
+        /// <summary>
+        ///     DeleteByIndex using linq expression
+        /// </summary>
+        /// <param name="indexName">Index name</param>
+        /// <param name="expression">The linq expression</param>
+        /// <param name="patch"></param>
+        /// <param name="options"></param>
+        Operation PatchByIndex<T>(string indexName, Expression<Func<T, bool>> expression, PatchRequest patch, QueryOperationOptions options = null);
+
+        /// <summary>
+        ///     DeleteByIndex using linq expression
+        /// </summary>
+        /// <param name="expression">The linq expression</param>
+        /// <param name="options"></param>
+        Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression, QueryOperationOptions options = null) where TIndexCreator : AbstractIndexCreationTask, new();
 
         /// <summary>
         ///     DeleteByIndex using linq expression
         /// </summary>
         /// <param name="indexName">Index string name</param>
         /// <param name="expression">The linq expression</param>
-        Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression);
+        /// <param name="options"></param>
+        Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression, QueryOperationOptions options = null);
     }
 }

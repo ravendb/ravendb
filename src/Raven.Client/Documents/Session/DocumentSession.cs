@@ -5,25 +5,16 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Commands.MultiGet;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -61,29 +52,6 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        #region DeleteByIndex
-
-        public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            var indexCreator = new TIndexCreator();
-            return DeleteByIndex(indexCreator.IndexName, expression);
-        }
-
-        public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
-        {
-            var query = Query<T>(indexName).Where(expression);
-            var indexQuery = new IndexQuery(Conventions)
-            {
-                Query = query.ToString()
-            };
-            if (_operations == null)
-                _operations = new OperationExecuter(_documentStore, _requestExecuter, Context);
-
-
-            return _operations.Send(new DeleteByIndexOperation(indexName, indexQuery));
-        }
-
-        #endregion
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>

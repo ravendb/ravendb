@@ -9,7 +9,7 @@ namespace FastTests.Issues
 {
     public class RavenDB_5730 : ReplicationTestsBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }
