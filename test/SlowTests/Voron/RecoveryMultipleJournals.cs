@@ -225,11 +225,11 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
-            for (int i = 0; i < 1002; i++)
+            for (int i = 0; i < 990; i++)
             {
 
                 var buffer = new byte[100];
-                new Random().NextBytes(buffer);
+                new Random(i).NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     tx.CreateTree("tree").Add("a" + i, new MemoryStream(buffer));
