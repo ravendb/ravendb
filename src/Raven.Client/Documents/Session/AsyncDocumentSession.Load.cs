@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
 {

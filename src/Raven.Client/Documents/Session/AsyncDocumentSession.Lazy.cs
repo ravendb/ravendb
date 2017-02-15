@@ -16,6 +16,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session

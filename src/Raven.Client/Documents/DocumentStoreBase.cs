@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Documents.Transformers;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Client.Util.Encryption;

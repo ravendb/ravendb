@@ -9,6 +9,7 @@ using Lucene.Net.Analysis.Standard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Transformers;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
