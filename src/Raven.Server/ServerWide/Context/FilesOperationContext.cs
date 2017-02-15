@@ -8,36 +8,6 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly FileSystem _fileSystem;
 
-        public short TransactionMarkerOffset;
-
-        private short _currentTxMarker;
-
-        public short GetTransactionMarker()
-        {
-            if (Transaction != null && Transaction.Disposed == false && Transaction.InnerTransaction.LowLevelTransaction.Flags != TransactionFlags.ReadWrite)
-                MustHaveWriteTransactionOpened();
-
-            var value = (short)(_currentTxMarker + TransactionMarkerOffset);
-            if (value <= 0)
-            {
-                switch (value)
-                {
-                    case short.MaxValue:
-                        return 1;
-                    case 0:
-                        return 2;
-                    default:
-                        return (short) -value;
-                }
-            }
-            return value;
-        }
-
-        private static void MustHaveWriteTransactionOpened()
-        {
-            throw new InvalidOperationException("Write transaction must be opened");
-        }
-
         public static FilesOperationContext ShortTermSingleUse(FileSystem fileSystem)
         {
             var shortTermSingleUse = new FilesOperationContext(fileSystem, 4096, 1024);
@@ -59,7 +29,7 @@ namespace Raven.Server.ServerWide.Context
         {
             var tx = new FilesTransaction(this, _fileSystem.FilesStorage.Environment.WriteTransaction(PersistentContext, Allocator));
 
-            _currentTxMarker = (short) tx.InnerTransaction.LowLevelTransaction.Id;
+            CurrentTxMarker = (short) tx.InnerTransaction.LowLevelTransaction.Id;
 
             var options = _fileSystem.FilesStorage.Environment.Options;
 
