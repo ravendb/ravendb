@@ -100,9 +100,7 @@ namespace Raven.Client.Documents
 #endif
 
             foreach (var observeChangesAndEvictItemsFromCacheForDatabase in _observeChangesAndEvictItemsFromCacheForDatabases)
-            {
                 observeChangesAndEvictItemsFromCacheForDatabase.Value.Dispose();
-            }
 
             var tasks = new List<Task>();
             foreach (var databaseChange in _databaseChanges)
@@ -133,6 +131,14 @@ namespace Raven.Client.Documents
 
             WasDisposed = true;
             AfterDispose?.Invoke(this, EventArgs.Empty);
+
+            foreach (var kvp in _requestExecuters)
+            {
+                if (kvp.Value.IsValueCreated == false)
+                    continue;
+
+                kvp.Value.Value.Dispose();
+            }
         }
 
         /// <summary>
@@ -174,11 +180,7 @@ namespace Raven.Client.Documents
             if (databaseName == null)
                 databaseName = DefaultDatabase;
 
-            Lazy<RequestExecuter> lazy;
-            if (_requestExecuters.TryGetValue(databaseName, out lazy))
-                return lazy.Value;
-            lazy = _requestExecuters.GetOrAdd(databaseName,
-                dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey)));
+            var lazy = _requestExecuters.GetOrAdd(databaseName, dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey)));
             return lazy.Value;
         }
 
