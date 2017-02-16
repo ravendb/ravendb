@@ -37,6 +37,7 @@ using Raven.Unix.Native;
 using Raven.Abstractions;
 using Raven.Database.Util;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 
 namespace Raven.Storage.Voron
 {
@@ -533,8 +534,7 @@ namespace Raven.Storage.Voron
         public StorageStats GetStorageStats()
         {
             var stats = tableStorage.Environment.Stats();
-
-            return new StorageStats()
+            return new StorageStats
             {
                 VoronStats = new VoronStorageStats()
                 {
@@ -548,7 +548,8 @@ namespace Raven.Storage.Voron
                     {
                         Id = x.Id,
                         Flags = x.Flags.ToString()
-                    }).ToList()
+                    }).ToList(),
+                    ScratchBufferPoolInfo = Environment.ScratchBufferPool.InfoForDebug(Environment.PossibleOldestReadTransaction)
                 }
             };
         }

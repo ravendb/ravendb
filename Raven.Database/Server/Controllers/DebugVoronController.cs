@@ -12,8 +12,6 @@ using Raven.Database.Server.WebApi.Attributes;
 using Raven.Storage.Voron;
 using Voron;
 using Voron.Debugging;
-using Voron.Impl;
-using Voron.Trees;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -60,6 +58,24 @@ namespace Raven.Database.Server.Controllers
                     Headers = { ContentType = MediaTypeHeaderValue.Parse("text/html")}
                 }
             };
+        }
+
+        [HttpGet]
+        [RavenRoute("admin/voron/scratch-buffer-pool-info")]
+        [RavenRoute("databases/{databaseName}/admin/voron/scratch-buffer-pool-info")]
+        public HttpResponseMessage ScratchBufferPoolInfo()
+        {
+            var transactionalStorage = Database.TransactionalStorage as TransactionalStorage;
+            if (transactionalStorage == null)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "The database storage is not Voron"
+                }, HttpStatusCode.BadRequest);
+            }
+
+            var info = transactionalStorage.GetStorageStats();
+            return GetMessageWithObject(info);
         }
     }
 }

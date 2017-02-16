@@ -16,5 +16,6 @@ namespace Raven.Abstractions.Data
         public long AllocatedDataFileSizeInBytes;
         public long NextWriteTransactionId;
         public List<VoronActiveTransaction> ActiveTransactions;
+        public object ScratchBufferPoolInfo { get; set; }
     }
 }
