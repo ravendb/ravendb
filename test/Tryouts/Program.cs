@@ -16,9 +16,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new RavenDB_5178())
+                using (var a = new SlowTests.Smuggler.LegacySmugglerTests())
                 {
-                    a.CanUsePathLongerThan260Chars();
+                    a.CanImportIndexesAndTransformers("SlowTests.Smuggler.Indexes_And_Transformers_3.5.ravendbdump").Wait();
                 }
             }
         }

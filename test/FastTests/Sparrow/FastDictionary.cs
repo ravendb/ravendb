@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Sparrow
 {
-    public class FastDictionaryTests
+    public class FastDictionaryTests : NoDisposalNeeded
     {
         [Fact]
         public void Construction()
