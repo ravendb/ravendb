@@ -97,8 +97,8 @@ namespace Raven.Server.Config.Categories
 
         [Description("When set to true, exposes the database to the world.")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Raven/AllowAdminAnonymousAccessWhenNotbindedToLocalhost")]
-        public bool AllowAdminAnonymousAccessWhenNotbindedToLocalhost { get; internal set; }
+        [ConfigurationEntry("Raven/AllowEverybodyToAccessTheServerAsAdmin")]
+        public bool AllowEverybodyToAccessTheServerAsAdmin { get; internal set; }
 
         public IDisposable SetAccessMode(AnonymousUserAccessModeValues newVal)
         {

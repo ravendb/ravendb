@@ -45,28 +45,29 @@ namespace Raven.Server
 
             _router = app.ApplicationServices.GetService<RequestRouter>();
             _server = app.ApplicationServices.GetService<RavenServer>();
-            if (IsAccessUnauthorized())
+            if (IsServerRuningInASafeManner() == false)
             {
-                app.Run(UnAuthorizedRequestHandler);
-            }
+                app.Run(UnsafeRequestHandler);
+                return;
+            }            
             app.Run(RequestHandler);
         }
 
-        private bool IsAccessUnauthorized()
+        private bool IsServerRuningInASafeManner()
         {
             if (_server.Configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.None)
-                return false;
-            if (_server.Configuration.Server.AllowAdminAnonymousAccessWhenNotbindedToLocalhost == true)
-                return false;
+                return true;
+            if (_server.Configuration.Server.AllowEverybodyToAccessTheServerAsAdmin == true)
+                return true;
             var url = _server.Configuration.Core.ServerUrl.ToLowerInvariant();
             var uri = new Uri(url);
             //url isn't set to localhost 
-            return !(uri.IsLoopback  || uri.Host == "0.0.0.0");
+            return uri.IsLoopback;
         }
 
         public static bool SkipHttpLogging;
 
-        private Task UnAuthorizedRequestHandler(HttpContext context)
+        private Task UnsafeRequestHandler(HttpContext context)
         {
             context.Response.StatusCode = (int) HttpStatusCode.ServiceUnavailable;
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
@@ -76,14 +77,31 @@ namespace Raven.Server
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Message");
-                writer.WriteString($"The server is running in an un-authorized mode.{Environment.NewLine}" +
-                                   $"This means that Raven/AnonymousUserAccessMode is set to Admin and expose to the world.{Environment.NewLine}" +
-                                   $"Either set Raven/AnonymousUserAccessMode to None or set Raven/AllowAdminAnonymousAccessWhenNotbindedToLocalhost to true.{Environment.NewLine}" +
-                                   $"In order to gain access to the server please run in on localhost.{Environment.NewLine}");
+                writer.WriteString(String.Join(" ",UnsafeWarning));
+                writer.WriteComma();
+                writer.WritePropertyName("MessageAsArray");
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var val in UnsafeWarning)
+                {
+                    if(first == false)
+                        writer.WriteComma();
+                    first = false;
+                    writer.WriteString(val);
+                }
+                writer.WriteEndArray();
                 writer.WriteEndObject();
             }
             return Task.CompletedTask;
         }
+
+        private static readonly string[] UnsafeWarning = {
+            "The server is running in a potentially unsafe mode.",
+            "This means that Raven/AnonymousUserAccessMode is set to Admin and expose to the world.",
+            "Prevent unsafe access to the server by setting Raven/AnonymousUserAccessMode to None.",
+            "If you intended to give everybody admin access to the server than set Raven/AllowEverybodyToAccessTheServerAsAdmin to true.",
+            "In order to gain access to the server please run in on localhost."
+        };
 
         private async Task RequestHandler(HttpContext context)
         {
