@@ -15,6 +15,7 @@ using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Compilation;
 using Raven.Client.Exceptions.Database;
+using Raven.Server.Config.Attributes;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
@@ -44,15 +45,50 @@ namespace Raven.Server
 
             _router = app.ApplicationServices.GetService<RequestRouter>();
             _server = app.ApplicationServices.GetService<RavenServer>();
+            if (IsAccessUnauthorized())
+            {
+                app.Run(UnAuthorizedRequestHandler);
+            }
             app.Run(RequestHandler);
+        }
+
+        private bool IsAccessUnauthorized()
+        {
+            if (_server.Configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.None)
+                return false;
+            if (_server.Configuration.Server.AllowAdminAnonymousAccessWhenNotbindedToLocalhost == true)
+                return false;
+            var url = _server.Configuration.Core.ServerUrl.ToLowerInvariant();
+            var uri = new Uri(url);
+            //url isn't set to localhost 
+            return !(uri.IsLoopback  || uri.Host == "0.0.0.0");
         }
 
         public static bool SkipHttpLogging;
 
+        private Task UnAuthorizedRequestHandler(HttpContext context)
+        {
+            context.Response.StatusCode = (int) HttpStatusCode.ServiceUnavailable;
+            context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+            JsonOperationContext ctx;
+            using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
+            using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Message");
+                writer.WriteString($"The server is running in an un-authorized mode.{Environment.NewLine}" +
+                                   $"This means that Raven/AnonymousUserAccessMode is set to Admin and expose to the world.{Environment.NewLine}" +
+                                   $"Either set Raven/AnonymousUserAccessMode to None or set Raven/AllowAdminAnonymousAccessWhenNotbindedToLocalhost to true.{Environment.NewLine}" +
+                                   $"In order to gain access to the server please run in on localhost.{Environment.NewLine}");
+                writer.WriteEndObject();
+            }
+            return Task.CompletedTask;
+        }
+
         private async Task RequestHandler(HttpContext context)
         {
             try
-            {
+            {                
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
 
