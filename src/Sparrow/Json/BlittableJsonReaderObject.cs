@@ -121,12 +121,12 @@ namespace Sparrow.Json
 
             var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
 
-            if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeInt)
-                _propNamesDataOffsetSize = sizeof(int);
-            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeByte)
+            if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeByte)
                 _propNamesDataOffsetSize = sizeof(byte);
             else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeShort)
                 _propNamesDataOffsetSize = sizeof(short);
+            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeInt)
+                _propNamesDataOffsetSize = sizeof(int);
             else ThrowOutOfRangeException(propNamesOffsetFlag);
 
             _objStart = _mem + pos;
