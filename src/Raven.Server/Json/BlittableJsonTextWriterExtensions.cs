@@ -489,7 +489,9 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName((nameof(query.WaitForNonStaleResultsTimeout)));
             if (query.WaitForNonStaleResultsTimeout.HasValue)
-                writer.WriteString((query.WaitForNonStaleResultsTimeout.Value.ToString()));
+                writer.WriteString(query.WaitForNonStaleResultsTimeout.Value.ToString());
+            else
+                writer.WriteNull();
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(query.DynamicMapReduceFields)));

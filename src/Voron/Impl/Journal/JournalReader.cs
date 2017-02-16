@@ -302,7 +302,7 @@ namespace Voron.Impl.Journal
         }
 
         Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.
-            Windows32BitsPagerTransactionState
+            PagerTransactionState32Bits
         { get; set; }
 
         public event Action<IPagerLevelTransactionState> OnDispose;

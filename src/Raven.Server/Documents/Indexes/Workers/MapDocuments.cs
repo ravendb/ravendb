@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             $"Failed to execute mapping function on {current.Key}. Exception: {e}");
                                     }
 
-                                    if (CanContinueBatch(collectionStats, lastEtag, lastCollectionEtag) == false)
+                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag) == false)
                                     {
                                         keepRunning = false;
                                         break;
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return false;
         }
 
-        public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
             {
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
                 return false;
            
-            if (_index.CanContinueBatch(stats) == false)
+            if (_index.CanContinueBatch(stats,documentsContext, indexingContext) == false)
                 return false;
 
             return true;

@@ -85,13 +85,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     {
                         long totalMapped = 0;
                         var dja = new DynamicJsonArray();
+                        var dic = new Dictionary<long, long>();
                         foreach (var mapping in file.Value)
                         {
                             totalMapped += mapping.Value;
+                            long prev;
+                            dic.TryGetValue(mapping.Value, out prev);
+                            dic[mapping.Value] = prev + 1;
+                        }
+                        foreach (var maps in dic)
+                        {
                             dja.Add(new DynamicJsonValue
                             {
-                                ["Address"] = "0x" + mapping.Key.ToString("x"),
-                                ["Size"] = mapping.Value
+                                ["Size"] = maps.Key,
+                                ["Count"] = maps.Value
                             });
                         }
                         dir[Path.GetFileName(file.Key)] = new DynamicJsonValue

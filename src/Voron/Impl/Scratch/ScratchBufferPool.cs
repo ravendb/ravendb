@@ -300,6 +300,15 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public byte* AcquirePagePointerWithOverflowHandling(LowLevelTransaction tx, int scratchNumber, long p)
+        {
+            var item = GetScratchBufferFile(scratchNumber);
+
+            ScratchBufferFile bufferFile = item.File;
+            return bufferFile.AcquirePagePointerWithOverflowHandling(tx, p);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ScratchBufferItem GetScratchBufferFile(int scratchNumber)
         {
             var currentScratchFile = _current;

@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Queries.Parse
 
         public override string ToString()
         {
-            return GetPrefixString() + "*:*";
+            return GetPrefixString()+ "*:*";
         }
     }
     public class FieldLuceneASTNode : LuceneASTNodeBase
@@ -98,18 +98,18 @@ namespace Raven.Server.Documents.Queries.Parse
         }
         public override string ToString()
         {
-            return string.Format("{0}{1}:{2}", GetPrefixString(), FieldName, Node);
+            return string.Format("{0}{1}:{2}",GetPrefixString(), FieldName, Node);
         }
     }
-
+    
     public class MethodLuceneASTNode : LuceneASTNodeBase
-    {
+    {        
         public MethodLuceneASTNode(string rawMethodStr, List<TermLuceneASTNode> matches)
-        {
+        {            
             var fieldStartPos = rawMethodStr.IndexOf('<');
-            MethodName = rawMethodStr.Substring(1, fieldStartPos - 1);
+            MethodName = rawMethodStr.Substring(1, fieldStartPos-1);
             var fieldEndPos = rawMethodStr.IndexOf('>');
-            FieldName = rawMethodStr.Substring(fieldStartPos + 1, fieldEndPos - fieldStartPos - 1);
+            FieldName = rawMethodStr.Substring(fieldStartPos + 1, fieldEndPos - fieldStartPos-1);
             Matches = matches;
         }
 
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Queries.Parse
                     break;
                 case TermType.QuotedWildcard:
                 case TermType.WildCardTerm:
-                case TermType.PrefixTerm:
+                case TermType.PrefixTerm:				    
                     yield return GetWildcardTerm(configuration).Text;
                     break;
                 case TermType.Float:
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Queries.Parse
                 var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
                 terms.Add(attribute.Term);
             }
-
+            
             if (terms.Count == 0)
             {
                 return new Term(configuration.FieldName, Term);
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Queries.Parse
                 if (Term.EndsWith("*") && !firstTerm.EndsWith("*")) sb.Append('*');
                 var res = sb.ToString();
                 expectedLength = (qouted ? 2 : 0) + res.Length;
-                Debug.Assert(expectedLength == Term.Length,
+                Debug.Assert(expectedLength  == Term.Length,
 @"if analyzer changes length of term and removes wildcards after processing it, 
 there is no way to know where to put the wildcard character back after the analysis. 
 This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
@@ -270,7 +270,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
             {
                 var res = AnalyzedWildCardQueries(configuration);
                 res.Boost = boost;
-                return res;
+                return res;		        
             }
 
             if (Type == TermType.WildCardTerm)
@@ -282,7 +282,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
 
             var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, new StringReader(Term));
             var terms = new List<string>();
-
+            
             while (tokenStream.IncrementToken())
             {
                 var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
@@ -299,7 +299,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 // if the term that we are trying to prefix has been removed entirely by the analyzer, then we are going
                 // to cheat a bit, and check for both the term in as specified and the term in lower case format so we can
                 // find it regardless of casing
-                var removeStar = Term.Substring(0, Term.Length - 1);
+                var removeStar = Term.Substring(0, Term.Length-1);
                 var booleanQuery = new BooleanQuery
                 {
                     Clauses =
@@ -324,12 +324,12 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 }*/
                 if (terms.Count == 1)
                 {
-                    return new TermQuery(new Term(configuration.FieldName, terms.First())) { Boost = boost };
+                    return new TermQuery(new Term(configuration.FieldName,terms.First())){Boost = boost};
                 }
                 var pq = new PhraseQuery() { Boost = boost };
                 foreach (var term in terms)
                 {
-                    pq.Add(new Term(configuration.FieldName, term));
+                    pq.Add(new Term(configuration.FieldName,term));
                 }
                 return pq;
                 //return new TermQuery(new Term(configuration.FieldName, Term.Substring(1, Term.Length - 2))){Boost = boost};
@@ -343,12 +343,12 @@ This edge-case has a very slim chance of happening, but still we should not igno
             }
             if (terms.Count == 1)
             {
-                return new TermQuery(new Term(configuration.FieldName, terms.First())) { Boost = boost };
+                return new TermQuery(new Term(configuration.FieldName, terms.First())) {Boost = boost};
             }
             var phrase = new PhraseQuery() { Boost = boost };
             foreach (var term in terms)
             {
-                phrase.Add(new Term(configuration.FieldName, term));
+                phrase.Add(new Term(configuration.FieldName,term));
             }
             return phrase;
         }
@@ -381,8 +381,8 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public override string ToString()
         {
             var prefix = Prefix == PrefixOperator.Plus ? "+" : Prefix == PrefixOperator.Minus ? "-" : "";
-            var boost = string.IsNullOrEmpty(Boost) ? string.Empty : "^" + Boost;
-            var proximity = string.IsNullOrEmpty(Proximity) ? string.Empty : "~" + Proximity;
+            var boost = string.IsNullOrEmpty(Boost)? string.Empty : "^" + Boost;
+            var proximity = string.IsNullOrEmpty(Proximity)? string.Empty : "~" + Proximity;
             var similarity = string.IsNullOrEmpty(Similarity) ? string.Empty : "~" + Similarity;
             return String.Format("{0}{1}{2}{3}{4}", prefix, Term, boost, proximity, similarity);
         }
@@ -417,9 +417,9 @@ This edge-case has a very slim chance of happening, but still we should not igno
             {
                 //numbers inside range without prefix are treated as strings.
                 if (!RangeMin.Term.StartsWith("Dx") && !RangeMax.Term.StartsWith("Dx"))
-                    return new TermRangeQuery(configuration.FieldName,
-                        RangeMin.Type == TermLuceneASTNode.TermType.Null ? null : RangeMin.Term,
-                        RangeMax.Type == TermLuceneASTNode.TermType.Null ? null : RangeMax.Term,
+                    return new TermRangeQuery(configuration.FieldName, 
+                        RangeMin.Type == TermLuceneASTNode.TermType.Null?null:RangeMin.Term, 
+                        RangeMax.Type == TermLuceneASTNode.TermType.Null?null:RangeMax.Term, 
                         InclusiveMin, InclusiveMax);
                 var min = (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == "*") ? double.MinValue : double.Parse(RangeMin.Term.Substring(2));
                 var max = (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*") ? double.MaxValue : double.Parse(RangeMax.Term.Substring(2));
@@ -533,8 +533,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
             if (rightHandBooleanNode == null || 
                 rightHandBooleanNode.Op == Operator.AND || 
                 rightHandBooleanNode.Op == Operator.INTERSECT || 
-                (rightHandBooleanNode.Op == Operator.Implicit && isDefaultOperatorAnd) ||
-                rightHandBooleanNode.Op == Operator.NOT)
+                (rightHandBooleanNode.Op == Operator.Implicit && isDefaultOperatorAnd))
             {
                 LeftNode = leftNode;
                 RightNode = rightNode;
@@ -571,9 +570,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 case Operator.OR:
                     LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
                     RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
-                    break;
-                case Operator.NOT:
-                    query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
                     break;
                 case Operator.Implicit:
                     switch (configuration.DefaultOperator)
@@ -627,9 +623,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
                     LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
                     RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
                     break;
-                case Operator.NOT:
-                    query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
-                    break;
                 case Operator.Implicit:
                     switch (configuration.DefaultOperator)
                     {
@@ -658,7 +651,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
         {
             AND,
             OR,
-            NOT,
             Implicit,
             INTERSECT
         }
@@ -669,10 +661,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public Operator Op { get; set; }
         public override string ToString()
         {
-            if (Op == Operator.NOT)
-            {
-                return "NOT " + LeftNode.ToString();
-            }
             if (Op == Operator.Implicit)
             {
                 return LeftNode + " " + RightNode;
@@ -709,14 +697,14 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.Append('(').Append(Node).Append(')').Append(string.IsNullOrEmpty(Boost) ? string.Empty : string.Format("^{0}", Boost));
+            sb.Append('(').Append(Node).Append(')').Append(string.IsNullOrEmpty(Boost)?string.Empty:string.Format("^{0}",Boost));
             return sb.ToString();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetBoost()
         {
-            return Boost == null ? 1 : float.Parse(Boost);
+            return  Boost == null ? 1 : float.Parse(Boost);
         }
 
     }
@@ -727,3 +715,4 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public string Proximity { get; set; }
     }
 }
+

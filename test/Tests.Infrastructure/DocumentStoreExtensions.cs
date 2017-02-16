@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -105,7 +106,7 @@ namespace FastTests
                             documentJson = session.Advanced.Context.ReadObject(documentJson, id);
                         }
                     }
-                    
+
 
                     var command = new PutDocumentCommand
                     {
@@ -232,9 +233,69 @@ namespace FastTests
                 await RequestExecuter.ExecuteAsync(command, Context);
             }
 
+            public TResult RawGetJson<TResult>(string url)
+                where TResult : BlittableJsonReaderBase
+            {
+                return AsyncHelpers.RunSync(() => RawGetJsonAsync<TResult>(url));
+            }
+
+            public async Task<TResult> RawGetJsonAsync<TResult>(string url) 
+                where TResult : BlittableJsonReaderBase
+            {
+                var command = new GetJsonCommand<TResult>(url);
+
+                await RequestExecuter.ExecuteAsync(command, Context);
+
+                return command.Result;
+            }
+
             public void Dispose()
             {
                 _returnContext?.Dispose();
+            }
+
+            private class GetJsonCommand<TResult> : RavenCommand<TResult>
+                where TResult : BlittableJsonReaderBase
+            {
+                private readonly string _url;
+
+                public GetJsonCommand(string url)
+                {
+                    if (url == null)
+                        throw new ArgumentNullException(nameof(url));
+
+                    if (url.StartsWith("/") == false)
+                        url += $"/{url}";
+
+                    _url = url;
+
+                    if (typeof(TResult) == typeof(BlittableJsonReaderArray))
+                        ResponseType = RavenCommandResponseType.Array;
+                }
+
+                public override bool IsReadRequest => true;
+
+                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}{_url}";
+
+                    var request = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Get
+                    };
+
+                    return request;
+                }
+
+                public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+                {
+                    Result = (TResult)(object)response;
+                }
+
+                public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
+                {
+                    Result = (TResult)(object)response;
+                }
             }
         }
     }

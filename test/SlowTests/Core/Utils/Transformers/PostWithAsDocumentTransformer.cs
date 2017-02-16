@@ -4,9 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Post = SlowTests.Core.Utils.Entities.Post;
 
 namespace SlowTests.Core.Utils.Transformers
@@ -15,17 +15,16 @@ namespace SlowTests.Core.Utils.Transformers
     {
         public class Result
         {
-            //public RavenJObject RawDocument { get; set; }
+            public JsonObject RawDocument { get; set; }
         }
 
         public PostWithAsDocumentTransformer()
         {
-            throw new NotImplementedException();
-            //TransformResults = posts => from post in posts
-            //                            select new Result
-            //                            {
-            //                                RawDocument = AsDocument(post)
-            //                            };
+            TransformResults = posts => from post in posts
+                                        select new Result
+                                        {
+                                            RawDocument = AsJson(post)
+                                        };
         }
     }
 }

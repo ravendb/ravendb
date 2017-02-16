@@ -60,10 +60,9 @@ namespace Raven.Server.Routing
                 RouteMatch = tryMatch.Match,
             };
 
-            HandleRequest handler;
-            if (tryMatch.Value.TryGetHandler(reqCtx, out handler) == false)
-                handler = await tryMatch.Value.CreateHandlerAsync(reqCtx);
-            
+            var tuple = tryMatch.Value.TryGetHandler(reqCtx);
+            var handler = tuple.Item1 ?? await tuple.Item2;
+
             reqCtx.Database?.Metrics?.RequestsMeter.Mark();
             _serverMetrics.RequestsMeter.Mark();
 

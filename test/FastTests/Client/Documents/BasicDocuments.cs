@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Transformers;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;

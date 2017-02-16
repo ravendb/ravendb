@@ -51,6 +51,7 @@ using Sparrow.Utils;
 using Size = Raven.Server.Config.Settings.Size;
 using Voron.Debugging;
 using Voron.Exceptions;
+using Voron.Impl;
 using Voron.Impl.Compaction;
 
 namespace Raven.Server.Documents.Indexes
@@ -930,7 +931,16 @@ namespace Raven.Server.Documents.Indexes
             // TODO we should create notification here?
 
             _errorStateReason = $"State was changed due to data corruption with message '{e.Message}'";
-            SetState(IndexState.Error);
+            try
+            {
+                SetState(IndexState.Error);
+            }
+            catch (Exception exception)
+            {
+                if(_logger.IsInfoEnabled)
+                    _logger.Info($"Unable to set the index {Name} to error state", exception);
+                State = IndexState.Error; // just in case it didn't took from the SetState call
+            }
         }
 
         private void HandleIndexFailureInformation(IndexFailureInformation failureInformation)
@@ -1036,7 +1046,7 @@ namespace Raven.Server.Documents.Indexes
 
                         tx.Commit();
 
-                        stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOfPagesWrittenToDisk);
+                        stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
                     }
 
                     return mightBeMore;
@@ -1116,31 +1126,43 @@ namespace Raven.Server.Documents.Indexes
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Changing state for '{Name} ({IndexId})' from '{State}' to '{state}'.");
 
-                _indexStorage.WriteState(state);
 
                 var oldState = State;
                 State = state;
-
-                var notificationType = IndexChangeTypes.None;
-
-                if (state == IndexState.Disabled)
-                    notificationType = IndexChangeTypes.IndexDemotedToDisabled;
-                else if (state == IndexState.Error)
-                    notificationType = IndexChangeTypes.IndexMarkedAsErrored;
-                else if (state == IndexState.Idle)
-                    notificationType = IndexChangeTypes.IndexDemotedToIdle;
-                else if (state == IndexState.Normal && oldState == IndexState.Idle)
-                    notificationType = IndexChangeTypes.IndexPromotedFromIdle;
-
-                if (notificationType != IndexChangeTypes.None)
+                try
                 {
-                    DocumentDatabase.Changes.RaiseNotifications(new IndexChange
+                    // this might fail if we can't write, so we first update the in memory state
+                    _indexStorage.WriteState(state);
+                }
+                finally
+                { 
+                    // even if there is a failure, update it
+                    var changeType = GetIndexChangeType(state, oldState);
+                    if (changeType != IndexChangeTypes.None)
                     {
-                        Name = Name,
-                        Type = notificationType
-                    });
+                        DocumentDatabase.Changes.RaiseNotifications(new IndexChange
+                        {
+                            Name = Name,
+                            Type = changeType
+                        });
+                    }
                 }
             }
+        }
+
+        private static IndexChangeTypes GetIndexChangeType(IndexState state, IndexState oldState)
+        {
+            var notificationType = IndexChangeTypes.None;
+
+            if (state == IndexState.Disabled)
+                notificationType = IndexChangeTypes.IndexDemotedToDisabled;
+            else if (state == IndexState.Error)
+                notificationType = IndexChangeTypes.IndexMarkedAsErrored;
+            else if (state == IndexState.Idle)
+                notificationType = IndexChangeTypes.IndexDemotedToIdle;
+            else if (state == IndexState.Normal && oldState == IndexState.Idle)
+                notificationType = IndexChangeTypes.IndexPromotedFromIdle;
+            return notificationType;
         }
 
         public virtual void SetLock(IndexLockMode mode)
@@ -2045,7 +2067,10 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public bool CanContinueBatch(IndexingStatsScope stats)
+        public bool CanContinueBatch(
+            IndexingStatsScope stats,
+            DocumentsOperationContext documentsOperationContext,
+            TransactionOperationContext indexingContext)
         {
             stats.RecordMapAllocations(_threadAllocations.Allocations);
 
@@ -2053,6 +2078,25 @@ namespace Raven.Server.Documents.Indexes
             {
                 stats.RecordMapCompletedReason($"Number of errors ({stats.ErrorsCount}) reached maximum number of allowed errors per batch ({IndexStorage.MaxNumberOfKeptErrors})");
                 return false;
+            }
+
+            if (sizeof(int) == IntPtr.Size)
+            {
+                IPagerLevelTransactionState pagerLevelTransactionState = documentsOperationContext.Transaction?.InnerTransaction?.LowLevelTransaction;
+                var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
+                if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
+                {
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize/1024:#,#} kb mapped in docs ctx");
+                    return false;
+                }
+
+                pagerLevelTransactionState = indexingContext.Transaction?.InnerTransaction?.LowLevelTransaction;
+                total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
+                if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
+                {
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#} kb mapped in index ctx");
+                    return false;
+                }
             }
 
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
@@ -2066,6 +2110,7 @@ namespace Raven.Server.Documents.Indexes
                     return false;
                 }
             }
+
             return true;
         }
 

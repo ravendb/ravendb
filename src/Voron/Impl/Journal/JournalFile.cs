@@ -100,7 +100,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal
         /// </summary>
-        public void Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
+        public void Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);           
             var cur4KbPos = _writePosIn4Kb;
@@ -135,7 +135,7 @@ namespace Voron.Impl.Journal
                 if (lazyTransactionScratch == null)
                     throw new InvalidOperationException("lazyTransactionScratch cannot be null if the transaction is lazy (or a previous one was)");
                 lazyTransactionScratch.EnsureSize(_journalWriter.NumberOfAllocated4Kb);
-                lazyTransactionScratch.AddToBuffer(cur4KbPos, pages, uncompressedPageCount);
+                lazyTransactionScratch.AddToBuffer(cur4KbPos, pages);
 
                 // non lazy tx will add itself to the buffer and then flush scratch to journal
                 if (tx.IsLazyTransaction == false ||

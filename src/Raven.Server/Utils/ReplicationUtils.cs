@@ -42,7 +42,7 @@ namespace Raven.Server.Utils
 
                 if (TryGetActiveDestination(destination, replicationLoader.OutgoingHandlers, out outgoingHandler))
                 {
-                    
+
                     topologyInfo.Outgoing.Add(
                         new ActiveNodeStatus
                         {
@@ -124,17 +124,29 @@ namespace Raven.Server.Utils
             return false;
         }
 
-        public static async Task<string> GetTcpInfoAsync(JsonOperationContext context,
-        string url,
-        string databaseName,
-        string apiKey)
+        public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string apiKey)
         {
-            using (var requestExecuter = new RequestExecuter(url, databaseName, apiKey))
+            JsonOperationContext context;
+            using (var requestExecuter = RequestExecuter.ShortTermSingleUse(url, databaseName, apiKey))
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            {
+                var getTcpInfoCommand = new GetTcpInfoCommand();
+                requestExecuter.Execute(getTcpInfoCommand, context);
+
+                return getTcpInfoCommand.Result;
+            }
+        }
+
+        public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string apiKey)
+        {
+            JsonOperationContext context;
+            using (var requestExecuter = RequestExecuter.ShortTermSingleUse(url, databaseName, apiKey))
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand();
                 await requestExecuter.ExecuteAsync(getTcpInfoCommand, context);
 
-                return getTcpInfoCommand.Result.Url;
+                return getTcpInfoCommand.Result;
             }
         }
 
@@ -277,7 +289,7 @@ namespace Raven.Server.Utils
             Array.Sort(vectorB);
             int ia = 0, ib = 0;
             var merged = new List<ChangeVectorEntry>();
-            while(ia < vectorA.Length && ib < vectorB.Length)
+            while (ia < vectorA.Length && ib < vectorB.Length)
             {
                 int res = vectorA[ia].CompareTo(vectorB[ib]);
                 if (res == 0)
@@ -333,7 +345,7 @@ namespace Raven.Server.Utils
                     }
                 }
             }
-            
+
             return mergedVector.Select(kvp => new ChangeVectorEntry
             {
                 DbId = kvp.Key,

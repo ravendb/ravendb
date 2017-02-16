@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
 {

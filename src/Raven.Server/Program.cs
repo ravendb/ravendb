@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
@@ -196,7 +197,7 @@ namespace Raven.Server
         private static void WriteServerStatsAndWaitForEsc(RavenServer server)
         {
             Console.WriteLine("Showing stats, press ESC to close...");
-            Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec (now, 5s, 1m, 5m) ");
+            Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec       | docs (all dbs)");
             var i = 0;
             while (Console.KeyAvailable == false || Console.ReadKey(true).Key != ConsoleKey.Escape)
             {
@@ -211,7 +212,25 @@ namespace Raven.Server
                 Console.Write($" | {humaneProp?["ManagedAllocations"],-14} ");
                 Console.Write($" | {humaneProp?["TotalMemoryMapped"],-17} ");
 
-                Console.Write($"| {Math.Round(reqCounter.OneSecondRate, 1):#,#.#;;0}, {Math.Round(reqCounter.FiveSecondRate, 1):#,#.#;;0}, {Math.Round(reqCounter.OneMinuteRate, 1):#,#.#;;0}, {Math.Round(reqCounter.FiveMinuteRate, 1):#,#.#;;0}             ");
+                Console.Write($"| {Math.Round(reqCounter.OneSecondRate, 1),-14:#,#.#;;0} ");
+
+                long allDocs = 0;
+                foreach (var value in server.ServerStore.DatabasesLandlord.ResourcesStoresCache.Values)
+                {
+                    if(value.Status != TaskStatus.RanToCompletion)
+                        continue;
+
+                    try
+                    {
+                        allDocs += value.Result.DocumentsStorage.GetNumberOfDocuments();
+                    }
+                    catch (Exception)
+                    {
+                        // may run out of virtual address space, or just shutdown, etc
+                    }
+                }
+
+                Console.Write($"| {allDocs,14:#,#.#;;0}      ");
 
                 for (int j = 0; j < 5 && Console.KeyAvailable == false; j++)
                 {

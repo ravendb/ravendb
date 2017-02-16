@@ -55,46 +55,64 @@ namespace Raven.Server.Documents
             if (config == null)
                 return null;
 
-            var hasAcquired = false;
+            if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
+                throw new DatabaseConcurrentLoadTimeoutException(
+                    "Too much databases loading concurrently, timed out waiting for them to load.");
             try
             {
-                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
-                    throw new DatabaseConcurrentLoadTimeoutException(
-                        "Too much databases loading concurrently, timed out waiting for them to load.");
+                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config));
 
-                hasAcquired = true;
-
-                var task = new Task<DocumentDatabase>(() => CreateDocumentsStorage(databaseName, config));
                 var database = ResourcesStoresCache.GetOrAdd(databaseName, task);
                 if (database == task)
                 {
-                    task.ContinueWith(completedTask =>
-                    {
-                        if (completedTask.IsCompleted)
-                            ServerStore.NotificationCenter.Add(ResourceChanged.Create(Constants.Documents.Prefix + databaseName, ResourceChangeType.Load));
-                        }, TaskContinuationOptions.OnlyOnRanToCompletion)
-                        .ContinueWith(t =>
+                    task.Start(); // the semaphore will be released here at the end of the task
+                }
+                else
                 {
-                    // if we are here, there is an error, and if there is an error, we need to clear it from the 
-                    // resource store cache so we can try to reload it.
-                    // Note that we return the faulted task anyway, because we need the user to look at the error
-                            if (database.Exception != null &&
-                                database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
-                    {
-                        Task<DocumentDatabase> val;
-                        ResourcesStoresCache.TryRemove(databaseName, out val);
-                    }
-                        }, TaskContinuationOptions.OnlyOnFaulted);
-
-                    task.Start();
+                    // the other task will release it
+                    ResourceSemaphore.Release();
                 }
 
                 return database;
             }
+            catch (Exception)
+            {
+                ResourceSemaphore.Release();
+                throw;
+            }
+        }
+
+        private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config)
+        {
+            try
+            {
+                var db = CreateDocumentsStorage(databaseName, config);
+                ServerStore.NotificationCenter.Add(
+                    ResourceChanged.Create(Constants.Documents.Prefix + databaseName,
+                        ResourceChangeType.Load));
+                return db;
+            }
+            catch (Exception e)
+            {
+                // if we are here, there is an error, and if there is an error, we need to clear it from the 
+                // resource store cache so we can try to reload it.
+                // Note that we return the faulted task anyway, because we need the user to look at the error
+                if (e.Data.Contains("Raven/KeepInResourceStore") == false)
+                {
+                    Task<DocumentDatabase> val;
+                    ResourcesStoresCache.TryRemove(databaseName, out val);
+                }
+                throw;
+            }
             finally
             {
-                if (hasAcquired)
+                try
+                {
                     ResourceSemaphore.Release();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
             }
         }
 

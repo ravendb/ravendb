@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

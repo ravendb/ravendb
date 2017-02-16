@@ -24,17 +24,17 @@ namespace SlowTests.MailingList
 
             public Users_AllProperties()
             {
-                //Map = users =>
-                //      from user in users
-                //      select new
-                //      {
-                //          Query = AsDocument(user).Select(x => x.Value)
-                //      };
+                Map = users =>
+                      from user in users
+                      select new
+                      {
+                          Query = AsJson(user).Select(x => x.Value)
+                      };
                 Index(x => x.Query, FieldIndexing.Analyzed);
             }
         }
 
-        [Fact(Skip = "RavenDB-6211")]
+        [Fact]
         public void CanSearchOnAllProperties()
         {
             using (var store = GetDocumentStore())

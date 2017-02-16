@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using SlowTests.Core.Utils.Entities;
 
 namespace SlowTests.Core.Utils.Transformers

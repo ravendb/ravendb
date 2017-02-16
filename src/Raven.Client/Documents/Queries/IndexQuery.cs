@@ -339,7 +339,9 @@ namespace Raven.Client.Documents.Queries
         protected IndexQueryBase(DocumentConventions conventions)
         {
             Conventions = conventions;
-            _pageSize = conventions.ImplicitTakeAmount;
+
+            if (conventions != null)
+                _pageSize = conventions.ImplicitTakeAmount;
         }
 
         protected internal DocumentConventions Conventions { get; }

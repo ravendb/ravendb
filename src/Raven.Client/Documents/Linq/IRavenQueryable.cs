@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Linq
 {

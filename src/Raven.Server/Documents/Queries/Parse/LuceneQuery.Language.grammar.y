@@ -48,11 +48,7 @@ main: node EOF {
 	LuceneAST = $$;
 	}
 ;
-node: NOT node           {
-		//Console.WriteLine("Found rule node -> NOT node");
-		$$ = new OperatorLuceneASTNode($2,null,OperatorLuceneASTNode.Operator.NOT, IsDefaultOperatorAnd);
-	}
-	| node operator node {
+node: node operator node {
 		//Console.WriteLine("Found rule node -> node operator node");
 		var res =  new OperatorLuceneASTNode($1,$3,$2, IsDefaultOperatorAnd);
 		$$ = res;
@@ -335,5 +331,9 @@ prefix_operator: PLUS {
 		//Console.WriteLine("Found rule prefix_operator -> MINUS");
 		$$ = LuceneASTNodeBase.PrefixOperator.Minus;
 		}
+    | NOT {
+        //Console.WriteLine("Found rule prefix_operator -> NOT");
+		$$ = LuceneASTNodeBase.PrefixOperator.Minus;
+    }
 	;
 %%
