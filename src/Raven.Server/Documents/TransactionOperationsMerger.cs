@@ -411,7 +411,7 @@ namespace Raven.Server.Documents
                     return GetPendingOperationsStatus(context);
                 }
 
-                if (IntPtr.Size == sizeof(int)) // 32bits, will be optimized away by JIT on 64
+                if (IntPtr.Size == sizeof(int) || _parent.Configuration.Storage.ForceUsing32BitsPager) // 32bits, will be optimized away by JIT on 64
                 {
                     // we need to be sure that we don't use up too much virtual space
                     var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
