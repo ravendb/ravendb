@@ -18,7 +18,7 @@ using Raven.Client;
 using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Exceptions.Compilation;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
@@ -88,6 +88,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static StaticIndexBase Compile(IndexDefinition definition)
         {
+            ValidateAnalyzers(definition);
+
             var cSharpSafeName = GetCSharpSafeName(definition.Name, isIndex: true);
 
             var @class = CreateClass(cSharpSafeName, definition);
@@ -442,6 +444,27 @@ namespace Raven.Server.Documents.Indexes.Static
         private static string NormalizeFunction(string function)
         {
             return function?.Trim().TrimEnd(';');
+        }
+
+        private static void ValidateAnalyzers(IndexDefinition definition)
+        {
+            if (definition.Fields == null)
+                return;
+
+            foreach (var kvp in definition.Fields)
+            {
+                if (string.IsNullOrWhiteSpace(kvp.Value.Analyzer))
+                    continue;
+
+                try
+                {
+                    IndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer);
+                }
+                catch (Exception e)
+                {
+                    throw new IndexCompilationException(e.Message, e);
+                }
+            }
         }
 
         private class CompilationResult
