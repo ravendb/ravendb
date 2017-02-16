@@ -110,7 +110,7 @@ namespace Voron.Impl.Scratch
                     if (scratch.File.HasActivelyUsedBytes(oldestActiveTransaction))
                         continue;
 
-                    scratchesToDelete.Add(scratch.Number);
+                     scratchesToDelete.Add(scratch.Number);
                 }
 
                 // delete inactive scratches
@@ -345,6 +345,49 @@ namespace Voron.Impl.Scratch
 
             ScratchBufferFile bufferFile = item.File;
             return bufferFile.AcquirePagePointer(tx, p);       
+        }
+
+        public ScratchBufferPoolInfo InfoForDebug(long oldestActiveTransaction)
+        {
+            var currentFile = _current.File;
+            var scratchBufferPoolInfo = new ScratchBufferPoolInfo
+            {
+                OldestTransactionWhenFlushWasForced = _current.OldestTransactionWhenFlushWasForced,
+                NumberOfScratchFiles = _scratchBuffers.Count,
+                CurrentFileSizeInMB = currentFile.Size / 1024L / 1024L,
+                TotalScratchFileSizeLimitInMB = sizeLimit / 1024L / 1024L
+            };
+
+            foreach (var scratchBufferItem in _scratchBuffers.Values.OrderBy(x => x.Number))
+            {
+                scratchBufferPoolInfo.ScratchFilesUsage.Add(new ScratchFileUsage
+                {
+                    Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferItem.File.Number),
+                    SizeInKB = scratchBufferItem.File.Size / 1024,
+                    InActiveUseInKB = scratchBufferItem.File.ActivelyUsedBytes(oldestActiveTransaction) / 1024
+                });
+            }
+
+            foreach (var scratchBufferFile in _scratchBuffers.OrderBy(x => x.Key))
+            {
+                var mostAvailableFreePages = new MostAvailableFreePagesByScratch
+                {
+                    Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferFile.Value.Number)
+                };
+
+                foreach (var freePage in scratchBufferFile.Value.File.GetMostAvailableFreePagesBySize())
+                {
+                    mostAvailableFreePages.MostAvailableFreePages.Add(new MostAvailableFreePagesBySize
+                    {
+                        Size = freePage.Key,
+                        ValidAfterTransactionId = freePage.Value
+                    });
+                }
+
+                scratchBufferPoolInfo.MostAvailableFreePages.Add(mostAvailableFreePages);
+            }
+
+            return scratchBufferPoolInfo;
         }
     }
 }
