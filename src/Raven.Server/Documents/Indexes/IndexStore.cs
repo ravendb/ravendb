@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Settings;
@@ -14,6 +15,7 @@ using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Exceptions;
@@ -115,6 +117,8 @@ namespace Raven.Server.Documents.Indexes
                     return existingIndex.IndexId;
 
                 definition.RemoveDefaultValues();
+
+                ValidateAnalyzers(definition);
 
                 switch (GetIndexCreationOptions(definition, existingIndex))
                 {
@@ -716,6 +720,27 @@ namespace Raven.Server.Documents.Indexes
         {
             if (Directory.Exists(path.FullPath) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
                 Directory.CreateDirectory(path.FullPath);
+        }
+
+        private static void ValidateAnalyzers(IndexDefinition definition)
+        {
+            if (definition.Fields == null)
+                return;
+
+            foreach (var kvp in definition.Fields)
+            {
+                if (string.IsNullOrWhiteSpace(kvp.Value.Analyzer))
+                    continue;
+
+                try
+                {
+                    IndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer);
+                }
+                catch (Exception e)
+                {
+                    throw new IndexCompilationException(e.Message, e);
+                }
+            }
         }
 
         private class UnusedIndexState
