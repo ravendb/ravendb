@@ -22,12 +22,12 @@ namespace Sparrow.Json
             // PERF: Switch for this case will create if-then-else anyways. 
             //       So we order them explicitely based on knowledge.
             BlittableJsonToken current = currentType & mask;
-            if (current == BlittableJsonToken.PropertyIdSizeInt)
-                return sizeof(int);
             if (current == BlittableJsonToken.PropertyIdSizeByte)
                 return sizeof(byte);
             if (current == BlittableJsonToken.PropertyIdSizeShort)
                 return sizeof(short);
+            if (current == BlittableJsonToken.PropertyIdSizeInt)
+                return sizeof(int);
 
             ThrowInvalidOfsetSize(currentType);
             return -1;//will never happen
@@ -44,12 +44,12 @@ namespace Sparrow.Json
             // PERF: Switch for this case will create if-then-else anyways. 
             //       So we order them explicitely based on knowledge.
             BlittableJsonToken current = currentType & mask;
-            if (current == BlittableJsonToken.OffsetSizeInt)
-                return sizeof(int);
             if (current == BlittableJsonToken.OffsetSizeByte)
                 return sizeof(byte);
             if (current == BlittableJsonToken.OffsetSizeShort)
                 return sizeof(short);
+            if (current == BlittableJsonToken.OffsetSizeInt)
+                return sizeof(int);
 
             ThrowInvalidOfsetSize(currentType);
             return -1; // will never happen
