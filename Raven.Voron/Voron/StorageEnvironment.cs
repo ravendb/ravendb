@@ -439,7 +439,7 @@ namespace Voron
                 _txCommit.EnterReadLock();
                 try
                 {
-                    long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
+                    long txId = flags == TransactionFlags.ReadWrite ? NextWriteTransactionId : CurrentReadTransactionId;
                     tx = new Transaction(this, txId, flags, _freeSpaceHandling);
 
                     if (IsDebugRecording)
