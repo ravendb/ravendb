@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests.Issues;
 using FastTests.Server.Basic;
 using Raven.Client.Documents;
 using Raven.Client.Server;
@@ -15,9 +16,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Client.Indexing.DebugIndexing())
+                using (var a = new RavenDB_5178())
                 {
-                    a.QueriesRunning().Wait();
+                    a.CanUsePathLongerThan260Chars();
                 }
             }
         }
