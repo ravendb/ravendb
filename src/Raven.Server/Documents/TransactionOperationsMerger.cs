@@ -416,10 +416,7 @@ namespace Raven.Server.Documents
                     // we need to be sure that we don't use up too much virtual space
                     var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
                     var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
-                    if (
-                        modifiedSize > 4 * Constants.Size.Megabyte || 
-                        llt.GetTotal32BitsMappedSize() > 32 * Constants.Size.Megabyte
-                       )
+                    if (modifiedSize > 4 * Constants.Size.Megabyte)
                     {
                         break;
                     }

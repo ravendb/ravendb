@@ -1219,11 +1219,7 @@ namespace Voron.Impl.Journal
 
         private AbstractPager CreateCompressionPager(long initialSize)
         {
-            // we use a long lived pager here so in 32 bits mode we'll be able to avoid
-            // mapping the compression pager back & forth on each transaction, leading to 
-            // potential issues with memory fragmentation and not being able to map it in
-            // continious space.
-            return _env.Options.CreateLongLivedScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", initialSize);
+            return _env.Options.CreateScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", initialSize);
         }
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
