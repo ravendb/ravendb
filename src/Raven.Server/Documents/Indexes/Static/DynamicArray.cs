@@ -28,11 +28,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
         {
-            const string LengthName = "Length";
-            const string CountName = "Count";
+            const string lengthName = "Length";
+            const string countName = "Count";
+
             result = null;
-            if (string.CompareOrdinal(binder.Name, LengthName) == 0 ||
-                string.CompareOrdinal(binder.Name, CountName) == 0)
+            if (string.CompareOrdinal(binder.Name, lengthName) == 0 ||
+                string.CompareOrdinal(binder.Name, countName) == 0)
             {
                 result = Length;
                 return true;
@@ -75,14 +76,19 @@ namespace Raven.Server.Documents.Indexes.Static
             return base.TryConvert(binder, out result);
         }
 
-        public IEnumerator<object> GetEnumerator()
+        IEnumerator<object> IEnumerable<object>.GetEnumerator()
         {
-            return new DynamicArrayIterator(_inner);
+            return GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public DynamicArrayIterator GetEnumerator()
+        {
+            return new DynamicArrayIterator(_inner);
         }
 
         public bool Contains(object item)
@@ -489,13 +495,14 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.Intersect(this, second.Cast<object>()));
         }
 
-        private class DynamicArrayIterator : IEnumerator<object>
+        public struct DynamicArrayIterator : IEnumerator<object>
         {
             private readonly IEnumerator<object> _inner;
 
             public DynamicArrayIterator(IEnumerable<object> items)
             {
                 _inner = items.GetEnumerator();
+                Current = null;
             }
 
             public bool MoveNext()
