@@ -989,7 +989,7 @@ class metrics extends viewModelBase {
                 let commitDetails: string;
                 commitDetails = `<br/>*** Commit details ***<br/>`;
                 commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages.toLocaleString()}<br/>`;
-                commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOfPagesWrittenToDisk.toLocaleString()}`;
+                commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOf4KbsWrittenToDisk.toLocaleString()}`;
                 tooltipHtml += commitDetails;
             }
             if (element.MapDetails) {
