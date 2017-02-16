@@ -29,7 +29,22 @@ namespace Voron
         public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabaleFileSystemError;
         private long _reuseCounter;
         public abstract override string ToString();
-        public bool ForceUsing32BitsPager { get; set; }
+
+        private bool _forceUsing32BitsPager;
+        public bool ForceUsing32BitsPager
+        {
+            get
+            {
+                return _forceUsing32BitsPager;
+            }
+            set
+            {
+                _forceUsing32BitsPager = value;
+                MaxLogFileSize = (value ? 32 : 256)*Constants.Size.Megabyte;
+                MaxScratchBufferSize = (value ? 32 : 256) * Constants.Size.Megabyte;
+                MaxNumberOfPagesInJournalBeforeFlush = (value ? 4 : 32) * Constants.Size.Megabyte / Constants.Storage.PageSize;
+            }
+        }
 
         public void InvokeRecoveryError(object sender, string message, Exception e)
         {
@@ -132,14 +147,14 @@ namespace Voron
 
             ShouldUseKeyPrefix = name => false;
 
-            MaxLogFileSize = ((sizeof(int) == IntPtr.Size || ForceUsing32BitsPager ? 32 : 256)*Constants.Size.Megabyte);
+            MaxLogFileSize = ((sizeof(int) == IntPtr.Size ? 32 : 256)*Constants.Size.Megabyte);
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
-            MaxScratchBufferSize = ((sizeof(int) == IntPtr.Size || ForceUsing32BitsPager ? 32 : 256) * Constants.Size.Megabyte);
+            MaxScratchBufferSize = ((sizeof(int) == IntPtr.Size ? 32 : 256) * Constants.Size.Megabyte);
 
             MaxNumberOfPagesInJournalBeforeFlush =
-                ((sizeof(int) == IntPtr.Size || ForceUsing32BitsPager ? 4 : 32)*Constants.Size.Megabyte)/Constants.Storage.PageSize;
+                ((sizeof(int) == IntPtr.Size ? 4 : 32)*Constants.Size.Megabyte)/Constants.Storage.PageSize;
 
             IdleFlushTimeout = 5000; // 5 seconds
 
