@@ -179,47 +179,56 @@ namespace Voron.Impl.Paging
             var result = MapViewOfFileEx(_hFileMappingObject, _mmFileAccessType, offset.High,
                 offset.Low,
                 (UIntPtr)AllocationGranularity, null);
-
-            if (result == null)
+            try
             {
-                var lastWin32Error = Marshal.GetLastWin32Error();
-                throw new Win32Exception($"Unable to map (default view size) {AllocationGranularity / Constants.Size.Kilobyte:#,#} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}",
-                    new Win32Exception(lastWin32Error));
-            }
-
-            var pageHeader = (PageHeader*)(result + distanceFromStart * Constants.Storage.PageSize);
-
-            int numberOfPages = 1;
-            if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
-            {
-                numberOfPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
-            }
-
-            if (numberOfPages + distanceFromStart > NumberOfPagesInAllocationGranularity)
-            {
-                UnmapViewOfFile(result);
-
-                var newSize = NearestSizeToAllocationGranularity((numberOfPages + distanceFromStart) * Constants.Storage.PageSize);
-                result = MapViewOfFileEx(_hFileMappingObject, _mmFileAccessType, offset.High,
-                    offset.Low,
-                    (UIntPtr)newSize, null);
 
                 if (result == null)
                 {
                     var lastWin32Error = Marshal.GetLastWin32Error();
-                    throw new Win32Exception($"Unable to map {newSize / Constants.Size.Kilobyte:#,#} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}",
+                    throw new Win32Exception($"Unable to map (default view size) {AllocationGranularity / Constants.Size.Kilobyte:#,#} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}",
                         new Win32Exception(lastWin32Error));
                 }
 
-                pageHeader = (PageHeader*)(result + (distanceFromStart * Constants.Storage.PageSize));
+                var pageHeader = (PageHeader*)(result + distanceFromStart * Constants.Storage.PageSize);
+
+                int numberOfPages = 1;
+                if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+                {
+                    numberOfPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                }
+
+                if (numberOfPages + distanceFromStart > NumberOfPagesInAllocationGranularity)
+                {
+                    UnmapViewOfFile(result);
+                    result = null;
+
+                    var newSize = NearestSizeToAllocationGranularity((numberOfPages + distanceFromStart) * Constants.Storage.PageSize);
+                    result = MapViewOfFileEx(_hFileMappingObject, _mmFileAccessType, offset.High,
+                        offset.Low,
+                        (UIntPtr)newSize, null);
+
+                    if (result == null)
+                    {
+                        var lastWin32Error = Marshal.GetLastWin32Error();
+                        throw new Win32Exception($"Unable to map {newSize / Constants.Size.Kilobyte:#,#} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}",
+                            new Win32Exception(lastWin32Error));
+                    }
+
+                    pageHeader = (PageHeader*)(result + (distanceFromStart * Constants.Storage.PageSize));
+                }
+                const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
+
+                destI4KbBatchWrites.Write(pageHeader->PageNumber * adjustPageSize, numberOfPages * adjustPageSize, (byte*)pageHeader);
+
+                return numberOfPages;
             }
-            const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
+            finally
+            {
+                if (result != null)
+                    UnmapViewOfFile(result);
 
-            destI4KbBatchWrites.Write(pageHeader->PageNumber * adjustPageSize, numberOfPages * adjustPageSize, (byte*)pageHeader);
+            }
 
-            UnmapViewOfFile(result);
-
-            return numberOfPages;
         }
 
         public override I4KbBatchWrites BatchWriter()
@@ -252,12 +261,12 @@ namespace Voron.Impl.Paging
 
         private LoadedPage MapPages(TransactionState state, long startPage, long size)
         {
-            var addresses = _globalMapping.GetOrAdd(startPage,
-                _ => new ConcurrentSet<MappedAddresses>());
-
             _globalMemory.EnterReadLock();
             try
             {
+                var addresses = _globalMapping.GetOrAdd(startPage,
+                    _ => new ConcurrentSet<MappedAddresses>());
+
                 foreach (var addr in addresses)
                 {
                     if (addr.Size < size)
@@ -266,46 +275,47 @@ namespace Voron.Impl.Paging
                     Interlocked.Increment(ref addr.Usages);
                     return AddMappingToTransaction(state, startPage, size, addr);
                 }
+
+
+                var offset = new WindowsMemoryMapPager.SplitValue
+                {
+                    Value = (ulong)startPage * Constants.Storage.PageSize
+                };
+
+                if ((long)offset.Value + size > _fileStreamLength)
+                {
+                    ThrowInvalidMappingRequested(startPage, size);
+                }
+
+                var result = MapViewOfFileEx(_hFileMappingObject, _mmFileAccessType, offset.High,
+                    offset.Low,
+                    (UIntPtr)size, null);
+
+                if (result == null)
+                {
+                    var lastWin32Error = Marshal.GetLastWin32Error();
+                    throw new Win32Exception(
+                        $"Unable to map {size / Constants.Size.Kilobyte:#,#} kb starting at {startPage} on {FileName}",
+                        new Win32Exception(lastWin32Error));
+                }
+
+                NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size);
+                Interlocked.Add(ref _totalMapped, size);
+                var mappedAddresses = new MappedAddresses
+                {
+                    Address = (IntPtr)result,
+                    File = _fileInfo.FullName,
+                    Size = size,
+                    StartPage = startPage,
+                    Usages = 1
+                };
+                addresses.Add(mappedAddresses);
+                return AddMappingToTransaction(state, startPage, size, mappedAddresses);
             }
             finally
             {
                 _globalMemory.ExitReadLock();
             }
-
-            var offset = new WindowsMemoryMapPager.SplitValue
-            {
-                Value = (ulong)startPage * Constants.Storage.PageSize
-            };
-
-            if ((long)offset.Value + size > _fileStreamLength)
-            {
-                ThrowInvalidMappingRequested(startPage, size);
-            }
-
-            var result = MapViewOfFileEx(_hFileMappingObject, _mmFileAccessType, offset.High,
-                offset.Low,
-                (UIntPtr)size, null);
-
-            if (result == null)
-            {
-                var lastWin32Error = Marshal.GetLastWin32Error();
-                throw new Win32Exception(
-                    $"Unable to map {size / Constants.Size.Kilobyte:#,#} kb starting at {startPage} on {FileName}",
-                    new Win32Exception(lastWin32Error));
-            }
-
-            NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size);
-            Interlocked.Add(ref _totalMapped, size);
-            var mappedAddresses = new MappedAddresses
-            {
-                Address = (IntPtr)result,
-                File = _fileInfo.FullName,
-                Size = size,
-                StartPage = startPage,
-                Usages = 1
-            };
-            addresses.Add(mappedAddresses);
-            return AddMappingToTransaction(state, startPage, size, mappedAddresses);
         }
 
         private LoadedPage AddMappingToTransaction(TransactionState state, long startPage, long size, MappedAddresses mappedAddresses)
@@ -392,31 +402,33 @@ namespace Voron.Impl.Paging
             if (canCleanup == false)
                 return;
 
-            CleanupMemory();
+            CleanupMemory(value);
         }
 
-        private void CleanupMemory()
+        private void CleanupMemory(TransactionState txState)
         {
             _globalMemory.EnterWriteLock();
             try
             {
-                foreach (var maps in _globalMapping)
+                foreach (var addr in txState.AddressesToUnload)
                 {
-                    foreach (var map in maps.Value)
+                    if (addr.Usages != 0)
+                        continue;
+
+                    ConcurrentSet<MappedAddresses> set;
+                    if (!_globalMapping.TryGetValue(addr.StartPage, out set))
+                        continue;
+
+                    if (!set.TryRemove(addr))
+                        continue;
+
+                    Interlocked.Add(ref _totalMapped, addr.Size);
+                    UnmapViewOfFile((byte*)addr.Address);
+                    NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
+
+                    if (set.Count == 0)
                     {
-                        if (map.Usages != 0)
-                            continue;
-
-                        UnmapViewOfFile((byte*) map.Address);
-                        NativeMemory.UnregisterFileMapping(map.File, map.Address, map.Size);
-
-                        maps.Value.TryRemove(map);
-                        if (maps.Value.Count != 0)
-                            continue;
-
-                        ConcurrentSet<MappedAddresses> _;
-                        _globalMapping.TryRemove(maps.Key, out _);
-                        break;
+                        _globalMapping.TryRemove(addr.StartPage, out set);
                     }
                 }
             }
@@ -458,18 +470,6 @@ namespace Voron.Impl.Paging
                 {
                     if (page.NumberOfPages < distanceFromStart + numberOfPages)
                     {
-                        for (int i = 0; i < _state.AddressesToUnload.Count; i++)
-                        {
-                            if (_state.AddressesToUnload[i].Address == (IntPtr)page.Pointer)
-                            {
-                                NativeMemory.UnregisterFileMapping(_state.AddressesToUnload[i].File,
-                                    (IntPtr) _state.AddressesToUnload[i].Address, 
-                                    _state.AddressesToUnload[i].Size);
-
-                                _state.AddressesToUnload.RemoveAt(i);
-                                break;
-                            }
-                        }
                         page = _parent.MapPages(_state, allocationStartPosition, ammountToMapInBytes);
                     }
                 }
@@ -505,8 +505,8 @@ namespace Voron.Impl.Paging
                 {
                     canCleanup |= Interlocked.Decrement(ref addr.Usages) == 0;
                 }
-                if(canCleanup)
-                    _parent.CleanupMemory();
+                if (canCleanup)
+                    _parent.CleanupMemory(_state);
             }
         }
 

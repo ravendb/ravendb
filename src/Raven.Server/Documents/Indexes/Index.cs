@@ -2059,6 +2059,25 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
+            if (sizeof(int) == IntPtr.Size)
+            {
+                IPagerLevelTransactionState pagerLevelTransactionState = documentsOperationContext.Transaction?.InnerTransaction?.LowLevelTransaction;
+                var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
+                if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
+                {
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize/1024:#,#} kb mapped in docs ctx");
+                    return false;
+                }
+
+                pagerLevelTransactionState = indexingContext.Transaction?.InnerTransaction?.LowLevelTransaction;
+                total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
+                if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
+                {
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#} kb mapped in index ctx");
+                    return false;
+                }
+            }
+
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
                 if (TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats) == false)
@@ -2069,17 +2088,6 @@ namespace Raven.Server.Documents.Indexes
                     stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
                     return false;
                 }
-            }
-
-            if (sizeof(int) == IntPtr.Size)
-            {
-                IPagerLevelTransactionState pagerLevelTransactionState = documentsOperationContext.Transaction?.InnerTransaction?.LowLevelTransaction;
-                if (pagerLevelTransactionState?.GetTotal32BitsMappedSize() > 8 * Voron.Global.Constants.Size.Megabyte)
-                    return false;
-
-                pagerLevelTransactionState = indexingContext.Transaction?.InnerTransaction?.LowLevelTransaction;
-                if (pagerLevelTransactionState?.GetTotal32BitsMappedSize() > 8 * Voron.Global.Constants.Size.Megabyte)
-                    return false;
             }
 
             return true;
