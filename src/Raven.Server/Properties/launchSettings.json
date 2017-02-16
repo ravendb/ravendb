@@ -1,8 +1,3 @@
 {
-  "profiles": {
-    "Raven.Server": {
-      "commandName": "Raven.Server",
-      "commandLineArgs": "--Raven/ServerUrl=https://0.0.0.0:8080"
-    }
-  }
+  "profiles": {}
 }
