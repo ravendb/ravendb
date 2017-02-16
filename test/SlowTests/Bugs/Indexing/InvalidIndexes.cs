@@ -27,19 +27,26 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: RavenDB-6153")]
+        [Fact]
         public void CannotCreateIndexWithOrderBy()
         {
             using (var store = GetDocumentStore())
             {
                 var ioe = Assert.Throws<IndexCompilationException>(() =>
-                    store.Admin.Send(new PutIndexesOperation(new[] {
-                        new IndexDefinition
-                        {
+                    store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                    {
+                        Maps = { "from user in docs.Users orderby user.Id select new { user.Name}" },
+                        Name = "test"
+                    })));
 
-                            Maps = { "from user in docs.Users orderby user.Id select new { user.Name}" },
-                            Name = "test"
-                        }})));
+                Assert.Contains(@"OrderBy calls are not valid during map or reduce phase, but the following was found:", ioe.Message);
+
+                ioe = Assert.Throws<IndexCompilationException>(() =>
+                    store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                    {
+                        Maps = { "docs.Users.OrderBy(user => user.Id).Select(user => new { user.Name })" },
+                        Name = "test2"
+                    })));
 
                 Assert.Contains(@"OrderBy calls are not valid during map or reduce phase, but the following was found:", ioe.Message);
             }

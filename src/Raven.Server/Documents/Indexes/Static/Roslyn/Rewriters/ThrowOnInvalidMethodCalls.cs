@@ -9,13 +9,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     public class ThrowOnInvalidMethodCalls : CSharpSyntaxRewriter
     {
-        public static ThrowOnInvalidMethodCalls Instance = new ThrowOnInvalidMethodCalls();
-
-        private ThrowOnInvalidMethodCalls()
-        {
-        }
-
-        private readonly List<ForbiddenMethod> _forbiddenMethods = new List<ForbiddenMethod>
+        private static readonly List<ForbiddenMethod> ForbiddenMethods = new List<ForbiddenMethod>
         {
             new ForbiddenMethod(
                 names: new[] { "Now", "UtcNow" },
@@ -25,10 +19,20 @@ The map or reduce functions must be referentially transparent, that is, for the 
 Using {0} invalidate that premise, and is not allowed"),
         };
 
+        private SyntaxNode _root;
+
+        public override SyntaxNode Visit(SyntaxNode node)
+        {
+            if (_root == null)
+                _root = node;
+
+            return base.Visit(node);
+        }
+
         public override SyntaxNode VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             var name = node.Name.ToString();
-            var method = _forbiddenMethods.FirstOrDefault(x => x.Names.Contains(name));
+            var method = ForbiddenMethods.FirstOrDefault(x => x.Names.Contains(name));
             if (method == null)
                 return base.VisitMemberAccessExpression(node);
 
@@ -38,6 +42,39 @@ Using {0} invalidate that premise, and is not allowed"),
                 return base.VisitMemberAccessExpression(node);
 
             throw new InvalidOperationException(string.Format(method.Error, $"{expression}.{name}"));
+        }
+
+        public override SyntaxNode VisitOrderByClause(OrderByClauseSyntax node)
+        {
+            var parent = node.Ancestors().FirstOrDefault(x => x.IsKind(SyntaxKind.InvocationExpression) || x.IsKind(SyntaxKind.QueryExpression));
+            if (parent != _root)
+                return base.VisitOrderByClause(node);
+
+            ThrowOrderByException(node.ToString());
+            return node;
+        }
+
+        public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
+        {
+            var expression = node.Expression.ToString();
+            if (expression.EndsWith("OrderBy") == false)
+                return base.VisitInvocationExpression(node);
+
+            var parent = node.Ancestors().FirstOrDefault(x => x.IsKind(SyntaxKind.InvocationExpression) || x.IsKind(SyntaxKind.QueryExpression));
+            if (parent != _root)
+                return base.VisitInvocationExpression(node);
+
+            ThrowOrderByException(node.ToString());
+            return node;
+        }
+
+        private static void ThrowOrderByException(string text)
+        {
+            throw new InvalidOperationException(
+$@"OrderBy calls are not valid during map or reduce phase, but the following was found:
+'{text}'
+OrderBy calls modify the indexing output, but doesn't actually impact the order of results returned from the database.
+You should be calling OrderBy on the QUERY, not on the index, if you want to specify ordering.");
         }
 
         private class ForbiddenMethod
