@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -11,6 +12,29 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class DynamicBlittableJson : DynamicObject, IEnumerable<object>, IBlittableJsonContainer
     {
+
+        private const int DocumentIdFieldNameIndex = 0;
+        private const int MetadataIdPropertyIndex = 1;
+        private const int MetadataHasValueIndex = 2;
+        private const int MetadataKeyIndex = 3;
+        private const int MetadataIdIndex = 4;
+        private const int MetadataEtagIndex = 5;
+        private const int MetadataLastModifiedIndex = 6;
+
+        static DynamicBlittableJson()
+        {
+            precomputedTable = new[]
+            {
+                new CompareKey( Constants.Documents.Indexing.Fields.DocumentIdFieldName, 0 ),
+                new CompareKey( Constants.Documents.Metadata.IdProperty, 0 ),
+                new CompareKey( Constants.Documents.Metadata.HasValue, 0 ), 
+                new CompareKey( Constants.Documents.Metadata.Key, 0 ),
+                new CompareKey( Constants.Documents.Metadata.Id, 1),
+                new CompareKey( Constants.Documents.Metadata.Etag, 1),
+                new CompareKey( Constants.Documents.Metadata.LastModified, 1)
+            };
+        }
+
         private Document _doc;
         public BlittableJsonReaderObject BlittableJson { get; private set; }
 
@@ -51,11 +75,43 @@ namespace Raven.Server.Documents.Indexes.Static
             return TryGetByName((string)indexes[0], out result);
         }
 
+
+        private struct CompareKey
+        {
+            public readonly string Key;
+            public readonly int PrefixGroupIndex;
+            public readonly char PrefixValue;
+            public readonly int Length;
+
+            public CompareKey(string key, int prefixGroup)
+            {
+                this.Key = key;
+                this.PrefixGroupIndex = prefixGroup;
+                this.PrefixValue = key[prefixGroup];
+                this.Length = key.Length;
+            }
+        }
+
+        private static readonly CompareKey[] precomputedTable;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool FastCompare(string name, int fieldLookup)
+        {
+            if (name.Length != precomputedTable[fieldLookup].Length)
+                return false;
+
+            int prefixGroup = precomputedTable[fieldLookup].PrefixGroupIndex;
+            if (name[prefixGroup] != precomputedTable[fieldLookup].PrefixValue)
+                return false;
+
+            return string.Compare(name, precomputedTable[fieldLookup].Key, StringComparison.Ordinal) == 0;
+        }
+
         private bool TryGetByName(string name, out object result)
         {
             // Using ordinal ignore case versions to avoid the cast of calling String.Equals with non interned values.
-            if (string.Compare(name, Constants.Documents.Indexing.Fields.DocumentIdFieldName, StringComparison.Ordinal) == 0 || 
-                string.Compare(name, "Id", StringComparison.Ordinal) == 0 )
+            if (FastCompare(name, DocumentIdFieldNameIndex) ||
+                FastCompare(name, MetadataIdPropertyIndex))
             {
                 if (BlittableJson.TryGetMember(name, out result))
                     return true;
@@ -70,28 +126,22 @@ namespace Raven.Server.Documents.Indexes.Static
                 return true;
             }
 
-            var getResult = BlittableJson.TryGetMember(name, out result);
+            bool getResult = BlittableJson.TryGetMember(name, out result);
 
             if (getResult == false && _doc != null)
             {
-                switch (name)
-                {
-                    case Constants.Documents.Metadata.Id:
-                        result = _doc.Key;
-                        getResult = true;
-                        break;
-                    case Constants.Documents.Metadata.Etag:
-                        result = _doc.Etag;
-                        getResult = true;
-                        break;
-                    case Constants.Documents.Metadata.LastModified:
-                        result = _doc.LastModified;
-                        getResult = true;
-                        break;
-                }
+                getResult = true;
+                if (FastCompare(name, MetadataIdIndex))
+                    result = _doc.Key;
+                else if (FastCompare(name, MetadataEtagIndex))
+                    result = _doc.Etag;
+                else if (FastCompare(name, MetadataLastModifiedIndex))
+                    result = _doc.LastModified;
+                else
+                    getResult = false;            
             }
 
-            if (result == null && string.Compare(name, "HasValue", StringComparison.Ordinal) == 0 )
+            if (result == null && FastCompare(name, MetadataHasValueIndex))
             {
                 result = getResult;
                 return true;
@@ -111,7 +161,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             result = TypeConverter.ToDynamicType(result);
 
-            if (string.Compare(name,Constants.Documents.Metadata.Key, StringComparison.Ordinal) == 0)
+            if (FastCompare(name, MetadataKeyIndex))
             {
                 ((DynamicBlittableJson) result)._doc = _doc;
             }
