@@ -32,6 +32,9 @@ namespace Raven.Server.Documents.Indexes
 
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
+            if (sizeof(int) == IntPtr.Size || DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager)
+                return null;
+
             _filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.BloomFilter.Capacity, indexContext);
 
             return null;
@@ -45,11 +48,18 @@ namespace Raven.Server.Documents.Indexes
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
-
             bool mustDelete;
-            using (_stats.BloomStats.Start())
+
+            if (sizeof(int) == IntPtr.Size || DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager)
             {
-                mustDelete = _filter.Add(key) == false;
+                mustDelete = true;
+            }
+            else
+            {
+                using (_stats.BloomStats.Start())
+                {
+                    mustDelete = _filter.Add(key) == false;
+                }
             }
 
             if (mustDelete)
