@@ -64,16 +64,20 @@ namespace Raven.Client.Connection
             }
         }
 
+        private static object locker = new object();
         public static void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
         {
             try
             {
-                using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
+                lock (locker)
                 {
-                    var path = "RavenDB Replication Information For - " + serverHash;
-                    using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
+                    using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
                     {
-                        document.ToJson().WriteTo(stream);
+                        var path = "RavenDB Replication Information For - " + serverHash;
+                        using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
+                        {
+                            document.ToJson().WriteTo(stream);
+                        }
                     }
                 }
             }

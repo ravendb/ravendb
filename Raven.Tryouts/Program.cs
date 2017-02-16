@@ -11,9 +11,23 @@ using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Changes;
 using Raven.Client.Document;
+using Raven.Json.Linq;
+using Raven.Tests.Bugs;
+using Raven.Tests.Core.Replication;
+using Raven.Tests.Issues;
+using Xunit;
 
 namespace Tryouts
 {
+
+    public class ReplicationTest : RavenReplicationCoreTest
+    {
+        
+        public void can_reset_index_with_replication()
+        {
+            
+        }
+    }
     public class Program
     {
         public class User
@@ -25,99 +39,124 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            Console.ReadLine();
-            using (var store = new DocumentStore
+            int choice = 0;
+            TestASync();
+            //if (args.Length == 1)
+            //{
+            //    int.TryParse(args[0], out choice);
+            //}
+            //switch (choice)
+            //{
+            //    case 0:
+            //        TestSync();
+            //        break;
+            //    case 1:
+            //        TestASync();
+            //        break;
+            //    case 2:
+            //        TestASyncSafer();
+            //        break;
+            //    default:
+            //        TestSync();
+            //        break;
+            //}
+        }
+
+        private static void TestASyncSafer()
+        {
+            using (var masterStore = new DocumentStore()
             {
-                Url = "http://scratch1:8080",
-                DefaultDatabase = "FooBar123"
-            })
+                ConnectionStringName = "RavenDB"
+            }.Initialize())
             {
-                store.FailoverServers = new FailoverServers
+                var sp = Stopwatch.StartNew();
+
+
+                while (sp.ElapsedMilliseconds < 10 * 60 * 1000)
                 {
-                    ForDatabases = new Dictionary<string, ReplicationDestination[]>
+                    Console.WriteLine(sp.Elapsed);
+
+                    try
                     {
+                        using (var session = masterStore.OpenAsyncSession())
                         {
-                            "FooBar123",
-                            new[]
-                            {
-                                new ReplicationDestination
-                                {
-                                    Url = "http://scratch2:8080"
-                                }
-                            }
+                            var loadAsyncTask = session.LoadAsync<RavenJObject>("products/1");
+                            Task.WaitAll(loadAsyncTask);
+                            var res = loadAsyncTask.Result;
                         }
                     }
-                };
-
-                store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries;
-                store.Initialize();
-
-                //for (int i = 0; i < 1000; i++)
-                //{
-                //    using (var session = store.OpenSession())
-                //    {
-                //        session.Store(new User
-                //        {
-                //            FirstName = "first-" + i,
-                //            LastName = "last"
-                //        });
-                //        session.SaveChanges();
-                //        Console.WriteLine(i);
-                //    }
-                //}
-
-                for (int i = 0; i < 1000; i++)
-                {
-                    using (var session = store.OpenSession())
+                    catch (Exception ex)
                     {
-                        var doc = session.Query<User>().FirstOrDefault(x => x.FirstName == "first-" + i);
-                        if (doc == null)
-                            throw new ApplicationException("Missed doc with first name 'first-" + i + "'");
-                        Console.WriteLine(i);
+                        Debugger.Launch();
                     }
+
+                    Thread.Sleep(1000);
                 }
             }
         }
 
-        private static async Task DoTestAsync(DocumentStore store, int index)
+        private static void TestASync()
         {
-            using (var session = store.OpenAsyncSession())
+            using (var masterStore = new DocumentStore()
             {
-                await session.StoreAsync(new User
+                //ConnectionStringName = "RavenDB"
+                Url="http://localhost:8080",
+                DefaultDatabase = "Rep1"
+            }.Initialize())
+            {
+                var sp = Stopwatch.StartNew();
+
+
+                while (true)
                 {
-                    FirstName = "name-" + index,
-                    LastName = "last"
-                });
-                await session.SaveChangesAsync();
-            }
-        }
+                    Console.Write(sp.Elapsed);
 
-
-        private static void DoTest(DocumentStore store)
-        {
-            using (var session = store.OpenSession())
-            {
-                session.Store(new User
-                {
-                    FirstName = "name",
-                    LastName = "last"
-                });
-                session.SaveChanges();
-            }
-        }
-
-
-        static int id = 1;
-        public static void BulkInsert(DocumentStore store, int numOfItems)
-        {
-            using (var bulkInsert = store.BulkInsert())
-            {
-                for (int i = 0; i < numOfItems; i++)
-                    bulkInsert.Store(new User
+                    try
                     {
-                        FirstName = String.Format("First Name - {0}", i),
-                        LastName = String.Format("Last Name - {0}", i)
-                    }, String.Format("users/{0}", id++));
+                        using (var session = masterStore.OpenAsyncSession())
+                        {
+                            var res = session.LoadAsync<RavenJObject>("docs/1").Result;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Write(" Error");
+                    }
+                    Console.WriteLine();
+
+                    Thread.Sleep(1000);
+                }
+            }
+        }
+
+        private static void TestSync()
+        {
+            using (var masterStore = new DocumentStore()
+            {
+                ConnectionStringName = "RavenDB"
+            }.Initialize())
+            {
+                var sp = Stopwatch.StartNew();
+
+
+                while (sp.ElapsedMilliseconds < 10*60*1000)
+                {
+                    Console.WriteLine(sp.Elapsed);
+
+                    try
+                    {
+                        using (var session = masterStore.OpenSession())
+                        {
+                            var res = session.Load<dynamic>("docs/1");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debugger.Launch();
+                    }
+
+                    Thread.Sleep(1000);
+                }
             }
         }
     }

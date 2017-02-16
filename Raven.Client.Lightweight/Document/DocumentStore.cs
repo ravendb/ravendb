@@ -498,7 +498,7 @@ namespace Raven.Client.Document
         public IDocumentStoreReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
         {
             var key = Url;
-            dbName = dbName ?? DefaultDatabase;
+            dbName = dbName ?? Constants.SystemDatabase;
             if (string.IsNullOrEmpty(dbName) == false)
             {
                 key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
