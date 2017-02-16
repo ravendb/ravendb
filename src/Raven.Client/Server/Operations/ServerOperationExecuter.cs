@@ -16,7 +16,7 @@ namespace Raven.Client.Server.Operations
         public ServerOperationExecuter(DocumentStoreBase store)
         {
             _store = store;
-            _requestExecuter = RequestExecuter.ShortTermSingleUse(store.Url, null,store.ApiKey);
+            _requestExecuter = store.GetRequestExecuter();
         }
 
         public void Send(IServerOperation operation)
