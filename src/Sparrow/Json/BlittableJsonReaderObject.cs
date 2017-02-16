@@ -24,50 +24,8 @@ namespace Sparrow.Json
 
         public DynamicJsonValue Modifications;
 
-        private struct StringSegmentEqualityStructComparer : IEqualityComparer<StringSegment>
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool Equals(StringSegment x, StringSegment y)
-            {
-                if (x.Length != y.Length)
-                    return false;
-
-                fixed (char* pX = x.String)
-                fixed (char* pY = y.String)
-                {
-                    return Memory.Compare((byte*)pX + x.Start * sizeof(char), (byte*)pY + y.Start * sizeof(char), x.Length * sizeof(char)) == 0;
-                }
-
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int GetHashCode(StringSegment str)
-            {
-                fixed (char* p = str.String)
-                {
-                    return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
-                }
-            }
-        }
-
-        public struct IntEqualityStructComparer : IEqualityComparer<int>
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool Equals(int x, int y)
-            {
-                return x == y;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int GetHashCode(int obj)
-            {
-                return obj;
-            }
-        }
-
-
         private FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> _objectsPathCache;
-        private FastDictionary<int, object, IntEqualityStructComparer> _objectsPathCacheByIndex;
+        private FastDictionary<int, object, NumericEqualityStructComparer> _objectsPathCacheByIndex;
         public string _allocation;
         public bool NoCache { get; set; }
 
@@ -162,21 +120,14 @@ namespace Sparrow.Json
             NoCache = parent.NoCache;
 
             var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
-            switch (propNamesOffsetFlag)
-            {
-                case BlittableJsonToken.OffsetSizeByte:
-                    _propNamesDataOffsetSize = sizeof(byte);
-                    break;
-                case BlittableJsonToken.OffsetSizeShort:
-                    _propNamesDataOffsetSize = sizeof(short);
-                    break;
-                case BlittableJsonToken.OffsetSizeInt:
-                    _propNamesDataOffsetSize = sizeof(int);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(
-                        $"Property names offset flag should be either byte, short of int, instead of {propNamesOffsetFlag}");
-            }
+
+            if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeInt)
+                _propNamesDataOffsetSize = sizeof(int);
+            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeByte)
+                _propNamesDataOffsetSize = sizeof(byte);
+            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeShort)
+                _propNamesDataOffsetSize = sizeof(short);
+            else ThrowOutOfRangeException(propNamesOffsetFlag);
 
             _objStart = _mem + pos;
             byte propCountOffset;
@@ -186,6 +137,11 @@ namespace Sparrow.Json
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(type);
             _currentPropertyIdSize = ProcessTokenPropertyFlags(type);
+        }
+
+        private static void ThrowOutOfRangeException(BlittableJsonToken token)
+        {
+            throw new ArgumentOutOfRangeException($"Property names offset flag should be either byte, short of int, instead of {token}");
         }
 
         private static void ThrowObjectDisposed()
@@ -470,7 +426,7 @@ namespace Sparrow.Json
             if (_objectsPathCache == null)
             {
                 _objectsPathCache = new FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer>(default(StringSegmentEqualityStructComparer));
-                _objectsPathCacheByIndex = new FastDictionary<int, object, IntEqualityStructComparer>(default(IntEqualityStructComparer));
+                _objectsPathCacheByIndex = new FastDictionary<int, object, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
             }
             _objectsPathCache[name] = result;
             _objectsPathCacheByIndex[index] = result;

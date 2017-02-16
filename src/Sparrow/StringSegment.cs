@@ -36,6 +36,32 @@ namespace Sparrow
         }
     }
 
+    public unsafe struct StringSegmentEqualityStructComparer : IEqualityComparer<StringSegment>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(StringSegment x, StringSegment y)
+        {
+            if (x.Length != y.Length)
+                return false;
+
+            fixed (char* pX = x.String)
+            fixed (char* pY = y.String)
+            {
+                return Memory.Compare((byte*)pX + x.Start * sizeof(char), (byte*)pY + y.Start * sizeof(char), x.Length * sizeof(char)) == 0;
+            }
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(StringSegment str)
+        {
+            fixed (char* p = str.String)
+            {
+                return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
+            }
+        }
+    }
+
     public class StringSegmentEqualityComparer : IEqualityComparer<StringSegment>
     {
         public static StringSegmentEqualityComparer Instance = new StringSegmentEqualityComparer();

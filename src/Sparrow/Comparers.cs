@@ -32,11 +32,52 @@ namespace Sparrow
             return obj;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(ulong x, ulong y)
         {
             return x == y;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(ulong obj)
+        {
+            return unchecked((int)obj ^ (int)(obj >> 32));
+        }
+    }
+
+    public struct NumericEqualityStructComparer : IEqualityComparer<long>, IEqualityComparer<int>, IEqualityComparer<ulong>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(long x, long y)
+        {
+            return x == y;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(long obj)
+        {
+            return unchecked((int)obj ^ (int)(obj >> 32));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(int x, int y)
+        {
+            return x == y;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(int obj)
+        {
+            return obj;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(ulong x, ulong y)
+        {
+            return x == y;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(ulong obj)
         {
             return unchecked((int)obj ^ (int)(obj >> 32));
