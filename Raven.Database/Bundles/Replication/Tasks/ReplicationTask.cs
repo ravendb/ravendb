@@ -313,10 +313,7 @@ namespace Raven.Bundles.Replication.Tasks
             if (_hasReplicationRanAtLeastOnce == false)
                 return true;
 
-            if (lastReplicatedAttachmentOrTombstoneEtag.Count == 0)
-                return false;
-
-            var lastReplicatedAttachmentEtag = lastReplicatedAttachmentOrTombstoneEtag.Min(x => x.Value);
+            var lastReplicatedAttachmentEtag = lastReplicatedAttachmentOrTombstoneEtag.Min(x => x.Value) ?? Etag.Empty;
 
             var lastTombstoneEtag = Etag.Empty;
             docDb.TransactionalStorage.Batch(actions =>
@@ -347,10 +344,7 @@ namespace Raven.Bundles.Replication.Tasks
             if (_hasReplicationRanAtLeastOnce == false)
                 return true;
 
-            if (lastReplicatedDocumentOrTombstoneEtag.Count == 0)
-                return false;
-
-            var lastReplicatedDocumentEtag = lastReplicatedDocumentOrTombstoneEtag.Min(x => x.Value);
+            var lastReplicatedDocumentEtag = lastReplicatedDocumentOrTombstoneEtag.Min(x => x.Value) ?? Etag.Empty;
 
             var lastTombstoneEtag = Etag.Empty;
             docDb.TransactionalStorage.Batch(actions =>
