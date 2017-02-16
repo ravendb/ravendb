@@ -230,7 +230,7 @@ namespace Raven.Server
                     }
                 }
 
-                Console.Write($"| {allDocs,-14:#,#.#;;0}      ");
+                Console.Write($"| {allDocs,14:#,#.#;;0}      ");
 
                 for (int j = 0; j < 5 && Console.KeyAvailable == false; j++)
                 {
