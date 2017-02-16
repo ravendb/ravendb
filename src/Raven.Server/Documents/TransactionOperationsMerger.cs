@@ -10,6 +10,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Voron.Global;
+using Voron.Impl;
 
 namespace Raven.Server.Documents
 {
@@ -412,8 +413,13 @@ namespace Raven.Server.Documents
 
                 if (IntPtr.Size == sizeof(int)) // 32bits, will be optimized away by JIT on 64
                 {
+                    // we need to be sure that we don't use up too much virtual space
                     var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
-                    if (llt.NumberOfModifiedPages * Constants.Storage.PageSize > 4 * Constants.Size.Megabyte)
+                    var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
+                    if (
+                        modifiedSize > 4 * Constants.Size.Megabyte || 
+                        llt.GetTotal32BitsMappedSize() > 32 * Constants.Size.Megabyte
+                       )
                     {
                         break;
                     }

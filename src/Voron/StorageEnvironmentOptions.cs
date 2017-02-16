@@ -136,7 +136,7 @@ namespace Voron
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
-            MaxScratchBufferSize = 256 * Constants.Size.Megabyte;
+            MaxScratchBufferSize = ((sizeof(int) == IntPtr.Size ? 32 : 256) * Constants.Size.Megabyte);
 
             MaxNumberOfPagesInJournalBeforeFlush =
                 ((sizeof(int) == IntPtr.Size ? 4 : 32)*Constants.Size.Megabyte)/Constants.Storage.PageSize;
@@ -462,6 +462,34 @@ namespace Voron
                     File.Delete(file);
             }
 
+            /// <summary>
+            /// This is used to generate a pager that is long lived, in 64 bits, it is the same
+            /// as CreateScratchPager, but in 32 bits, it reserve all the required space ahead
+            /// of time, and doesn't release it per transaction. This is used for the compression
+            /// pager, which requires a large amount of continious space and can grow quickly under
+            /// certain conditions, leading to fragmentation and eventually inability to process
+            /// transactions
+            /// </summary>
+            public override AbstractPager CreateLongLivedScratchPager(string name, long initialSize)
+            {
+                var scratchFile = Path.Combine(TempPath, name);
+                if (File.Exists(scratchFile))
+                    File.Delete(scratchFile);
+
+                if (RunningOnPosix)
+                {
+                    return new PosixMemoryMapPager(this, scratchFile, initialSize)
+                    {
+                        DeleteOnClose = true
+                    };
+                }
+
+                var attributes = Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary |
+                                 Win32NativeFileAttributes.RandomAccess;
+
+                return new WindowsMemoryMapPager(this, scratchFile, initialSize, attributes);
+            }
+
             public override AbstractPager CreateScratchPager(string name, long initialSize)
             {
                 var scratchFile = Path.Combine(TempPath, name);
@@ -690,6 +718,11 @@ namespace Voron
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
 
+            public override AbstractPager CreateLongLivedScratchPager(string name, long initialSize)
+            {
+                return CreateScratchPager(name, initialSize);
+            }
+
             public override AbstractPager CreateScratchPager(string name, long intialSize)
             {
                 var guid = Guid.NewGuid();
@@ -752,6 +785,8 @@ namespace Voron
         public abstract unsafe void WriteHeader(string filename, FileHeader* header);
 
         public abstract AbstractPager CreateScratchPager(string name, long initialSize);
+
+        public abstract AbstractPager CreateLongLivedScratchPager(string name, long initialSize);
 
         public abstract AbstractPager OpenJournalPager(long journalNumber);
 

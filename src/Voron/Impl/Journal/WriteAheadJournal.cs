@@ -1103,16 +1103,10 @@ namespace Voron.Impl.Journal
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
             var diffOverhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
             var diffOverheadInPages = checked((int)(diffOverhead / Constants.Storage.PageSize + (diffOverhead % Constants.Storage.PageSize == 0 ? 0 : 1)));
-            long maxSizeRequiringCompression = (long)pageCountIncludingAllOverflowPages * (long)Constants.Storage.PageSize + diffOverhead;
-            var outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
-
-            int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / Constants.Storage.PageSize +
-                                      ((outputBufferSize + sizeof(TransactionHeader)) % Constants.Storage.PageSize == 0 ? 0 : 1)));
-
+           
             // The pages required includes the intermediate pages and the required output pages. 
             const int transactionHeaderPageOverhead = 1;
-            var pagesRequired = (transactionHeaderPageOverhead + pageCountIncludingAllOverflowPages + diffOverheadInPages + outputBufferInPages);
-            _maxNumberOfPagesRequiredForCompressionBuffer = Math.Max(pagesRequired, _maxNumberOfPagesRequiredForCompressionBuffer);
+            var pagesRequired = (transactionHeaderPageOverhead + pageCountIncludingAllOverflowPages + diffOverheadInPages);
             var pagerState = _compressionPager.EnsureContinuous(0, pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
@@ -1159,9 +1153,22 @@ namespace Voron.Impl.Journal
             }
             var totalSizeWritten = (write - outputBuffer) + sizeOfPagesHeader;
 
+            var outputBufferSize = LZ4.MaximumOutputLength(totalSizeWritten);
 
-            var fullTxBuffer = outputBuffer + (pageCountIncludingAllOverflowPages * (long)Constants.Storage.PageSize) +
-                               diffOverheadInPages * (long)Constants.Storage.PageSize;
+            int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / Constants.Storage.PageSize +
+                                      ((outputBufferSize + sizeof(TransactionHeader)) % Constants.Storage.PageSize == 0 ? 0 : 1)));
+
+
+            _maxNumberOfPagesRequiredForCompressionBuffer = Math.Max(pagesRequired + outputBufferInPages, _maxNumberOfPagesRequiredForCompressionBuffer);
+            var pagesWritten = (totalSizeWritten / Constants.Storage.PageSize) +
+                               (totalSizeWritten % Constants.Storage.PageSize == 0 ? 0 : 1);
+
+            pagerState = _compressionPager.EnsureContinuous(pagesWritten, outputBufferInPages);
+            tx.EnsurePagerStateReference(pagerState);
+
+            _compressionPager.EnsureMapped(tx, pagesWritten, outputBufferInPages);
+
+            var fullTxBuffer = _compressionPager.AcquirePagePointer(tx, pagesWritten);
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
@@ -1212,7 +1219,11 @@ namespace Voron.Impl.Journal
 
         private AbstractPager CreateCompressionPager(long initialSize)
         {
-            return _env.Options.CreateScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", initialSize);
+            // we use a long lived pager here so in 32 bits mode we'll be able to avoid
+            // mapping the compression pager back & forth on each transaction, leading to 
+            // potential issues with memory fragmentation and not being able to map it in
+            // continious space.
+            return _env.Options.CreateLongLivedScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", initialSize);
         }
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
