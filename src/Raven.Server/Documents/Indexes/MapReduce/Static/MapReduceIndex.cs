@@ -261,9 +261,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 _createBlittableResultStats = _stats.For(IndexingOperation.Reduce.CreateBlittableJson, start: false);
             }
 
-            public IEnumerator<MapResult> GetEnumerator()
+            IEnumerator<MapResult> IEnumerable<MapResult>.GetEnumerator()
             {
-                return new Enumerator(_items.GetEnumerator(), this, _createBlittableResultStats);
+               return GetEnumerator();
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -271,8 +271,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 return GetEnumerator();
             }
 
+            public Enumerator GetEnumerator()
+            {
+                return new Enumerator(_items.GetEnumerator(), this, _createBlittableResultStats);
+            }
 
-            private class Enumerator : IEnumerator<MapResult>
+            public class Enumerator : IEnumerator<MapResult>
             {
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;

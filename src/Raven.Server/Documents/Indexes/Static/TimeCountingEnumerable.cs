@@ -14,12 +14,17 @@ namespace Raven.Server.Documents.Indexes.Static
             _stats = stats;
         }
 
-        public IEnumerator GetEnumerator()
+        IEnumerator IEnumerable.GetEnumerator()
         {
             return new Enumerator(_enumerable.GetEnumerator(), _stats);
         }
 
-        private class Enumerator : IEnumerator
+        public Enumerator GetEnumerator()
+        {
+            return new Enumerator(_enumerable.GetEnumerator(), _stats);
+        }
+
+        public struct Enumerator : IEnumerator
         {
             private readonly IEnumerator _enumerator;
             private readonly IndexingStatsScope _stats;
