@@ -931,7 +931,16 @@ namespace Raven.Server.Documents.Indexes
             // TODO we should create notification here?
 
             _errorStateReason = $"State was changed due to data corruption with message '{e.Message}'";
-            SetState(IndexState.Error);
+            try
+            {
+                SetState(IndexState.Error);
+            }
+            catch (Exception exception)
+            {
+                if(_logger.IsInfoEnabled)
+                    _logger.Info($"Unable to set the index {Name} to error state", exception);
+                throw;
+            }
         }
 
         private void HandleIndexFailureInformation(IndexFailureInformation failureInformation)
@@ -1117,31 +1126,43 @@ namespace Raven.Server.Documents.Indexes
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Changing state for '{Name} ({IndexId})' from '{State}' to '{state}'.");
 
-                _indexStorage.WriteState(state);
 
                 var oldState = State;
                 State = state;
-
-                var notificationType = IndexChangeTypes.None;
-
-                if (state == IndexState.Disabled)
-                    notificationType = IndexChangeTypes.IndexDemotedToDisabled;
-                else if (state == IndexState.Error)
-                    notificationType = IndexChangeTypes.IndexMarkedAsErrored;
-                else if (state == IndexState.Idle)
-                    notificationType = IndexChangeTypes.IndexDemotedToIdle;
-                else if (state == IndexState.Normal && oldState == IndexState.Idle)
-                    notificationType = IndexChangeTypes.IndexPromotedFromIdle;
-
-                if (notificationType != IndexChangeTypes.None)
+                try
                 {
-                    DocumentDatabase.Changes.RaiseNotifications(new IndexChange
+                    // this might fail if we can't write, so we first update the in memory state
+                    _indexStorage.WriteState(state);
+                }
+                finally
+                { 
+                    // even if there is a failure, update it
+                    var changeType = GetIndexChangeType(state, oldState);
+                    if (changeType != IndexChangeTypes.None)
                     {
-                        Name = Name,
-                        Type = notificationType
-                    });
+                        DocumentDatabase.Changes.RaiseNotifications(new IndexChange
+                        {
+                            Name = Name,
+                            Type = changeType
+                        });
+                    }
                 }
             }
+        }
+
+        private static IndexChangeTypes GetIndexChangeType(IndexState state, IndexState oldState)
+        {
+            var notificationType = IndexChangeTypes.None;
+
+            if (state == IndexState.Disabled)
+                notificationType = IndexChangeTypes.IndexDemotedToDisabled;
+            else if (state == IndexState.Error)
+                notificationType = IndexChangeTypes.IndexMarkedAsErrored;
+            else if (state == IndexState.Idle)
+                notificationType = IndexChangeTypes.IndexDemotedToIdle;
+            else if (state == IndexState.Normal && oldState == IndexState.Idle)
+                notificationType = IndexChangeTypes.IndexPromotedFromIdle;
+            return notificationType;
         }
 
         public virtual void SetLock(IndexLockMode mode)
