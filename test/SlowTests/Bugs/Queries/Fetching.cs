@@ -8,7 +8,7 @@ namespace SlowTests.Bugs.Queries
 {
     public class Fetching : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-6155")]
+        [Fact]
         public void CanFetchMultiplePropertiesFromCollection()
         {
             using (var store = GetDocumentStore())
@@ -19,7 +19,7 @@ namespace SlowTests.Bugs.Queries
                     {
                         s.Store(new
                         {
-                            Id = "item-"+i,
+                            Id = "item-" + i,
                             Tags = new[]
                             {
 
@@ -55,6 +55,6 @@ namespace SlowTests.Bugs.Queries
                 }
             }
         }
-        
+
     }
 }

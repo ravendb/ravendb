@@ -146,7 +146,11 @@ namespace Raven.Client
 
                     public const string IndexFieldScoreName = "__field_score";
 
-                    public const string RangeFieldSuffix = "_Range";
+                    internal const string RangeFieldSuffix = "_Range";
+
+                    public const string RangeFieldSuffixLong = "_L" + RangeFieldSuffix;
+
+                    public const string RangeFieldSuffixDouble = "_D" + RangeFieldSuffix;
 
                     public const string IgnoredDynamicField = "__ignored";
 

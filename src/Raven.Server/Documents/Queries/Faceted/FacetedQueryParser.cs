@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Lucene.Net.Util;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Parse;
@@ -37,10 +38,9 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                     if (facet.AggregationField.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) == false)
                     {
-                        if (FacetedQueryHelper.IsAggregationTypeNumerical(facet.AggregationType))
-                            facet.AggregationField = facet.AggregationField + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
+                        var rangeType = FacetedQueryHelper.GetRangeTypeForAggregationType(facet.AggregationType);
+                        facet.AggregationField = FieldUtil.ApplyRangeSuffixIfNecessary(facet.AggregationField, rangeType);
                     }
-
                 }
 
                 switch (facet.Mode)

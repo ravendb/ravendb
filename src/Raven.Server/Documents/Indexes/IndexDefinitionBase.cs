@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Indexes
         public bool ContainsField(string field)
         {
             if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
+                field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
 
             return MapFields.ContainsKey(field);
         }
@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Indexes
         public IndexField GetField(string field)
         {
             if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
+                field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
 
             return MapFields[field];
         }
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Indexes
         public bool TryGetField(string field, out IndexField value)
         {
             if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
+                field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
 
             return MapFields.TryGetValue(field, out value);
         }

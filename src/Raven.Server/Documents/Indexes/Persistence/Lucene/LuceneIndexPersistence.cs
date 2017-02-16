@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return _index.Type.IsMap();
 
             if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
+                field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
 
             field = IndexField.ReplaceInvalidCharactersInFieldName(field);
 

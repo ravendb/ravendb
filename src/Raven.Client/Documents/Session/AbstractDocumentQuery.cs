@@ -1137,13 +1137,13 @@ If you really want to do in memory filtering on the data returned from the query
 
                     if (whereParams.FieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
                     {
-                        var name = whereParams.FieldName.Substring(0, whereParams.FieldName.Length - 6);
+                        var name = whereParams.FieldName.Substring(0, whereParams.FieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
 
                         renamedField = DynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == name);
 
                         if (renamedField != null)
                         {
-                            return whereParams.FieldName = renamedField.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
+                            return whereParams.FieldName = FieldUtil.ApplyRangeSuffixIfNecessary(renamedField.Name, whereParams.FieldTypeForIdentifier);
                         }
                     }
                     else
@@ -1355,10 +1355,9 @@ If you really want to do in memory filtering on the data returned from the query
             if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 return fieldName;
 
-            var val = (start ?? end);
-            if (_conventions.UsesRangeType(val) && !fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
-            return fieldName;
+            var val = start ?? end;
+
+            return FieldUtil.ApplyRangeSuffixIfNecessary(fieldName, val);
         }
 
         /// <summary>
@@ -2163,9 +2162,8 @@ If you really want to do in memory filtering on the data returned from the query
         {
             var memberQueryPath = GetMemberQueryPath(expression);
             var memberExpression = _linqPathProvider.GetMemberExpression(expression);
-            if (DocumentConventions.UsesRangeType(memberExpression.Type))
-                return memberQueryPath + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
-            return memberQueryPath;
+
+            return FieldUtil.ApplyRangeSuffixIfNecessary(memberQueryPath, memberExpression.Type);
         }
 
         public string GetMemberQueryPath(Expression expression)

@@ -15,6 +15,7 @@ using Sparrow.Logging;
 using Voron.Impl;
 using System.Linq;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Sparrow.Json;
@@ -467,7 +468,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             foreach (var facet in facets)
             {
-                if (FacetedQueryHelper.IsAggregationNumerical(facet.Aggregation) && FacetedQueryHelper.IsAggregationTypeNumerical(facet.AggregationType) && FacetedQueryHelper.GetSortOptionsForFacet(facet.AggregationField, _fields) == SortOptions.None)
+                if (FacetedQueryHelper.IsAggregationNumerical(facet.Aggregation) && FacetedQueryHelper.GetRangeTypeForAggregationType(facet.AggregationType) != RangeType.None && FacetedQueryHelper.GetSortOptionsForFacet(facet.AggregationField, _fields) == SortOptions.None)
                     throw new InvalidOperationException(string.Format("Index '{0}' does not have sorting enabled for a numerical field '{1}'.", _indexName, facet.AggregationField));
             }
         }
