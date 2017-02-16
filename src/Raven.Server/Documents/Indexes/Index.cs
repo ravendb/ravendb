@@ -939,7 +939,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 if(_logger.IsInfoEnabled)
                     _logger.Info($"Unable to set the index {Name} to error state", exception);
-                throw;
+                State = IndexState.Error; // just in case it didn't took from the SetState call
             }
         }
 
@@ -1046,7 +1046,7 @@ namespace Raven.Server.Documents.Indexes
 
                         tx.Commit();
 
-                        stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOfPagesWrittenToDisk);
+                        stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
                     }
 
                     return mightBeMore;

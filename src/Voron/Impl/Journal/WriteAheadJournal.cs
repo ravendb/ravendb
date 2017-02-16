@@ -1051,12 +1051,12 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public int WriteToJournal(LowLevelTransaction tx, int pageCount)
+        public CompressedPagesResult WriteToJournal(LowLevelTransaction tx)
         {
             lock (_writeLock)
             {
                 var sp = Stopwatch.StartNew();
-                var journalEntry = PrepareToWriteToJournal(tx, pageCount);
+                var journalEntry = PrepareToWriteToJournal(tx);
                 if (_logger.IsInfoEnabled)
                 {
                     _logger.Info($"Preparing to write tx {tx.Id} to jouranl with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {journalEntry.NumberOf4Kbs / 4:#,#} kb compressed.");
@@ -1076,7 +1076,7 @@ namespace Voron.Impl.Journal
                 }
 
                 sp.Restart();
-                CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer, pageCount);
+                CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Writing {journalEntry.NumberOf4Kbs / 4:#,#} kb to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
@@ -1090,14 +1090,19 @@ namespace Voron.Impl.Journal
 
                 ReduceSizeOfCompressionBufferIfNeeded();
 
-                return journalEntry.NumberOfUncompressedPages;
+                return journalEntry;
             }
         }
 
-        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx, int pageCountIncludingAllOverflowPages)
+        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx)
         {
             var txPages = tx.GetTransactionPages();
             var numberOfPages = txPages.Count;
+            var pagesCountIncludingAllOverflowPages = 0;
+            foreach (var page in txPages)
+            {
+                pagesCountIncludingAllOverflowPages += page.NumberOfPages;
+            }
 
             // We want to include the Transaction Header straight into the compression buffer.
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
@@ -1106,7 +1111,7 @@ namespace Voron.Impl.Journal
            
             // The pages required includes the intermediate pages and the required output pages. 
             const int transactionHeaderPageOverhead = 1;
-            var pagesRequired = (transactionHeaderPageOverhead + pageCountIncludingAllOverflowPages + diffOverheadInPages);
+            var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + diffOverheadInPages);
             var pagerState = _compressionPager.EnsureContinuous(0, pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
@@ -1116,7 +1121,7 @@ namespace Voron.Impl.Journal
             var pagesInfo = (TransactionHeaderPageInfo*)outputBuffer;
             var write = outputBuffer + sizeOfPagesHeader;
             var pageSequencialNumber = 0;
-
+            var pagesEncountered = 0;
             foreach (var txPage in txPages)
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointerWithOverflowHandling(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
@@ -1129,7 +1134,8 @@ namespace Voron.Impl.Journal
                 _diffPage.Output = write;
 
                 int diffPageSize = txPage.NumberOfPages * Constants.Storage.PageSize;
-
+                pagesEncountered += txPage.NumberOfPages;
+                Debug.Assert(pagesEncountered <= pagesCountIncludingAllOverflowPages);
                 if (txPage.PreviousVersion != null)
                 {
                     _diffPage.ComputeDiff(txPage.PreviousVersion.Value.Pointer, scratchPage, diffPageSize);
@@ -1142,7 +1148,7 @@ namespace Voron.Impl.Journal
                 write += _diffPage.OutputSize;
                 pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
                 pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
-
+                Debug.Assert(Math.Max(pagesInfo[pageSequencialNumber].Size, pagesInfo[pageSequencialNumber].DiffSize) <= diffPageSize);
 
                 // Protect pages in the scratch buffer after we are done with them
                 // This ensures no one writes to them after we have written them to the journal
@@ -1200,7 +1206,7 @@ namespace Voron.Impl.Journal
             {
                 Base = fullTxBuffer,
                 NumberOf4Kbs = compressed4Kbs,
-                NumberOfUncompressedPages = pageCountIncludingAllOverflowPages,
+                NumberOfUncompressedPages = pagesCountIncludingAllOverflowPages,
             };
             // Copy the transaction header to the output buffer. 
             Memory.Copy(fullTxBuffer, (byte*)txHeader, sizeof(TransactionHeader));
