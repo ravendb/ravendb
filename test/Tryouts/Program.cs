@@ -15,9 +15,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Voron.Backups.Incremental())
+                using (var a = new FastTests.Client.Indexing.DebugIndexing())
                 {
-                    a.IncorrectWriteOfOverflowPagesFromJournalsInBackupToDataFile_RavenDB_2891();
+                    a.QueriesRunning().Wait();
                 }
             }
         }
