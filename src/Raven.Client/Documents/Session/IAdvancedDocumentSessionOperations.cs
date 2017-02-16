@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Sparrow.Json;
@@ -117,6 +118,15 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="instance">The instance.</param>
         IDictionary<string, string> GetMetadataFor<T>(T instance);
+
+
+        /// <summary>
+        ///     Gets change vector for the specified entity.
+        ///     If the entity is transient, it will load the metadata from the store
+        ///     and associate the current state of the entity with the metadata from the server.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        ChangeVectorEntry[] GetChangeVectorFor<T>(T instance);
 
         /// <summary>
         ///     Determines whether the specified entity has changed.

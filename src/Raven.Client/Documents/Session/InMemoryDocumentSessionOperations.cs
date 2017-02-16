@@ -17,6 +17,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Session;
 using Raven.Client.Documents.Identity;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -184,6 +185,9 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public IDictionary<string, string> GetMetadataFor<T>(T instance)
         {
+            if(instance == null)
+                throw new ArgumentNullException(nameof(instance));
+
             var documentInfo = GetDocumentInfo(instance);
 
             if (documentInfo.MetadataInstance != null)
@@ -193,6 +197,19 @@ namespace Raven.Client.Documents.Session
             var metadata = new MetadataAsDictionary(metadataAsBlittable);
             documentInfo.MetadataInstance = metadata;
             return metadata;
+        }
+
+        public ChangeVectorEntry[] GetChangeVectorFor<T>(T instance)
+        {
+            if(instance == null)
+                throw new ArgumentNullException(nameof(instance));
+
+            var documentInfo = GetDocumentInfo(instance);
+            BlittableJsonReaderArray changeVectorJson;
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Replication.ChangeVector, out changeVectorJson))
+                return changeVectorJson.ToVector();
+
+            return new ChangeVectorEntry[0];
         }
 
         private DocumentInfo GetDocumentInfo<T>(T instance)
@@ -1263,6 +1280,7 @@ more responsive application.
         public object Entity { get; set; }
 
         public bool IsNewDocument { get; set; }
+
         public string Collection { get; set; }
 
         public static DocumentInfo GetNewDocumentInfo(BlittableJsonReaderObject document)

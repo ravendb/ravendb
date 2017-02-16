@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -1131,17 +1132,24 @@ namespace Raven.Server.Documents
             var conflicts = GetConflictsFor(context, loweredKey);
             if (conflicts.Count > 0)
             {
-                var changeVectors = new List<ChangeVectorEntry[]>();
+                var conflictRecords = new List<GetConflictsResult.Conflict>();
                 foreach (var conflict in conflicts)
-                    changeVectors.Add(conflict.ChangeVector);
+                {
+                    conflictRecords.Add(new GetConflictsResult.Conflict
+                    {
+                        Doc = conflict.Doc,
+                        Key = conflict.LoweredKey,
+                        ChangeVector = conflict.ChangeVector
+                    });
+                }
 
-                ThrowDocumentConflictException(loweredKey, changeVectors);
+                ThrowDocumentConflictException(loweredKey, conflictRecords);
             }
         }
 
-        private static void ThrowDocumentConflictException(Slice loweredKey, List<ChangeVectorEntry[]> changeVectors)
+        private static void ThrowDocumentConflictException(Slice loweredKey, List<GetConflictsResult.Conflict> conflicts)
         {
-            throw new DocumentConflictException(loweredKey.ToString(), changeVectors);
+            throw new DocumentConflictException(loweredKey.ToString(), conflicts);
         }
 
         public long GenerateNextEtag()
@@ -1158,6 +1166,52 @@ namespace Raven.Server.Documents
             Slice etagSlice;
             using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
                 etagTree.Add(LastEtagSlice, etagSlice);
+        }
+
+        public void AddTombstoneIfNoDocument(
+            DocumentsOperationContext context,
+            string key,
+            long lastModifiedTicks,
+            ChangeVectorEntry[] changeVector,
+            string collection,
+            long etag,
+            bool shouldThrowOnConflict = true)
+        {
+            if (context.Transaction == null)
+            {
+                ThrowRequiresTransaction();
+            }
+
+            var collectionName = GetCollection(collection, throwIfDoesNotExist: true);
+
+            byte* lowerKey;
+            int lowerSize;
+            byte* keyPtr;
+            int keySize;
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr,
+                out keySize);
+            Slice loweredKey;
+            using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
+            {
+                if (shouldThrowOnConflict && _conflictCount != 0)
+                    ThrowOnDocumentConflict(context, loweredKey);
+
+                var result = GetDocumentOrTombstone(context, loweredKey, throwOnConflict:false);
+                if (result.Item1 == null) //if there is no document, precaution
+                {
+                    CreateTombstone(context,
+                        lowerKey,
+                        lowerSize,
+                        keyPtr,
+                        keySize,
+                        etag,
+                        collectionName,
+                        changeVector,
+                        lastModifiedTicks,
+                        changeVector,
+                        DocumentFlags.None);
+                }
+            }
         }
 
         public void AddTombstoneOnReplicationIfRelevant(
@@ -1966,13 +2020,12 @@ namespace Raven.Server.Documents
                 DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
             }
 
-
             var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
             {
-                TableValueReader oldValue = default(TableValueReader);
+                var oldValue = default(TableValueReader);
                 if (knownNewKey == false)
                 {
                     table.ReadByKey(keySlice, out oldValue);

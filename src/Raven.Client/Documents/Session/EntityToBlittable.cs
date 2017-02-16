@@ -26,6 +26,11 @@ namespace Raven.Client.Documents.Session
 
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentInfo documentInfo)
         {
+            //maybe we don't need to do anything..
+            var blittable = entity as BlittableJsonReaderObject;
+            if(blittable != null)
+                return blittable;            
+
             using (var writer = new BlittableJsonWriter(_session.Context, documentInfo))
             {
                 var serializer = _session.Conventions.CreateSerializer();

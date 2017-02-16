@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -6,7 +7,11 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Extensions;
+using Raven.Server.Json;
+using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -46,6 +51,89 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/replication/conflicts", "PUT", "/databases/{databaseName:string}/replication/conflicts?docId={documentId:string}")]
+        public Task SolveReplicationConflictById()
+        {
+            var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
+            var result = new ResolveConflictResult();
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))            
+            using (var tx = context.OpenWriteTransaction())
+            {
+                if (Database.DocumentsStorage.ConflictsCount == 0)
+                {
+                    WriteNotConflictedResponse(result, context);
+                    return Task.CompletedTask;
+                }
+
+                ChangeVectorEntry[] changeVector;
+                using (var changeVectorObject = context.ReadForMemory(RequestBodyStream(),"SolveReplicationConflictById/read-change-vector"))
+                {
+                    BlittableJsonReaderArray changeVectorJson;
+                    if(!changeVectorObject.TryGet("ChangeVector",out changeVectorJson))
+                        throw new InvalidDataException("Invalid request, expected a json with 'ChangeVector' property and didn't find so.");
+                    changeVector = changeVectorJson.ToVector();
+                }
+
+                var conflicts = Database.DocumentsStorage.GetConflictsFor(context, docId);
+                if (conflicts.Count == 0)
+                {
+                    WriteNotConflictedResponse(result, context);
+                    return Task.CompletedTask;
+                }
+
+                var variantToResolveWith = conflicts.FirstOrDefault(x => x.ChangeVector.EqualTo(changeVector));
+                if (variantToResolveWith == null)
+                {
+                    //perhaps we should return http status 'not found' here? not sure
+                    result.Result = ResolveConflictResult.ResultType.ChangeVectorNotFound;
+                }
+                else
+                {
+                    if (variantToResolveWith.Doc != null)
+                    {
+                        //PUT also resolves & deletes conflicts
+                        var putResult = Database.DocumentsStorage.Put(context, docId, null, variantToResolveWith.Doc);
+                        result.ResolvedEtag = putResult.Etag;
+                    }
+                    else //resolve with tombstone
+                    {
+                        Database.DocumentsStorage.AddTombstoneIfNoDocument(
+                            context,
+                            docId,
+                            variantToResolveWith.LastModified.Ticks,
+                            variantToResolveWith.ChangeVector,
+                            variantToResolveWith.Collection,
+                            variantToResolveWith.Etag,
+                            shouldThrowOnConflict:false);
+
+                        Database.DocumentsStorage.DeleteConflictsFor(context,docId);
+                    }
+                    result.Result = ResolveConflictResult.ResultType.Resolved;
+                }
+
+                tx.Commit();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result.ToJson());
+                    writer.Flush();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private void WriteNotConflictedResponse(ResolveConflictResult result, DocumentsOperationContext context)
+        {
+            result.Result = ResolveConflictResult.ResultType.NotConflicted;
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, result.ToJson());
+                writer.Flush();
+            }
+        }
+
         //get conflicts for specified document
         [RavenAction("/databases/*/replication/conflicts", "GET", "/databases/{databaseName:string}/replication/conflicts?docId={documentId:string}")]
         public Task GetReplicationConflictsById()
@@ -62,15 +150,15 @@ namespace Raven.Server.Documents.Handlers
                 {
                     array.Add(new DynamicJsonValue
                     {
-                        ["Key"] = conflict.Key,
-                        ["ChangeVector"] = conflict.ChangeVector.ToJson(),
-                        ["Doc"] = conflict.Doc
+                        [nameof(GetConflictsResult.Conflict.Key)] = conflict.Key,
+                        [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
+                        [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc
                     });
                 }
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Results"] = array
+                    [nameof(GetConflictsResult.Results)] = array
                 });
 
                 return Task.CompletedTask;

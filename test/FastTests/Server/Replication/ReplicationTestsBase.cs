@@ -7,6 +7,7 @@ using System.Threading;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
@@ -188,7 +189,7 @@ namespace FastTests.Server.Replication
                         if (doc != null)
                             return true;
                     }
-                    catch (ConflictException)
+                    catch (DocumentConflictException)
                     {
                         // expected that we might get conflict, ignore and wait
                     }
