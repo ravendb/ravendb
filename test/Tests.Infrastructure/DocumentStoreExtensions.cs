@@ -10,6 +10,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -152,6 +153,21 @@ namespace FastTests
                 await RequestExecuter.ExecuteAsync(command, Context);
 
                 return command.Result;
+            }
+
+            public ResolveConflictResult ResolveConflictsFor(string id, ChangeVectorEntry[] changeVectorToSolveFor)
+            {
+                var resolveConflictsCommand = new ResolveConflictCommand(id,changeVectorToSolveFor, Context);
+                RequestExecuter.Execute(resolveConflictsCommand, Context);
+                return resolveConflictsCommand.Result;
+            }
+
+            public GetConflictsResult.Conflict[] GetConflictsFor(string id)
+            {
+                var getConflictsCommand = new GetConflictsCommand(id);
+                RequestExecuter.Execute(getConflictsCommand, Context);
+
+                return getConflictsCommand.Result.Results;
             }
 
             public DynamicBlittableJson Get(string id, bool metadataOnly = false)
