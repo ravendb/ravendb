@@ -4,6 +4,6 @@
     {
         public int NumberOfModifiedPages;
 
-        public int NumberOfPagesWrittenToDisk;
+        public int NumberOf4KbsWrittenToDisk;
     }
 }

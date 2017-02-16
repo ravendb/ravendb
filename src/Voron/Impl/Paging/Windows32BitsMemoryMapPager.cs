@@ -422,7 +422,7 @@ namespace Voron.Impl.Paging
                     if (!set.TryRemove(addr))
                         continue;
 
-                    Interlocked.Add(ref _totalMapped, addr.Size);
+                    Interlocked.Add(ref _totalMapped, -addr.Size);
                     UnmapViewOfFile((byte*)addr.Address);
                     NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
 
