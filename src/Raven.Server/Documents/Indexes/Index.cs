@@ -2080,7 +2080,7 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            if (sizeof(int) == IntPtr.Size)
+            if (sizeof(int) == IntPtr.Size || DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager)
             {
                 IPagerLevelTransactionState pagerLevelTransactionState = documentsOperationContext.Transaction?.InnerTransaction?.LowLevelTransaction;
                 var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();

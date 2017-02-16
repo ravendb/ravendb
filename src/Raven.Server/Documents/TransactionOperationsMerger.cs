@@ -465,7 +465,7 @@ namespace Raven.Server.Documents
 
         private  PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context)
         {
-            if (sizeof(int) == IntPtr.Size) // this optimization is disabled for 32 bits
+            if (sizeof(int) == IntPtr.Size || _parent.Configuration.Storage.ForceUsing32BitsPager) // this optimization is disabled for 32 bits
                 return PendingOperations.CompletedAll;
 
             if (context.Transaction.ModifiedSystemDocuments)

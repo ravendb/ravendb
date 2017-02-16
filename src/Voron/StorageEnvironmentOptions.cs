@@ -132,14 +132,14 @@ namespace Voron
 
             ShouldUseKeyPrefix = name => false;
 
-            MaxLogFileSize = ((sizeof(int) == IntPtr.Size ? 32 : 256)*Constants.Size.Megabyte);
+            MaxLogFileSize = ((sizeof(int) == IntPtr.Size || ForceUsing32BitsPager ? 32 : 256)*Constants.Size.Megabyte);
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
-            MaxScratchBufferSize = ((sizeof(int) == IntPtr.Size ? 32 : 256) * Constants.Size.Megabyte);
+            MaxScratchBufferSize = ((sizeof(int) == IntPtr.Size || ForceUsing32BitsPager ? 32 : 256) * Constants.Size.Megabyte);
 
             MaxNumberOfPagesInJournalBeforeFlush =
-                ((sizeof(int) == IntPtr.Size ? 4 : 32)*Constants.Size.Megabyte)/Constants.Storage.PageSize;
+                ((sizeof(int) == IntPtr.Size || ForceUsing32BitsPager ? 4 : 32)*Constants.Size.Megabyte)/Constants.Storage.PageSize;
 
             IdleFlushTimeout = 5000; // 5 seconds
 
