@@ -671,11 +671,17 @@ namespace Voron
                                 throw new VoronUnrecoverableErrorException("Error occurred during flushing journals to the data file",
                                     new Win32Exception(sehException.HResult));
                             }
+                            catch (Exception e)
+                            {
+                                //File.AppendAllText("D:\\Temp\\bug.txt", $"Failed to flush to disk {e.Message}, details: {e}");
+                            }
 
                             if (IsDebugRecording)
                                 _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, null);
                         }
                     }
+                    File.AppendAllText("D:\\Temp\\bug.txt", $"Cancellation was raised in flush loop");
+
                 }, TaskCreationOptions.LongRunning);
         }
 
