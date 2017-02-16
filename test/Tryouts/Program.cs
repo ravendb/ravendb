@@ -11,25 +11,15 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            Parallel.For(0, 1000, i =>
+            for (int i = 0; i < 10000; i++)
             {
-                Console.Write(".");
+                Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.Replication.ReplicationResolveToDatabase())
+                using (var a = new FastTests.Voron.Backups.Incremental())
                 {
-                    a.UnsetDatabaseResolver();
+                    a.IncorrectWriteOfOverflowPagesFromJournalsInBackupToDataFile_RavenDB_2891();
                 }
-            });
-
-            //for(int i = 0; i < 10000; i++)
-            //{
-            //    Console.WriteLine(i);
-
-            //    using (var a = new MaxSecondsForTaskToWaitForDatabaseToLoad())
-            //    {
-            //        a.Should_throw_when_there_is_timeout();
-            //    }
-            //}
+            }
         }
     }
 }

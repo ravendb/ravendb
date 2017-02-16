@@ -1192,7 +1192,7 @@ namespace Voron.Impl.Journal
             if (remainder != 0)
             {
                 // zero the remainder of the page
-                UnmanagedMemory.Set(compressionBuffer + totalLength, 0, 4 * Constants.Size.Kilobyte - remainder);
+                UnmanagedMemory.Set(compressionBuffer + compressedLen, 0, 4 * Constants.Size.Kilobyte - remainder);
             }
 
 
