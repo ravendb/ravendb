@@ -212,7 +212,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Name = "Address.ZipCode",
                     Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.NumericDefault
+                    SortOption = SortOptions.Numeric
                 },
             });
 
@@ -292,7 +292,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Name = "Age",
                     Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.NumericDefault
+                    SortOption = SortOptions.Numeric
                 },
             });
 

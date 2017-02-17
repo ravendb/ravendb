@@ -30,7 +30,7 @@ namespace SlowTests.Tests.Faceted
                     from item in items
                     select new { item.Active, item.Category, item.Age };
 
-                Sort(x => x.Age, SortOptions.NumericLong);
+                Sort(x => x.Age, SortOptions.Numeric);
             }
         }
 

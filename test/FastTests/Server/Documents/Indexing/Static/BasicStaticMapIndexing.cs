@@ -215,7 +215,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Suggestions = true,
                         Storage = FieldStorage.Yes,
                         Analyzer = "a1",
-                        Sort = SortOptions.NumericDouble,
+                        Sort = SortOptions.Numeric,
                         TermVector = FieldTermVector.WithPositionsAndOffsets
                     }
                 },
@@ -236,7 +236,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Suggestions = false,
                         Storage = FieldStorage.No,
                         Analyzer = "a2",
-                        Sort = SortOptions.NumericDefault,
+                        Sort = SortOptions.Numeric,
                         TermVector = FieldTermVector.WithPositions
                     }
                 }

@@ -220,7 +220,7 @@ namespace SlowTests.Tests.Faceted
                         "Price", new IndexFieldOptions
                         {
                             Storage = FieldStorage.Yes,
-                            Sort = SortOptions.NumericDouble
+                            Sort = SortOptions.Numeric
                         }
                     }
                 },

@@ -59,7 +59,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     MapReduceOperation = FieldMapReduceOperation.Count,
-                    SortOption = SortOptions.NumericDefault
+                    SortOption = SortOptions.Numeric
                 },
             },
             new[]

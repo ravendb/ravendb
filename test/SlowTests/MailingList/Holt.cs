@@ -107,7 +107,7 @@ namespace SlowTests.MailingList
                 Index(x => x.AccountName, FieldIndexing.Default);
                 Index(x => x.Year, FieldIndexing.Default);
 
-                Sort(x => x.Year, SortOptions.NumericDefault);
+                Sort(x => x.Year, SortOptions.Numeric);
             }
 
             public class Result

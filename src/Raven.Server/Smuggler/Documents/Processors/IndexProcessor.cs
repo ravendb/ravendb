@@ -178,11 +178,11 @@ namespace Raven.Server.Smuggler.Documents.Processors
                     case LegacyIndexDefinition.LegacySortOptions.Long:
                     case LegacyIndexDefinition.LegacySortOptions.Int:
                     case LegacyIndexDefinition.LegacySortOptions.Byte:
-                        sortOptions = SortOptions.NumericLong;
+                        sortOptions = SortOptions.Numeric;
                         break;
                     case LegacyIndexDefinition.LegacySortOptions.Float:
                     case LegacyIndexDefinition.LegacySortOptions.Double:
-                        sortOptions = SortOptions.NumericDouble;
+                        sortOptions = SortOptions.Numeric;
                         break;
                     case LegacyIndexDefinition.LegacySortOptions.Custom:
                         throw new NotImplementedException(kvp.Value.ToString());

@@ -343,7 +343,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                                              Maps = { "from doc in docs.SomeObjects\r\nselect new { IntField = (int)doc.IntField, StringField = doc.StringField }" },
                                              Fields = new Dictionary<string, IndexFieldOptions>
                                              {
-                                                 { "IntField", new IndexFieldOptions { Sort = SortOptions.NumericDefault } }
+                                                 { "IntField", new IndexFieldOptions { Sort = SortOptions.Numeric } }
                                              }
                                          }}));
 

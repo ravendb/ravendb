@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         yield return GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
                     }
 
-                    foreach (var numericField in GetOrCreateNumericField(field, GetNullValueForSorting(sort), storage))
+                    foreach (var numericField in GetOrCreateNumericField(field, double.MinValue, storage))
                         yield return numericField;
                 }
 
@@ -395,17 +395,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
 
             return ValueType.ConvertToJson;
-        }
-
-        private static object GetNullValueForSorting(SortOptions? sortOptions)
-        {
-            switch (sortOptions)
-            {
-                case SortOptions.NumericDouble:
-                    return double.MinValue;
-                default:
-                    return long.MinValue;
-            }
         }
 
         protected Field GetOrCreateKeyField(LazyStringValue key)

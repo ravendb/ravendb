@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     sortInfo.Add(new DynamicSortInfo
                     {
                         Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length),
-                        FieldType = SortOptions.NumericDefault
+                        FieldType = SortOptions.Numeric
                     });
                 }
             }
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         sortInfo.Add(new DynamicSortInfo
                         {
                             Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length),
-                            FieldType = SortOptions.NumericDefault
+                            FieldType = SortOptions.Numeric
                         });
                     }
                     else

@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
 
                       };
 
-                Sort(x => x.Price, SortOptions.NumericDouble);
+                Sort(x => x.Price, SortOptions.Numeric);
             }
         }
 

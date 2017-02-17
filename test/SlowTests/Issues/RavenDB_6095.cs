@@ -76,7 +76,7 @@ select new {
                     Fields =
                     {
                         {"__all_fields", new IndexFieldOptions { Storage =  FieldStorage.Yes} },
-                        {"StartTick", new IndexFieldOptions {Sort = SortOptions.NumericLong} }
+                        {"StartTick", new IndexFieldOptions {Sort = SortOptions.Numeric} }
                     }
                 };
             }

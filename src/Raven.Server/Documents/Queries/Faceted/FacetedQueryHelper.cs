@@ -62,14 +62,14 @@ namespace Raven.Server.Documents.Queries.Faceted
                 case SortOptions.StringVal:
                     //case SortOptions.Custom: // TODO [arek]
                     return text;
-                case SortOptions.NumericLong:
-                    if (IsStringNumber(text))
-                        return text;
-                    return NumericUtils.PrefixCodedToLong(text).ToInvariantString();
-                case SortOptions.NumericDouble:
-                    if (IsStringNumber(text))
-                        return text;
-                    return NumericUtils.PrefixCodedToDouble(text).ToInvariantString();
+                //case SortOptions.NumericLong:
+                //    if (IsStringNumber(text))
+                //        return text;
+                //    return NumericUtils.PrefixCodedToLong(text).ToInvariantString();
+                //case SortOptions.NumericDouble:
+                //    if (IsStringNumber(text))
+                //        return text;
+                //    return NumericUtils.PrefixCodedToDouble(text).ToInvariantString();
                 default:
                     throw new ArgumentException($"Can't get range name from '{sortOptions}' sort option for '{field}' field.");
             }

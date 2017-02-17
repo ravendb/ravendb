@@ -307,62 +307,62 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 //case SortOptions.Custom: // TODO arek
                 case SortOptions.None:
                     throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", FacetedQueryHelper.TryTrimRangeSuffix(facet.AggregationField)));
-                case SortOptions.NumericLong:
-                    var longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, facet.AggregationField);
-                    for (int index = 0; index < docsInQuery.Count; index++)
-                    {
-                        var doc = docsInQuery.Array[index];
+                //case SortOptions.NumericLong:
+                //    var longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, facet.AggregationField);
+                //    for (int index = 0; index < docsInQuery.Count; index++)
+                //    {
+                //        var doc = docsInQuery.Array[index];
 
-                        var currentVal = longs[doc - docBase];
-                        if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
-                        {
-                            value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
-                        }
+                //        var currentVal = longs[doc - docBase];
+                //        if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
+                //        {
+                //            value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
+                //        }
 
-                        if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
-                        {
-                            value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
-                        }
+                //        if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
+                //        {
+                //            value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
+                //        }
 
-                        if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
-                        {
-                            value.Sum = currentVal + (value.Sum ?? 0d);
-                        }
+                //        if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
+                //        {
+                //            value.Sum = currentVal + (value.Sum ?? 0d);
+                //        }
 
-                        if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
-                        {
-                            value.Average = currentVal + (value.Average ?? 0d);
-                        }
-                    }
-                    break;
-                case SortOptions.NumericDouble:
-                    var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, facet.AggregationField);
-                    for (int index = 0; index < docsInQuery.Count; index++)
-                    {
-                        var doc = docsInQuery.Array[index];
+                //        if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
+                //        {
+                //            value.Average = currentVal + (value.Average ?? 0d);
+                //        }
+                //    }
+                //    break;
+                //case SortOptions.NumericDouble:
+                //    var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, facet.AggregationField);
+                //    for (int index = 0; index < docsInQuery.Count; index++)
+                //    {
+                //        var doc = docsInQuery.Array[index];
 
-                        var currentVal = doubles[doc - docBase];
-                        if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
-                        {
-                            value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
-                        }
+                //        var currentVal = doubles[doc - docBase];
+                //        if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
+                //        {
+                //            value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
+                //        }
 
-                        if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
-                        {
-                            value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
-                        }
+                //        if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
+                //        {
+                //            value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
+                //        }
 
-                        if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
-                        {
-                            value.Sum = currentVal + (value.Sum ?? 0d);
-                        }
+                //        if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
+                //        {
+                //            value.Sum = currentVal + (value.Sum ?? 0d);
+                //        }
 
-                        if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
-                        {
-                            value.Average = currentVal + (value.Average ?? 0d);
-                        }
-                    }
-                    break;
+                //        if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
+                //        {
+                //            value.Average = currentVal + (value.Average ?? 0d);
+                //        }
+                //    }
+                //    break;
                 default:
                     throw new ArgumentOutOfRangeException($"Not supported sort option for aggregation: {sortOptionsForFacet}");
             }

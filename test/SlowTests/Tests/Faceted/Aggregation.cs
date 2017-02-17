@@ -36,10 +36,10 @@ namespace SlowTests.Tests.Faceted
                           order.Tax
                       };
 
-                Sort(x => x.Total, SortOptions.NumericDouble);
-                Sort(x => x.Quantity, SortOptions.NumericLong);
-                Sort(x => x.Region, SortOptions.NumericLong);
-                Sort(x => x.Tax, SortOptions.NumericDouble);
+                Sort(x => x.Total, SortOptions.Numeric);
+                Sort(x => x.Quantity, SortOptions.Numeric);
+                Sort(x => x.Region, SortOptions.Numeric);
+                Sort(x => x.Tax, SortOptions.Numeric);
             }
         }
 

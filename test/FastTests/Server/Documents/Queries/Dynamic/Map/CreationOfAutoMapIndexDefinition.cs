@@ -156,7 +156,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             var nameField = definition.GetField("Name");
             Assert.Null(nameField.SortOption);
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
         }
 
         [Fact]
@@ -206,7 +206,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             var nameField = definition.GetField("Name");
             Assert.Null(nameField.SortOption);
             var ageField = definition.GetField("Address.ZipCode");
-            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
         }
 
         [Fact]
@@ -224,7 +224,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.True(definition.ContainsField("Age"));
             Assert.Equal("Auto/Users/ByAgeSortByAge", definition.Name);
             var nameField = definition.GetField("Age");
-            Assert.Equal(SortOptions.NumericDefault, nameField.SortOption);
+            Assert.Equal(SortOptions.Numeric, nameField.SortOption);
         }
 
         [Fact]
@@ -263,10 +263,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAgeAndCountAndFirstNameAndLastNameSortByAgeCount", definition.Name);
 
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
 
             var countField = definition.GetField("Count");
-            Assert.Equal(SortOptions.NumericDefault, countField.SortOption);
+            Assert.Equal(SortOptions.Numeric, countField.SortOption);
         }
 
         [Fact]
@@ -307,10 +307,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAddressIdAndAgeAndCountAndFirstNameAndLastNameSortByAgeCount", definition.Name);
 
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
 
             var countField = definition.GetField("Count");
-            Assert.Equal(SortOptions.NumericDefault, countField.SortOption);
+            Assert.Equal(SortOptions.Numeric, countField.SortOption);
         }
 
         private void create_dynamic_mapping_for_users_collection(string query)
