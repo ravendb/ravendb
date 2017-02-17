@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes
     {
         private CollectionOfBloomFilters _filter;
         private IndexingStatsScope _statsInstance;
-        private MapStats _stats = new MapStats();
+        private readonly MapStats _stats = new MapStats();
 
         protected MapIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -32,10 +32,11 @@ namespace Raven.Server.Documents.Indexes
 
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
-            if (sizeof(int) == IntPtr.Size || DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager)
-                return null;
+            var mode = sizeof(int) == IntPtr.Size || DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager
+                ? CollectionOfBloomFilters.Mode.X86
+                : CollectionOfBloomFilters.Mode.X64;
 
-            _filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.BloomFilter.Capacity, indexContext);
+            _filter = CollectionOfBloomFilters.Load(mode, indexContext);
 
             return null;
         }
@@ -48,18 +49,11 @@ namespace Raven.Server.Documents.Indexes
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
-            bool mustDelete;
 
-            if (sizeof(int) == IntPtr.Size || DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager)
+            bool mustDelete;
+            using (_stats.BloomStats.Start())
             {
-                mustDelete = true;
-            }
-            else
-            {
-                using (_stats.BloomStats.Start())
-                {
-                    mustDelete = _filter.Add(key) == false;
-                }
+                mustDelete = _filter.Add(key) == false;
             }
 
             if (mustDelete)

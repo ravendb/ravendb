@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
-using Raven.Client;
+using System.Threading;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
-
-#if v35
-using Raven.NewClient.Abstractions.Data;
-#else
-
-#endif
+using Sparrow.Json;
 
 namespace Indexing.Benchmark
 {
@@ -16,7 +12,7 @@ namespace Indexing.Benchmark
     {
         private readonly IDocumentStore _store;
 
-        public IndexingBenchmark(IDocumentStore store)
+        protected IndexingBenchmark(IDocumentStore store)
         {
             _store = store;
         }
@@ -33,8 +29,8 @@ namespace Indexing.Benchmark
 
                 var sw = Stopwatch.StartNew();
 
-                var stalenessTimeout = TimeSpan.FromMinutes(5);
-                QueryResult result = null;
+                var stalenessTimeout = TimeSpan.FromMinutes(15);
+                QueryResult result;
 
 #if !v35
                 //Task.Factory.StartNew(() =>
@@ -50,13 +46,25 @@ namespace Indexing.Benchmark
                 //    } while ((result != null && result.IsStale == false) || sw.Elapsed > stalenessTimeout);
                 //}, TaskCreationOptions.LongRunning);
 
-                //result = _store.DatabaseCommands.Query(test.Index.IndexName, new IndexQuery(_store.Conventions)
-                //{
-                //    WaitForNonStaleResultsTimeout = stalenessTimeout,
-                //    PageSize = 0,
-                //    Start = 0
-                //});
+                var requestExecuter = _store.GetRequestExecuter();
+                JsonOperationContext context;
+                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                {
+                    do
+                    {
+                        var queryCommand = new QueryCommand(_store.Conventions, context, test.Index.IndexName, new IndexQuery(_store.Conventions)
+                        {
+                            PageSize = 0,
+                            Start = 0
+                        });
 
+                        requestExecuter.Execute(queryCommand, context);
+
+                        result = queryCommand.Result;
+
+                        Thread.Sleep(100);
+                    } while (result.IsStale || sw.Elapsed > stalenessTimeout);
+                }
 #else
                 do
                 {
