@@ -49,7 +49,7 @@ class deleteItems extends dialogViewModelBase {
             var counters: any = this.items();
             var groupAndNames: {groupName: string; counterName: string}[] = counters.map((x: counterSummary) => {
                 return {
-                    groupName: x.getEntityName(),
+                    groupName: x.getCollection(),
                     counterName: x.getId()
                 }
             });
@@ -86,7 +86,7 @@ class deleteItems extends dialogViewModelBase {
         var item = this.items()[0];
         if (item instanceof counterSummary) {
             var summary: any = item;
-            return " counter name: " + summary.getId() + ", group name: " + summary.getEntityName();
+            return " counter name: " + summary.getId() + ", group name: " + summary.getCollection();
         }
 
         return item.getId();

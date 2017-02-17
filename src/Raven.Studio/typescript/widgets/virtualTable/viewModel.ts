@@ -72,7 +72,7 @@ class ctor {
         selectionEnabled: boolean;
         customColumns: KnockoutObservable<customColumns>;
         customFunctions: KnockoutObservable<customFunctions>;
-        collections: KnockoutObservableArray<ICollectionBase>;
+        collections: KnockoutObservableArray<any>;
         rowsAreLoading: KnockoutObservable<boolean>;
         noResultsMessage: string;
         isAnyAutoSelected: KnockoutObservable<boolean>;
@@ -350,7 +350,7 @@ class ctor {
         var rowAtIndex: row = ko.utils.arrayFirst(this.recycleRows(), (r: row) => r.rowIndex() === rowIndex);
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
-            var entityName = this.getEntityName(rowData);
+            var entityName = this.getCollection(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromEntityNameMemoized(rowData, entityName));
 
             var editUrl = appUrl.forEditItem(!!rowData.getUrl() ? rowData.getUrl() : rowData["Id"], activeResourceTracker.default.resource(), rowIndex, entityName);
@@ -382,20 +382,20 @@ class ctor {
         return "";
     }
 
-    getEntityName(rowData: documentBase): string {
+    getCollection(rowData: documentBase): string {
         var obj: any = rowData;
         if (obj && obj.getEntityName) {
             if (obj instanceof document) {
                 var documentObj = <document>obj;
-                return documentObj.getEntityName();
+                return documentObj.getCollection();
             }
             if (obj instanceof counterSummary) {
                 var counterSummaryObj = <counterSummary>obj;
-                return counterSummaryObj.getEntityName();
+                return counterSummaryObj.getCollection();
             }
             if (obj instanceof timeSeriesKey) {
                 var timeSeriesKeyObj = <timeSeriesKey>obj;
-                return timeSeriesKeyObj.getEntityName();
+                return timeSeriesKeyObj.getCollection();
             }
         }
         return null;

@@ -12,8 +12,8 @@ class document implements documentBase {
         }
     }
 
-    getEntityName() {
-        return this.__metadata.ravenEntityName;
+    getCollection() {
+        return this.__metadata.collection;
     }
 
     getId() {
@@ -28,7 +28,7 @@ class document implements documentBase {
         const propertyNames: Array<string> = [];
         for (let property in this) {
             const isMeta = property === "__metadata" || property === "__moduleId__";
-            const isFunction = typeof (<any>this)[property] === "function";
+            const isFunction = _.isFunction((this as any)[property]);
             if (!isMeta && !isFunction) {
                 propertyNames.push(property);
             }
@@ -38,10 +38,10 @@ class document implements documentBase {
     }
 
     toDto(includeMeta: boolean = false): documentDto {
-        var dto: any = { };
-        var properties = this.getDocumentPropertyNames();
-        for (var i = 0; i < properties.length; i++) {
-            var property = properties[i];
+        const dto: any = { };
+        const properties = this.getDocumentPropertyNames();
+        for (let i = 0; i < properties.length; i++) {
+            let property = properties[i];
             dto[property] = (<any>this)[property];
         }
 
@@ -51,15 +51,15 @@ class document implements documentBase {
     }
 
     toBulkDoc(method: string): bulkDocumentDto {
-        var dto = this.toDto(true);
-        var bulkDoc: bulkDocumentDto = {
+        const dto = this.toDto(true);
+        const bulkDoc: bulkDocumentDto = {
             Document: dto,
             Key: this.getId(),
             Method: method,
             AdditionalData: null
         };
 
-        var meta = dto["@metadata"];
+        const meta = dto["@metadata"];
         if (meta) {
             bulkDoc.Metadata = meta;
 
@@ -72,19 +72,19 @@ class document implements documentBase {
     }
 
     static empty(): document {
-        var emptyDto = {
+        const emptyDto = {
             '@metadata': {}
         };
 
         return new document(<any>emptyDto);
     }
 
-    static getEntityNameFromId(id: string): string {
+    static getCollectionFromId(id: string): string {
         if (!id) {
             return null;
         }
 
-        var slashIndex = id.lastIndexOf("/");
+        const slashIndex = id.lastIndexOf("/");
         if (slashIndex >= 1) {
             return id.substring(0, 1).toUpperCase() + id.substring(1, slashIndex);
         }

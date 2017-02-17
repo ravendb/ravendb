@@ -133,7 +133,7 @@ class editDocument extends viewModelBase {
             })
             .fail(() => {
                 messagePublisher.reportError(`Could not find ${id} document`);
-                canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
+                canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.activeDatabase()) });
             });
         return canActivateResult;
     }
@@ -225,7 +225,7 @@ class editDocument extends viewModelBase {
         this.metadata.subscribe((meta: documentMetadata) => {
             if (meta && meta.id) {
                 this.userSpecifiedId(meta.id);
-                this.entityName(document.getEntityNameFromId(meta.id));
+                this.entityName(document.getCollectionFromId(meta.id));
             }
         });
         this.editedDocId = ko.pureComputed(() => this.metadata() ? this.metadata().id : "");
@@ -478,7 +478,7 @@ class editDocument extends viewModelBase {
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
         target['@etag'] = 0;
-        target['@collection'] = target['@collection'] || document.getEntityNameFromId(id);
+        target['@collection'] = target['@collection'] || document.getCollectionFromId(id);
         target['@id'] = id;
     }
 
