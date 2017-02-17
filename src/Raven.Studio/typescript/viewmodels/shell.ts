@@ -329,10 +329,6 @@ class shell extends viewModelBase {
             });
     }
 
-    getDocCssClass(doc: documentMetadataDto) {
-        return collection.getCollectionCssClass((<any>doc)["@metadata"]["@collection"], this.activeDatabase());
-    }
-
     fetchServerBuildVersion() {
         new getServerBuildVersionCommand()
             .execute()

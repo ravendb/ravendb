@@ -11,6 +11,7 @@ import selectCsvColumnsDialog = require("viewmodels/common/selectCsvColumns");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 
 import collection = require("models/database/documents/collection");
+import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import changeSubscription = require("common/changeSubscription");
 import customFunctions = require("models/database/documents/customFunctions");
@@ -25,8 +26,91 @@ import generateClassCommand = require("commands/database/documents/generateClass
 
 import eventsCollector = require("common/eventsCollector");
 
+import virtualGrid = require("widgets/virtualGrid/virtualGrid");
+import documentBasedProvider = require("widgets/virtualGrid/columns/providers/documentBasedProvider");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import pagedResult = require("widgets/virtualGrid/pagedResult");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
+
 class documents extends viewModelBase {
 
+    static readonly allDocumentCollectionName = "__all_docs";
+
+    private collectionToSelectName: string;
+    private collections = ko.observableArray<collection>();
+    private currentCollection = ko.observable<collection>();
+    private gridController = ko.observable<virtualGridController<any>>();
+
+    constructor() {
+        super();
+    }
+
+    activate(args: any) {
+        super.activate(args);
+        this.updateHelpLink("G8CDCP");
+
+        this.collectionToSelectName = args ? args.collection : null;
+
+        const db = this.activeDatabase();
+        return this.fetchCollectionsStats(db).done(results => {
+            this.collectionsLoaded(results, db);
+        });
+    }
+
+    private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
+        return new getCollectionsStatsCommand(db)
+            .execute();
+    }
+
+    private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
+        const collections = collectionsStats.collections;
+
+        //TODO: starred
+        const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
+        this.collections([allDocsCollection].concat(collections));
+
+        const collectionToSelect = this.collections().find(x => x.name === this.collectionToSelectName) || allDocsCollection;
+        this.currentCollection(collectionToSelect);
+    }
+
+    fetchDocs(skip: number, take: number): JQueryPromise<pagedResult<any>> {
+        return this.currentCollection().fetchDocuments(skip, take);
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+
+        const grid = this.gridController();
+
+        const documentsProvider = new documentBasedProvider(this.activeDatabase(), true);
+
+        grid.headerVisible(true);
+        grid.init((s, t) => this.fetchDocs(s, t), (w, r) => {
+            if (this.currentCollection().isAllDocuments) {
+                return [
+                    new checkedColumn(),
+                    new hyperlinkColumn<document>(x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
+                    new textColumn<document>(x => x.__metadata.etag(), "ETag", "200px"),
+                    new textColumn<document>(x => x.__metadata.lastModified(), "Last Modified", "300px"),
+                    new hyperlinkColumn<document>(x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px")
+                ];
+            } else {
+                return documentsProvider.findColumns(w, r);
+            }
+        });
+
+        this.currentCollection.subscribe(this.onCollectionChanged, this);
+    }
+
+    private onCollectionChanged(newCollection: collection) {
+        this.gridController().reset();
+    }
+
+
+    /*
     displayName = "documents";
     collections = ko.observableArray<collection>();
     collectionsExceptAllDocs: KnockoutComputed<collection[]>;
@@ -248,9 +332,7 @@ class documents extends viewModelBase {
         }
     }
 
-    private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
-        return new getCollectionsStatsCommand(db).execute();
-    }
+    
 
     private refreshCollections(): JQueryPromise<any> {
         var deferred = $.Deferred();
@@ -265,20 +347,6 @@ class documents extends viewModelBase {
             });
 
         return deferred;
-    }
-
-    collectionsLoaded(collectionsStats: collectionsStats, db: database) {
-        var collections = collectionsStats.collections;
-        // Create the "All Documents" pseudo collection.
-        this.allDocumentsCollection(collection.createAllDocsCollection(db));
-        this.allDocumentsCollection().documentCount(collectionsStats.numberOfDocuments());
-
-        // All systems a-go. Load them into the UI and select the first one.
-        var allCollections = [this.allDocumentsCollection()].concat(collections);
-        this.collections(allCollections);
-
-        var collectionToSelect = allCollections.find(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection();
-        collectionToSelect.activate();
     }
 
     fetchCustomFunctions() {
@@ -353,7 +421,7 @@ class documents extends viewModelBase {
                 } else {
                     setTimeout(() => this.updateGridAfterOperationComplete(collection, operationId), 500);
                 }
-            });*/
+            });*
     }
 
     private updateCollections(receivedCollections: Array<collection>) {
@@ -589,7 +657,7 @@ class documents extends viewModelBase {
     }
 
 
-    /* TODO 
+    * TODO 
     generateDocCode() {
         var grid = this.getDocumentsGrid();
         if (grid) {

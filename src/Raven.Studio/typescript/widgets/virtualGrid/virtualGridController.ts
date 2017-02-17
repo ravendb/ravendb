@@ -5,15 +5,9 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
 interface virtualGridController<T> { 
 
-    init(fetcher: (skip: number, take: number) => JQueryPromise<pagedResult<T>>): void;
+    init(fetcher: (skip: number, take: number) => JQueryPromise<pagedResult<T>>, columnsProvider: (containerWidth:number, results: pagedResult<T>) => virtualColumn[]): void;
 
     headerVisible(value: boolean): void;
-
-    rowSelectionCheckboxVisible(value: boolean): void;
-
-    useColumns(columns: virtualColumn[]): void;
-
-    useDefaultColumns(): void;
 
     reset(): void;
 }

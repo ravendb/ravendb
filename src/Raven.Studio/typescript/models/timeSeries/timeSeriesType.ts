@@ -4,7 +4,7 @@ import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");
 import getKeysCommand = require("commands/timeSeries/getKeysCommand");
 
-class timeSeriesType implements ICollectionBase {
+class timeSeriesType {
     colorClass = "";
     private timeSeriesList: pagedList;
     private static typeColorMaps: resourceStyleMap[] = [];
@@ -51,7 +51,7 @@ class timeSeriesType implements ICollectionBase {
         return new getKeysCommand(this.ownerTimeSeries, skip, take, this.name, this.keysCount()).execute();
     }
 
-    getEntityName() {
+    getCollection() {
         return this.getId();
     }
 

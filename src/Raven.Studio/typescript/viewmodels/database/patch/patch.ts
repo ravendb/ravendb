@@ -386,7 +386,11 @@ class patch extends viewModelBase {
     setSelectedCollection(coll: collection) {
         this.resetProgressBar();
         this.patchDocument().selectedItem(coll.name);
-        var list = coll.getDocuments();
+
+        var fetcher = (skip: number, take: number) => coll.fetchDocuments(skip, take);
+        var list = new pagedList(fetcher);
+        list.collectionName = coll.name;
+
         this.currentCollectionPagedItems(list);
         list.fetch(0, 20).always(() => $("#matchingDocumentsGrid").resize());
     }

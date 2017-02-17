@@ -519,10 +519,6 @@ interface documentBase extends dictionary<any> {
     getDocumentPropertyNames(): Array<string>;
 }
 
-interface ICollectionBase {
-    colorClass: string;
-}
-
 interface customColumnParamsDto {
     Header?: string;
     Binding: string;

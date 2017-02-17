@@ -49,18 +49,14 @@ class virtualGrid<T> {
     private initController() {
         this.controller = {
             headerVisible: v => this.settings.showHeader(v),
-            useColumns: columns => this.settings.customColumns = columns,
-            useDefaultColumns: () => this.settings.customColumns = undefined,
-            rowSelectionCheckboxVisible: v => this.settings.showRowSelectionCheckbox = v,
-            init: fetcher => this.init(fetcher),
+            init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
             reset: () => this.resetItems(),
         }
     }
 
-    private init(fetcher: (skip: number, take: number) => JQueryPromise<pagedResult<T>>) {
+    private init(fetcher: (skip: number, take: number) => JQueryPromise<pagedResult<T>>, columnsProvider: (containerWidth:number, results: pagedResult<T>) => virtualColumn[]) {
         this.settings.fetcher = fetcher;
-
-        this.initializeColumns();
+        this.settings.columnsProvider = columnsProvider;
 
         this.fetchItems(0, 100);
     }
@@ -98,18 +94,6 @@ class virtualGrid<T> {
         }
 
         return rows;
-    }
-
-    private initializeColumns() {
-        // If the consumer code passed in some columns, use those.
-        if (this.settings.customColumns && this.settings.customColumns.length > 0) {
-            // Also, insert the row selection checkbox column if we're configured to do so.
-            if (this.settings.showRowSelectionCheckbox) {
-                this.columns([new checkedColumn() as virtualColumn].concat(this.settings.customColumns));
-            } else {
-                this.columns(this.settings.customColumns);
-            }
-        }
     }
 
     private gridScrolled() {
@@ -321,7 +305,7 @@ class virtualGrid<T> {
 
     private chunkFetched(results: pagedResult<T>, skip: number, take: number) {
         if (!this.columns() || this.columns().length === 0) {
-            this.assignColumnFromItems(results.items);
+            this.columns(this.settings.columnsProvider(this.$viewportElement.prop("clientWidth"), results));
         }
 
         // Add these results to the .items array as necessary.
@@ -335,33 +319,6 @@ class virtualGrid<T> {
         }
 
         this.render();
-    }
-
-    private assignColumnFromItems(items: T[]): void {
-        const propertySet = {};
-        const uniquePropertyNames = new Set<string>();
-        items.map(i => _.keys(i).forEach(key => uniquePropertyNames.add(key)));
-        
-        const columnNames = Array.from(uniquePropertyNames);
-        const viewportWidth = this.$viewportElement.prop("clientWidth");
-        const checkedColumnWidth = this.settings.showRowSelectionCheckbox ? checkedColumn.columnWidth : 0;
-        const columnWidth = Math.floor(viewportWidth / columnNames.length) - checkedColumnWidth + "px";
-        
-        // Put Id and Name columns first.
-        const prioritizedColumns = ["Id", "Name"];
-        prioritizedColumns
-            .reverse()
-            .forEach(c => {
-                const columnIndex = columnNames.indexOf(c);
-                if (columnIndex >= 0) {
-                    columnNames.splice(columnIndex, 1);
-                    columnNames.unshift(c);
-                }
-            });
-
-        // Insert the row selection checkbox column as necessary.
-        const initialColumns: virtualColumn[] = this.settings.showRowSelectionCheckbox ? [new checkedColumn()] : [];
-        this.columns(initialColumns.concat(columnNames.map(p => new textColumn(p, p, columnWidth))));
     }
 
     private gridClicked(e: JQueryEventObject) {
@@ -414,7 +371,7 @@ class virtualGrid<T> {
         this.virtualRows.forEach(r => r.reset());
         this.columns([]);
         this.selectedIndices = [];
-        this.initializeColumns();
+
         this.fetchItems(0, 100);
     }
 

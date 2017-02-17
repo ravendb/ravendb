@@ -4,7 +4,7 @@ import getCountersCommand = require("commands/counter/getCountersCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");
 
-class counterGroup implements ICollectionBase {
+class counterGroup {
     colorClass = "";
     static allGroupsGroupName = "All Groups";
     private countersList: pagedList;

@@ -26,7 +26,7 @@ class connectedDocuments {
     db: KnockoutObservable<database>;
     searchInput = ko.observable<string>("");
     columns: virtualColumn[] = [
-        new hyperlinkColumn("id", "href", "", "100%")
+        new hyperlinkColumn<connectedDocument>(x => x.id, x => x.href, "", "100%")
     ];
     currentDocumentIsStarred = ko.observable<boolean>(false);
     currentTab = ko.observable<string>(connectedDocuments.connectedDocsTabs.related);
@@ -57,9 +57,7 @@ class connectedDocuments {
     compositionComplete() {
         const grid = this.gridController();
         grid.headerVisible(false);
-        grid.rowSelectionCheckboxVisible(false);
-        grid.useColumns(this.columns);
-        grid.init((s, t) => this.fetchCurrentTabDocs(s, t));
+        grid.init((s, t) => this.fetchCurrentTabDocs(s, t), () => this.columns);
 
         this.currentTab.subscribe(() => this.gridController().reset());
     }
@@ -104,7 +102,7 @@ class connectedDocuments {
 
         // Fetch collection size.
         // Why? Because calling collection.fetchDocuments returns a pagedResultSet with .totalResultCount = 0. :-(
-        const collectionName = doc.getEntityName();
+        const collectionName = doc.getCollection();
         const collectionSizeTask = new getCollectionsStatsCommand(this.db())
             .execute()
             .then((stats: collectionsStats) => stats.getCollectionCount(collectionName));

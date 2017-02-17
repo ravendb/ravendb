@@ -4,9 +4,6 @@ import pagedResultSet = require("common/pagedResultSet");
 import document = require("models/database/documents/document");
 import endpoints = require("endpoints");
 
-/*
- * getAllDocumentsCommand is a specialized command that fetches all the documents in a specified database.
-*/
 class getAllDocumentsCommand extends commandBase {
 
     constructor(private ownerDatabase: database, private skip: number, private take: number) {
@@ -14,22 +11,23 @@ class getAllDocumentsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultSet<document>> {
-
         // Getting all documents requires a 2 step process:
         // 1. Fetch /collections/stats to get the total doc count.
         // 2. Fetch /docs to get the actual documents.
 
-        var docsTask = this.fetchDocs();
-        var totalResultsTask = this.fetchTotalResultCount();
-        var doneTask = $.Deferred<pagedResultSet<document>>();
-        var combinedTask = $.when<any>(docsTask, totalResultsTask);
-        combinedTask.done(([docsResult]: [document[]], [resultsCount]: [number]) => doneTask.resolve(new pagedResultSet(docsResult, resultsCount)));
-        combinedTask.fail(xhr => doneTask.reject(xhr));
+        const docsTask = this.fetchDocs();
+        const totalResultsTask = this.fetchTotalResultCount();
+        const doneTask = $.Deferred<pagedResultSet<document>>();
+
+        $.when<any>(docsTask, totalResultsTask)
+            .done(([docsResult]: [document[]], [resultsCount]: [number]) => doneTask.resolve(new pagedResultSet(docsResult, resultsCount)))
+            .fail(xhr => doneTask.reject(xhr));
+
         return doneTask;
     }
 
     private fetchDocs(): JQueryPromise<document[]> {
-        var args = {
+        const args = {
             start: this.skip,
             pageSize: this.take
         };
@@ -41,8 +39,8 @@ class getAllDocumentsCommand extends commandBase {
     }
 
     private fetchTotalResultCount(): JQueryPromise<number> {
-        var url = endpoints.databases.collections.collectionsStats;
-        var countSelector = (dto: Raven.Client.Documents.Operations.CollectionStatistics) => dto.CountOfDocuments;
+        const url = endpoints.databases.collections.collectionsStats;
+        const countSelector = (dto: Raven.Client.Documents.Operations.CollectionStatistics) => dto.CountOfDocuments;
         return this.query(url, null, this.ownerDatabase, countSelector);
     }
 }

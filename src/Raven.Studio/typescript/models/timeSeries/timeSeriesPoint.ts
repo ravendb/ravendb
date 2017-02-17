@@ -19,7 +19,7 @@ class timeSeriesPoint implements documentBase {
         }
     }
 
-    getEntityName() {
+    getCollection() {
         return this.getId();
     }
 
