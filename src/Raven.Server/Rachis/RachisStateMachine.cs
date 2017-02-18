@@ -19,7 +19,7 @@ namespace Raven.Server.Rachis
         {
             Debug.Assert(context.Transaction != null);
 
-            var lastAppliedIndex = _parent.GetLastAppliedIndex(context);
+            var lastAppliedIndex = _parent.GetLastCommitIndex(context);
             for (var index = lastAppliedIndex+1; index <= uptoInclusive; index++)
             {
                 var cmd = _parent.GetEntry(context, index);
@@ -28,7 +28,7 @@ namespace Raven.Server.Rachis
 
                 Apply(context, cmd);
             }
-            _parent.SetLastAppliedIndex(context, uptoInclusive);
+            _parent.SetLastCommitIndex(context, uptoInclusive);
         }
 
         protected abstract void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd);

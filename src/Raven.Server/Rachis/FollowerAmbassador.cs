@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
@@ -12,17 +15,22 @@ using Voron.Global;
 
 namespace Raven.Server.Rachis
 {
-    public class FollowerAmbasaddor
+    public class FollowerAmbassador : IDisposable
     {
         private readonly RachisConsensus _engine;
-        private readonly ManualResetEventSlim _wakeLeader;
-        private readonly Func<Stream> _conenctToFollower;
-        private readonly string _debugFollower;
+        private readonly Leader _leader;
+        private readonly ManualResetEvent _wakeLeader;
+        private readonly string _url;
+        private readonly string _apiKey;
+
+        public string Status;
 
         private long _followerNextIndex;// this is only accessed by this thread
         private long _followerMatchIndex;
         private long _lastReplyFromFollower;
+        private Thread _thread;
 
+        public string Url => _url;
 
         public long FollowerMatchIndex => Interlocked.Read(ref _followerMatchIndex);
 
@@ -36,12 +44,14 @@ namespace Raven.Server.Rachis
                 _wakeLeader.Set();
         }
 
-        public FollowerAmbasaddor(RachisConsensus engine, ManualResetEventSlim wakeLeader, Func<Stream> conenctToFollower, string debugFollower)
+        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string url, string apiKey)
         {
             _engine = engine;
+            _leader = leader;
             _wakeLeader = wakeLeader;
-            _conenctToFollower = conenctToFollower;
-            _debugFollower = debugFollower;
+            _url = url;
+            _apiKey = apiKey;
+            Status = "Started";
         }
 
         /// <summary>
@@ -49,7 +59,7 @@ namespace Raven.Server.Rachis
         /// it is responsible for talking to the remote follower and maintaining its state.
         /// This can never throw, and will run on its own thread.
         /// </summary>
-        public unsafe void FollowerAmbassador()
+        private unsafe void Run()
         {
             try
             {
@@ -61,21 +71,23 @@ namespace Raven.Server.Rachis
                     {
                         try
                         {
-                            stream = _conenctToFollower();
+                            stream = RachisConsensus.ConenctToPeer(_url, _apiKey);
                         }
                         catch (Exception e)
                         {
+                            Status = "Failed - " + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info("Failed to connect to remote follower: " + _debugFollower, e);
+                                _engine.Log.Info("Failed to connect to remote follower: " + _url, e);
                             }
-                            _engine.WaitHeartbeat();
+                            // wait a bit
+                            _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs/2);
                             continue; // we'll retry connecting
                         }
-
+                        Status = "Connected";
                         using (var connection = new RemoteConnection(stream))
                         {
-                            var matchIndex = InitialNegotiationWithFollower(_debugFollower, connection);
+                            var matchIndex = InitialNegotiationWithFollower(connection);
                             if (matchIndex == null)
                                 return;
 
@@ -157,25 +169,37 @@ namespace Raven.Server.Rachis
                                     _followerNextIndex = aer.LastLogIndex + 1;
                                     UpdateLastMatchFromFollower(aer.LastLogIndex);
                                 }
-
-                                _engine.WaitHeartbeat();
+                                Task task = _leader.WaitForNewEntries();
+                                using (_engine.ContextPool.AllocateOperationContext(out context))
+                                using (context.OpenReadTransaction())
+                                {
+                                    if (_engine.GetLastEntryIndex(context) != _followerMatchIndex)
+                                        continue;// instead of waiting, we have new entries, start immediately
+                                }
+                                // either we have new entries to send, or we waited for long enough 
+                                // to send another heartbeat
+                                task.Wait(_engine.ElectionTimeoutMs/3);
                             }
                         }
                     }
                     finally
                     {
                         stream?.Dispose();
+                        Status = "Disconnected";
                     }
                 }
             }
             catch (Exception e)
             {
+                Status = "Failed - " + e.Message;
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to remote follower: " + _debugFollower, e);
+                    _engine.Log.Info("Failed to talk to remote follower: " + _url, e);
                 }
             }
         }
+
+      
 
         private static unsafe BlittableJsonReaderObject BuildRachisEntryToSend(TransactionOperationContext context,
             Table.TableValueHolder value)
@@ -211,14 +235,16 @@ namespace Raven.Server.Rachis
             return entry;
         }
 
-        private long? InitialNegotiationWithFollower(string debugFollower, RemoteConnection connection)
+        private long? InitialNegotiationWithFollower(RemoteConnection connection)
         {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             {
+                ClusterTopology clusterTopology;
                 AppendEntries appendEntries;
                 using (context.OpenReadTransaction())
                 {
+                    clusterTopology = _engine.GetTopology(context);
                     var range = _engine.GetLogEntriesRange(context);
                     appendEntries = new AppendEntries
                     {
@@ -233,7 +259,7 @@ namespace Raven.Server.Rachis
 
                 connection.Send(context, new RachisHello
                 {
-                    TopologyId = _engine.TopologyId,
+                    TopologyId = clusterTopology.TopologyId,
                     InitialMessageType = InitialMessageType.AppendEntries,
                     DebugSourceIdentifier = _engine.GetDebugInformation()
                 });
@@ -257,7 +283,7 @@ namespace Raven.Server.Rachis
 
                 if (aer.Negotiation == null)
                     throw new InvalidOperationException("BUG: We didn't get a success on first AppendEntries to peer " +
-                                                        debugFollower + ", the term match but there is no negotiation");
+                                                        _url + ", the term match but there is no negotiation");
 
                 // need to negotiate
                 do
@@ -293,5 +319,21 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public void Start()
+        {
+            _thread = new Thread(Run)
+            {
+                Name = "Follower Ambasaddor for " + _url,
+                IsBackground = true
+            };
+            _thread.Start();
+        }
+
+        public void Dispose()
+        {
+            //TODO: shutdown notification of some kind?
+            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                _thread.Join();
+        }
     }
 }

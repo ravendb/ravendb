@@ -38,6 +38,24 @@ namespace Raven.Server.Rachis
             }
         }
 
+
+        public void Send(JsonOperationContext context, RequestVote rv)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            {
+                context.Write(writer,
+                    new DynamicJsonValue
+                    {
+                        ["Type"] = nameof(RequestVote),
+                        [nameof(RequestVote.Term)] = rv.Term,
+                        [nameof(RequestVote.LastLogTerm)] = rv.LastLogTerm,
+                        [nameof(RequestVote.LastLogIndex)] = rv.LastLogIndex,
+                        [nameof(RequestVote.IsTrialElection)] = rv.IsTrialElection,
+                        [nameof(RequestVote.IsForcedElection)] = rv.IsForcedElection,
+                    });
+            }
+        }
+
         public void Send(JsonOperationContext context, AppendEntries ae, List<BlittableJsonReaderObject> items = null)
         {
             using (var writer = new BlittableJsonTextWriter(context, _stream))

@@ -51,7 +51,7 @@ namespace Raven.Server.Rachis
                             lastLogIndex,
                             appendEntries.LeaderCommit);
 
-                        var lastAppliedIndex = _engine.GetLastAppliedIndex(context);
+                        var lastAppliedIndex = _engine.GetLastCommitIndex(context);
 
                         if (lastEntryIndexToCommit != lastAppliedIndex)
                         {
@@ -100,7 +100,7 @@ namespace Raven.Server.Rachis
 
                 if (fstAppendEntries.Term > _engine.CurrentTerm)
                 {
-                    _engine.UpdateCurrentTerm(fstAppendEntries.Term);
+                    _engine.FoundAboutHigherTerm(fstAppendEntries.Term);
                 }
 
                 var prevTerm = _engine.GetTermFor(fstAppendEntries.PrevLogIndex) ?? 0;

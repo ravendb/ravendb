@@ -2,36 +2,40 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
-using Voron.Global;
 
 namespace Raven.Server.Rachis
 {
     public class RachisConsensus : IDisposable
     {
         private readonly StorageEnvironmentOptions _options;
+        private readonly string _url;
         public TransactionContextPool ContextPool { get; private set; }
         private StorageEnvironment _persistentState;
         internal readonly Logger Log;
         public RachisStateMachine StateMachine;
 
         public long CurrentTerm { get; private set; }
-        public string TopologyId { get; private set; }
+        public string Url => _url;
 
         private static readonly Slice GlobalStateSlice;
         private static readonly Slice CurrentTermSlice;
-        private static readonly Slice TopologyIdSlice;
-        private static readonly Slice LastAppliedSlice;
+        private static readonly Slice VotedForSlice;
         private static readonly Slice LastCommitSlice;
+        private static readonly Slice TopologySlice;
 
 
         internal static readonly Slice EntriesSlice;
@@ -41,12 +45,20 @@ namespace Raven.Server.Rachis
         {
             Slice.From(StorageEnvironment.LabelsContext, "GlobalState", out GlobalStateSlice);
             Slice.From(StorageEnvironment.LabelsContext, "CurrentTerm", out CurrentTermSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "TopologyId", out TopologyIdSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "LastApplied", out LastAppliedSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "VotedFor", out VotedForSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastCommit", out LastCommitSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Topology", out TopologySlice);
 
             Slice.From(StorageEnvironment.LabelsContext, "Entries", out EntriesSlice);
 
+            /*
+             
+            index - int64 big endian
+            term  - int64 little endian
+            entry - blittable value
+            flags - cmd, no op, topology, etc
+
+             */
             LogsTable = new TableSchema();
             LogsTable.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -54,9 +66,12 @@ namespace Raven.Server.Rachis
             });
         }
 
-        public RachisConsensus(StorageEnvironmentOptions options)
+        public int ElectionTimeoutMs = 300;
+
+        public RachisConsensus(StorageEnvironmentOptions options, string url)
         {
             _options = options;
+            _url = url;
             Log = LoggingSource.Instance.GetLogger<RachisConsensus>(options.BasePath);
         }
 
@@ -74,8 +89,6 @@ namespace Raven.Server.Rachis
                     if (state.State.NumberOfEntries == 0)
                     {
                         *(long*)state.DirectAdd(CurrentTermSlice, sizeof(long)) = CurrentTerm = 0;
-                        state.Add(TopologyIdSlice, Array.Empty<byte>());
-                        TopologyId = null;
                     }
                     else
                     {
@@ -84,10 +97,6 @@ namespace Raven.Server.Rachis
                             throw new InvalidOperationException(
                                 "Could not read the current term from persistent storage");
                         CurrentTerm = read.Reader.ReadLittleEndianInt64();
-                        read = state.Read(TopologyIdSlice);
-                        if (read == null)
-                            throw new InvalidOperationException("Could not read the topology id from persistent storage");
-                        TopologyId = read.Reader.ReadString(read.Reader.Length);
                     }
                 }
                 ContextPool = new TransactionContextPool(_persistentState);
@@ -99,18 +108,44 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public unsafe ClusterTopology GetTopology(TransactionOperationContext context)
+        {
+            Debug.Assert(context.Transaction != null);
+            var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
+            var read = state.Read(TopologySlice);
+            if (read == null)
+                return new ClusterTopology(null, null, new string[0], new string[0], new string[0]);
+
+            var json = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+            return JsonDeserializationRachis<ClusterTopology>.Deserialize(json);
+        }
+
+        public unsafe BlittableJsonReaderObject SetTopology(TransactionOperationContext context, ClusterTopology topology)
+        {
+            Debug.Assert(context.Transaction != null);
+            var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
+
+            var djv = new DynamicJsonValue
+            {
+                [nameof(ClusterTopology.TopologyId)] = topology.TopologyId,
+                [nameof(ClusterTopology.ApiKey)] = topology.ApiKey,
+                [nameof(ClusterTopology.Voters)] = new DynamicJsonArray(topology.Voters),
+                [nameof(ClusterTopology.Promotables)] = new DynamicJsonArray(topology.Promotables),
+                [nameof(ClusterTopology.NonVotingMembers)] = new DynamicJsonArray(topology.NonVotingMembers),
+            };
+
+            var topologyJson = context.ReadObject(djv, "topology");
+
+            var ptr = state.DirectAdd(TopologySlice, topologyJson.Size);
+            topologyJson.CopyTo(ptr);
+
+            return topologyJson;
+        }
+
         public string GetDebugInformation()
         {
             // TODO: Full debug information (maching name, port, ip, etc)
             return Environment.MachineName;
-        }
-
-        public void WaitHeartbeat()
-        {
-            //TODO: This need to wait the random timeout
-            //TODO: need to abort when shutting down / no longer leading 
-            //TODO: Should explciitly be sleeping (to avoid having runnable threads)
-            Thread.Sleep(250);
         }
 
         /// <summary>
@@ -126,15 +161,22 @@ namespace Raven.Server.Rachis
                 try
                 {
                     RachisHello initialMessage;
+                            ClusterTopology clusterTopology;
                     TransactionOperationContext context;
                     using (ContextPool.AllocateOperationContext(out context))
+                    {
                         initialMessage = remoteConnection.InitFollower(context);
+                        using (context.OpenReadTransaction())
+                        {
+                            clusterTopology = GetTopology(context);
+                        }
+                    }
 
-                    if (initialMessage.TopologyId != TopologyId &&
-                        string.IsNullOrEmpty(TopologyId) == false)
+                    if (initialMessage.TopologyId != clusterTopology.TopologyId &&
+                        string.IsNullOrEmpty(clusterTopology.TopologyId) == false)
                     {
                         throw new InvalidOperationException(
-                            $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({TopologyId}). " +
+                            $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
                             $"Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
                     }
 
@@ -143,7 +185,7 @@ namespace Raven.Server.Rachis
                         case InitialMessageType.RequestVote:
                             throw new NotImplementedException("Too young to vote");
                         case InitialMessageType.AppendEntries:
-                            var follower = new Follower(this,remoteConnection);
+                            var follower = new Follower(this, remoteConnection);
                             follower.Run();
                             break;
                         default:
@@ -197,6 +239,37 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public unsafe long InsertToLog(TransactionOperationContext context, BlittableJsonReaderObject cmd,
+            RachisEntryFlags flags)
+        {
+            Debug.Assert(context.Transaction != null);
+            var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+
+            long lastIndex;
+
+            TableValueReader reader;
+            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out reader))
+            {
+                int size;
+                lastIndex = Bits.SwapBytes(*(long*) reader.Read(0, out size));
+                Debug.Assert(size == sizeof(long));
+            }
+            else
+            {
+                lastIndex = 0;
+            }
+            lastIndex += 1;
+            var tvb = new TableValueBuilder
+            {
+                Bits.SwapBytes(lastIndex),
+                CurrentTerm,
+                {cmd.BasePointer, cmd.Size},
+                (int) flags
+            };
+            table.Insert(tvb);
+
+            return lastIndex;
+        }
 
         public unsafe void AppendToLog(TransactionOperationContext context, List<RachisEntry> entries)
         {
@@ -244,7 +317,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-      
+
         public unsafe BlittableJsonReaderObject GetEntry(TransactionOperationContext context, long index)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
@@ -261,44 +334,33 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public long GetLastAppliedIndex(TransactionOperationContext context)
-        {
-            Debug.Assert(context.Transaction != null);
-
-            var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
-            var read = state.Read(LastAppliedSlice);
-            if (read == null)
-                return 0;
-            return read.Reader.ReadLittleEndianInt64();
-        }
-
         public long GetLastCommitIndex(TransactionOperationContext context)
         {
             Debug.Assert(context.Transaction != null);
 
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
-            var read = state.Read(LastAppliedSlice);
+            var read = state.Read(LastCommitSlice);
             if (read == null)
                 return 0;
             return read.Reader.ReadLittleEndianInt64();
         }
 
 
-        public unsafe void SetLastAppliedIndex(TransactionOperationContext context, long value)
+        public unsafe void SetLastCommitIndex(TransactionOperationContext context, long value)
         {
             Debug.Assert(context.Transaction != null);
 
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
-            var read = state.Read(LastAppliedSlice);
+            var read = state.Read(LastCommitSlice);
             if (read != null)
             {
                 var oldValue = read.Reader.ReadLittleEndianInt64();
                 if (oldValue >= value)
                     throw new InvalidOperationException(
-                        $"Cannot reduce the last applied index (is {oldValue} but was requested to reduce to {value})");
+                        $"Cannot reduce the last commit index (is {oldValue} but was requested to reduce to {value})");
             }
 
-            *(long*)state.DirectAdd(LastAppliedSlice, sizeof(long)) = value;
+            *(long*)state.DirectAdd(LastCommitSlice, sizeof(long)) = value;
         }
 
         public unsafe Tuple<long, long> GetLogEntriesRange(TransactionOperationContext context)
@@ -318,6 +380,20 @@ namespace Raven.Server.Rachis
             Debug.Assert(size == sizeof(long));
 
             return Tuple.Create(min, max);
+        }
+
+        public unsafe long GetLastEntryIndex(TransactionOperationContext context)
+        {
+            Debug.Assert(context.Transaction != null);
+
+            var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+            TableValueReader reader;
+            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out reader) == false)
+                return 0;
+            int size;
+            var max = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+            Debug.Assert(size == sizeof(long));
+            return max;
         }
 
         public long GetTermForKnownExisting(TransactionOperationContext context, long index)
@@ -357,7 +433,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe void UpdateCurrentTerm(long term)
+        public void FoundAboutHigherTerm(long term)
         {
             if (term == CurrentTerm)
                 return;
@@ -371,18 +447,36 @@ namespace Raven.Server.Rachis
                 using (var tx = context.OpenWriteTransaction())
                 {
                     // we check it here again because now we are under the tx lock, so we can't get into concurrency issues
+                    if (term == CurrentTerm)
+                        return;
 
-                    if (term < CurrentTerm)
-                        throw new ConcurrencyException($"The current term {CurrentTerm} is larger than {term}, aborting change");
-
-                    var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
-                    *(long*)state.DirectAdd(CurrentTermSlice, sizeof(long)) = term;
-
-                    CurrentTerm = term;
+                    CastVoteInTerm(context, term, votedFor: null);
 
                     tx.Commit();
                 }
             }
+        }
+
+        public unsafe void CastVoteInTerm(TransactionOperationContext context ,long term, string votedFor)
+        {
+            Debug.Assert(context.Transaction != null);
+            if (term <= CurrentTerm)
+                throw new ConcurrencyException($"The current term {CurrentTerm} is larger than {term}, aborting change");
+
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+            *(long*) state.DirectAdd(CurrentTermSlice, sizeof(long)) = term;
+
+            votedFor = votedFor ?? string.Empty;
+
+            var size = Encoding.UTF8.GetByteCount(votedFor);
+
+            var ptr = state.DirectAdd(VotedForSlice, size);
+            fixed (char* pVotedFor = votedFor)
+            {
+                Encoding.UTF8.GetBytes(pVotedFor, votedFor.Length, ptr, size);
+            }
+
+            CurrentTerm = term;
         }
 
 
@@ -392,6 +486,20 @@ namespace Raven.Server.Rachis
             ContextPool?.Dispose();
             _persistentState?.Dispose();
             _options?.Dispose();
+        }
+
+        public static Stream ConenctToPeer(string url, string apiKey)
+        {
+            var serverUrl = new UriBuilder(url)
+            {
+                Fragment = null // remove debug info
+            }.Uri.ToString();
+
+            var tcpInfo = ReplicationUtils.GetTcpInfo(serverUrl, null, apiKey);
+
+            var tcpClient = new TcpClient();
+            tcpClient.ConnectAsync(tcpInfo.Url, tcpInfo.Port).Wait();
+            return tcpClient.GetStream();
         }
     }
 }
