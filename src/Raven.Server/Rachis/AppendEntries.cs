@@ -5,7 +5,6 @@ namespace Raven.Server.Rachis
     public class AppendEntries 
     {
         public long Term { get; set; }
-        public long LastLogIndex { get; set; }
         public long PrevLogIndex { get; set; }
         public long PrevLogTerm { get; set; }
         public long LeaderCommit { get; set; }
