@@ -9,6 +9,7 @@ import generalUtils = require("common/generalUtils");
 import rangeAggregator = require("common/helpers/graph/rangeAggregator");
 import liveIndexPerformanceWebSocketClient = require("common/liveIndexPerformanceWebSocketClient");
 import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
+import messagePublisher = require("common/messagePublisher");
 
 type rTreeLeaf = {
     minX: number;
@@ -307,7 +308,7 @@ class metrics extends viewModelBase {
     }
 
     private initCanvases() {
-        const metricsContainer = d3.select("#metricsContainer");
+        const metricsContainer = d3.select("#indexPerfMetricsContainer");
         this.canvas = metricsContainer
             .append("canvas")
             .attr("width", this.totalWidth + 1)
@@ -486,8 +487,10 @@ class metrics extends viewModelBase {
     }
 
     private cancelLiveView() {
-        this.liveViewClient().dispose();
-        this.liveViewClient(null);
+        if (!!this.liveViewClient()) {
+            this.liveViewClient().dispose();
+            this.liveViewClient(null);
+        }
     }
 
     private draw(workData: indexesWorkData[], maxConcurrentIndexes: number, resetFilteredIndexNames: boolean) {
@@ -974,7 +977,7 @@ class metrics extends viewModelBase {
 
         if (currentDatum !== element) {
             const tooltipHtml = "Gap start time: " + (element).StartTime +
-                                  "<br />Gap duration: " + generalUtils.formatMillis((element).DurationInMilliseconds);       
+                                  "<br/>Gap duration: " + generalUtils.formatMillis((element).DurationInMilliseconds);       
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     } 
@@ -1017,19 +1020,31 @@ class metrics extends viewModelBase {
 
     private handleTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap, x: number, y: number, tooltipHtml: string) {
         if (element && !this.dialogVisible) {
-            const tooltipWidth = $("#indexingPerformance .tooltip").width() + 30;
-            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
+            const canvas = this.canvas.node() as HTMLCanvasElement;
+            const context = canvas.getContext("2d");
+            context.font = this.tooltip.style("font");
 
-            this.tooltip.transition()
-                .duration(200)                                                          
-                .style("opacity", 1)              
+            const longestLine = generalUtils.findLongestLineInTooltip(tooltipHtml);
+            const tooltipWidth = context.measureText(longestLine).width + 60;
+
+            const numberOfLines = generalUtils.findNumberOfLinesInTooltip(tooltipHtml);
+            const tooltipHeight = numberOfLines * 30 + 60;
+
+            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
+            y = Math.min(y, Math.max(this.totalHeight - tooltipHeight, 0));
+
+            this.tooltip
                 .style("left", (x + 10) + "px")
                 .style("top", (y + 10) + "px");
 
             this.tooltip
+                .transition()
+                .duration(250)
+                .style("opacity", 1);
+
+            this.tooltip
                 .html(tooltipHtml)
                 .datum(element);
-
         } else {
             this.hideTooltip();
         }
@@ -1037,7 +1052,7 @@ class metrics extends viewModelBase {
 
     private hideTooltip() {
         this.tooltip.transition()
-            .duration(200)
+            .duration(250)
             .style("opacity", 0);
          
         this.tooltip.datum(null);      
@@ -1071,12 +1086,25 @@ class metrics extends viewModelBase {
     private dataImported(result: string) {
         this.cancelLiveView();
 
-        this.data = JSON.parse(result);
-        this.fillCache();
-        this.resetGraphData();
-        const [workData, maxConcurrentIndexes] = this.prepareTimeData();
-        this.draw(workData, maxConcurrentIndexes, true);
-        this.isImport(true);
+        try {            
+            const importedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = JSON.parse(result);
+
+            // Data validation
+            if (!_.isArray(importedData)) {
+                messagePublisher.reportError("Invalid indexing performance file format", undefined, undefined);
+            }
+            else {                                
+                this.data = importedData;
+                this.fillCache();
+                this.resetGraphData();
+                const [workData, maxConcurrentIndexes] = this.prepareTimeData();
+                this.draw(workData, maxConcurrentIndexes, true);
+                this.isImport(true);
+            }         
+        }
+        catch (e) {
+            messagePublisher.reportError("Failed to parse json data", undefined, undefined);
+        }              
     }
 
     private fillCache() {

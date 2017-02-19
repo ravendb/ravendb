@@ -1,0 +1,52 @@
+﻿.metricsContainer {
+    position: relative;
+}
+
+.metricsContainer canvas, .metricsContainer svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+.brush .extent {
+    fill-opacity: .3;
+    stroke: #ca1c59;
+    fill: #ca1c59;
+    shape-rendering: crispEdges;
+}
+
+rect.pane {
+    fill: none;
+    pointer-events: all;
+}
+
+.metricsContainer { 
+    .tooltip {
+        box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.45);
+        position: absolute;
+        text-align: left;
+        background: #2c3333;
+        color: #a9adad;
+        border: 0px;
+        padding:8px 16px;
+        border-radius: 2px;
+        pointer-events: none;
+        opacity:1;
+    }
+}
+
+.legendColor {
+    width: 11px;
+    height: 11px;
+    display: inline-block;
+}
+
+.legendHeading {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+}
+
+.legendText {
+    font-size:0.7em;
+}
