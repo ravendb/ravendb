@@ -68,7 +68,8 @@ class genUtils {
         return genUtils.formatDuration(moment.duration(input));
     }
 
-    static formatBytesToSize(bytes: number) {
+    // Format bytes to human size string
+    static formatBytesToSize(bytes: number) : string {
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         if (bytes === 0) {
             return "0 Bytes";
@@ -86,6 +87,17 @@ class genUtils {
 
         return newRes + ' ' + sizes[i];
     }
+
+    // Return the nearest rounded bytes size 
+    static roundBytesToNearstSize(bytes: number): number {
+        if (bytes === 0) {
+            return 0;
+        }
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        const result = bytes / Math.pow(1024, i);
+        const roundedResult = Math.round(result) * 1024;
+        return roundedResult;
+    }   
 
     // replace characters with their char codes, but leave A-Za-z0-9 and - in place. 
     static escape(input: string) {
@@ -179,5 +191,17 @@ class genUtils {
         }
         return result;
     };
+
+    static findLongestLineInTooltip(tooltipText: string) : string {
+        // Find and return the longest line in the tooltip text
+        const tooltipTextLines = tooltipText.split("<br/>");
+        return tooltipTextLines.reduce(function (a, b) { return a.length > b.length ? a : b; });
+    }
+
+    static findNumberOfLinesInTooltip(tooltipText: string): number {
+        // Find and return the number of lines in the tooltip text
+        const tooltipTextLines = tooltipText.split("<br/>");
+        return tooltipTextLines.length;
+    }
 } 
 export = genUtils;

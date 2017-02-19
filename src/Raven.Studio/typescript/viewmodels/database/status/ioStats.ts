@@ -7,6 +7,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import gapFinder = require("common/helpers/graph/gapFinder");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import getIOMetricsCommand = require("commands/database/debug/getIOMetricsCommand");
+import messagePublisher = require("common/messagePublisher");
 
 type rTreeLeaf = {
     minX: number;
@@ -183,6 +184,7 @@ class metrics extends viewModelBase {
     private isImport = ko.observable<boolean>(false);
     private hasIndexes = ko.observable<boolean>(false);
     private isIndexesExpanded = ko.observable<boolean>(false);
+    private hasAnyData = ko.observable<boolean>(false);
 
     private searchText = ko.observable<string>();
     private trackNames = ko.observableArray<string>();
@@ -201,12 +203,13 @@ class metrics extends viewModelBase {
     private commonPathsPrefix: string;     
     private totalWidth: number;
     private totalHeight: number; 
-
     private currentYOffset = 0;
     private maxYOffset = 0;
+
+    private gapFinder: gapFinder;   
     private hitTest = new hitTest();
     private brushSection: HTMLCanvasElement; // a virtual canvas for brush section
-    private gapFinder: gapFinder;   
+    private brushAndZoomCallbacksEnabled = true;    
 
     /* d3 */
 
@@ -288,19 +291,21 @@ class metrics extends viewModelBase {
                     if (recentItem.Type === metrics.dataFlushString) {
                         maxVoronDataFlushSize = recentItem.Size > maxVoronDataFlushSize ? recentItem.Size : maxVoronDataFlushSize;
                     }
+
+                    this.hasAnyData(true);
                 });
             });
         });
 
         // 3. Calc levels so we know what color to use for the data in UI (low/med/high)
-        this.journalWriteLowSizeLevel(maxJournalWriteSize / 3);
-        this.journalWriteHighSizeLevel((maxJournalWriteSize / 3) * 2);
+        this.journalWriteLowSizeLevel(generalUtils.roundBytesToNearstSize(maxJournalWriteSize / 3));
+        this.journalWriteHighSizeLevel(generalUtils.roundBytesToNearstSize(maxJournalWriteSize / 3 * 2));
 
-        this.dataSyncLowSizeLevel(maxVoronDataSyncSize / 3);
-        this.dataSyncHighSizeLevel((maxVoronDataSyncSize / 3) * 2);
+        this.dataSyncLowSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataSyncSize / 3));
+        this.dataSyncHighSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataSyncSize / 3 * 2));
 
-        this.dataFlushLowSizeLevel(maxVoronDataFlushSize / 3);
-        this.dataFlushHighSizeLevel((maxVoronDataFlushSize / 3) * 2);
+        this.dataFlushLowSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataFlushSize / 3));
+        this.dataFlushHighSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataFlushSize / 3 * 2));
     }
 
     private initCanvas() {
@@ -399,23 +404,21 @@ class metrics extends viewModelBase {
     }
 
     private draw() {
-        if (!this.data || this.data.Environments.length === 0) {
-            //TODO: handle the same as in indexing performance
-            return;
-        }
+        if (this.hasAnyData()) {           
 
-        // 0. Prepare
-        this.prepareBrushSection();
-        this.prepareMainSection();
+            // 0. Prepare
+            this.prepareBrushSection();
+            this.prepareMainSection();
 
-        // 1. Draw the top brush section as image on the real DOM canvas
-        const canvas = this.canvas.node() as HTMLCanvasElement;
-        const context = canvas.getContext("2d");
-        context.clearRect(0, 0, this.totalWidth, metrics.brushSectionHeight);
-        context.drawImage(this.brushSection, 0, 0);
+            // 1. Draw the top brush section as image on the real DOM canvas
+            const canvas = this.canvas.node() as HTMLCanvasElement;
+            const context = canvas.getContext("2d");
+            context.clearRect(0, 0, this.totalWidth, metrics.brushSectionHeight);
+            context.drawImage(this.brushSection, 0, 0);
 
-        // 2. Draw main (bottom) section
-        this.drawMainSection();
+            // 2. Draw main (bottom) section
+            this.drawMainSection();
+        }        
     }
 
     private prepareBrushSection() {
@@ -644,17 +647,21 @@ class metrics extends viewModelBase {
     }
 
     private onZoom() {
-        this.brush.extent(this.xNumericScale.domain() as [number, number]);
-        this.brushContainer
-            .call(this.brush);
+        if (this.brushAndZoomCallbacksEnabled) {
+            this.brush.extent(this.xNumericScale.domain() as [number, number]);
+            this.brushContainer
+                .call(this.brush);
 
-        this.drawMainSection();
+            this.drawMainSection();
+        }
     }
 
     private onBrush() {
-        this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
-        this.zoom.x(this.xNumericScale);
-        this.drawMainSection();
+        if (this.brushAndZoomCallbacksEnabled) {
+            this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
+            this.zoom.x(this.xNumericScale);
+            this.drawMainSection();
+        }
     }
 
     private drawMainSection() {
@@ -877,6 +884,14 @@ class metrics extends viewModelBase {
         this.drawMainSection();
     }   
 
+    private getIOMetricsData(): JQueryPromise<Raven.Server.Documents.Handlers.IOMetricsResponse> {
+        return new getIOMetricsCommand(this.activeDatabase())
+            .execute()
+            .done((result) => {
+                this.data = result;
+            });
+    }
+
     fileSelected() {
         const fileInput = <HTMLInputElement>document.querySelector("#importFilePicker");
         const self = this;
@@ -902,51 +917,51 @@ class metrics extends viewModelBase {
         $input.val(null);
     }
 
-    private dataImported(result: string) {
+    private dataImported(result: string) {              
+        try {
+            const importedData: Raven.Server.Documents.Handlers.IOMetricsResponse = JSON.parse(result); 
 
-        // TODO: implement similar to indexing performance
+            // Check if data is an IOStats json data..                                  
+            if (!importedData.hasOwnProperty('Environments')) {
+                messagePublisher.reportError("Invalid IO Stats file format", undefined, undefined);
+            }
+            else {
+                this.data = importedData;
+                this.resetGraphData();
+                this.draw();
+                this.isImport(true);
+            }
 
-        this.data = JSON.parse(result);  
-
-        this.xNumericScale.domain(this.xBrushNumericScale.domain());
-
-        this.xNumericScale.domain([0, this.totalWidth]);
-        this.zoom.x(this.xNumericScale);
-        this.brush.clear();
-        this.brushContainer.call(this.brush);
-
-        this.initViewData();
-        this.draw();
-        this.isImport(true);
-        this.searchText("");
+        } catch (e) {
+            messagePublisher.reportError("Failed to parse json data", undefined, undefined);
+        }             
     }
 
     closeImport() {       
-        this.getIOMetricsData().done(() => {           
-
-            // TODO: implement similar to indexing performance
-
-            this.initViewData();            
-           
-            this.xNumericScale.domain(this.xBrushNumericScale.domain());
-
-            this.xNumericScale.domain([0, this.totalWidth]);
-            this.zoom.x(this.xNumericScale);
-            this.brush.clear();
-            this.brushContainer.call(this.brush);
-
-            this.draw();
+        this.getIOMetricsData().done(() => {                                                                   
+            
+            this.resetGraphData();
+            this.draw();            
             this.isImport(false);
-            this.searchText("");
         });
+    }   
+
+    private resetGraphData() {
+        this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());      
+        this.initViewData(); 
+        this.searchText("");
     }
 
-    private getIOMetricsData(): JQueryPromise<Raven.Server.Documents.Handlers.IOMetricsResponse> {
-        return new getIOMetricsCommand(this.activeDatabase())
-            .execute()
-            .done((result) => {
-                this.data = result;
-            });
+    private setZoomAndBrush(scale: [number, number], brushAction: (brush: d3.svg.Brush<any>) => void) {
+        this.brushAndZoomCallbacksEnabled = false;
+
+        this.xNumericScale.domain(scale);
+        this.zoom.x(this.xNumericScale);
+
+        brushAction(this.brush);
+        this.brushContainer.call(this.brush);
+
+        this.brushAndZoomCallbacksEnabled = true;
     }
 
     exportAsJson() {
@@ -1056,7 +1071,7 @@ class metrics extends viewModelBase {
 
         if (currentDatum !== element) {
             const tooltipHtml = "Gap start time: " + (element).StartTime +
-                "<br />Gap duration: " + generalUtils.formatMillis((element).DurationInMilliseconds);
+                "<br/>Gap duration: " + generalUtils.formatMillis((element).DurationInMilliseconds);
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
@@ -1076,21 +1091,36 @@ class metrics extends viewModelBase {
             tooltipHtml += `Duration: ${duration}<br/>`;
             tooltipHtml += `Size: ${element.HumanSize}<br/>`;
             tooltipHtml += `Size (bytes): ${element.Size.toLocaleString()}<br/>`;
+            tooltipHtml += `Allocated Size: ${element.HumanFileSize.toLocaleString()}<br/>`;
+            tooltipHtml += `Allocated Size (bytes): ${element.FileSize.toLocaleString()}<br/>`;
 
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
 
     private handleTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats | IndexingPerformanceGap, x: number, y: number, tooltipHtml: string) {
-        if (element) {
-            const tooltipWidth = $("#indexingPerformance .tooltip").width() + 30;
-            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
+        if (element) {         
+            const canvas = this.canvas.node() as HTMLCanvasElement;
+            const context = canvas.getContext("2d");
+            context.font = this.tooltip.style("font"); 
+          
+            const longestLine = generalUtils.findLongestLineInTooltip(tooltipHtml);               
+            const tooltipWidth = context.measureText(longestLine).width + 60;
+          
+            const numberOfLines = generalUtils.findNumberOfLinesInTooltip(tooltipHtml);
+            const tooltipHeight = numberOfLines * 30 + 60;      
 
-            this.tooltip.transition()
-                .duration(200)
-                .style("opacity", 1)
+            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
+            y = Math.min(y, Math.max(this.totalHeight - tooltipHeight, 0));
+
+            this.tooltip                           
                 .style("left", (x + 10) + "px")
-                .style("top", (y + 10) + "px");
+                .style("top", (y + 10) + "px");    
+           
+            this.tooltip
+                .transition()
+                .duration(250)
+                .style("opacity", 1);    
 
             this.tooltip
                 .html(tooltipHtml)
@@ -1100,14 +1130,14 @@ class metrics extends viewModelBase {
             this.hideTooltip();
         }
     }
-
-    private hideTooltip() {
-        this.tooltip.transition()
-            .duration(200)
+    private hideTooltip() {       
+        this.tooltip
+            .transition()
+            .duration(250)
             .style("opacity", 0);
 
         this.tooltip.datum(null);
-    }
+    }   
 }
 
 export = metrics;
