@@ -27,7 +27,7 @@ namespace Raven.Server
             return CreateSelfSignedCertificateBasedOnCertificateAuthorityPrivateKey(subjectName, issuerName, CaPrivateKey);
         }
 
-        public static X509Certificate2 CreateSelfSignedCertificateBasedOnCertificateAuthorityPrivateKey(string subjectName, string issuerName, AsymmetricKeyParameter issuerPrivKey)
+        private static X509Certificate2 CreateSelfSignedCertificateBasedOnCertificateAuthorityPrivateKey(string subjectName, string issuerName, AsymmetricKeyParameter issuerPrivKey)
         {
             const int keyStrength = 2048;
 
@@ -81,7 +81,7 @@ namespace Raven.Server
             return convertedCertificate;
         }
 
-        public static X509Certificate2 CreateCertificateAuthorityCertificate(string subjectName, out AsymmetricKeyParameter CaPrivateKey)
+        private static X509Certificate2 CreateCertificateAuthorityCertificate(string subjectName, out AsymmetricKeyParameter CaPrivateKey)
         {
             const int keyStrength = 2048;
 
@@ -133,30 +133,5 @@ namespace Raven.Server
             return x509;
         }
 
-        public static AsymmetricAlgorithm ToDotNetKey(RsaPrivateCrtKeyParameters privateKey)
-        {
-            var cspParams = new CspParameters()
-            {
-                KeyContainerName = Guid.NewGuid().ToString(),
-                KeyNumber = (int)KeyNumber.Exchange,
-                Flags = CspProviderFlags.UseMachineKeyStore
-            };
-
-            var rsaProvider = new RSACryptoServiceProvider(cspParams);
-            var parameters = new RSAParameters()
-            {
-                Modulus = privateKey.Modulus.ToByteArrayUnsigned(),
-                P = privateKey.P.ToByteArrayUnsigned(),
-                Q = privateKey.Q.ToByteArrayUnsigned(),
-                DP = privateKey.DP.ToByteArrayUnsigned(),
-                DQ = privateKey.DQ.ToByteArrayUnsigned(),
-                InverseQ = privateKey.QInv.ToByteArrayUnsigned(),
-                D = privateKey.Exponent.ToByteArrayUnsigned(),
-                Exponent = privateKey.PublicExponent.ToByteArrayUnsigned()
-            };
-
-            rsaProvider.ImportParameters(parameters);
-            return rsaProvider;
-        }
     }
 }
