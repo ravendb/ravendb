@@ -30,8 +30,8 @@ namespace Rachis.Behaviors
 
             _eventLoop.Start();
 
-            TimeoutEvent = new TimeoutEvent(engine.Options.ElectionTimeout);
-            TimeoutEvent.TimeoutHappened += HandleTimeout;
+            //TimeoutEvent = new TimeoutEvent(engine.Options.ElectionTimeout);
+            //TimeoutEvent.TimeoutHappened += HandleTimeout;
             if (confirmLeadership)
             {
                 AppendCommand(new NoOpCommand());
@@ -290,7 +290,7 @@ namespace Rachis.Behaviors
 
         public override void Dispose()
         {
-            TimeoutEvent.Dispose();
+            //TimeoutEvent.Dispose();
             _cancellation.Cancel();
             _eventLoop.Join();
             foreach (var thread in _peersThreads.Values)

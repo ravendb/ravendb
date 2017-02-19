@@ -44,7 +44,7 @@ namespace Raven.Server.Rachis
             _engine = engine;
         }
 
-        public void Initialize()
+        public void Start()
         {
             ClusterTopology clusterTopology;
             TransactionOperationContext context;
@@ -83,6 +83,7 @@ namespace Raven.Server.Rachis
 
                 var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter, clusterTopology.ApiKey);
                 _voters.Add(voter, ambasaddor);
+                _engine.AppendStateDisposable(this, ambasaddor);
                 ambasaddor.Start();
             }
 
@@ -104,6 +105,7 @@ namespace Raven.Server.Rachis
 
                 var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable, clusterTopology.ApiKey);
                 _promotables.Add(promotable, ambasaddor);
+                _engine.AppendStateDisposable(this, ambasaddor);
                 ambasaddor.Start();
             }
 
@@ -125,6 +127,7 @@ namespace Raven.Server.Rachis
                 }
                 var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter, clusterTopology.ApiKey);
                 _nonVoters.Add(nonVoter, ambasaddor);
+                _engine.AppendStateDisposable(this, ambasaddor);
                 ambasaddor.Start();
             }
 
@@ -138,7 +141,7 @@ namespace Raven.Server.Rachis
         /// <summary>
         /// This is expected to run for a long time, and it cannot leak exceptions
         /// </summary>
-        private void Run()
+        private unsafe void Run()
         {
             using (this)
             {
@@ -146,11 +149,20 @@ namespace Raven.Server.Rachis
                 {
                     var handles = new WaitHandle[]
                     {
-                    _newEntry,
-                    _voterResponded,
-                    _promotableUpdated,
-                    _shutdownRequested
+                        _newEntry,
+                        _voterResponded,
+                        _promotableUpdated,
+                        _shutdownRequested
                     };
+
+                    TransactionOperationContext context;
+                    using (_engine.ContextPool.AllocateOperationContext(out context))
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        _engine.InsertToLog(context, new BlittableJsonReaderObject(null, 0, context),
+                            RachisEntryFlags.Noop);
+                        tx.Commit();
+                    }
 
                     while (true)
                     {
@@ -170,13 +182,14 @@ namespace Raven.Server.Rachis
                                 _promotableUpdated.Reset();
                                 CheckPromotables();
                                 break;
-                            case WaitHandle.WaitTimeout: // timeout
-                                                         // couldn't talk to followers for too long, need to step down
+                            case WaitHandle.WaitTimeout: 
                                 VoteOfNoConfidence();
                                 break;
                             case 3: // shutdown requested
                                 return;
                         }
+
+                        EnsureThatWeHaveLeadership((_voters.Count / 2) + 1);
                     }
                 }
                 catch (Exception e)
@@ -184,6 +197,18 @@ namespace Raven.Server.Rachis
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info("Error when running leader behavior", e);
+                    }
+                    try
+                    {
+                        _engine.SwitchToCandidateState();
+                    }
+                    catch (Exception e2)
+                    {
+                        if (_engine.Log.IsOperationsEnabled)
+                        {
+                            _engine.Log.Operations("After leadership failure, could not setup switch to candidate state", e2);
+                        }
+
                     }
                 }
             }
@@ -199,19 +224,7 @@ namespace Raven.Server.Rachis
         private long _lastCommit;
         private void OnVoterConfirmation()
         {
-            var votersCount = _voters.Count;
-            var majority = (votersCount / 2) + 1;
-            var now = DateTime.UtcNow;
-            var peersHeardFromInElectionTimeout = 1;// we count as a node :-)
-            foreach (var voter in _voters.Values)
-            {
-                if ((now - voter.LastReplyFromFollower).TotalMilliseconds < _engine.ElectionTimeoutMs)
-                    peersHeardFromInElectionTimeout++;
-            }
-            if (peersHeardFromInElectionTimeout < majority)
-                VoteOfNoConfidence(); // we didn't get enough votes to still remain the leader
-
-            var maxIndexOnQuorum = GetMaxIndexOnQuorum(majority);
+            var maxIndexOnQuorum = GetMaxIndexOnQuorum((_voters.Count / 2) + 1);
 
             if (_lastCommit == maxIndexOnQuorum)
                 return; // nothing to do here
@@ -222,6 +235,9 @@ namespace Raven.Server.Rachis
             {
                 _lastCommit = _engine.GetLastCommitIndex(context);
 
+                if (_engine.GetTermFor(_lastCommit) < _engine.CurrentTerm)
+                    return;// can't commit until at least one entry from our term has been published
+
                 if (_lastCommit == maxIndexOnQuorum)
                     return; // nothing to do here
 
@@ -230,6 +246,31 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
+
+            foreach (var kvp in _entries)
+            {
+                if(kvp.Key > _lastCommit)
+                    continue;
+
+                TaskCompletionSource<object> value;
+                if (_entries.TryRemove(kvp.Key, out value))
+                {
+                    value.TrySetResult(null);
+                }
+            }
+        }
+
+        private void EnsureThatWeHaveLeadership(int majority)
+        {
+            var now = DateTime.UtcNow;
+            var peersHeardFromInElectionTimeout = 1; // we count as a node :-)
+            foreach (var voter in _voters.Values)
+            {
+                if ((now - voter.LastReplyFromFollower).TotalMilliseconds < _engine.ElectionTimeoutMs)
+                    peersHeardFromInElectionTimeout++;
+            }
+            if (peersHeardFromInElectionTimeout < majority)
+                VoteOfNoConfidence(); // we didn't get enough votes to still remain the leader
         }
 
         /// <summary>

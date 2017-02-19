@@ -29,11 +29,13 @@ namespace Raven.Server.Rachis
                 using (_engine.ContextPool.AllocateOperationContext(out context))
                 {
                     var appendEntries = _connection.Read<AppendEntries>(context);
+                    _engine.Timeout.Defer();
                     if (appendEntries.EntriesCount != 0)
                     {
                         for (int i = 0; i < appendEntries.EntriesCount; i++)
                         {
                             entries.Add(_connection.Read<RachisEntry>(context));
+                            _engine.Timeout.Defer();
                         }
                     }
                     long lastLogIndex;
@@ -56,6 +58,7 @@ namespace Raven.Server.Rachis
                         if (lastEntryIndexToCommit != lastAppliedIndex)
                         {
                             _engine.StateMachine.Apply(context, lastEntryIndexToCommit);
+                            _engine.SetLastCommitIndex(context, lastEntryIndexToCommit);
                         }
 
                         tx.Commit();
@@ -67,6 +70,9 @@ namespace Raven.Server.Rachis
                         LastLogIndex = lastLogIndex,
                         Success = true
                     });
+
+                    _engine.Timeout.Defer();
+
                 }
             }
         }
@@ -90,6 +96,8 @@ namespace Raven.Server.Rachis
                     _connection.Dispose();
                     return false;
                 }
+
+                _engine.Timeout.Defer();
 
                 //TODO: If leader, need to step down here
                 //TODO: If follower, need to close all followers connections
@@ -146,6 +154,7 @@ namespace Raven.Server.Rachis
                     CurrentTerm = _engine.CurrentTerm,
                     LastLogIndex = snapshot.LastIncludedIndex
                 });
+                _engine.Timeout.Defer();
             }
             return true;
         }
@@ -192,6 +201,8 @@ namespace Raven.Server.Rachis
 
             while (minIndex < maxIndex)
             {
+                _engine.Timeout.Defer();
+
                 // TODO: cancellation
                 //_cancellationTokenSource.Token.ThrowIfCancellationRequested();
 

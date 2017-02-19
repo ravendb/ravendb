@@ -7,7 +7,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using Raven.Client.Exceptions;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -21,12 +20,26 @@ namespace Raven.Server.Rachis
 {
     public class RachisConsensus : IDisposable
     {
+        public enum State
+        {
+            Passive,
+            Candidate,
+            Follower,
+            Leader
+        }
+
+        public State CurrentState { get; private set; }
+        public TimeoutEvent Timeout { get; private set; }
+
         private readonly StorageEnvironmentOptions _options;
         private readonly string _url;
         public TransactionContextPool ContextPool { get; private set; }
         private StorageEnvironment _persistentState;
         internal readonly Logger Log;
         public RachisStateMachine StateMachine;
+
+        private List<IDisposable> _disposables = new List<IDisposable>();
+
 
         public long CurrentTerm { get; private set; }
         public string Url => _url;
@@ -67,6 +80,7 @@ namespace Raven.Server.Rachis
         }
 
         public int ElectionTimeoutMs = 300;
+        private Leader _leader;
 
         public RachisConsensus(StorageEnvironmentOptions options, string url)
         {
@@ -81,11 +95,16 @@ namespace Raven.Server.Rachis
             {
                 StateMachine = stateMachine;
                 _persistentState = new StorageEnvironment(_options);
-                using (var tx = _persistentState.WriteTransaction())
-                {
-                    LogsTable.Create(tx, EntriesSlice, 16);
+                ContextPool = new TransactionContextPool(_persistentState);
 
-                    var state = tx.CreateTree(GlobalStateSlice);
+                ClusterTopology topology;
+                TransactionOperationContext context;
+                using (ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
+
+                    var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
                     if (state.State.NumberOfEntries == 0)
                     {
                         *(long*)state.DirectAdd(CurrentTermSlice, sizeof(long)) = CurrentTerm = 0;
@@ -98,14 +117,85 @@ namespace Raven.Server.Rachis
                                 "Could not read the current term from persistent storage");
                         CurrentTerm = read.Reader.ReadLittleEndianInt64();
                     }
+
+                    topology = GetTopology(context);
+
+                    tx.Commit();
                 }
-                ContextPool = new TransactionContextPool(_persistentState);
+
+                Timeout = new TimeoutEvent(new Random().Next((ElectionTimeoutMs / 3) * 2, ElectionTimeoutMs));
+
+                // if we don't have a topology id, then we are passive
+                // an admin needs to let us know that it is fine, either
+                // by explicit bootstraping or by connecting us to a cluster
+                if (topology.TopologyId == null || 
+                    topology.Voters.Contains(_url) == false)
+                {
+                    CurrentState=State.Passive;
+                    return;
+                }
+
+                CurrentState = State.Follower;
+                if (topology.Voters.Length == 1)
+                    SwitchToLeaderState();
+                else
+                    Timeout.Start(SwitchToCandidateState);
             }
             catch (Exception)
             {
                 Dispose();
                 throw;
             }
+        }
+
+        public void SetNewState(IDisposable state)
+        {
+            lock (_disposables)
+            {
+                foreach (var disposable in _disposables)
+                {
+                    disposable.Dispose();
+                }
+
+                _disposables.Clear();
+
+                _disposables.Add(state);
+            }
+        }
+
+        public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
+        {
+            lock (_disposables)
+            {
+                if (ReferenceEquals(_disposables[0], parentState) == false)
+                    throw new ConcurrencyException(
+                        "Could not set the disposeOnStateChange because by the time we did it the parent state has changed");
+                _disposables.Add(disposeOnStateChange);
+            }
+        }
+
+        public void SwitchToLeaderState()
+        {
+            if (Log.IsInfoEnabled)
+            {
+                Log.Info("Switching to leader state");
+            }
+            _leader = new Leader(this);
+            SetNewState(_leader);
+            _leader.Start();
+        }
+
+        public void SwitchToCandidateState()
+        {
+            if (Log.IsInfoEnabled)
+            {
+                Log.Info("Switching to candidate state");
+            }
+            var oldLeader = _leader;
+            var candidate = new Candidate(this);
+            SetNewState(candidate);
+            Interlocked.CompareExchange(ref _leader, null, oldLeader);
+            candidate.Start();
         }
 
         public unsafe ClusterTopology GetTopology(TransactionOperationContext context)
@@ -161,7 +251,7 @@ namespace Raven.Server.Rachis
                 try
                 {
                     RachisHello initialMessage;
-                            ClusterTopology clusterTopology;
+                    ClusterTopology clusterTopology;
                     TransactionOperationContext context;
                     using (ContextPool.AllocateOperationContext(out context))
                     {
@@ -251,7 +341,7 @@ namespace Raven.Server.Rachis
             if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out reader))
             {
                 int size;
-                lastIndex = Bits.SwapBytes(*(long*) reader.Read(0, out size));
+                lastIndex = Bits.SwapBytes(*(long*)reader.Read(0, out size));
                 Debug.Assert(size == sizeof(long));
             }
             else
@@ -457,14 +547,14 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe void CastVoteInTerm(TransactionOperationContext context ,long term, string votedFor)
+        public unsafe void CastVoteInTerm(TransactionOperationContext context, long term, string votedFor)
         {
             Debug.Assert(context.Transaction != null);
             if (term <= CurrentTerm)
                 throw new ConcurrencyException($"The current term {CurrentTerm} is larger than {term}, aborting change");
 
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
-            *(long*) state.DirectAdd(CurrentTermSlice, sizeof(long)) = term;
+            *(long*)state.DirectAdd(CurrentTermSlice, sizeof(long)) = term;
 
             votedFor = votedFor ?? string.Empty;
 
