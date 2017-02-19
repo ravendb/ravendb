@@ -9,7 +9,7 @@ namespace Voron.Impl.Scratch
             ScratchFilesUsage = new List<ScratchFileUsage>();
         }
 
-        public long TxIdAfterWhichLatestFreePagesBecomeAvailable { get; set; }
+        public long OldestActiveTransaction { get; set; }
 
         public int NumberOfScratchFiles { get; set; }
 
@@ -44,6 +44,8 @@ namespace Voron.Impl.Scratch
         public long InActiveUseInKB { get; set; }
 
         public long TxIdAfterWhichLatestFreePagesBecomeAvailable { get; set; }
+
+        public bool CanBeDeleted { get; set; }
 
         public List<MostAvailableFreePagesBySize> MostAvailableFreePages { get; set; }
     }
