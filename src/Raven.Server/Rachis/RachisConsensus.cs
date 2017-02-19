@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -15,6 +16,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 
 namespace Raven.Server.Rachis
 {
@@ -81,6 +83,7 @@ namespace Raven.Server.Rachis
         }
 
         public int ElectionTimeoutMs = 300;
+        private Leader _currentLeader;
 
         public RachisConsensus(StorageEnvironmentOptions options, string url)
         {
@@ -93,6 +96,7 @@ namespace Raven.Server.Rachis
         {
             try
             {
+                stateMachine.Initialize(this);
                 StateMachine = stateMachine;
                 _persistentState = new StorageEnvironment(_options);
                 ContextPool = new TransactionContextPool(_persistentState);
@@ -105,18 +109,11 @@ namespace Raven.Server.Rachis
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
                     var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
-                    if (state.State.NumberOfEntries == 0)
-                    {
+                    var read = state.Read(CurrentTermSlice);
+                    if (read == null || read.Reader.Length != sizeof(long))
                         *(long*)state.DirectAdd(CurrentTermSlice, sizeof(long)) = CurrentTerm = 0;
-                    }
                     else
-                    {
-                        var read = state.Read(CurrentTermSlice);
-                        if (read == null || read.Reader.Length != sizeof(long))
-                            throw new InvalidOperationException(
-                                "Could not read the current term from persistent storage");
                         CurrentTerm = read.Reader.ReadLittleEndianInt64();
-                    }
 
                     topology = GetTopology(context);
 
@@ -137,7 +134,17 @@ namespace Raven.Server.Rachis
 
                 CurrentState = State.Follower;
                 if (topology.Voters.Length == 1)
+                {
+                    using (ContextPool.AllocateOperationContext(out context))
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+
+                        CastVoteInTerm(context, CurrentTerm + 1, Url);
+
+                        tx.Commit();
+                    }
                     SwitchToLeaderState();
+                }
                 else
                     Timeout.Start(SwitchToCandidateState);
             }
@@ -152,6 +159,7 @@ namespace Raven.Server.Rachis
         {
             lock (_disposables)
             {
+                _currentLeader = null;
                 for (int i = _disposables.Count - 1; i >= 0; i--)
                 {
                     _disposables[i].Dispose();
@@ -191,7 +199,17 @@ namespace Raven.Server.Rachis
             }
             var leader = new Leader(this);
             SetNewState(State.Leader, leader);
+            _currentLeader = leader;
             leader.Start();
+        }
+
+        public Task PutAsync(BlittableJsonReaderObject cmd)
+        {
+            var leader = _currentLeader;
+            if (leader == null)
+                throw new InvalidOperationException("Not a leader, cannot accept commands");
+
+            return leader.PutAsync(cmd);
         }
 
         public void SwitchToCandidateState()
@@ -236,7 +254,15 @@ namespace Raven.Server.Rachis
         public unsafe BlittableJsonReaderObject SetTopology(TransactionOperationContext context, ClusterTopology topology)
         {
             Debug.Assert(context.Transaction != null);
-            var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
+            var tx = context.Transaction.InnerTransaction;
+            var topologyJson = SetTopology(tx, context, topology);
+
+            return topologyJson;
+        }
+
+        private static unsafe BlittableJsonReaderObject SetTopology(Transaction tx, JsonOperationContext context, ClusterTopology topology)
+        {
+            var state = tx.CreateTree(GlobalStateSlice);
 
             var djv = new DynamicJsonValue
             {
@@ -251,7 +277,6 @@ namespace Raven.Server.Rachis
 
             var ptr = state.DirectAdd(TopologySlice, topologyJson.Size);
             topologyJson.CopyTo(ptr);
-
             return topologyJson;
         }
 
@@ -265,12 +290,12 @@ namespace Raven.Server.Rachis
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
         /// </summary>
-        public void AcceptNewConnection(Stream stream, TcpClient tcpClient)
+        public void AcceptNewConnection(TcpClient tcpClient)
         {
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(stream);
+                remoteConnection = new RemoteConnection(tcpClient.GetStream());
                 try
                 {
                     RachisHello initialMessage;
@@ -337,14 +362,6 @@ namespace Raven.Server.Rachis
 
                 try
                 {
-                    stream?.Dispose();
-                }
-                catch (Exception)
-                {
-                }
-
-                try
-                {
                     tcpClient?.Dispose();
                 }
                 catch (Exception)
@@ -354,7 +371,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe long InsertToLog(TransactionOperationContext context, BlittableJsonReaderObject cmd,
+        public unsafe long InsertToLeaderLog(TransactionOperationContext context, BlittableJsonReaderObject cmd,
             RachisEntryFlags flags)
         {
             Debug.Assert(context.Transaction != null);
@@ -392,14 +409,34 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
 
-            long reversedEntryIndex = -1;
+            long reversedEntryIndex = Bits.SwapBytes(entries[0].Index - 1);
+
             Slice key;
             using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long), out key))
             {
-                foreach (var entry in entries)
+                long prevIndex;
+                TableValueReader reader;
+                if (reversedEntryIndex != 0)
                 {
+                    if (table.ReadByKey(key, out reader) == false)
+                        throw new InvalidOperationException(
+                            $"Was asked to append {entries[0].Index} but couldn\'t find {(entries[0].Index - 1)} in the log");
+
+                    prevIndex = entries[0].Index - 1;
+                }
+                else
+                {
+                    prevIndex = 0;
+                }
+                for (var index = 0; index < entries.Count; index++)
+                {
+                    var entry = entries[index];
+                    if (entry.Index != prevIndex + 1)
+                    {
+                        throw new InvalidOperationException($"Gap in the entries, prev was {prevIndex} but now trying {entry.Index}");
+                    }
+                    prevIndex = entry.Index;
                     reversedEntryIndex = Bits.SwapBytes(entry.Index);
-                    TableValueReader reader;
                     if (table.ReadByKey(key, out reader)) // already exists
                     {
                         int size;
@@ -422,18 +459,22 @@ namespace Raven.Server.Rachis
                         } while (table.ReadByKey(key, out reader));
                     }
 
-                    table.Insert(new TableValueBuilder
+                    using (var nested = context.ReadObject(entry.Entry, "entry"))
                     {
-                        reversedEntryIndex,
-                        entry.Term,
-                        {entry.Entry.BasePointer, entry.Entry.Size}
-                    });
+                        table.Insert(new TableValueBuilder
+                        {
+                            reversedEntryIndex,
+                            entry.Term,
+                            {nested.BasePointer, nested.Size},
+                            (int)entry.Flags
+                        });
+                    }
                 }
             }
         }
 
 
-        public unsafe BlittableJsonReaderObject GetEntry(TransactionOperationContext context, long index)
+        public unsafe BlittableJsonReaderObject GetEntry(TransactionOperationContext context, long index, out RachisEntryFlags flags)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             var reversedIndex = Bits.SwapBytes(index);
@@ -442,8 +483,13 @@ namespace Raven.Server.Rachis
             {
                 TableValueReader reader;
                 if (table.ReadByKey(key, out reader) == false)
+                {
+                    flags = RachisEntryFlags.Invalid;
                     return null;
+                }
                 int size;
+                flags = *(RachisEntryFlags*) reader.Read(3, out size);
+                Debug.Assert(size == sizeof(RachisEntryFlags));
                 var ptr = reader.Read(2, out size);
                 return new BlittableJsonReaderObject(ptr, size, context);
             }
@@ -616,18 +662,72 @@ namespace Raven.Server.Rachis
             _options?.Dispose();
         }
 
-        public static Stream ConenctToPeer(string url, string apiKey)
+        public Stream ConenctToPeer(string url, string apiKey)
         {
-            var serverUrl = new UriBuilder(url)
-            {
-                Fragment = null // remove debug info
-            }.Uri.ToString();
+            //var serverUrl = new UriBuilder(url)
+            //{
+            //    Fragment = null // remove debug info
+            //}.Uri.ToString();
 
-            var tcpInfo = ReplicationUtils.GetTcpInfo(serverUrl, null, apiKey);
+            //var tcpInfo = ReplicationUtils.GetTcpInfo(serverUrl, null, apiKey);
 
+            var tcpInfo = new Uri(url);
             var tcpClient = new TcpClient();
-            tcpClient.ConnectAsync(tcpInfo.Url, tcpInfo.Port).Wait();
+            tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port).Wait();
             return tcpClient.GetStream();
+        }
+
+        public static void Bootstarp(StorageEnvironmentOptions options, string self)
+        {
+            var old = options.OwnsPagers;
+            options.OwnsPagers = false;
+            try
+            {
+                using (var env = new StorageEnvironment(options))
+                {
+                    using (var tx = env.WriteTransaction())
+                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var topology = new ClusterTopology(Guid.NewGuid().ToString(),
+                            null,
+                            new string[] { self },
+                            new string[0],
+                            new string[0]);
+
+                        SetTopology(tx, ctx, topology);
+
+                        tx.Commit();
+                    }
+                }
+            }
+            finally
+            {
+                options.OwnsPagers = old;
+            }
+        }
+
+        public Task AddToClusterAsync(string node)
+        {
+            return ModifyTopologyAsync(node, Leader.TopologyModification.Promotable);
+        }
+
+
+        public Task RemoveFromClusterAsync(string node)
+        {
+            return ModifyTopologyAsync(node, Leader.TopologyModification.Remove);
+        }
+
+        private Task ModifyTopologyAsync(string newNode, Leader.TopologyModification modification)
+        {
+            var leader = _currentLeader;
+            if (leader == null)
+                throw new InvalidOperationException("Not a leader, cannot accept commands");
+
+            Task task;
+            if (leader.TryModifyTopology(newNode, modification, out task) == false)
+                throw new InvalidOperationException("Cannot run a modification on the topology when one is in progress");
+
+            return task;
         }
     }
 }

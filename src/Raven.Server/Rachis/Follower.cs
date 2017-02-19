@@ -36,7 +36,7 @@ namespace Raven.Server.Rachis
                     {
                         for (int i = 0; i < appendEntries.EntriesCount; i++)
                         {
-                            entries.Add(_connection.Read<RachisEntry>(context));
+                            entries.Add(_connection.ReadRachisEntry(context));
                             _engine.Timeout.Defer();
                         }
                     }
@@ -60,7 +60,6 @@ namespace Raven.Server.Rachis
                         if (lastEntryIndexToCommit != lastAppliedIndex)
                         {
                             _engine.StateMachine.Apply(context, lastEntryIndexToCommit);
-                            _engine.SetLastCommitIndex(context, lastEntryIndexToCommit);
                         }
 
                         tx.Commit();

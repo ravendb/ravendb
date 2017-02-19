@@ -9,8 +9,6 @@ namespace Raven.Server.Rachis
         public long PrevLogTerm { get; set; }
         public long LeaderCommit { get; set; }
         public int EntriesCount { get; set; }
-        //TODO: topology chnages?
-        public bool HasTopologyChange { get; set; }
     }
 
     public class RachisEntry
@@ -18,5 +16,6 @@ namespace Raven.Server.Rachis
         public long Term { get; set; }
         public long Index { get; set; }
         public BlittableJsonReaderObject Entry { get; set; }
+        public RachisEntryFlags Flags { get; set; }
     }
 }

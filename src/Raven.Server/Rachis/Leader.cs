@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Rachis
 {
@@ -17,6 +18,7 @@ namespace Raven.Server.Rachis
     /// </summary>
     public class Leader : IDisposable
     {
+        private Task _topologyModification;
         private readonly RachisConsensus _engine;
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>();
@@ -148,74 +150,77 @@ namespace Raven.Server.Rachis
         /// <summary>
         /// This is expected to run for a long time, and it cannot leak exceptions
         /// </summary>
-        private unsafe void Run()
+        private void Run()
         {
-            using (this)
+            try
             {
+                var handles = new WaitHandle[]
+                {
+                    _newEntry,
+                    _voterResponded,
+                    _promotableUpdated,
+                    _shutdownRequested
+                };
+
+                var noopCmd = new DynamicJsonValue
+                {
+                    ["Command"] = "noop"
+                };
+                TransactionOperationContext context;
+                using (_engine.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                using (var cmd = context.ReadObject(noopCmd, "noop-cmd"))
+                {
+                    _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.Noop);
+                    tx.Commit();
+                }
+
+                while (true)
+                {
+                    switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeoutMs))
+                    {
+                        case 0: // new entry
+                            _newEntry.Reset();
+                            // release any waiting ambasaddors to send immediately
+                            var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
+                            old.TrySetResult(null);
+                            if (_voters.Count == 0)
+                                goto case 1;
+                            break;
+                        case 1: // voter responded
+                            _voterResponded.Reset();
+                            OnVoterConfirmation();
+                            break;
+                        case 2: // promotable updated
+                            _promotableUpdated.Reset();
+                            CheckPromotables();
+                            break;
+                        case WaitHandle.WaitTimeout:
+                            if (_voters.Count != 0)
+                                VoteOfNoConfidence();
+                            break;
+                        case 3: // shutdown requested
+                            return;
+                    }
+
+                    EnsureThatWeHaveLeadership((_voters.Count / 2) + 1);
+                }
+            }
+            catch (Exception e)
+            {
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info("Error when running leader behavior", e);
+                }
                 try
                 {
-                    var handles = new WaitHandle[]
-                    {
-                        _newEntry,
-                        _voterResponded,
-                        _promotableUpdated,
-                        _shutdownRequested
-                    };
-
-                    TransactionOperationContext context;
-                    using (_engine.ContextPool.AllocateOperationContext(out context))
-                    using (var tx = context.OpenWriteTransaction())
-                    {
-                        _engine.InsertToLog(context, new BlittableJsonReaderObject(null, 0, context),
-                            RachisEntryFlags.Noop);
-                        tx.Commit();
-                    }
-
-                    while (true)
-                    {
-                        switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeoutMs))
-                        {
-                            case 0: // new entry
-                                _newEntry.Reset();
-                                // release any waiting ambasaddors to send immediately
-                                var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
-                                old.TrySetResult(null);
-                                break;
-                            case 1: // voter responded
-                                _voterResponded.Reset();
-                                OnVoterConfirmation();
-                                break;
-                            case 2: // promotable updated
-                                _promotableUpdated.Reset();
-                                CheckPromotables();
-                                break;
-                            case WaitHandle.WaitTimeout:
-                                VoteOfNoConfidence();
-                                break;
-                            case 3: // shutdown requested
-                                return;
-                        }
-
-                        EnsureThatWeHaveLeadership((_voters.Count / 2) + 1);
-                    }
+                    _engine.SwitchToCandidateState();
                 }
-                catch (Exception e)
+                catch (Exception e2)
                 {
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsOperationsEnabled)
                     {
-                        _engine.Log.Info("Error when running leader behavior", e);
-                    }
-                    try
-                    {
-                        _engine.SwitchToCandidateState();
-                    }
-                    catch (Exception e2)
-                    {
-                        if (_engine.Log.IsOperationsEnabled)
-                        {
-                            _engine.Log.Operations("After leadership failure, could not setup switch to candidate state", e2);
-                        }
-
+                        _engine.Log.Operations("After leadership failure, could not setup switch to candidate state", e2);
                     }
                 }
             }
@@ -251,7 +256,6 @@ namespace Raven.Server.Rachis
                 _lastCommit = maxIndexOnQuorum;
 
                 _engine.StateMachine.Apply(context, maxIndexOnQuorum);
-                _engine.SetLastCommitIndex(context, maxIndexOnQuorum);
 
                 _lastCommit = maxIndexOnQuorum;
 
@@ -268,6 +272,12 @@ namespace Raven.Server.Rachis
                 {
                     value.TrySetResult(null);
                 }
+            }
+            if (_entries.Count != 0)
+            {
+                // we have still items to process, run them in 1 node cluster
+                // and speed up the followers ambassadors if they can
+                _newEntry.Set();
             }
         }
 
@@ -303,6 +313,12 @@ namespace Raven.Server.Rachis
         protected long GetMaxIndexOnQuorum(int minSize)
         {
             _votersPerIndex.Clear();
+            TransactionOperationContext context;
+            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                _votersPerIndex[_engine.GetLastEntryIndex(context)] = 1;
+            }
 
             foreach (var voter in _voters.Values)
             {
@@ -329,65 +345,42 @@ namespace Raven.Server.Rachis
         private void CheckPromotables()
         {
             long lastIndex;
-            ClusterTopology clusterTopology;
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                clusterTopology = _engine.GetTopology(context);
                 lastIndex = _engine.GetLogEntriesRange(context).Item2;
             }
 
-            bool hasChanges = false;
-
             foreach (var ambasaddor in _promotables)
             {
-                if (ambasaddor.Value.FollowerMatchIndex == lastIndex)
-                {
-                    hasChanges = true;
-                    clusterTopology = new ClusterTopology(
-                        clusterTopology.TopologyId,
-                        clusterTopology.ApiKey,
-                        clusterTopology.Voters.Concat(new[] { ambasaddor.Value.Url }).ToArray(),
-                        clusterTopology.Promotables.Except(new[] { ambasaddor.Value.Url }).ToArray(),
-                        clusterTopology.NonVotingMembers
-                    );
-                }
+                if (ambasaddor.Value.FollowerMatchIndex != lastIndex)
+                    continue;
+
+                Task task;
+                TryModifyTopology(ambasaddor.Key, TopologyModification.Voter, out task);
+                _promotableUpdated.Set();
+                break;
             }
 
-            if (hasChanges == false)
-                return;
-
-            ChangeTopology(clusterTopology);
-        }
-
-        private void ChangeTopology(ClusterTopology clusterTopology)
-        {
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
-            using (context.OpenWriteTransaction())
-            {
-                var json = _engine.SetTopology(context, clusterTopology);
-                _engine.InsertToLog(context, json, RachisEntryFlags.Topology);
-                _newEntry.Set();
-
-                context.Transaction.Commit();
-            }
-
-            RefreshAmbasaddors(clusterTopology);
         }
 
         public Task PutAsync(BlittableJsonReaderObject cmd)
         {
+            TaskCompletionSource<object> tcs;
+            long index;
+
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
             {
-                var index = _engine.InsertToLog(context, cmd, RachisEntryFlags.Topology);
-                var tcs = _entries.GetOrAdd(index, _ => new TaskCompletionSource<object>());
-                _newEntry.Set();
-                return tcs.Task;
+                index = _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.StateMachineCommand);
+                context.Transaction.Commit();
             }
+            _entries[index] = tcs = new TaskCompletionSource<object>();
+
+            _newEntry.Set();
+            return tcs.Task;
         }
 
         public void Dispose()
@@ -423,6 +416,84 @@ namespace Raven.Server.Rachis
         public Task WaitForNewEntries()
         {
             return _newEntriesArrived.Task;
+        }
+
+        public enum TopologyModification
+        {
+            Voter,
+            Promotable,
+            NonVoter,
+            Remove
+        }
+
+        public bool TryModifyTopology(string node, TopologyModification modification, out Task task)
+        {
+            TaskCompletionSource<object> tcs;
+
+            ClusterTopology clusterTopology;
+            TransactionOperationContext context;
+            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenWriteTransaction())
+            {
+                if (_topologyModification != null)
+                {
+                    task = null;
+                    return false;
+                }
+
+                clusterTopology = _engine.GetTopology(context);
+
+                switch (modification)
+                {
+                    case TopologyModification.Voter:
+                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
+                            clusterTopology.Voters.Concat(new[] {node}).ToArray(),
+                            clusterTopology.Promotables.Except(new[] {node}).ToArray(),
+                            clusterTopology.NonVotingMembers.Except(new[] {node}).ToArray()
+                        );
+                        break;
+                    case TopologyModification.Promotable:
+                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
+                            clusterTopology.Voters.Except(new[] {node}).ToArray(),
+                            clusterTopology.Promotables.Concat(new[] {node}).ToArray(),
+                            clusterTopology.NonVotingMembers.Except(new[] {node}).ToArray()
+                        );
+                        break;
+                    case TopologyModification.NonVoter:
+                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
+                            clusterTopology.Voters.Except(new[] {node}).ToArray(),
+                            clusterTopology.Promotables.Except(new[] {node}).ToArray(),
+                            clusterTopology.NonVotingMembers.Concat(new[] {node}).ToArray()
+                        );
+                        break;
+                    case TopologyModification.Remove:
+                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
+                            clusterTopology.Voters.Except(new[] {node}).ToArray(),
+                            clusterTopology.Promotables.Except(new[] {node}).ToArray(),
+                            clusterTopology.NonVotingMembers.Except(new[] {node}).ToArray()
+                        );
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
+                }
+
+                var topologyJson = _engine.SetTopology(context, clusterTopology);
+
+                var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
+                _entries[index] = tcs = new TaskCompletionSource<object>();
+                _topologyModification = tcs.Task.ContinueWith(_ =>
+                {
+                    _topologyModification = null;
+                });
+                context.Transaction.Commit();
+            }
+
+            _newEntry.Set();
+
+            RefreshAmbasaddors(clusterTopology);
+
+            task =  tcs.Task;
+            return true;
         }
     }
 }

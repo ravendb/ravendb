@@ -13,10 +13,15 @@ namespace Raven.Server.Rachis
             NonVotingMembers = nonVotingMembers;
         }
 
-        public readonly string TopologyId;
-        public readonly string ApiKey;
-        public readonly string[] Voters;
-        public readonly string[] Promotables;
-        public readonly string[] NonVotingMembers;
+        public ClusterTopology()
+        {
+            
+        }
+
+        public string TopologyId;
+        public string ApiKey;
+        public string[] Voters;
+        public string[] Promotables;
+        public string[] NonVotingMembers;
     }
 }

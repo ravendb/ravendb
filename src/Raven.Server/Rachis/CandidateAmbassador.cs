@@ -59,7 +59,7 @@ namespace Raven.Server.Rachis
                     {
                         try
                         {
-                            stream = RachisConsensus.ConenctToPeer(_url, _apiKey);
+                            stream = _engine.ConenctToPeer(_url, _apiKey);
                         }
                         catch (Exception e)
                         {

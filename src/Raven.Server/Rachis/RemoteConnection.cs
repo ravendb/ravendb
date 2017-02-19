@@ -25,18 +25,33 @@ namespace Raven.Server.Rachis
 
         public void Send(JsonOperationContext context, RachisHello helloMsg)
         {
-            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            Send(context, new DynamicJsonValue
             {
-                context.Write(writer,
-                    new DynamicJsonValue
-                    {
-                        ["Type"] = nameof(RachisHello),
-                        [nameof(RachisHello.DebugSourceIdentifier)] = helloMsg.DebugSourceIdentifier,
-                        [nameof(RachisHello.InitialMessageType)] = helloMsg.InitialMessageType,
-                        [nameof(RachisHello.TopologyId)] = helloMsg.TopologyId,
-                    });
+                ["Type"] = nameof(RachisHello),
+                [nameof(RachisHello.DebugSourceIdentifier)] = helloMsg.DebugSourceIdentifier,
+                [nameof(RachisHello.InitialMessageType)] = helloMsg.InitialMessageType,
+                [nameof(RachisHello.TopologyId)] = helloMsg.TopologyId,
+            });
+        }
+
+        private void Send(JsonOperationContext context, DynamicJsonValue msg)
+        {
+            using (var msgJson = context.ReadObject(msg, "msg"))
+            {
+                Send(context, msgJson);
             }
         }
+
+        private void Send(JsonOperationContext context, BlittableJsonReaderObject msg)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            {
+                Console.WriteLine(msg);
+
+                context.Write(writer, msg);
+            }
+        }
+
 
         public void Send(JsonOperationContext context, RequestVoteResponse rvr)
         {
@@ -45,79 +60,62 @@ namespace Raven.Server.Rachis
                 _log.Info($"Voting {rvr.VoteGranted} for term {rvr.Term} becaise: {rvr.Message}");
             }
 
-            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            Send(context, new DynamicJsonValue
             {
-                context.Write(writer,
-                    new DynamicJsonValue
-                    {
-                        ["Type"] = nameof(RequestVoteResponse),
-                        [nameof(RequestVoteResponse.Term)] = rvr.Term,
-                        [nameof(RequestVoteResponse.VoteGranted)] = rvr.VoteGranted,
-                        [nameof(RequestVoteResponse.Message)] = rvr.Message,
-                    });
-            }
+                ["Type"] = nameof(RequestVoteResponse),
+                [nameof(RequestVoteResponse.Term)] = rvr.Term,
+                [nameof(RequestVoteResponse.VoteGranted)] = rvr.VoteGranted,
+                [nameof(RequestVoteResponse.Message)] = rvr.Message,
+            });
         }
 
 
 
         public void Send(JsonOperationContext context, RequestVote rv)
         {
-            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            Send(context, new DynamicJsonValue
             {
-                context.Write(writer,
-                    new DynamicJsonValue
-                    {
-                        ["Type"] = nameof(RequestVote),
-                        [nameof(RequestVote.Term)] = rv.Term,
-                        [nameof(RequestVote.Source)] = rv.Source,
-                        [nameof(RequestVote.LastLogTerm)] = rv.LastLogTerm,
-                        [nameof(RequestVote.LastLogIndex)] = rv.LastLogIndex,
-                        [nameof(RequestVote.IsTrialElection)] = rv.IsTrialElection,
-                        [nameof(RequestVote.IsForcedElection)] = rv.IsForcedElection,
-                    });
-            }
+                ["Type"] = nameof(RequestVote),
+                [nameof(RequestVote.Term)] = rv.Term,
+                [nameof(RequestVote.Source)] = rv.Source,
+                [nameof(RequestVote.LastLogTerm)] = rv.LastLogTerm,
+                [nameof(RequestVote.LastLogIndex)] = rv.LastLogIndex,
+                [nameof(RequestVote.IsTrialElection)] = rv.IsTrialElection,
+                [nameof(RequestVote.IsForcedElection)] = rv.IsForcedElection,
+            });
         }
 
         public void Send(JsonOperationContext context, AppendEntries ae, List<BlittableJsonReaderObject> items = null)
         {
-            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            Send(context, new DynamicJsonValue
             {
-                context.Write(writer,
-                    new DynamicJsonValue
-                    {
-                        ["Type"] = nameof(AppendEntries),
-                        [nameof(AppendEntries.EntriesCount)] = ae.EntriesCount,
-                        [nameof(AppendEntries.HasTopologyChange)] = ae.HasTopologyChange,
-                        [nameof(AppendEntries.LeaderCommit)] = ae.LeaderCommit,
-                        [nameof(AppendEntries.PrevLogIndex)] = ae.PrevLogIndex,
-                        [nameof(AppendEntries.PrevLogTerm)] = ae.PrevLogTerm,
-                        [nameof(AppendEntries.Term)] = ae.Term,
-                    });
+                ["Type"] = nameof(AppendEntries),
+                [nameof(AppendEntries.EntriesCount)] = ae.EntriesCount,
+                [nameof(AppendEntries.LeaderCommit)] = ae.LeaderCommit,
+                [nameof(AppendEntries.PrevLogIndex)] = ae.PrevLogIndex,
+                [nameof(AppendEntries.PrevLogTerm)] = ae.PrevLogTerm,
+                [nameof(AppendEntries.Term)] = ae.Term,
+            });
 
-                if (items == null || items.Count == 0)
-                    return;
+            if (items == null || items.Count == 0)
+                return;
 
-                foreach (var item in items)
-                {
-                    context.Write(writer, item);
-                }
+            foreach (var item in items)
+            {
+                Send(context, item);
             }
         }
 
         public void Send(JsonOperationContext context, InstallSnapshot installSnapshot)
         {
-            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            Send(context, new DynamicJsonValue
             {
-                context.Write(writer,
-                    new DynamicJsonValue
-                    {
-                        ["Type"] = nameof(InstallSnapshot),
-                        [nameof(InstallSnapshot.LastIncludedIndex)] = installSnapshot.LastIncludedIndex,
-                        [nameof(InstallSnapshot.LastIncludedTerm)] = installSnapshot.LastIncludedTerm,
-                        [nameof(InstallSnapshot.SnapshotSize)] = installSnapshot.SnapshotSize,
-                        [nameof(InstallSnapshot.Topology)] = installSnapshot.Topology,
-                    });
-            }
+                ["Type"] = nameof(InstallSnapshot),
+                [nameof(InstallSnapshot.LastIncludedIndex)] = installSnapshot.LastIncludedIndex,
+                [nameof(InstallSnapshot.LastIncludedTerm)] = installSnapshot.LastIncludedTerm,
+                [nameof(InstallSnapshot.SnapshotSize)] = installSnapshot.SnapshotSize,
+                [nameof(InstallSnapshot.Topology)] = installSnapshot.Topology,
+            });
         }
 
         public void Send(JsonOperationContext context, Exception e)
@@ -128,16 +126,12 @@ namespace Raven.Server.Rachis
             }
 
             ;
-            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            Send(context, new DynamicJsonValue
             {
-                context.Write(writer,
-                    new DynamicJsonValue
-                    {
-                        ["Type"] = "Error",
-                        ["Message"] = e.Message,
-                        ["Exception"] = e.ToString()
-                    });
-            }
+                ["Type"] = "Error",
+                ["Message"] = e.Message,
+                ["Exception"] = e.ToString()
+            });
         }
 
         public T Read<T>(JsonOperationContext context)
@@ -151,7 +145,17 @@ namespace Raven.Server.Rachis
                 return JsonDeserializationRachis<T>.Deserialize(json);
             }
         }
-        
+
+        public RachisEntry ReadRachisEntry(JsonOperationContext context)
+        {
+            // we explicitly not disposing this here, because we need to access the entry
+            var json = context.ParseToMemory(_stream, "rachis-entry",
+                BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
+            json.BlittableValidation();
+            ValidateMessage(nameof(RachisEntry), json);
+            return JsonDeserializationRachis<RachisEntry>.Deserialize(json);
+        }
+
 
         public void Send(JsonOperationContext context, AppendEntriesResponse aer)
         {
@@ -162,30 +166,26 @@ namespace Raven.Server.Rachis
                     _log.Info($"Replying with success {aer.Success}: {aer.Message}");
                 }
             }
-            ;
-            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            var msg = new DynamicJsonValue
             {
-                var msg = new DynamicJsonValue
+                ["Type"] = "AppendEntriesResponse",
+                [nameof(AppendEntriesResponse.Success)] = aer.Success,
+                [nameof(AppendEntriesResponse.Message)] = aer.Message,
+                [nameof(AppendEntriesResponse.CurrentTerm)] = aer.CurrentTerm,
+                [nameof(AppendEntriesResponse.LastLogIndex)] = aer.LastLogIndex,
+            };
+            var negotiation = aer.Negotiation;
+            if (negotiation != null)
+            {
+                msg[nameof(AppendEntriesResponse.Negotiation)] = new DynamicJsonValue
                 {
-                    ["Type"] = "AppendEntriesResponse",
-                    [nameof(AppendEntriesResponse.Success)] = aer.Success,
-                    [nameof(AppendEntriesResponse.Message)] = aer.Message,
-                    [nameof(AppendEntriesResponse.CurrentTerm)] = aer.CurrentTerm,
-                    [nameof(AppendEntriesResponse.LastLogIndex)] = aer.LastLogIndex,
+                    [nameof(Negotiation.MaxIndex)] = negotiation.MaxIndex,
+                    [nameof(Negotiation.MinIndex)] = negotiation.MinIndex,
+                    [nameof(Negotiation.MidpointIndex)] = negotiation.MidpointIndex,
+                    [nameof(Negotiation.MidpointTerm)] = negotiation.MidpointTerm,
                 };
-                var negotiation = aer.Negotiation;
-                if (negotiation != null)
-                {
-                    msg[nameof(AppendEntriesResponse.Negotiation)] = new DynamicJsonValue
-                    {
-                        [nameof(Negotiation.MaxIndex)] = negotiation.MaxIndex,
-                        [nameof(Negotiation.MinIndex)] = negotiation.MinIndex,
-                        [nameof(Negotiation.MidpointIndex)] = negotiation.MidpointIndex,
-                        [nameof(Negotiation.MidpointTerm)] = negotiation.MidpointTerm,
-                    };
-                }
-                context.Write(writer, msg);
             }
+            Send(context, msg);
         }
 
         public void Dispose()

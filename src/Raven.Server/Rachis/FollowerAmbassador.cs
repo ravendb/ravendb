@@ -70,7 +70,7 @@ namespace Raven.Server.Rachis
                     {
                         try
                         {
-                            stream = RachisConsensus.ConenctToPeer(_url, _apiKey);
+                            stream = _engine.ConenctToPeer(_url, _apiKey);
                         }
                         catch (Exception e)
                         {
@@ -129,7 +129,7 @@ namespace Raven.Server.Rachis
                                         Slice key;
                                         using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long),
                                                 out key))
-                                        {
+                                        { 
                                             long totalSize = 0;
                                             foreach (var value in table.SeekByPrimaryKey(key))
                                             {
@@ -142,7 +142,6 @@ namespace Raven.Server.Rachis
 
                                             appendEntries = new AppendEntries
                                             {
-                                                HasTopologyChange = false, // TODO: figure this out
                                                 EntriesCount = entries.Count,
                                                 LeaderCommit = _engine.GetLastCommitIndex(context),
                                                 Term = _engine.CurrentTerm,
@@ -214,8 +213,13 @@ namespace Raven.Server.Rachis
                 new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(
                     context, BlittableJsonDocumentBuilder.UsageMode.None))
             {
+                writer.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+
                 writer.StartWriteObjectDocument();
                 writer.StartWriteObject();
+
+                writer.WritePropertyName("Type");
+                writer.WriteValue(nameof(RachisEntry));
 
                 writer.WritePropertyName(nameof(RachisEntry.Index));
 
@@ -231,6 +235,12 @@ namespace Raven.Server.Rachis
 
                 writer.WritePropertyName(nameof(RachisEntry.Entry));
                 writer.WriteEmbeddedBlittableDocument(value.Reader.Read(2, out size), size);
+
+
+                writer.WritePropertyName(nameof(RachisEntry.Flags));
+                var flags = *(RachisEntryFlags*)value.Reader.Read(3, out size);
+                Debug.Assert(size == sizeof(RachisEntryFlags));
+                writer.WriteValue(flags.ToString());
 
 
                 writer.WriteObjectEnd();
@@ -254,7 +264,6 @@ namespace Raven.Server.Rachis
                     appendEntries = new AppendEntries
                     {
                         EntriesCount = 0,
-                        HasTopologyChange = false,
                         Term = _engine.CurrentTerm,
                         LeaderCommit = _engine.GetLastCommitIndex(context),
                         PrevLogIndex = range.Item2,
@@ -310,7 +319,6 @@ namespace Raven.Server.Rachis
                         appendEntries = new AppendEntries
                         {
                             EntriesCount = 0,
-                            HasTopologyChange = false,
                             Term = _engine.CurrentTerm,
                             LeaderCommit = _engine.GetLastCommitIndex(context),
                             PrevLogIndex = midIndex,

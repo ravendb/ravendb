@@ -2,6 +2,7 @@
 {
     public enum RachisEntryFlags
     {
+        Invalid,
         Noop,// first commit in every term
         Topology,
         StateMachineCommand
