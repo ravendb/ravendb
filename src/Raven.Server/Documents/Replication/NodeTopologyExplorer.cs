@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Raven.Client.Document;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http.OAuth;
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Replication
                 _tcpConnectionInfo = await ReplicationUtils.GetTcpInfoAsync(_destination.Url, _destination.Database, _destination.ApiKey);
                 var token = await _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey, _destination.Url, context);
                 await ConnectSocketAsync();
-                using (var stream = await TcpUtils.WrapStreamWithSsl(_tcpClient, _tcpConnectionInfo))
+                using (var stream = TcpUtils.WrapStreamWithSsl(_tcpClient, _tcpConnectionInfo))
                 using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
                     context.Write(writer, new DynamicJsonValue

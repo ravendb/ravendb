@@ -12,7 +12,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Client.Document;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Identity;
@@ -213,7 +212,7 @@ namespace Raven.Client.Documents.Subscriptions
             _tcpClient.SendBufferSize = 32 * 1024;
             _tcpClient.ReceiveBufferSize = 4096;
             _stream = _tcpClient.GetStream();
-            _stream = await TcpUtils.WrapStreamWithSsl(_tcpClient, command.Result);
+            _stream = TcpUtils.WrapStreamWithSsl(_tcpClient, command.Result);
 
             var header = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
             {

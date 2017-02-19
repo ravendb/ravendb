@@ -210,7 +210,7 @@ namespace Voron
                             QueueForSyncDataFile();                            
                     }
                     else
-                    {ne
+                    {
                         await Task.Delay(1000, cancellationToken);
                     }
                 }
