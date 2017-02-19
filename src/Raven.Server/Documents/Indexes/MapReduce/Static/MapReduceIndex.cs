@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>(CollectionNameComparer.Instance);
 
         protected internal readonly StaticIndexBase _compiled;
+        private bool? _isSideBySide;
 
         private HandleReferences _handleReferences;
 
@@ -100,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         }
 
         private static bool CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(
-            MapReduceIndex otherIndex, string[] indexCollections, 
+            MapReduceIndex otherIndex, string[] indexCollections,
             List<MapReduceIndex> indexes, out string description)
         {
             description = $"{otherIndex.Name}: {string.Join(",", otherIndex.Collections)} => {otherIndex.Definition.OutputReduceToCollection}";
@@ -142,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var staticMapIndex = (MapReduceIndex)index;
             var staticIndex = staticMapIndex._compiled;
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, 
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
@@ -151,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, 
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
             var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
 
@@ -225,6 +226,31 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, documentsContext, indexContext);
         }
 
+        protected override bool ShouldReplace()
+        {
+            if (_isSideBySide.HasValue == false)
+                _isSideBySide = Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase);
+
+            if (_isSideBySide == false)
+                return false;
+
+            DocumentsOperationContext databaseContext;
+            TransactionOperationContext indexContext;
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            {
+                using (indexContext.OpenReadTransaction())
+                using (databaseContext.OpenReadTransaction())
+                {
+                    var canReplace = StaticIndexHelper.CanReplace(this, IsStale(databaseContext, indexContext), DocumentDatabase, databaseContext, indexContext);
+                    if (canReplace)
+                        _isSideBySide = null;
+
+                    return canReplace;
+                }
+            }
+        }
+
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
             return _compiled.ReferencedCollections;
@@ -263,7 +289,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             IEnumerator<MapResult> IEnumerable<MapResult>.GetEnumerator()
             {
-               return GetEnumerator();
+                return GetEnumerator();
             }
 
             IEnumerator IEnumerable.GetEnumerator()

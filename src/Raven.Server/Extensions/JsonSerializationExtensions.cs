@@ -56,6 +56,7 @@ namespace Raven.Server.Extensions
                 settings[kvp.Key] = kvp.Value;
 
             result[nameof(IndexDefinition.Configuration)] = settings;
+            result[nameof(IndexDefinition.MinimumEtagBeforeReplace)] = definition.MinimumEtagBeforeReplace;
 
             return result;
         }

@@ -408,7 +408,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var currentMaxNumberOfOutputs = statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument)?.Reader.ReadLittleEndianInt32();
 
-                *(int*) statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int)) =
+                *(int*)statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int)) =
                     currentMaxNumberOfOutputs > stats.MaxNumberOfOutputsPerDocument
                         ? currentMaxNumberOfOutputs.Value
                         : stats.MaxNumberOfOutputsPerDocument;
@@ -604,6 +604,21 @@ namespace Raven.Server.Documents.Indexes
                 referencesTree.MultiDelete(key, referenceKey);
                 collectionTree?.MultiDelete(referenceKey, key);
                 referenceKey.Release(tx.InnerTransaction.Allocator);
+            }
+        }
+
+        public void Rename(string name)
+        {
+            if (_index.Definition.Name == name)
+                return;
+
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                _index.Definition.Rename(name, context, _environment.Options);
+
+                tx.Commit();
             }
         }
 

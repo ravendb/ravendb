@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
@@ -8,7 +9,6 @@ using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         protected internal readonly StaticIndexBase _compiled;
+        private bool? _isSideBySide;
 
         private HandleReferences _handleReferences;
 
@@ -94,6 +95,31 @@ namespace Raven.Server.Documents.Indexes.Static
             var writePos = indexEtagBytes + minLength;
 
             return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, documentsContext, indexContext);
+        }
+
+        protected override bool ShouldReplace()
+        {
+            if (_isSideBySide.HasValue == false)
+                _isSideBySide = Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase);
+
+            if (_isSideBySide == false)
+                return false;
+
+            DocumentsOperationContext databaseContext;
+            TransactionOperationContext indexContext;
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            {
+                using (indexContext.OpenReadTransaction())
+                using (databaseContext.OpenReadTransaction())
+                {
+                    var canReplace = StaticIndexHelper.CanReplace(this, IsStale(databaseContext, indexContext), DocumentDatabase, databaseContext, indexContext);
+                    if (canReplace)
+                        _isSideBySide = null;
+
+                    return canReplace;
+                }
+            }
         }
 
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
