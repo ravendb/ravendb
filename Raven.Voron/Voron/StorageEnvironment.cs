@@ -1,12 +1,10 @@
 using Sparrow.Collections;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -14,7 +12,6 @@ using System.Threading.Tasks;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
-using Voron.Impl.Backup;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
@@ -671,17 +668,11 @@ namespace Voron
                                 throw new VoronUnrecoverableErrorException("Error occurred during flushing journals to the data file",
                                     new Win32Exception(sehException.HResult));
                             }
-                            catch (Exception e)
-                            {
-                                //File.AppendAllText("D:\\Temp\\bug.txt", $"Failed to flush to disk {e.Message}, details: {e}");
-                            }
 
                             if (IsDebugRecording)
                                 _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, null);
                         }
                     }
-                    File.AppendAllText("D:\\Temp\\bug.txt", $"Cancellation was raised in flush loop");
-
                 }, TaskCreationOptions.LongRunning);
         }
 
