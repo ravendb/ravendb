@@ -560,12 +560,22 @@ namespace Raven.Server.Documents.Replication
             {
                 tcpClient.ConnectAsync(host, port).Wait(CancellationToken);
             }
-            catch (SocketException e)
+            catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info(
-                        $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {e.SocketErrorCode}",
-                        e);
+                        $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {((SocketException) ae.InnerException).SocketErrorCode}",
+                        ae.InnerException);
+                throw;
+            }
+            catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info(
+                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted. 
+                            This is not necessarily an issue, it might be that replication destination document has changed at 
+                            the same time we tried to connect. We will try to reconnect later.",
+                        ae.InnerException);
                 throw;
             }
             catch (OperationCanceledException e)

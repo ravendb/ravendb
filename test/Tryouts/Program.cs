@@ -1,10 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Issues;
-using FastTests.Server.Basic;
-using Raven.Client.Documents;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.Http;
+using Raven.Server.Rachis;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Voron;
+using Assert = Xunit.Assert;
+using TcpListener = System.Net.Sockets.TcpListener;
 
 namespace Tryouts
 {
@@ -12,15 +19,11 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 10000; i++)
-            {
-                Console.WriteLine(i);
-
-                using (var a = new FastTests.Client.BulkInserts())
-                {
-                    a.Simple_Bulk_Insert(true).Wait();
-                }
-            }
+            new Program().Run();
         }
+
+       
     }
+
+
 }

@@ -10,7 +10,7 @@ namespace Rachis.Behaviors
     /// </summary>
     public abstract class AbstractRaftStateBehavior : IDisposable
     {
-        protected TimeoutEvent TimeoutEvent;
+        //protected TimeoutEvent TimeoutEvent;
 
         public bool AvoidLeadership { get; set; }
 
@@ -32,12 +32,12 @@ namespace Rachis.Behaviors
 
         public virtual void Dispose()
         {
-            TimeoutEvent.Dispose();
+            //TimeoutEvent.Dispose();
         }
 
         public virtual void HandleTimeout()
         {
-            TimeoutEvent.Defer();
+            //TimeoutEvent.Defer();
             if (Engine.CurrentTopology.IsVoter(Engine.Name) == false)
             {
                 //TODO: log timeout, report not been a leader.

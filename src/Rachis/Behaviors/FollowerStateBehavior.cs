@@ -20,8 +20,8 @@ namespace Rachis.Behaviors
             var random = new Random();
             var timeoutPeriod = random.Next(engine.Options.ElectionTimeout / 2, engine.Options.ElectionTimeout);
 
-            TimeoutEvent = new TimeoutEvent(timeoutPeriod);
-            TimeoutEvent.TimeoutHappened += HandleTimeout;
+            //TimeoutEvent = new TimeoutEvent(timeoutPeriod);
+            //TimeoutEvent.TimeoutHappened += HandleTimeout;
         }
 
         public void Start(AppendEntries firstMsg,Stream s)
@@ -129,14 +129,14 @@ namespace Rachis.Behaviors
         {
             _cancellationTokenSource.Token.ThrowIfCancellationRequested();            
             var appendEntries = _messageHandler.ReadMessage<AppendEntries>();
-            TimeoutEvent.Defer();
+            //TimeoutEvent.Defer();
             return appendEntries;
         }
 
 
         private void HandleValidAppendEntries(AppendEntries appendEntries)
         {
-            TimeoutEvent.Defer();
+            //TimeoutEvent.Defer();
             var lastIndex = Engine.PersistentState.AppendToLog(appendEntries.Entries);
             if (appendEntries.PositionOfTopologyChange >= 0)
             {
