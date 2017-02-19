@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Versioning
 
         static VersioningStorage()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "KeyAndChangeVector", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable, out KeyAndEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsEtags", ByteStringType.Immutable, out RevisionsEtags);
 
@@ -386,29 +386,36 @@ namespace Raven.Server.Documents.Versioning
             var keyLen = keyBytes.Length;
             var size = keyLen + 1 + sizeof(ChangeVectorEntry)*changeVector.Length;
             var buffer = context.GetMemory(size);
-            
-            fixed (ChangeVectorEntry* changeVectorPtr = changeVector)
-            fixed (byte* keyPtr = keyBytes)
+            try
             {
-                Memory.Copy(buffer.Address, keyPtr, keyLen);
-                buffer.Address[keyLen] = Seperator;
-                Memory.Copy(&buffer.Address[keyLen + 1],(byte*)changeVectorPtr, sizeof(ChangeVectorEntry) * changeVector.Length);
-            }
 
-            Slice slice;
-            using (Slice.From(context.Allocator, buffer.Address, size, out slice))
-            {
-                foreach (var tvr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndChangeVectorSlice], slice))
+                fixed (ChangeVectorEntry* changeVectorPtr = changeVector)
+                fixed (byte* keyPtr = keyBytes)
                 {
-                    foreach (var tableValueHolder in tvr.Results)
+                    Memory.Copy(buffer.Address, keyPtr, keyLen);
+                    buffer.Address[keyLen] = Seperator;
+                    Memory.Copy(&buffer.Address[keyLen + 1], (byte*)changeVectorPtr, sizeof(ChangeVectorEntry) * changeVector.Length);
+                }
+
+                Slice slice;
+                using (Slice.From(context.Allocator, buffer.Address, size, out slice))
+                {
+                    foreach (var tvr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndChangeVectorSlice], slice))
                     {
-                        var entry = TableValueToDocument(context, ref tableValueHolder.Reader);
-                        if (entry.ChangeVector.SequenceEqual(changeVector))
+                        foreach (var tableValueHolder in tvr.Results)
                         {
-                            return true;
+                            var entry = TableValueToDocument(context, ref tableValueHolder.Reader);
+                            if (entry.ChangeVector.SequenceEqual(changeVector))
+                            {
+                                return true;
+                            }
                         }
                     }
                 }
+            }
+            finally
+            {
+                 context.ReturnMemory(buffer);   
             }
             return false;
         }

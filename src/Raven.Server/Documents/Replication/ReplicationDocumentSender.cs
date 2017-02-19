@@ -79,6 +79,11 @@ namespace Raven.Server.Documents.Replication
 
             public void Dispose()
             {
+                foreach (var workEnumerator in _workEnumerators)
+                {
+                    workEnumerator.Dispose();
+                }
+                _workEnumerators.Clear();
             }
         }
         
@@ -93,8 +98,8 @@ namespace Raven.Server.Documents.Replication
             using (var tombsIt = tombs.GetEnumerator())
             using (var conflictsIt = conflicts.GetEnumerator())
             using (var versionsIt = versions?.GetEnumerator())
+            using (var mergedInEnumerator = new MergedReplicationBatchEnumerator())
             {
-                var mergedInEnumerator = new MergedReplicationBatchEnumerator();
 
                 mergedInEnumerator.AddEnumerator(docsIt);
                 mergedInEnumerator.AddEnumerator(tombsIt);
