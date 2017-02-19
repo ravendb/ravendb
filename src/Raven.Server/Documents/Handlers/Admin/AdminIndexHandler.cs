@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
@@ -10,6 +11,23 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class AdminIndexHandler : AdminDatabaseRequestHandler
     {
+        [RavenAction("/databases/*/admin/indexes/replace", "POST")]
+        public Task Replace()
+        {
+            //WIP - Efrat
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var index = Database.IndexStore.GetIndex(name);
+            if (index == null)
+                return NoContent();
+            while (true)
+            {
+                if (Database.IndexStore.TryReplaceIndexes(name, Constants.Documents.Indexing.SideBySideIndexNamePrefix + name, true))
+                    break;
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/admin/indexes/compact", "POST")]
         public Task Compact()
         {

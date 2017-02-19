@@ -28,12 +28,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/indexes/replace", "PUT")]
-        public Task Replace()
-        {
-            return null;
-        }
-
         [RavenAction("/databases/*/indexes", "PUT")]
         public async Task Put()
         {
@@ -79,6 +73,25 @@ namespace Raven.Server.Documents.Handlers
             }
 
         }
+
+
+        [RavenAction("/databases/*/indexes/replace", "PUT")]
+        public Task Replace()
+        {
+            //WIP - Efrat
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var index = Database.IndexStore.GetIndex(name);
+            if (index == null)
+                return NoContent();
+            while (true)
+            {
+                if (Database.IndexStore.TryReplaceIndexes(name, Constants.Documents.Indexing.SideBySideIndexNamePrefix + name))
+                    break;
+            }
+
+            return Task.CompletedTask;
+        }
+
 
         [RavenAction("/databases/*/indexes/source", "GET")]
         public Task Source()

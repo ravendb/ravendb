@@ -69,6 +69,12 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : IDocumentTombstoneAware, IDisposable
     {
+        public bool SideBySideIndex;
+
+        public long? MinimumEtagBeforeReplace { get; set; }
+
+        public string RealName { get; set; }
+
         private long _writeErrors;
 
         private long _criticalErrors;
@@ -686,6 +692,49 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     TimeSpentIndexing.Stop();
                                 }
+
+                                if (SideBySideIndex)
+                                {
+                                    var canReplace = true;
+                                    TransactionOperationContext indexContext;
+                                    DocumentsOperationContext documentsOperationContext;
+                                    using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
+                                    using (_contextPool.AllocateOperationContext(out indexContext))
+                                    {
+                                        using (indexContext.OpenReadTransaction())
+                                        using (documentsOperationContext.OpenReadTransaction())
+                                        {
+                                            foreach (var collection in Collections)
+                                            {
+                                                var lastProcessedDocEtag =
+                                                    _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                                                if ((MinimumEtagBeforeReplace == null) &&
+                                                    (IsStale(documentsOperationContext, indexContext)) ||
+                                                    ((MinimumEtagBeforeReplace != null) &&
+                                                     (MinimumEtagBeforeReplace < lastProcessedDocEtag)))
+                                                {
+                                                    canReplace = false;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (canReplace)
+                                        {
+                                            // this can fail if the indexes lock is currently held, so we'll retry
+                                            // however, we might be requested to shutdown, so we want to skip replacing
+                                            // in this case, worst case scenario we'll handle this in the next batch
+                                            while (_cancellationTokenSource.IsCancellationRequested == false)
+                                            {
+                                                if (DocumentDatabase.IndexStore.TryReplaceIndexes(RealName,
+                                                    Definition.Name))
+                                                {
+                                                    SideBySideIndex = false;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                  }
 
                                 _indexingBatchCompleted.SetAndResetAtomically();
 
