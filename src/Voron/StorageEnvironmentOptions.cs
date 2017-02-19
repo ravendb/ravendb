@@ -41,7 +41,6 @@ namespace Voron
             {
                 _forceUsing32BitsPager = value;
                 MaxLogFileSize = (value ? 32 : 256)*Constants.Size.Megabyte;
-                MaxScratchBufferSize = (value ? 32 : 256) * Constants.Size.Megabyte;
                 MaxNumberOfPagesInJournalBeforeFlush = (value ? 4 : 32) * Constants.Size.Megabyte / Constants.Storage.PageSize;
             }
         }
@@ -151,7 +150,7 @@ namespace Voron
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
-            MaxScratchBufferSize = ((sizeof(int) == IntPtr.Size ? 32 : 256) * Constants.Size.Megabyte);
+            MaxScratchBufferSize = 256 * Constants.Size.Megabyte;
 
             MaxNumberOfPagesInJournalBeforeFlush =
                 ((sizeof(int) == IntPtr.Size ? 4 : 32)*Constants.Size.Megabyte)/Constants.Storage.PageSize;
