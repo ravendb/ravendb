@@ -352,9 +352,10 @@ namespace Voron.Impl.Scratch
             var currentFile = _current.File;
             var scratchBufferPoolInfo = new ScratchBufferPoolInfo
             {
-                OldestTransactionWhenFlushWasForced = _current.OldestTransactionWhenFlushWasForced,
+                TxIdAfterWhichLatestFreePagesBecomeAvailable = _current.File.TxIdAfterWhichLatestFreePagesBecomeAvailable,
                 NumberOfScratchFiles = _scratchBuffers.Count,
                 CurrentFileSizeInMB = currentFile.Size / 1024L / 1024L,
+                PerScratchFileSizeLimitInMB = sizePerScratchLimit / 1024L / 1024L,
                 TotalScratchFileSizeLimitInMB = sizeLimit / 1024L / 1024L
             };
 
@@ -364,7 +365,8 @@ namespace Voron.Impl.Scratch
                 {
                     Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferItem.File.Number),
                     SizeInKB = scratchBufferItem.File.Size / 1024,
-                    InActiveUseInKB = scratchBufferItem.File.ActivelyUsedBytes(oldestActiveTransaction) / 1024
+                    InActiveUseInKB = scratchBufferItem.File.ActivelyUsedBytes(oldestActiveTransaction) / 1024,
+                    TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable
                 });
             }
 

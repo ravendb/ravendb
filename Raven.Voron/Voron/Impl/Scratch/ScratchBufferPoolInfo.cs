@@ -10,11 +10,13 @@ namespace Voron.Impl.Scratch
             MostAvailableFreePages = new List<MostAvailableFreePagesByScratch>();
         }
 
-        public long OldestTransactionWhenFlushWasForced { get; set; }
+        public long TxIdAfterWhichLatestFreePagesBecomeAvailable { get; set; }
 
         public int NumberOfScratchFiles { get; set; }
 
         public long CurrentFileSizeInMB { get; set; }
+
+        public long PerScratchFileSizeLimitInMB { get; set; }
 
         public long TotalScratchFileSizeLimitInMB { get; set; }
 
@@ -48,5 +50,7 @@ namespace Voron.Impl.Scratch
         public long SizeInKB { get; set; }
 
         public long InActiveUseInKB { get; set; }
+
+        public long TxIdAfterWhichLatestFreePagesBecomeAvailable { get; set; }
     }
 }
