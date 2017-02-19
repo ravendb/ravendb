@@ -361,32 +361,24 @@ namespace Voron.Impl.Scratch
 
             foreach (var scratchBufferItem in _scratchBuffers.Values.OrderBy(x => x.Number))
             {
-                scratchBufferPoolInfo.ScratchFilesUsage.Add(new ScratchFileUsage
+                var scratchFileUsage = new ScratchFileUsage
                 {
                     Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferItem.File.Number),
                     SizeInKB = scratchBufferItem.File.Size / 1024,
                     InActiveUseInKB = scratchBufferItem.File.ActivelyUsedBytes(oldestActiveTransaction) / 1024,
                     TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable
-                });
-            }
-
-            foreach (var scratchBufferFile in _scratchBuffers.OrderBy(x => x.Key))
-            {
-                var mostAvailableFreePages = new MostAvailableFreePagesByScratch
-                {
-                    Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferFile.Value.Number)
                 };
 
-                foreach (var freePage in scratchBufferFile.Value.File.GetMostAvailableFreePagesBySize())
+                foreach (var freePage in scratchBufferItem.File.GetMostAvailableFreePagesBySize())
                 {
-                    mostAvailableFreePages.MostAvailableFreePages.Add(new MostAvailableFreePagesBySize
+                    scratchFileUsage.MostAvailableFreePages.Add(new MostAvailableFreePagesBySize
                     {
                         Size = freePage.Key,
                         ValidAfterTransactionId = freePage.Value
                     });
                 }
 
-                scratchBufferPoolInfo.MostAvailableFreePages.Add(mostAvailableFreePages);
+                scratchBufferPoolInfo.ScratchFilesUsage.Add(scratchFileUsage);
             }
 
             return scratchBufferPoolInfo;
