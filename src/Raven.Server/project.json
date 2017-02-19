@@ -57,7 +57,8 @@
     "System.Runtime.Loader": "4.3.0",
     "System.Security.Cryptography.Csp": "4.3.0",
     "System.Threading.Tasks.Parallel": "4.3.0",
-    "Voron": "4.0.0-*"
+    "Voron": "4.0.0-*",
+    "Portable.BouncyCastle": "1.8.1.2"
   },
 
   "commands": {

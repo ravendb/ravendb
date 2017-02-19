@@ -13,9 +13,15 @@ namespace FastTests.Server.Replication
             public int Age { get; set; }
         }
 
-        [Fact]
-        public void Master_master_replication_from_etag_zero_without_conflict_should_work()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Master_master_replication_from_etag_zero_without_conflict_should_work(bool useSsl)
         {
+            if (useSsl)
+            {
+                DoNotReuseServer(new global::Sparrow.Collections.LockFree.ConcurrentDictionary<string, string> { { "Raven/UseSsl", "true" } });
+            }
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))

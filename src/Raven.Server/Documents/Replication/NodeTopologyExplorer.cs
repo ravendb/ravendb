@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Raven.Client.Document;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http.OAuth;
+using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -22,10 +25,10 @@ namespace Raven.Server.Documents.Replication
         private readonly ReplicationDestination _destination;
         private readonly string _dbId;
         private readonly long _timeout;
-        private string _tcpUrl;
         private readonly TcpClient _tcpClient;
         private readonly Logger _log;
         private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
+        private TcpConnectionInfo _tcpConnectionInfo;
 
         public NodeTopologyExplorer(
             DocumentsContextPool pool,
@@ -50,11 +53,10 @@ namespace Raven.Server.Documents.Replication
             JsonOperationContext context;
             using (_pool.AllocateOperationContext(out context))
             {
-                var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(_destination.Url, _destination.Database, _destination.ApiKey);
-                _tcpUrl = connectionInfo.Url;
+                _tcpConnectionInfo = await ReplicationUtils.GetTcpInfoAsync(_destination.Url, _destination.Database, _destination.ApiKey);
                 var token = await _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey, _destination.Url, context);
                 await ConnectSocketAsync();
-                using (var stream = _tcpClient.GetStream())
+                using (var stream = await TcpUtils.WrapStreamWithSsl(_tcpClient, _tcpConnectionInfo))
                 using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
                     context.Write(writer, new DynamicJsonValue
@@ -111,7 +113,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private async Task ReadTcpHeaderResponseAndThrowOnUnauthorized(JsonOperationContext context, NetworkStream stream, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private async Task ReadTcpHeaderResponseAndThrowOnUnauthorized(JsonOperationContext context, Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             using (var tcpConnectionHeaderResponse =
                 await context.ParseToMemoryAsync(stream, "ReplicationDiscovere/tcpConnectionHeaderResponse",
@@ -138,7 +140,7 @@ namespace Raven.Server.Documents.Replication
 
         private async Task ConnectSocketAsync()
         {
-            var uri = new Uri(_tcpUrl);
+            var uri = new Uri(_tcpConnectionInfo.Url);
             var host = uri.Host;
             var port = uri.Port;
             try
@@ -148,13 +150,13 @@ namespace Raven.Server.Documents.Replication
             catch (SocketException e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Failed to connect to remote replication destination {_tcpUrl} for topology discovery. Socket Error Code = {e.SocketErrorCode}", e);
+                    _log.Info($"Failed to connect to remote replication destination {_tcpConnectionInfo.Url} for topology discovery. Socket Error Code = {e.SocketErrorCode}", e);
                 throw;
             }
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Failed to connect to remote replication destination {_tcpUrl}  for topology discovery.", e);
+                    _log.Info($"Failed to connect to remote replication destination {_tcpConnectionInfo.Url}  for topology discovery.", e);
                 throw;
             }
         }

@@ -62,7 +62,8 @@
     },
     "Newtonsoft.Json": "9.0.1",
     "System.Runtime.InteropServices.RuntimeInformation": "4.3.0",
-    "System.ServiceModel.Primitives": "4.3.0"
+    "System.ServiceModel.Primitives": "4.3.0",
+    "System.Net.Security": "4.3.0"
   },
 
   "frameworks": {

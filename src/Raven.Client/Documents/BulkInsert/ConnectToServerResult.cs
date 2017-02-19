@@ -1,10 +1,10 @@
-﻿using System.Net.Sockets;
+﻿using System.IO;
 
 namespace Raven.Client.Documents.BulkInsert
 {
     internal class ConnectToServerResult
     {
-        public NetworkStream Stream { get; set; }
+        public Stream Stream { get; set; }
         public string OAuthToken { get; set; }
     }
 }
