@@ -19,7 +19,8 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            new Program().Run();
+            using (var basicCluster = new BasicCluster())
+                basicCluster.ClusterWithTwoNodes();
         }
 
        
