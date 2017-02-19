@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
+using Raven.Client.Document;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -66,7 +67,7 @@ namespace Raven.Server.Documents.Replication
         internal string DestinationDbId;
 
         public long LastHeartbeatTicks;
-        private NetworkStream _stream;
+        private Stream _stream;
         private InterruptibleRead _interruptableRead;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
@@ -111,7 +112,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     ConnectSocket(connectionInfo, _tcpClient);
 
-                    using (_stream = _tcpClient.GetStream())
+                    using (_stream = TcpUtils.WrapStreamWithSsl(_tcpClient, connectionInfo).Result)
                     using (_interruptableRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {

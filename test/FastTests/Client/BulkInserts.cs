@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Xunit;
 
@@ -12,9 +13,15 @@ namespace FastTests.Client
 {
     public class BulkInserts : RavenTestBase
     {
-        [Fact]
-        public async Task Simple_Bulk_Insert()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Simple_Bulk_Insert(bool useSsl)
         {
+            if (useSsl)
+            {
+                DoNotReuseServer(new ConcurrentDictionary<string, string> { { "Raven/UseSsl", "true" } });
+            }
             using (var store = GetDocumentStore())
             {                
                 using (var bulkInsert = store.BulkInsert())

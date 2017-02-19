@@ -383,9 +383,15 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Cluster_with_master_master_master_and_some_leaves_full_topology_should_be_correctly_detected()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Cluster_with_master_master_master_and_some_leaves_full_topology_should_be_correctly_detected(bool useSsl)
         {
+            if (useSsl)
+            {
+                DoNotReuseServer(new global::Sparrow.Collections.LockFree.ConcurrentDictionary<string, string> { { "Raven/UseSsl", "true" } });
+            }
             using (var nodeA = GetDocumentStore())
             using (var nodeB = GetDocumentStore())
             using (var nodeC = GetDocumentStore())

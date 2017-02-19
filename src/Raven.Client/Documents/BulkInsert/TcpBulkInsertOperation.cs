@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Document;
 using Raven.Client.Documents.Exceptions.BulkInsert;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Security;
@@ -104,9 +105,9 @@ namespace Raven.Client.Documents.BulkInsert
             _tcpClient.NoDelay = true;
             _tcpClient.SendBufferSize = 32 * 1024;
             _tcpClient.ReceiveBufferSize = 4096;
-            var networkStream = _tcpClient.GetStream();
+            var stream = await TcpUtils.WrapStreamWithSsl(_tcpClient, command.Result);
 
-            return new ConnectToServerResult { OAuthToken = apiToken, Stream = networkStream };
+            return new ConnectToServerResult { OAuthToken = apiToken, Stream = stream };
         }
 
         private void WriteToServer(string database, ConnectToServerResult connection)

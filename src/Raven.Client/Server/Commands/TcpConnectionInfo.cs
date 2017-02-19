@@ -4,5 +4,6 @@ namespace Raven.Client.Server.Commands
     {
         public int Port;
         public string Url;
+        public string Certificate;
     }
 }

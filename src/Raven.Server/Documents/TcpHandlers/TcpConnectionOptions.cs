@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using Raven.Client.Server.Tcp;
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public TcpConnectionHeaderMessage.OperationTypes Operation;
 
-        public NetworkStream Stream;
+        public Stream Stream;
 
         public TcpClient TcpClient;
 
