@@ -1031,7 +1031,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
+        [Fact( Skip =" TODO - Efrat Indexes")]
         public void IndexCreationOptions()
         {
             using (var database = CreateDocumentDatabase())
