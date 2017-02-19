@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers
             if (versioningStorage == null)
                 throw new VersioningDisabledException();
 
-            var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))

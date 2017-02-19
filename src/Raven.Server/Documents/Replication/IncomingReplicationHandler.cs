@@ -16,6 +16,7 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
+using Raven.Client;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
@@ -642,7 +643,22 @@ namespace Raven.Server.Documents.Replication
             _connectionOptions.PinnedBuffer.Used += size;
             return result;
         }
-        
+
+        private bool IsRevisioned(BlittableJsonReaderObject data)
+        {
+            if (data == null)
+            {
+                return false;
+            }
+            BlittableJsonReaderObject metadata;
+            if (data.TryGet(Constants.Documents.Metadata.Key, out metadata))
+            {
+                bool isRevisioned;
+                return metadata.TryGet(Constants.Documents.Versioning.RevisionedDocument, out isRevisioned);
+            }
+            return false;
+        }
+
         private unsafe void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedDocsCount, long lastEtag)
         {
             if (_log.IsInfoEnabled)
@@ -692,7 +708,16 @@ namespace Raven.Server.Documents.Replication
                                 doc.DocumentSize, documentsContext);
                             json.BlittableValidation();
                         }
-                        
+
+                        if (IsRevisioned(json))
+                        {
+                            var collectionName = _database.DocumentsStorage.ExtractCollectionName(documentsContext, doc.Id, json);
+                            _database.BundleLoader?.VersioningStorage.PutFromDocument(documentsContext, 
+                                collectionName, doc.Id, json,_tempReplicatedChangeVector);
+                           continue; 
+                        }
+                           
+
                         ChangeVectorEntry[] conflictingVector;
                         var conflictStatus = GetConflictStatusForDocument(documentsContext, doc.Id, _tempReplicatedChangeVector, out conflictingVector);
 

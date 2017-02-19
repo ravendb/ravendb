@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Replication
                 Data = doc.Doc,
                 Key = doc.Key,
                 LastModifiedTicks = doc.LastModified.Ticks,
-                TransactionMarker = -1// not relevant for conflicts since they are already resolved in separate tx
+                TransactionMarker = -1// not relevant
             };
         }
     }

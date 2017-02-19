@@ -39,6 +39,9 @@ namespace Raven.Server.Documents.Replication
             private ReplicationBatchDocumentItem _currentItem;
             public void AddEnumerator(IEnumerator<ReplicationBatchDocumentItem> enumerator)
             {
+                if(enumerator == null)
+                    return;
+
                 if (enumerator.MoveNext())
                 {
                     _workEnumerators.Add(enumerator);
@@ -101,15 +104,18 @@ namespace Raven.Server.Documents.Replication
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
             var conflicts = _parent._database.DocumentsStorage.GetConflictsFrom(ctx, etag + 1);
-            
+            var versions = _parent._database.BundleLoader?.VersioningStorage?.GetRevisionsAfter(ctx, etag + 1);
+
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
             using (var conflictsIt = conflicts.GetEnumerator())
+            using (var versionsIt = versions?.GetEnumerator())
             {
                 _mergedInEnumerator.Clear();
                 _mergedInEnumerator.AddEnumerator(docsIt);
                 _mergedInEnumerator.AddEnumerator(tombsIt);
                 _mergedInEnumerator.AddEnumerator(conflictsIt);
+                _mergedInEnumerator.AddEnumerator(versionsIt);
                 
                 while (_mergedInEnumerator.MoveNext())
                 {

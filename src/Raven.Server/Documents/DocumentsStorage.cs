@@ -1928,17 +1928,7 @@ namespace Raven.Server.Documents
             var collectionName = ExtractCollectionName(context, key, document);
             var newEtag = GenerateNextEtag();
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
-            if (collectionName.IsSystem == false && (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
-            {
-                bool hasVersion =
-                    _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
-                    key, document) ?? false;
-                if (hasVersion)
-                {
-                    flags |= DocumentFlags.Versioned;
-                }
-            }
-
+            
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             bool knownNewKey = false;
@@ -1995,6 +1985,17 @@ namespace Raven.Server.Documents
                     changeVector = SetDocumentChangeVectorForLocalChange(context,
                         keySlice,
                         ref oldValue, newEtag);
+                }
+
+                if (collectionName.IsSystem == false && (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                {
+                    bool hasVersion =
+                        _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
+                        key, document,changeVector) ?? false;
+                    if (hasVersion)
+                    {
+                        flags |= DocumentFlags.Versioned;
+                    }
                 }
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -2496,7 +2497,7 @@ namespace Raven.Server.Documents
             return collectionName;
         }
 
-        private CollectionName ExtractCollectionName(DocumentsOperationContext context, string key, BlittableJsonReaderObject document)
+        public CollectionName ExtractCollectionName(DocumentsOperationContext context, string key, BlittableJsonReaderObject document)
         {
             var originalCollectionName = CollectionName.GetCollectionName(key, document);
 
