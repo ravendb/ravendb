@@ -16,7 +16,7 @@ namespace Raven.Server.Rachis
     {
         private readonly RachisConsensus _engine;
         private readonly Leader _leader;
-        private readonly ManualResetEvent _wakeLeader;
+        private ManualResetEvent _wakeLeader;
         private readonly string _url;
         private readonly string _apiKey;
 
@@ -26,6 +26,7 @@ namespace Raven.Server.Rachis
         private long _followerMatchIndex;
         private long _lastReplyFromFollower;
         private Thread _thread;
+        private RemoteConnection _connection;
 
         public string Url => _url;
 
@@ -36,9 +37,8 @@ namespace Raven.Server.Rachis
         private void UpdateLastMatchFromFollower(long newVal)
         {
             Interlocked.Exchange(ref _lastReplyFromFollower, DateTime.UtcNow.Ticks);
-            var oldVal = Interlocked.Exchange(ref _followerMatchIndex, newVal);
-            if (oldVal != newVal)
-                _wakeLeader.Set();
+            Interlocked.Exchange(ref _followerMatchIndex, newVal);
+            _wakeLeader.Set();
         }
 
         public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string url, string apiKey)
@@ -49,6 +49,11 @@ namespace Raven.Server.Rachis
             _url = url;
             _apiKey = apiKey;
             Status = "Started";
+        }
+
+        public void UpdateLeaderWake(ManualResetEvent wakeLeader)
+        {
+            _wakeLeader = wakeLeader;
         }
 
         /// <summary>
@@ -81,10 +86,11 @@ namespace Raven.Server.Rachis
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        using (var connection = new RemoteConnection(stream))
+                        _connection = new RemoteConnection(stream);
+                        using (_connection)
                         {
-                            _engine.AppendStateDisposable(_leader, connection);
-                            var matchIndex = InitialNegotiationWithFollower(connection);
+                            _engine.AppendStateDisposable(_leader, _connection);
+                            var matchIndex = InitialNegotiationWithFollower();
                             if (matchIndex == null)
                                 return;
 
@@ -94,7 +100,7 @@ namespace Raven.Server.Rachis
                             using (_engine.ContextPool.AllocateOperationContext(out context))
                             {
                                 //TODO: implement this
-                                connection.Send(context, new InstallSnapshot
+                                _connection.Send(context, new InstallSnapshot
                                 {
                                     LastIncludedIndex = -1,
                                     LastIncludedTerm = -1,
@@ -102,7 +108,7 @@ namespace Raven.Server.Rachis
                                     SnapshotSize = 0
                                 });
 
-                                var aer = connection.Read<AppendEntriesResponse>(context);
+                                var aer = _connection.Read<AppendEntriesResponse>(context);
                                 if (aer.Success == false)
                                 {
                                     throw new InvalidOperationException(
@@ -157,8 +163,8 @@ namespace Raven.Server.Rachis
 
                                     // out of the tx, we can do network calls
 
-                                    connection.Send(context, appendEntries, entries);
-                                    var aer = connection.Read<AppendEntriesResponse>(context);
+                                    _connection.Send(context, appendEntries, entries);
+                                    var aer = _connection.Read<AppendEntriesResponse>(context);
 
                                     if (aer.Success == false)
                                     {
@@ -266,7 +272,7 @@ namespace Raven.Server.Rachis
             return entry;
         }
 
-        private long? InitialNegotiationWithFollower(RemoteConnection connection)
+        private long? InitialNegotiationWithFollower()
         {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -287,7 +293,7 @@ namespace Raven.Server.Rachis
                     };
                 }
 
-                connection.Send(context, new RachisHello
+                _connection.Send(context, new RachisHello
                 {
                     TopologyId = clusterTopology.TopologyId,
                     InitialMessageType = InitialMessageType.AppendEntries,
@@ -295,9 +301,9 @@ namespace Raven.Server.Rachis
                 });
 
 
-                connection.Send(context, appendEntries);
+                _connection.Send(context, appendEntries);
 
-                var aer = connection.Read<AppendEntriesResponse>(context);
+                var aer = _connection.Read<AppendEntriesResponse>(context);
                
                 // need to negotiate
                 do
@@ -341,8 +347,8 @@ namespace Raven.Server.Rachis
                             PrevLogTerm = _engine.GetTermForKnownExisting(context, midIndex),
                         };
                     }
-                    connection.Send(context, appendEntries);
-                    aer = connection.Read<AppendEntriesResponse>(context);
+                    _connection.Send(context, appendEntries);
+                    aer = _connection.Read<AppendEntriesResponse>(context);
                 } while (aer.Success == false);
 
                 _followerNextIndex = aer.LastLogIndex + 1;
@@ -362,7 +368,8 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-            //TODO: shutdown notification of some kind?
+            _connection?.Dispose();
+
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _thread.Join();
         }

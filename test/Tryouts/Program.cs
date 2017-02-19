@@ -20,7 +20,9 @@ namespace Tryouts
         public static void Main(string[] args)
         {
             using (var basicCluster = new BasicCluster())
+            {
                 basicCluster.ClusterWithTwoNodes();
+            }
         }
 
        
