@@ -29,11 +29,15 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
             using (var tbl = new Table(session, dbid, "lists", OpenTableGrbit.None))
             {
                 JET_COLUMNID columnid;
-                Api.JetAddColumn(session, tbl, "created_at", new JET_COLUMNDEF
+                var columnids = Api.GetColumnDictionary(session, tbl);
+                if (columnids.ContainsKey("created_at") == false)
                 {
-                    coltyp = JET_coltyp.DateTime,
-                    grbit = ColumndefGrbit.ColumnMaybeNull,
-                }, null, 0, out columnid);
+                    Api.JetAddColumn(session, tbl, "created_at", new JET_COLUMNDEF
+                    {
+                        coltyp = JET_coltyp.DateTime,
+                        grbit = ColumndefGrbit.ColumnMaybeNull,
+                    }, null, 0, out columnid);
+                }
                 int rows = 0;
                 if (Api.TryMoveFirst(session, tbl))
                 {
