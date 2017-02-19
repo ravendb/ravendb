@@ -124,10 +124,8 @@ namespace Voron.Impl.Paging
                 _totalAllocationSize = fileLength;
             }
 
-
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
-
-
+            NumberOfAllocatedPages = _totalAllocationSize/Constants.Storage.PageSize +
+                                     ((_totalAllocationSize%Constants.Storage.PageSize) == 0 ? 0 : 1);
             SetPagerState(CreatePagerState());
         }
 
