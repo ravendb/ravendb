@@ -10,7 +10,7 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEventSlim _timeoutEventSlim = new ManualResetEventSlim();
         private ExceptionDispatchInfo _edi;
         private readonly Timer _timer;
-
+        private long _lastDeferredTicks;
         private Action _timeoutHappened;
 
         public TimeoutEvent(int timeoutPeriod)
@@ -51,7 +51,15 @@ namespace Raven.Server.Rachis
         public void Defer()
         {
             _edi?.Throw();
+            Interlocked.Exchange(ref _lastDeferredTicks, DateTime.UtcNow.Ticks);
             _timeoutEventSlim.Set();
+        }
+
+        public int TimeSinceLastDeferral()
+        {
+            var ticks = Interlocked.Read(ref _lastDeferredTicks);
+            var elapsed = DateTime.UtcNow - new DateTime(ticks);
+            return (int) elapsed.TotalMilliseconds;
         }
 
         public void Dispose()

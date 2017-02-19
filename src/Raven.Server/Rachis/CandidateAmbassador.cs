@@ -103,6 +103,7 @@ namespace Raven.Server.Rachis
                                     {
                                         connection.Send(context, new RequestVote
                                         {
+                                            Source = _url,
                                             Term = currentTerm,
                                             IsForcedElection = false,
                                             IsTrialElection = true,
@@ -114,7 +115,7 @@ namespace Raven.Server.Rachis
                                         if (rvr.Term > _engine.CurrentTerm)
                                         {
                                             // we need to abort the current elections
-                                            _engine.SetNewState(null);
+                                            _engine.SetNewState(RachisConsensus.State.Follower, null);
                                             _engine.FoundAboutHigherTerm(rvr.Term);
                                             return;
                                         }
@@ -137,6 +138,7 @@ namespace Raven.Server.Rachis
 
                                     connection.Send(context, new RequestVote
                                     {
+                                        Source = _url,
                                         Term = currentTerm,
                                         IsForcedElection = _candidate.IsForcedElection,
                                         IsTrialElection = false,
@@ -148,7 +150,7 @@ namespace Raven.Server.Rachis
                                     if (rvr.Term > _engine.CurrentTerm)
                                     {
                                         // we need to abort the current elections
-                                        _engine.SetNewState(null);
+                                        _engine.SetNewState(RachisConsensus.State.Follower, null);
                                         _engine.FoundAboutHigherTerm(rvr.Term);
                                         return;
                                     }

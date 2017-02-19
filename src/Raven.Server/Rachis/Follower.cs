@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis
@@ -9,6 +10,7 @@ namespace Raven.Server.Rachis
     {
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
+        private Thread _thread;
         public string DebugCurrentLeader { get; private set; }
 
         public Follower(RachisConsensus engine, RemoteConnection remoteConnection)
@@ -78,7 +80,7 @@ namespace Raven.Server.Rachis
         }
 
 
-        private bool HandleFirstAppendEntriesNegotiation()
+        private AppendEntries CheckIfValidAppendEntries()
         {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -94,69 +96,69 @@ namespace Raven.Server.Rachis
                         CurrentTerm = _engine.CurrentTerm
                     });
                     _connection.Dispose();
-                    return false;
+                    return null;
                 }
 
                 _engine.Timeout.Defer();
+                return fstAppendEntries;
+            }
+        }
 
-                // if leader / candidate, this remove them from play and revert to follower mode
-                _engine.SetNewState(this);
-                _engine.Timeout.Start(_engine.SwitchToCandidateState);
+        private void NegotiateWithLeader(TransactionOperationContext context, AppendEntries fstAppendEntries)
+        {
+            
+            // only the leader can send append entries, so if we accepted it, it's the leader
+            DebugCurrentLeader = _connection.DebugSource;
 
-                // only the leader can send append entries, so if we accepted it, it's the leader
-                DebugCurrentLeader = _connection.DebugSource;
+            if (fstAppendEntries.Term > _engine.CurrentTerm)
+            {
+                _engine.FoundAboutHigherTerm(fstAppendEntries.Term);
+            }
 
-                if (fstAppendEntries.Term > _engine.CurrentTerm)
-                {
-                    _engine.FoundAboutHigherTerm(fstAppendEntries.Term);
-                }
-
-                var prevTerm = _engine.GetTermFor(fstAppendEntries.PrevLogIndex) ?? 0;
-                if (prevTerm != fstAppendEntries.PrevLogTerm)
-                {
-                    // we now have a mismatch with the log position, and need to negotiate it with 
-                    // the leader
-                    NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, fstAppendEntries);
-                }
-                else
-                {
-                    // this (or the negotiation above) completes the negotiation process
-                    _connection.Send(context, new AppendEntriesResponse
-                    {
-                        Success = true,
-                        Message = $"Found a log index / term match at {fstAppendEntries.PrevLogIndex} with term {prevTerm}",
-                        CurrentTerm = _engine.CurrentTerm,
-                        LastLogIndex = fstAppendEntries.PrevLogIndex
-                    });
-                }
-
-                // at this point, the leader will send us a snapshot message
-                // in most cases, it is an empty snaphsot, then start regular append entries
-                // the reason we send this is to simplify the # of states in the protocol
-
-                var snapshot = _connection.Read<InstallSnapshot>(context);
-
-                Debug.Assert(snapshot.SnapshotSize == 0); // for now, until we implement it
-                if (snapshot.SnapshotSize != 0)
-                {
-                    //TODO: read snapshot from stream
-                    //TODO: might be large, so need to write to disk (temp folder)
-                    //TODO: then need to apply it, might take a while, so need to 
-                    //TODO: send periodic heartbeats to other side so it can keep track 
-                    //TODO: of what we are doing
-
-                    //TODO: install snapshot always contains the latest topology from the leader
-                }
+            var prevTerm = _engine.GetTermFor(fstAppendEntries.PrevLogIndex) ?? 0;
+            if (prevTerm != fstAppendEntries.PrevLogTerm)
+            {
+                // we now have a mismatch with the log position, and need to negotiate it with 
+                // the leader
+                NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, fstAppendEntries);
+            }
+            else
+            {
+                // this (or the negotiation above) completes the negotiation process
                 _connection.Send(context, new AppendEntriesResponse
                 {
                     Success = true,
-                    Message = $"Negotiation completed, now at {snapshot.LastIncludedIndex} with term {snapshot.LastIncludedTerm}",
+                    Message = $"Found a log index / term match at {fstAppendEntries.PrevLogIndex} with term {prevTerm}",
                     CurrentTerm = _engine.CurrentTerm,
-                    LastLogIndex = snapshot.LastIncludedIndex
+                    LastLogIndex = fstAppendEntries.PrevLogIndex
                 });
-                _engine.Timeout.Defer();
             }
-            return true;
+
+            // at this point, the leader will send us a snapshot message
+            // in most cases, it is an empty snaphsot, then start regular append entries
+            // the reason we send this is to simplify the # of states in the protocol
+
+            var snapshot = _connection.Read<InstallSnapshot>(context);
+
+            Debug.Assert(snapshot.SnapshotSize == 0); // for now, until we implement it
+            if (snapshot.SnapshotSize != 0)
+            {
+                //TODO: read snapshot from stream
+                //TODO: might be large, so need to write to disk (temp folder)
+                //TODO: then need to apply it, might take a while, so need to 
+                //TODO: send periodic heartbeats to other side so it can keep track 
+                //TODO: of what we are doing
+
+                //TODO: install snapshot always contains the latest topology from the leader
+            }
+            _connection.Send(context, new AppendEntriesResponse
+            {
+                Success = true,
+                Message = $"Negotiation completed, now at {snapshot.LastIncludedIndex} with term {snapshot.LastIncludedTerm}",
+                CurrentTerm = _engine.CurrentTerm,
+                LastLogIndex = snapshot.LastIncludedIndex
+            });
+            _engine.Timeout.Defer();
         }
 
         private void NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context, RemoteConnection connection, AppendEntries aer)
@@ -244,16 +246,50 @@ namespace Raven.Server.Rachis
             });
         }
 
-        public void Run()
+        public void TryAcceptConnection()
         {
-            if (HandleFirstAppendEntriesNegotiation() == false)
-                return;// did not accept connection
-            FollowerSteadyState();
+            var validAppendEntries = CheckIfValidAppendEntries();
+            if (validAppendEntries == null)
+            {
+                _connection.Dispose();
+                return; // did not accept connection
+            }
+
+            // if leader / candidate, this remove them from play and revert to follower mode
+            _engine.SetNewState(RachisConsensus.State.Follower, this);
+            _engine.Timeout.Start(_engine.SwitchToCandidateState);
+
+            _thread = new Thread(Run)
+            {
+                Name = "Follower thread from " + _connection.DebugSource,
+                IsBackground = true
+            };
+            _thread.Start(validAppendEntries);
+        }
+
+        private void Run(object obj)
+        {
+            //TODO: error handling!
+
+            using (this)
+            {
+                TransactionOperationContext context;
+                using (_engine.ContextPool.AllocateOperationContext(out context))
+                {
+                    NegotiateWithLeader(context, (AppendEntries)obj);
+                }
+
+                FollowerSteadyState();
+            }
         }
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            _connection.Dispose();
+
+            if (_thread != null &&
+                _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                _thread.Join();
         }
     }
 }

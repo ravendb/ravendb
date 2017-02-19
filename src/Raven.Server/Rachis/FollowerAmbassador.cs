@@ -280,7 +280,7 @@ namespace Raven.Server.Rachis
                     if (aer.CurrentTerm > _engine.CurrentTerm)
                     {
                         // we need to abort the current leadership
-                        _engine.SetNewState(null);
+                        _engine.SetNewState(RachisConsensus.State.Follower, null);
                         _engine.FoundAboutHigherTerm(aer.CurrentTerm);
                         return null;
                     }

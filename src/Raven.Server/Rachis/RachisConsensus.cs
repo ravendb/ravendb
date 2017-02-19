@@ -148,7 +148,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void SetNewState(IDisposable state)
+        public void SetNewState(State state, IDisposable disposable)
         {
             lock (_disposables)
             {
@@ -159,10 +159,16 @@ namespace Raven.Server.Rachis
 
                 _disposables.Clear();
 
-                if (state != null)
-                    _disposables.Add(state);
-                else// if we are back to null state, wait to become leader
+                if (disposable != null)
+                {
+                    CurrentState = state;
+                    _disposables.Add(disposable);
+                }
+                else // if we are back to null state, wait to become leader
+                {
+                    CurrentState = state;
                     Timeout.Start(SwitchToCandidateState);
+                }
             }
         }
 
@@ -184,7 +190,7 @@ namespace Raven.Server.Rachis
                 Log.Info("Switching to leader state");
             }
             var leader = new Leader(this);
-            SetNewState(leader);
+            SetNewState(State.Leader, leader);
             leader.Start();
         }
 
@@ -211,7 +217,7 @@ namespace Raven.Server.Rachis
                 Log.Info("Switching to candidate state");
             }
             var candidate = new Candidate(this);
-            SetNewState(candidate);
+            SetNewState(State.Candidate, candidate);
             candidate.Start();
         }
 
@@ -290,10 +296,12 @@ namespace Raven.Server.Rachis
                     switch (initialMessage.InitialMessageType)
                     {
                         case InitialMessageType.RequestVote:
-                            throw new NotImplementedException("Too young to vote");
+                            var elector = new Elector(this, remoteConnection);
+                            elector.HandleVoteRequest();
+                            break;
                         case InitialMessageType.AppendEntries:
                             var follower = new Follower(this, remoteConnection);
-                            follower.Run();
+                            follower.TryAcceptConnection();
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Uknown initial message value: " +
@@ -583,6 +591,22 @@ namespace Raven.Server.Rachis
             CurrentTerm = term;
         }
 
+        public string GetWhoGotMyVoteIn(TransactionOperationContext context, long term)
+        {
+            Debug.Assert(context.Transaction != null);
+
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+            var read = state.Read(CurrentTermSlice);
+
+            var votedTerm = read?.Reader.ReadLittleEndianInt64();
+
+            if (votedTerm != term)
+                return null;
+
+            read = state.Read(VotedForSlice);
+
+            return read?.Reader.ReadString(read.Reader.Length);
+        }
 
         public void Dispose()
         {

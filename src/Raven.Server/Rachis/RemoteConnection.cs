@@ -38,6 +38,27 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public void Send(JsonOperationContext context, RequestVoteResponse rvr)
+        {
+            if (_log?.IsInfoEnabled == true)
+            {
+                _log.Info($"Voting {rvr.VoteGranted} for term {rvr.Term} becaise: {rvr.Message}");
+            }
+
+            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            {
+                context.Write(writer,
+                    new DynamicJsonValue
+                    {
+                        ["Type"] = nameof(RequestVoteResponse),
+                        [nameof(RequestVoteResponse.Term)] = rvr.Term,
+                        [nameof(RequestVoteResponse.VoteGranted)] = rvr.VoteGranted,
+                        [nameof(RequestVoteResponse.Message)] = rvr.Message,
+                    });
+            }
+        }
+
+
 
         public void Send(JsonOperationContext context, RequestVote rv)
         {
@@ -48,6 +69,7 @@ namespace Raven.Server.Rachis
                     {
                         ["Type"] = nameof(RequestVote),
                         [nameof(RequestVote.Term)] = rv.Term,
+                        [nameof(RequestVote.Source)] = rv.Source,
                         [nameof(RequestVote.LastLogTerm)] = rv.LastLogTerm,
                         [nameof(RequestVote.LastLogIndex)] = rv.LastLogIndex,
                         [nameof(RequestVote.IsTrialElection)] = rv.IsTrialElection,
