@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Extensions;
@@ -30,112 +32,78 @@ namespace Raven.Server.Documents.Replication
             _parent = parent;
         }
 
-        [Flags]
-        private enum CurrentEnumerationState
+        public class MergedReplicationBatchEnumerator : IEnumerator<ReplicationBatchDocumentItem>
         {
-            None = 0,
-            HasDocs = 1,
-            HasTombs = 2,
-            HasConflicts = 4,
-            HasDocsAndTombsAndConflicts = HasDocs | HasTombs | HasConflicts,
-            HasDocsAndTombs = HasDocs | HasTombs,
-            HasConflictsAndTombs = HasConflicts | HasTombs,
-            HasDocsAndConflicts = HasConflicts | HasDocs
-        }
+            private readonly List<IEnumerator<ReplicationBatchDocumentItem>> _workEnumerators = new List<IEnumerator<ReplicationBatchDocumentItem>>();
+            private ReplicationBatchDocumentItem _currentItem;
+            public void AddEnumerator(IEnumerator<ReplicationBatchDocumentItem> enumerator)
+            {
+                if(enumerator == null)
+                    return;
 
+                if (enumerator.MoveNext())
+                {
+                    _workEnumerators.Add(enumerator);
+                }              
+            }
+
+            public bool MoveNext()
+            {
+                if (_workEnumerators.Count == 0)
+                    return false;
+
+                var current = _workEnumerators[0];
+                for (var index = 1; index < _workEnumerators.Count; index++)
+                {
+                    if (_workEnumerators[index].Current.Etag < current.Current.Etag)
+                    {
+                        current = _workEnumerators[index];
+                    }
+                }
+                _currentItem = current.Current;
+                if (current.MoveNext() == false)
+                {
+                    _workEnumerators.Remove(current);
+                }
+                return true;
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
+
+            public ReplicationBatchDocumentItem Current => _currentItem;
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose()
+            {
+            }
+        }
+        
         private IEnumerable<ReplicationBatchDocumentItem> GetDocsConflictsAndTombstonesAfter(DocumentsOperationContext ctx, long etag)
         {
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
-            var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1, 0, int.MaxValue);
+            var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
             var conflicts = _parent._database.DocumentsStorage.GetConflictsFrom(ctx, etag + 1);
+            var versions = _parent._database.BundleLoader?.VersioningStorage?.GetRevisionsAfter(ctx, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
             using (var conflictsIt = conflicts.GetEnumerator())
+            using (var versionsIt = versions?.GetEnumerator())
             {
-                var state = CurrentEnumerationState.None;
+                var mergedInEnumerator = new MergedReplicationBatchEnumerator();
 
-                if (docsIt.MoveNext())
-                    state |= CurrentEnumerationState.HasDocs;
-                if (tombsIt.MoveNext())
-                    state |= CurrentEnumerationState.HasTombs;
-                if (conflictsIt.MoveNext())
-                    state |= CurrentEnumerationState.HasConflicts;
-                while (true)
+                mergedInEnumerator.AddEnumerator(docsIt);
+                mergedInEnumerator.AddEnumerator(tombsIt);
+                mergedInEnumerator.AddEnumerator(conflictsIt);
+                mergedInEnumerator.AddEnumerator(versionsIt);
+                
+                while (mergedInEnumerator.MoveNext())
                 {
-                    switch (state)
-                    {
-                        case CurrentEnumerationState.None:
-                            yield break;
-                        case CurrentEnumerationState.HasDocs:
-                            var docsItCurrent = docsIt.Current;
-                            yield return new ReplicationBatchDocumentItem
-                            {
-                                Etag = docsItCurrent.Etag,
-                                ChangeVector = docsItCurrent.ChangeVector,
-                                Data = docsItCurrent.Data,
-                                Key = docsItCurrent.Key,
-                                Flags = docsItCurrent.Flags,
-                                TransactionMarker = docsItCurrent.TransactionMarker,
-                                LastModifiedTicks = docsItCurrent.LastModified.Ticks,
-                            };
-                            if (docsIt.MoveNext() == false)
-                                state &= ~CurrentEnumerationState.HasDocs;
-                            break;
-                        case CurrentEnumerationState.HasTombs:
-                            var tombsItCurrent = tombsIt.Current;
-                            yield return new ReplicationBatchDocumentItem
-                            {
-                                Etag = tombsItCurrent.Etag,
-                                ChangeVector = tombsItCurrent.ChangeVector,
-                                Collection = tombsItCurrent.Collection,
-                                Key = tombsItCurrent.Key,
-                                Flags = tombsItCurrent.Flags,
-                                TransactionMarker = tombsItCurrent.TransactionMarker,
-                                LastModifiedTicks = tombsItCurrent.LastModified.Ticks,
-                            };
-                            if (tombsIt.MoveNext() == false)
-                                state &= ~CurrentEnumerationState.HasTombs;
-                            break;
-                        case CurrentEnumerationState.HasConflicts:
-                            var conflictCurrent = conflictsIt.Current;
-                            yield return new ReplicationBatchDocumentItem
-                            {
-                                Etag = conflictCurrent.Etag,
-                                ChangeVector = conflictCurrent.ChangeVector,
-                                Collection = conflictCurrent.Collection,
-                                Data = conflictCurrent.Doc,
-                                Key = conflictCurrent.Key,
-                                LastModifiedTicks = conflictCurrent.LastModified.Ticks,
-                                TransactionMarker = -1// not relevant for conflicts since they are already resolved in separate tx
-                            };
-                            if (conflictsIt.MoveNext() == false)
-                                state &= ~CurrentEnumerationState.HasConflicts;
-                            break;
-
-                        case CurrentEnumerationState.HasDocsAndTombs:
-                            if (docsIt.Current.Etag > tombsIt.Current.Etag)
-                                goto case CurrentEnumerationState.HasTombs;
-                            goto case CurrentEnumerationState.HasDocs;
-
-                        case CurrentEnumerationState.HasConflictsAndTombs:
-                            if (conflictsIt.Current.Etag > tombsIt.Current.Etag)
-                                goto case CurrentEnumerationState.HasTombs;
-                            goto case CurrentEnumerationState.HasConflicts;
-
-                        case CurrentEnumerationState.HasDocsAndConflicts:
-                            if (conflictsIt.Current.Etag > docsIt.Current.Etag)
-                                goto case CurrentEnumerationState.HasDocs;
-                            goto case CurrentEnumerationState.HasConflicts;
-
-                        case CurrentEnumerationState.HasDocsAndTombsAndConflicts:
-                            if (docsIt.Current.Etag > tombsIt.Current.Etag)
-                                goto case CurrentEnumerationState.HasDocsAndConflicts;
-                            goto case CurrentEnumerationState.HasConflictsAndTombs;
-
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                    yield return mergedInEnumerator.Current;
                 }
             }
         }
@@ -336,6 +304,9 @@ namespace Raven.Server.Documents.Replication
 
                 *(long*)(pTemp + tempBufferPos) = item.LastModifiedTicks;
                 tempBufferPos += sizeof(long);
+
+                *(DocumentFlags*)(pTemp + tempBufferPos) = item.Flags;
+                tempBufferPos += sizeof(DocumentFlags);
 
                 *(int*)(pTemp + tempBufferPos) = item.Key.Size;
                 tempBufferPos += sizeof(int);

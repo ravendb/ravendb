@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net;
+using System.Linq;
 using System.Text;
 using Raven.Client;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -18,6 +20,7 @@ namespace Raven.Server.Documents.Versioning
 {
     public unsafe class VersioningStorage
     {
+        private static readonly Slice KeyAndChangeVectorSlice;
         public static readonly Slice KeyAndEtagSlice;
         public static readonly Slice RevisionsEtags;
         private static Logger _logger;
@@ -30,6 +33,27 @@ namespace Raven.Server.Documents.Versioning
         private const string RevisionDocuments = "RevisionDocuments";
         private const string RevisionsCount = "RevisionsCount";
 
+        // The documents schema is as follows
+        // (lowered key, recored separator, etag, lowered key, recored separator, change vector, lazy string key, document)
+        // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
+        //      e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it.
+        // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
+
+        // We have to fetch versions based on it's change vector as well as by it's insert order.
+        // To do so, we duplicate the key and indexing both (key,etag) and (key,cv)
+        private enum Columns
+        {
+            LoweredKey = 0,
+            // Seperator = 1
+            Etag = 2, // etag to keep the insertion order
+            LoweredKey2 = 3, // get by key and change vector 
+            // Separator = 4,
+            ChangeVector = 5,
+            Key = 6,
+            Document = 7
+        }
+
+        private const byte Seperator = 30;
         private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
 
         private VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
@@ -51,23 +75,29 @@ namespace Raven.Server.Documents.Versioning
 
         static VersioningStorage()
         {
+            Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable, out KeyAndEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsEtags", ByteStringType.Immutable, out RevisionsEtags);
-            // The documents schema is as follows
-            // 5 fields (lowered key, recored separator, etag, lazy string key, document)
-            // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
-            //      e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it.
-            // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
+
             DocsSchema = new TableSchema();
+
             DocsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = 0,
+                StartIndex = (int)Columns.LoweredKey,
                 Count = 3,
                 Name = KeyAndEtagSlice
             });
+
+            DocsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)Columns.LoweredKey2,
+                Count = 3,
+                Name = KeyAndChangeVectorSlice
+            });
+            
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = 2,
+                StartIndex = (int)Columns.Etag,
                 Name = RevisionsEtags
             });
         }
@@ -115,7 +145,8 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public bool PutFromDocument(DocumentsOperationContext context, CollectionName collectionName, string key, BlittableJsonReaderObject document)
+        public bool PutFromDocument(DocumentsOperationContext context, CollectionName collectionName, string key, 
+            BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector = null)
         {
             var enableVersioning = false;
             BlittableJsonReaderObject metadata;
@@ -141,7 +172,7 @@ namespace Raven.Server.Documents.Versioning
                     mutatedMetadata.Remove(Constants.Documents.Versioning.EnableVersioning);
                 }
             }
-
+            
             var configuration = GetVersioningConfiguration(collectionName);
             if (enableVersioning == false && configuration.Active == false)
                 return false;
@@ -153,20 +184,23 @@ namespace Raven.Server.Documents.Versioning
                 var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
                 DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
 
-                PutInternal(context, key, document, table);
+                PutInternal(context, key, document, table, changeVector);
             }
 
             return true;
         }
 
-        public void PutDirect(DocumentsOperationContext context, string key,  BlittableJsonReaderObject document)
+        
+        public void PutDirect(DocumentsOperationContext context, string key,  BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
-            PutInternal(context, key, document, table);
+            PutInternal(context, key, document, table, changeVector);
         }
 
-        private void PutInternal(JsonOperationContext context, string key, BlittableJsonReaderObject document, Table table)
+        private void PutInternal(DocumentsOperationContext context, string key, BlittableJsonReaderObject document
+            , Table table, ChangeVectorEntry[] changeVector)
         {
+            
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
             byte* lowerKey;
@@ -175,18 +209,44 @@ namespace Raven.Server.Documents.Versioning
             int keySize;
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            byte recordSeperator = 30;
-            long newEtagBigEndian = Bits.SwapBytes(_database.DocumentsStorage.GenerateNextEtag());
-            var tbv = new TableValueBuilder
-            {
-                {lowerKey, lowerSize},
-                {&recordSeperator, sizeof(char)},
-                {(byte*)&newEtagBigEndian, sizeof(long)},
-                {keyPtr, keySize},
-                {document.BasePointer, document.Size}
-            };
+            var data = context.ReadObject(document, key);
 
-            table.Insert(tbv);
+            //byte recordSeperator = 30;
+            var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+            var newEtagBigEndian = Bits.SwapBytes(newEtag);
+
+            if (changeVector == null)
+            {
+                changeVector = new[]
+                {
+                    new ChangeVectorEntry
+                    {
+                        DbId = _database.DbId,
+                        Etag = newEtag
+                    }
+                };
+            }
+
+            if (CheckIfVersionExists(context, key, changeVector))
+            {
+                return;
+            }
+
+            fixed (ChangeVectorEntry* pChangeVector = changeVector)
+            {
+                var tbv = new TableValueBuilder
+                {
+                    {lowerKey, lowerSize},
+                    Seperator,
+                    {(byte*)&newEtagBigEndian, sizeof(long)},
+                    {lowerKey, lowerSize},
+                    Seperator,
+                    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
+                    {keyPtr, keySize},
+                    {data.BasePointer, data.Size}
+                };
+                table.Insert(tbv);
+            }         
         }
 
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long? maxRevisions, long revisionsCount)
@@ -305,6 +365,54 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
+        public IEnumerable<ReplicationBatchDocumentItem> GetRevisionsAfter(DocumentsOperationContext context, long etag)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
+
+            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtags], etag))
+            {
+                yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref tvr.Reader));
+            }
+        }
+
+        private bool CheckIfVersionExists(DocumentsOperationContext context,string key, ChangeVectorEntry[] changeVector)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
+            if (table.NumberOfEntries == 0)
+            {
+                return false;
+            }
+            var keyBytes = Encoding.UTF8.GetBytes(key);
+            var keyLen = keyBytes.Length;
+            var size = keyLen + 1 + sizeof(ChangeVectorEntry)*changeVector.Length;
+            var buffer = context.GetMemory(size);
+            
+            fixed (ChangeVectorEntry* changeVectorPtr = changeVector)
+            fixed (byte* keyPtr = keyBytes)
+            {
+                Memory.Copy(buffer.Address, keyPtr, keyLen);
+                buffer.Address[keyLen] = Seperator;
+                Memory.Copy(&buffer.Address[keyLen + 1],(byte*)changeVectorPtr, sizeof(ChangeVectorEntry) * changeVector.Length);
+            }
+
+            Slice slice;
+            using (Slice.From(context.Allocator, buffer.Address, size, out slice))
+            {
+                foreach (var tvr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndChangeVectorSlice], slice))
+                {
+                    foreach (var tableValueHolder in tvr.Results)
+                    {
+                        var entry = TableValueToDocument(context, ref tableValueHolder.Reader);
+                        if (entry.ChangeVector.SequenceEqual(changeVector))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
         private static Document TableValueToDocument(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
@@ -313,13 +421,25 @@ namespace Raven.Server.Documents.Versioning
             };
             int size;
             // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
-            var ptr = tvr.Read(3, out size);
+            var ptr = tvr.Read((int)Columns.Key, out size);
             byte offset;
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
-            ptr = tvr.Read(2, out size);
-            result.Etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
-            result.Data = new BlittableJsonReaderObject(tvr.Read(4, out size), size, context);
+            ptr = tvr.Read((int)Columns.Etag, out size);
+            result.Etag = Bits.SwapBytes(*(long*)ptr);
+            result.Data = new BlittableJsonReaderObject(tvr.Read((int)Columns.Document, out size), size, context);
+
+
+            int changeVectorSize = sizeof(ChangeVectorEntry);
+            ptr = tvr.Read((int) Columns.ChangeVector, out size);
+            int changeVecotorCount = size/changeVectorSize;
+            result.ChangeVector = new ChangeVectorEntry[changeVecotorCount];
+            for (var i = 0; i < changeVecotorCount; i++)
+            {
+                result.ChangeVector[i] = ((ChangeVectorEntry*) ptr)[i];
+            }
+
+            result.Flags = DocumentFlags.FromVersionStorage;
 
             return result;
         }

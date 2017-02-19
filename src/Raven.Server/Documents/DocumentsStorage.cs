@@ -508,14 +508,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchDocumentItem> GetDocumentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
             {
-                yield return TableValueToDocument(context, ref result.Reader);
+                yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref result.Reader));
             }
         }
 
@@ -601,12 +601,12 @@ namespace Raven.Server.Documents
             return list;
         }
 
-        public IEnumerable<DocumentConflict> GetConflictsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchDocumentItem> GetConflictsFrom(DocumentsOperationContext context, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag))
             {
-                yield return TableValueToConflictDocument(context, ref tvr.Reader);
+                yield return ReplicationBatchDocumentItem.From(TableValueToConflictDocument(context, ref tvr.Reader));
             }
         }
 
@@ -737,6 +737,19 @@ namespace Raven.Server.Documents
                     yield break;
 
                 yield return TableValueToTombstone(context, ref result.Reader);
+            }
+        }
+
+        public IEnumerable<ReplicationBatchDocumentItem> GetTombstonesFrom(
+            DocumentsOperationContext context,
+            long etag)
+        {
+            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag))
+            {
+                yield return ReplicationBatchDocumentItem.From(TableValueToTombstone(context, ref result.Reader));
             }
         }
 
@@ -1916,17 +1929,7 @@ namespace Raven.Server.Documents
             var collectionName = ExtractCollectionName(context, key, document);
             var newEtag = GenerateNextEtag();
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
-            if (collectionName.IsSystem == false && (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
-            {
-                bool hasVersion =
-                    _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
-                    key, document) ?? false;
-                if (hasVersion)
-                {
-                    flags |= DocumentFlags.Versioned;
-                }
-            }
-
+            
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             bool knownNewKey = false;
@@ -1983,6 +1986,17 @@ namespace Raven.Server.Documents
                     changeVector = SetDocumentChangeVectorForLocalChange(context,
                         keySlice,
                         ref oldValue, newEtag);
+                }
+
+                if (collectionName.IsSystem == false && (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                {
+                    bool hasVersion =
+                        _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
+                        key, document, changeVector) ?? false;
+                    if (hasVersion)
+                    {
+                        flags |= DocumentFlags.Versioned;
+                    }
                 }
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -2484,7 +2498,7 @@ namespace Raven.Server.Documents
             return collectionName;
         }
 
-        private CollectionName ExtractCollectionName(DocumentsOperationContext context, string key, BlittableJsonReaderObject document)
+        public CollectionName ExtractCollectionName(DocumentsOperationContext context, string key, BlittableJsonReaderObject document)
         {
             var originalCollectionName = CollectionName.GetCollectionName(key, document);
 

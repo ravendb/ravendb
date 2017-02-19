@@ -16,6 +16,7 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
+using Raven.Client;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
@@ -692,7 +693,16 @@ namespace Raven.Server.Documents.Replication
                                 doc.DocumentSize, documentsContext);
                             json.BlittableValidation();
                         }
-                        
+
+                        if ((doc.Flags & DocumentFlags.FromVersionStorage) == DocumentFlags.FromVersionStorage)
+                        {
+                            var collectionName = _database.DocumentsStorage.ExtractCollectionName(documentsContext, doc.Id, json);
+                            _database.BundleLoader?.VersioningStorage.PutFromDocument(documentsContext, 
+                                collectionName, doc.Id, json,_tempReplicatedChangeVector);
+                           continue; 
+                        }
+                           
+
                         ChangeVectorEntry[] conflictingVector;
                         var conflictStatus = GetConflictStatusForDocument(documentsContext, doc.Id, _tempReplicatedChangeVector, out conflictingVector);
 
@@ -1097,6 +1107,7 @@ namespace Raven.Server.Documents.Replication
             public int DocumentSize;
             public string Collection;
             public long LastModifiedTicks;
+            public DocumentFlags Flags;
         }
 
         public struct ReplicationIndexOrTransformerPositions
@@ -1130,6 +1141,8 @@ namespace Raven.Server.Documents.Replication
                 curDoc.TransactionMarker = *(short*)ReadExactly(sizeof(short));
 
                 curDoc.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
+
+                curDoc.Flags = *(DocumentFlags*)ReadExactly(sizeof(DocumentFlags));
 
                 var keySize = *(int*)ReadExactly(sizeof(int));
                 

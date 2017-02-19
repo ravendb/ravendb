@@ -20,6 +20,19 @@ namespace FastTests.Server.Replication
 {
     public class ReplicationTestsBase : RavenTestBase
     {
+
+        protected List<object> GetRevisions(DocumentStore store,string id)
+        {
+            using (var commands = store.Commands())
+            {
+                var command = new GetRevisionsCommand(id);
+
+                commands.RequestExecuter.Execute(command, commands.Context);
+
+                return command.Result;
+            }
+        }
+
         protected Dictionary<string, object> GetReplicationStats(DocumentStore store)
         {
             using (var commands = store.Commands())
@@ -206,7 +219,7 @@ namespace FastTests.Server.Replication
 
         protected T WaitForValue<T>(Func<T> act, T expectedVal)
         {
-            int timeout = 5000;
+            int timeout = 10000;
             if (Debugger.IsAttached)
                 timeout *= 100;
             var sw = Stopwatch.StartNew();
@@ -447,7 +460,48 @@ namespace FastTests.Server.Replication
                 session.SaveChanges();
             }
         }
+        
+        private class GetRevisionsCommand : RavenCommand<List<object>>
+        {
+            private readonly string _id;
 
+            public GetRevisionsCommand(string id)
+            {
+                if (id == null)
+                    throw new ArgumentNullException(nameof(id));
+
+                _id = id;
+            }
+            public override bool IsReadRequest => true;
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/revisions?key={_id}";
+
+                ResponseType = RavenCommandResponseType.Object;
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+
+                BlittableJsonReaderArray array;
+                if (response.TryGet("Results", out array) == false)
+                    ThrowInvalidResponse();
+
+                var result = new List<object>();
+                foreach (var arrayItem in array.Items)
+                {
+                    result.Add(arrayItem);
+                }
+
+                Result = result;
+            }
+        }
 
         private class GetConncectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>
         {

@@ -22,5 +22,48 @@ namespace Raven.Server.Documents.Replication
         public DocumentFlags Flags;
         public short TransactionMarker;
         public long LastModifiedTicks;
+
+
+        public static ReplicationBatchDocumentItem From(Document doc)
+        {
+            return new ReplicationBatchDocumentItem
+            {
+                Etag = doc.Etag,
+                ChangeVector = doc.ChangeVector,
+                Data = doc.Data,
+                Key = doc.Key,
+                Flags = doc.Flags,
+                TransactionMarker = doc.TransactionMarker,
+                LastModifiedTicks = doc.LastModified.Ticks,
+            };
+        }
+
+        public static ReplicationBatchDocumentItem From(DocumentTombstone doc)
+        {
+            return new ReplicationBatchDocumentItem
+            {
+                Etag = doc.Etag,
+                ChangeVector = doc.ChangeVector,
+                Collection = doc.Collection,
+                Key = doc.Key,
+                Flags = doc.Flags,
+                TransactionMarker = doc.TransactionMarker,
+                LastModifiedTicks = doc.LastModified.Ticks,
+            };
+        }
+
+        public static ReplicationBatchDocumentItem From(DocumentConflict doc)
+        {
+            return new ReplicationBatchDocumentItem
+            {
+                Etag = doc.Etag,
+                ChangeVector = doc.ChangeVector,
+                Collection = doc.Collection,
+                Data = doc.Doc,
+                Key = doc.Key,
+                LastModifiedTicks = doc.LastModified.Ticks,
+                TransactionMarker = -1// not relevant
+            };
+        }
     }
 }
