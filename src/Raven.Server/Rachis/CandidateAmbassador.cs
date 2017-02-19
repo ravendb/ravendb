@@ -75,7 +75,8 @@ namespace Raven.Server.Rachis
                         Status = "Connected";
                         using (var connection = new RemoteConnection(stream))
                         {
-                            while (true)
+                            _engine.AppendStateDisposable(_candidate, connection);
+                            while (_candidate.Running)
                             {
                                 TransactionOperationContext context;
                                 using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -184,6 +185,19 @@ namespace Raven.Server.Rachis
                         Status = "Disconnected";
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                Status = "Closed";
+            }
+            catch (ObjectDisposedException)
+            {
+                Status = "Closed";
+            }
+            catch (AggregateException ae)
+                when (ae.InnerException is OperationCanceledException || ae.InnerException is ObjectDisposedException)
+            {
+                Status = "Closed";
             }
             catch (Exception e)
             {

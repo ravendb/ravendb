@@ -2,11 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
@@ -86,6 +83,7 @@ namespace Raven.Server.Rachis
                         Status = "Connected";
                         using (var connection = new RemoteConnection(stream))
                         {
+                            _engine.AppendStateDisposable(_leader, connection);
                             var matchIndex = InitialNegotiationWithFollower(connection);
                             if (matchIndex == null)
                                 return;
@@ -100,21 +98,22 @@ namespace Raven.Server.Rachis
                                 {
                                     LastIncludedIndex = -1,
                                     LastIncludedTerm = -1,
-                                    Topology = -1,//TODO: fake, just to remember doing this
+                                    Topology = -1, //TODO: fake, just to remember doing this
                                     SnapshotSize = 0
                                 });
 
                                 var aer = connection.Read<AppendEntriesResponse>(context);
                                 if (aer.Success == false)
                                 {
-                                    throw new InvalidOperationException($"Unable to install snapshot on {_url} because {aer.Message}");
+                                    throw new InvalidOperationException(
+                                        $"Unable to install snapshot on {_url} because {aer.Message}");
                                 }
 
                                 //TODO: make sure that we routinely update LastReplyFromFollower here
                             }
 
                             var entries = new List<BlittableJsonReaderObject>();
-                            while (true)
+                            while (_leader.Running)
                             {
                                 // TODO: how to close
                                 entries.Clear();
@@ -123,13 +122,16 @@ namespace Raven.Server.Rachis
                                     AppendEntries appendEntries;
                                     using (context.OpenReadTransaction())
                                     {
-                                        var table = context.Transaction.InnerTransaction.OpenTable(RachisConsensus.LogsTable, RachisConsensus.EntriesSlice);
+                                        var table =
+                                            context.Transaction.InnerTransaction.OpenTable(RachisConsensus.LogsTable,
+                                                RachisConsensus.EntriesSlice);
 
                                         var reveredNextIndex = Bits.SwapBytes(_followerNextIndex);
                                         Slice key;
-                                        using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long),
+                                        using (
+                                            Slice.External(context.Allocator, (byte*) &reveredNextIndex, sizeof(long),
                                                 out key))
-                                        { 
+                                        {
                                             long totalSize = 0;
                                             foreach (var value in table.SeekByPrimaryKey(key))
                                             {
@@ -161,8 +163,9 @@ namespace Raven.Server.Rachis
                                     if (aer.Success == false)
                                     {
                                         // shouldn't happen, the connection should be aborted if this is the case, but still
-                                        var msg = "A negative Append Entries Response after the connection has been established shouldn't happen. Message: " +
-                                                  aer.Message;
+                                        var msg =
+                                            "A negative Append Entries Response after the connection has been established shouldn't happen. Message: " +
+                                            aer.Message;
                                         if (_engine.Log.IsInfoEnabled)
                                         {
                                             _engine.Log.Info("BUG? " + msg);
@@ -178,7 +181,7 @@ namespace Raven.Server.Rachis
                                 using (context.OpenReadTransaction())
                                 {
                                     if (_engine.GetLastEntryIndex(context) != _followerMatchIndex)
-                                        continue;// instead of waiting, we have new entries, start immediately
+                                        continue; // instead of waiting, we have new entries, start immediately
                                 }
                                 // either we have new entries to send, or we waited for long enough 
                                 // to send another heartbeat
@@ -192,6 +195,19 @@ namespace Raven.Server.Rachis
                         Status = "Disconnected";
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                Status = "Closed";
+            }
+            catch (ObjectDisposedException)
+            {
+                Status = "Closed";
+            }
+            catch (AggregateException ae)
+                when (ae.InnerException is OperationCanceledException || ae.InnerException is ObjectDisposedException)
+            {
+                Status = "Closed";
             }
             catch (Exception e)
             {

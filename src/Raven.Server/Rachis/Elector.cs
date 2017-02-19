@@ -18,153 +18,173 @@ namespace Raven.Server.Rachis
 
         public void HandleVoteRequest()
         {
-            while (true)
+            try
             {
-                TransactionOperationContext context;
-                using (_engine.ContextPool.AllocateOperationContext(out context))
+                while (true)
                 {
-                    var rv = _connection.Read<RequestVote>(context);
-                    if (rv.Term <= _engine.CurrentTerm)
+                    TransactionOperationContext context;
+                    using (_engine.ContextPool.AllocateOperationContext(out context))
                     {
-                        _connection.Send(context, new RequestVoteResponse
+                        var rv = _connection.Read<RequestVote>(context);
+                        if (rv.Term <= _engine.CurrentTerm)
                         {
-                            Term = _engine.CurrentTerm,
-                            VoteGranted = false,
-                            Message = "My term is higher or equals to yours"
-                        });
-                        _connection.Dispose();
-                        return;
-                    }
-
-                    if (_engine.CurrentState == RachisConsensus.State.Leader)
-                    {
-                        _connection.Send(context, new RequestVoteResponse
-                        {
-                            Term = _engine.CurrentTerm,
-                            VoteGranted = false,
-                            Message = "I'm a leader in good standing, coup will be resisted"
-                        });
-                        _connection.Dispose();
-                        return;
-                    }
-
-                    long lastIndex;
-                    long lastTerm;
-                    string whoGotMyVoteIn;
-
-                    using (context.OpenReadTransaction())
-                    {
-                        lastIndex = _engine.GetLastEntryIndex(context);
-                        lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
-                        whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
-                    }
-
-                    if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
-                    {
-                        _connection.Send(context, new RequestVoteResponse
-                        {
-                            Term = _engine.CurrentTerm,
-                            VoteGranted = false,
-                            Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
-                        });
-                        _connection.Dispose();
-                        return;
-                    }
-
-                    if (lastTerm > rv.LastLogTerm)
-                    {
-                        _connection.Send(context, new RequestVoteResponse
-                        {
-                            Term = _engine.CurrentTerm,
-                            VoteGranted = false,
-                            Message = $"My last log entry is of term {lastTerm} while yours is {rv.LastLogTerm}, so I'm more up to date"
-                        });
-                        _connection.Dispose();
-                        return;
-                    }
-
-                    if (lastIndex > rv.LastLogIndex)
-                    {
-                        _connection.Send(context, new RequestVoteResponse
-                        {
-                            Term = _engine.CurrentTerm,
-                            VoteGranted = false,
-                            Message = $"My last log entry is of term {lastTerm} / {lastIndex} while yours is {rv.LastLogTerm} / {rv.LastLogIndex}, so I'm more up to date"
-                        });
-                        _connection.Dispose();
-                        return;
-                    }
-
-                    if (rv.IsForcedElection == false &&
-                        _engine.Timeout.TimeSinceLastDeferral() < _engine.ElectionTimeoutMs / 2)
-                    {
-                        _connection.Send(context, new RequestVoteResponse
-                        {
-                            Term = _engine.CurrentTerm,
-                            VoteGranted = false,
-                            Message = "My leader is keeping me up to date, so I don't want to vote for you"
-                        });
-                        _connection.Dispose();
-                        return;
-                    }
-
-                    if (rv.IsTrialElection)
-                    {
-                        _connection.Send(context, new RequestVoteResponse
-                        {
-                            Term = rv.Term,
-                            VoteGranted = true,
-                            Message = "I might vote for you"
-                        });
-                        if (_thread == null) // let's wait for this in another thread
-                        {
-                            _thread = new Thread(HandleVoteRequest)
+                            _connection.Send(context, new RequestVoteResponse
                             {
-                                Name = "Elector thread for " + rv.Source,
-                                IsBackground = true
-                            };
-                            _thread.Start();
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                Message = "My term is higher or equals to yours"
+                            });
+                            _connection.Dispose();
                             return;
                         }
-                        continue;
-                    }
 
-                    bool alreadyVoted = false;
-                    using (context.OpenWriteTransaction())
-                    {
-                        whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+                        if (_engine.CurrentState == RachisConsensus.State.Leader)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                Message = "I'm a leader in good standing, coup will be resisted"
+                            });
+                            _connection.Dispose();
+                            return;
+                        }
+
+                        long lastIndex;
+                        long lastTerm;
+                        string whoGotMyVoteIn;
+
+                        using (context.OpenReadTransaction())
+                        {
+                            lastIndex = _engine.GetLastEntryIndex(context);
+                            lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
+                            whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+                        }
+
                         if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
                         {
-                            alreadyVoted = true;
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
+                            });
+                            _connection.Dispose();
+                            return;
+                        }
+
+                        if (lastTerm > rv.LastLogTerm)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                Message = $"My last log entry is of term {lastTerm} while yours is {rv.LastLogTerm}, so I'm more up to date"
+                            });
+                            _connection.Dispose();
+                            return;
+                        }
+
+                        if (lastIndex > rv.LastLogIndex)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                Message = $"My last log entry is of term {lastTerm} / {lastIndex} while yours is {rv.LastLogTerm} / {rv.LastLogIndex}, so I'm more up to date"
+                            });
+                            _connection.Dispose();
+                            return;
+                        }
+
+                        if (rv.IsForcedElection == false &&
+                            _engine.Timeout.TimeSinceLastDeferral() < _engine.ElectionTimeoutMs / 2)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                Message = "My leader is keeping me up to date, so I don't want to vote for you"
+                            });
+                            _connection.Dispose();
+                            return;
+                        }
+
+                        if (rv.IsTrialElection)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = rv.Term,
+                                VoteGranted = true,
+                                Message = "I might vote for you"
+                            });
+                            if (_thread == null) // let's wait for this in another thread
+                            {
+                                _thread = new Thread(HandleVoteRequest)
+                                {
+                                    Name = "Elector thread for " + rv.Source,
+                                    IsBackground = true
+                                };
+                                _thread.Start();
+                                return;
+                            }
+                            continue;
+                        }
+
+                        bool alreadyVoted = false;
+                        using (context.OpenWriteTransaction())
+                        {
+                            whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+                            if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
+                            {
+                                alreadyVoted = true;
+                            }
+                            else
+                            {
+                                _engine.CastVoteInTerm(context, rv.Term, rv.Source);
+                            }
+                            context.Transaction.Commit();
+                        }
+                        if (alreadyVoted)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
+                            });
                         }
                         else
                         {
-                            _engine.CastVoteInTerm(context, rv.Term, rv.Source);
-                        }
-                        context.Transaction.Commit();
-                    }
-                    if (alreadyVoted)
-                    {
-                        _connection.Send(context, new RequestVoteResponse
-                        {
-                            Term = _engine.CurrentTerm,
-                            VoteGranted = false,
-                            Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
-                        });
-                    }
-                    else
-                    {
-                        _engine.SetNewState(RachisConsensus.State.Follower, this);
-                        _engine.Timeout.Start(_engine.SwitchToCandidateState);
+                            _engine.SetNewState(RachisConsensus.State.Follower, this);
+                            _engine.Timeout.Start(_engine.SwitchToCandidateState);
 
-                        _connection.Send(context, new RequestVoteResponse
-                        {
-                            Term = _engine.CurrentTerm,
-                            VoteGranted = true,
-                            Message = "I've voted for you"
-                        });
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = true,
+                                Message = "I've voted for you"
+                            });
+                        }
+                        _connection.Dispose();
                     }
-                    _connection.Dispose();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (AggregateException ae)
+                when (ae.InnerException is OperationCanceledException || ae.InnerException is ObjectDisposedException)
+            {
+            }
+            catch (Exception e)
+            {
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info("Failed to talk to leader: " + _engine.Url, e);
                 }
             }
         }

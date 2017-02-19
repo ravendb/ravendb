@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Server.Kestrel.Internal;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -17,10 +18,46 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Raven.Server.Rachis
 {
-    public class RachisConsensus : IDisposable
+    public class RachisConsensus<TStateMachine> : RachisConsensus
+        where TStateMachine : RachisStateMachine, new()
+    {
+        public RachisConsensus(StorageEnvironmentOptions options, string url) : base(options, url)
+        {
+        }
+
+        public TStateMachine StateMachine;
+
+        protected override void InitializeState()
+        {
+            StateMachine = new TStateMachine();
+            StateMachine.Initialize(this);
+        }
+
+        public override void Dispose()
+        {
+            SetNewState(State.Follower, new NullDisposable());
+            StateMachine?.Dispose();
+            base.Dispose();
+        }
+
+        public override void Apply(TransactionOperationContext context, long uptoInclusive)
+        {
+            StateMachine.Apply(context, uptoInclusive);
+        }
+
+        private class NullDisposable : IDisposable
+        {
+            public void Dispose()
+            {
+                
+            }
+        }
+    }
+    public abstract class RachisConsensus : IDisposable
     {
         public enum State
         {
@@ -38,7 +75,6 @@ namespace Raven.Server.Rachis
         public TransactionContextPool ContextPool { get; private set; }
         private StorageEnvironment _persistentState;
         internal readonly Logger Log;
-        public RachisStateMachine StateMachine;
 
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
@@ -85,19 +121,17 @@ namespace Raven.Server.Rachis
         public int ElectionTimeoutMs = 300;
         private Leader _currentLeader;
 
-        public RachisConsensus(StorageEnvironmentOptions options, string url)
+        protected RachisConsensus(StorageEnvironmentOptions options, string url)
         {
             _options = options;
             _url = url;
             Log = LoggingSource.Instance.GetLogger<RachisConsensus>(options.BasePath);
         }
 
-        public unsafe void Initialize(RachisStateMachine stateMachine)
+        public unsafe void Initialize()
         {
             try
             {
-                stateMachine.Initialize(this);
-                StateMachine = stateMachine;
                 _persistentState = new StorageEnvironment(_options);
                 ContextPool = new TransactionContextPool(_persistentState);
 
@@ -116,6 +150,8 @@ namespace Raven.Server.Rachis
                         CurrentTerm = read.Reader.ReadLittleEndianInt64();
 
                     topology = GetTopology(context);
+
+                    InitializeState();
 
                     tx.Commit();
                 }
@@ -155,14 +191,16 @@ namespace Raven.Server.Rachis
             }
         }
 
+        protected abstract void InitializeState();
+
         public void SetNewState(State state, IDisposable disposable)
         {
             lock (_disposables)
             {
                 _currentLeader = null;
-                for (int i = _disposables.Count - 1; i >= 0; i--)
+                foreach (var t in _disposables)
                 {
-                    _disposables[i].Dispose();
+                    t.Dispose();
                 }
 
                 _disposables.Clear();
@@ -654,9 +692,8 @@ namespace Raven.Server.Rachis
             return read?.Reader.ReadString(read.Reader.Length);
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
-            StateMachine?.Dispose();
             ContextPool?.Dispose();
             _persistentState?.Dispose();
             _options?.Dispose();
@@ -729,5 +766,7 @@ namespace Raven.Server.Rachis
 
             return task;
         }
+
+        public abstract void Apply(TransactionOperationContext context, long uptoInclusive);
     }
 }

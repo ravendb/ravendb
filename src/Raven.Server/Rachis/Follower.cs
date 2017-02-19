@@ -59,7 +59,7 @@ namespace Raven.Server.Rachis
 
                         if (lastEntryIndexToCommit != lastAppliedIndex)
                         {
-                            _engine.StateMachine.Apply(context, lastEntryIndexToCommit);
+                            _engine.Apply(context, lastEntryIndexToCommit);
                         }
 
                         tx.Commit();
@@ -91,7 +91,8 @@ namespace Raven.Server.Rachis
                     _connection.Send(context, new AppendEntriesResponse
                     {
                         Success = false,
-                        Message = $"The incoming term {fstAppendEntries.Term} is smaller than current term {_engine.CurrentTerm} and is therefor rejected",
+                        Message =
+                            $"The incoming term {fstAppendEntries.Term} is smaller than current term {_engine.CurrentTerm} and is therefor rejected",
                         CurrentTerm = _engine.CurrentTerm
                     });
                     _connection.Dispose();
@@ -105,7 +106,7 @@ namespace Raven.Server.Rachis
 
         private void NegotiateWithLeader(TransactionOperationContext context, AppendEntries fstAppendEntries)
         {
-            
+
             // only the leader can send append entries, so if we accepted it, it's the leader
             DebugCurrentLeader = _connection.DebugSource;
 
@@ -153,14 +154,16 @@ namespace Raven.Server.Rachis
             _connection.Send(context, new AppendEntriesResponse
             {
                 Success = true,
-                Message = $"Negotiation completed, now at {snapshot.LastIncludedIndex} with term {snapshot.LastIncludedTerm}",
+                Message =
+                    $"Negotiation completed, now at {snapshot.LastIncludedIndex} with term {snapshot.LastIncludedTerm}",
                 CurrentTerm = _engine.CurrentTerm,
                 LastLogIndex = snapshot.LastIncludedIndex
             });
             _engine.Timeout.Defer();
         }
 
-        private void NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context, RemoteConnection connection, AppendEntries aer)
+        private void NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context,
+            RemoteConnection connection, AppendEntries aer)
         {
             if (aer.EntriesCount != 0)
                 // if leader sent entries, we can't negotiate, so it invalid state, shouldn't happen
@@ -194,7 +197,7 @@ namespace Raven.Server.Rachis
                     aer.PrevLogIndex
                 );
 
-                midpointIndex = maxIndex + minIndex / 2;
+                midpointIndex = (maxIndex + minIndex)/2;
 
                 midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
@@ -231,7 +234,7 @@ namespace Raven.Server.Rachis
                 {
                     maxIndex = midpointIndex - 1;
                 }
-                midpointIndex = (maxIndex + minIndex) / 2;
+                midpointIndex = (maxIndex + minIndex)/2;
                 using (context.OpenReadTransaction())
                     midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
@@ -268,17 +271,35 @@ namespace Raven.Server.Rachis
 
         private void Run(object obj)
         {
-            //TODO: error handling!
-
-            using (this)
+            try
             {
-                TransactionOperationContext context;
-                using (_engine.ContextPool.AllocateOperationContext(out context))
+                using (this)
                 {
-                    NegotiateWithLeader(context, (AppendEntries)obj);
-                }
+                    TransactionOperationContext context;
+                    using (_engine.ContextPool.AllocateOperationContext(out context))
+                    {
+                        NegotiateWithLeader(context, (AppendEntries)obj);
+                    }
 
-                FollowerSteadyState();
+                    FollowerSteadyState();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (AggregateException ae)
+                when (ae.InnerException is OperationCanceledException || ae.InnerException is ObjectDisposedException)
+            {
+            }
+            catch (Exception e)
+            {
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info("Failed to talk to leader: " + _engine.Url, e);
+                }
             }
         }
 

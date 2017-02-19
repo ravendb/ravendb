@@ -255,7 +255,7 @@ namespace Raven.Server.Rachis
 
                 _lastCommit = maxIndexOnQuorum;
 
-                _engine.StateMachine.Apply(context, maxIndexOnQuorum);
+                _engine.Apply(context, maxIndexOnQuorum);
 
                 _lastCommit = maxIndexOnQuorum;
 
@@ -388,6 +388,10 @@ namespace Raven.Server.Rachis
             Running = false;
             _shutdownRequested.Set();
             _newEntriesArrived.TrySetCanceled();
+            foreach (var entry in _entries)
+            {
+                entry.Value.TrySetCanceled();
+            }
             var ae = new ExceptionAggregator("Could not properly dispose Leader");
             foreach (var ambasaddor in _nonVoters)
             {

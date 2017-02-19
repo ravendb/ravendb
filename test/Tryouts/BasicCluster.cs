@@ -23,6 +23,8 @@ namespace Tryouts
             var a = SetupServer(true);
             var b = SetupServer();
 
+            b.StateMachine.Countdown = new CountdownEvent(10);
+
             a.AddToClusterAsync(b.Url).Wait();
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -37,17 +39,9 @@ namespace Tryouts
                     ["Value"] = 9
                 }, "test")).Wait();
 
-                var bsm = (NoopStateMachine) b.StateMachine;
+                Assert.True(b.StateMachine.Countdown.Wait(1000));
 
-                while (true)
-                {
-                    bsm.Changed.Wait(500);
-                    bsm.Changed.Reset();
-                    if (bsm.Values.Count == 10)
-                        break;
-                }
-
-                Assert.Equal(Enumerable.Range(0, 10), bsm.Values);
+                Assert.Equal(Enumerable.Range(0, 10), b.StateMachine.Values);
             }
         }
 
@@ -55,7 +49,7 @@ namespace Tryouts
         private readonly List<RachisConsensus> _rachisConsensuses = new List<RachisConsensus>();
         private readonly List<Task> _mustBeSuccessfulTasks = new List<Task>();
 
-        private RachisConsensus SetupServer(bool bootstrap = false)
+        private RachisConsensus<NoopStateMachine> SetupServer(bool bootstrap = false)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, 0);
             tcpListener.Start();
@@ -65,8 +59,8 @@ namespace Tryouts
             if (bootstrap)
                 RachisConsensus.Bootstarp(serverA, url);
 
-            var rachis = new RachisConsensus(serverA, url);
-            rachis.Initialize(new NoopStateMachine());
+            var rachis = new RachisConsensus<NoopStateMachine>(serverA, url);
+            rachis.Initialize();
             _listeners.Add(tcpListener);
             _rachisConsensuses.Add(rachis);
             var task = AcceptConnection(tcpListener, rachis);
@@ -83,7 +77,7 @@ namespace Tryouts
                 {
                     tcpClient = await tcpListener.AcceptTcpClientAsync();
                 }
-                catch (OperationCanceledException)
+                catch (ObjectDisposedException)
                 {
                     break;
                 }
@@ -114,11 +108,6 @@ namespace Tryouts
 
         public void Dispose()
         {
-            foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
-            {
-                mustBeSuccessfulTask.Wait();
-            }
-
             foreach (var rc in _rachisConsensuses)
             {
                 rc.Dispose();
@@ -128,12 +117,17 @@ namespace Tryouts
             {
                 listener.Stop();
             }
+
+            foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
+            {
+                mustBeSuccessfulTask.Wait();
+            }
         }
     }
 
     public class NoopStateMachine : RachisStateMachine
     {
-        public ManualResetEventSlim Changed = new ManualResetEventSlim(false);
+        public CountdownEvent Countdown;
         public ConcurrentQueue<int> Values = new ConcurrentQueue<int>();
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd)
@@ -142,7 +136,7 @@ namespace Tryouts
             if (cmd.TryGet("Value", out val))
             {
                 Values.Enqueue(val);
-                Changed.Set();
+                Countdown?.Signal();
             }
         }
     }
