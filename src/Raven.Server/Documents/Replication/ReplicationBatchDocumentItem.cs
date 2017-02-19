@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Replication
         public long LastModifiedTicks;
 
 
-        public static implicit operator ReplicationBatchDocumentItem(Document doc)
+        public static ReplicationBatchDocumentItem From(Document doc)
         {
             return new ReplicationBatchDocumentItem
             {
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Replication
             };
         }
 
-        public static implicit operator ReplicationBatchDocumentItem(DocumentTombstone doc)
+        public static ReplicationBatchDocumentItem From(DocumentTombstone doc)
         {
             return new ReplicationBatchDocumentItem
             {
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Replication
             };
         }
 
-        public static implicit operator ReplicationBatchDocumentItem(DocumentConflict doc)
+        public static ReplicationBatchDocumentItem From(DocumentConflict doc)
         {
             return new ReplicationBatchDocumentItem
             {

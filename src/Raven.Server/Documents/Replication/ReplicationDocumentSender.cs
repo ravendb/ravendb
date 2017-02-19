@@ -35,7 +35,6 @@ namespace Raven.Server.Documents.Replication
         public class MergedReplicationBatchEnumerator : IEnumerator<ReplicationBatchDocumentItem>
         {
             private readonly List<IEnumerator<ReplicationBatchDocumentItem>> _workEnumerators = new List<IEnumerator<ReplicationBatchDocumentItem>>();
-            private readonly List<IEnumerator<ReplicationBatchDocumentItem>> _initEnumerators = new List<IEnumerator<ReplicationBatchDocumentItem>>();
             private ReplicationBatchDocumentItem _currentItem;
             public void AddEnumerator(IEnumerator<ReplicationBatchDocumentItem> enumerator)
             {
@@ -45,7 +44,6 @@ namespace Raven.Server.Documents.Replication
                 if (enumerator.MoveNext())
                 {
                     _workEnumerators.Add(enumerator);
-                    _initEnumerators.Add(enumerator);
                 }              
             }
 
@@ -72,20 +70,7 @@ namespace Raven.Server.Documents.Replication
 
             public void Reset()
             {
-                _workEnumerators.Clear();
-                _workEnumerators.AddRange(_initEnumerators);
-
-                foreach (var enumerator in _workEnumerators)
-                {
-                    enumerator.Reset();
-                    enumerator.MoveNext();
-                }
-            }
-
-            public void Clear()
-            {
-                _workEnumerators.Clear();
-                _initEnumerators.Clear();
+                throw new NotImplementedException();
             }
 
             public ReplicationBatchDocumentItem Current => _currentItem;
@@ -96,9 +81,7 @@ namespace Raven.Server.Documents.Replication
             {
             }
         }
-
-        private readonly MergedReplicationBatchEnumerator _mergedInEnumerator = new MergedReplicationBatchEnumerator();
-
+        
         private IEnumerable<ReplicationBatchDocumentItem> GetDocsConflictsAndTombstonesAfter(DocumentsOperationContext ctx, long etag)
         {
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
@@ -111,15 +94,16 @@ namespace Raven.Server.Documents.Replication
             using (var conflictsIt = conflicts.GetEnumerator())
             using (var versionsIt = versions?.GetEnumerator())
             {
-                _mergedInEnumerator.Clear();
-                _mergedInEnumerator.AddEnumerator(docsIt);
-                _mergedInEnumerator.AddEnumerator(tombsIt);
-                _mergedInEnumerator.AddEnumerator(conflictsIt);
-                _mergedInEnumerator.AddEnumerator(versionsIt);
+                var mergedInEnumerator = new MergedReplicationBatchEnumerator();
+
+                mergedInEnumerator.AddEnumerator(docsIt);
+                mergedInEnumerator.AddEnumerator(tombsIt);
+                mergedInEnumerator.AddEnumerator(conflictsIt);
+                mergedInEnumerator.AddEnumerator(versionsIt);
                 
-                while (_mergedInEnumerator.MoveNext())
+                while (mergedInEnumerator.MoveNext())
                 {
-                    yield return _mergedInEnumerator.Current;
+                    yield return mergedInEnumerator.Current;
                 }
             }
         }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
@@ -19,6 +20,7 @@ namespace Raven.Server.Documents.Versioning
 {
     public unsafe class VersioningStorage
     {
+        private static readonly Slice KeyAndChangeVectorSlice;
         public static readonly Slice KeyAndEtagSlice;
         public static readonly Slice RevisionsEtags;
         private static Logger _logger;
@@ -31,14 +33,24 @@ namespace Raven.Server.Documents.Versioning
         private const string RevisionDocuments = "RevisionDocuments";
         private const string RevisionsCount = "RevisionsCount";
 
+        // The documents schema is as follows
+        // (lowered key, recored separator, etag, lowered key, recored separator, change vector, lazy string key, document)
+        // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
+        //      e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it.
+        // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
+
+        // We have to fetch versions based on it's change vector as well as by it's insert order.
+        // To do so, we duplicate the key and indexing both (key,etag) and (key,cv)
         private enum Columns
         {
             LoweredKey = 0,
-            Separator = 1,
-            ChangeVector = 2,
-            Etag = 3,
-            Key = 4,
-            Document = 5
+            // Seperator = 1
+            Etag = 2, // etag to keep the insertion order
+            LoweredKey2 = 3, // get by key and change vector 
+            // Separator = 4,
+            ChangeVector = 5,
+            Key = 6,
+            Document = 7
         }
 
         private const byte Seperator = 30;
@@ -63,19 +75,24 @@ namespace Raven.Server.Documents.Versioning
 
         static VersioningStorage()
         {
+            Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable, out KeyAndEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsEtags", ByteStringType.Immutable, out RevisionsEtags);
-            // The documents schema is as follows
-            // 6 fields (lowered key, recored separator, etag, change vector, lazy string key, document)
-            // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
-            //      e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it.
-            // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
+
             DocsSchema = new TableSchema();
+
             DocsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)Columns.LoweredKey,
                 Count = 3,
                 Name = KeyAndEtagSlice
+            });
+
+            DocsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)Columns.LoweredKey2,
+                Count = 3,
+                Name = KeyAndChangeVectorSlice
             });
             
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
@@ -221,8 +238,10 @@ namespace Raven.Server.Documents.Versioning
                 {
                     {lowerKey, lowerSize},
                     Seperator,
-                    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
                     {(byte*)&newEtagBigEndian, sizeof(long)},
+                    {lowerKey, lowerSize},
+                    Seperator,
+                    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
                     {keyPtr, keySize},
                     {data.BasePointer, data.Size}
                 };
@@ -352,33 +371,42 @@ namespace Raven.Server.Documents.Versioning
 
             foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtags], etag))
             {
-                yield return TableValueToDocument(context, ref tvr.Reader);
+                yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref tvr.Reader));
             }
         }
 
         private bool CheckIfVersionExists(DocumentsOperationContext context,string key, ChangeVectorEntry[] changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
-            Slice keySlice;
-            DocumentKeyWorker.GetSliceFromKey(context, key, out keySlice);
-            fixed (ChangeVectorEntry* changeVectorPtr = changeVector)
+            if (table.NumberOfEntries == 0)
             {
-                Slice changeVectorSlice;
-                using (Slice.External(context.Allocator, (byte*)changeVectorPtr, sizeof(ChangeVectorEntry) * changeVector.Length,
-                    out changeVectorSlice))
-                {
-                    *(keySlice.Content.Ptr + keySlice.Size) = Seperator;
-                    changeVectorSlice.CopyTo(keySlice.Content.Ptr + keySlice.Size + 1);
-                }
+                return false;
             }
-            foreach (var tvr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice],keySlice, startsWith: true))
+            var keyBytes = Encoding.UTF8.GetBytes(key);
+            var keyLen = keyBytes.Length;
+            var size = keyLen + 1 + sizeof(ChangeVectorEntry)*changeVector.Length;
+            var buffer = context.GetMemory(size);
+            
+            fixed (ChangeVectorEntry* changeVectorPtr = changeVector)
+            fixed (byte* keyPtr = keyBytes)
             {
-                foreach (var tableValueHolder in tvr.Results)
+                Memory.Copy(buffer.Address, keyPtr, keyLen);
+                buffer.Address[keyLen] = Seperator;
+                Memory.Copy(&buffer.Address[keyLen + 1],(byte*)changeVectorPtr, sizeof(ChangeVectorEntry) * changeVector.Length);
+            }
+
+            Slice slice;
+            using (Slice.From(context.Allocator, buffer.Address, size, out slice))
+            {
+                foreach (var tvr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndChangeVectorSlice], slice))
                 {
-                    var entry = TableValueToDocument(context, ref tableValueHolder.Reader);
-                    if (entry.ChangeVector.SequenceEqual(changeVector))
+                    foreach (var tableValueHolder in tvr.Results)
                     {
-                        return true;
+                        var entry = TableValueToDocument(context, ref tableValueHolder.Reader);
+                        if (entry.ChangeVector.SequenceEqual(changeVector))
+                        {
+                            return true;
+                        }
                     }
                 }
             }

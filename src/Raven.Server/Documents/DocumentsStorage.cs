@@ -515,7 +515,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
             {
-                yield return TableValueToDocument(context, ref result.Reader);
+                yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref result.Reader));
             }
         }
 
@@ -606,7 +606,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag))
             {
-                yield return TableValueToConflictDocument(context, ref tvr.Reader);
+                yield return ReplicationBatchDocumentItem.From(TableValueToConflictDocument(context, ref tvr.Reader));
             }
         }
 
@@ -749,7 +749,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag))
             {
-                yield return TableValueToTombstone(context, ref result.Reader);
+                yield return ReplicationBatchDocumentItem.From(TableValueToTombstone(context, ref result.Reader));
             }
         }
 
@@ -1992,7 +1992,7 @@ namespace Raven.Server.Documents
                 {
                     bool hasVersion =
                         _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
-                        key, document,changeVector) ?? false;
+                        key, document, changeVector) ?? false;
                     if (hasVersion)
                     {
                         flags |= DocumentFlags.Versioned;
