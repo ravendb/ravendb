@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Transformers;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;

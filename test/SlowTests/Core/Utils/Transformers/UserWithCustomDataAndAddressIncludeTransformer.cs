@@ -6,6 +6,7 @@
 
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Utils.Transformers

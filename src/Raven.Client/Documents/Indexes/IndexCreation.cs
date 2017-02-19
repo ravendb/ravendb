@@ -13,7 +13,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Logging;
+using Raven.Client.Documents.Transformers;
+using Sparrow.Logging;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Indexes
@@ -23,7 +24,7 @@ namespace Raven.Client.Documents.Indexes
     /// </summary>
     internal static class IndexCreation
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(IndexCreation));
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Client", typeof(IndexCreation).FullName);
 
         /// <summary>
         /// Creates the indexes found in the specified assembly.
@@ -43,7 +44,11 @@ namespace Raven.Client.Documents.Indexes
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception ex)
             {
-                Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                }
+
                 foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
                 {
                     try
@@ -81,7 +86,10 @@ namespace Raven.Client.Documents.Indexes
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception ex)
             {
-                Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                }
                 foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
                 {
                     try
@@ -117,7 +125,10 @@ namespace Raven.Client.Documents.Indexes
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception ex)
             {
-                Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                }
                 foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
                 {
                     try
@@ -155,7 +166,10 @@ namespace Raven.Client.Documents.Indexes
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception ex)
             {
-                Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                }
                 foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
                 {
                     try
@@ -191,7 +205,10 @@ namespace Raven.Client.Documents.Indexes
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception ex)
             {
-                Log.InfoException("Could not create side by side indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Could not create side by side indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                }
                 foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
                 {
                     try
@@ -274,7 +291,10 @@ namespace Raven.Client.Documents.Indexes
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception ex)
             {
-                Log.InfoException("Could not create side by side indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Could not create side by side indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                }
                 foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
                 {
                     try

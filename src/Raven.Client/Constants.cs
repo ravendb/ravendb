@@ -92,6 +92,8 @@ namespace Raven.Client
 
                 public const string Id = "@id";
 
+                public const string IdProperty = "Id";
+
                 public const string Etag = "@etag";
 
                 public const string Flags = "@flags";
@@ -101,6 +103,8 @@ namespace Raven.Client
                 public const string LastModified = "@last-modified";
 
                 public const string RavenClrType = "Raven-Clr-Type";
+
+                public const string HasValue = "HasValue";
             }
 
             public class Indexing

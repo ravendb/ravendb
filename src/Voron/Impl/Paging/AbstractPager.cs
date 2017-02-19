@@ -147,7 +147,7 @@ namespace Voron.Impl.Paging
             return state.MapBase + pageNumber * Constants.Storage.PageSize;
         }
 
-        public abstract void Sync();
+        public abstract void Sync(long totalUnsynced);
 
 
         public PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages)

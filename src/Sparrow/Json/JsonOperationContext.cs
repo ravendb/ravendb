@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Collections;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -30,8 +31,24 @@ namespace Sparrow.Json
         private AllocatedMemoryData _tempBuffer;
         private List<GCHandle> _pinnedObjects;
 
-        private readonly Dictionary<string, LazyStringValue> _fieldNames =
-            new Dictionary<string, LazyStringValue>(StringComparer.Ordinal);
+        private struct StringEqualityStructComparer : IEqualityComparer<string>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Equals(string x, string y)
+            {
+                return string.Compare(x, y, StringComparison.OrdinalIgnoreCase) == 0;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int GetHashCode(string str)
+            {
+                return str.GetHashCode();                
+            }
+        }
+
+        private readonly FastDictionary<string, LazyStringValue, StringEqualityStructComparer> _fieldNames = new FastDictionary<string, LazyStringValue, StringEqualityStructComparer>(default(StringEqualityStructComparer));
+
+
 
         private bool _disposed;
 
@@ -259,7 +276,7 @@ namespace Sparrow.Json
 
             if (!_fieldNames.TryGetValue(field, out value))
             {
-                var key = new StringSegment(field, 0, field.Length);
+                var key = new StringSegment(field, field.Length);
                 value = GetLazyString(key, longLived: true);
                 _fieldNames[field] = value;
             }
@@ -350,6 +367,9 @@ namespace Sparrow.Json
             if (_documentBuilder.Read() == false)
                 throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
             _documentBuilder.FinalizeDocument();
+            
+            _objectJsonParser.Reset(null);
+
             var reader = _documentBuilder.CreateReader();
             return reader;
         }
@@ -597,6 +617,8 @@ namespace Sparrow.Json
             _objectJsonParser.Read();
 
             WriteObject(writer, _jsonParserState, _objectJsonParser);
+
+            _objectJsonParser.Reset(null);
         }
 
         public void Write(BlittableJsonTextWriter writer, DynamicJsonValue json)
@@ -612,6 +634,8 @@ namespace Sparrow.Json
             _objectJsonParser.Read();
 
             WriteArray(writer, _jsonParserState, _objectJsonParser);
+
+            _objectJsonParser.Reset(null);
         }
 
         public unsafe void WriteObject(BlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)

@@ -6,6 +6,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -23,8 +24,8 @@ namespace Sparrow.Json
 
         public DynamicJsonValue Modifications;
 
-        private Dictionary<StringSegment, object> _objectsPathCache;
-        private Dictionary<int, object> _objectsPathCacheByIndex;
+        private FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> _objectsPathCache;
+        private FastDictionary<int, object, NumericEqualityStructComparer> _objectsPathCacheByIndex;
         public string _allocation;
         public bool NoCache { get; set; }
 
@@ -119,21 +120,14 @@ namespace Sparrow.Json
             NoCache = parent.NoCache;
 
             var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
-            switch (propNamesOffsetFlag)
-            {
-                case BlittableJsonToken.OffsetSizeByte:
-                    _propNamesDataOffsetSize = sizeof(byte);
-                    break;
-                case BlittableJsonToken.OffsetSizeShort:
-                    _propNamesDataOffsetSize = sizeof(short);
-                    break;
-                case BlittableJsonToken.OffsetSizeInt:
-                    _propNamesDataOffsetSize = sizeof(int);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(
-                        $"Property names offset flag should be either byte, short of int, instead of {propNamesOffsetFlag}");
-            }
+
+            if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeByte)
+                _propNamesDataOffsetSize = sizeof(byte);
+            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeShort)
+                _propNamesDataOffsetSize = sizeof(short);
+            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeInt)
+                _propNamesDataOffsetSize = sizeof(int);
+            else ThrowOutOfRangeException(propNamesOffsetFlag);
 
             _objStart = _mem + pos;
             byte propCountOffset;
@@ -143,6 +137,11 @@ namespace Sparrow.Json
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(type);
             _currentPropertyIdSize = ProcessTokenPropertyFlags(type);
+        }
+
+        private static void ThrowOutOfRangeException(BlittableJsonToken token)
+        {
+            throw new ArgumentOutOfRangeException($"Property names offset flag should be either byte, short of int, instead of {token}");
         }
 
         private static void ThrowObjectDisposed()
@@ -211,7 +210,7 @@ namespace Sparrow.Json
 
         public bool TryGet<T>(string name, out T obj)
         {
-            return TryGet(new StringSegment(name, 0, name.Length), out obj);
+            return TryGet(new StringSegment(name, name.Length), out obj);
         }
 
         public bool TryGet<T>(StringSegment name, out T obj)
@@ -299,7 +298,7 @@ namespace Sparrow.Json
 
         public bool TryGet(string name, out double? nullableDbl)
         {
-            return TryGet(new StringSegment(name, 0, name.Length), out nullableDbl);
+            return TryGet(new StringSegment(name, name.Length), out nullableDbl);
         }
 
         public bool TryGet(StringSegment name, out double? nullableDbl)
@@ -317,7 +316,7 @@ namespace Sparrow.Json
 
         public bool TryGet(string name, out double dbl)
         {
-            return TryGet(new StringSegment(name, 0, name.Length), out dbl);
+            return TryGet(new StringSegment(name, name.Length), out dbl);
         }
 
         public bool TryGet(StringSegment name, out double dbl)
@@ -348,7 +347,7 @@ namespace Sparrow.Json
 
         public bool TryGet(string name, out string str)
         {
-            return TryGet(new StringSegment(name, 0, name.Length), out str);
+            return TryGet(new StringSegment(name, name.Length), out str);
         }
 
         public bool TryGet(StringSegment name, out string str)
@@ -383,9 +382,10 @@ namespace Sparrow.Json
             return false;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetMember(string name, out object result)
         {
-            return TryGetMember(new StringSegment(name, 0, name.Length), out result);
+            return TryGetMember(new StringSegment(name, name.Length), out result);
         }
 
 
@@ -393,27 +393,31 @@ namespace Sparrow.Json
         {
             if (_mem == null)
                 ThrowObjectDisposed();
+
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
-            {
                 return true;
-            }
+
             var index = GetPropertyIndex(name);
             if (index == -1)
             {
                 result = null;
                 return false;
             }
-            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+
             BlittableJsonToken token;
             int position;
             int propertyId;
             GetPropertyTypeAndPosition(index, metadataSize, out token, out position, out propertyId);
             result = GetObject(token, (int)(_objStart - _mem - position));
+
             if (NoCache == false && result is BlittableJsonReaderBase)
             {
                 AddToCache(name, result, index);
             }
+
             return true;
         }
 
@@ -421,14 +425,14 @@ namespace Sparrow.Json
         {
             if (_objectsPathCache == null)
             {
-                _objectsPathCache = new Dictionary<StringSegment, object>();
-                _objectsPathCacheByIndex = new Dictionary<int, object>();
+                _objectsPathCache = new FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer>(default(StringSegmentEqualityStructComparer));
+                _objectsPathCacheByIndex = new FastDictionary<int, object, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
             }
             _objectsPathCache[name] = result;
             _objectsPathCacheByIndex[index] = result;
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void GetPropertyTypeAndPosition(int index, long metadataSize, out BlittableJsonToken token, out int position, out int propertyId)
         {
             var propPos = _metadataPtr + index * metadataSize;
@@ -486,7 +490,7 @@ namespace Sparrow.Json
 
         public int GetPropertyIndex(string name)
         {
-            return GetPropertyIndex(new StringSegment(name, 0, name.Length));
+            return GetPropertyIndex(new StringSegment(name, name.Length));
         }
 
 
@@ -598,11 +602,24 @@ namespace Sparrow.Json
             return props;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal object GetObject(BlittableJsonToken type, int position)
         {
             if (_mem == null)
                 ThrowObjectDisposed();
-            switch (type & TypesMask)
+
+            BlittableJsonToken actualType = type & TypesMask;
+            if (actualType == BlittableJsonToken.String)
+                return ReadStringLazily(position);
+            if (actualType == BlittableJsonToken.Integer)
+                return ReadVariableSizeLong(position);
+
+            return GetObjectUnlikely(type, position, actualType);
+        }
+
+        private object GetObjectUnlikely(BlittableJsonToken type, int position, BlittableJsonToken actualType)
+        {
+            switch (actualType)
             {
                 case BlittableJsonToken.EmbeddedBlittable:
                     return ReadNestedObject(position);
@@ -610,10 +627,6 @@ namespace Sparrow.Json
                     return new BlittableJsonReaderObject(position, _parent ?? this, type);
                 case BlittableJsonToken.StartArray:
                     return new BlittableJsonReaderArray(position, _parent ?? this, type);
-                case BlittableJsonToken.Integer:
-                    return ReadVariableSizeLong(position);
-                case BlittableJsonToken.String:
-                    return ReadStringLazily(position);
                 case BlittableJsonToken.CompressedString:
                     return ReadCompressStringLazily(position);
                 case BlittableJsonToken.Boolean:
@@ -622,11 +635,10 @@ namespace Sparrow.Json
                     return null;
                 case BlittableJsonToken.Float:
                     return new LazyDoubleValue(ReadStringLazily(position));
-                default:
-                    throw new ArgumentOutOfRangeException((type).ToString());
             }
-        }
 
+            throw new ArgumentOutOfRangeException((type).ToString());
+        }
 
         public void Dispose()
         {

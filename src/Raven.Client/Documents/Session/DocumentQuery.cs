@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 

@@ -87,7 +87,7 @@ namespace Raven.Server.Documents
 
         public readonly PatchDocument Patch;
 
-        public TransactionOperationsMerger TxMerger;
+        public readonly TransactionOperationsMerger TxMerger;
 
         public SubscriptionStorage SubscriptionStorage { get; }
 
@@ -159,6 +159,7 @@ namespace Raven.Server.Documents
             catch (Exception)
             {
                 Dispose();
+                throw;
             }
         }
 
@@ -247,6 +248,9 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            if (_databaseShutdown.IsCancellationRequested)
+                return; // double dispose?
+
             //before we dispose of the database we take its latest info to be displayed in the studio
             var databaseInfo = GenerateDatabaseInfo();
             if (databaseInfo!= null)
@@ -266,7 +270,7 @@ namespace Raven.Server.Documents
                     _waitForUsagesOnDisposal.Reset();
             }
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)}");
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
             foreach (var connection in RunningTcpConnections)
             {

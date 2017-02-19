@@ -5,11 +5,11 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
-using Raven.Client.Documents.Transformers;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Indexes
+namespace Raven.Client.Documents.Transformers
 {
     /// <summary>
     /// Base class for creating transformers
@@ -26,18 +26,6 @@ namespace Raven.Client.Documents.Indexes
         /// <para>if our type is <code>'Orders_Totals'</code> then index name would be <code>'Orders/Totals'</code></para>
         /// </summary>
         public virtual string TransformerName => GetType().Name.Replace("_", "/");
-
-        /*[Obsolete("Use Parameter instead.")]
-        protected RavenJToken Query(string key)
-        {
-            throw new NotSupportedException("This can only be run on the server side");
-        }
-
-        [Obsolete("Use ParameterOrDefault instead.")]
-        protected RavenJToken QueryOrDefault(string key, object defaultVal)
-        {
-            throw new NotSupportedException("This can only be run on the server side");
-        }*/
 
         /// <summary>
         /// Returns value of a transformer parameter for specified key

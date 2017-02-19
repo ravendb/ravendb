@@ -15,6 +15,7 @@ using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Compilation;
 using Raven.Client.Exceptions.Database;
+using Raven.Server.Config.Attributes;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
@@ -44,15 +45,68 @@ namespace Raven.Server
 
             _router = app.ApplicationServices.GetService<RequestRouter>();
             _server = app.ApplicationServices.GetService<RavenServer>();
+            if (IsServerRuningInASafeManner() == false)
+            {
+                app.Run(UnsafeRequestHandler);
+                return;
+            }            
             app.Run(RequestHandler);
+        }
+
+        private bool IsServerRuningInASafeManner()
+        {
+            if (_server.Configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.None)
+                return true;
+            if (_server.Configuration.Server.AllowEverybodyToAccessTheServerAsAdmin == true)
+                return true;
+            var url = _server.Configuration.Core.ServerUrl.ToLowerInvariant();
+            var uri = new Uri(url);
+            //url isn't set to localhost 
+            return uri.IsLoopback;
         }
 
         public static bool SkipHttpLogging;
 
+        private Task UnsafeRequestHandler(HttpContext context)
+        {
+            context.Response.StatusCode = (int) HttpStatusCode.ServiceUnavailable;
+            context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+            JsonOperationContext ctx;
+            using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
+            using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Message");
+                writer.WriteString(String.Join(" ",UnsafeWarning));
+                writer.WriteComma();
+                writer.WritePropertyName("MessageAsArray");
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var val in UnsafeWarning)
+                {
+                    if(first == false)
+                        writer.WriteComma();
+                    first = false;
+                    writer.WriteString(val);
+                }
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+            }
+            return Task.CompletedTask;
+        }
+
+        private static readonly string[] UnsafeWarning = {
+            "The server is running in a potentially unsafe mode.",
+            "This means that Raven/AnonymousUserAccessMode is set to Admin and expose to the world.",
+            "Prevent unsafe access to the server by setting Raven/AnonymousUserAccessMode to None.",
+            "If you intended to give everybody admin access to the server than set Raven/AllowEverybodyToAccessTheServerAsAdmin to true.",
+            "In order to gain access to the server please run in on localhost."
+        };
+
         private async Task RequestHandler(HttpContext context)
         {
             try
-            {
+            {                
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
 

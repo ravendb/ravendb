@@ -16,7 +16,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
-using Raven.Client.Logging;
+using Sparrow.Logging;
 using Raven.Client.Util.Sockets;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -28,7 +28,7 @@ namespace Raven.Traffic
         private readonly IDocumentStore _store;
         private readonly TrafficToolConfiguration _config;
         private readonly JsonContextPool _jsonContextPool = new JsonContextPool();
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(TrafficRec));
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficRec>("Raven/Traffic");
 
         public TrafficRec(IDocumentStore store, TrafficToolConfiguration config)
         {
@@ -79,8 +79,10 @@ namespace Raven.Traffic
 
                         if (result.MessageType == WebSocketMessageType.Close)
                         {
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info("Client got close message from server and is closing connection");
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info("Client got close message from server and is closing connection");
+                            }
 
                             builder.Dispose();
                             // actual socket close from dispose
@@ -102,8 +104,12 @@ namespace Raven.Traffic
             catch (WebSocketException ex)
             {
                 builder?.Dispose();
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Failed to receive a message, client was probably disconnected", ex);
+
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Failed to receive a message, client was probably disconnected", ex);
+                }
+
                 throw;
             }
         }

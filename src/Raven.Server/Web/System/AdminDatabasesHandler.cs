@@ -42,7 +42,18 @@ namespace Raven.Server.Web.System
                     if (dbDoc == null)
                     {
                         HttpContext.Response.StatusCode = (int) HttpStatusCode.NotFound;
-                        return HttpContext.Response.WriteAsync("Database " + name + " wasn't found");
+
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
+                        {
+                            context.Write(writer,
+                                new DynamicJsonValue
+                                {
+                                    ["Type"] = "Error",
+                                    ["Message"] = "Database " + name + " wasn't found"
+                                });
+                        }
+                        return Task.CompletedTask;
                     }
 
                     UnprotectSecuredSettingsOfDatabaseDocument(dbDoc);
@@ -81,16 +92,26 @@ namespace Raven.Server.Web.System
                 ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(name, out dbTask) &&
                 dbTask != null && dbTask.IsCompleted;
 
+            TransactionOperationContext context;
             string errorMessage;
             if (
                 ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath,
                     out errorMessage) == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                return HttpContext.Response.WriteAsync(errorMessage);
+                using(ServerStore.ContextPool.AllocateOperationContext(out context))
+                using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
+                {
+                    context.Write(writer,
+                        new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Message"] = errorMessage
+                        });
+                }
+                return Task.CompletedTask;
             }
 
-            TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 var dbId = Constants.Documents.Prefix + name;
@@ -107,7 +128,17 @@ namespace Raven.Server.Web.System
                             out errorMessage) == false)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        return HttpContext.Response.WriteAsync(errorMessage);
+
+                        using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
+                        {
+                            context.Write(writer,
+                                new DynamicJsonValue
+                                {
+                                    ["Type"] = "Error",
+                                    ["Message"] = errorMessage
+                                });
+                        }
+                        return Task.CompletedTask;
                     }
                 }
 

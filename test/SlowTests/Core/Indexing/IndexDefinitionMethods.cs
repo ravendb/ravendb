@@ -71,7 +71,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "RavenDB-6211")]
+        [Fact]
         public void CanUseAsDocumentToIndexAllDocumentFields()
         {
             using (var store = GetDocumentStore())

@@ -8,8 +8,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Extensions;
-using Raven.Client.Http;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
@@ -22,6 +20,7 @@ using Sparrow.Logging;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Utils;
 using Sparrow;
 
 namespace Raven.Server.Documents.Replication
@@ -99,29 +98,14 @@ namespace Raven.Server.Documents.Replication
             _sendingThread.Start();
         }
 
-        private TcpConnectionInfo GetTcpInfo()
-        {
-            JsonOperationContext context;
-            using (var requestExecuter = RequestExecuter.ShortTermSingleUse(MultiDatabase.GetRootDatabaseUrl(_destination.Url), _destination.Database, _destination.ApiKey))
-            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
-            {
-                var command = new GetTcpInfoCommand();
-
-                requestExecuter.Execute(command, context);
-
-                var info = command.Result;
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via {info.Url}");
-
-                return info;
-            }
-        }
-
         private void ReplicateToDestination()
         {
             try
             {
-                var connectionInfo = GetTcpInfo();
+                var connectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(_destination.Url), _destination.Database, _destination.ApiKey);
+
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via {connectionInfo.Url}");
 
                 using (_tcpClient = new TcpClient())
                 {

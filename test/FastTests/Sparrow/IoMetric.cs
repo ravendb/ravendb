@@ -19,7 +19,7 @@ namespace FastTests.Sparrow
             {
                 var now = DateTime.UtcNow;
                 metrics.MeterIoRate("file1.txt", IoMetrics.MeterType.JournalWrite, i + 1)
-                    .Parent.Mark(i + 1, now, now.AddMilliseconds(2), IoMetrics.MeterType.JournalWrite);
+                    .Parent.Mark(i + 1, now, now.AddMilliseconds(2), IoMetrics.MeterType.JournalWrite, 0);
             }
 
             int filesCount = 0;

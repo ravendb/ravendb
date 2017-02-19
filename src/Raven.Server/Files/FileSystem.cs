@@ -36,6 +36,7 @@ namespace Raven.Server.Files
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<FileSystem>(Name);
             FilesStorage = new FilesStorage(this);
+            TxMerger = new FilesTransactionsMerger(FilesStorage.ContextPool);
             Metrics = new MetricsCountersManager();
             IoMetrics = serverStore?.IoMetrics ?? new IoMetrics(256, 256);
         }
@@ -62,6 +63,8 @@ namespace Raven.Server.Files
 
         public DateTime StartTime { get; }
 
+        public FilesTransactionsMerger TxMerger;
+
         public void Initialize()
         {
             try
@@ -86,6 +89,7 @@ namespace Raven.Server.Files
             catch (Exception)
             {
                 Dispose();
+                throw;
             }
         }
 
@@ -108,7 +112,7 @@ namespace Raven.Server.Files
                     _waitForUsagesOnDisposal.Reset();
             }
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(FileSystem)}");
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(FileSystem)} {Name}");
 
             exceptionAggregator.Execute(() =>
             {

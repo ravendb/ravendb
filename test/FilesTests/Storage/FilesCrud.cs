@@ -52,12 +52,13 @@ namespace FilesTests.Storage
                 ctx.OpenReadTransaction();
 
                 var file = _fileSystem.FilesStorage.Get(ctx, name);
+                var stream = _fileSystem.FilesStorage.GetStream(ctx, file.StreamIdentifier);
                 Assert.NotNull(file);
                 Assert.Equal(1, file.Etag);
                 Assert.Equal(name, file.Name);
-                Assert.Equal(5, file.Stream.Length);
+                Assert.Equal(5, stream.Length);
                 var readBuffer = new byte[5];
-                Assert.Equal(5, file.Stream.Read(readBuffer, 0, 5));
+                Assert.Equal(5, stream.Read(readBuffer, 0, 5));
                 Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, readBuffer);
             }
         }

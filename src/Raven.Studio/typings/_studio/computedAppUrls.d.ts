@@ -103,5 +103,5 @@ interface computedAppUrls {
     timeSeriesConfiguration: KnockoutComputed<string>;
     timeSeriesConfigurationTypes: KnockoutComputed<string>;
 
-    dataSubscriptions: KnockoutComputed<string>;
+    subscriptions: KnockoutComputed<string>;
 }

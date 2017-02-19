@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Threading.Tasks;
+using FastTests.Issues;
+using FastTests.Server.Basic;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -9,13 +12,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
 
-                using (var a = new SlowTests.Tests.Querying.SkipDuplicates())
+                using (var a = new SlowTests.Smuggler.LegacySmugglerTests())
                 {
-                    a.WillSkipDuplicates();
+                    a.CanImportIndexesAndTransformers("SlowTests.Smuggler.Indexes_And_Transformers_3.5.ravendbdump").Wait();
                 }
             }
         }

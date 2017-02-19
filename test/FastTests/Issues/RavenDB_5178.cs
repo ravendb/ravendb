@@ -12,22 +12,25 @@ namespace FastTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var longName = "LongDatabaseName_";
-
-                for (int i = 0; i < 1000; i++)
-                {
-                    longName += "z";
-                }
+                var longName = "LongDatabaseName_" + new string('z', 1000);
 
                 var doc = MultiDatabase.CreateDatabaseDocument(longName);
 
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                try
+                {
 
-                store.DefaultDatabase = longName;
+                    store.DefaultDatabase = longName;
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                    var db = GetDocumentDatabaseInstanceFor(store).Result;
 
-                Assert.Equal(db.Name, longName);
+                    Assert.Equal(db.Name, longName);
+                }
+                finally
+                {
+                    store.Admin.Server.Send(new DeleteDatabaseOperation(longName, true));
+
+                }
 
             }           
         }

@@ -12,15 +12,21 @@ namespace Raven.Server.Documents.Indexes
 {
     public class CollectionOfBloomFilters
     {
-        private readonly int _singleBloomFilterCapacity;
+        public enum Mode
+        {
+            X64,
+            X86
+        }
+
         private readonly TransactionOperationContext _context;
         private BloomFilter[] _filters;
         private BloomFilter _currentFilter;
+        private Mode _mode;
         private readonly Tree _tree;
 
-        private CollectionOfBloomFilters(int singleBloomFilterCapacity, Tree tree, TransactionOperationContext context)
+        private CollectionOfBloomFilters(Mode mode, Tree tree, TransactionOperationContext context)
         {
-            _singleBloomFilterCapacity = singleBloomFilterCapacity;
+            _mode = mode;
             _context = context;
             _tree = tree;
         }
@@ -38,10 +44,10 @@ namespace Raven.Server.Documents.Indexes
 
         public BloomFilter this[int index] => _filters[index];
 
-        public static unsafe CollectionOfBloomFilters Load(int singleBloomFilterCapacity, TransactionOperationContext indexContext)
+        public static unsafe CollectionOfBloomFilters Load(Mode mode, TransactionOperationContext indexContext)
         {
             var tree = indexContext.Transaction.InnerTransaction.CreateTree("IndexedDocs");
-            var collection = new CollectionOfBloomFilters(singleBloomFilterCapacity, tree, indexContext);
+            var collection = new CollectionOfBloomFilters(mode, tree, indexContext);
             using (var it = tree.Iterate(prefetch: false))
             {
                 if (it.Seek(Slices.BeforeAllKeys))
@@ -50,9 +56,20 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var reader = it.CreateReaderForCurrent();
 
-                        Debug.Assert(reader.Length == BloomFilter.PtrSize);
+                        BloomFilter filter;
+                        switch (reader.Length)
+                        {
+                            case BloomFilter32.PtrSize:
+                                filter = new BloomFilter32(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader.Base, tree, writeable: false);
+                                break;
+                            case BloomFilter64.PtrSize:
+                                filter = new BloomFilter64(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader.Base, tree, writeable: false);
+                                break;
+                            default:
+                                throw new InvalidOperationException($"Unsupported bloom filter size ({reader.Length}) for '{it.CurrentKey}' filter.");
+                        }
 
-                        collection.AddFilter(new BloomFilter(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader.Base, tree, writeable: false));
+                        collection.AddFilter(filter);
                     } while (it.MoveNext());
                 }
             }
@@ -70,24 +87,46 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            AddFilter(CreateNewFilter(0));
+            AddFilter(CreateNewFilter(0, _mode));
         }
 
-        private unsafe BloomFilter CreateNewFilter(int number)
+        internal unsafe BloomFilter CreateNewFilter(int number, Mode mode)
         {
             Slice key;
             Slice.From(_context.Allocator, number.ToString("D9"), out key);
-            var ptr = _tree.DirectAdd(key, BloomFilter.PtrSize);
-            return new BloomFilter(key, ptr, _tree, writeable: true);
+
+            if (mode == Mode.X64)
+            {
+                var ptr64 = _tree.DirectAdd(key, BloomFilter64.PtrSize);
+                return new BloomFilter64(key, ptr64, _tree, writeable: true);
+            }
+
+            var ptr32 = _tree.DirectAdd(key, BloomFilter32.PtrSize);
+            return new BloomFilter32(key, ptr32, _tree, writeable: true);
         }
 
-        private void AddFilter(BloomFilter filter)
+        internal void AddFilter(BloomFilter filter)
         {
             if (_filters == null)
             {
+                _mode = filter is BloomFilter64 ? Mode.X64 : Mode.X86; // first filter determines actual mode
                 _filters = new BloomFilter[1];
                 _filters[0] = _currentFilter = filter;
                 return;
+            }
+
+            switch (_mode)
+            {
+                case Mode.X64:
+                    if (filter is BloomFilter32)
+                        throw new InvalidOperationException("Cannot add 32-bit filter in 64-bit mode.");
+                    break;
+                case Mode.X86:
+                    if (filter is BloomFilter64)
+                        throw new InvalidOperationException("Cannot add 64-bit filter in 32-bit mode.");
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
             var length = _filters.Length;
@@ -126,24 +165,49 @@ namespace Raven.Server.Documents.Indexes
 
         private void ExpandFiltersIfNecessary()
         {
-            if (_currentFilter.Count < _singleBloomFilterCapacity)
+            if (_currentFilter.Count < _currentFilter.Capacity)
                 return;
 
-            AddFilter(CreateNewFilter(_filters.Length));
+            AddFilter(CreateNewFilter(_filters.Length, _mode));
         }
 
-        public unsafe class BloomFilter
+        public unsafe class BloomFilter32 : BloomFilter
+        {
+            public const int PtrSize = 32 * 1024;
+            public const int MaxCapacity = 25000;
+
+            private const ulong M = (PtrSize - CountSize) * BitVector.BitsPerByte;
+
+            public BloomFilter32(Slice key, byte* basePtr, Tree tree, bool writeable)
+                : base(key, basePtr, tree, writeable, M, PtrSize, MaxCapacity)
+            {
+            }
+        }
+
+        public unsafe class BloomFilter64 : BloomFilter
+        {
+            public const int PtrSize = 16 * 1024 * 1024;
+            public const int MaxCapacity = 10000000;
+
+            private const ulong M = (PtrSize - CountSize) * BitVector.BitsPerByte;
+
+            public BloomFilter64(Slice key, byte* basePtr, Tree tree, bool writeable)
+                : base(key, basePtr, tree, writeable, M, PtrSize, MaxCapacity)
+            {
+            }
+        }
+
+        public abstract unsafe class BloomFilter
         {
             public const int CountSize = sizeof(int);
-            public const int PtrSize = 16 * 1024 * 1024;
-            public const int Capacity = 10000000;
 
-            private const long M = (PtrSize - CountSize) * BitVector.BitsPerByte;
             private const long K = 10;
 
             private readonly Slice _key;
             private readonly byte* _basePtr;
             private readonly Tree _tree;
+            private readonly ulong _m;
+            private readonly int _ptrSize;
             private byte* _dataPtr;
             private int* _countPtr;
 
@@ -153,11 +217,16 @@ namespace Raven.Server.Documents.Indexes
 
             public bool Writeable { get; private set; }
 
-            public BloomFilter(Slice key, byte* basePtr, Tree tree, bool writeable)
+            public readonly int Capacity;
+
+            protected BloomFilter(Slice key, byte* basePtr, Tree tree, bool writeable, ulong m, int ptrSize, int capacity)
             {
                 _key = key;
                 _basePtr = basePtr;
                 _tree = tree;
+                _m = m;
+                _ptrSize = ptrSize;
+                Capacity = capacity;
                 Writeable = writeable;
 
                 Initialize(basePtr);
@@ -174,7 +243,7 @@ namespace Raven.Server.Documents.Indexes
                 for (ulong i = 0; i < K; i++)
                 {
                     // Dillinger and Manolios double hashing
-                    var finalHash = (primaryHash + (i * secondaryHash)) % M;
+                    var finalHash = (primaryHash + (i * secondaryHash)) % _m;
 
                     var ptrPosition = finalHash / BitVector.BitsPerByte;
                     var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
@@ -206,7 +275,7 @@ namespace Raven.Server.Documents.Indexes
                 for (ulong i = 0; i < K; i++)
                 {
                     // Dillinger and Manolios double hashing
-                    var finalHash = (primaryHash + (i * secondaryHash)) % M;
+                    var finalHash = (primaryHash + (i * secondaryHash)) % _m;
 
                     var ptrPosition = finalHash / BitVector.BitsPerByte;
                     var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
@@ -229,8 +298,8 @@ namespace Raven.Server.Documents.Indexes
                 if (Writeable)
                     return;
 
-                var ptr = _tree.DirectAdd(_key, PtrSize);
-                UnmanagedMemory.Copy(ptr, _basePtr, PtrSize);
+                var ptr = _tree.DirectAdd(_key, _ptrSize);
+                UnmanagedMemory.Copy(ptr, _basePtr, _ptrSize);
 
                 Initialize(ptr);
 

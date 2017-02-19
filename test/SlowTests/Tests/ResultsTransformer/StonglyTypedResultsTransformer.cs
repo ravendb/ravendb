@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Tests.ResultsTransformer

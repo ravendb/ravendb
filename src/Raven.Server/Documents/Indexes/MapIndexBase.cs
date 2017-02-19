@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes
     {
         private CollectionOfBloomFilters _filter;
         private IndexingStatsScope _statsInstance;
-        private MapStats _stats = new MapStats();
+        private readonly MapStats _stats = new MapStats();
 
         protected MapIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -32,7 +32,11 @@ namespace Raven.Server.Documents.Indexes
 
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
-            _filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.BloomFilter.Capacity, indexContext);
+            var mode = sizeof(int) == IntPtr.Size || DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager
+                ? CollectionOfBloomFilters.Mode.X86
+                : CollectionOfBloomFilters.Mode.X64;
+
+            _filter = CollectionOfBloomFilters.Load(mode, indexContext);
 
             return null;
         }

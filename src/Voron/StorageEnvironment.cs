@@ -438,6 +438,8 @@ namespace Voron
 
         internal LowLevelTransaction NewLowLevelTransaction(TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
         {
+            _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+            
             bool txLockTaken = false;
             bool flushInProgressReadLockTaken = false;
             try
@@ -477,6 +479,8 @@ namespace Voron
                 _txCommit.EnterReadLock();
                 try
                 {
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
                     tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
                         context)
@@ -876,7 +880,7 @@ namespace Voron
                 if (oldMode == TransactionsMode.Danger)
                 {
                     Journal.TruncateJournal();
-                    _dataPager.Sync();
+                    _dataPager.Sync(Journal.Applicator.TotalWrittenButUnsyncedBytes);
                 }
 
                 switch (mode)

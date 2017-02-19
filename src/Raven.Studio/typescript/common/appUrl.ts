@@ -101,7 +101,8 @@ class appUrl {
         statusDebugWebSocket: ko.computed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
         statusDebugExplainReplication: ko.computed(() => appUrl.forStatusDebugExplainReplication(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
-        dataSubscriptions: ko.computed(() => appUrl.forDataSubscriptions(appUrl.currentDatabase())),
+
+        subscriptions: ko.pureComputed(() => appUrl.forSubscriptions(appUrl.currentDatabase())),
 
         statusStorageStats: ko.computed(() => appUrl.forStatusStorageStats(appUrl.currentDatabase())),
         statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
@@ -494,6 +495,10 @@ class appUrl {
         return '#databases/status/infoPackage?' + appUrl.getEncodedDbPart(db);
     }
 
+    static forSubscriptions(db: database): string {
+        return '#databases/status/subscriptions?' + appUrl.getEncodedDbPart(db); 
+    }
+
     static forStatusStorageOnDisk(db: database): string {
         return '#databases/status/storage?' + appUrl.getEncodedDbPart(db);
     }
@@ -548,10 +553,6 @@ class appUrl {
             url += "&index=" + index;
         }
         return url;
-    }
-
-    static forDataSubscriptions(db: database): string {
-        return "#databases/status/debug/dataSubscriptions?" + appUrl.getEncodedDbPart(db);
     }
 
     static forDatabaseSettings(db: database): string {
@@ -739,11 +740,6 @@ class appUrl {
 
         //TODO: we don't have Raven/DocumentsByEntityName anymore
         return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
-    }
-
-    static forSetAcknowledgedEtag(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/subscriptionsTask?" + databasePart;
     }
 
     static forSampleData(db: database): string {

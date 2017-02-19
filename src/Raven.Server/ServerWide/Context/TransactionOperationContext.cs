@@ -51,6 +51,37 @@ namespace Raven.Server.ServerWide.Context
             return Transaction;
         }
 
+
+        public short TransactionMarkerOffset;
+
+        protected short CurrentTxMarker;
+
+        public short GetTransactionMarker()
+        {
+            if (Transaction != null && Transaction.Disposed == false && Transaction.InnerTransaction.LowLevelTransaction.Flags != TransactionFlags.ReadWrite)
+                MustHaveWriteTransactionOpened();
+
+            var value = (short)(CurrentTxMarker + TransactionMarkerOffset);
+            if (value <= 0)
+            {
+                switch (value)
+                {
+                    case short.MaxValue:
+                        return 1;
+                    case 0:
+                        return 2;
+                    default:
+                        return (short)-value;
+                }
+            }
+            return value;
+        }
+
+        private static void MustHaveWriteTransactionOpened()
+        {
+            throw new InvalidOperationException("Write transaction must be opened");
+        }
+
         protected abstract TTransaction CreateReadTransaction();
 
         protected abstract TTransaction CreateWriteTransaction();

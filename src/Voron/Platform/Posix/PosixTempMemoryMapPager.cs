@@ -133,7 +133,7 @@ namespace Voron.Platform.Posix
             return newPager;
         }
 
-        public override void Sync()
+        public override void Sync(long totalUnsynced)
         {
             //nothing to do here
         }

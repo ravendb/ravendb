@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -13,7 +14,7 @@ namespace Sparrow.Json
 
         private readonly byte* _dataStart;
         private readonly long _currentOffsetSize;
-        private Dictionary<int, Tuple<object, BlittableJsonToken>> _cache;
+        private FastDictionary<int, Tuple<object, BlittableJsonToken>, NumericEqualityStructComparer> _cache;
 
         public DynamicJsonArray Modifications;
 
@@ -70,7 +71,6 @@ namespace Sparrow.Json
 
         public Tuple<object, BlittableJsonToken> GetValueTokenTupleByIndex(int index)
         {
-
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             Tuple<object, BlittableJsonToken> result;
             if (_cache != null && _cache.TryGetValue(index, out result))
@@ -89,7 +89,7 @@ namespace Sparrow.Json
             {
                 if (_cache == null)
                 {
-                    _cache = new Dictionary<int, Tuple<object, BlittableJsonToken>>();
+                    _cache = new FastDictionary<int, Tuple<object, BlittableJsonToken>, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
                 }
                 _cache[index] = result;
             }

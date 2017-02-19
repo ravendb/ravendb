@@ -12,7 +12,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
@@ -483,7 +482,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Allow to get to the metadata of the document
         /// </summary>
-        protected JObject MetadataFor(object doc)
+        protected JsonObject.Metadata MetadataFor(object doc)
         {
             throw new NotSupportedException("This is here as a marker only");
         }
@@ -491,7 +490,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Allow to access an entity as a document
         /// </summary>
-        protected JObject AsDocument(object doc)
+        protected JsonObject AsJson(object doc)
         {
             throw new NotSupportedException("This is here as a marker only");
         }

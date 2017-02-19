@@ -31,9 +31,9 @@ namespace Voron.Impl.Journal
             _lazyTransactionPager.EnsureContinuous(0, sizeInPages);
         }
 
-        public void AddToBuffer(long position, CompressedPagesResult pages, int uncompressedPageCount)
+        public void AddToBuffer(long position, CompressedPagesResult pages)
         {
-            NumberOfPages += uncompressedPageCount;
+            NumberOfPages += pages.NumberOfUncompressedPages;
             if (_firstPositionInJournalFile == null)
             {
                 _firstPositionInJournalFile = position; // first lazy tx saves position to all lazy tx that comes afterwards

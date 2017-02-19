@@ -57,7 +57,7 @@ namespace FastTests
 
                 if (_doNotReuseServer)
                 {
-                    _localServer = GetNewServer(_customServerSettings);
+                    UseNewLocalServer();
                     return _localServer;
                 }
 
@@ -93,36 +93,48 @@ namespace FastTests
             }
         }
 
-        protected static RavenServer GetNewServer(IDictionary<string, string> customSettings = null)
+        public void UseNewLocalServer()
         {
-            var configuration = new RavenConfiguration(null, ResourceType.Server);
+            _localServer?.Dispose();
+            _localServer = GetNewServer(_customServerSettings);
+        }
 
-            if (customSettings != null)
+        private readonly object _getNewServerSync = new object();
+
+        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null)
+        {
+            lock (_getNewServerSync)
             {
-                foreach (var setting in customSettings)
+                var configuration = new RavenConfiguration(Guid.NewGuid().ToString(), ResourceType.Server);
+
+                if (customSettings != null)
                 {
-                    configuration.SetSetting(setting.Key, setting.Value);
+                    foreach (var setting in customSettings)
+                    {
+                        configuration.SetSetting(setting.Key, setting.Value);
+                    }
                 }
+
+                configuration.Initialize();
+                configuration.DebugLog.LogMode = LogMode.None;
+                configuration.Core.ServerUrl = "http://127.0.0.1:0";
+                configuration.Server.Name = ServerName;
+                configuration.Core.RunInMemory = true;
+                configuration.Core.DataDirectory =
+                    configuration.Core.DataDirectory.Combine($"Tests{Interlocked.Increment(ref _serverCounter)}");
+                configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
+
+                IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
+
+                var server = new RavenServer(configuration);
+                server.Initialize();
+
+                // TODO: Make sure to properly handle this when this is resolved:
+                // TODO: https://github.com/dotnet/corefx/issues/5205
+                // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
+
+                return server;
             }
-
-            configuration.Initialize();
-            configuration.DebugLog.LogMode = LogMode.None;
-            configuration.Core.ServerUrl = "http://127.0.0.1:0";
-            configuration.Server.Name = ServerName;
-            configuration.Core.RunInMemory = true;
-            configuration.Core.DataDirectory = configuration.Core.DataDirectory.Combine($"Tests{Interlocked.Increment(ref _serverCounter)}");
-            configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
-
-            IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
-
-            var server = new RavenServer(configuration);
-            server.Initialize();
-
-            // TODO: Make sure to properly handle this when this is resolved:
-            // TODO: https://github.com/dotnet/corefx/issues/5205
-            // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
-
-            return server;
         }
 
         protected static string UseFiddler(string url)
@@ -171,16 +183,13 @@ namespace FastTests
 
             Dispose(exceptionAggregator);
 
-            if (_localServer != null)
+            if (_localServer != null && _localServer != _globalServer)
             {
-                if (_doNotReuseServer)
+                exceptionAggregator.Execute(() =>
                 {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _localServer.Dispose();
-                        _localServer = null;
-                    });
-                }
+                    _localServer.Dispose();
+                    _localServer = null;
+                });
 
                 exceptionAggregator.ThrowIfNeeded();
             }

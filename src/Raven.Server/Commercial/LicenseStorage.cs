@@ -88,7 +88,7 @@ namespace Raven.Server.Commercial
                 TableValueReader infoTvr;
                 using (Slice.From(tx.InnerTransaction.Allocator, FirstServerStartDateKey, out keyAsSlice))
                 {
-                    //It seems like the database was shutdown rudly and never wrote it stats onto the disk
+                    //It seems like the database was shutdown rudely and never wrote it stats onto the disk
                     if (table.ReadByKey(keyAsSlice, out infoTvr) == false)
                         return null;
                 }

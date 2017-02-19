@@ -305,8 +305,8 @@ namespace Raven.Server.Documents
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations("Could not open server store for " + _name, e);
 
-                options.Dispose();
                 Dispose();
+                options.Dispose();
                 throw;
             }
         }
@@ -996,6 +996,7 @@ namespace Raven.Server.Documents
             long? lastModifiedTicks = null,
             ChangeVectorEntry[] changeVector = null)
         {
+            // TODO: Should we call TableValueToDocument from here? Or it should be eascape the blittable building as of the data as we don't use it here?
             var result = GetDocumentOrTombstone(context, loweredKey, throwOnConflict: false);
             if (result.Item2 != null)
                 return null; //NOP, already deleted
@@ -1021,7 +1022,7 @@ namespace Raven.Server.Documents
 
                 if (expectedEtag != null)
                     throw new ConcurrencyException(
-                        $"Document {loweredKey} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                        $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
 
                 return null; //NOP, doesn't exist and doesn't have any concurrency requirements
             }

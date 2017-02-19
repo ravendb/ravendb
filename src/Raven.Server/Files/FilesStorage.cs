@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Server.Documents;
@@ -145,8 +146,8 @@ namespace Raven.Server.Files
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations("Could not open server store for " + _name, e);
 
-                options.Dispose();
                 Dispose();
+                options.Dispose();
                 throw;
             }
         }
@@ -188,7 +189,7 @@ namespace Raven.Server.Files
             return 0;
         }
 
-        public FileSystemFile Get(FilesOperationContext context, string name)
+        public FileMetadata Get(FilesOperationContext context, string name)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument is null or whitespace", nameof(name));
@@ -202,7 +203,13 @@ namespace Raven.Server.Files
             }
         }
 
-        public FileSystemFile Get(FilesOperationContext context, Slice loweredKey)
+        public Stream GetStream(FilesOperationContext context, Slice streamIdentifier)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(FilesSlice);
+            return tree.ReadStream(streamIdentifier);
+        }
+
+        public FileMetadata Get(FilesOperationContext context, Slice loweredKey)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(FilesSchema, FilesMetadataSlice);
 
@@ -211,13 +218,12 @@ namespace Raven.Server.Files
                 return null;
 
             var file = TableValueToFile(context, ref tvr);
-
             return file;
         }
 
-        private static FileSystemFile TableValueToFile(FilesOperationContext context, ref TableValueReader tvr)
+        private static FileMetadata TableValueToFile(FilesOperationContext context, ref TableValueReader tvr)
         {
-            var result = new FileSystemFile
+            var result = new FileMetadata
             {
                 StorageId = tvr.Id
             };
@@ -236,19 +242,13 @@ namespace Raven.Server.Files
 
             result.Metadata = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
 
-            // fetch the stream
-            var tree = context.Transaction.InnerTransaction.ReadTree(FilesSlice);
             var streamIdentifier = tvr.Read(StreamIdentifierPosition, out size);
-            Slice streamIdentifierSlice;
-            using (Slice.External(context.Allocator, streamIdentifier, size, out streamIdentifierSlice))
-            {
-                result.Stream = tree.ReadStream(streamIdentifierSlice);
-            }
-
+            result.StreamIdentifierDispose = Slice.External(context.Allocator, streamIdentifier, size, out result.StreamIdentifier);
+           
             return result;
         }
 
-        public long GenerateNextEtag()
+        private long GenerateNextEtag()
         {
             return ++_lastEtag;
         }
@@ -358,6 +358,57 @@ namespace Raven.Server.Files
                 ActualETag = oldEtag,
                 ExpectedETag = expectedEtag ?? -1
             };
+        }
+
+        public void Delete(FilesOperationContext context, string name, long? expectedEtag)
+        {
+            Slice keySlice;
+            using (DocumentKeyWorker.GetSliceFromKey(context, name, out keySlice))
+            {
+                Delete(context, keySlice, name, expectedEtag);
+            }
+        }
+
+        public void Delete(FilesOperationContext context,
+            Slice loweredKey,
+            string name,
+            long? expectedEtag)
+        {
+            var file = Get(context, loweredKey);
+            if (file == null)
+                return; //NOP, already deleted
+
+            using (file)
+            {
+                if (expectedEtag != null && file.Etag != expectedEtag)
+                {
+                    throw new ConcurrencyException(
+                        $"File {name} has etag {file.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                    {
+                        ActualETag = file.Etag,
+                        ExpectedETag = (long) expectedEtag
+                    };
+                }
+
+                EnsureLastEtagIsPersisted(context, file.Etag);
+
+                var table = context.Transaction.InnerTransaction.OpenTable(FilesSchema, FilesMetadataSlice);
+                table.Delete(file.StorageId);
+
+                var tree = context.Transaction.InnerTransaction.CreateTree(FilesSlice);
+                tree.DeleteStream(file.StreamIdentifier);
+            }
+        }
+
+        private void EnsureLastEtagIsPersisted(FilesOperationContext context, long fileEtag)
+        {
+            if (fileEtag != _lastEtag)
+                return;
+            var etagTree = context.Transaction.InnerTransaction.ReadTree(EtagsSlice);
+            var etag = _lastEtag;
+            Slice etagSlice;
+            using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
+                etagTree.Add(LastEtagSlice, etagSlice);
         }
     }
 }

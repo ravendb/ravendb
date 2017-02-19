@@ -4,7 +4,7 @@
     {
         public int NumberOfModifiedPages { get; set; }
 
-        public int NumberOfPagesWrittenToDisk { get; set; }
+        public int NumberOf4KbsWrittenToDisk { get; set; }
 
     }
 }

@@ -95,6 +95,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/AnonymousAccess")]
         public AnonymousUserAccessModeValues AnonymousUserAccessMode { get; internal set; }
 
+        [Description("When set to true, exposes the database to the world.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Raven/AllowEverybodyToAccessTheServerAsAdmin")]
+        public bool AllowEverybodyToAccessTheServerAsAdmin { get; internal set; }
+
         public IDisposable SetAccessMode(AnonymousUserAccessModeValues newVal)
         {
             var old = AnonymousUserAccessMode;

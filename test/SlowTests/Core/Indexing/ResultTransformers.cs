@@ -8,7 +8,10 @@ using System.Collections.Generic;
 using System.Linq;
 
 using FastTests;
+using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Documents.Linq;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
@@ -381,7 +384,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "RavenDB-6211")]
+        [Fact]
         public void CanUseAsDocumentInTransformer()
         {
             using (var store = GetDocumentStore())
@@ -398,16 +401,15 @@ namespace SlowTests.Core.Indexing
 
                     session.SaveChanges();
 
-                    //var post =
-                    //    session.Query<Post>()
-                    //        .Where(x => x.Title == "Result Transformers")
-                    //        .Customize(x => x.WaitForNonStaleResults())
-                    //        .TransformWith<PostWithAsDocumentTransformer, PostWithAsDocumentTransformer.Result>()
-                    //        .First();
+                    var post = session.Query<Post>()
+                            .Where(x => x.Title == "Result Transformers")
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .TransformWith<PostWithAsDocumentTransformer, PostWithAsDocumentTransformer.Result>()
+                            .First();
 
-                    //Assert.NotNull(post.RawDocument);
-                    //var metadata = (RavenJObject)post.RawDocument[Constants.Metadata.Key];
-                    //Assert.Equal("posts/1", metadata.Value<string>(Constants.Metadata.Id));
+                    Assert.NotNull(post.RawDocument);
+                    var metadata = (JObject)post.RawDocument[Constants.Documents.Metadata.Key];
+                    Assert.Equal("posts/1", metadata.Value<string>(Constants.Documents.Metadata.Id));
                 }
             }
         }

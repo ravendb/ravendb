@@ -162,7 +162,7 @@ namespace Voron.Platform.Posix
             return newPager;
         }
 
-        public override void Sync()
+        public override void Sync(long totalUnsynced)
         {
             //TODO: Is it worth it to change to just one call for msync for the entire file?
             var currentState = GetPagerStateAndAddRefAtomically();
@@ -172,7 +172,7 @@ namespace Voron.Platform.Posix
                 {
                     foreach (var alloc in currentState.AllocationInfos)
                     {
-                        metric.IncrementSize(alloc.Size);
+                        metric.IncrementFileSize(alloc.Size);
                         var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (UIntPtr)alloc.Size, MsyncFlags.MS_SYNC);
                         if (result == -1)
                         {
@@ -180,6 +180,7 @@ namespace Voron.Platform.Posix
                             PosixHelper.ThrowLastError(err, "msync on " + FileName);
                         }
                     }
+                    metric.IncrementSize(totalUnsynced);
                 }
             }
             finally
