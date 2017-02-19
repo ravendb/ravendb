@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes
             Slice.From(StorageEnvironment.LabelsContext, "Definition", ByteStringType.Immutable, out DefinitionSlice);
         }
 
-        public string Name { get; set; }
+        public string Name { get; private set; }
 
         public HashSet<string> Collections { get; }
 
@@ -153,6 +153,13 @@ namespace Raven.Server.Documents.Indexes
                 first = false;
             }
             writer.WriteEndArray();
+        }
+
+        public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
+        {
+            Name = name;
+
+            Persist(context, options);
         }
 
         public IndexDefinition ConvertToIndexDefinition(Index index)
