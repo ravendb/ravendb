@@ -88,43 +88,43 @@ namespace FastTests.Server.Replication
         [Fact]
         public async Task ReplicateVersionsIgnoringConflicts()
         {
-            var master = GetDocumentStore();
-            var slave = GetDocumentStore();
+            var storeA = GetDocumentStore();
+            var storeB = GetDocumentStore();
 
-            await GenerateConflict(master, slave);
+            await GenerateConflict(storeA, storeB);
 
-            Assert.Equal(2, WaitUntilHasConflict(slave, "foo/bar")["foo/bar"].Count);
-            Assert.Equal(2, WaitUntilHasConflict(slave, "foo/bar")["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar")["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
 
-            Assert.Equal(2, WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 2));
-            Assert.Equal(2, WaitForValue(() => GetRevisions(master, "foo/bar").Count, 2));
+            Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
+            Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
         }
 
         [Fact]
         public async Task CreateConflictAndResolveItIncreaseTheVersion()
         {
             
-            var master = GetDocumentStore();
-            var slave = GetDocumentStore();
+            var storeA = GetDocumentStore();
+            var storeB = GetDocumentStore();
 
-            await GenerateConflict(master, slave);
+            await GenerateConflict(storeA, storeB);
             
-            Assert.Equal(2, WaitUntilHasConflict(slave, "foo/bar")["foo/bar"].Count);
-            Assert.Equal(2, WaitUntilHasConflict(slave, "foo/bar")["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
 
-            Assert.Equal(2, WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 2));
-            Assert.Equal(2, WaitForValue(() => GetRevisions(master, "foo/bar").Count, 2));
+            Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
+            Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
 
-            SetupReplication(master, new ReplicationDocument
+            SetupReplication(storeA, new ReplicationDocument
             {
                 DocumentConflictResolution = StraightforwardConflictResolution.ResolveToLatest
-            }, slave);
+            }, storeB);
 
-            Assert.True(WaitForDocument(master, "foo/bar"));
-            Assert.True(WaitForDocument(slave, "foo/bar"));
+            Assert.True(WaitForDocument(storeA, "foo/bar"));
+            Assert.True(WaitForDocument(storeB, "foo/bar"));
 
-            Assert.Equal(3, WaitForValue(() => GetRevisions(master, "foo/bar").Count, 3));
-            Assert.Equal(3, WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 3));
+            Assert.Equal(3, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 3));
+            Assert.Equal(3, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 3));
         }
 
 

@@ -214,8 +214,6 @@ namespace Raven.Client
                 public const string EnableVersioning = "Raven-Enable-Versioning";
 
                 public const string DisableVersioning = "Raven-Disable-Versioning";
-
-                public const string RevisionedDocument = "Raven-Revisioned-Document";
             }
 
             public class SqlReplication

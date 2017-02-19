@@ -321,6 +321,9 @@ namespace Raven.Server.Documents.Replication
                 *(long*)(pTemp + tempBufferPos) = item.LastModifiedTicks;
                 tempBufferPos += sizeof(long);
 
+                *(DocumentFlags*)(pTemp + tempBufferPos) = item.Flags;
+                tempBufferPos += sizeof(DocumentFlags);
+
                 *(int*)(pTemp + tempBufferPos) = item.Key.Size;
                 tempBufferPos += sizeof(int);
 

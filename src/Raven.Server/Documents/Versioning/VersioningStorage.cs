@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
-using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
@@ -175,33 +173,7 @@ namespace Raven.Server.Documents.Versioning
             return true;
         }
 
-        private void AddRevisionedTag(JsonOperationContext context, string key, BlittableJsonReaderObject doc)
-        {
-            DynamicJsonValue mutatedMetadata;
-            BlittableJsonReaderObject metadata;
-            if (doc.TryGet(Constants.Documents.Metadata.Key, out metadata))
-            {
-                if (metadata.Modifications == null)
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-
-                mutatedMetadata = metadata.Modifications;
-            }
-            else
-            {
-                doc.Modifications = new DynamicJsonValue(doc)
-                {
-                    [Constants.Documents.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
-                };
-            }
-            mutatedMetadata[Constants.Documents.Versioning.RevisionedDocument] = true;
-
-            if (doc.Modifications == null)
-            {
-                doc.Modifications = new DynamicJsonValue(doc);
-            }
-            doc.Modifications[Constants.Documents.Metadata.Key] = context.ReadObject(metadata, key);
-        }
-
+        
         public void PutDirect(DocumentsOperationContext context, string key,  BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
@@ -220,7 +192,6 @@ namespace Raven.Server.Documents.Versioning
             int keySize;
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            AddRevisionedTag(context,key,document);
             var data = context.ReadObject(document, key);
 
             //byte recordSeperator = 30;
@@ -439,6 +410,8 @@ namespace Raven.Server.Documents.Versioning
             {
                 result.ChangeVector[i] = ((ChangeVectorEntry*) ptr)[i];
             }
+
+            result.Flags = DocumentFlags.FromVersionStorage;
 
             return result;
         }

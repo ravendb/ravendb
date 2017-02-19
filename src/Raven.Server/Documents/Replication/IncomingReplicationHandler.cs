@@ -643,22 +643,7 @@ namespace Raven.Server.Documents.Replication
             _connectionOptions.PinnedBuffer.Used += size;
             return result;
         }
-
-        private bool IsRevisioned(BlittableJsonReaderObject data)
-        {
-            if (data == null)
-            {
-                return false;
-            }
-            BlittableJsonReaderObject metadata;
-            if (data.TryGet(Constants.Documents.Metadata.Key, out metadata))
-            {
-                bool isRevisioned;
-                return metadata.TryGet(Constants.Documents.Versioning.RevisionedDocument, out isRevisioned);
-            }
-            return false;
-        }
-
+        
         private unsafe void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedDocsCount, long lastEtag)
         {
             if (_log.IsInfoEnabled)
@@ -709,7 +694,7 @@ namespace Raven.Server.Documents.Replication
                             json.BlittableValidation();
                         }
 
-                        if (IsRevisioned(json))
+                        if ((doc.Flags & DocumentFlags.FromVersionStorage) == DocumentFlags.FromVersionStorage)
                         {
                             var collectionName = _database.DocumentsStorage.ExtractCollectionName(documentsContext, doc.Id, json);
                             _database.BundleLoader?.VersioningStorage.PutFromDocument(documentsContext, 
@@ -1122,6 +1107,7 @@ namespace Raven.Server.Documents.Replication
             public int DocumentSize;
             public string Collection;
             public long LastModifiedTicks;
+            public DocumentFlags Flags;
         }
 
         public struct ReplicationIndexOrTransformerPositions
@@ -1155,6 +1141,8 @@ namespace Raven.Server.Documents.Replication
                 curDoc.TransactionMarker = *(short*)ReadExactly(sizeof(short));
 
                 curDoc.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
+
+                curDoc.Flags = *(DocumentFlags*)ReadExactly(sizeof(DocumentFlags));
 
                 var keySize = *(int*)ReadExactly(sizeof(int));
                 

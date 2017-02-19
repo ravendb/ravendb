@@ -9,5 +9,6 @@ namespace Raven.Server.Documents
         Versioned = 1,
         Artificial = 2,
         FromIndex = 4,
+        FromVersionStorage = 8,  
     }
 }
