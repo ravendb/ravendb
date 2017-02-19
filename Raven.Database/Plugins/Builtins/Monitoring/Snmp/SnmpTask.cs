@@ -177,7 +177,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
         {
             var index = (int)GetOrAddDatabaseIndex(databaseName);
 
-            loadedDatabases.GetOrAdd(databaseName, new SnmpDatabase(databaseLandlord, store, databaseName, index));
+            loadedDatabases.GetOrAdd(databaseName, _ => new SnmpDatabase(databaseLandlord, store, databaseName, index));
         }
 
         private long GetOrAddDatabaseIndex(string databaseName)

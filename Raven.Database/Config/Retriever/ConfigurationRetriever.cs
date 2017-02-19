@@ -142,7 +142,17 @@ namespace Raven.Database.Config.Retriever
         {
             var globalKey = GetGlobalConfigurationDocumentKey(key);
 
-            systemDatabase.Notifications.OnDocumentChange += (documentDatabase, notification, metadata) => SendNotification(notification, globalKey, action);
+            WeakReference<Action> weakAction = new WeakReference<Action>(action);
+            Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> globalNotification = null;
+            globalNotification = (documentDatabase, notification, metadata) =>
+            {
+                Action target;
+                if (weakAction.TryGetTarget(out target))
+                    SendNotification(notification, globalKey, target);
+                else
+                    systemDatabase.Notifications.OnDocumentChange -= globalNotification;
+            };
+            systemDatabase.Notifications.OnDocumentChange += globalNotification;
             database.Notifications.OnDocumentChange += (documentDatabase, notification, metadata) => SendNotification(notification, key, action);
         }
 
