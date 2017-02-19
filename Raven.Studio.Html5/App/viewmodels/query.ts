@@ -842,7 +842,7 @@ class query extends viewModelBase {
                 if (this.queryText().length !== 0) {
                     this.queryText(this.queryText() + " AND ");
                 }
-                var escapedStrings = inputs.map((s: string) => queryUtil.escapeTerm(s)).join();
+                var escapedStrings = inputs.map((s: string) => queryUtil.escapeTerm(s)).join(" , ")
                 this.queryText(this.queryText() + "@in<" + this.searchField() + ">:(" + escapedStrings + ")");
             });
         app.showDialog(inMethodFilterViewModel);        
