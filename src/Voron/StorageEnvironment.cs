@@ -210,7 +210,7 @@ namespace Voron
                             QueueForSyncDataFile();                            
                     }
                     else
-                    {
+                    {ne
                         await Task.Delay(1000, cancellationToken);
                     }
                 }
@@ -481,7 +481,7 @@ namespace Voron
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
+                    long txId = flags == TransactionFlags.ReadWrite ? NextWriteTransactionId : CurrentReadTransactionId;
                     tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
                         context)
                     {
