@@ -52,9 +52,8 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                while (true)
+                while (_candidate.Running)
                 {
-                    //TODO: need a way to shut this down when we are no longer leader / shutting down
                     Stream stream = null;
                     try
                     {
@@ -90,7 +89,7 @@ namespace Raven.Server.Rachis
                                         lastLogIndex = _engine.GetLastEntryIndex(context);
                                         lastLogTerm = _engine.GetTermForKnownExisting(context, lastLogIndex);
                                     }
-
+                                    Debug.Assert(topology.TopologyId != null);
                                     connection.Send(context, new RachisHello
                                     {
                                         TopologyId = topology.TopologyId,
@@ -99,11 +98,12 @@ namespace Raven.Server.Rachis
                                     });
 
                                     RequestVoteResponse rvr;
+                                    var currentTerm = _candidate.ElectionTerm;
                                     if (_candidate.IsForcedElection == false)
                                     {
                                         connection.Send(context, new RequestVote
                                         {
-                                            Term = _candidate.ElectionTerm,
+                                            Term = currentTerm,
                                             IsForcedElection = false,
                                             IsTrialElection = true,
                                             LastLogIndex = lastLogIndex,
@@ -111,9 +111,11 @@ namespace Raven.Server.Rachis
                                         });
 
                                         rvr = connection.Read<RequestVoteResponse>(context);
-                                        if (rvr.Term != _engine.CurrentTerm)
+                                        if (rvr.Term > _engine.CurrentTerm)
                                         {
-                                            _candidate.HigherTermDiscovered(rvr.Term);
+                                            // we need to abort the current elections
+                                            _engine.SetNewState(null);
+                                            _engine.FoundAboutHigherTerm(rvr.Term);
                                             return;
                                         }
 
@@ -130,12 +132,12 @@ namespace Raven.Server.Rachis
 
                                     _candidate.WaitForChangeInState();
 
-                                    if (_candidate.RunRealElection == false)
+                                    if (_candidate.RunRealElectionAtTerm == currentTerm)
                                         continue;
 
                                     connection.Send(context, new RequestVote
                                     {
-                                        Term = _candidate.ElectionTerm,
+                                        Term = currentTerm,
                                         IsForcedElection = _candidate.IsForcedElection,
                                         IsTrialElection = false,
                                         LastLogIndex = lastLogIndex,
@@ -143,9 +145,11 @@ namespace Raven.Server.Rachis
                                     });
 
                                     rvr = connection.Read<RequestVoteResponse>(context);
-                                    if (rvr.Term != _engine.CurrentTerm)
+                                    if (rvr.Term > _engine.CurrentTerm)
                                     {
-                                        _candidate.HigherTermDiscovered(rvr.Term);
+                                        // we need to abort the current elections
+                                        _engine.SetNewState(null);
+                                        _engine.FoundAboutHigherTerm(rvr.Term);
                                         return;
                                     }
 

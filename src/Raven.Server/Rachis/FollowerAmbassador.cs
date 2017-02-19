@@ -63,9 +63,8 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                while (true)
+                while (_leader.Running)
                 {
-                    //TODO: need a way to shut this down when we are no longer leader / shutting down
                     Stream stream = null;
                     try
                     {
@@ -104,6 +103,12 @@ namespace Raven.Server.Rachis
                                     Topology = -1,//TODO: fake, just to remember doing this
                                     SnapshotSize = 0
                                 });
+
+                                var aer = connection.Read<AppendEntriesResponse>(context);
+                                if (aer.Success == false)
+                                {
+                                    throw new InvalidOperationException($"Unable to install snapshot on {_url} because {aer.Message}");
+                                }
 
                                 //TODO: make sure that we routinely update LastReplyFromFollower here
                             }
@@ -169,7 +174,7 @@ namespace Raven.Server.Rachis
                                     _followerNextIndex = aer.LastLogIndex + 1;
                                     UpdateLastMatchFromFollower(aer.LastLogIndex);
                                 }
-                                Task task = _leader.WaitForNewEntries();
+                                var task = _leader.WaitForNewEntries();
                                 using (_engine.ContextPool.AllocateOperationContext(out context))
                                 using (context.OpenReadTransaction())
                                 {
@@ -268,26 +273,28 @@ namespace Raven.Server.Rachis
                 connection.Send(context, appendEntries);
 
                 var aer = connection.Read<AppendEntriesResponse>(context);
-                if (aer.CurrentTerm != _engine.CurrentTerm)
-                {
-                    //TODO: Step down as leader
-                    Debug.Assert(false, "TODO: Step down as leader");
-                    return null;
-                }
-
-                if (aer.Success)
-                {
-                    _followerNextIndex = aer.LastLogIndex + 1;
-                    return aer.LastLogIndex;
-                }
-
-                if (aer.Negotiation == null)
-                    throw new InvalidOperationException("BUG: We didn't get a success on first AppendEntries to peer " +
-                                                        _url + ", the term match but there is no negotiation");
-
+               
                 // need to negotiate
                 do
                 {
+                    if (aer.CurrentTerm > _engine.CurrentTerm)
+                    {
+                        // we need to abort the current leadership
+                        _engine.SetNewState(null);
+                        _engine.FoundAboutHigherTerm(aer.CurrentTerm);
+                        return null;
+                    }
+
+                    if (aer.Success)
+                    {
+                        _followerNextIndex = aer.LastLogIndex + 1;
+                        return aer.LastLogIndex;
+                    }
+
+                    if (aer.Negotiation == null)
+                        throw new InvalidOperationException("BUG: We didn't get a success on first AppendEntries to peer " +
+                                                            _url + ", the term match but there is no negotiation");
+
                     using (context.OpenReadTransaction())
                     {
                         if (aer.Negotiation.MidpointTerm ==

@@ -19,6 +19,8 @@ namespace Raven.Server.Rachis
             _timer = new Timer(Callback, null, Timeout.Infinite, Timeout.Infinite);
         }
 
+        public int TimeoutPeriod => _timeoutPeriod;
+
         public void Start(Action onTimeout)
         {
             _edi?.Throw();

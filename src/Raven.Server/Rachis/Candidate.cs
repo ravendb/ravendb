@@ -12,22 +12,31 @@ namespace Raven.Server.Rachis
         private TaskCompletionSource<object> _stateChange = new TaskCompletionSource<object>();
         private readonly RachisConsensus _engine;
         private readonly List<CandidateAmbassador> _voters = new List<CandidateAmbassador>();
-        public int ElectionTimeout;
-        private long _higherTerm;
         private readonly ManualResetEvent _peersWaiting = new ManualResetEvent(false);
         private Thread _thread;
-        public bool RunRealElection { get; private set; }
+        private bool _running;
+        public long RunRealElectionAtTerm { get; private set; }
+
+        public bool Running
+        {
+            get { return Volatile.Read(ref _running); }
+            private set { Volatile.Write(ref _running, value); }
+        }
+
 
         public Candidate(RachisConsensus engine)
         {
             _engine = engine;
-            ElectionTimeout = new Random().Next((_engine.ElectionTimeoutMs / 3) * 2, _engine.ElectionTimeoutMs);
         }
 
         public long ElectionTerm { get; private set; }
 
         private void Run()
         {
+            //TODO: Error handling!
+
+            Running = true;
+
             TransactionOperationContext context;
             ClusterTopology clusterTopology;
             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -40,7 +49,6 @@ namespace Raven.Server.Rachis
                 tx.Commit();
             }
 
-            RunRealElection = IsForcedElection;
             if (IsForcedElection)
             {
                 CastVoteForSelf();
@@ -55,13 +63,11 @@ namespace Raven.Server.Rachis
                 _engine.AppendStateDisposable(this, candidateAmbassador);
                 candidateAmbassador.Start();
             }
-
-            while (true)
+            while (Running)
             {
-                if (_peersWaiting.WaitOne(_engine.ElectionTimeoutMs) == false)
+                if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)
                 {
                     // timeout? 
-                    RunRealElection = IsForcedElection;
                     if (IsForcedElection)
                     {
                         CastVoteForSelf();
@@ -70,19 +76,10 @@ namespace Raven.Server.Rachis
                     StateChange(); // will wake ambassadors and make them ping peers again
                     continue;
                 }
-                _peersWaiting.Reset();
-
-                var term = Interlocked.Read(ref _higherTerm);
-                if (term > ElectionTerm)
-                {
-                    if (_engine.Log.IsInfoEnabled)
-                    {
-                        _engine.Log.Info(
-                            $"New higher term {term} has been discovered, will now wait until new candidate / leader will talk with us");
-                    }
-                    _engine.Timeout.Start(_engine.SwitchToCandidateState);
+                if (Running == false)
                     return;
-                }
+
+                _peersWaiting.Reset();
 
                 var trialElectionsCount = 1;
                 var realElectionsCount = 1;
@@ -100,10 +97,10 @@ namespace Raven.Server.Rachis
                     _engine.SwitchToLeaderState();
                     break;
                 }
-                if (trialElectionsCount >= majority)
+                if (RunRealElectionAtTerm != ElectionTerm && 
+                    trialElectionsCount >= majority)
                 {
-                    RunRealElection = true;
-                    StateChange();
+                    CastVoteForSelf();
                 }
             }
         }
@@ -117,6 +114,8 @@ namespace Raven.Server.Rachis
                 ElectionTerm = _engine.CurrentTerm + 1;
 
                 _engine.CastVoteInTerm(context, ElectionTerm, _engine.Url);
+
+                RunRealElectionAtTerm = ElectionTerm;
 
                 tx.Commit();
             }
@@ -149,20 +148,13 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
+            Running = false;
+            _stateChange.TrySetCanceled();
+            _peersWaiting.Set();
             //TODO: shutdown notification of some kind?
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _thread.Join();
         }
 
-        public void HigherTermDiscovered(long term)
-        {
-            var old = Interlocked.Read(ref _higherTerm);
-            if (old >= term)
-                return;
-            if (Interlocked.CompareExchange(ref _higherTerm, term, old) != old)
-                return;
-
-            _peersWaiting.Set();
-        }
     }
 }

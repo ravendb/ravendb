@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis
 {
-    public class Follower
+    public class Follower : IDisposable
     {
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
@@ -99,9 +99,9 @@ namespace Raven.Server.Rachis
 
                 _engine.Timeout.Defer();
 
-                //TODO: If leader, need to step down here
-                //TODO: If follower, need to close all followers connections
-                //TODO: maybe have a follower lock that only one thread can have?
+                // if leader / candidate, this remove them from play and revert to follower mode
+                _engine.SetNewState(this);
+                _engine.Timeout.Start(_engine.SwitchToCandidateState);
 
                 // only the leader can send append entries, so if we accepted it, it's the leader
                 DebugCurrentLeader = _connection.DebugSource;
@@ -249,6 +249,11 @@ namespace Raven.Server.Rachis
             if (HandleFirstAppendEntriesNegotiation() == false)
                 return;// did not accept connection
             FollowerSteadyState();
+        }
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
         }
     }
 }

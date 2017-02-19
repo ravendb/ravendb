@@ -38,7 +38,7 @@ namespace Raven.Server.Rachis
         internal readonly Logger Log;
         public RachisStateMachine StateMachine;
 
-        private List<IDisposable> _disposables = new List<IDisposable>();
+        private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
 
         public long CurrentTerm { get; private set; }
@@ -57,6 +57,7 @@ namespace Raven.Server.Rachis
         static RachisConsensus()
         {
             Slice.From(StorageEnvironment.LabelsContext, "GlobalState", out GlobalStateSlice);
+
             Slice.From(StorageEnvironment.LabelsContext, "CurrentTerm", out CurrentTermSlice);
             Slice.From(StorageEnvironment.LabelsContext, "VotedFor", out VotedForSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastCommit", out LastCommitSlice);
@@ -80,7 +81,6 @@ namespace Raven.Server.Rachis
         }
 
         public int ElectionTimeoutMs = 300;
-        private Leader _leader;
 
         public RachisConsensus(StorageEnvironmentOptions options, string url)
         {
@@ -128,10 +128,10 @@ namespace Raven.Server.Rachis
                 // if we don't have a topology id, then we are passive
                 // an admin needs to let us know that it is fine, either
                 // by explicit bootstraping or by connecting us to a cluster
-                if (topology.TopologyId == null || 
+                if (topology.TopologyId == null ||
                     topology.Voters.Contains(_url) == false)
                 {
-                    CurrentState=State.Passive;
+                    CurrentState = State.Passive;
                     return;
                 }
 
@@ -152,14 +152,17 @@ namespace Raven.Server.Rachis
         {
             lock (_disposables)
             {
-                foreach (var disposable in _disposables)
+                for (int i = _disposables.Count - 1; i >= 0; i--)
                 {
-                    disposable.Dispose();
+                    _disposables[i].Dispose();
                 }
 
                 _disposables.Clear();
 
-                _disposables.Add(state);
+                if (state != null)
+                    _disposables.Add(state);
+                else// if we are back to null state, wait to become leader
+                    Timeout.Start(SwitchToCandidateState);
             }
         }
 
@@ -180,21 +183,35 @@ namespace Raven.Server.Rachis
             {
                 Log.Info("Switching to leader state");
             }
-            _leader = new Leader(this);
-            SetNewState(_leader);
-            _leader.Start();
+            var leader = new Leader(this);
+            SetNewState(leader);
+            leader.Start();
         }
 
         public void SwitchToCandidateState()
         {
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                var clusterTopology = GetTopology(context);
+                if (clusterTopology.TopologyId == null ||
+                    clusterTopology.Voters.Contains(_url) == false)
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info("Can't switch to candidate mode when not initialized with topology / not a voter");
+                    }
+                    return;
+                }
+            }
+
             if (Log.IsInfoEnabled)
             {
                 Log.Info("Switching to candidate state");
             }
-            var oldLeader = _leader;
             var candidate = new Candidate(this);
             SetNewState(candidate);
-            Interlocked.CompareExchange(ref _leader, null, oldLeader);
             candidate.Start();
         }
 
@@ -527,9 +544,6 @@ namespace Raven.Server.Rachis
         {
             if (term == CurrentTerm)
                 return;
-
-            // TODO
-            // if leader, need to become follower
 
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))

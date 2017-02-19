@@ -44,8 +44,15 @@ namespace Raven.Server.Rachis
             _engine = engine;
         }
 
+        public bool Running
+        {
+            get { return Volatile.Read(ref _running); }
+            private set { Volatile.Write(ref _running, value); }
+        }
+
         public void Start()
         {
+            Running = true;
             ClusterTopology clusterTopology;
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -182,7 +189,7 @@ namespace Raven.Server.Rachis
                                 _promotableUpdated.Reset();
                                 CheckPromotables();
                                 break;
-                            case WaitHandle.WaitTimeout: 
+                            case WaitHandle.WaitTimeout:
                                 VoteOfNoConfidence();
                                 break;
                             case 3: // shutdown requested
@@ -235,13 +242,17 @@ namespace Raven.Server.Rachis
             {
                 _lastCommit = _engine.GetLastCommitIndex(context);
 
-                if (_engine.GetTermFor(_lastCommit) < _engine.CurrentTerm)
-                    return;// can't commit until at least one entry from our term has been published
-
                 if (_lastCommit == maxIndexOnQuorum)
                     return; // nothing to do here
 
+                if (_engine.GetTermFor(maxIndexOnQuorum) < _engine.CurrentTerm)
+                    return;// can't commit until at least one entry from our term has been published
+
+                _lastCommit = maxIndexOnQuorum;
+
                 _engine.StateMachine.Apply(context, maxIndexOnQuorum);
+                _engine.SetLastCommitIndex(context, maxIndexOnQuorum);
+
                 _lastCommit = maxIndexOnQuorum;
 
                 context.Transaction.Commit();
@@ -249,7 +260,7 @@ namespace Raven.Server.Rachis
 
             foreach (var kvp in _entries)
             {
-                if(kvp.Key > _lastCommit)
+                if (kvp.Key > _lastCommit)
                     continue;
 
                 TaskCompletionSource<object> value;
@@ -286,6 +297,9 @@ namespace Raven.Server.Rachis
         /// So we have 2 nodes that have 3, so that is the quorom.
         /// </summary>
         private readonly SortedList<long, int> _votersPerIndex = new SortedList<long, int>();
+
+        private bool _running;
+
         protected long GetMaxIndexOnQuorum(int minSize)
         {
             _votersPerIndex.Clear();
@@ -349,7 +363,6 @@ namespace Raven.Server.Rachis
 
         private void ChangeTopology(ClusterTopology clusterTopology)
         {
-            RefreshAmbasaddors(clusterTopology);
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
@@ -357,7 +370,11 @@ namespace Raven.Server.Rachis
                 var json = _engine.SetTopology(context, clusterTopology);
                 _engine.InsertToLog(context, json, RachisEntryFlags.Topology);
                 _newEntry.Set();
+
+                context.Transaction.Commit();
             }
+
+            RefreshAmbasaddors(clusterTopology);
         }
 
         public Task PutAsync(BlittableJsonReaderObject cmd)
@@ -375,6 +392,7 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
+            Running = false;
             _shutdownRequested.Set();
             _newEntriesArrived.TrySetCanceled();
             var ae = new ExceptionAggregator("Could not properly dispose Leader");
