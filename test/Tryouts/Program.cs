@@ -16,9 +16,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new SlowTests.Smuggler.LegacySmugglerTests())
+                using (var a = new FastTests.Client.BulkInserts())
                 {
-                    a.CanImportIndexesAndTransformers("SlowTests.Smuggler.Indexes_And_Transformers_3.5.ravendbdump").Wait();
+                    a.Simple_Bulk_Insert(true).Wait();
                 }
             }
         }

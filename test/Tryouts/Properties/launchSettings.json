@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Tryouts": {
+      "commandName": "Tryouts",
+      "environmentVariables": {
+        "COMPlus_ReadyToRunExcludeList": "System.Security.Cryptography.X509Certificates"
+      }
+    }
+  }
+}

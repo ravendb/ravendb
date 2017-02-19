@@ -212,7 +212,7 @@ namespace Raven.Client.Documents.Subscriptions
             _tcpClient.SendBufferSize = 32 * 1024;
             _tcpClient.ReceiveBufferSize = 4096;
             _stream = _tcpClient.GetStream();
-            _stream = TcpUtils.WrapStreamWithSsl(_tcpClient, command.Result);
+            _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result);
 
             var header = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
             {

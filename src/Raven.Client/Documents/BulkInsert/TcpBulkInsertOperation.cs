@@ -104,7 +104,7 @@ namespace Raven.Client.Documents.BulkInsert
             _tcpClient.NoDelay = true;
             _tcpClient.SendBufferSize = 32 * 1024;
             _tcpClient.ReceiveBufferSize = 4096;
-            var stream = TcpUtils.WrapStreamWithSsl(_tcpClient, command.Result);
+            var stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result);
 
             return new ConnectToServerResult { OAuthToken = apiToken, Stream = stream };
         }
