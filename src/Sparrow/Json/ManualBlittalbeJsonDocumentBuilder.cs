@@ -402,9 +402,14 @@ namespace Sparrow.Json
 
         public unsafe void WriteEmbeddedBlittableDocument(BlittableJsonReaderObject document)
         {
+            WriteEmbeddedBlittableDocument(document.BasePointer, document.Size);
+        }
+
+        public unsafe void WriteEmbeddedBlittableDocument(byte* ptr, int size)
+        {
             var currentState = _continuationState.Pop();
             BlittableJsonToken token;
-            var valuePos = _writer.WriteValue(document.BasePointer, document.Size, out token, UsageMode.None, null);
+            var valuePos = _writer.WriteValue(ptr, size, out token, UsageMode.None, null);
             _writeToken = new WriteToken
             {
                 ValuePos = valuePos,

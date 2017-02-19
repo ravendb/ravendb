@@ -774,8 +774,10 @@ namespace Voron.Data.Tables
             }
         }
 
-        public bool SeekLastByPrimaryKey(out TableValueReader reader)
+        public bool SeekOnePrimaryKey(Slice slice,out TableValueReader reader)
         {
+            Debug.Assert(slice.Options != SliceOptions.Key, "Should be called with only AfterAllKeys or BeforeAllKeys");
+
             var pk = _schema.Key;
             var tree = GetTree(pk);
             using (var it = tree.Iterate(false))

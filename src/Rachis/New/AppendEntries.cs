@@ -13,7 +13,7 @@ namespace Rachis.Messages
         public long PrevLogIndex { get; set; }
         public long PrevLogTerm { get; set; }
         public LogEntry[] Entries { get; set; }
-        public int EntriesCount => Entries?.Length ?? 0;
+        public int EntriesCount { get; set; }
         public long LeaderCommit { get; set; }
 
         //this is the last topology change command in the entries, or null if topology didn't change.
