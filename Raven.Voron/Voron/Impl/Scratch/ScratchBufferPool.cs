@@ -374,13 +374,14 @@ namespace Voron.Impl.Scratch
 
             foreach (var scratchBufferItem in _scratchBuffers.Values.OrderBy(x => x.Number))
             {
+                var current = _current;
                 var scratchFileUsage = new ScratchFileUsage
                 {
                     Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferItem.File.Number),
                     SizeInKB = scratchBufferItem.File.Size / 1024,
                     NumberOfAllocations = scratchBufferItem.File.NumberOfAllocations,
                     InActiveUseInKB = scratchBufferItem.File.ActivelyUsedBytes(oldestActiveTransaction) / 1024,
-                    CanBeDeleted = scratchBufferItem.File.HasActivelyUsedBytes(oldestActiveTransaction),
+                    CanBeDeleted = scratchBufferItem != current && scratchBufferItem.File.HasActivelyUsedBytes(oldestActiveTransaction) == false,
                     TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable
                 };
 
