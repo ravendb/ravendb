@@ -79,14 +79,12 @@ namespace Raven.Server.Documents
 
         public enum AttachmentsTable
         {
-            LoweredDocumentId = 0,
-            RecordSeparator = 1,
-            LoweredName = 2,
-            Etag = 3,
-            Name = 4,
-            ContentType = 5,
-            LastModified = 6,
-            StreamIdentifier = 7,
+            LoweredDocumentIdAndRecordSeparatorAndLoweredName = 0,
+            Etag = 1,
+            Name = 2,
+            ContentType = 3,
+            LastModified = 4,
+            StreamIdentifier = 5,
         }
 
         static DocumentsStorage()
@@ -223,15 +221,15 @@ namespace Raven.Server.Documents
             // We are you using the record separator in order to avoid loading another files that has the same key prefix, 
             //      e.g. fitz(record-separator)profile.png and fitz0(record-separator)profile.png, without the record separator we would have to load also fitz0 and filter it.
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
-            AttachmentsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            AttachmentsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
-                Count = 3,
+                Count = 1,
                 Name = AttachmentsKeySlice
             });
             AttachmentsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = 3,
+                StartIndex = 1,
                 Name = AttachmentsEtagSlice
             });
         }
@@ -2659,11 +2657,11 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
-            byte* lowerKey;
-            int lowerSize;
-            byte* keyPtr;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            byte* lowerDocumentId;
+            int lowerDocumentIdSize;
+            byte* documentIdPtr;
+            int documentIdSize;
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerDocumentId, out lowerDocumentIdSize, out documentIdPtr, out documentIdSize);
 
             byte* lowerName;
             int lowerNameSize;
@@ -2677,14 +2675,11 @@ namespace Raven.Server.Documents
             DocumentKeyWorker.GetSliceFromKey(context, contentType, out contentTypeSlice);
 
             Slice keySlice;
-            using (GetAttachmentKey(context, lowerKey, lowerSize, lowerName, lowerNameSize, out keySlice))
+            using (GetAttachmentKey(context, lowerDocumentId, lowerDocumentIdSize, lowerName, lowerNameSize, out keySlice))
             {
-                byte recordSeperator = 30;
                 var tbv = new TableValueBuilder
                 {
-                    {lowerKey, lowerSize},
-                    {&recordSeperator, sizeof(char)},
-                    {lowerKey, lowerSize},
+                    {keySlice.Content.Ptr, keySlice.Size},
                     newEtagBigEndian,
                     {namePtr, nameSize},
                     {contentTypeSlice.Content.Ptr, contentTypeSlice.Size},
@@ -2693,7 +2688,6 @@ namespace Raven.Server.Documents
 
                 Slice streamIdentifierSlice;
                 TableValueReader oldValue;
-                ByteStringContext<ByteStringMemoryCache>.Scope streamIdentifierScope;
                 if (table.ReadByKey(keySlice, out oldValue))
                 {
                     throw new InvalidOperationException("Cannot overwrite exisitng attachment.");
@@ -2724,50 +2718,68 @@ namespace Raven.Server.Documents
                     }
 
                     tbv.Add(newEtagBigEndian); // streamIdentifier
-                    streamIdentifierScope = tbv.SliceFromLocation(context.Allocator, (int)AttachmentsTable.StreamIdentifier, out streamIdentifierSlice);
+                    tbv.SliceFromLocation(context.Allocator, (int) AttachmentsTable.StreamIdentifier, out streamIdentifierSlice);
 
                     table.Insert(tbv);
                 }
 
+                // Insert the stream
+                var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+                tree.AddStream(streamIdentifierSlice, stream);
+
                 // Update the document
-                Slice lowerKeySlice;
-                using (Slice.External(context.Allocator, lowerKey, lowerSize, out lowerKeySlice))
+                UpdateDocumentAfterAttachmentPut(context, lowerDocumentId, lowerDocumentIdSize, documentId, name, modifiedTicks);
+
+                _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
+                _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
+            }
+
+            return newEtag;
+        }
+
+        private void UpdateDocumentAfterAttachmentPut(DocumentsOperationContext context, byte* lowerDocumentId, int lowerDocumentIdSize, 
+            string documentId, string name, long modifiedTicks)
+        {
+            Slice lowerKeySlice;
+            using (Slice.External(context.Allocator, lowerDocumentId, lowerDocumentIdSize, out lowerKeySlice))
+            {
+                Document document;
+                try
                 {
-                    Document document;
-                    try
-                    {
-                        document = Get(context, lowerKeySlice);
-                        if (document == null)
-                            throw new InvalidOperationException($"Cannot put attachment {name} on a not exist document '{documentId}'.");
-                    }
-                    catch (DocumentConflictException e)
-                    {
-                        throw new InvalidOperationException($"Cannot put attachment {name} on a document '{documentId}' with a conflict.", e);
-                    }
-
-                    var newDocumentEtag = GenerateNextEtag();
-                    var newDocumentEtagBigEndian = Bits.SwapBytes(newEtag);
-
-                    var collectionName = ExtractCollectionName(context, documentId, document.Data);
-                    var docsTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
-
-                    TableValueReader oldDocument;
-                    if (docsTable.ReadByKey(keySlice, out oldDocument) == false)
-                    {
-                        // Cannot happen as we tested for this already
+                    document = Get(context, lowerKeySlice);
+                    if (document == null)
                         throw new InvalidOperationException($"Cannot put attachment {name} on a not exist document '{documentId}'.");
-                    }
+                }
+                catch (DocumentConflictException e)
+                {
+                    throw new InvalidOperationException($"Cannot put attachment {name} on a document '{documentId}' with a conflict.", e);
+                }
 
-                    var changeVector = SetDocumentChangeVectorForLocalChange(context, keySlice, ref oldDocument, newDocumentEtag);
+                var newEtag = GenerateNextEtag();
+                var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
-                    fixed (ChangeVectorEntry* pChangeVector = changeVector)
-                    {
-                        var transactionMarker = context.GetTransactionMarker();
-                        var docTbv = new TableValueBuilder
+                var collectionName = ExtractCollectionName(context, documentId, document.Data);
+                var docsTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+
+                TableValueReader oldDocument;
+                Slice documentIdSlice;
+                Slice.External(context.Allocator, lowerDocumentId, lowerDocumentIdSize, out documentIdSlice);
+                if (docsTable.ReadByKey(documentIdSlice, out oldDocument) == false)
+                {
+                    // Cannot happen as we tested for this already
+                    throw new InvalidOperationException($"Cannot put attachment {name} on a not exist document '{documentId}'.");
+                }
+
+                var changeVector = SetDocumentChangeVectorForLocalChange(context, documentIdSlice, ref oldDocument, newEtag);
+
+                fixed (ChangeVectorEntry* pChangeVector = changeVector)
+                {
+                    var transactionMarker = context.GetTransactionMarker();
+                    var docTbv = new TableValueBuilder
                         {
-                            {lowerKey, lowerSize},
-                            newDocumentEtagBigEndian,
-                            {keyPtr, keySize},
+                            {lowerDocumentId, lowerDocumentIdSize},
+                            newEtagBigEndian,
+                            {document.Key.Buffer, document.Key.Size},
                             {document.Data.BasePointer, document.Data.Size},
                             {(byte*) pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length},
                             modifiedTicks,
@@ -2775,35 +2787,22 @@ namespace Raven.Server.Documents
                             transactionMarker
                         };
 
-                        docsTable.Update(oldValue.Id, docTbv);
-                    }
-
-                    _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
-                    _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Data.Size);
-
-                    context.Transaction.AddAfterCommitNotification(new AttachmentChange
-                    {
-                        Etag = newEtag,
-                        CollectionName = collectionName.Name,
-                        Key = documentId,
-                        Name = name,
-                        Type = DocumentChangeTypes.PutAttachment,
-                        IsSystemDocument = collectionName.IsSystem,
-                    });
+                    docsTable.Update(oldDocument.Id, docTbv);
                 }
 
-                // Insert the stream
-                using (streamIdentifierScope)
+                _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
+                _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Data.Size);
+
+                context.Transaction.AddAfterCommitNotification(new AttachmentChange
                 {
-                    var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                    tree.AddStream(streamIdentifierSlice, stream);
-                }
-
-                _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
-                _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
+                    Etag = newEtag,
+                    CollectionName = collectionName.Name,
+                    Key = documentId,
+                    Name = name,
+                    Type = DocumentChangeTypes.PutAttachment,
+                    IsSystemDocument = collectionName.IsSystem,
+                });
             }
-
-            return newEtag;
         }
 
         public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name)
@@ -2867,7 +2866,7 @@ namespace Raven.Server.Documents
             int size;
             // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
             byte offset;
-            var ptr = tvr.Read((int)AttachmentsTable.LoweredDocumentId, out size);
+            var ptr = tvr.Read((int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, out size);
             result.LoweredDocumentId = new LazyStringValue(null, ptr, size, context);
 
             ptr = tvr.Read((int)AttachmentsTable.Etag, out size);
