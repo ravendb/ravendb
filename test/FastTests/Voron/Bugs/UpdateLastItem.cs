@@ -12,15 +12,15 @@ namespace FastTests.Voron.Bugs
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("t");
-                tree.DirectAdd("events", sizeof (TreeRootHeader));
-                tree.DirectAdd("aggregations", sizeof(TreeRootHeader));
-                tree.DirectAdd("aggregation-status", sizeof(TreeRootHeader));
+                tree.DirectAdd("events", sizeof (TreeRootHeader)).Dispose();
+                tree.DirectAdd("aggregations", sizeof(TreeRootHeader)).Dispose();
+                tree.DirectAdd("aggregation-status", sizeof(TreeRootHeader)).Dispose();
                 tx.Commit();
             }
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("t");
-                tree.DirectAdd("events", sizeof(TreeRootHeader));
+                tree.DirectAdd("events", sizeof(TreeRootHeader)).Dispose();
 
                 tx.Commit();
             }
@@ -30,7 +30,7 @@ namespace FastTests.Voron.Bugs
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("t");
-                tree.DirectAdd("events", sizeof(TreeRootHeader));
+                tree.DirectAdd("events", sizeof(TreeRootHeader)).Dispose();
 
                 tx.Commit();
             }
