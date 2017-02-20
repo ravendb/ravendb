@@ -21,6 +21,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.NotificationCenter.Notifications;
+using Voron;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -366,7 +367,6 @@ namespace Raven.Server.Documents.Replication
                     {
                         switch (conflictStatus)
                         {
-                            case ConflictStatus.ShouldResolveConflict:
                             //note : PutIndexOrTransformer() is deleting conflicts and merges chnage vectors
                             //of the conflicts. This can be seen in IndexesEtagsStorage::WriteEntry()
                             case ConflictStatus.Update:                                
@@ -716,23 +716,26 @@ namespace Raven.Server.Documents.Replication
                                             $"Conflict check resolved to Update operation, doing PUT on doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
                                     _database.DocumentsStorage.Put(documentsContext, doc.Id, null, json,
                                         doc.LastModifiedTicks,
-                                        _tempReplicatedChangeVector);
+                                        _tempReplicatedChangeVector,DocumentFlags.FromReplication);
                                 }
                                 else
                                 {
                                     if (_log.IsInfoEnabled)
                                         _log.Info(
                                             $"Conflict check resolved to Update operation, writing tombstone for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
-                                    _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
-                                        documentsContext, doc.Id,
+                                    Slice keySlice;
+                                    using (DocumentKeyWorker.GetSliceFromKey(documentsContext, doc.Id,out keySlice))
+                                    {
+                                        _database.DocumentsStorage.Delete(
+                                        documentsContext, keySlice, doc.Id, null,
                                         doc.LastModifiedTicks,
                                         _tempReplicatedChangeVector,
-                                        doc.Collection);
+                                        documentsContext.GetLazyString(doc.Collection));
+                                    }
+                                    
+//                                    _database.DocumentsStorage.Delete(documentsContext, doc.Id, null);
                                 }
                                 break;
-                            case ConflictStatus.ShouldResolveConflict:
-                                documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(documentsContext, doc.Id);
-                                goto case ConflictStatus.Update;
                             case ConflictStatus.Conflict:
                                 if (_log.IsInfoEnabled)
                                     _log.Info(
@@ -1227,7 +1230,7 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
 
-                return ConflictStatus.ShouldResolveConflict;
+                return ConflictStatus.Update;
             }
 
             var metadata = _database.IndexMetadataPersistence.GetIndexMetadataByName(context.Transaction.InnerTransaction, context, name, false);
@@ -1263,8 +1266,8 @@ namespace Raven.Server.Documents.Replication
                         return ConflictStatus.Conflict;
                     }
                 }
-
-                return ConflictStatus.ShouldResolveConflict;
+                // this document will resolve the conflicts when putted
+                return ConflictStatus.Update;
             }
 
             var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, key);
@@ -1291,8 +1294,7 @@ namespace Raven.Server.Documents.Replication
         {
             Update,
             Conflict,
-            AlreadyMerged,
-            ShouldResolveConflict
+            AlreadyMerged
         }
 
         public static ConflictStatus GetConflictStatus(ChangeVectorEntry[] remote, ChangeVectorEntry[] local)

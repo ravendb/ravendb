@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents
         private static readonly TableSchema CollectionsSchema = new TableSchema();
 
         private readonly DocumentDatabase _documentDatabase;
-
+     
         private Dictionary<string, CollectionName> _collectionsCache;
 
         public int NextPage;
@@ -951,10 +952,11 @@ namespace Raven.Server.Documents
             var ptr = tvr.Read(0, out size);
             result.LoweredKey = new LazyStringValue(null, ptr, size, context);
 
-            byte offset;
             ptr = tvr.Read(3, out size);
+            byte offset;
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
+            //result.Key = new LazyStringValue(null, ptr, size, context);
 
             ptr = tvr.Read(1, out size);
             result.Etag = Bits.SwapBytes(*(long*)ptr);
@@ -983,92 +985,145 @@ namespace Raven.Server.Documents
             }
         }
 
-        public struct DeleteOperationResult
-        {
-            public long Etag;
-            public CollectionName Collection;
-        }
-
         public DeleteOperationResult? Delete(DocumentsOperationContext context,
             Slice loweredKey,
             string key,
             long? expectedEtag,
             long? lastModifiedTicks = null,
-            ChangeVectorEntry[] changeVector = null)
+            ChangeVectorEntry[] changeVector = null,
+            LazyStringValue collection = null)
         {
-            // TODO: Should we call TableValueToDocument from here? Or it should be eascape the blittable building as of the data as we don't use it here?
-            var result = GetDocumentOrTombstone(context, loweredKey, throwOnConflict: false);
-            if (result.Item2 != null)
-                return null; //NOP, already deleted
+            var local = GetDocumentOrTombstone(context, loweredKey, throwOnConflict: false);
+            var currentLastTicks = DateTime.UtcNow.Ticks;
+            long etag = -1;
+            var collectionName = collection != null ? new CollectionName(collection) : null;
 
-            var doc = result.Item1;
-            long etag;
-            CollectionName collectionName;
-            if (doc == null)
+            if (_conflictCount > 0)
             {
-                if (_conflictCount > 0) //no tombstone and no document. perhaps we have a conflict?
+                if (local.Item2 != null && local.Item1 != null)
                 {
-                    var conflicts = GetConflictsFor(context, loweredKey);
-                    if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
+                    // Something is wrong, we can't have conflicts and local document/tombstone
+                    throw new InvalidDataException($"we can't have conflicts and local document/tombstone with the key {loweredKey}");
+                }
+                var conflicts = GetConflictsFor(context, loweredKey);
+                if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
+                {
+                    collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out etag);
+                }
+            }
+            else
+            {
+
+                byte* lowerKey;
+                int lowerSize;
+                byte* keyPtr;
+                int keySize;
+
+                if (key != null)
+                {
+                    DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, 
+                        out lowerKey, out lowerSize, out keyPtr, out keySize);
+                
+                    if (local.Item2 == null && local.Item1 == null)
                     {
-                        collectionName = ResolveConflictAndAddTombstone(context, loweredKey, changeVector, conflicts, out etag);
-                        return new DeleteOperationResult
+                        // we adding a tombstone without having any pervious document, it could happened if this was called
+                        // from the incoming replication.
+
+                        if (expectedEtag != null)
+                            throw new ConcurrencyException(
+                                $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+
+
+                        if (collectionName == null)
                         {
-                            Collection = collectionName,
-                            Etag = etag
-                        };
+                            // throw
+                            return null;
+                        }
+
+                        etag = CreateTombstone(context,
+                            lowerKey,
+                            lowerSize,
+                            keyPtr,
+                            keySize,
+                            -1, // delete etag is not relevant
+                            collectionName,
+                            changeVector,
+                            currentLastTicks,
+                            null,
+                            DocumentFlags.None);
+                    }
+
+                    if (local.Item2 != null)
+                    {
+                        if (expectedEtag != null)
+                            throw new ConcurrencyException(
+                                $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                    
+                        // we update the tombstone
+                        etag = CreateTombstone(context,
+                                lowerKey,
+                                lowerSize,
+                                keyPtr,
+                                keySize,
+                                local.Item2.Etag,
+                                collectionName,
+                                local.Item2.ChangeVector,
+                                lastModifiedTicks,
+                                changeVector,
+                                DocumentFlags.None);
+
                     }
                 }
-
-                if (expectedEtag != null)
-                    throw new ConcurrencyException(
-                        $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
-
-                return null; //NOP, doesn't exist and doesn't have any concurrency requirements
-            }
-
-            if (expectedEtag != null && doc.Etag != expectedEtag)
-            {
-                throw new ConcurrencyException(
-                    $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                if (local.Item1 != null)
                 {
-                    ActualETag = doc.Etag,
-                    ExpectedETag = (long) expectedEtag
-                };
+                    // just delete the document
+                    var doc = local.Item1;
+                    if (expectedEtag != null && doc.Etag != expectedEtag)
+                    {
+                        throw new ConcurrencyException(
+                            $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                        {
+                            ActualETag = doc.Etag,
+                            ExpectedETag = (long)expectedEtag
+                        };
+                    }
+
+                    EnsureLastEtagIsPersisted(context, doc.Etag);
+
+                    collectionName = ExtractCollectionName(context, loweredKey, doc.Data);
+                    var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+
+                    int size;
+                    var ptr = table.DirectRead(doc.StorageId, out size);
+                    var tvr = new TableValueReader(ptr, size);
+
+                    lowerKey = tvr.Read(0, out lowerSize);
+                    keyPtr = tvr.Read(2, out keySize);
+
+                    etag = CreateTombstone(context,
+                        lowerKey,
+                        lowerSize,
+                        keyPtr,
+                        keySize,
+                        doc.Etag,
+                        collectionName,
+                        doc.ChangeVector,
+                        lastModifiedTicks,
+                        changeVector,
+                        doc.Flags);
+
+                    if (collectionName.IsSystem == false)
+                    {
+                        _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, loweredKey);
+                    }
+                    table.Delete(doc.StorageId);
+                }
             }
 
-            EnsureLastEtagIsPersisted(context, doc.Etag);
-
-            collectionName = ExtractCollectionName(context, loweredKey, doc.Data);
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
-
-            int size;
-            var ptr = table.DirectRead(doc.StorageId, out size);
-            var tvr = new TableValueReader(ptr, size);
-
-            int lowerSize;
-            var lowerKey = tvr.Read(0, out lowerSize);
-
-            int keySize;
-            var keyPtr = tvr.Read(2, out keySize);
-
-            etag = CreateTombstone(context,
-                lowerKey,
-                lowerSize,
-                keyPtr,
-                keySize,
-                doc.Etag,
-                collectionName,
-                doc.ChangeVector,
-                lastModifiedTicks,
-                changeVector,
-                doc.Flags);
-
-            if (collectionName.IsSystem == false)
+            if (etag == -1)
             {
-                _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, loweredKey);
+                return null;
             }
-            table.Delete(doc.StorageId);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChange
             {
@@ -1081,32 +1136,57 @@ namespace Raven.Server.Documents
 
             return new DeleteOperationResult
             {
-                Etag = etag,
-                Collection = collectionName
+                Collection = collectionName,
+                Etag = etag
             };
+
         }
 
-        private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context, Slice loweredKey,
+        public struct DeleteOperationResult
+        {
+            public long Etag;
+            public CollectionName Collection;
+        }
+
+        private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context,
             ChangeVectorEntry[] changeVector, IReadOnlyList<DocumentConflict> conflicts, out long etag)
         {
             ChangeVectorEntry[] mergedChangeVector;
             var indexOfLargestEtag = FindIndexOfLargestEtagAndMergeChangeVectors(conflicts, out mergedChangeVector);
             var latestConflict = conflicts[indexOfLargestEtag];
-
             var collectionName = new CollectionName(latestConflict.Collection);
+
+            byte* lowerKeyPtr;
+            byte* keyPtr;
+            int lowerKeySize;
+            int keySize;
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, latestConflict.Key, 
+                out lowerKeyPtr,
+                out lowerKeySize,
+                out keyPtr, 
+                out keySize);
 
             //note that CreateTombstone is also deleting conflicts
             etag = CreateTombstone(context,
-                loweredKey.Content.Ptr,
-                loweredKey.Size,
-                latestConflict.Key.Buffer,
-                latestConflict.Key.Size,
+                lowerKeyPtr,
+                lowerKeySize,
+                keyPtr,
+                keySize,
                 latestConflict.Etag,
                 collectionName,
                 mergedChangeVector,
                 latestConflict.LastModified.Ticks,
                 changeVector,
                 DocumentFlags.None);
+
+            context.Transaction.AddAfterCommitNotification(new DocumentChange
+            {
+                Type = DocumentChangeTypes.Delete,
+                Etag = etag,
+                Key = latestConflict.Key,
+                CollectionName = collectionName.Name,
+                IsSystemDocument = collectionName.IsSystem,
+            });
 
             return collectionName;
         }
@@ -1173,95 +1253,6 @@ namespace Raven.Server.Documents
                 etagTree.Add(LastEtagSlice, etagSlice);
         }
 
-        public void AddTombstoneOnReplicationIfRelevant(
-            DocumentsOperationContext context,
-            string key,
-            long lastModifiedTicks,
-            ChangeVectorEntry[] changeVector,
-            string collection)
-        {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: true);
-
-            byte* lowerKey;
-            int lowerSize;
-            byte* keyPtr;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
-            Slice loweredKey;
-            using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
-            {
-                if (_conflictCount != 0)
-                    ThrowOnDocumentConflict(context, loweredKey);
-
-                var result = GetDocumentOrTombstone(context, loweredKey);
-                if (result.Item2 != null) //already have a tombstone -> need to update the change vector
-                {
-                    CreateTombstone(context,
-                        lowerKey,
-                        lowerSize,
-                        keyPtr,
-                        keySize,
-                        result.Item2.Etag,
-                        collectionName,
-                        result.Item2.ChangeVector,
-                        lastModifiedTicks,
-                        changeVector,
-                        DocumentFlags.None);
-                }
-                else
-                {
-                    var doc = result.Item1;
-                    var newEtag = GenerateNextEtag();
-
-                    if (changeVector == null)
-                    {
-                        changeVector = GetMergedConflictChangeVectorsAndDeleteConflicts(
-                            context,
-                            loweredKey,
-                            newEtag,
-                            doc?.ChangeVector);
-                    }
-
-                    CreateTombstone(context,
-                        lowerKey,
-                        lowerSize,
-                        keyPtr,
-                        keySize,
-                        doc?.Etag ?? -1,
-                        //if doc == null, this means the tombstone does not have a document etag to point to
-                        collectionName,
-                        doc?.ChangeVector,
-                        lastModifiedTicks,
-                        changeVector,
-                        DocumentFlags.None);
-
-                    // not sure if this needs to be done. 
-                    // see http://issues.hibernatingrhinos.com/issue/RavenDB-5226
-                    //if (isSystemDocument == false)
-                    //{
-                    // _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, originalCollectionName, loweredKey);
-                    //}
-
-                    //it is possible that tombstones will be replicated and no document will be there 
-                    //on the destination
-                    if (doc != null)
-                    {
-                        var docsTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                            collectionName.GetTableName(CollectionTableType.Documents));
-                        docsTable.Delete(doc.StorageId);
-                    }
-
-                    context.Transaction.AddAfterCommitNotification(new DocumentChange
-                    {
-                        Type = DocumentChangeTypes.DeleteOnTombstoneReplication,
-                        Etag = newEtag,
-                        CollectionName = collectionName.Name,
-                        IsSystemDocument = false, //tombstone is not a system document...
-                    });
-                }
-            }
-        }
-
         private long CreateTombstone(
             DocumentsOperationContext context,
             byte* lowerKey, int lowerSize,
@@ -1277,16 +1268,20 @@ namespace Raven.Server.Documents
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
             var documentEtagBigEndian = Bits.SwapBytes(etag);
 
-            if (changeVector == null)
+            Slice loweredKey;
+            using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
             {
-                Slice loweredKey;
-                using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
+                if (changeVector == null)
                 {
                     changeVector = GetMergedConflictChangeVectorsAndDeleteConflicts(
                         context,
                         loweredKey,
                         newEtag,
                         docChangeVector);
+                }
+                else
+                {
+                    DeleteConflictsFor(context, loweredKey);
                 }
             }
 
@@ -1537,10 +1532,14 @@ namespace Raven.Server.Documents
             {
                 // Conflict between two tombstones resolves to the local tombstone
                 existingTombstone.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
-                AddTombstoneOnReplicationIfRelevant(context, existingTombstone.Key,
+                Slice keySlice;
+                using (DocumentKeyWorker.GetSliceFromKey(context, existingTombstone.Key, out keySlice))
+                {
+                    Delete(context, keySlice, existingTombstone.Key, null,
                     lastModifiedTicks,
                     existingTombstone.ChangeVector,
                     existingTombstone.Collection);
+                }               
                 return true;
             }
 
@@ -1554,18 +1553,13 @@ namespace Raven.Server.Documents
         {
             if (conflict.Doc == null)
             {
-                if (hasLocalTombstone) // local document is a tombstone
+                Slice keySlice;
+                using (DocumentKeyWorker.GetSliceFromKey(ctx, conflict.LoweredKey, out keySlice))
                 {
-                    // update change vector
-                    AddTombstoneOnReplicationIfRelevant(
-                    ctx, conflict.LoweredKey, _documentDatabase.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
+                    Delete(ctx, keySlice, conflict.LoweredKey, null, 
+                        _documentDatabase.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
                     return;
-                }
-                // the resolved document is a tombstone
-                DeleteConflictsFor(ctx, conflict.LoweredKey);
-                AddTombstoneOnReplicationIfRelevant(
-                    ctx, conflict.LoweredKey, _documentDatabase.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
-                return;
+                }              
             }
 
             // because we are resolving to a conflict, and putting a document will
@@ -1833,8 +1827,6 @@ namespace Raven.Server.Documents
                                 break; // we'll add this conflict if no one else also includes it
                             case IncomingReplicationHandler.ConflictStatus.AlreadyMerged:
                                 return; // we already have a conflict that includes this version
-                            // ReSharper disable once RedundantCaseLabel
-                            case IncomingReplicationHandler.ConflictStatus.ShouldResolveConflict:
                             default:
                                 throw new ArgumentOutOfRangeException("Invalid conflict status " + conflictStatus);
                         }
@@ -1933,7 +1925,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             bool knownNewKey = false;
-
+            bool fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
             if (string.IsNullOrWhiteSpace(key))
             {
                 key = Guid.NewGuid().ToString();
@@ -1961,7 +1953,20 @@ namespace Raven.Server.Documents
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             if (_conflictCount != 0)
-                changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
+            {
+                // Since this document resolve the conflict we dont need to alter the change vector.
+                // This way we avoid another replication back to the source
+
+                if (fromReplication)
+                {
+                    DeleteConflictsFor(context, key);
+                }
+                else
+                {
+                    changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
+                }
+            }
+                
 
             // delete a tombstone if it exists, if it known that it is a new key, no need, so we can skip it
             if (knownNewKey == false)
@@ -1991,12 +1996,13 @@ namespace Raven.Server.Documents
                 if (collectionName.IsSystem == false && (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
                     bool hasVersion =
-                        _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
-                        key, document, changeVector) ?? false;
+                    _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
+                    key, document, changeVector) ?? false;
                     if (hasVersion)
                     {
                         flags |= DocumentFlags.Versioned;
                     }
+                               
                 }
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
