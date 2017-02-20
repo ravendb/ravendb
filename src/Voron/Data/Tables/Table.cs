@@ -355,22 +355,26 @@ namespace Voron.Data.Tables
             // Any changes done to this method should be reproduced in the Insert below, as they're used when compacting.
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
+
+            int size = builder.Size;
+
+            byte* pos;
+            long id;
+
             using (var add = _tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats)))
             {
                 var stats = (TableSchemaStats*)add.Ptr;
                 NumberOfEntries++;
                 stats->NumberOfEntries = NumberOfEntries;
 
-                int size = builder.Size;
-
-                byte* pos;
-                long id;
+               
                 if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
                 {
                     id = AllocateFromSmallActiveSection(size);
 
                     if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-                        throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
+                        throw new InvalidOperationException(
+                            $"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
 
                     // Memory Copy into final position.
                     builder.CopyTo(pos);
@@ -390,12 +394,12 @@ namespace Voron.Data.Tables
                     builder.CopyTo(pos);
                     id = page.PageNumber * Constants.Storage.PageSize;
                 }
-
-                var tvr = new TableValueReader(pos, size);
-                InsertIndexValuesFor(id, ref tvr);
-
-                return id;
             }
+
+            var tvr = new TableValueReader(pos, size);
+            InsertIndexValuesFor(id, ref tvr);
+
+            return id;
         }
 
         private void UpdateValuesFromIndex(long id, ref TableValueReader oldVer, TableValueBuilder newVer)
