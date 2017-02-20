@@ -104,6 +104,8 @@ namespace Raven.Client
 
                 public const string RavenClrType = "Raven-Clr-Type";
 
+                public const string ChangeVector = "@change-vector";
+
                 public const string HasValue = "HasValue";
             }
 
@@ -200,6 +202,8 @@ namespace Raven.Client
 
             public class Replication
             {
+                public const string ChangeVector = "@change-vector";
+
                 public const string AllDocumentsCollection = Indexing.AllDocumentsCollection;
 
                 public const string ReplicationDestinationsId = "Raven/Replication/Destinations";

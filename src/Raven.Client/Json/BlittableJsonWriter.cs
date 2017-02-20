@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
 using Sparrow.Extensions;
@@ -63,15 +64,47 @@ namespace Raven.Client.Json
                 {
                     var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                     _documentInfo.Metadata.GetPropertyByIndex(id, ref propertyDetails);
-
                     _manualBlittalbeJsonDocumentBuilder.WritePropertyName(propertyDetails.Name);
+
                     switch (propertyDetails.Token)
                     {
+                        //in this case it can only be change vector (since it is the only array in the metadata)
+                        //not sure how viable/maintenable this is.
+                        case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeByte:
+                            _manualBlittalbeJsonDocumentBuilder.StartWriteArray();
+                            var changeVectorArray = propertyDetails.Value as BlittableJsonReaderArray;
+                            if (changeVectorArray != null)
+                            {
+                                var changeVectorEntryPropDetails = new BlittableJsonReaderObject.PropertyDetails();
+                                foreach (BlittableJsonReaderObject entry in changeVectorArray)
+                                {
+                                    _manualBlittalbeJsonDocumentBuilder.StartWriteObject();
+                                    var propsIndexes = entry.GetPropertiesByInsertionOrder();
+                                    foreach (var index in propsIndexes)
+                                    {
+                                        entry.GetPropertyByIndex(index, ref changeVectorEntryPropDetails);
+                                        _manualBlittalbeJsonDocumentBuilder.WritePropertyName(changeVectorEntryPropDetails.Name);
+                                        switch (changeVectorEntryPropDetails.Token)
+                                        {
+                                            case BlittableJsonToken.Integer:
+                                                _manualBlittalbeJsonDocumentBuilder.WriteValue((long)changeVectorEntryPropDetails.Value);
+                                                break;
+                                            case BlittableJsonToken.String:
+                                                _manualBlittalbeJsonDocumentBuilder.WriteValue(changeVectorEntryPropDetails.Value.ToString());
+                                                break;
+                                        }
+
+                                    }
+                                    _manualBlittalbeJsonDocumentBuilder.WriteObjectEnd();
+                                }
+                            }
+                            _manualBlittalbeJsonDocumentBuilder.WriteArrayEnd();
+                            break;
                         case BlittableJsonToken.Integer:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue((long)propertyDetails.Value);
+                            _manualBlittalbeJsonDocumentBuilder.WriteValue((long) propertyDetails.Value);
                             break;
                         case BlittableJsonToken.Float:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue((float)propertyDetails.Value);
+                            _manualBlittalbeJsonDocumentBuilder.WriteValue((float) propertyDetails.Value);
                             break;
                         case BlittableJsonToken.String:
                             _manualBlittalbeJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());
@@ -80,7 +113,7 @@ namespace Raven.Client.Json
                             _manualBlittalbeJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());
                             break;
                         case BlittableJsonToken.Boolean:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue((bool)propertyDetails.Value);
+                            _manualBlittalbeJsonDocumentBuilder.WriteValue((bool) propertyDetails.Value);
                             break;
                         case BlittableJsonToken.Null:
                             _manualBlittalbeJsonDocumentBuilder.WriteValueNull();

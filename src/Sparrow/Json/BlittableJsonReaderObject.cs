@@ -31,13 +31,13 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
-            var memoryStream = new MemoryStream();
+            using (var memoryStream = new MemoryStream())
+            {
+                WriteJsonTo(memoryStream);
+                memoryStream.Position = 0;
 
-            WriteJsonTo(memoryStream);
-
-            memoryStream.Position = 0;
-
-            return new StreamReader(memoryStream).ReadToEnd();
+                return new StreamReader(memoryStream).ReadToEnd();
+            }
         }
 
         public void WriteJsonTo(Stream stream)
