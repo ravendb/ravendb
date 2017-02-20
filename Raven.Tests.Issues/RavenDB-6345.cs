@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_6345: RavenTest
+    public class RavenDB_6345 : RavenTest
     {
         [Fact]
         void NotOperatorShouldBeInvokedOnTheProperAstNode()
@@ -19,10 +15,10 @@ namespace Raven.Tests.Issues
                 store.ExecuteIndex(new SomeClassIndex());
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new SomeClass {Culture = "EU",CatalogId = "Catalog/Test",ModelId = 4});
+                    session.Store(new SomeClass { Culture = "EU", CatalogId = "Catalog/Test", ModelId = 4 });
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    var query = session.Advanced.DocumentQuery<SomeClass>("SomeClassIndex").WhereEquals("Culture","EU").AndAlso().Not.WhereEquals("ModelId",4).AndAlso().WhereEquals("CatalogId", "Catalog/Test");
+                    var query = session.Query<SomeClass>("SomeClassIndex").Where(x => x.Culture.Equals("EU") && !(x.ModelId == 4 || x.ModelId == 5) && x.CatalogId == "Catalog/Test");
                     Assert.Empty(query.ToList());
                 }
             }
@@ -32,7 +28,7 @@ namespace Raven.Tests.Issues
         {
             public SomeClassIndex()
             {
-                Map = docs => from doc in docs select new {doc.Culture,doc.ModelId,doc.CatalogId};
+                Map = docs => from doc in docs select new { doc.Culture, doc.ModelId, doc.CatalogId };
             }
         }
         public class SomeClass

@@ -133,7 +133,14 @@ namespace Raven.Client.Linq
                                 documentQuery.CloseSubclause();
                                 break;
                             default:
-                                throw new ArgumentOutOfRangeException(unaryExpressionOp.NodeType.ToString());
+                                //probably the case of !(complex condition)
+                                documentQuery.OpenSubclause();
+                                documentQuery.Where("*:*");
+                                documentQuery.AndAlso();
+                                documentQuery.NegateNext();
+                                VisitExpression(unaryExpressionOp);
+                                documentQuery.CloseSubclause();
+                                break;
                         }
                         break;
                     case ExpressionType.Convert:
