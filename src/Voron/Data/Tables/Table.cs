@@ -584,7 +584,11 @@ namespace Voron.Data.Tables
                     }
                 }
 
-                const ushort maxSectionSizeInPages = (32 * Constants.Size.Megabyte)/Constants.Storage.PageSize;
+                ushort maxSectionSizeInPages =
+                    _tx.LowLevelTransaction.Environment.Options.RunningOn32Bits
+                        ? (ushort) ((1*Constants.Size.Megabyte)/Constants.Storage.PageSize)
+                        : (ushort) ((32*Constants.Size.Megabyte)/Constants.Storage.PageSize);
+
                 var newNumberOfPages = Math.Min(maxSectionSizeInPages,
                     (ushort) (ActiveDataSmallSection.NumberOfPages * 2));
 
