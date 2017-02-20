@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-                var contentType = GetStringQueryString("contentType");
+                var contentType = GetStringQueryString("contentType", false) ?? "";
 
                 var tempPath = GetUniqueTempFileName(Path.GetTempPath(), "tmp");
                 using (var file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose) )
