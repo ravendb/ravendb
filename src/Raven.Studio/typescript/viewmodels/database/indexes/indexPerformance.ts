@@ -20,18 +20,13 @@ type rTreeLeaf = {
     arg: any;
 }
 
-interface IndexingPerformanceGap {
-    DurationInMilliseconds: number;
-    StartTime: string;     
-}
-
 class hitTest {
     cursor = ko.observable<string>("auto");
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
     private onToggleIndex: (indexName: string) => void;
-    private handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;
-    private handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void;
+    private handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;   
+    private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
    
     reset() {
@@ -40,8 +35,8 @@ class hitTest {
 
     init(container: d3.Selection<any>,
         onToggleIndex: (indeName: string) => void,
-        handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,
-        handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void,
+        handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,       
+        handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
         removeTooltip: () => void) {       
         this.container = container;
         this.onToggleIndex = onToggleIndex;
@@ -73,8 +68,8 @@ class hitTest {
         } as rTreeLeaf;
         this.rTree.insert(data);
     }
-
-    registerGapItem(x: number, y: number, width: number, height: number, element: IndexingPerformanceGap) {
+   
+    registerGapItem(x: number, y: number, width: number, height: number, element: timeGapInfo) {
         const data = {
             minX: x,
             minY: y,
@@ -113,7 +108,7 @@ class hitTest {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);           
         }
         else {
-            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as IndexingPerformanceGap)[0];
+            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
             if (currentGapItem) {
                 this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
             }
@@ -226,7 +221,7 @@ class metrics extends viewModelBase {
     private currentYOffset = 0;
     private maxYOffset = 0;
     private hitTest = new hitTest();
-    private tooltip: d3.Selection<Raven.Client.Documents.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap>;   
+    private tooltip: d3.Selection<Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo>;   
 
     private inProgressAnimator: inProgressAnimator;
     private inProgressMarkerCanvas: HTMLCanvasElement;
@@ -540,7 +535,7 @@ class metrics extends viewModelBase {
             .range([0, metrics.brushSectionIndexesWorkHeight]); 
 
         const context = this.brushSection.getContext("2d");
-        this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
+        this.drawXaxis(context, this.xBrushTimeScale, 0, metrics.brushSectionHeight, 5, 5);
 
         context.strokeStyle = metrics.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth, metrics.brushSectionHeight - 1);
@@ -665,38 +660,41 @@ class metrics extends viewModelBase {
         this.maxYOffset = Math.max(offset + extraBottomMargin - availableHeightForTracks, 0);
     }
 
-    private drawXaxis(context: CanvasRenderingContext2D, scale: d3.time.Scale<number, number>, height: number) {
-        context.save();
+    private drawXaxis(context: CanvasRenderingContext2D, scale: d3.time.Scale<number, number>, yStart: number, yEnd: number, timePaddingLeft: number, timePaddingTop: number) {
+        try {
+            context.save();
 
-        const step = 200;
-        const initialOffset = 100;
+            const step = 200;
+            const initialOffset = 100;
 
-        const ticks = d3.range(initialOffset, this.totalWidth - step, step)
-            .map(y => scale.invert(y));
+            const ticks = d3.range(initialOffset, this.totalWidth - step, step)
+                .map(y => scale.invert(y));
 
-        context.strokeStyle = metrics.colors.axis;
-        context.fillStyle = metrics.colors.axis;
+            context.strokeStyle = metrics.colors.axis;
+            context.fillStyle = metrics.colors.axis;
 
-        context.beginPath();
-        context.setLineDash([4, 2]);
+            // 1. Draw vertical dotted lines in brush section
+            context.beginPath();
+            context.setLineDash([4, 2]);
+            ticks.forEach((x, i) => {
+                context.moveTo(initialOffset + (i * step) + 0.5, yStart);
+                context.lineTo(initialOffset + (i * step) + 0.5, yEnd);
+            });
+            context.stroke();
 
-        ticks.forEach((x, i) => {
-            context.moveTo(initialOffset + (i * step) + 0.5, 0);
-            context.lineTo(initialOffset + (i * step) + 0.5, height);
-        });
-        context.stroke();
-
-        context.beginPath();
-
-        context.textAlign = "left";
-        context.textBaseline = "top";
-        context.font = "10px Lato";
-        ticks.forEach((x, i) => {
-            // draw text with 5px left padding
-            context.fillText(this.xTickFormat(x), initialOffset + (i * step) + 5, 5);
-        });
-        context.restore();
-    }
+            // 2. Draw the time
+            context.beginPath();
+            context.textAlign = "left";
+            context.textBaseline = "top";
+            context.font = "10px Lato";
+            ticks.forEach((x, i) => {
+                context.fillText(this.xTickFormat(x), initialOffset + (i * step) + timePaddingLeft, timePaddingTop);
+            });
+        }
+        finally {
+            context.restore();
+        }
+    }   
 
     private onZoom() {
         this.autoScroll(false);
@@ -758,7 +756,7 @@ class metrics extends viewModelBase {
             this.drawTracksBackground(context, xScale);
 
             if (xScale.domain().length) {
-                this.drawXaxis(context, xScale, this.totalHeight);
+                this.drawXaxis(context, xScale, this.yScale(this.data[0].IndexName) - 3, this.totalHeight, -20, 17);
             }
 
             context.save();
@@ -947,7 +945,7 @@ class metrics extends viewModelBase {
             const gapInfo = this.gapFinder.gapsPositions[indexToGapFinderPosition];
             if (gapInfo) {
                 this.hitTest.registerGapItem(gapX - 5, metrics.axisHeight, 10, this.totalHeight,
-                    { DurationInMilliseconds: gapInfo.durationInMillis, StartTime: gapInfo.start.toLocaleTimeString() });
+                    { durationInMillis: gapInfo.durationInMillis, start: gapInfo.start });
             }
         }
     }
@@ -971,13 +969,13 @@ class metrics extends viewModelBase {
         this.expandedTracks([]);
         this.drawMainSection();
     }
-
-    private handleGapTooltip(element: IndexingPerformanceGap, x: number, y: number) {
+   
+    private handleGapTooltip(element: timeGapInfo, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            const tooltipHtml = "Gap start time: " + (element).StartTime +
-                                  "<br/>Gap duration: " + generalUtils.formatMillis((element).DurationInMilliseconds);       
+            const tooltipHtml = "Gap start time: " + (element).start.toLocaleTimeString() +
+                "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);       
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     } 
@@ -1017,17 +1015,17 @@ class metrics extends viewModelBase {
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
-
-    private handleTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap, x: number, y: number, tooltipHtml: string) {
+    
+    private handleTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo, x: number, y: number, tooltipHtml: string) {
         if (element && !this.dialogVisible) {
             const canvas = this.canvas.node() as HTMLCanvasElement;
             const context = canvas.getContext("2d");
             context.font = this.tooltip.style("font");
 
-            const longestLine = generalUtils.findLongestLineInTooltip(tooltipHtml);
+            const longestLine = generalUtils.findLongestLine(tooltipHtml); 
             const tooltipWidth = context.measureText(longestLine).width + 60;
 
-            const numberOfLines = generalUtils.findNumberOfLinesInTooltip(tooltipHtml);
+            const numberOfLines = generalUtils.findNumberOfLines(tooltipHtml);
             const tooltipHeight = numberOfLines * 30 + 60;
 
             x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));

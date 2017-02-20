@@ -18,19 +18,13 @@ type rTreeLeaf = {
     arg: any;
 }
 
-// TODO: change to a general 'TimeGap' interface, for both IOStats & IndexingPerformance viewmodels
-interface IndexingPerformanceGap {
-    DurationInMilliseconds: number;
-    StartTime: string;
-}
-
 class hitTest {
     cursor = ko.observable<string>("auto");   
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;    
     private onToggleIndexes: () => void;
     private handleTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void;
-    private handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void;
+    private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
 
     reset() {
@@ -40,7 +34,7 @@ class hitTest {
     init(container: d3.Selection<any>,
         onToggleIndexes: () => void,
         handleTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void,
-        handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void,
+        handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
         removeTooltip: () => void) {
         this.container = container;
         this.onToggleIndexes = onToggleIndexes;
@@ -72,7 +66,7 @@ class hitTest {
         this.rTree.insert(data);
     }
 
-    registerGapItem(x: number, y: number, width: number, height: number, element: IndexingPerformanceGap) {
+    registerGapItem(x: number, y: number, width: number, height: number, element: timeGapInfo) {
         const data = {
             minX: x,
             minY: y,
@@ -111,7 +105,7 @@ class hitTest {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);          
         }
         else {
-            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as IndexingPerformanceGap)[0];
+            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
             if (currentGapItem) {
                 this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
             }
@@ -224,7 +218,7 @@ class metrics extends viewModelBase {
     private brushContainer: d3.Selection<any>;
     private zoom: d3.behavior.Zoom<any>;
     private yScale: d3.scale.Ordinal<string, number>;
-    private tooltip: d3.Selection<Raven.Server.Documents.Handlers.IOMetricsRecentStats | IndexingPerformanceGap>; 
+    private tooltip: d3.Selection<Raven.Server.Documents.Handlers.IOMetricsRecentStats | timeGapInfo>; 
 
     constructor() {
         super();
@@ -433,7 +427,7 @@ class metrics extends viewModelBase {
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
 
         const context = this.brushSection.getContext("2d");
-        this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
+        this.drawXaxis(context, this.xBrushTimeScale, 0, metrics.brushSectionHeight, 5, 5);
 
         context.strokeStyle = metrics.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
@@ -610,10 +604,10 @@ class metrics extends viewModelBase {
         return Array.from(result);
     }
 
-    private drawXaxis(context: CanvasRenderingContext2D, scale: d3.time.Scale<number, number>, height: number) {
+    private drawXaxis(context: CanvasRenderingContext2D, scale: d3.time.Scale<number, number>, yStart: number, yEnd: number, timePaddingLeft: number, timePaddingTop: number) {
         try {
             context.save();
-           
+
             const step = 200;
             const initialOffset = 100;
 
@@ -623,12 +617,12 @@ class metrics extends viewModelBase {
             context.strokeStyle = metrics.colors.axis;
             context.fillStyle = metrics.colors.axis;
 
-            // 1. Draw vertical dotted lines
+            // 1. Draw vertical dotted lines in brush section
             context.beginPath();
             context.setLineDash([4, 2]);
-            ticks.forEach((x, i) => {
-                context.moveTo(initialOffset + (i * step) + 0.5, 0);
-                context.lineTo(initialOffset + (i * step) + 0.5, height);
+            ticks.forEach((x, i) => {                
+                context.moveTo(initialOffset + (i * step) + 0.5, yStart);
+                context.lineTo(initialOffset + (i * step) + 0.5, yEnd);
             });
             context.stroke();
 
@@ -637,13 +631,13 @@ class metrics extends viewModelBase {
             context.textAlign = "left";
             context.textBaseline = "top";
             context.font = "10px Lato";
-            ticks.forEach((x, i) => {               
-                context.fillText(this.xTickFormat(x), initialOffset + (i * step) + 5, 5); // 5px left padding
+            ticks.forEach((x, i) => {              
+                context.fillText(this.xTickFormat(x), initialOffset + (i * step) + timePaddingLeft, timePaddingTop); 
             });
         }
         finally {
             context.restore();
-        }             
+        }
     }
 
     private onZoom() {
@@ -690,9 +684,9 @@ class metrics extends viewModelBase {
             // 1. Draw tracks background 
             this.drawTracksBackground(context, xScale);           
 
-            // 2. Draw the vertical dotted lines                  
+            // 2. Draw vertical dotted lines in main section                  
             if (xScale.domain().length) {
-                this.drawXaxis(context, xScale, this.totalHeight);
+                this.drawXaxis(context, xScale, this.yScale(this.data.Environments[0].Path) - 3, this.totalHeight, -20, 17);
             }          
 
             // 3. Draw all other data (track name + items on track)                                 
@@ -864,7 +858,7 @@ class metrics extends viewModelBase {
             if (gapInfo) {
                 // Register gap for tooltip 
                 this.hitTest.registerGapItem(gapX - 5, metrics.axisHeight, 10, this.totalHeight,
-                    { DurationInMilliseconds: gapInfo.durationInMillis, StartTime: gapInfo.start.toLocaleTimeString() });
+                    { durationInMillis: gapInfo.durationInMillis, start: gapInfo.start });
             }
         }
     }
@@ -1066,12 +1060,12 @@ class metrics extends viewModelBase {
     * The following methods are called by hitTest class on mouse move    
     */
 
-    private handleGapTooltip(element: IndexingPerformanceGap, x: number, y: number) {
+    private handleGapTooltip(element: timeGapInfo, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            const tooltipHtml = "Gap start time: " + (element).StartTime +
-                "<br/>Gap duration: " + generalUtils.formatMillis((element).DurationInMilliseconds);
+            const tooltipHtml = "Gap start time: " + (element).start.toLocaleTimeString() +
+                "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
@@ -1098,16 +1092,16 @@ class metrics extends viewModelBase {
         }
     }
 
-    private handleTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats | IndexingPerformanceGap, x: number, y: number, tooltipHtml: string) {
+    private handleTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats | timeGapInfo, x: number, y: number, tooltipHtml: string) {
         if (element) {         
             const canvas = this.canvas.node() as HTMLCanvasElement;
             const context = canvas.getContext("2d");
             context.font = this.tooltip.style("font"); 
           
-            const longestLine = generalUtils.findLongestLineInTooltip(tooltipHtml);               
+            const longestLine = generalUtils.findLongestLine(tooltipHtml);               
             const tooltipWidth = context.measureText(longestLine).width + 60;
           
-            const numberOfLines = generalUtils.findNumberOfLinesInTooltip(tooltipHtml);
+            const numberOfLines = generalUtils.findNumberOfLines(tooltipHtml);
             const tooltipHeight = numberOfLines * 30 + 60;      
 
             x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
@@ -1141,4 +1135,3 @@ class metrics extends viewModelBase {
 }
 
 export = metrics;
-

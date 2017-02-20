@@ -192,16 +192,16 @@ class genUtils {
         return result;
     };
 
-    static findLongestLineInTooltip(tooltipText: string) : string {
-        // Find and return the longest line in the tooltip text
-        const tooltipTextLines = tooltipText.split("<br/>");
-        return tooltipTextLines.reduce(function (a, b) { return a.length > b.length ? a : b; });
+    static findLongestLine(htmlText: string, lineSeparator: string = "<br/>") : string {
+        // Find and return the longest line in an html text
+        const textLines = htmlText.split(lineSeparator);       
+        return textLines.reduce((a, b) => (a.length > b.length) ? a : b, "");
     }
 
-    static findNumberOfLinesInTooltip(tooltipText: string): number {
-        // Find and return the number of lines in the tooltip text
-        const tooltipTextLines = tooltipText.split("<br/>");
-        return tooltipTextLines.length;
+    static findNumberOfLines(htmlText: string, lineSeparator: string = "<br/>"): number {
+        // Find and return the number of lines in an html text
+        const textLines = htmlText.split(lineSeparator);
+        return textLines.length;
     }
 } 
 export = genUtils;
