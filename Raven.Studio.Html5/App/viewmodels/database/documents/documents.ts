@@ -276,7 +276,6 @@ class documents extends viewModelBase {
 
         this.fetchCollections(db).done(results => {
             this.updateCollections(results);
-            this.refreshCollectionsData();
             deferred.resolve();
         });
 
