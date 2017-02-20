@@ -25,6 +25,14 @@ namespace Raven.Server.Rachis
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
         }
 
+        public RemoteConnection(string debugSource, Stream stream)
+        {
+            _debugSource = debugSource;
+            _log = LoggingSource.Instance.GetLogger<RemoteConnection>(debugSource);
+            _stream = stream;
+            _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
+        }
+
         public void Send(JsonOperationContext context, RachisHello helloMsg)
         {
             Send(context, new DynamicJsonValue
@@ -48,7 +56,7 @@ namespace Raven.Server.Rachis
         {
             using (var writer = new BlittableJsonTextWriter(context, _stream))
             {
-                Console.WriteLine(msg);
+                Console.WriteLine(_debugSource +" -> "+  msg);
 
                 context.Write(writer, msg);
             }
@@ -275,7 +283,6 @@ namespace Raven.Server.Rachis
 
         public RachisHello InitFollower(JsonOperationContext context)
         {
-            ;
             using (
                 var json = context.ParseToMemory(_stream, "rachis-initial-msg",
                     BlittableJsonDocumentBuilder.UsageMode.None, _buffer))
@@ -303,7 +310,7 @@ namespace Raven.Server.Rachis
 
         private static void ThrowUnexpectedMessage(string expectedType, BlittableJsonReaderObject json)
         {
-            throw new InvalidOperationException(
+            throw new InvalidDataException(
                 $"Expected to get type of \'{expectedType}\' message, but got unkonwn message: {json}");
         }
     }

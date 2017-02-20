@@ -8,9 +8,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Server.Kestrel.Internal;
+using Org.BouncyCastle.Crypto;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -133,8 +135,10 @@ namespace Raven.Server.Rachis
             });
         }
 
-        public int ElectionTimeoutMs = 300;
+        public int ElectionTimeoutMs = Debugger.IsAttached ? 3000 : 300;
+
         private Leader _currentLeader;
+        private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>();
 
         protected RachisConsensus(StorageEnvironmentOptions options, string url)
         {
@@ -207,6 +211,45 @@ namespace Raven.Server.Rachis
         }
 
         protected abstract void InitializeState(TransactionOperationContext context);
+
+        public async Task WaitForTopology(Leader.TopologyModification modification)
+        {
+            while (true)
+            {
+                var task = _topologyChanged.Task;
+                TransactionOperationContext context;
+                using (ContextPool.AllocateOperationContext(out context))
+                using (context.OpenReadTransaction())
+                {
+                    var clusterTopology = GetTopology(context);
+                    switch (modification)
+                    {
+                        case Leader.TopologyModification.Voter:
+                            if (clusterTopology.Voters.Contains(_url))
+                                return;
+                            break;
+                        case Leader.TopologyModification.Promotable:
+                            if (clusterTopology.Promotables.Contains(_url))
+                                return;
+                            break;
+                        case Leader.TopologyModification.NonVoter:
+                            if (clusterTopology.NonVotingMembers.Contains(_url))
+                                return;
+                            break;
+                        case Leader.TopologyModification.Remove:
+                            if (clusterTopology.Voters.Contains(_url) == false &&
+                                clusterTopology.Promotables.Contains(_url) == false &&
+                                clusterTopology.NonVotingMembers.Contains(_url) == false)
+                                return;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
+                    }
+                }
+
+                await task;
+            }
+        }
 
         public void SetNewState(State state, IDisposable disposable)
         {
@@ -319,14 +362,13 @@ namespace Raven.Server.Rachis
         {
             Debug.Assert(context.Transaction != null);
             var tx = context.Transaction.InnerTransaction;
-            var topologyJson = SetTopology(tx, context, topology);
+            var topologyJson = SetTopology(this, tx, context, topology);
 
             return topologyJson;
         }
 
-        private static unsafe BlittableJsonReaderObject SetTopology(Transaction tx, JsonOperationContext context, ClusterTopology topology)
+        private static BlittableJsonReaderObject SetTopology(RachisConsensus engine,Transaction tx, JsonOperationContext context, ClusterTopology topology)
         {
-
             var djv = new DynamicJsonValue
             {
                 [nameof(ClusterTopology.TopologyId)] = topology.TopologyId,
@@ -338,28 +380,39 @@ namespace Raven.Server.Rachis
 
             var topologyJson = context.ReadObject(djv, "topology");
 
-            SetTopology(tx, topologyJson);
+            SetTopology(engine, tx, topologyJson);
+
             return topologyJson;
         }
 
-        public static unsafe void SetTopology(Transaction tx, BlittableJsonReaderObject topologyJson)
+        public static unsafe void SetTopology(RachisConsensus engine, Transaction tx, BlittableJsonReaderObject topologyJson)
         {
             var state = tx.CreateTree(GlobalStateSlice);
             var ptr = state.DirectAdd(TopologySlice, topologyJson.Size);
             topologyJson.CopyTo(ptr);
+
+            if (engine == null)
+                return;
+
+
+            tx.LowLevelTransaction.OnDispose += _ =>
+            {
+                Interlocked.Exchange(ref engine._topologyChanged, new TaskCompletionSource<object>()).TrySetResult(null);
+            };
+
+
         }
 
         public string GetDebugInformation()
         {
-            // TODO: Full debug information (maching name, port, ip, etc)
-            return Environment.MachineName;
+            return _url;
         }
 
         /// <summary>
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
         /// </summary>
-        public void AcceptNewConnection(TcpClient tcpClient)
+        public void AcceptNewConnection(TcpClient tcpClient, Action<RachisHello> sayHello = null)
         {
             RemoteConnection remoteConnection = null;
             try
@@ -373,6 +426,7 @@ namespace Raven.Server.Rachis
                     using (ContextPool.AllocateOperationContext(out context))
                     {
                         initialMessage = remoteConnection.InitFollower(context);
+                        sayHello?.Invoke(initialMessage);
                         using (context.OpenReadTransaction())
                         {
                             clusterTopology = GetTopology(context);
@@ -474,18 +528,18 @@ namespace Raven.Server.Rachis
 
         public unsafe void TruncateLogBefore(TransactionOperationContext context, long upto)
         {
-            long lastCommitIndex;
-            long lastCommitTerm;
-            GetLastCommitIndex(context,out lastCommitIndex, out lastCommitTerm);
+            long lastIndex;
+            long lastTerm;
+            GetLastCommitIndex(context,out lastIndex, out lastTerm);
 
             long entryTerm;
             long entryIndex;
 
-            if (lastCommitIndex < upto)
+            if (lastIndex < upto)
             {
-                upto = lastCommitIndex;// max we can delete
-                entryIndex = lastCommitIndex;
-                entryTerm = lastCommitTerm;
+                upto = lastIndex;// max we can delete
+                entryIndex = lastIndex;
+                entryTerm = lastTerm;
             }
             else
             {
@@ -495,7 +549,12 @@ namespace Raven.Server.Rachis
                 entryIndex = upto;
                 entryTerm = maybeTerm.Value;
             }
+            GetLastTruncated(context, out lastIndex, out lastTerm);
 
+            if (lastIndex >= upto)
+                return;
+
+            Console.WriteLine(upto);
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             while (true)
@@ -515,14 +574,13 @@ namespace Raven.Server.Rachis
 
                 table.Delete(reader.Id);
             }
-
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             var data = (long*) state.DirectAdd(LastTruncatedSlice, sizeof(long)*2);
             data[0] = entryIndex;
             data[1] = entryTerm;
         }
 
-        public unsafe void AppendToLog(TransactionOperationContext context, List<RachisEntry> entries)
+        public unsafe BlittableJsonReaderObject AppendToLog(TransactionOperationContext context, List<RachisEntry> entries)
         {
             Debug.Assert(entries.Count > 0);
             Debug.Assert(context.Transaction != null);
@@ -530,6 +588,8 @@ namespace Raven.Server.Rachis
 
             var firstIndexToFind = entries[0].Index;
             long reversedEntryIndex = Bits.SwapBytes(firstIndexToFind - 1);
+
+            BlittableJsonReaderObject lastTopology = null;
 
             Slice key;
             using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long), out key))
@@ -556,14 +616,16 @@ namespace Raven.Server.Rachis
                     var entry = entries[index];
                     if (entry.Index != prevIndex + 1)
                     {
-                        throw new InvalidOperationException($"Gap in the entries, prev was {prevIndex} but now trying {entry.Index}");
+                        throw new InvalidOperationException(
+                            $"Gap in the entries, prev was {prevIndex} but now trying {entry.Index}");
                     }
+
                     prevIndex = entry.Index;
                     reversedEntryIndex = Bits.SwapBytes(entry.Index);
                     if (table.ReadByKey(key, out reader)) // already exists
                     {
                         int size;
-                        var term = *(long*)reader.Read(1, out size);
+                        var term = *(long*) reader.Read(1, out size);
                         Debug.Assert(size == sizeof(long));
                         if (term == entry.Term)
                             continue; // same, can skip
@@ -582,18 +644,26 @@ namespace Raven.Server.Rachis
                         } while (table.ReadByKey(key, out reader));
                     }
 
-                    using (var nested = context.ReadObject(entry.Entry, "entry"))
+                    var nested = context.ReadObject(entry.Entry, "entry");
+                    table.Insert(new TableValueBuilder
                     {
-                        table.Insert(new TableValueBuilder
-                        {
-                            reversedEntryIndex,
-                            entry.Term,
-                            {nested.BasePointer, nested.Size},
-                            (int)entry.Flags
-                        });
+                        reversedEntryIndex,
+                        entry.Term,
+                        {nested.BasePointer, nested.Size},
+                        (int) entry.Flags
+                    });
+                    if (entry.Flags == RachisEntryFlags.Topology)
+                    {
+                        lastTopology?.Dispose();
+                        lastTopology = nested;
+                    }
+                    else
+                    {
+                        nested.Dispose();
                     }
                 }
             }
+            return lastTopology;
         }
 
         private static void GetLastTruncated(TransactionOperationContext context, out long lastTruncatedIndex, out long lastTruncatedTerm)
@@ -836,6 +906,7 @@ namespace Raven.Server.Rachis
 
         public virtual void Dispose()
         {
+            ThreadPool.QueueUserWorkItem(_ => _topologyChanged.TrySetCanceled());
             ContextPool?.Dispose();
             _persistentState?.Dispose();
             _options?.Dispose();
@@ -873,7 +944,7 @@ namespace Raven.Server.Rachis
                             new string[0],
                             new string[0]);
 
-                        SetTopology(tx, ctx, topology);
+                        SetTopology(null, tx, ctx, topology);
 
                         tx.Commit();
                     }

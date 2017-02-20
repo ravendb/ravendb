@@ -59,7 +59,14 @@ namespace Raven.Server.Rachis
                         {
                             if (entries.Count > 0)
                             {
-                                _engine.AppendToLog(context, entries);
+                                using (var lastTopology = _engine.AppendToLog(context, entries))
+                                {
+                                    if (lastTopology != null)
+                                    {
+                                        RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction,
+                                            lastTopology);
+                                    }
+                                }
                             }
 
                             lastLogIndex = _engine.GetLastEntryIndex(context);
@@ -171,7 +178,7 @@ namespace Raven.Server.Rachis
                 // snapshot always has the latest topology
                 if (snapshot.Topology == null)
                     throw new InvalidOperationException("Expected to get topology on snapshot");
-                RachisConsensus.SetTopology(context.Transaction.InnerTransaction, snapshot.Topology);
+                RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, snapshot.Topology);
 
                 context.Transaction.Commit();
             }

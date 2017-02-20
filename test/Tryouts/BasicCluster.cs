@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -19,6 +21,44 @@ namespace Tryouts
 {
     public class BasicCluster : IDisposable
     {
+        [Fact]
+        public async Task ClusterWithThreeNodesAndElections()
+        {
+            var a = SetupServer(true);
+            var b = SetupServer();
+            var c = SetupServer();
+
+            var bUpgraded = b.WaitForTopology(Leader.TopologyModification.Voter);
+            var cUpgraded = c.WaitForTopology(Leader.TopologyModification.Voter);
+
+            await a.AddToClusterAsync(b.Url);
+            await a.AddToClusterAsync(c.Url);
+
+            await bUpgraded;
+            await cUpgraded;
+
+
+            Console.WriteLine("READY!!!");
+
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    {
+                        ["Name"] = "test",
+                        ["Value"] = i
+                    }, "test"));
+                }
+            }
+
+            Disconnect(b.Url, a.Url);
+            Disconnect(c.Url, a.Url);
+
+            Console.ReadLine();
+
+        }
+
         [Fact]
         public async Task ClusterWithLateJoiningNodeRequiringSnapshot()
         {
@@ -111,11 +151,14 @@ namespace Tryouts
         private readonly List<RachisConsensus> _rachisConsensuses = new List<RachisConsensus>();
         private readonly List<Task> _mustBeSuccessfulTasks = new List<Task>();
 
+        private int _count;
+
         private RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, 0);
             tcpListener.Start();
-            var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port;
+            var url = "http://localhost:" + ((IPEndPoint) tcpListener.LocalEndpoint).Port + "/# < " +
+                      (char) (65 + (_count++)) + " >";
 
             var serverA = StorageEnvironmentOptions.CreateMemoryOnly();
             if (bootstrap)
@@ -128,6 +171,32 @@ namespace Tryouts
             var task = AcceptConnection(tcpListener, rachis);
             _mustBeSuccessfulTasks.Add(task);
             return rachis;
+        }
+
+        private readonly ConcurrentDictionary<string, ConcurrentSet<string>> _rejectionList = new ConcurrentDictionary<string, ConcurrentSet<string>>();
+        private ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>> _connections = new ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>>();
+
+
+        protected void Disconnect(string to, string from)
+        {
+            lock (this)
+            {
+                var rejections = _rejectionList.GetOrAdd(to, _ => new ConcurrentSet<string>());
+                rejections.Add(from);
+
+                ConcurrentSet<Tuple<string, TcpClient>> set;
+                if (_connections.TryGetValue(to, out set))
+                {
+                    foreach (var tuple in set)
+                    {
+                        if (tuple.Item1 == from)
+                        {
+                            set.TryRemove(tuple);
+                            tuple.Item2.Dispose();
+                        }
+                    }
+                }
+            }
         }
 
         private async Task AcceptConnection(TcpListener tcpListener, RachisConsensus rachis)
@@ -143,7 +212,17 @@ namespace Tryouts
                 {
                     break;
                 }
-                rachis.AcceptNewConnection(tcpClient);
+                rachis.AcceptNewConnection(tcpClient, hello =>
+                {
+                    lock (this)
+                    {
+                        ConcurrentSet<string> set;
+                        if (_rejectionList.TryGetValue(rachis.Url, out set) && set.Contains(hello.DebugSourceIdentifier))
+                            throw new EndOfStreamException("Simulated failure");
+                        var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
+                        connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
+                    }
+                });
             }
         }
 

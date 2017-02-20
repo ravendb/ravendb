@@ -73,7 +73,7 @@ namespace Raven.Server.Rachis
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        using (var connection = new RemoteConnection(stream))
+                        using (var connection = new RemoteConnection(_url, stream))
                         {
                             _engine.AppendStateDisposable(_candidate, connection);
                             while (_candidate.Running)

@@ -26,6 +26,7 @@ namespace Raven.Server.Rachis
         private readonly ConcurrentDictionary<long, TaskCompletionSource<object>> _entries =
             new ConcurrentDictionary<long, TaskCompletionSource<object>>();
 
+        private int _hasNewTopology;
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
         private readonly ManualResetEvent _voterResponded = new ManualResetEvent(false);
         private readonly ManualResetEvent _promotableUpdated = new ManualResetEvent(false);
@@ -190,7 +191,7 @@ namespace Raven.Server.Rachis
                             _newEntry.Reset();
                             // release any waiting ambasaddors to send immediately
                             var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
-                            old.TrySetResult(null);
+                            ThreadPool.QueueUserWorkItem(o => ((TaskCompletionSource<object>)o).TrySetResult(null), old);
                             if (_voters.Count == 0)
                                 goto case 1;
                             break;
@@ -214,11 +215,11 @@ namespace Raven.Server.Rachis
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                     if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
                     {
-                        LowestIndexInEntireCluster = lowestIndexInEntireCluster;
                         using (_engine.ContextPool.AllocateOperationContext(out context))
                         using (context.OpenWriteTransaction())
                         {
                             _engine.TruncateLogBefore(context, lowestIndexInEntireCluster);
+                            LowestIndexInEntireCluster = lowestIndexInEntireCluster;
                             context.Transaction.Commit();
                         }
                     }
@@ -255,12 +256,23 @@ namespace Raven.Server.Rachis
         private long _lastCommit;
         private void OnVoterConfirmation()
         {
+            TransactionOperationContext context;
+            if (Interlocked.CompareExchange(ref _hasNewTopology, 0, 1) != 0)
+            {
+                ClusterTopology clusterTopology;
+                using (_engine.ContextPool.AllocateOperationContext(out context))
+                using (context.OpenReadTransaction())
+                {
+                    clusterTopology = _engine.GetTopology(context);
+                }
+                RefreshAmbassadors(clusterTopology);
+            }
+
             var maxIndexOnQuorum = GetMaxIndexOnQuorum(VotersMajority);
 
             if (_lastCommit == maxIndexOnQuorum)
                 return; // nothing to do here
 
-            TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
             {
@@ -269,7 +281,7 @@ namespace Raven.Server.Rachis
                 if (_lastCommit == maxIndexOnQuorum)
                     return; // nothing to do here
 
-                if (_engine.GetTermFor(context, maxIndexOnQuorum) < _engine.CurrentTerm)
+                if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < _engine.CurrentTerm)
                     return;// can't commit until at least one entry from our term has been published
 
                 _lastCommit = maxIndexOnQuorum;
@@ -289,7 +301,7 @@ namespace Raven.Server.Rachis
                 TaskCompletionSource<object> value;
                 if (_entries.TryRemove(kvp.Key, out value))
                 {
-                    value.TrySetResult(null);
+                    ThreadPool.QueueUserWorkItem(o => ((TaskCompletionSource<object>)o).TrySetResult(null), value);
                 }
             }
             if (_entries.Count != 0)
@@ -432,11 +444,14 @@ namespace Raven.Server.Rachis
         {
             Running = false;
             _shutdownRequested.Set();
-            _newEntriesArrived.TrySetCanceled();
-            foreach (var entry in _entries)
+            ThreadPool.QueueUserWorkItem(_ =>
             {
-                entry.Value.TrySetCanceled();
-            }
+                _newEntriesArrived.TrySetCanceled();
+                foreach (var entry in _entries)
+                {
+                    entry.Value.TrySetCanceled();
+                }
+            });
             var ae = new ExceptionAggregator("Could not properly dispose Leader");
             foreach (var ambasaddor in _nonVoters)
             {
@@ -477,9 +492,6 @@ namespace Raven.Server.Rachis
 
         public bool TryModifyTopology(string node, TopologyModification modification, out Task task)
         {
-            TaskCompletionSource<object> tcs;
-
-            ClusterTopology clusterTopology;
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
@@ -490,7 +502,7 @@ namespace Raven.Server.Rachis
                     return false;
                 }
 
-                clusterTopology = _engine.GetTopology(context);
+                var clusterTopology = _engine.GetTopology(context);
 
                 switch (modification)
                 {
@@ -529,19 +541,18 @@ namespace Raven.Server.Rachis
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
+                TaskCompletionSource<object> tcs;
                 _entries[index] = tcs = new TaskCompletionSource<object>();
-                _topologyModification = tcs.Task.ContinueWith(_ =>
-                {
-                    _topologyModification = null;
-                });
+                _topologyModification = task = tcs.Task.ContinueWith(_ =>
+               {
+                   _topologyModification = null;
+               });
                 context.Transaction.Commit();
             }
-
+            Interlocked.Exchange(ref _hasNewTopology, 1);
+            _voterResponded.Set();
             _newEntry.Set();
 
-            RefreshAmbassadors(clusterTopology);
-
-            task = tcs.Task;
             return true;
         }
     }

@@ -88,7 +88,7 @@ namespace Raven.Server.Rachis
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        _connection = new RemoteConnection(stream);
+                        _connection = new RemoteConnection(_url,stream);
                         using (_connection)
                         {
                             _engine.AppendStateDisposable(_leader, _connection);
@@ -173,6 +173,15 @@ namespace Raven.Server.Rachis
                                 task.Wait(_engine.ElectionTimeoutMs / 3);
                             }
                         }
+                    }
+                    catch (Exception e)
+                    {
+                        Status = "Failed - " + e.Message;
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info("Failed to talk to remote follower: " + _url, e);
+                        }
+                        _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
                     }
                     finally
                     {
