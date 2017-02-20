@@ -31,16 +31,20 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void ReplaceIndexes(Index oldIndex, Index NewIndex)
+        public void ReplaceIndexes(Index oldIndex, Index newIndex)
         {
             //WIP
-            _indexesByName.AddOrUpdate(oldIndex.Name, oldIndex, (key, oldValue) => NewIndex);
-            _indexesByName.TryRemove(NewIndex.Name, out NewIndex);
+            _indexesByName.AddOrUpdate(oldIndex.Name, oldIndex, (key, oldValue) => newIndex);
+
+            Index _;
+            _indexesByName.TryRemove(newIndex.Name, out _);
             foreach (var collection in oldIndex.Definition.Collections)
             {
-                ConcurrentSet<Index> indexSet;
-                _indexesByCollection.TryGetValue(collection, out indexSet);
-                indexSet.TryRemove(oldIndex);
+                ConcurrentSet<Index> indexes;
+                if (_indexesByCollection.TryGetValue(collection, out indexes) == false)
+                    continue;
+
+                indexes.TryRemove(oldIndex);
             }
             _indexesById.TryRemove(oldIndex.IndexId, out oldIndex);
         }

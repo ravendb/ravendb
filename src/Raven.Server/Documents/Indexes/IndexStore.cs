@@ -102,7 +102,6 @@ namespace Raven.Server.Documents.Indexes
 
         public int CreateIndex(IndexDefinition definition)
         {
-
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
@@ -121,7 +120,6 @@ namespace Raven.Server.Documents.Indexes
                 definition.RemoveDefaultValues();
 
                 ValidateAnalyzers(definition);
-                var createReplacementIndex = false;
                 var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
                 Index replacementIndex;
 
@@ -150,7 +148,6 @@ namespace Raven.Server.Documents.Indexes
                         definition.Name = replacementIndexName;
                         if (_indexes.TryGetByName(replacementIndexName, out replacementIndex))
                             DeleteIndex(replacementIndex.IndexId);
-                        createReplacementIndex = true;
                         break;
                 }
 
@@ -168,12 +165,7 @@ namespace Raven.Server.Documents.Indexes
                     default:
                         throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
                 }
-                if (createReplacementIndex)
-                {
-                    index.SideBySideIndex = true;
-                    index.MinimumEtagBeforeReplace = definition.MinimumEtagBeforeReplace;
-                    index.RealName = existingIndex.Name;
-                }
+
                 return CreateIndexInternal(index, indexId);
             }
         }
@@ -268,7 +260,7 @@ namespace Raven.Server.Documents.Indexes
             if (result == IndexDefinitionCompareDifferences.None)
                 return IndexCreationOptions.Noop;
 
-            if ((result & IndexDefinitionCompareDifferences.Maps) == IndexDefinitionCompareDifferences.Maps || 
+            if ((result & IndexDefinitionCompareDifferences.Maps) == IndexDefinitionCompareDifferences.Maps ||
                 (result & IndexDefinitionCompareDifferences.Reduce) == IndexDefinitionCompareDifferences.Reduce)
                 return IndexCreationOptions.Update;
 
@@ -371,22 +363,25 @@ namespace Raven.Server.Documents.Indexes
             if (index == null)
                 return false;
 
-            DeleteIndexInternal(index.IndexId);
+            DeleteIndexInternal(index);
             return true;
         }
 
         public void DeleteIndex(int id)
         {
-            DeleteIndexInternal(id);
+            var index = GetIndex(id);
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(id);
+
+            DeleteIndexInternal(index);
         }
 
-        private void DeleteIndexInternal(int id)
+        private void DeleteIndexInternal(Index index)
         {
             lock (_indexAndTransformerLocker)
             {
-                Index index;
-                if (_indexes.TryRemoveById(id, out index) == false)
-                    IndexDoesNotExistException.ThrowFor(id);
+                Index _;
+                _indexes.TryRemoveById(index.IndexId, out _);
 
                 try
                 {
@@ -395,7 +390,7 @@ namespace Raven.Server.Documents.Indexes
                 catch (Exception e)
                 {
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Could not dispose index '{index.Name}' ({id}).", e);
+                        _logger.Info($"Could not dispose index '{index.Name}' ({index.IndexId}).", e);
                 }
 
                 var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnIndexDeleted(index);
@@ -621,15 +616,15 @@ namespace Raven.Server.Documents.Indexes
 
                         var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
                         var fakeIndex = new FaultyInMemoryIndex(e, indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexPath) ?? indexName, configuration);
-                        
+
                         var message = $"Could not open index with id {indexId} at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info(message, e);
 
-                        _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Indexes store initialization error", 
+                        _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Indexes store initialization error",
                             message,
-                            AlertType.IndexStore_IndexCouldNotBeOpened, 
+                            AlertType.IndexStore_IndexCouldNotBeOpened,
                             NotificationSeverity.Error,
                             key: fakeIndex.Name,
                             details: new ExceptionDetails(e)));
@@ -778,60 +773,21 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexes.TryGetByName(newIndexName, out newIndex) == false)
                     return true;
 
-                if ((oldIndex.CurrentlyRunningQueries.Count > 0) && (!(immediately)))
-                    return false;
-
                 _documentDatabase.IndexMetadataPersistence.OnIndexDeleted(newIndex);
 
                 _indexes.ReplaceIndexes(oldIndex, newIndex);
-                newIndex.Definition.Name = oldIndexName;
-                _indexes.TryGetById(newIndex.IndexId, out newIndex);
+                newIndex.Rename(oldIndexName);
 
-                newIndex.Definition.Name = oldIndexName;
-                try
-                {
-                    oldIndex.Dispose();
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Could not dispose index '{oldIndex.Name}' ({oldIndex.IndexId}).", e);
-                }
-                var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnIndexDeleted(oldIndex);
+                using (oldIndex.DrainRunningQueries())
+                    DeleteIndexInternal(oldIndex);
+
                 _documentDatabase.IndexMetadataPersistence.OnIndexCreated(newIndex);
-                _documentDatabase.Changes.RaiseNotifications(new IndexChange
-                {
-                    Name = oldIndex.Name,
-                    Type = IndexChangeTypes.IndexRemoved,
-                    Etag = tombstoneEtag
-                });
-
-
-                //WIP - Efrat
-                if (oldIndex.Configuration.RunInMemory)
-                    return true;
-
-                var name = oldIndex.GetIndexNameSafeForFileSystem();
-
-                var indexPath = oldIndex.Configuration.StoragePath.Combine(name);
-
-                var indexTempPath = oldIndex.Configuration.TempPath?.Combine(name);
-
-                var journalPath = oldIndex.Configuration.JournalsStoragePath?.Combine(name);
-
-                IOExtensions.DeleteDirectory(indexPath.FullPath);
-
-                if (indexTempPath != null)
-                    IOExtensions.DeleteDirectory(indexTempPath.FullPath);
-
-                if (journalPath != null)
-                    IOExtensions.DeleteDirectory(journalPath.FullPath);
 
                 return true;
             }
             finally
             {
-                if(lockTaken)
+                if (lockTaken)
                     Monitor.Exit(_indexAndTransformerLocker);
             }
         }

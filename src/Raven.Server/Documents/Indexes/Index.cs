@@ -17,7 +17,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -69,12 +68,6 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : IDocumentTombstoneAware, IDisposable
     {
-        public bool SideBySideIndex;
-
-        public long? MinimumEtagBeforeReplace { get; set; }
-
-        public string RealName { get; set; }
-
         private long _writeErrors;
 
         private long _criticalErrors;
@@ -153,7 +146,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
-        
+
         private readonly WarnIndexOutputsPerDocument _indexOutputsPerDocumentWarning = new WarnIndexOutputsPerDocument
         {
             MaxNumberOutputsPerDocument = int.MinValue,
@@ -313,7 +306,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private ExitWriteLock DrainRunningQueries()
+        internal ExitWriteLock DrainRunningQueries()
         {
             if (_currentlyRunningQueriesLock.IsWriteLockHeld)
                 return new ExitWriteLock();
@@ -325,7 +318,7 @@ namespace Raven.Server.Documents.Indexes
             return new ExitWriteLock(_currentlyRunningQueriesLock);
         }
 
-        private struct ExitWriteLock : IDisposable
+        internal struct ExitWriteLock : IDisposable
         {
             readonly ReaderWriterLockSlim _rwls;
 
@@ -693,49 +686,6 @@ namespace Raven.Server.Documents.Indexes
                                     TimeSpentIndexing.Stop();
                                 }
 
-                                if (SideBySideIndex)
-                                {
-                                    var canReplace = true;
-                                    TransactionOperationContext indexContext;
-                                    DocumentsOperationContext documentsOperationContext;
-                                    using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
-                                    using (_contextPool.AllocateOperationContext(out indexContext))
-                                    {
-                                        using (indexContext.OpenReadTransaction())
-                                        using (documentsOperationContext.OpenReadTransaction())
-                                        {
-                                            foreach (var collection in Collections)
-                                            {
-                                                var lastProcessedDocEtag =
-                                                    _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
-                                                if ((MinimumEtagBeforeReplace == null) &&
-                                                    (IsStale(documentsOperationContext, indexContext)) ||
-                                                    ((MinimumEtagBeforeReplace != null) &&
-                                                     (MinimumEtagBeforeReplace < lastProcessedDocEtag)))
-                                                {
-                                                    canReplace = false;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        if (canReplace)
-                                        {
-                                            // this can fail if the indexes lock is currently held, so we'll retry
-                                            // however, we might be requested to shutdown, so we want to skip replacing
-                                            // in this case, worst case scenario we'll handle this in the next batch
-                                            while (_cancellationTokenSource.IsCancellationRequested == false)
-                                            {
-                                                if (DocumentDatabase.IndexStore.TryReplaceIndexes(RealName,
-                                                    Definition.Name))
-                                                {
-                                                    SideBySideIndex = false;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                  }
-
                                 _indexingBatchCompleted.SetAndResetAtomically();
 
                                 if (didWork)
@@ -745,6 +695,20 @@ namespace Raven.Server.Documents.Indexes
 
                                 if (_logger.IsInfoEnabled)
                                     _logger.Info($"Finished indexing for '{Name} ({IndexId})'.'");
+
+                                if (ShouldReplace())
+                                {
+                                    var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
+
+                                    // this can fail if the indexes lock is currently held, so we'll retry
+                                    // however, we might be requested to shutdown, so we want to skip replacing
+                                    // in this case, worst case scenario we'll handle this in the next batch
+                                    while (_cancellationTokenSource.IsCancellationRequested == false)
+                                    {
+                                        if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
+                                            break;
+                                    }
+                                }
 
                                 batchCompleted = true;
                             }
@@ -804,8 +768,7 @@ namespace Raven.Server.Documents.Indexes
 
                         if (batchCompleted)
                         {
-                            DocumentDatabase.Changes.RaiseNotifications(
-                                    new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
+                            DocumentDatabase.Changes.RaiseNotifications(new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
                         }
 
                         try
@@ -860,6 +823,11 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
                 }
             }
+        }
+
+        protected virtual bool ShouldReplace()
+        {
+            return false;
         }
 
         private void ChangeIndexThreadPriorityIfNeeded()
@@ -986,7 +954,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception exception)
             {
-                if(_logger.IsInfoEnabled)
+                if (_logger.IsInfoEnabled)
                     _logger.Info($"Unable to set the index {Name} to error state", exception);
                 State = IndexState.Error; // just in case it didn't took from the SetState call
             }
@@ -1184,7 +1152,7 @@ namespace Raven.Server.Documents.Indexes
                     _indexStorage.WriteState(state);
                 }
                 finally
-                { 
+                {
                     // even if there is a failure, update it
                     var changeType = GetIndexChangeType(state, oldState);
                     if (changeType != IndexChangeTypes.None)
@@ -1262,6 +1230,11 @@ namespace Raven.Server.Documents.Indexes
                 SetState(IndexState.Disabled);
                 Stop();
             }
+        }
+
+        public void Rename(string name)
+        {
+            _indexStorage.Rename(name);
         }
 
         public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext)
@@ -1505,10 +1478,10 @@ namespace Raven.Server.Documents.Indexes
                  (transformer != null && transformer.HasInclude)))
                 throw new NotSupportedException("Includes are not supported by this type of query.");
 
-            
+
 
             using (var marker = MarkQueryAsRunning(query, token))
-            
+
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
@@ -1631,10 +1604,10 @@ namespace Raven.Server.Documents.Indexes
 
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
 
-            
+
 
             using (var marker = MarkQueryAsRunning(query, token))
-            
+
             {
                 var result = new FacetedQueryResult();
 
@@ -2085,13 +2058,13 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _indexOutputsPerDocumentWarning.NumberOfExceedingDocuments++;
-            
+
             if (_indexOutputsPerDocumentWarning.MaxNumberOutputsPerDocument < numberOfOutputs)
             {
                 _indexOutputsPerDocumentWarning.MaxNumberOutputsPerDocument = numberOfOutputs;
                 _indexOutputsPerDocumentWarning.SampleDocumentId = documentKey;
             }
-              
+
             if (_indexOutputsPerDocumentWarning.LastWarnedAt != null &&
                 (SystemTime.UtcNow - _indexOutputsPerDocumentWarning.LastWarnedAt.Value).Minutes <= 5)
             {
@@ -2104,7 +2077,7 @@ namespace Raven.Server.Documents.Indexes
             var hint = PerformanceHint.Create("High indexing fanout ratio",
                 $"Index '{Name}' has produced more than {PerformanceHints.MaxWarnIndexOutputsPerDocument} map results from a single document",
                 PerformanceHintType.Indexing,
-                NotificationSeverity.Warning, 
+                NotificationSeverity.Warning,
                 source: Name,
                 details: _indexOutputsPerDocumentWarning);
 
@@ -2135,7 +2108,7 @@ namespace Raven.Server.Documents.Indexes
                 var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
                 if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
                 {
-                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize/1024:#,#} kb mapped in docs ctx");
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#} kb mapped in docs ctx");
                     return false;
                 }
 

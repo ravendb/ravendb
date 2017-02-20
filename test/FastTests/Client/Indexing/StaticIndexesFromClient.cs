@@ -1,6 +1,8 @@
-﻿using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -91,6 +93,7 @@ namespace FastTests.Client.Indexing
                     .SendAsync(new PutIndexesOperation(new[] { input2 }));
 
                 WaitForIndexing(store);
+
                 output = await store
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
@@ -149,6 +152,7 @@ namespace FastTests.Client.Indexing
                    .SendAsync(new PutIndexesOperation(new[] { input }));
 
                 WaitForIndexing(store);
+
                 output = await store
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
