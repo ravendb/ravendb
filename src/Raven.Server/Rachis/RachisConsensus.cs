@@ -511,7 +511,8 @@ namespace Raven.Server.Rachis
             }
             else
             {
-                lastIndex = 0;
+                long lastIndexTerm;
+                GetLastTruncated(context, out lastIndex,out lastIndexTerm);
             }
             lastIndex += 1;
             var tvb = new TableValueBuilder
