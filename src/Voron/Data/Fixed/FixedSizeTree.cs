@@ -392,33 +392,38 @@ namespace Voron.Data.Fixed
 
         private FixedSizeTreePage PageSplit(FixedSizeTreePage page, long key)
         {
-            using (var add = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large)))
+            FixedSizeTreePage parentPage = _cursor.Count > 0 ? _cursor.Pop() : null;
+            if (parentPage == null) // root split
             {
-                var largePtr = (FixedSizeTreeHeader.Large*)add.Ptr;
+                parentPage = NewPage(FixedSizeTreePageFlags.Branch, page.PageNumber);
+                parentPage.NumberOfEntries = 1;
+                parentPage.StartPosition = (ushort)Constants.FixedSizeTree.PageHeaderSize;
+                parentPage.ValueSize = _valSize;
 
-                FixedSizeTreePage parentPage = _cursor.Count > 0 ? _cursor.Pop() : null;
-                if (parentPage == null) // root split
+                using (var largeFstHeader = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large)))
                 {
-                    parentPage = NewPage(FixedSizeTreePageFlags.Branch, page.PageNumber);
-                    parentPage.NumberOfEntries = 1;
-                    parentPage.StartPosition = (ushort)Constants.FixedSizeTree.PageHeaderSize;
-                    parentPage.ValueSize = _valSize;
-
+                    var largePtr = (FixedSizeTreeHeader.Large*)largeFstHeader.Ptr;
                     largePtr->RootPageNumber = parentPage.PageNumber;
                     largePtr->Depth++;
                     largePtr->PageCount++;
-                    var entry = parentPage.GetEntry(0);
-                    entry->Key = long.MinValue;
-                    entry->PageNumber = page.PageNumber;
                 }
 
-                parentPage = ModifyPage(parentPage);
-                if (page.IsLeaf) // simple case of splitting a leaf pageNum
+                var entry = parentPage.GetEntry(0);
+                entry->Key = long.MinValue;
+                entry->PageNumber = page.PageNumber;
+            }
+
+            parentPage = ModifyPage(parentPage);
+            if (page.IsLeaf) // simple case of splitting a leaf pageNum
+            {
+                var newPage = NewPage(FixedSizeTreePageFlags.Leaf, page.PageNumber);
+                newPage.StartPosition = (ushort)Constants.FixedSizeTree.PageHeaderSize;
+                newPage.ValueSize = _valSize;
+                newPage.NumberOfEntries = 0;
+
+                using (var largeFstHeader = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large)))
                 {
-                    var newPage = NewPage(FixedSizeTreePageFlags.Leaf, page.PageNumber);
-                    newPage.StartPosition = (ushort)Constants.FixedSizeTree.PageHeaderSize;
-                    newPage.ValueSize = _valSize;
-                    newPage.NumberOfEntries = 0;
+                    var largePtr = (FixedSizeTreeHeader.Large*)largeFstHeader.Ptr;
                     largePtr->PageCount++;
 
                     // need to add past end of pageNum, optimized
@@ -426,7 +431,8 @@ namespace Voron.Data.Fixed
                     {
                         AddLeafKey(newPage, 0, key);
 
-                        AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, key, newPage.PageNumber);
+                        AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, key,
+                            newPage.PageNumber);
 
                         largePtr->NumberOfEntries++;
                     }
@@ -438,53 +444,56 @@ namespace Voron.Data.Fixed
                         Memory.Copy(newPage.Pointer + newPage.StartPosition,
                             page.Pointer + page.StartPosition + (page.NumberOfEntries * _entrySize),
                             newPage.NumberOfEntries * _entrySize
-                            );
-                        AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, newPage.GetKey(0), newPage.PageNumber);
-                    }
-                    return null;// we don't care about it for leaf pages
-                }
-                else // branch page
-                {
-                    var newPage = NewPage(FixedSizeTreePageFlags.Branch, page.PageNumber);
-                    newPage.StartPosition = (ushort)Constants.FixedSizeTree.PageHeaderSize;
-                    newPage.ValueSize = _valSize;
-                    newPage.NumberOfEntries = 0;
-                    largePtr->PageCount++;
-
-                    if (page.LastMatch > 0)
-                        page.LastSearchPosition++;
-
-                    // need to add past end of pageNum, optimized
-                    if (page.LastSearchPosition >= page.NumberOfEntries)
-                    {
-                        // here we steal the last entry from the current page so we maintain the implicit null left entry
-                        var entry = newPage.GetEntry(0);
-                        *entry = *page.GetEntry(page.NumberOfEntries - 1);
-
-                        newPage.NumberOfEntries++;
-                        page.NumberOfEntries--;
-
-                        AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, entry->Key,
-                            newPage.PageNumber);
-
-                        return newPage; // this is where the new entry needs to go
-                    }
-                    // not at end, random inserts, split page 3/4 to 1/4
-
-                    var entriesToMove = (ushort)(page.NumberOfEntries / 4);
-                    newPage.NumberOfEntries = entriesToMove;
-                    page.NumberOfEntries -= entriesToMove;
-                    Memory.Copy(newPage.Pointer + newPage.StartPosition,
-                        page.Pointer + page.StartPosition + (page.NumberOfEntries * BranchEntrySize),
-                        newPage.NumberOfEntries * BranchEntrySize
                         );
-
-                    var newKey = newPage.GetKey(0);
-
-                    AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, newKey, newPage.PageNumber);
-
-                    return (newKey > key) ? page : newPage;
+                        AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, newPage.GetKey(0),
+                            newPage.PageNumber);
+                    }
+                    return null; // we don't care about it for leaf pages
                 }
+            }
+            else // branch page
+            {
+                var newPage = NewPage(FixedSizeTreePageFlags.Branch, page.PageNumber);
+                newPage.StartPosition = (ushort)Constants.FixedSizeTree.PageHeaderSize;
+                newPage.ValueSize = _valSize;
+                newPage.NumberOfEntries = 0;
+
+                using (var largeFstHeader = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large)))
+                    ((FixedSizeTreeHeader.Large*) largeFstHeader.Ptr)->PageCount++;
+
+                if (page.LastMatch > 0)
+                    page.LastSearchPosition++;
+
+                // need to add past end of pageNum, optimized
+                if (page.LastSearchPosition >= page.NumberOfEntries)
+                {
+                    // here we steal the last entry from the current page so we maintain the implicit null left entry
+                    var entry = newPage.GetEntry(0);
+                    *entry = *page.GetEntry(page.NumberOfEntries - 1);
+
+                    newPage.NumberOfEntries++;
+                    page.NumberOfEntries--;
+
+                    AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, entry->Key,
+                        newPage.PageNumber);
+
+                    return newPage; // this is where the new entry needs to go
+                }
+                // not at end, random inserts, split page 3/4 to 1/4
+
+                var entriesToMove = (ushort)(page.NumberOfEntries / 4);
+                newPage.NumberOfEntries = entriesToMove;
+                page.NumberOfEntries -= entriesToMove;
+                Memory.Copy(newPage.Pointer + newPage.StartPosition,
+                    page.Pointer + page.StartPosition + (page.NumberOfEntries * BranchEntrySize),
+                    newPage.NumberOfEntries * BranchEntrySize
+                    );
+
+                var newKey = newPage.GetKey(0);
+
+                AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, newKey, newPage.PageNumber);
+
+                return (newKey > key) ? page : newPage;
             }
         }
 
