@@ -73,7 +73,7 @@ namespace Voron
         private readonly HeaderAccessor _headerAccessor;
         private readonly DecompressionBuffersPool _decompressionBuffers;
 
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
         private EndOfDiskSpaceEvent _endOfDiskSpace;
         internal int SizeOfUnflushedTransactionsInJournalFile;
@@ -463,14 +463,11 @@ namespace Voron
 
                     if (_endOfDiskSpace != null)
                     {
-                        if (_endOfDiskSpace.CanContinueWriting)
-                        {
-                            CatastrophicFailure = null;
-                            _endOfDiskSpace = null;
-                            _cancellationTokenSource = new CancellationTokenSource();
-                            Task.Run(IdleFlushTimer);
-                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                        }
+                        _endOfDiskSpace.AssertCanContinueWriting();
+
+                        _endOfDiskSpace = null;
+                        Task.Run(IdleFlushTimer);
+                        GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                     }
                 }
 
@@ -798,8 +795,7 @@ namespace Voron
             if (_options.ManualFlushing)
                 return;
 
-            _cancellationTokenSource.Cancel();
-            _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
+            _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo, ExceptionDispatchInfo.Capture(exception));
         }
 
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
