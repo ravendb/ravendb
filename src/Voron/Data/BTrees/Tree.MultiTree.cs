@@ -148,29 +148,30 @@ namespace Voron.Data.BTrees
                 Delete(key); // release our current page
                 TreePage nestedPage = new TreePage(tempPagePointer, (ushort)currentSize);
 
-                var ptr = DirectAdd(key, newSize);
-
-                var newNestedPage = new TreePage(ptr, newSize)
+                using (var add = DirectAdd(key, newSize))
                 {
-                    Lower = (ushort)Constants.Tree.PageHeaderSize,
-                    Upper = newSize,
-                    TreeFlags = TreePageFlags.Leaf,
-                    PageNumber = -1L, // mark as invalid page number
-                    Flags = 0
-                };
+                    var newNestedPage = new TreePage(add.Ptr, newSize)
+                    {
+                        Lower = (ushort) Constants.Tree.PageHeaderSize,
+                        Upper = newSize,
+                        TreeFlags = TreePageFlags.Leaf,
+                        PageNumber = -1L, // mark as invalid page number
+                        Flags = 0
+                    };
 
-                ByteStringContext allocator = _llt.Allocator;
-                for (int i = 0; i < nestedPage.NumberOfEntries; i++)
-                {
-                    var nodeHeader = nestedPage.GetNode(i);
+                    ByteStringContext allocator = _llt.Allocator;
+                    for (int i = 0; i < nestedPage.NumberOfEntries; i++)
+                    {
+                        var nodeHeader = nestedPage.GetNode(i);
 
-                    Slice nodeKey;
-                    using (TreeNodeHeader.ToSlicePtr(allocator, nodeHeader, out nodeKey))
-                        newNestedPage.AddDataNode(i, nodeKey, 0);
+                        Slice nodeKey;
+                        using (TreeNodeHeader.ToSlicePtr(allocator, nodeHeader, out nodeKey))
+                            newNestedPage.AddDataNode(i, nodeKey, 0);
+                    }
+
+                    newNestedPage.Search(_llt, value);
+                    newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0);
                 }
-
-                newNestedPage.Search(_llt, value);
-                newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0);
             }
         }
 
@@ -195,18 +196,19 @@ namespace Voron.Data.BTrees
 
             var actualPageSize = (ushort)Math.Min(Bits.NextPowerOf2(requiredPageSize), maxNodeSize - Constants.Tree.NodeHeaderSize);
 
-            var ptr = DirectAdd(key, actualPageSize);
-
-            var nestedPage = new TreePage(ptr, actualPageSize)
+            using (var add = DirectAdd(key, actualPageSize))
             {
-                PageNumber = -1L,// hint that this is an inner page
-                Lower = (ushort)Constants.Tree.PageHeaderSize,
-                Upper = actualPageSize,
-                TreeFlags = TreePageFlags.Leaf,
-                Flags = 0
-            };
+                var nestedPage = new TreePage(add.Ptr, actualPageSize)
+                {
+                    PageNumber = -1L, // hint that this is an inner page
+                    Lower = (ushort) Constants.Tree.PageHeaderSize,
+                    Upper = actualPageSize,
+                    TreeFlags = TreePageFlags.Leaf,
+                    Flags = 0
+                };
 
-            nestedPage.AddDataNode(0, value, 0);
+                nestedPage.AddDataNode(0, value, 0);
+            }
         }
 
         public void MultiDelete(Slice key, Slice value)

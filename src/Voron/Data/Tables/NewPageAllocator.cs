@@ -33,7 +33,7 @@ namespace Voron.Data.Tables
         private readonly Tree _parentTree;
         internal static readonly Slice AllocationStorage;
         private const byte BitmapSize = sizeof(long)*4;
-        private const int NumberOfPagesInSection = BitmapSize*8;
+        internal const int NumberOfPagesInSection = BitmapSize*8;
         public const string AllocationStorageName = "Allocation-Storage";
 
         static NewPageAllocator()

@@ -114,8 +114,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     
                     using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                     {
-                        var pos = Tree.DirectAdd(entrySlice, result.Size);
-                        result.CopyTo(pos);
+                        using (var add = Tree.DirectAdd(entrySlice, result.Size))
+                            result.CopyTo(add.Ptr);
                     }
 
                     break;

@@ -37,6 +37,8 @@ namespace Voron.Data.BTrees
 
         public LowLevelTransaction Llt => _llt;
 
+        private readonly DirectAddScope _addScope;
+
         private Tree(LowLevelTransaction llt, Transaction tx, long root, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
             _llt = llt;
@@ -50,6 +52,8 @@ namespace Voron.Data.BTrees
             {
                 RootPageNumber = root
             };
+
+            _addScope = new DirectAddScope(this);
         }
 
         public Tree(LowLevelTransaction llt, Transaction tx, TreeMutableState state)
@@ -61,6 +65,8 @@ namespace Voron.Data.BTrees
             _pageLocator = llt.PersistentContext.AllocatePageLocator(llt);
             _state = new TreeMutableState(llt);
             _state = state;
+
+            _addScope = new DirectAddScope(this);
         }
 
         public bool IsLeafCompressionSupported
@@ -138,8 +144,8 @@ namespace Voron.Data.BTrees
                 currentValue = *(long*)read.Reader.Base;
 
             var value = currentValue + delta;
-            var result = (long*)DirectAdd(key, sizeof(long));
-            *result = value;
+            using (var add = DirectAdd(key, sizeof(long)))
+                *(long*)add.Ptr = value;
 
             return value;
         }
@@ -159,8 +165,8 @@ namespace Voron.Data.BTrees
 
             State.IsModified = true;
 
-            var result = (long*)DirectAdd(key, sizeof(long));
-            *result = value;
+            using (var add = DirectAdd(key, sizeof(long)))
+                *(long*)add.Ptr = value;
 
             return true;
         }
@@ -173,9 +179,8 @@ namespace Voron.Data.BTrees
 
             var length = (int)value.Length;
 
-            var pos = DirectAdd(key, length);
-
-            CopyStreamToPointer(_llt, value, pos);
+            using (var add = DirectAdd(key, length))
+                CopyStreamToPointer(_llt, value, add.Ptr);
         }
 
         private static void ValidateValueLength(Stream value)
@@ -204,12 +209,13 @@ namespace Voron.Data.BTrees
             Debug.Assert(value != null);
 
             State.IsModified = true;
-            var pos = DirectAdd(key, value.Length);
-
-            fixed (byte* src = value)
+            using (var add = DirectAdd(key, value.Length))
             {
-                Memory.Copy(pos, src, value.Length);
-            }
+                fixed (byte* src = value)
+                {
+                    Memory.Copy(add.Ptr, src, value.Length);
+                }
+            }  
         }
 
         public void Add(Slice key, Slice value)
@@ -218,9 +224,8 @@ namespace Voron.Data.BTrees
                 ThrowNullReferenceException();
 
             State.IsModified = true;
-            var pos = DirectAdd(key, value.Size);
-
-            value.CopyTo(pos);
+            using (var add = DirectAdd(key, value.Size))
+                value.CopyTo(add.Ptr);
         }
 
         private static void CopyStreamToPointer(LowLevelTransaction tx, Stream value, byte* pos)
@@ -252,7 +257,7 @@ namespace Voron.Data.BTrees
             return size + (size & 1);
         }
 
-        public byte* DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data)
+        public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data)
         {
             Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 
@@ -293,13 +298,13 @@ namespace Voron.Data.BTrees
                 {
                     // optimization for Data and MultiValuePageRef - try to overwrite existing node space
                     if (TryOverwriteDataOrMultiValuePageRefNode(node, len, nodeType, out pos))
-                        return pos;
+                        return _addScope.Open(pos);
                 }
                 else
                 {
                     // optimization for PageRef - try to overwrite existing overflows
                     if (TryOverwriteOverflowPages(node, len, out pos))
-                        return pos;
+                        return _addScope.Open(pos);
                 }
 
                 RemoveLeafNode(page);
@@ -334,7 +339,7 @@ namespace Voron.Data.BTrees
 
                     DebugValidateTree(State.RootPageNumber);
 
-                    return overFlowPos == null ? dataPos : overFlowPos;
+                    return _addScope.Open(overFlowPos == null ? dataPos : overFlowPos);
                 }
 
                 // existing values compressed and put at the end of the page, let's insert from Upper position
@@ -360,7 +365,7 @@ namespace Voron.Data.BTrees
 
             page.DebugValidate(this, State.RootPageNumber);
 
-            return overFlowPos == null ? dataPos : overFlowPos;
+            return _addScope.Open(overFlowPos == null ? dataPos : overFlowPos);
         }
 
         private static void ThrowUnknownNodeTypeAddOperation(TreeNodeFlags nodeType)
@@ -1290,6 +1295,42 @@ namespace Voron.Data.BTrees
                 return new ValueReader(overFlowPage.Pointer + Constants.Tree.PageHeaderSize, overFlowPage.OverflowSize);
             }
             return new ValueReader((byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, node->DataSize);
+        }
+
+        public class DirectAddScope : IDisposable
+        {
+            private readonly Tree _tree;
+            private uint _usage;
+
+            public byte* Ptr;
+
+            public DirectAddScope(Tree tree)
+            {
+                _usage = 0;
+                _tree = tree;
+                Ptr = null;
+            }
+
+            public DirectAddScope Open(byte* writePos)
+            {
+                if (_usage++ > 0)
+                    ThrowScopeAlreadyOpen(_tree);
+
+                Ptr = writePos;
+
+                return this;
+            }
+
+            private static void ThrowScopeAlreadyOpen(Tree tree)
+            {
+                throw new InvalidOperationException($"Write operation already requested on a tree name: {tree.Name}. DirectAdd method cannot be called recursively while the add scope is already opened.");
+            }
+
+            public void Dispose()
+            {
+                _usage--;
+                Ptr = null;
+            }
         }
     }
 }

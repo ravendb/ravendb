@@ -60,7 +60,7 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public unsafe byte* DirectAdd(string key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data)
+        public DirectAddScope DirectAdd(string key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data)
         {
             Slice keySlice;
             using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
