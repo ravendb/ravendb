@@ -31,6 +31,7 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEvent _promotableUpdated = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
         private readonly ManualResetEvent _noop = new ManualResetEvent(false);
+        private long _lowestIndexInEntireCluster;
 
         private readonly Dictionary<string, FollowerAmbassador> _voters =
             new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
@@ -40,6 +41,12 @@ namespace Raven.Server.Rachis
             new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
 
         private Thread _thread;
+
+        public long LowestIndexInEntireCluster
+        {
+            get { return Interlocked.Read(ref _lowestIndexInEntireCluster); }
+            set { Interlocked.Exchange(ref _lowestIndexInEntireCluster, value); }
+        }
 
         public Leader(RachisConsensus engine)
         {
@@ -202,8 +209,9 @@ namespace Raven.Server.Rachis
                         case 3: // shutdown requested
                             return;
                     }
-
                     EnsureThatWeHaveLeadership(((_voters.Count + 1) / 2) + 1);
+
+                    LowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                 }
             }
             catch (Exception e)
@@ -307,34 +315,62 @@ namespace Raven.Server.Rachis
         /// Why? Because A has 4 (which implies that it has 3) and B has 3 as well.
         /// So we have 2 nodes that have 3, so that is the quorom.
         /// </summary>
-        private readonly SortedList<long, int> _votersPerIndex = new SortedList<long, int>();
+        private readonly SortedList<long, int> _nodesPerIndex = new SortedList<long, int>();
 
         private bool _running;
 
-        protected long GetMaxIndexOnQuorum(int minSize)
+        protected long GetLowestIndexInEntireCluster()
         {
-            _votersPerIndex.Clear();
+            long lowestIndex;
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                _votersPerIndex[_engine.GetLastEntryIndex(context)] = 1;
+                lowestIndex = _engine.GetLastEntryIndex(context);
+            }
+
+            foreach (var voter in _voters.Values)
+            {
+                lowestIndex = Math.Min(lowestIndex, voter.FollowerMatchIndex);
+            }
+
+            foreach (var promotable in _promotables.Values)
+            {
+                lowestIndex = Math.Min(lowestIndex, promotable.FollowerMatchIndex);
+            }
+
+            foreach (var nonVoter in _nonVoters.Values)
+            {
+                lowestIndex = Math.Min(lowestIndex, nonVoter.FollowerMatchIndex);
+            }
+
+            return lowestIndex;
+        }
+
+        protected long GetMaxIndexOnQuorum(int minSize)
+        {
+            _nodesPerIndex.Clear();
+            TransactionOperationContext context;
+            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                _nodesPerIndex[_engine.GetLastEntryIndex(context)] = 1;
             }
 
             foreach (var voter in _voters.Values)
             {
                 int count;
                 var voterIndex = voter.FollowerMatchIndex;
-                _votersPerIndex.TryGetValue(voterIndex, out count);
-                _votersPerIndex[voterIndex] = count + 1;
+                _nodesPerIndex.TryGetValue(voterIndex, out count);
+                _nodesPerIndex[voterIndex] = count + 1;
             }
             var votesSoFar = 0;
 
-            for (int i = _votersPerIndex.Count - 1; i >= 0; i--)
+            for (int i = _nodesPerIndex.Count - 1; i >= 0; i--)
             {
-                votesSoFar += _votersPerIndex.Values[i];
+                votesSoFar += _nodesPerIndex.Values[i];
                 if (votesSoFar >= minSize)
-                    return _votersPerIndex.Keys[i];
+                    return _nodesPerIndex.Keys[i];
             }
             return -1;
         }

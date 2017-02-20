@@ -8,6 +8,7 @@ namespace Raven.Server.Rachis
         public long PrevLogIndex { get; set; }
         public long PrevLogTerm { get; set; }
         public long LeaderCommit { get; set; }
+        public long TruncateLogBefore { get; set; }
         public int EntriesCount { get; set; }
     }
 

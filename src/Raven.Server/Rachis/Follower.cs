@@ -22,11 +22,11 @@ namespace Raven.Server.Rachis
         private void FollowerSteadyState()
         {
             var entries = new List<RachisEntry>();
+            long lastCommit = 0, lastTruncate = 0;
             while (true)
             {
                 entries.Clear();
 
-                // TODO: how do we shutdown? probably just close the TCP connection
                 TransactionOperationContext context;
                 using (_engine.ContextPool.AllocateOperationContext(out context))
                 {
@@ -40,29 +40,42 @@ namespace Raven.Server.Rachis
                             _engine.Timeout.Defer();
                         }
                     }
-                    long lastLogIndex;
-                    // we start the tx after we finished reading from the network
-                    using (var tx = context.OpenWriteTransaction())
+
+                    long lastLogIndex = appendEntries.PrevLogIndex;
+
+                    // don't start write transaction fro noop
+                    if (lastCommit != appendEntries.LeaderCommit ||
+                        lastTruncate != appendEntries.TruncateLogBefore ||
+                        entries.Count != 0)
                     {
-                        if (entries.Count > 0)
+                        // we start the tx after we finished reading from the network
+                        using (var tx = context.OpenWriteTransaction())
                         {
-                            _engine.AppendToLog(context, entries);
+                            if (entries.Count > 0)
+                            {
+                                _engine.AppendToLog(context, entries);
+                            }
+
+                            lastLogIndex = _engine.GetLogEntriesRange(context).Item2;
+
+                            var lastEntryIndexToCommit = Math.Min(
+                                lastLogIndex,
+                                appendEntries.LeaderCommit);
+
+
+                            var lastAppliedIndex = _engine.GetLastCommitIndex(context);
+
+                            if (lastEntryIndexToCommit != lastAppliedIndex)
+                            {
+                                _engine.Apply(context, lastEntryIndexToCommit);
+                            }
+
+                            lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastEntryIndexToCommit);
+                            _engine.TruncateLogBefore(context, lastTruncate);
+                            lastCommit = lastEntryIndexToCommit;
+
+                            tx.Commit();
                         }
-
-                        lastLogIndex = _engine.GetLogEntriesRange(context).Item2;
-
-                        var lastEntryIndexToCommit = Math.Min(
-                            lastLogIndex,
-                            appendEntries.LeaderCommit);
-
-                        var lastAppliedIndex = _engine.GetLastCommitIndex(context);
-
-                        if (lastEntryIndexToCommit != lastAppliedIndex)
-                        {
-                            _engine.Apply(context, lastEntryIndexToCommit);
-                        }
-
-                        tx.Commit();
                     }
 
                     _connection.Send(context, new AppendEntriesResponse
@@ -77,7 +90,6 @@ namespace Raven.Server.Rachis
                 }
             }
         }
-
 
         private AppendEntries CheckIfValidAppendEntries()
         {
@@ -197,7 +209,7 @@ namespace Raven.Server.Rachis
                     aer.PrevLogIndex
                 );
 
-                midpointIndex = (maxIndex + minIndex)/2;
+                midpointIndex = (maxIndex + minIndex) / 2;
 
                 midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
@@ -234,7 +246,7 @@ namespace Raven.Server.Rachis
                 {
                     maxIndex = midpointIndex - 1;
                 }
-                midpointIndex = (maxIndex + minIndex)/2;
+                midpointIndex = (maxIndex + minIndex) / 2;
                 using (context.OpenReadTransaction())
                     midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }

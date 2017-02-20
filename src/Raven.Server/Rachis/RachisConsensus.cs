@@ -441,6 +441,24 @@ namespace Raven.Server.Rachis
             return lastIndex;
         }
 
+        public unsafe void TruncateLogBefore(TransactionOperationContext context, long upto)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+            while (true)
+            {
+                TableValueReader reader;
+                if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out reader) == false)
+                    break;
+
+                int size;
+                var entryIndex = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+                if (entryIndex > upto)
+                    break;
+
+                table.Delete(reader.Id);
+            }
+        }
+
         public unsafe void AppendToLog(TransactionOperationContext context, List<RachisEntry> entries)
         {
             Debug.Assert(entries.Count > 0);
@@ -768,5 +786,6 @@ namespace Raven.Server.Rachis
         }
 
         public abstract void Apply(TransactionOperationContext context, long uptoInclusive);
+
     }
 }

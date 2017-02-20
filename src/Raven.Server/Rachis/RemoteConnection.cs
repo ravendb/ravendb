@@ -95,6 +95,7 @@ namespace Raven.Server.Rachis
                 [nameof(AppendEntries.PrevLogIndex)] = ae.PrevLogIndex,
                 [nameof(AppendEntries.PrevLogTerm)] = ae.PrevLogTerm,
                 [nameof(AppendEntries.Term)] = ae.Term,
+                [nameof(AppendEntries.TruncateLogBefore)] = ae.TruncateLogBefore,
             });
 
             if (items == null || items.Count == 0)

@@ -153,8 +153,7 @@ namespace Raven.Server.Rachis
                                                 EntriesCount = entries.Count,
                                                 LeaderCommit = _engine.GetLastCommitIndex(context),
                                                 Term = _engine.CurrentTerm,
-                                                //TODO: figure out what to do if we have a snapshot that removed all 
-                                                //TODO: the entries
+                                                TruncateLogBefore = _leader.LowestIndexInEntireCluster,
                                                 PrevLogTerm = _engine.GetTermFor(_followerNextIndex - 1) ?? 0,
                                                 PrevLogIndex = _followerNextIndex - 1
                                             };
