@@ -253,31 +253,35 @@ namespace Voron.Data.Tables
             var ptr = DirectRead(id, out size);
             if (ptr == null)
                 return;
+            
+            var tvr = new TableValueReader(ptr, size);
+            DeleteValueFromIndex(id, ref tvr);
 
-            using (var add = _tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats)))
+            var largeValue = (id % Constants.Storage.PageSize) == 0;
+            if (largeValue)
             {
-                var stats = (TableSchemaStats*)add.Ptr;
-                NumberOfEntries--;
-                stats->NumberOfEntries = NumberOfEntries;
-
-                var tvr = new TableValueReader(ptr, size);
-                DeleteValueFromIndex(id, ref tvr);
-
-                var largeValue = (id % Constants.Storage.PageSize) == 0;
-                if (largeValue)
+                var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
+                var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+                _overflowPageCount -= numberOfPages;
+                
+                for (int i = 0; i < numberOfPages; i++)
                 {
-                    var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
-                    var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
-                    _overflowPageCount -= numberOfPages;
-                    stats->OverflowPageCount = _overflowPageCount;
-
-                    for (int i = 0; i < numberOfPages; i++)
-                    {
-                        _tx.LowLevelTransaction.FreePage(page.PageNumber + i);
-                    }
-                    return;
+                    _tx.LowLevelTransaction.FreePage(page.PageNumber + i);
                 }
             }
+
+            NumberOfEntries--;
+
+            using (var updateStats = _tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats)))
+            {
+                var stats = (TableSchemaStats*)updateStats.Ptr;
+
+                stats->NumberOfEntries = NumberOfEntries;
+                stats->OverflowPageCount = _overflowPageCount;
+            }
+
+            if (largeValue)
+                return;
 
             var density = ActiveDataSmallSection.Free(id);
             if (ActiveDataSmallSection.Contains(id) || density > 0.5)
