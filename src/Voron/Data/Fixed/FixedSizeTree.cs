@@ -421,6 +421,7 @@ namespace Voron.Data.Fixed
                 newPage.ValueSize = _valSize;
                 newPage.NumberOfEntries = 0;
 
+                long separatorKey;
                 using (var largeFstHeader = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large)))
                 {
                     var largePtr = (FixedSizeTreeHeader.Large*)largeFstHeader.Ptr;
@@ -430,11 +431,9 @@ namespace Voron.Data.Fixed
                     if (page.LastSearchPosition >= page.NumberOfEntries)
                     {
                         AddLeafKey(newPage, 0, key);
-
-                        AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, key,
-                            newPage.PageNumber);
-
                         largePtr->NumberOfEntries++;
+
+                        separatorKey = key;
                     }
                     else // not at end, random inserts, split page 3/4 to 1/4
                     {
@@ -445,11 +444,13 @@ namespace Voron.Data.Fixed
                             page.Pointer + page.StartPosition + (page.NumberOfEntries * _entrySize),
                             newPage.NumberOfEntries * _entrySize
                         );
-                        AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, newPage.GetKey(0),
-                            newPage.PageNumber);
+
+                        separatorKey = newPage.GetKey(0);
                     }
-                    return null; // we don't care about it for leaf pages
                 }
+
+                AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, separatorKey, newPage.PageNumber);
+                return null; // we don't care about it for leaf pages
             }
             else // branch page
             {
