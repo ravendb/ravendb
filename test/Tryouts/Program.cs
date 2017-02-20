@@ -6,7 +6,7 @@
         {
             using (var basicCluster = new BasicCluster())
             {
-                basicCluster.ClusterWithLateJoiningNodeRequiringSnapshot().Wait();
+                basicCluster.CanSetupSingleNode().Wait();
             }
         }
     }

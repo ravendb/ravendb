@@ -8,8 +8,6 @@ namespace Raven.Server.Rachis
 
         public long LastIncludedTerm { get; set; }
 
-        public long SnapshotSize { get; set; }
-
         public BlittableJsonReaderObject Topology { get; set; } 
     }
 

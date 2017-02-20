@@ -53,9 +53,10 @@ namespace Tryouts
                     }, "test"));
                 }
             }
-            Assert.True(await b.StateMachine.ReachedExpectedAmount.WaitAsync(TimeSpan.FromSeconds(15)));
+            Assert.True(await b.StateMachine.ReachedExpectedAmount.WaitAsync(TimeSpan.FromSeconds(150)));
             TransactionOperationContext context;
             using (b.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
                 Assert.Equal(expected, b.StateMachine.Read(context, "test"));
             }
@@ -99,6 +100,7 @@ namespace Tryouts
 
                 TransactionOperationContext context;
                 using (b.ContextPool.AllocateOperationContext(out context))
+                using (context.OpenReadTransaction())
                 {
                     Assert.Equal(expected, b.StateMachine.Read(context, "test"));
                 }
@@ -163,6 +165,7 @@ namespace Tryouts
 
                 TransactionOperationContext context;
                 using (rachis.ContextPool.AllocateOperationContext(out context))
+                using (context.OpenReadTransaction())
                 {
                     Assert.Equal(Enumerable.Range(0, 10).Sum(), rachis.StateMachine.Read(context, "test"));
                 }
@@ -213,9 +216,20 @@ namespace Tryouts
 
             if (Predicate?.Invoke(this, context) == true)
             {
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose +=
+                    tx =>
+                    {
+                        ReachedExpectedAmount.Set();
+                    };
+            }
+        }
+
+        public override void OnSnapshotInstalled(TransactionOperationContext context)
+        {
+            if (Predicate?.Invoke(this, context) == true)
+            {
                 ReachedExpectedAmount.Set();
             }
-
         }
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)

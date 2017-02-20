@@ -62,7 +62,7 @@ namespace Raven.Server.Rachis
                                 _engine.AppendToLog(context, entries);
                             }
 
-                            lastLogIndex = _engine.GetLogEntriesRange(context).Item2;
+                            lastLogIndex = _engine.GetLastEntryIndex(context);
 
                             var lastEntryIndexToCommit = Math.Min(
                                 lastLogIndex,
@@ -122,9 +122,8 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private unsafe void NegotiateWithLeader(TransactionOperationContext context, AppendEntries fstAppendEntries)
+        private void NegotiateWithLeader(TransactionOperationContext context, AppendEntries fstAppendEntries)
         {
-
             // only the leader can send append entries, so if we accepted it, it's the leader
             DebugCurrentLeader = _connection.DebugSource;
 
@@ -133,7 +132,11 @@ namespace Raven.Server.Rachis
                 _engine.FoundAboutHigherTerm(fstAppendEntries.Term);
             }
 
-            var prevTerm = _engine.GetTermFor(fstAppendEntries.PrevLogIndex) ?? 0;
+            long prevTerm;
+            using (context.OpenReadTransaction())
+            {
+                prevTerm = _engine.GetTermFor(context,fstAppendEntries.PrevLogIndex) ?? 0;
+            }
             if (prevTerm != fstAppendEntries.PrevLogTerm)
             {
                 // we now have a mismatch with the log position, and need to negotiate it with 
@@ -156,16 +159,17 @@ namespace Raven.Server.Rachis
             // in most cases, it is an empty snaphsot, then start regular append entries
             // the reason we send this is to simplify the # of states in the protocol
 
-            var snapshot = _connection.Read<InstallSnapshot>(context);
+            var snapshot = _connection.ReadInstallSnapshot(context);
 
             using (context.OpenWriteTransaction())
             {
-                if (snapshot.SnapshotSize != 0)
-                {
-                    InstallSnapshot(context, snapshot);
-                }
+                InstallSnapshot(context, snapshot);
+                
+                _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
+                _engine.TruncateLogBefore(context, snapshot.LastIncludedIndex);
+
                 // snapshot always has the latest topology
-                if(snapshot.Topology == null)
+                if (snapshot.Topology == null)
                     throw new InvalidOperationException("Expected to get topology on snapshot");
                 RachisConsensus.SetTopology(context.Transaction.InnerTransaction, snapshot.Topology);
 
@@ -177,6 +181,13 @@ namespace Raven.Server.Rachis
                 CurrentTerm = _engine.CurrentTerm,
                 LastLogIndex = snapshot.LastIncludedIndex
             });
+
+            using (context.OpenReadTransaction())
+            {
+                // notify the state machine
+                _engine.SnapshotInstalled(context);
+            }
+
             _engine.Timeout.Defer();
         }
 
@@ -185,99 +196,102 @@ namespace Raven.Server.Rachis
             var txw = context.Transaction.InnerTransaction;
             var sp = Stopwatch.StartNew();
             var reader = _connection.CreateReader();
-
-            var type = (RootObjectType)reader.ReadInt32();
-            int size;
-            Slice key;
-            long entries;
-            switch (type)
+            while (true)
             {
-                case RootObjectType.VariableSizeTree:
+                var type = (RootObjectType)reader.ReadInt32();
+                if (type == RootObjectType.None)
+                    break;
 
-                    size = reader.ReadInt32();
-                    reader.ReadExactly(size);
-                    Tree tree;
-
-                    using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
-                    {
-                        txw.DeleteTree(key);
-                        tree = txw.CreateTree(key);
-                    }
-
-                    entries = reader.ReadInt64();
-                    for (long i = 0; i < entries; i++)
-                    {
-                        MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+                int size;
+                Slice key;
+                long entries;
+                switch (type)
+                {
+                    case RootObjectType.VariableSizeTree:
 
                         size = reader.ReadInt32();
                         reader.ReadExactly(size);
+                        Tree tree;
+
                         using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
                         {
+                            txw.DeleteTree(key);
+                            tree = txw.CreateTree(key);
+                        }
+
+                        entries = reader.ReadInt64();
+                        for (long i = 0; i < entries; i++)
+                        {
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
-
-                            var ptr = tree.DirectAdd(key, size);
-                            fixed (byte* pBuffer = reader.Buffer)
+                            using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
                             {
-                                Memory.Copy(ptr, pBuffer, size);
+                                size = reader.ReadInt32();
+                                reader.ReadExactly(size);
+
+                                var ptr = tree.DirectAdd(key, size);
+                                fixed (byte* pBuffer = reader.Buffer)
+                                {
+                                    Memory.Copy(ptr, pBuffer, size);
+                                }
                             }
                         }
-                    }
 
 
-                    break;
-                case RootObjectType.Table:
-
-                    size = reader.ReadInt32();
-                    reader.ReadExactly(size);
-                    Table table;
-                    using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
-                    {
-                        var tableTree = txw.ReadTree(key, RootObjectType.Table);
-
-                        // Get the table schema
-                        var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
-                        var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
-                        if (schemaPtr == null)
-                            throw new InvalidOperationException(
-                                "When trying to install snapshot, found missing table " + key);
-
-                        var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
-
-                        table = txw.OpenTable(schema, key);
-                    }
-
-                    // delete the table
-                    TableValueReader tvr;
-                    while (true)
-                    {
-                        if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out tvr) == false)
-                            break;
-                        table.Delete(tvr.Id);
-
-                        MaybeNotifyLeaderThatWeAreSillAlive(context, table.NumberOfEntries, sp);
-                    }
-
-                    entries = reader.ReadInt64();
-                    for (long i = 0; i < entries; i++)
-                    {
-                        MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+                        break;
+                    case RootObjectType.Table:
 
                         size = reader.ReadInt32();
                         reader.ReadExactly(size);
-                        fixed (byte* pBuffer = reader.Buffer)
+                        Table table;
+                        using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
                         {
-                            tvr = new TableValueReader(pBuffer, size);
-                            table.Insert(ref tvr);
+                            var tableTree = txw.ReadTree(key, RootObjectType.Table);
+
+                            // Get the table schema
+                            var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                            var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+                            if (schemaPtr == null)
+                                throw new InvalidOperationException(
+                                    "When trying to install snapshot, found missing table " + key);
+
+                            var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
+
+                            table = txw.OpenTable(schema, key);
                         }
-                    }
 
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+                        // delete the table
+                        TableValueReader tvr;
+                        while (true)
+                        {
+                            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out tvr) == false)
+                                break;
+                            table.Delete(tvr.Id);
+
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, table.NumberOfEntries, sp);
+                        }
+
+                        entries = reader.ReadInt64();
+                        for (long i = 0; i < entries; i++)
+                        {
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+
+                            size = reader.ReadInt32();
+                            reader.ReadExactly(size);
+                            fixed (byte* pBuffer = reader.Buffer)
+                            {
+                                tvr = new TableValueReader(pBuffer, size);
+                                table.Insert(ref tvr);
+                            }
+                        }
+
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+                }
             }
-
-            _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
         }
 
         private void MaybeNotifyLeaderThatWeAreSillAlive(TransactionOperationContext context, long count, Stopwatch sp)
@@ -309,12 +323,11 @@ namespace Raven.Server.Rachis
             long maxIndex;
             long midpointTerm;
             long midpointIndex;
-            Debug.Assert(context.Transaction == null, "Transaction is not expected to be opened here");
             using (context.OpenReadTransaction())
             {
-                var logEntriesRange = _engine.GetLogEntriesRange(context);
+                minIndex = _engine.GetFirstEntryIndex(context);
 
-                if (logEntriesRange.Item1 == 0) // no entries at all
+                if (minIndex == 0) // no entries at all
                 {
                     connection.Send(context, new AppendEntriesResponse
                     {
@@ -327,9 +340,8 @@ namespace Raven.Server.Rachis
                     return; // leader will know where to start from here
                 }
 
-                minIndex = logEntriesRange.Item1;
                 maxIndex = Math.Min(
-                    logEntriesRange.Item2, // max
+                    _engine.GetLastEntryIndex(context), // max
                     aer.PrevLogIndex
                 );
 
@@ -362,13 +374,16 @@ namespace Raven.Server.Rachis
                 });
 
                 var response = connection.Read<AppendEntries>(context);
-                if (_engine.GetTermFor(response.PrevLogIndex) == response.PrevLogTerm)
+                using (context.OpenReadTransaction())
                 {
-                    minIndex = midpointIndex + 1;
-                }
-                else
-                {
-                    maxIndex = midpointIndex - 1;
+                    if (_engine.GetTermFor(context, response.PrevLogIndex) == response.PrevLogTerm)
+                    {
+                        minIndex = midpointIndex + 1;
+                    }
+                    else
+                    {
+                        maxIndex = midpointIndex - 1;
+                    }
                 }
                 midpointIndex = (maxIndex + minIndex) / 2;
                 using (context.OpenReadTransaction())

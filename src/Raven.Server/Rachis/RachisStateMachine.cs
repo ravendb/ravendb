@@ -11,7 +11,8 @@ namespace Raven.Server.Rachis
     {
         protected TransactionContextPool ContextPoolForReadOnlyOperations;
         private RachisConsensus _parent;
-        public void Initialize(RachisConsensus parent)
+
+        public virtual void Initialize(RachisConsensus parent, TransactionOperationContext context)
         {
             _parent = parent;
             ContextPoolForReadOnlyOperations = _parent.ContextPool;
@@ -46,6 +47,12 @@ namespace Raven.Server.Rachis
             
         }
 
+
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
+
+        public virtual void OnSnapshotInstalled(TransactionOperationContext context)
+        {
+            
+        }
     }
 }

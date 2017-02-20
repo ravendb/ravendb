@@ -25,7 +25,6 @@ namespace Raven.Server.Rachis
 
         public string Status;
 
-        private long _followerNextIndex;// this is only accessed by this thread
         private long _followerMatchIndex;
         private long _lastReplyFromFollower;
         private Thread _thread;
@@ -96,8 +95,8 @@ namespace Raven.Server.Rachis
                             var matchIndex = InitialNegotiationWithFollower();
                             if (matchIndex == null)
                                 return;
-
-                            SendSnapshot(stream, matchIndex.Value);
+                            UpdateLastMatchFromFollower(matchIndex.Value);
+                            SendSnapshot(stream);
 
                             var entries = new List<BlittableJsonReaderObject>();
                             while (_leader.Running)
@@ -114,7 +113,7 @@ namespace Raven.Server.Rachis
                                             RachisConsensus.LogsTable,
                                             RachisConsensus.EntriesSlice);
 
-                                        var reveredNextIndex = Bits.SwapBytes(_followerNextIndex);
+                                        var reveredNextIndex = Bits.SwapBytes(_followerMatchIndex + 1);
                                         Slice key;
                                         using (
                                             Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long),
@@ -136,8 +135,8 @@ namespace Raven.Server.Rachis
                                                 LeaderCommit = _engine.GetLastCommitIndex(context),
                                                 Term = _engine.CurrentTerm,
                                                 TruncateLogBefore = _leader.LowestIndexInEntireCluster,
-                                                PrevLogTerm = _engine.GetTermFor(_followerNextIndex - 1) ?? 0,
-                                                PrevLogIndex = _followerNextIndex - 1
+                                                PrevLogTerm = _engine.GetTermFor(context,_followerMatchIndex) ?? 0,
+                                                PrevLogIndex = _followerMatchIndex
                                             };
                                         }
                                     }
@@ -160,7 +159,6 @@ namespace Raven.Server.Rachis
                                         throw new InvalidOperationException(msg);
                                     }
                                     Debug.Assert(aer.CurrentTerm == _engine.CurrentTerm);
-                                    _followerNextIndex = aer.LastLogIndex + 1;
                                     UpdateLastMatchFromFollower(aer.LastLogIndex);
                                 }
                                 var task = _leader.WaitForNewEntries();
@@ -206,25 +204,26 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void SendSnapshot(Stream stream, long matchIndex)
+        private void SendSnapshot(Stream stream)
         {
-            UpdateLastMatchFromFollower(matchIndex);
-
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
                 var earliestIndexEtry = _engine.GetFirstEntryIndex(context);
-                if (matchIndex >= earliestIndexEtry)
+                if (_followerMatchIndex >= earliestIndexEtry)
                 {
                     // we don't need a snapshot, so just send updated topology
                     _connection.Send(context, new InstallSnapshot
                     {
-                        LastIncludedIndex = -1,
-                        LastIncludedTerm = -1,
+                        LastIncludedIndex = 0,
+                        LastIncludedTerm = 0,
                         Topology = _engine.GetTopologyRaw(context),
-                        SnapshotSize = 0
                     });
+                    using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
+                    {
+                        binaryWriter.Write((int) RootObjectType.None);
+                    }
                 }
                 else
                 {
@@ -232,43 +231,20 @@ namespace Raven.Server.Rachis
                     long term;
                     _engine.GetLastCommitIndex(context, out index, out term);
 
-                    var snapshot = Path.Combine(_engine.TempPath, $"Snapshot-{index}-{term}.{Guid.NewGuid()}");
-                    using (var file = new FileStream(snapshot, FileMode.Create,
-                        FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete, 4096,
-                        FileOptions.DeleteOnClose | FileOptions.SequentialScan))
+                    // we make sure that we routinely update LastReplyFromFollower here
+                    // so we'll not leave the leader thinking we abandoned it
+                    UpdateLastMatchFromFollower(_followerMatchIndex);
+
+                    _connection.Send(context, new InstallSnapshot
                     {
-                        var copier = new UnmanagedMemoryToStream(file);
+                        LastIncludedIndex = index,
+                        LastIncludedTerm = term,
+                        Topology = _engine.GetTopologyRaw(context),
+                    });
 
-                        WriteSnapshotToFile(context, file, copier);
+                    WriteSnapshotToFile(context, new BufferedStream(stream));
 
-                        // we make sure that we routinely update LastReplyFromFollower here
-                        // so we'll not leave the leader thinking we abandoned it
-                        UpdateLastMatchFromFollower(matchIndex);
-
-                        _connection.Send(context, new InstallSnapshot
-                        {
-                            LastIncludedIndex = index,
-                            LastIncludedTerm = term,
-                            Topology = _engine.GetTopologyRaw(context),
-                            SnapshotSize = file.Length
-                        });
-
-                        file.Position = 0;
-                        var sp = Stopwatch.StartNew();
-                        while (file.Position < file.Length)
-                        {
-                            var read = file.Read(copier.Buffer,0, copier.Buffer.Length);
-                            stream.Write(copier.Buffer, 0, read);
-                            if (sp.ElapsedMilliseconds > _engine.ElectionTimeoutMs / 2)
-                            {
-                                UpdateLastMatchFromFollower(matchIndex);
-                                sp.Restart();
-                            }
-                        }
-
-                        UpdateLastMatchFromFollower(matchIndex);
-                    }
-                    File.Delete(snapshot);
+                    UpdateLastMatchFromFollower(_followerMatchIndex);
                 }
 
                 while (true)
@@ -279,14 +255,31 @@ namespace Raven.Server.Rachis
                         UpdateLastMatchFromFollower(aer.LastLogIndex);
                         break;
                     }
-                    UpdateLastMatchFromFollower(matchIndex);
+                    UpdateLastMatchFromFollower(_followerMatchIndex);
                 }
             }
         }
 
-        private unsafe void WriteSnapshotToFile(TransactionOperationContext context, FileStream file, UnmanagedMemoryToStream copier)
+        private void MaybeNotifyLeaderThatWeAreSillAlive(long count, Stopwatch sp)
         {
-            using (var binaryWriter = new BinaryWriter(file, Encoding.UTF8, leaveOpen: true))
+            if (count % 100 != 0)
+                return;
+
+            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeoutMs / 2)
+                return;
+
+            sp.Restart();
+
+            UpdateLastMatchFromFollower(_followerMatchIndex);
+        }
+
+        private unsafe void WriteSnapshotToFile(TransactionOperationContext context, Stream dest)
+        {
+            var copier = new UnmanagedMemoryToStream(dest);
+            var sp = Stopwatch.StartNew();
+            long count = 0;
+
+            using (var binaryWriter = new BinaryWriter(dest, Encoding.UTF8, leaveOpen: true))
             {
                 var txr = context.Transaction.InnerTransaction;
                 var llt = txr.LowLevelTransaction;
@@ -299,6 +292,8 @@ namespace Raven.Server.Rachis
                         var rootObjectType = txr.GetRootObjectType(rootIterator.CurrentKey);
                         if (_engine.ShouldSnapshot(rootIterator.CurrentKey, rootObjectType) == false)
                             continue;
+
+                        MaybeNotifyLeaderThatWeAreSillAlive(count++, sp);
 
                         var currentTreeKey = rootIterator.CurrentKey;
 
@@ -324,6 +319,7 @@ namespace Raven.Server.Rachis
                                             var reader = treeIterator.CreateReaderForCurrent();
                                             binaryWriter.Write(reader.Length);
                                             copier.Copy(reader.Base, reader.Length);
+                                            MaybeNotifyLeaderThatWeAreSillAlive(count++, sp);
                                         } while (treeIterator.MoveNext());
                                     }
                                 }
@@ -341,6 +337,7 @@ namespace Raven.Server.Rachis
                                 binaryWriter.Write(inputTable.NumberOfEntries);
                                 foreach (var holder in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys))
                                 {
+                                    MaybeNotifyLeaderThatWeAreSillAlive(count++, sp);
                                     binaryWriter.Write(holder.Reader.Size);
                                     copier.Copy(holder.Reader.Pointer, holder.Reader.Size);
                                 }
@@ -351,7 +348,11 @@ namespace Raven.Server.Rachis
 
                     } while (rootIterator.MoveNext());
                 }
+                binaryWriter.Write((int)RootObjectType.None);
             }
+            MaybeNotifyLeaderThatWeAreSillAlive(0, sp);
+
+            dest.Flush();
         }
 
         private unsafe class UnmanagedMemoryToStream
@@ -440,14 +441,14 @@ namespace Raven.Server.Rachis
                 using (context.OpenReadTransaction())
                 {
                     clusterTopology = _engine.GetTopology(context);
-                    var range = _engine.GetLogEntriesRange(context);
+                    var lastIndexEntry = _engine.GetLastEntryIndex(context);
                     appendEntries = new AppendEntries
                     {
                         EntriesCount = 0,
                         Term = _engine.CurrentTerm,
                         LeaderCommit = _engine.GetLastCommitIndex(context),
-                        PrevLogIndex = range.Item2,
-                        PrevLogTerm = _engine.GetTermForKnownExisting(context, range.Item2),
+                        PrevLogIndex = lastIndexEntry,
+                        PrevLogTerm = _engine.GetTermForKnownExisting(context, lastIndexEntry),
                     };
                 }
 
@@ -476,7 +477,6 @@ namespace Raven.Server.Rachis
 
                     if (aer.Success)
                     {
-                        _followerNextIndex = aer.LastLogIndex + 1;
                         return aer.LastLogIndex;
                     }
 
@@ -509,7 +509,6 @@ namespace Raven.Server.Rachis
                     aer = _connection.Read<AppendEntriesResponse>(context);
                 } while (aer.Success == false);
 
-                _followerNextIndex = aer.LastLogIndex + 1;
                 return aer.LastLogIndex;
             }
         }

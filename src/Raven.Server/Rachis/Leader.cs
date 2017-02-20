@@ -269,7 +269,7 @@ namespace Raven.Server.Rachis
                 if (_lastCommit == maxIndexOnQuorum)
                     return; // nothing to do here
 
-                if (_engine.GetTermFor(maxIndexOnQuorum) < _engine.CurrentTerm)
+                if (_engine.GetTermFor(context, maxIndexOnQuorum) < _engine.CurrentTerm)
                     return;// can't commit until at least one entry from our term has been published
 
                 _lastCommit = maxIndexOnQuorum;
@@ -393,7 +393,7 @@ namespace Raven.Server.Rachis
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                lastIndex = _engine.GetLogEntriesRange(context).Item2;
+                lastIndex = _engine.GetLastEntryIndex(context);
             }
 
             foreach (var ambasaddor in _promotables)

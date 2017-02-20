@@ -116,7 +116,6 @@ namespace Raven.Server.Rachis
                 ["Type"] = nameof(InstallSnapshot),
                 [nameof(InstallSnapshot.LastIncludedIndex)] = installSnapshot.LastIncludedIndex,
                 [nameof(InstallSnapshot.LastIncludedTerm)] = installSnapshot.LastIncludedTerm,
-                [nameof(InstallSnapshot.SnapshotSize)] = installSnapshot.SnapshotSize,
                 [nameof(InstallSnapshot.Topology)] = installSnapshot.Topology,
             });
         }
@@ -215,6 +214,16 @@ namespace Raven.Server.Rachis
                 ValidateMessage(typeof(T).Name, json);
                 return JsonDeserializationRachis<T>.Deserialize(json);
             }
+        }
+
+        public InstallSnapshot ReadInstallSnapshot(JsonOperationContext context)
+        {
+            // we explicitly not disposing this here, because we need to access the topology
+            var json = context.ParseToMemory(_stream, "rachis-snapshot",
+                BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
+            json.BlittableValidation();
+            ValidateMessage(nameof(InstallSnapshot), json);
+            return JsonDeserializationRachis<InstallSnapshot>.Deserialize(json);
         }
 
         public RachisEntry ReadRachisEntry(JsonOperationContext context)
