@@ -168,15 +168,21 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             bool shouldSkip;
             _sut.SetDocument(doc.Key, doc, _ctx, out shouldSkip);
 
-            Assert.Equal(5, _sut.Document.GetFields().Count);
+            Assert.Equal(1 + 2 * 3, _sut.Document.GetFields().Count); // __document_id + 2x (field, field_L_Range, field_D_Range)
             Assert.NotNull(_sut.Document.GetField("Weight"));
-            var weightNumeric = _sut.Document.GetFieldable("Weight_Range") as NumericField;
+            var weightNumeric = _sut.Document.GetFieldable("Weight_D_Range") as NumericField;
             Assert.NotNull(weightNumeric);
             Assert.Equal(70.1, weightNumeric.NumericValue);
+            weightNumeric = _sut.Document.GetFieldable("Weight_L_Range") as NumericField;
+            Assert.NotNull(weightNumeric);
+            Assert.Equal(70L, weightNumeric.NumericValue);
             Assert.NotNull(_sut.Document.GetField("Age"));
-            var ageNumeric = _sut.Document.GetFieldable("Age_Range") as NumericField;
+            var ageNumeric = _sut.Document.GetFieldable("Age_L_Range") as NumericField;
             Assert.NotNull(ageNumeric);
             Assert.Equal(25L, ageNumeric.NumericValue);
+            ageNumeric = _sut.Document.GetFieldable("Age_D_Range") as NumericField;
+            Assert.NotNull(ageNumeric);
+            Assert.Equal(25.0, ageNumeric.NumericValue);
 
             Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
         }

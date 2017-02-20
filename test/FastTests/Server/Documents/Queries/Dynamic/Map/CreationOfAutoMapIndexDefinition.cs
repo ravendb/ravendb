@@ -142,7 +142,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "Name:A*",
                 SortedFields = new[]
                 {
-                    new SortedField("Age_Range"),
+                    new SortedField("Age_L_Range"),
                 },
             });
 
@@ -192,7 +192,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "Name:A*",
                 SortedFields = new[]
                 {
-                    new SortedField("Address.ZipCode_Range"),
+                    new SortedField("Address.ZipCode_D_Range"),
                 },
             });
 
@@ -214,7 +214,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
-                Query = "Age_Range:{Lx30 TO NULL}"
+                Query = "Age_D_Range:{Lx30 TO NULL}"
             });
 
             var definition = _sut.CreateAutoIndexDefinition();
@@ -235,7 +235,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "FirstName:A*",
                 SortedFields = new[]
                 {
-                    new SortedField("Count_Range"),
+                    new SortedField("Count_L_Range"),
                 },
             });
 
@@ -246,7 +246,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "LastName:A*",
                 SortedFields = new[]
                 {
-                    new SortedField("Age_Range"),
+                    new SortedField("Age_D_Range"),
                 },
             });
 
@@ -277,7 +277,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "FirstName:A* LastName:a*",
                 SortedFields = new[]
                 {
-                    new SortedField("Count_Range"),
+                    new SortedField("Count_L_Range"),
                 },
             });
 
@@ -288,8 +288,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "FirstName:A* AddressId:addresses/1",
                 SortedFields = new[]
                 {
-                    new SortedField("Age_Range"),
-                    new SortedField("Count_Range")
+                    new SortedField("Age_D_Range"),
+                    new SortedField("Count_L_Range")
                 },
             });
 

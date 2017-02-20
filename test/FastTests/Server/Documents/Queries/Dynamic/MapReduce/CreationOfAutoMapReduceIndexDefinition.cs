@@ -157,7 +157,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 },
                 SortedFields = new[]
                 {
-                    new SortedField("Count_Range"),
+                    new SortedField("Count_L_Range"),
                 }
             });
 
@@ -186,7 +186,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 },
                 SortedFields = new[]
                 {
-                    new SortedField("Age_Range"),
+                    new SortedField("Age_L_Range"),
                 }
             });
 

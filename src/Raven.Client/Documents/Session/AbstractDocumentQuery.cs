@@ -1137,14 +1137,13 @@ If you really want to do in memory filtering on the data returned from the query
 
                     if (whereParams.FieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
                     {
+                        var rangeType = FieldUtil.GetRangeTypeFromFieldName(whereParams.FieldName);
                         var name = whereParams.FieldName.Substring(0, whereParams.FieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
 
                         renamedField = DynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == name);
 
                         if (renamedField != null)
-                        {
-                            return whereParams.FieldName = FieldUtil.ApplyRangeSuffixIfNecessary(renamedField.Name, whereParams.FieldTypeForIdentifier);
-                        }
+                            return whereParams.FieldName = FieldUtil.ApplyRangeSuffixIfNecessary(renamedField.Name, rangeType);
                     }
                     else
                     {
@@ -1163,7 +1162,6 @@ If you really want to do in memory filtering on the data returned from the query
                 var identityProperty = TheSession.Conventions.GetIdentityProperty(rootType);
                 if (identityProperty != null && identityProperty.Name == whereParams.FieldName)
                 {
-                    whereParams.FieldTypeForIdentifier = rootType;
                     return whereParams.FieldName = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
                 }
             }
@@ -1258,7 +1256,6 @@ If you really want to do in memory filtering on the data returned from the query
                     AllowWildcards = true,
                     IsAnalyzed = true,
                     FieldName = whereParams.FieldName,
-                    FieldTypeForIdentifier = whereParams.FieldTypeForIdentifier,
                     Value = value
                 };
                 QueryText.Append(TransformToEqualValue(nestedWhereParams).Replace(",", "`,`"));
