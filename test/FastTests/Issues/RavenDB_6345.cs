@@ -20,8 +20,8 @@ namespace FastTests.Issues
                     session.Store(new SomeClass { Culture = "EU", CatalogId = "Catalog/Test", ModelId = 4 });
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    var query = session.Advanced.DocumentQuery<SomeClass>("SomeClassIndex").WhereEquals("Culture", "EU").AndAlso().Not.WhereEquals("ModelId", 4).AndAlso().WhereEquals("CatalogId", "Catalog/Test");
-                    Assert.Empty(query.ToList());
+                    var query = session.Query<SomeClass>("SomeClassIndex").Where(x => x.Culture.Equals("EU") && !(x.ModelId == 5) || x.CatalogId == "Catalog/Test");
+                    Assert.Single(query.ToList());
                 }
             }
         }
