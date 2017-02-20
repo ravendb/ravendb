@@ -132,7 +132,7 @@ namespace Voron.Impl.Paging
         private static void ThrowNotSupportedOption(string file)
         {
             throw new NotSupportedException(
-                "CopyOnWriteMode using spare memory is currently not supported for 32 bits, error on " +
+                "CopyOnWriteMode is currently not supported for 32 bits, error on " +
                 file);
         }
 
