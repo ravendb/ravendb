@@ -1,32 +1,22 @@
 using System;
-using Microsoft.Extensions.Primitives;
 using Sparrow.Json;
 using Voron;
 
-namespace Raven.Server.Files
+namespace Raven.Server.Documents
 {
-    public class FileMetadata : IDisposable
+    public class Attachment
     {
         public long Etag;
-        public LazyStringValue Name;
-        public LazyStringValue LoweredKey;
+        public LazyStringValue LoweredDocumentId;
+        public LazyStringValue LoweredName;
         public long StorageId;
-        public BlittableJsonReaderObject Metadata;
 
-        public DateTime LastModifed;
+        public DateTime LastModified;
+
+        public LazyStringValue Name;
+        public LazyStringValue ContentType;
 
         public Slice StreamIdentifier;
-        public IDisposable StreamIdentifierDispose;
-
-        public string ContentType;
-
-        public void Dispose()
-        {
-            Metadata?.Dispose();
-            Name?.Dispose();
-            LoweredKey?.Dispose();
-            StreamIdentifierDispose?.Dispose();
-        }
 
         public static string Canonize(string name, bool trimEnd = true)
         {
