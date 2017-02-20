@@ -778,13 +778,15 @@ namespace Voron.Data.Tables
             }
         }
 
-        public bool SeekLastByPrimaryKey(out TableValueReader reader)
+        public bool SeekOnePrimaryKey(Slice slice,out TableValueReader reader)
         {
+            Debug.Assert(slice.Options != SliceOptions.Key, "Should be called with only AfterAllKeys or BeforeAllKeys");
+
             var pk = _schema.Key;
             var tree = GetTree(pk);
             using (var it = tree.Iterate(false))
             {
-                if (it.Seek(Slices.AfterAllKeys) == false)
+                if (it.Seek(slice) == false)
                 {
                     reader = default(TableValueReader);
                     return false;
@@ -848,7 +850,7 @@ namespace Voron.Data.Tables
             long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
             int size;
             var ptr = DirectRead(id, out size);
-            reader = new TableValueReader(ptr, size);
+            reader = new TableValueReader(id,ptr, size);
         }
 
         public long Set(TableValueBuilder builder)
