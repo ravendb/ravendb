@@ -27,7 +27,7 @@ namespace Voron.Platform.Posix
 
             PosixHelper.EnsurePathExists(FileName);
 
-            _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT,
+            _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | options.SafePosixOpenFlags,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
             {
