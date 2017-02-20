@@ -121,6 +121,17 @@ namespace Raven.Server.Rachis
             });
         }
 
+        public void Send(JsonOperationContext context, InstallSnapshotResponse installSnapshotResponse)
+        {
+            Send(context, new DynamicJsonValue
+            {
+                ["Type"] = nameof(InstallSnapshotResponse),
+                [nameof(InstallSnapshotResponse.CurrentTerm)] = installSnapshotResponse.CurrentTerm,
+                [nameof(InstallSnapshotResponse.LastLogIndex)] = installSnapshotResponse.LastLogIndex,
+                [nameof(InstallSnapshotResponse.Done)] = installSnapshotResponse.Done,
+            });
+        }
+
         public void Send(JsonOperationContext context, Exception e)
         {
             if (_log?.IsInfoEnabled == true)

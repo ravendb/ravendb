@@ -97,44 +97,14 @@ namespace Raven.Server.Rachis
                             if (matchIndex == null)
                                 return;
 
-                            UpdateLastMatchFromFollower(matchIndex.Value);
-
-                            TransactionOperationContext context;
-                            using (_engine.ContextPool.AllocateOperationContext(out context))
-                            using (context.OpenReadTransaction())
-                            {
-                                var earliestIndexEtry = _engine.GetFirstEntryIndex(context);
-                                if (matchIndex.Value >= earliestIndexEtry)
-                                {
-                                    // we don't need a snapshot, so just send updated topology
-                                    _connection.Send(context, new InstallSnapshot
-                                    {
-                                        LastIncludedIndex = -1,
-                                        LastIncludedTerm = -1,
-                                        Topology = _engine.GetTopologyRaw(context),
-                                        SnapshotSize = 0
-                                    });
-                                }
-                                else
-                                {
-                                    SendSnapshotToFollower(context, stream);
-                                }
-
-                                var aer = _connection.Read<AppendEntriesResponse>(context);
-                                if (aer.Success == false)
-                                {
-                                    throw new InvalidOperationException(
-                                        $"Unable to install snapshot on {_url} because {aer.Message}");
-                                }
-
-                                //TODO: make sure that we routinely update LastReplyFromFollower here
-                            }
+                            SendSnapshot(stream, matchIndex.Value);
 
                             var entries = new List<BlittableJsonReaderObject>();
                             while (_leader.Running)
                             {
                                 // TODO: how to close
                                 entries.Clear();
+                                TransactionOperationContext context;
                                 using (_engine.ContextPool.AllocateOperationContext(out context))
                                 {
                                     AppendEntries appendEntries;
@@ -236,37 +206,88 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void SendSnapshotToFollower(TransactionOperationContext context, Stream stream)
+        private void SendSnapshot(Stream stream, long matchIndex)
         {
-            long index;
-            long term;
-            _engine.GetLastCommitIndex(context, out index, out term);
+            UpdateLastMatchFromFollower(matchIndex);
 
-            var snapshot = Path.Combine(_engine.TempPath, $"Snapshot-{index}-{term}.{Guid.NewGuid()}");
-            using (var file = new FileStream(snapshot, FileMode.Create,
-                FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete, 4096,
-                FileOptions.DeleteOnClose | FileOptions.SequentialScan))
+            TransactionOperationContext context;
+            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                WriteSnapshotToFile(context, file);
-                file.Position = 0;
-                _connection.Send(context, new InstallSnapshot
+                var earliestIndexEtry = _engine.GetFirstEntryIndex(context);
+                if (matchIndex >= earliestIndexEtry)
                 {
-                    LastIncludedIndex = index,
-                    LastIncludedTerm = term,
-                    Topology = _engine.GetTopologyRaw(context),
-                    SnapshotSize = file.Length
-                });
+                    // we don't need a snapshot, so just send updated topology
+                    _connection.Send(context, new InstallSnapshot
+                    {
+                        LastIncludedIndex = -1,
+                        LastIncludedTerm = -1,
+                        Topology = _engine.GetTopologyRaw(context),
+                        SnapshotSize = 0
+                    });
+                }
+                else
+                {
+                    long index;
+                    long term;
+                    _engine.GetLastCommitIndex(context, out index, out term);
 
-                file.CopyTo(stream);
+                    var snapshot = Path.Combine(_engine.TempPath, $"Snapshot-{index}-{term}.{Guid.NewGuid()}");
+                    using (var file = new FileStream(snapshot, FileMode.Create,
+                        FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete, 4096,
+                        FileOptions.DeleteOnClose | FileOptions.SequentialScan))
+                    {
+                        var copier = new UnmanagedMemoryToStream(file);
+
+                        WriteSnapshotToFile(context, file, copier);
+
+                        // we make sure that we routinely update LastReplyFromFollower here
+                        // so we'll not leave the leader thinking we abandoned it
+                        UpdateLastMatchFromFollower(matchIndex);
+
+                        _connection.Send(context, new InstallSnapshot
+                        {
+                            LastIncludedIndex = index,
+                            LastIncludedTerm = term,
+                            Topology = _engine.GetTopologyRaw(context),
+                            SnapshotSize = file.Length
+                        });
+
+                        file.Position = 0;
+                        var sp = Stopwatch.StartNew();
+                        while (file.Position < file.Length)
+                        {
+                            var read = file.Read(copier.Buffer,0, copier.Buffer.Length);
+                            stream.Write(copier.Buffer, 0, read);
+                            if (sp.ElapsedMilliseconds > _engine.ElectionTimeoutMs / 2)
+                            {
+                                UpdateLastMatchFromFollower(matchIndex);
+                                sp.Restart();
+                            }
+                        }
+
+                        UpdateLastMatchFromFollower(matchIndex);
+                    }
+                    File.Delete(snapshot);
+                }
+
+                while (true)
+                {
+                    var aer = _connection.Read<InstallSnapshotResponse>(context);
+                    if (aer.Done)
+                    {
+                        UpdateLastMatchFromFollower(aer.LastLogIndex);
+                        break;
+                    }
+                    UpdateLastMatchFromFollower(matchIndex);
+                }
             }
-            File.Delete(snapshot);
         }
 
-        private unsafe void WriteSnapshotToFile(TransactionOperationContext context, FileStream file)
+        private unsafe void WriteSnapshotToFile(TransactionOperationContext context, FileStream file, UnmanagedMemoryToStream copier)
         {
             using (var binaryWriter = new BinaryWriter(file, Encoding.UTF8, leaveOpen: true))
             {
-                var copier = new UnmanagedMemoryToStream(file);
                 var txr = context.Transaction.InnerTransaction;
                 var llt = txr.LowLevelTransaction;
                 using (var rootIterator = llt.RootObjects.Iterate(false))
@@ -335,8 +356,11 @@ namespace Raven.Server.Rachis
 
         private unsafe class UnmanagedMemoryToStream
         {
-            private byte[] _buffer = new byte[1024];
-            private Stream _stream;
+            private readonly byte[] _buffer = new byte[1024];
+
+            public byte[] Buffer => _buffer;
+
+            private readonly Stream _stream;
 
             public UnmanagedMemoryToStream(Stream stream)
             {

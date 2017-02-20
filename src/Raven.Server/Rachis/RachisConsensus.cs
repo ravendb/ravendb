@@ -318,7 +318,6 @@ namespace Raven.Server.Rachis
 
         private static unsafe BlittableJsonReaderObject SetTopology(Transaction tx, JsonOperationContext context, ClusterTopology topology)
         {
-            var state = tx.CreateTree(GlobalStateSlice);
 
             var djv = new DynamicJsonValue
             {
@@ -331,9 +330,15 @@ namespace Raven.Server.Rachis
 
             var topologyJson = context.ReadObject(djv, "topology");
 
+            SetTopology(tx, topologyJson);
+            return topologyJson;
+        }
+
+        public static unsafe void SetTopology(Transaction tx, BlittableJsonReaderObject topologyJson)
+        {
+            var state = tx.CreateTree(GlobalStateSlice);
             var ptr = state.DirectAdd(TopologySlice, topologyJson.Size);
             topologyJson.CopyTo(ptr);
-            return topologyJson;
         }
 
         public string GetDebugInformation()

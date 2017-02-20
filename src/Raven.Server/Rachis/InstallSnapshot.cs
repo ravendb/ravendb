@@ -12,4 +12,11 @@ namespace Raven.Server.Rachis
 
         public BlittableJsonReaderObject Topology { get; set; } 
     }
+
+    public class InstallSnapshotResponse
+    {
+        public bool Done { get; set; }
+        public long CurrentTerm { get; set; }
+        public long LastLogIndex { get; set; }
+    }
 }

@@ -158,119 +158,144 @@ namespace Raven.Server.Rachis
 
             var snapshot = _connection.Read<InstallSnapshot>(context);
 
-            if (snapshot.SnapshotSize != 0)
+            using (context.OpenWriteTransaction())
             {
-                using (context.OpenWriteTransaction())
+                if (snapshot.SnapshotSize != 0)
                 {
-                    var txw = context.Transaction.InnerTransaction;
-                    var llt = txw.LowLevelTransaction;
-
-                    var reader = _connection.CreateReader();
-
-                    var type = (RootObjectType)reader.ReadInt32();
-                    int size;
-                    Slice key;
-                    long entries;
-                    switch (type)
-                    {
-                        case RootObjectType.VariableSizeTree:
-
-                            size = reader.ReadInt32();
-                            reader.ReadExactly(size);
-                            Tree tree;
-
-                            using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
-                            {
-                                txw.DeleteTree(key);
-                                tree = txw.CreateTree(key);
-                            }
-
-                            entries = reader.ReadInt64();
-                            for (long i = 0; i < entries; i++)
-                            {
-                                size = reader.ReadInt32();
-                                reader.ReadExactly(size);
-                                using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
-                                {
-                                    size = reader.ReadInt32();
-                                    reader.ReadExactly(size);
-
-                                    var ptr = tree.DirectAdd(key, size);
-                                    fixed (byte* pBuffer = reader.Buffer)
-                                    {
-                                        Memory.Copy(ptr, pBuffer, size);
-                                    }
-                                }
-                            }
-
-
-                            break;
-                        case RootObjectType.Table:
-
-                            size = reader.ReadInt32();
-                            reader.ReadExactly(size);
-                            Table table;
-                            using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
-                            {
-                                var tableTree = txw.ReadTree(key, RootObjectType.Table);
-
-                                // Get the table schema
-                                var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
-                                var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
-                                if (schemaPtr == null)
-                                    throw new InvalidOperationException(
-                                        "When trying to install snapshot, found missing table " + key);
-
-                                var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
-
-                                table = txw.OpenTable(schema, key);
-                            }
-
-                            // delete the table
-                            TableValueReader tvr;
-                            while (true)
-                            {
-                                if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out tvr) == false)
-                                    break;
-                                table.Delete(tvr.Id);
-                            }
-
-                            entries = reader.ReadInt64();
-                            for (long i = 0; i < entries; i++)
-                            {
-                                size = reader.ReadInt32();
-                                reader.ReadExactly(size);
-                                fixed (byte* pBuffer = reader.Buffer)
-                                {
-                                    tvr = new TableValueReader(pBuffer, size);
-                                    table.Insert(ref tvr);
-                                }
-                            }
-
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
-                    }
-
-                    llt.Commit();
+                    InstallSnapshot(context, snapshot);
                 }
-                //TODO: read snapshot from stream
-                //TODO: might be large, so need to write to disk (temp folder)
-                //TODO: then need to apply it, might take a while, so need to 
-                //TODO: send periodic heartbeats to other side so it can keep track 
-                //TODO: of what we are doing
+                // snapshot always has the latest topology
+                if(snapshot.Topology == null)
+                    throw new InvalidOperationException("Expected to get topology on snapshot");
+                RachisConsensus.SetTopology(context.Transaction.InnerTransaction, snapshot.Topology);
 
-                //TODO: install snapshot always contains the latest topology from the leader
+                context.Transaction.Commit();
             }
-            _connection.Send(context, new AppendEntriesResponse
+            _connection.Send(context, new InstallSnapshotResponse
             {
-                Success = true,
-                Message =
-                    $"Negotiation completed, now at {snapshot.LastIncludedIndex} with term {snapshot.LastIncludedTerm}",
+                Done = true,
                 CurrentTerm = _engine.CurrentTerm,
                 LastLogIndex = snapshot.LastIncludedIndex
             });
             _engine.Timeout.Defer();
+        }
+
+        private unsafe void InstallSnapshot(TransactionOperationContext context, InstallSnapshot snapshot)
+        {
+            var txw = context.Transaction.InnerTransaction;
+            var sp = Stopwatch.StartNew();
+            var reader = _connection.CreateReader();
+
+            var type = (RootObjectType)reader.ReadInt32();
+            int size;
+            Slice key;
+            long entries;
+            switch (type)
+            {
+                case RootObjectType.VariableSizeTree:
+
+                    size = reader.ReadInt32();
+                    reader.ReadExactly(size);
+                    Tree tree;
+
+                    using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
+                    {
+                        txw.DeleteTree(key);
+                        tree = txw.CreateTree(key);
+                    }
+
+                    entries = reader.ReadInt64();
+                    for (long i = 0; i < entries; i++)
+                    {
+                        MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+                        using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
+                        {
+                            size = reader.ReadInt32();
+                            reader.ReadExactly(size);
+
+                            var ptr = tree.DirectAdd(key, size);
+                            fixed (byte* pBuffer = reader.Buffer)
+                            {
+                                Memory.Copy(ptr, pBuffer, size);
+                            }
+                        }
+                    }
+
+
+                    break;
+                case RootObjectType.Table:
+
+                    size = reader.ReadInt32();
+                    reader.ReadExactly(size);
+                    Table table;
+                    using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
+                    {
+                        var tableTree = txw.ReadTree(key, RootObjectType.Table);
+
+                        // Get the table schema
+                        var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                        var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+                        if (schemaPtr == null)
+                            throw new InvalidOperationException(
+                                "When trying to install snapshot, found missing table " + key);
+
+                        var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
+
+                        table = txw.OpenTable(schema, key);
+                    }
+
+                    // delete the table
+                    TableValueReader tvr;
+                    while (true)
+                    {
+                        if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out tvr) == false)
+                            break;
+                        table.Delete(tvr.Id);
+
+                        MaybeNotifyLeaderThatWeAreSillAlive(context, table.NumberOfEntries, sp);
+                    }
+
+                    entries = reader.ReadInt64();
+                    for (long i = 0; i < entries; i++)
+                    {
+                        MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+                        fixed (byte* pBuffer = reader.Buffer)
+                        {
+                            tvr = new TableValueReader(pBuffer, size);
+                            table.Insert(ref tvr);
+                        }
+                    }
+
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+            }
+
+            _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
+        }
+
+        private void MaybeNotifyLeaderThatWeAreSillAlive(TransactionOperationContext context, long count, Stopwatch sp)
+        {
+            if (count % 100 != 0)
+                return;
+
+            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeoutMs / 2)
+                return;
+
+            sp.Restart();
+
+            _connection.Send(context, new InstallSnapshotResponse
+            {
+                Done = false,
+                CurrentTerm = -1,
+                LastLogIndex = -1
+            });
         }
 
         private void NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context,
