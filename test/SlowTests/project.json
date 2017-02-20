@@ -4,12 +4,13 @@
   "buildOptions": {
     "allowUnsafe": true,
     "warningsAsErrors": true,
+    "emitEntryPoint": true,
     "compile": {
       "include": [ "**/*.cs", "../../src/CommonAssemblyInfo.cs" ]
     },
     "embed": [ "Data/*.txt", "MailingList/Everett/*.txt", "Smuggler/Northwind_3.5.35168.ravendbdump", "Smuggler/Indexes_And_Transformers_3.5.ravendbdump", "Smuggler/test.ravendbdump" ],
     "copyToOutput": {
-      "include": [ "../xunit.runner.json"]
+      "include": [ "../xunit.runner.json" ]
     }
   },
 
@@ -19,6 +20,10 @@
         "optimize": true
       }
     }
+  },
+
+  "publishOptions": {
+    "include": [ "../xunit.runner.json" ]
   },
 
   "testRunner": "xunit",
@@ -37,13 +42,23 @@
     "dotnet-test-xunit": "2.2.0-preview2-build1029",
     "Sparrow": "4.0.0-*",
     "FastTests": "4.0.0-*",
-    "Microsoft.NETCore.App": {
-      "type": "platform",
-      "version": "1.1.0"
-    },
+    "Microsoft.NETCore.App": "1.1.0",
     "System.Diagnostics.TraceSource": "4.3.0",
     "Tests.Infrastructure": "4.0.0-*",
     "Voron": "4.0.0-*",
     "xunit": "2.2.0-beta4-build3444"
+  },
+
+  "runtimes": {
+    "win7-x64": {},
+    "win7-x86": {},
+    "win8-x64": {},
+    "win8-x86": {},
+    "win81-x64": {},
+    "win81-x86": {},
+    "win10-x64": {},
+    "win10-x86": {},
+    "ubuntu.14.04-x64": {},
+    "ubuntu.16.04-x64": {}
   }
 }
