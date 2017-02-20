@@ -16,6 +16,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
+using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Voron.Util;
@@ -47,6 +48,11 @@ namespace Raven.Server.Rachis
         public override void Apply(TransactionOperationContext context, long uptoInclusive)
         {
             StateMachine.Apply(context, uptoInclusive);
+        }
+
+        public override bool ShouldSnapshot(Slice slice, RootObjectType type)
+        {
+            return StateMachine.ShouldSnapshot(slice, type);
         }
 
         private class NullDisposable : IDisposable
@@ -81,6 +87,7 @@ namespace Raven.Server.Rachis
 
         public long CurrentTerm { get; private set; }
         public string Url => _url;
+        public string TempPath => _options.TempPath;
 
         private static readonly Slice GlobalStateSlice;
         private static readonly Slice CurrentTermSlice;
@@ -289,7 +296,18 @@ namespace Raven.Server.Rachis
             return JsonDeserializationRachis<ClusterTopology>.Deserialize(json);
         }
 
-        public unsafe BlittableJsonReaderObject SetTopology(TransactionOperationContext context, ClusterTopology topology)
+        public unsafe BlittableJsonReaderObject GetTopologyRaw(TransactionOperationContext context)
+        {
+            Debug.Assert(context.Transaction != null);
+            var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
+            var read = state.Read(TopologySlice);
+            if (read == null)
+                return null;
+
+            return new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+        }
+
+        public BlittableJsonReaderObject SetTopology(TransactionOperationContext context, ClusterTopology topology)
         {
             Debug.Assert(context.Transaction != null);
             var tx = context.Transaction.InnerTransaction;
@@ -450,6 +468,9 @@ namespace Raven.Server.Rachis
                 if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out reader) == false)
                     break;
 
+                if (table.NumberOfEntries == 1)
+                    break; // we always leave at least the last entry here, so GetLastEntyIndex will work
+
                 int size;
                 var entryIndex = Bits.SwapBytes(*(long*)reader.Read(0, out size));
                 if (entryIndex > upto)
@@ -562,8 +583,23 @@ namespace Raven.Server.Rachis
             return read.Reader.ReadLittleEndianInt64();
         }
 
+        public void GetLastCommitIndex(TransactionOperationContext context, out long index, out long term)
+        {
+            Debug.Assert(context.Transaction != null);
 
-        public unsafe void SetLastCommitIndex(TransactionOperationContext context, long value)
+            var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
+            var read = state.Read(LastCommitSlice);
+            if (read == null)
+            {
+                index = 0;
+                term = 0;
+                return;
+            }
+            index = read.Reader.ReadLittleEndianInt64();
+            term = read.Reader.ReadLittleEndianInt64();
+        }
+
+        public unsafe void SetLastCommitIndex(TransactionOperationContext context, long index, long term)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -572,12 +608,14 @@ namespace Raven.Server.Rachis
             if (read != null)
             {
                 var oldValue = read.Reader.ReadLittleEndianInt64();
-                if (oldValue >= value)
+                if (oldValue >= index)
                     throw new InvalidOperationException(
-                        $"Cannot reduce the last commit index (is {oldValue} but was requested to reduce to {value})");
+                        $"Cannot reduce the last commit index (is {oldValue} but was requested to reduce to {index})");
             }
 
-            *(long*)state.DirectAdd(LastCommitSlice, sizeof(long)) = value;
+            var data = (long*)state.DirectAdd(LastCommitSlice, sizeof(long)*2);
+            data[0] = index;
+            data[1] = term;
         }
 
         public unsafe Tuple<long, long> GetLogEntriesRange(TransactionOperationContext context)
@@ -597,6 +635,20 @@ namespace Raven.Server.Rachis
             Debug.Assert(size == sizeof(long));
 
             return Tuple.Create(min, max);
+        }
+
+        public unsafe long GetFirstEntryIndex(TransactionOperationContext context)
+        {
+            Debug.Assert(context.Transaction != null);
+
+            var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+            TableValueReader reader;
+            if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out reader) == false)
+                return 0;
+            int size;
+            var max = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+            Debug.Assert(size == sizeof(long));
+            return max;
         }
 
         public unsafe long GetLastEntryIndex(TransactionOperationContext context)
@@ -784,6 +836,8 @@ namespace Raven.Server.Rachis
 
             return task;
         }
+
+        public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
         public abstract void Apply(TransactionOperationContext context, long uptoInclusive);
 

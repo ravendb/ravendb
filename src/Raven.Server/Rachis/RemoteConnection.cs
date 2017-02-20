@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -133,6 +135,63 @@ namespace Raven.Server.Rachis
                 ["Message"] = e.Message,
                 ["Exception"] = e.ToString()
             });
+        }
+
+        public unsafe int Read(byte[] buffer, int offset, int count)
+        {
+            if (_buffer.Used < _buffer.Valid)
+            {
+                var size = Math.Min(count, _buffer.Valid - _buffer.Used);
+                fixed (byte* pBuffer = buffer)
+                {
+                    Memory.Copy(pBuffer + offset, _buffer.Pointer + _buffer.Used, size);
+                    _buffer.Used += size;
+                    return size;
+                }
+            }
+            return _stream.Read(buffer, offset, count);
+        }
+
+        public Reader CreateReader()
+        {
+            return new Reader(this);
+        }
+
+        public class Reader
+        {
+            private readonly RemoteConnection _parent;
+            private byte[] _buffer = new byte[1024];
+
+            public Reader(RemoteConnection parent)
+            {
+                _parent = parent;
+            }
+
+            public int ReadInt32()
+            {
+                ReadExactly(sizeof(int));
+                return BitConverter.ToInt32(_buffer, 0);
+            }
+
+            public long ReadInt64()
+            {
+                ReadExactly(sizeof(long));
+                return BitConverter.ToInt64(_buffer, 0);
+            }
+
+            public byte[] Buffer => _buffer;
+
+            public void ReadExactly(int size)
+            {
+                if(_buffer.Length < size)
+                    _buffer = new byte[Bits.NextPowerOf2(size)];
+                var remaining = 0;
+                while (remaining < size)
+                {
+                    var read = _parent.Read(_buffer, remaining, size - remaining);
+                    remaining += read;
+                }
+            }
         }
 
         public T Read<T>(JsonOperationContext context)

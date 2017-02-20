@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Rachis
+﻿using Sparrow.Json;
+
+namespace Raven.Server.Rachis
 {
     public class InstallSnapshot
     {
@@ -8,6 +10,6 @@
 
         public long SnapshotSize { get; set; }
 
-        public long Topology { get; set; } // TODO: make this into a real topology that is being sent
+        public BlittableJsonReaderObject Topology { get; set; } 
     }
 }

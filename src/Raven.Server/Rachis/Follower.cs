@@ -1,8 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
+using Voron;
+using Voron.Data;
+using Voron.Data.BTrees;
+using Voron.Data.Tables;
 
 namespace Raven.Server.Rachis
 {
@@ -116,7 +122,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void NegotiateWithLeader(TransactionOperationContext context, AppendEntries fstAppendEntries)
+        private unsafe void NegotiateWithLeader(TransactionOperationContext context, AppendEntries fstAppendEntries)
         {
 
             // only the leader can send append entries, so if we accepted it, it's the leader
@@ -152,9 +158,102 @@ namespace Raven.Server.Rachis
 
             var snapshot = _connection.Read<InstallSnapshot>(context);
 
-            Debug.Assert(snapshot.SnapshotSize == 0); // for now, until we implement it
             if (snapshot.SnapshotSize != 0)
             {
+                using (context.OpenWriteTransaction())
+                {
+                    var txw = context.Transaction.InnerTransaction;
+                    var llt = txw.LowLevelTransaction;
+
+                    var reader = _connection.CreateReader();
+
+                    var type = (RootObjectType)reader.ReadInt32();
+                    int size;
+                    Slice key;
+                    long entries;
+                    switch (type)
+                    {
+                        case RootObjectType.VariableSizeTree:
+
+                            size = reader.ReadInt32();
+                            reader.ReadExactly(size);
+                            Tree tree;
+
+                            using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
+                            {
+                                txw.DeleteTree(key);
+                                tree = txw.CreateTree(key);
+                            }
+
+                            entries = reader.ReadInt64();
+                            for (long i = 0; i < entries; i++)
+                            {
+                                size = reader.ReadInt32();
+                                reader.ReadExactly(size);
+                                using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
+                                {
+                                    size = reader.ReadInt32();
+                                    reader.ReadExactly(size);
+
+                                    var ptr = tree.DirectAdd(key, size);
+                                    fixed (byte* pBuffer = reader.Buffer)
+                                    {
+                                        Memory.Copy(ptr, pBuffer, size);
+                                    }
+                                }
+                            }
+
+
+                            break;
+                        case RootObjectType.Table:
+
+                            size = reader.ReadInt32();
+                            reader.ReadExactly(size);
+                            Table table;
+                            using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
+                            {
+                                var tableTree = txw.ReadTree(key, RootObjectType.Table);
+
+                                // Get the table schema
+                                var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                                var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+                                if (schemaPtr == null)
+                                    throw new InvalidOperationException(
+                                        "When trying to install snapshot, found missing table " + key);
+
+                                var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
+
+                                table = txw.OpenTable(schema, key);
+                            }
+
+                            // delete the table
+                            TableValueReader tvr;
+                            while (true)
+                            {
+                                if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out tvr) == false)
+                                    break;
+                                table.Delete(tvr.Id);
+                            }
+
+                            entries = reader.ReadInt64();
+                            for (long i = 0; i < entries; i++)
+                            {
+                                size = reader.ReadInt32();
+                                reader.ReadExactly(size);
+                                fixed (byte* pBuffer = reader.Buffer)
+                                {
+                                    tvr = new TableValueReader(pBuffer, size);
+                                    table.Insert(ref tvr);
+                                }
+                            }
+
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+                    }
+
+                    llt.Commit();
+                }
                 //TODO: read snapshot from stream
                 //TODO: might be large, so need to write to disk (temp folder)
                 //TODO: then need to apply it, might take a while, so need to 

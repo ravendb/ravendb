@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
+using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Global;
 
@@ -82,7 +85,7 @@ namespace Raven.Server.Rachis
                                 _engine.Log.Info("Failed to connect to remote follower: " + _url, e);
                             }
                             // wait a bit
-                            _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs/2);
+                            _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
@@ -98,15 +101,24 @@ namespace Raven.Server.Rachis
 
                             TransactionOperationContext context;
                             using (_engine.ContextPool.AllocateOperationContext(out context))
+                            using (context.OpenReadTransaction())
                             {
-                                //TODO: implement this
-                                _connection.Send(context, new InstallSnapshot
+                                var earliestIndexEtry = _engine.GetFirstEntryIndex(context);
+                                if (matchIndex.Value >= earliestIndexEtry)
                                 {
-                                    LastIncludedIndex = -1,
-                                    LastIncludedTerm = -1,
-                                    Topology = -1, //TODO: fake, just to remember doing this
-                                    SnapshotSize = 0
-                                });
+                                    // we don't need a snapshot, so just send updated topology
+                                    _connection.Send(context, new InstallSnapshot
+                                    {
+                                        LastIncludedIndex = -1,
+                                        LastIncludedTerm = -1,
+                                        Topology = _engine.GetTopologyRaw(context),
+                                        SnapshotSize = 0
+                                    });
+                                }
+                                else
+                                {
+                                    SendSnapshotToFollower(context, stream);
+                                }
 
                                 var aer = _connection.Read<AppendEntriesResponse>(context);
                                 if (aer.Success == false)
@@ -128,14 +140,14 @@ namespace Raven.Server.Rachis
                                     AppendEntries appendEntries;
                                     using (context.OpenReadTransaction())
                                     {
-                                        var table =
-                                            context.Transaction.InnerTransaction.OpenTable(RachisConsensus.LogsTable,
-                                                RachisConsensus.EntriesSlice);
+                                        var table = context.Transaction.InnerTransaction.OpenTable(
+                                            RachisConsensus.LogsTable,
+                                            RachisConsensus.EntriesSlice);
 
                                         var reveredNextIndex = Bits.SwapBytes(_followerNextIndex);
                                         Slice key;
                                         using (
-                                            Slice.External(context.Allocator, (byte*) &reveredNextIndex, sizeof(long),
+                                            Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long),
                                                 out key))
                                         {
                                             long totalSize = 0;
@@ -190,7 +202,7 @@ namespace Raven.Server.Rachis
                                 }
                                 // either we have new entries to send, or we waited for long enough 
                                 // to send another heartbeat
-                                task.Wait(_engine.ElectionTimeoutMs/3);
+                                task.Wait(_engine.ElectionTimeoutMs / 3);
                             }
                         }
                     }
@@ -224,7 +236,130 @@ namespace Raven.Server.Rachis
             }
         }
 
-      
+        private void SendSnapshotToFollower(TransactionOperationContext context, Stream stream)
+        {
+            long index;
+            long term;
+            _engine.GetLastCommitIndex(context, out index, out term);
+
+            var snapshot = Path.Combine(_engine.TempPath, $"Snapshot-{index}-{term}.{Guid.NewGuid()}");
+            using (var file = new FileStream(snapshot, FileMode.Create,
+                FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete, 4096,
+                FileOptions.DeleteOnClose | FileOptions.SequentialScan))
+            {
+                WriteSnapshotToFile(context, file);
+                file.Position = 0;
+                _connection.Send(context, new InstallSnapshot
+                {
+                    LastIncludedIndex = index,
+                    LastIncludedTerm = term,
+                    Topology = _engine.GetTopologyRaw(context),
+                    SnapshotSize = file.Length
+                });
+
+                file.CopyTo(stream);
+            }
+            File.Delete(snapshot);
+        }
+
+        private unsafe void WriteSnapshotToFile(TransactionOperationContext context, FileStream file)
+        {
+            using (var binaryWriter = new BinaryWriter(file, Encoding.UTF8, leaveOpen: true))
+            {
+                var copier = new UnmanagedMemoryToStream(file);
+                var txr = context.Transaction.InnerTransaction;
+                var llt = txr.LowLevelTransaction;
+                using (var rootIterator = llt.RootObjects.Iterate(false))
+                {
+                    if (rootIterator.Seek(Slices.BeforeAllKeys) == false)
+                        throw new InvalidOperationException("Root objects iterations must always have _something_!");
+                    do
+                    {
+                        var rootObjectType = txr.GetRootObjectType(rootIterator.CurrentKey);
+                        if (_engine.ShouldSnapshot(rootIterator.CurrentKey, rootObjectType) == false)
+                            continue;
+
+                        var currentTreeKey = rootIterator.CurrentKey;
+
+                        binaryWriter.Write((int)rootObjectType);
+                        binaryWriter.Write(currentTreeKey.Size);
+                        copier.Copy(currentTreeKey.Content.Ptr, currentTreeKey.Size);
+
+                        switch (rootObjectType)
+                        {
+                            case RootObjectType.VariableSizeTree:
+                                var tree = txr.ReadTree(currentTreeKey);
+                                binaryWriter.Write(tree.State.NumberOfEntries);
+
+                                using (var treeIterator = tree.Iterate(false))
+                                {
+                                    if (treeIterator.Seek(Slices.BeforeAllKeys))
+                                    {
+                                        do
+                                        {
+                                            var currentTreeValueKey = treeIterator.CurrentKey;
+                                            binaryWriter.Write(currentTreeValueKey.Size);
+                                            copier.Copy(currentTreeValueKey.Content.Ptr, currentTreeValueKey.Size);
+                                            var reader = treeIterator.CreateReaderForCurrent();
+                                            binaryWriter.Write(reader.Length);
+                                            copier.Copy(reader.Base, reader.Length);
+                                        } while (treeIterator.MoveNext());
+                                    }
+                                }
+                                break;
+                            case RootObjectType.Table:
+                                var tableTree = txr.ReadTree(currentTreeKey, RootObjectType.Table);
+
+                                // Get the table schema
+                                var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                                var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+                                var schema = TableSchema.ReadFrom(txr.Allocator, schemaPtr, schemaSize);
+                               
+                                // Load table into structure 
+                                var inputTable = txr.OpenTable(schema, currentTreeKey);
+                                binaryWriter.Write(inputTable.NumberOfEntries);
+                                foreach (var holder in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                                {
+                                    binaryWriter.Write(holder.Reader.Size);
+                                    copier.Copy(holder.Reader.Pointer, holder.Reader.Size);
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(rootObjectType), rootObjectType + " " + rootIterator.CurrentKey);
+                        }
+
+                    } while (rootIterator.MoveNext());
+                }
+            }
+        }
+
+        private unsafe class UnmanagedMemoryToStream
+        {
+            private byte[] _buffer = new byte[1024];
+            private Stream _stream;
+
+            public UnmanagedMemoryToStream(Stream stream)
+            {
+                _stream = stream;
+            }
+
+
+            public void Copy(byte* ptr, int size)
+            {
+                fixed (byte* pBuffer = _buffer)
+                {
+                    while (size > 0)
+                    {
+                        var count = Math.Min(size, _buffer.Length);
+                        Memory.Copy(pBuffer, ptr, count);
+                        _stream.Write(_buffer, 0, count);
+                        ptr += count;
+                        size -= count;
+                    }
+                }
+            }
+        }
+
 
         private static unsafe BlittableJsonReaderObject BuildRachisEntryToSend(TransactionOperationContext context,
             Table.TableValueHolder value)
@@ -303,7 +438,7 @@ namespace Raven.Server.Rachis
                 _connection.Send(context, appendEntries);
 
                 var aer = _connection.Read<AppendEntriesResponse>(context);
-               
+
                 // need to negotiate
                 do
                 {

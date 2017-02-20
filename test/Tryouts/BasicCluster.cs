@@ -8,9 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
+using Voron.Data;
 using Xunit;
 
 namespace Tryouts
@@ -18,30 +20,88 @@ namespace Tryouts
     public class BasicCluster : IDisposable
     {
         [Fact]
-        public void ClusterWithTwoNodes()
+        public async Task ClusterWithLateJoiningNodeRequiringSnapshot()
         {
+            var expected = Enumerable.Range(0, 10).Sum();
             var a = SetupServer(true);
-            var b = SetupServer();
-
-            b.StateMachine.Countdown = new CountdownEvent(10);
-
-            a.AddToClusterAsync(b.Url).Wait();
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
-                for (var i = 0; i < 9; i++)
-                    a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                for (var i = 0; i < 5; i++)
+                {
+                    await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
                     {
+                        ["Name"] = "test",
                         ["Value"] = i
                     }, "test"));
-                a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                }
+            }
+
+            var b = SetupServer();
+            b.StateMachine.Predicate = (machine, ctx) => machine.Read(ctx, "test") == expected;
+
+            await a.AddToClusterAsync(b.Url);
+
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                for (var i = 0; i < 5; i++)
                 {
+                    await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    {
+                        ["Name"] = "test",
+                        ["Value"] = i + 5
+                    }, "test"));
+                }
+            }
+            Assert.True(await b.StateMachine.ReachedExpectedAmount.WaitAsync(TimeSpan.FromSeconds(15)));
+            TransactionOperationContext context;
+            using (b.ContextPool.AllocateOperationContext(out context))
+            {
+                Assert.Equal(expected, b.StateMachine.Read(context, "test"));
+            }
+        }
+
+        [Fact]
+        public async Task ClusterWithTwoNodes()
+        {
+            var expected = Enumerable.Range(0, 10).Sum();
+            var a = SetupServer(true);
+            var b = SetupServer();
+
+            b.StateMachine.Predicate = (machine, context) => machine.Read(context, "test") == expected;
+
+            await a.AddToClusterAsync(b.Url);
+
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                var tasks = new List<Task>();
+                for (var i = 0; i < 9; i++)
+                {
+                    tasks.Add(a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    {
+                        ["Name"] = "test",
+                        ["Value"] = i
+                    }, "test")));
+                }
+
+                await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "test",
                     ["Value"] = 9
-                }, "test")).Wait();
+                }, "test"));
 
-                Assert.True(b.StateMachine.Countdown.Wait(1000));
+                foreach (var task in tasks)
+                {
+                    Assert.Equal(TaskStatus.RanToCompletion, task.Status);
+                }
 
-                Assert.Equal(Enumerable.Range(0, 10), b.StateMachine.Values);
+                Assert.True(await b.StateMachine.ReachedExpectedAmount.WaitAsync(TimeSpan.FromSeconds(15)));
+
+                TransactionOperationContext context;
+                using (b.ContextPool.AllocateOperationContext(out context))
+                {
+                    Assert.Equal(expected, b.StateMachine.Read(context, "test"));
+                }
             }
         }
 
@@ -49,17 +109,17 @@ namespace Tryouts
         private readonly List<RachisConsensus> _rachisConsensuses = new List<RachisConsensus>();
         private readonly List<Task> _mustBeSuccessfulTasks = new List<Task>();
 
-        private RachisConsensus<NoopStateMachine> SetupServer(bool bootstrap = false)
+        private RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, 0);
             tcpListener.Start();
-            var url = "http://localhost:" + ((IPEndPoint) tcpListener.LocalEndpoint).Port;
+            var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port;
 
             var serverA = StorageEnvironmentOptions.CreateMemoryOnly();
             if (bootstrap)
                 RachisConsensus.Bootstarp(serverA, url);
 
-            var rachis = new RachisConsensus<NoopStateMachine>(serverA, url);
+            var rachis = new RachisConsensus<CountingStateMachine>(serverA, url);
             rachis.Initialize();
             _listeners.Add(tcpListener);
             _rachisConsensuses.Add(rachis);
@@ -86,23 +146,26 @@ namespace Tryouts
         }
 
         [Fact]
-        public void CanSetupSingleNode()
+        public async Task CanSetupSingleNode()
         {
             var rachis = SetupServer(true);
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
-                for (var i = 0; i < 9; i++)
-                    rachis.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                for (var i = 0; i < 10; i++)
+                {
+                    await rachis.PutAsync(ctx.ReadObject(new DynamicJsonValue
                     {
+                        ["Name"] = "test",
                         ["Value"] = i
                     }, "test"));
-                rachis.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                {
-                    ["Value"] = 9
-                }, "test")).Wait();
+                }
 
-                Assert.Equal(Enumerable.Range(0, 10), ((NoopStateMachine) rachis.StateMachine).Values);
+                TransactionOperationContext context;
+                using (rachis.ContextPool.AllocateOperationContext(out context))
+                {
+                    Assert.Equal(Enumerable.Range(0, 10).Sum(), rachis.StateMachine.Read(context, "test"));
+                }
             }
         }
 
@@ -125,19 +188,39 @@ namespace Tryouts
         }
     }
 
-    public class NoopStateMachine : RachisStateMachine
+    public class CountingStateMachine : RachisStateMachine
     {
-        public CountdownEvent Countdown;
-        public ConcurrentQueue<int> Values = new ConcurrentQueue<int>();
+        public Func<CountingStateMachine, TransactionOperationContext, bool> Predicate;
+        public AsyncManualResetEvent ReachedExpectedAmount = new AsyncManualResetEvent();
+
+        public long Read(TransactionOperationContext context, string name)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree("values");
+            var read = tree.Read(name);
+            if (read == null)
+                return 0;
+            return read.Reader.ReadLittleEndianInt64();
+        }
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd)
         {
             int val;
-            if (cmd.TryGet("Value", out val))
+            string name;
+            Assert.True(cmd.TryGet("Name", out name));
+            Assert.True(cmd.TryGet("Value", out val));
+            var tree = context.Transaction.InnerTransaction.CreateTree("values");
+            tree.Increment(name, val);
+
+            if (Predicate?.Invoke(this, context) == true)
             {
-                Values.Enqueue(val);
-                Countdown?.Signal();
+                ReachedExpectedAmount.Set();
             }
+
+        }
+
+        public override bool ShouldSnapshot(Slice slice, RootObjectType type)
+        {
+            return slice.ToString() == "values";
         }
     }
 }

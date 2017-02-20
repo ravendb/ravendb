@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Voron;
+using Voron.Data;
 
 namespace Raven.Server.Rachis
 {
@@ -32,7 +34,9 @@ namespace Raven.Server.Rachis
 
                 Apply(context, cmd);
             }
-            _parent.SetLastCommitIndex(context, uptoInclusive);
+            var term = _parent.GetTermForKnownExisting(context, uptoInclusive);
+
+            _parent.SetLastCommitIndex(context, uptoInclusive, term);
         }
 
         protected abstract void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd);
@@ -41,5 +45,7 @@ namespace Raven.Server.Rachis
         {
             
         }
+
+        public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
     }
 }

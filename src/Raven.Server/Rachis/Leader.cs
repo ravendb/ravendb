@@ -44,7 +44,7 @@ namespace Raven.Server.Rachis
 
         public long LowestIndexInEntireCluster
         {
-            get { return Interlocked.Read(ref _lowestIndexInEntireCluster); }
+            get { return _lowestIndexInEntireCluster; }
             set { Interlocked.Exchange(ref _lowestIndexInEntireCluster, value); }
         }
 
@@ -209,9 +209,19 @@ namespace Raven.Server.Rachis
                         case 3: // shutdown requested
                             return;
                     }
-                    EnsureThatWeHaveLeadership(((_voters.Count + 1) / 2) + 1);
+                    EnsureThatWeHaveLeadership(VotersMajority);
 
-                    LowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
+                    var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
+                    if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
+                    {
+                        LowestIndexInEntireCluster = lowestIndexInEntireCluster;
+                        using (_engine.ContextPool.AllocateOperationContext(out context))
+                        using (context.OpenWriteTransaction())
+                        {
+                            _engine.TruncateLogBefore(context, lowestIndexInEntireCluster);
+                            context.Transaction.Commit();
+                        }
+                    }
                 }
             }
             catch (Exception e)
@@ -245,7 +255,7 @@ namespace Raven.Server.Rachis
         private long _lastCommit;
         private void OnVoterConfirmation()
         {
-            var maxIndexOnQuorum = GetMaxIndexOnQuorum((_voters.Count / 2) + 1);
+            var maxIndexOnQuorum = GetMaxIndexOnQuorum(VotersMajority);
 
             if (_lastCommit == maxIndexOnQuorum)
                 return; // nothing to do here
@@ -318,6 +328,7 @@ namespace Raven.Server.Rachis
         private readonly SortedList<long, int> _nodesPerIndex = new SortedList<long, int>();
 
         private bool _running;
+        private int VotersMajority => (_voters.Count + 1) / 2 + 1;
 
         protected long GetLowestIndexInEntireCluster()
         {

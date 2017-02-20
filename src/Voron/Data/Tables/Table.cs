@@ -782,7 +782,7 @@ namespace Voron.Data.Tables
             var tree = GetTree(pk);
             using (var it = tree.Iterate(false))
             {
-                if (it.Seek(Slices.AfterAllKeys) == false)
+                if (it.Seek(slice) == false)
                 {
                     reader = default(TableValueReader);
                     return false;
@@ -846,7 +846,7 @@ namespace Voron.Data.Tables
             long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
             int size;
             var ptr = DirectRead(id, out size);
-            reader = new TableValueReader(ptr, size);
+            reader = new TableValueReader(id,ptr, size);
         }
 
         public long Set(TableValueBuilder builder)
