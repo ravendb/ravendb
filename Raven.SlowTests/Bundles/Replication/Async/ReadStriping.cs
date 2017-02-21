@@ -46,7 +46,7 @@ namespace Raven.SlowTests.Bundles.Replication.Async
             })
             {
                 store.Initialize();
-                var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
+                var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(store1.DefaultDatabase);
                 await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient) store.AsyncDatabaseCommands);
                 Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 

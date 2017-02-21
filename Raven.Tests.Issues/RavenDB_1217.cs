@@ -8,6 +8,7 @@ using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Tests.Common;
 
@@ -92,8 +93,8 @@ namespace Raven.Tests.Issues
             {
                 // for default database
                 var serverClient = (ServerClient)store.DatabaseCommands;
-
                 serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+
                 var servers = serverClient.ReplicationInformer.ReplicationDestinations;
 
                 Assert.Equal(2, servers.Count);

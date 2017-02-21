@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Server;
@@ -104,10 +105,13 @@ namespace Raven.SlowTests.Security.OAuth
             var company = WaitForDocument<Company>(store2, "companies/1");
             Assert.Equal("Hibernating Rhinos", company.Name);
 
-            var serverClient = (ServerClient)store1.DatabaseCommands;
-            serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+
+            var asyncServerClient = (AsyncServerClient) store1.AsyncDatabaseCommands;
+            await asyncServerClient.ReplicationInformer.UpdateReplicationInformationIfNeeded(asyncServerClient);
+            asyncServerClient.ReplicationInformer.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
 
             servers[0].Dispose();
+
 
             using (var session = store1.OpenAsyncSession())
             {
@@ -148,8 +152,9 @@ namespace Raven.SlowTests.Security.OAuth
             await new MyIndex().ExecuteAsync(store1.AsyncDatabaseCommands, store1.Conventions);
             Assert.NotNull(await store2.AsyncDatabaseCommands.GetIndexAsync("MyIndex"));
 
-            var serverClient = ((ServerClient)store1.DatabaseCommands);
-            serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+            var asyncServerClient = (AsyncServerClient)store1.AsyncDatabaseCommands;
+            await asyncServerClient.ReplicationInformer.UpdateReplicationInformationIfNeeded(asyncServerClient);
+            asyncServerClient.ReplicationInformer.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
 
             servers[0].Dispose();
 
