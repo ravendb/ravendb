@@ -919,6 +919,7 @@ namespace Raven.Server.Documents
             result.LoweredKey = new LazyStringValue(null, ptr, size, context);
 
             ptr = tvr.Read(2, out size);
+            result.RawKey = new LazyStringValue(null, ptr, size, context);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
 
@@ -2657,8 +2658,8 @@ namespace Raven.Server.Documents
 
             byte* lowerDocumentId;
             int lowerDocumentIdSize;
-            byte* documentIdPtr;
-            int documentIdSize;
+            byte* documentIdPtr; // not in use
+            int documentIdSize; // not in use
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerDocumentId, out lowerDocumentIdSize, out documentIdPtr, out documentIdSize);
 
             byte* lowerName;
@@ -2768,7 +2769,7 @@ namespace Raven.Server.Documents
                     {
                         {document.LoweredKey.Buffer, document.LoweredKey.Size},
                         newEtagBigEndian,
-                        {document.Key.Buffer, document.Key.Size},
+                        {document.RawKey.Buffer, document.RawKey.Size},
                         {document.Data.BasePointer, document.Data.Size},
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length},
                         modifiedTicks,

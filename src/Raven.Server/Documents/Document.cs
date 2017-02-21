@@ -18,6 +18,7 @@ namespace Raven.Server.Documents
 
         public long Etag;
         public LazyStringValue Key;
+        public LazyStringValue RawKey;
         public LazyStringValue LoweredKey;
         public long StorageId;
         public BlittableJsonReaderObject Data;
