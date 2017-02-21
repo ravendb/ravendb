@@ -269,7 +269,7 @@ namespace Voron.Recovery
                 Document document = null;              
                 try
                 {
-                    document = DocumentsStorage.TableValueToDocument(context, ref tvr);
+                    document = DocumentsStorage.ParseDocument(context, ref tvr);
                     if (document == null)
                     {
                         logWriter.WriteLine(

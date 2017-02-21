@@ -48,6 +48,7 @@ namespace Raven.Server.Documents
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
         private static readonly Slice AttachmentsKeySlice;
+        private static readonly Slice AttachmentsKeyIndexSlice;
         private static readonly Slice AttachmentsSlice;
         private static readonly Slice AttachmentsMetadataSlice;
         private static readonly Slice AttachmentsEtagSlice;
@@ -66,7 +67,8 @@ namespace Raven.Server.Documents
         private Dictionary<string, CollectionName> _collectionsCache;
 
         public int NextPage;
-        public enum ConflictsTable
+
+        private enum ConflictsTable
         {
             LoweredKey = 0,
             ChangeVector = 1,
@@ -77,7 +79,7 @@ namespace Raven.Server.Documents
             LastModified = 6,
         }
 
-        public enum AttachmentsTable
+        private enum AttachmentsTable
         {
             LoweredDocumentIdAndRecordSeparatorAndLoweredName = 0,
             Etag = 1,
@@ -85,6 +87,18 @@ namespace Raven.Server.Documents
             ContentType = 3,
             LastModified = 4,
             StreamIdentifier = 5,
+        }
+
+        private enum DocumentsTable
+        {
+            LoweredKey = 0,
+            Etag = 1,
+            Key = 2,
+            Data = 3,
+            ChangeVector = 4,
+            LastModified = 5,
+            Flags = 6,
+            TransactionMarker = 7,
         }
 
         static DocumentsStorage()
@@ -103,6 +117,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsKey", ByteStringType.Immutable, out AttachmentsKeySlice);
+            Slice.From(StorageEnvironment.LabelsContext, "AttachmentsKeyIndexSlice", ByteStringType.Immutable, out AttachmentsKeyIndexSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Attachments", ByteStringType.Immutable, out AttachmentsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsMetadata", ByteStringType.Immutable, out AttachmentsMetadataSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsEtagSlice", ByteStringType.Immutable, out AttachmentsEtagSlice);
@@ -136,7 +151,6 @@ namespace Raven.Server.Documents
                 IsGlobal = false,
                 Name = KeySlice
             });
-
             // required to get conflicts by key
             ConflictsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
@@ -145,14 +159,12 @@ namespace Raven.Server.Documents
                 IsGlobal = false,
                 Name = KeyAndChangeVectorSlice
             });
-
             ConflictsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)ConflictsTable.Etag,
                 IsGlobal = true,
                 Name = AllConflictedDocsEtagsSlice
             });
-
             ConflictsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)ConflictsTable.Collection,
@@ -166,22 +178,20 @@ namespace Raven.Server.Documents
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
             DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = 0,
+                StartIndex = (int)DocumentsTable.LoweredKey,
                 Count = 1,
                 IsGlobal = true,
                 Name = DocsSlice
             });
-
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = 1,
+                StartIndex = (int)DocumentsTable.Etag,
                 IsGlobal = false,
                 Name = CollectionEtagsSlice
             });
-
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = 1,
+                StartIndex = (int)DocumentsTable.Etag,
                 IsGlobal = true,
                 Name = AllDocsEtagsSlice
             });
@@ -193,21 +203,18 @@ namespace Raven.Server.Documents
                 IsGlobal = true,
                 Name = TombstonesSlice
             });
-
             TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = false,
                 Name = CollectionEtagsSlice
             });
-
             TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = true,
                 Name = AllTombstonesEtagsSlice
             });
-
             TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef()
             {
                 StartIndex = 2,
@@ -223,13 +230,19 @@ namespace Raven.Server.Documents
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
             AttachmentsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = 0,
+                StartIndex = (int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName,
                 Count = 1,
                 Name = AttachmentsKeySlice
             });
+            AttachmentsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName,
+                Count = 1,
+                Name = AttachmentsKeyIndexSlice
+            });
             AttachmentsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = 1,
+                StartIndex = (int)AttachmentsTable.Etag,
                 Name = AttachmentsEtagSlice
             });
         }
@@ -740,7 +753,7 @@ namespace Raven.Server.Documents
             }
 
             var doc = TableValueToDocument(context, ref tvr);
-
+            
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
             return doc;
@@ -904,38 +917,42 @@ namespace Raven.Server.Documents
                     .Count();
         }
 
+        private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
+        {
+            var document = ParseDocument(context, ref tvr);
 
+            if ((document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+            {
+                document.Attachments = GetAttachmentNamesForDocument(context, document.LoweredKey);
+            }
 
-        public static Document TableValueToDocument(JsonOperationContext context, ref TableValueReader tvr)
+            return document;
+        }
+
+        public static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {
                 StorageId = tvr.Id
             };
             int size;
-            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
-            byte offset;
-            var ptr = tvr.Read(0, out size);
+            var ptr = tvr.Read((int) DocumentsTable.LoweredKey, out size);
             result.LoweredKey = new LazyStringValue(null, ptr, size, context);
 
-            ptr = tvr.Read(2, out size);
-            result.RawKey = new LazyStringValue(null, ptr, size, context);
-            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
-            result.Key = new LazyStringValue(null, ptr + offset, size, context);
+            result.Key = TableValueToKey(context, (int) DocumentsTable.Key, ref tvr);
 
-            ptr = tvr.Read(1, out size);
+            ptr = tvr.Read((int)DocumentsTable.Etag, out size);
             result.Etag = Bits.SwapBytes(*(long*)ptr);
 
-            ptr = tvr.Read(3, out size);
-            result.Data = new BlittableJsonReaderObject(ptr, size, context);
+            result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out size), size, context);
 
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, 4);
+            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)DocumentsTable.ChangeVector);
 
-            result.LastModified = new DateTime(*(long*)tvr.Read(5, out size));
+            result.LastModified = new DateTime(*(long*)tvr.Read((int)DocumentsTable.LastModified, out size));
 
-            result.Flags = (DocumentFlags)(*(int*)tvr.Read(6, out size));
+            result.Flags = *(DocumentFlags*)tvr.Read((int)DocumentsTable.Flags, out size);
 
-            result.TransactionMarker = *(short*)tvr.Read(7, out size);
+            result.TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size);
 
             return result;
         }
@@ -947,14 +964,9 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id
             };
             int size;
-            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
-            byte offset;
             var ptr = tvr.Read((int)ConflictsTable.LoweredKey, out size);
             result.LoweredKey = new LazyStringValue(null, ptr, size, context);
-
-            ptr = tvr.Read((int)ConflictsTable.OriginalKey, out size);
-            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
-            result.Key = new LazyStringValue(null, ptr + offset, size, context);
+            result.Key = TableValueToKey(context, (int)ConflictsTable.OriginalKey, ref tvr);
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictsTable.ChangeVector);
             var read = tvr.Read((int)ConflictsTable.Data, out size);
             if (size > 0)
@@ -996,14 +1008,10 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id
             };
             int size;
-            // See format of the lazy string key in the GetLowerKeySliceAndStorageKeyAndCollection method
             var ptr = tvr.Read(0, out size);
             result.LoweredKey = new LazyStringValue(null, ptr, size, context);
 
-            ptr = tvr.Read(3, out size);
-            byte offset;
-            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
-            result.Key = new LazyStringValue(null, ptr + offset, size, context);
+            result.Key = TableValueToKey(context, 3, ref tvr);
             //result.Key = new LazyStringValue(null, ptr, size, context);
 
             ptr = tvr.Read(1, out size);
@@ -2716,7 +2724,7 @@ namespace Raven.Server.Documents
                         ThrowConcurrentExceptionOnMissingAttacment(documentId, name, expectedEtag.Value);
                     }
 
-                    tbv.Add(newEtagBigEndian); // streamIdentifier
+                    tbv.Add(newEtag); // streamIdentifier
                     tbv.SliceFromLocation(context.Allocator, (int) AttachmentsTable.StreamIdentifier, out streamIdentifierSlice);
 
                     table.Insert(tbv);
@@ -2739,49 +2747,51 @@ namespace Raven.Server.Documents
         private void UpdateDocumentAfterAttachmentPut(DocumentsOperationContext context, byte* lowerDocumentId, int lowerDocumentIdSize, 
             string documentId, string name, long modifiedTicks)
         {
-            Slice documentIdSlice;
-            using (Slice.External(context.Allocator, lowerDocumentId, lowerDocumentIdSize, out documentIdSlice))
+            Slice loweredKey;
+            using (Slice.External(context.Allocator, lowerDocumentId, lowerDocumentIdSize, out loweredKey))
             {
-                Document document;
-                try
+                var readTable = new Table(DocsSchema, context.Transaction.InnerTransaction);
+                TableValueReader tvr;
+                if (readTable.ReadByKey(loweredKey, out tvr) == false)
                 {
-                    document = Get(context, documentIdSlice);
-                    if (document == null)
-                        throw new InvalidOperationException($"Cannot put attachment {name} on a not exist document '{documentId}'.");
+                    ThrowDocumentNotFound(context, loweredKey, documentId, name);
                 }
-                catch (DocumentConflictException e)
+
+                int size;
+                var data = new BlittableJsonReaderObject(tvr.Read((int) DocumentsTable.Data, out size), size, context);
+                var collectionName = ExtractCollectionName(context, documentId, data);
+                var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                if (table.ReadByKey(loweredKey, out tvr) == false)
                 {
-                    throw new InvalidOperationException($"Cannot put attachment {name} on a document '{documentId}' with a conflict.", e);
+                    ThrowDocumentNotFound(context, loweredKey, documentId, name);
                 }
 
                 var newEtag = GenerateNextEtag();
                 var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
-                var collectionName = ExtractCollectionName(context, documentId, document.Data);
-                var docsTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
-
-                var changeVector = SetDocumentChangeVectorForLocalChange(context, documentIdSlice, document.ChangeVector, newEtag);
+                var oldChangeVector = tvr.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref tvr, 4) : null;
+                var changeVector = SetDocumentChangeVectorForLocalChange(context, loweredKey, oldChangeVector, newEtag);
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
                     var transactionMarker = context.GetTransactionMarker();
                     var tbv = new TableValueBuilder
                     {
-                        {document.LoweredKey.Buffer, document.LoweredKey.Size},
+                        {tvr.Read((int) DocumentsTable.LoweredKey, out size), size},
                         newEtagBigEndian,
-                        {document.RawKey.Buffer, document.RawKey.Size},
-                        {document.Data.BasePointer, document.Data.Size},
+                        {tvr.Read((int) DocumentsTable.Key, out size), size},
+                        {data.BasePointer, data.Size},
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length},
                         modifiedTicks,
-                        (int) (document.Flags | DocumentFlags.HasAttachments),
+                        (int) (*(DocumentFlags*) tvr.Read((int) DocumentsTable.Flags, out size) | DocumentFlags.HasAttachments),
                         transactionMarker
                     };
 
-                    docsTable.Update(document.StorageId, tbv);
+                    table.Update(tvr.Id, tbv);
                 }
 
                 _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
-                _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Data.Size);
+                _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(data.Size);
 
                 context.Transaction.AddAfterCommitNotification(new AttachmentChange
                 {
@@ -2792,6 +2802,46 @@ namespace Raven.Server.Documents
                     Type = DocumentChangeTypes.PutAttachment,
                     IsSystemDocument = collectionName.IsSystem,
                 });
+            }
+        }
+
+        private void ThrowDocumentNotFound(DocumentsOperationContext context, Slice loweredKey, string documentId, string name)
+        {
+            if (_conflictCount > 0)
+            {
+                try
+                {
+                    ThrowOnDocumentConflict(context, loweredKey);
+                }
+                catch (DocumentConflictException e)
+                {
+                    throw new InvalidOperationException($"Cannot put attachment {name} on a document '{documentId}' with a conflict.", e);
+                }
+            }
+            throw new InvalidOperationException($"Cannot put attachment {name} on a not exist document '{documentId}'.");
+        }
+
+        private IEnumerable<LazyStringValue> GetAttachmentsInternal(DocumentsOperationContext context, Slice startSlice)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            foreach (var sr in table.SeekForwardFrom(AttachmentsSchema.Indexes[AttachmentsKeyIndexSlice], startSlice, true))
+            {
+                foreach (var tvr in sr.Results)
+                {
+                    yield return TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr.Reader);
+                }
+            }
+        }
+
+        public IEnumerable<LazyStringValue> GetAttachmentNamesForDocument(DocumentsOperationContext context, LazyStringValue lowerDocumentId)
+        {
+            Slice startSlice;
+            // TODO: Should we use here an enumerator or reutrn an array and dispose?
+            /*using (*/
+            GetAttachmentPrefix(context, lowerDocumentId.Buffer, lowerDocumentId.Size, out startSlice);
+            /*)*/
+            {
+                return GetAttachmentsInternal(context, startSlice);
             }
         }
 
@@ -2846,6 +2896,20 @@ namespace Raven.Server.Documents
             });
         }
 
+        private IDisposable GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice keySlice)
+        {
+            var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
+            Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
+            keyMem.Ptr[lowerKeySize + 1] = (byte)30; // the record separator
+            keySlice = new Slice(SliceOptions.Key, keyMem);
+
+            return new DisposableAction(() =>
+            {
+                if (keyMem.HasValue)
+                    context.Allocator.Release(ref keyMem);
+            });
+        }
+
         private static Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var result = new Attachment
@@ -2854,18 +2918,12 @@ namespace Raven.Server.Documents
             };
 
             int size;
-            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
-            byte offset;
             var ptr = tvr.Read((int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, out size);
             result.LoweredDocumentId = new LazyStringValue(null, ptr, size, context);
 
             ptr = tvr.Read((int)AttachmentsTable.Etag, out size);
             result.Etag = Bits.SwapBytes(*(long*)ptr);
-
-            ptr = tvr.Read((int)AttachmentsTable.Name, out size);
-            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
-            result.Name = new LazyStringValue(null, ptr + offset, size, context);
-
+            result.Name = TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr);
             result.LastModified = new DateTime(*(long*)tvr.Read((int) AttachmentsTable.LastModified, out size));
 
             ptr = tvr.Read((int) AttachmentsTable.ContentType, out size);
@@ -2875,6 +2933,16 @@ namespace Raven.Server.Documents
             Slice.External(context.Allocator, streamIdentifier, size, out result.StreamIdentifier);
 
             return result;
+        }
+
+        private static LazyStringValue TableValueToKey(JsonOperationContext context, int index, ref TableValueReader tvr)
+        {
+            int size;
+            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
+            byte offset;
+            var ptr = tvr.Read(index, out size);
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            return new LazyStringValue(null, ptr + offset, size, context);
         }
 
         private static void ThrowConcurrentExceptionOnMissingAttacment(string documentId, string name, long expectedEtag)

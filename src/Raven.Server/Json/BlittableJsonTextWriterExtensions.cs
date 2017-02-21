@@ -1151,6 +1151,13 @@ namespace Raven.Server.Json
                 first = false;
                 writer.WritePropertyName(Constants.Documents.Metadata.Flags);
                 writer.WriteString(document.Flags.ToString());
+
+                if ((document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(Constants.Documents.Metadata.Attachments);
+                    writer.WriteStringJoin(document.Attachments);
+                }
             }
             if (document.Etag != 0)
             {

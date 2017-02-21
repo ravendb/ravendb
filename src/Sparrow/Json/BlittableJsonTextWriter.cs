@@ -1,10 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
-using System.Threading;
 
 namespace Sparrow.Json
 {
@@ -152,7 +151,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteString(LazyStringValue str)
+        public void WriteString(LazyStringValue str)
         {
             if (str == null)
             {
@@ -170,16 +169,63 @@ namespace Sparrow.Json
             if (numberOfEscapeSequences == 0)
             {
                 WriteRawString(strBuffer, size);
+            }
+            else
+            {
+                UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
+            }
 
-                EnsureBuffer(1);
-                _buffer[_pos++] = Quote;
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteStringJoin(IEnumerable<LazyStringValue> strArray)
+        {
+            if (strArray == null)
+            {
+                WriteNull();
                 return;
             }
 
-            UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+
+            var first = true;
+            foreach (var str in strArray)
+            {
+                if (first)
+                {
+                    WriteComma();
+                    first = false;
+                }
+
+                if (str == null)
+                {
+                    WriteNull();
+                    continue;
+                }
+
+                var strBuffer = str.Buffer;
+                var size = str.Size;
+
+                var escapeSequencePos = size;
+                var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+                if (numberOfEscapeSequences == 0)
+                {
+                    WriteRawString(strBuffer, size);
+                }
+                else
+                {
+                    UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
+                }
+            }
+
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
         }
 
-        private unsafe void UnlikelyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
+        private void UnlikelyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
             byte* strBuffer, int size)
         {
             while (numberOfEscapeSequences > 0)
@@ -196,9 +242,6 @@ namespace Sparrow.Json
             }
             // write remaining (or full string) to the buffer in one shot
             WriteRawString(strBuffer, size);
-
-            EnsureBuffer(1);
-            _buffer[_pos++] = Quote;
         }
 
         private byte GetEscapeCharacter(byte b)
@@ -227,7 +270,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteString(LazyCompressedStringValue str)
+        public void WriteString(LazyCompressedStringValue str)
         {
             AllocatedMemoryData allocated;
             var strBuffer = str.DecompressToTempBuffer(out allocated);

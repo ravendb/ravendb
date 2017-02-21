@@ -1,6 +1,8 @@
 ﻿using System.IO;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Raven.Client;
+using Raven.Server.Documents;
 
 namespace FastTests.Client.Attachments
 {
@@ -17,20 +19,28 @@ namespace FastTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                var name = "fileNANE_#$1^%_בעברית.txt";
+                var names = new[]
+                {
+                    "profile.png",
+                    "background-photo.jpg",
+                    "fileNANE_#$1^%_בעברית.txt"
+                };
                 using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                 using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
-                    store.Operations.Send(new PutAttachmentOperation("users/1", "profile.png", profileStream, "image/png"));
-                    store.Operations.Send(new PutAttachmentOperation("users/1", "background-photo.jpg", backgroundStream, "image/jpeg"));
-                    store.Operations.Send(new PutAttachmentOperation("users/1", name, fileStream, null));
+                    store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
+                    store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "image/jpeg"));
+                    store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    var metadataFor = session.Advanced.GetMetadataFor(user);
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+
+                    Assert.Equal(string.Join(",", names), metadata[Constants.Documents.Metadata.Attachments]);
                 }
 
                 /*  using (var ctx = FilesOperationContext.ShortTermSingleUse(database))

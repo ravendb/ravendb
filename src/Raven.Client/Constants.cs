@@ -98,6 +98,8 @@ namespace Raven.Client
 
                 public const string Flags = "@flags";
 
+                public const string Attachments = "@attachments";
+
                 public const string IndexScore = "@index-score";
 
                 public const string LastModified = "@last-modified";
