@@ -300,7 +300,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQueryWithStringSorting = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
-                Query = "Age_L_Range:{Lx9 TO NULL}",
+                Query = "Age_L_Range:{9 TO NULL}",
                 SortedFields = new[] { new SortedField("Age_L_Range") },
             });
 

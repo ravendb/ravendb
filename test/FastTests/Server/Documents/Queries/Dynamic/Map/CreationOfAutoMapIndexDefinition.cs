@@ -214,7 +214,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
-                Query = "Age_D_Range:{Lx30 TO NULL}"
+                Query = "Age_D_Range:{30 TO NULL}"
             });
 
             var definition = _sut.CreateAutoIndexDefinition();

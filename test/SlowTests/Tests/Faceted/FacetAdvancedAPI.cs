@@ -31,11 +31,11 @@ namespace SlowTests.Tests.Faceted
                     Mode = FacetMode.Ranges,
                     Ranges =
                     {
-                        "[NULL TO Dx200]",
-                        "[Dx200 TO Dx400]",
-                        "[Dx400 TO Dx600]",
-                        "[Dx600 TO Dx800]",
-                        "[Dx800 TO NULL]",
+                        "[NULL TO 200]",
+                        "[200 TO 400]",
+                        "[400 TO 600]",
+                        "[600 TO 800]",
+                        "[800 TO NULL]",
                     }
                 },
                 new Facet
@@ -44,10 +44,10 @@ namespace SlowTests.Tests.Faceted
                     Mode = FacetMode.Ranges,
                     Ranges =
                     {
-                        "[NULL TO Dx9.99]",
-                        "[Dx9.99 TO Dx49.99]",
-                        "[Dx49.99 TO Dx99.99]",
-                        "[Dx99.99 TO NULL]",
+                        "[NULL TO 9.99]",
+                        "[9.99 TO 49.99]",
+                        "[49.99 TO 99.99]",
+                        "[99.99 TO NULL]",
                     }
                 }
             };

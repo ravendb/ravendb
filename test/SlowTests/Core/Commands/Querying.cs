@@ -180,11 +180,11 @@ namespace SlowTests.Core.Commands
                             Mode = FacetMode.Ranges,
                             Ranges =
                             {
-                                "[NULL TO Dx200.0]",
-                                "[Dx300.0 TO Dx400.0]",
-                                "[Dx500.0 TO Dx600.0]",
-                                "[Dx700.0 TO Dx800.0]",
-                                "[Dx900.0 TO NULL]"
+                                "[NULL TO 200.0]",
+                                "[300.0 TO 400.0]",
+                                "[500.0 TO 600.0]",
+                                "[700.0 TO 800.0]",
+                                "[900.0 TO NULL]"
                             }
                         },
                         new Facet
@@ -193,10 +193,10 @@ namespace SlowTests.Core.Commands
                             Mode = FacetMode.Ranges,
                             Ranges =
                             {
-                                "[NULL TO Dx3.0]",
-                                "[Dx4.0 TO Dx7.0]",
-                                "[Dx8.0 TO Dx10.0]",
-                                "[Dx11.0 TO NULL]"
+                                "[NULL TO 3.0]",
+                                "[4.0 TO 7.0]",
+                                "[8.0 TO 10.0]",
+                                "[11.0 TO NULL]"
                             }
                         }
                     };
@@ -224,25 +224,25 @@ namespace SlowTests.Core.Commands
                         Assert.Equal(5, facetResults.Results["Manufacturer"].Values[1].Hits);
 
                         Assert.Equal(5, facetResults.Results["Cost_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx200.0]", facetResults.Results["Cost_Range"].Values[0].Range);
+                        Assert.Equal("[NULL TO 200.0]", facetResults.Results["Cost_Range"].Values[0].Range);
                         Assert.Equal(3, facetResults.Results["Cost_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx300.0 TO Dx400.0]", facetResults.Results["Cost_Range"].Values[1].Range);
+                        Assert.Equal("[300.0 TO 400.0]", facetResults.Results["Cost_Range"].Values[1].Range);
                         Assert.Equal(2, facetResults.Results["Cost_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx500.0 TO Dx600.0]", facetResults.Results["Cost_Range"].Values[2].Range);
+                        Assert.Equal("[500.0 TO 600.0]", facetResults.Results["Cost_Range"].Values[2].Range);
                         Assert.Equal(2, facetResults.Results["Cost_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx700.0 TO Dx800.0]", facetResults.Results["Cost_Range"].Values[3].Range);
+                        Assert.Equal("[700.0 TO 800.0]", facetResults.Results["Cost_Range"].Values[3].Range);
                         Assert.Equal(2, facetResults.Results["Cost_Range"].Values[3].Hits);
-                        Assert.Equal("[Dx900.0 TO NULL]", facetResults.Results["Cost_Range"].Values[4].Range);
+                        Assert.Equal("[900.0 TO NULL]", facetResults.Results["Cost_Range"].Values[4].Range);
                         Assert.Equal(1, facetResults.Results["Cost_Range"].Values[4].Hits);
 
                         Assert.Equal(4, facetResults.Results["Megapixels_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx3.0]", facetResults.Results["Megapixels_Range"].Values[0].Range);
+                        Assert.Equal("[NULL TO 3.0]", facetResults.Results["Megapixels_Range"].Values[0].Range);
                         Assert.Equal(4, facetResults.Results["Megapixels_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx4.0 TO Dx7.0]", facetResults.Results["Megapixels_Range"].Values[1].Range);
+                        Assert.Equal("[4.0 TO 7.0]", facetResults.Results["Megapixels_Range"].Values[1].Range);
                         Assert.Equal(4, facetResults.Results["Megapixels_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx8.0 TO Dx10.0]", facetResults.Results["Megapixels_Range"].Values[2].Range);
+                        Assert.Equal("[8.0 TO 10.0]", facetResults.Results["Megapixels_Range"].Values[2].Range);
                         Assert.Equal(2, facetResults.Results["Megapixels_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx11.0 TO NULL]", facetResults.Results["Megapixels_Range"].Values[3].Range);
+                        Assert.Equal("[11.0 TO NULL]", facetResults.Results["Megapixels_Range"].Values[3].Range);
                         Assert.Equal(0, facetResults.Results["Megapixels_Range"].Values[3].Hits);
                     }
 
@@ -269,25 +269,25 @@ namespace SlowTests.Core.Commands
                         Assert.Equal(1, multiFacetResults[0].Results["Manufacturer"].Values[1].Hits);
 
                         Assert.Equal(5, multiFacetResults[0].Results["Cost_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx200.0]", multiFacetResults[0].Results["Cost_Range"].Values[0].Range);
+                        Assert.Equal("[NULL TO 200.0]", multiFacetResults[0].Results["Cost_Range"].Values[0].Range);
                         Assert.Equal(2, multiFacetResults[0].Results["Cost_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx300.0 TO Dx400.0]", multiFacetResults[0].Results["Cost_Range"].Values[1].Range);
+                        Assert.Equal("[300.0 TO 400.0]", multiFacetResults[0].Results["Cost_Range"].Values[1].Range);
                         Assert.Equal(0, multiFacetResults[0].Results["Cost_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx500.0 TO Dx600.0]", multiFacetResults[0].Results["Cost_Range"].Values[2].Range);
+                        Assert.Equal("[500.0 TO 600.0]", multiFacetResults[0].Results["Cost_Range"].Values[2].Range);
                         Assert.Equal(0, multiFacetResults[0].Results["Cost_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx700.0 TO Dx800.0]", multiFacetResults[0].Results["Cost_Range"].Values[3].Range);
+                        Assert.Equal("[700.0 TO 800.0]", multiFacetResults[0].Results["Cost_Range"].Values[3].Range);
                         Assert.Equal(0, multiFacetResults[0].Results["Cost_Range"].Values[3].Hits);
-                        Assert.Equal("[Dx900.0 TO NULL]", multiFacetResults[0].Results["Cost_Range"].Values[4].Range);
+                        Assert.Equal("[900.0 TO NULL]", multiFacetResults[0].Results["Cost_Range"].Values[4].Range);
                         Assert.Equal(0, multiFacetResults[0].Results["Cost_Range"].Values[4].Hits);
 
                         Assert.Equal(4, multiFacetResults[0].Results["Megapixels_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx3.0]", multiFacetResults[0].Results["Megapixels_Range"].Values[0].Range);
+                        Assert.Equal("[NULL TO 3.0]", multiFacetResults[0].Results["Megapixels_Range"].Values[0].Range);
                         Assert.Equal(2, multiFacetResults[0].Results["Megapixels_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx4.0 TO Dx7.0]", multiFacetResults[0].Results["Megapixels_Range"].Values[1].Range);
+                        Assert.Equal("[4.0 TO 7.0]", multiFacetResults[0].Results["Megapixels_Range"].Values[1].Range);
                         Assert.Equal(0, multiFacetResults[0].Results["Megapixels_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx8.0 TO Dx10.0]", multiFacetResults[0].Results["Megapixels_Range"].Values[2].Range);
+                        Assert.Equal("[8.0 TO 10.0]", multiFacetResults[0].Results["Megapixels_Range"].Values[2].Range);
                         Assert.Equal(0, multiFacetResults[0].Results["Megapixels_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx11.0 TO NULL]", multiFacetResults[0].Results["Megapixels_Range"].Values[3].Range);
+                        Assert.Equal("[11.0 TO NULL]", multiFacetResults[0].Results["Megapixels_Range"].Values[3].Range);
                         Assert.Equal(0, multiFacetResults[0].Results["Megapixels_Range"].Values[3].Hits);
 
 
@@ -300,25 +300,25 @@ namespace SlowTests.Core.Commands
                         Assert.Equal(1, multiFacetResults[1].Results["Manufacturer"].Values[1].Hits);
 
                         Assert.Equal(5, multiFacetResults[1].Results["Cost_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx200.0]", multiFacetResults[1].Results["Cost_Range"].Values[0].Range);
+                        Assert.Equal("[NULL TO 200.0]", multiFacetResults[1].Results["Cost_Range"].Values[0].Range);
                         Assert.Equal(3, multiFacetResults[1].Results["Cost_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx300.0 TO Dx400.0]", multiFacetResults[1].Results["Cost_Range"].Values[1].Range);
+                        Assert.Equal("[300.0 TO 400.0]", multiFacetResults[1].Results["Cost_Range"].Values[1].Range);
                         Assert.Equal(0, multiFacetResults[1].Results["Cost_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx500.0 TO Dx600.0]", multiFacetResults[1].Results["Cost_Range"].Values[2].Range);
+                        Assert.Equal("[500.0 TO 600.0]", multiFacetResults[1].Results["Cost_Range"].Values[2].Range);
                         Assert.Equal(0, multiFacetResults[1].Results["Cost_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx700.0 TO Dx800.0]", multiFacetResults[1].Results["Cost_Range"].Values[3].Range);
+                        Assert.Equal("[700.0 TO 800.0]", multiFacetResults[1].Results["Cost_Range"].Values[3].Range);
                         Assert.Equal(0, multiFacetResults[1].Results["Cost_Range"].Values[3].Hits);
-                        Assert.Equal("[Dx900.0 TO NULL]", multiFacetResults[1].Results["Cost_Range"].Values[4].Range);
+                        Assert.Equal("[900.0 TO NULL]", multiFacetResults[1].Results["Cost_Range"].Values[4].Range);
                         Assert.Equal(0, multiFacetResults[1].Results["Cost_Range"].Values[4].Hits);
 
                         Assert.Equal(4, multiFacetResults[1].Results["Megapixels_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx3.0]", multiFacetResults[1].Results["Megapixels_Range"].Values[0].Range);
+                        Assert.Equal("[NULL TO 3.0]", multiFacetResults[1].Results["Megapixels_Range"].Values[0].Range);
                         Assert.Equal(3, multiFacetResults[1].Results["Megapixels_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx4.0 TO Dx7.0]", multiFacetResults[1].Results["Megapixels_Range"].Values[1].Range);
+                        Assert.Equal("[4.0 TO 7.0]", multiFacetResults[1].Results["Megapixels_Range"].Values[1].Range);
                         Assert.Equal(0, multiFacetResults[1].Results["Megapixels_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx8.0 TO Dx10.0]", multiFacetResults[1].Results["Megapixels_Range"].Values[2].Range);
+                        Assert.Equal("[8.0 TO 10.0]", multiFacetResults[1].Results["Megapixels_Range"].Values[2].Range);
                         Assert.Equal(0, multiFacetResults[1].Results["Megapixels_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx11.0 TO NULL]", multiFacetResults[1].Results["Megapixels_Range"].Values[3].Range);
+                        Assert.Equal("[11.0 TO NULL]", multiFacetResults[1].Results["Megapixels_Range"].Values[3].Range);
                         Assert.Equal(0, multiFacetResults[1].Results["Megapixels_Range"].Values[3].Hits);
                     }
                 }

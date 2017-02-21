@@ -76,7 +76,7 @@ namespace SlowTests.Tests.Linq
                     var indexedUsers = GetRavenQueryInspector(session);
                     double min = 1246.434565380224, max = 1246.434565380226;
                     var q = indexedUsers.Where(x => x.Rate >= min && x.Rate <= max);
-                    Assert.Equal("Rate_D_Range:[Dx1246.43456538022 TO Dx1246.43456538023]", q.ToString());
+                    Assert.Equal("Rate_D_Range:[1246.43456538022 TO 1246.43456538023]", q.ToString());
                 }
             }
         }
@@ -370,7 +370,7 @@ namespace SlowTests.Tests.Linq
                     var q = from user in indexedUsers
                             where 15 > user.Age
                             select user;
-                    Assert.Equal("Age_L_Range:{* TO Lx15}", q.ToString());
+                    Assert.Equal("Age_L_Range:{* TO 15}", q.ToString());
                 }
             }
         }
@@ -386,7 +386,7 @@ namespace SlowTests.Tests.Linq
                     var q = from user in indexedUsers
                             where 15 >= user.Age
                             select user;
-                    Assert.Equal("Age_L_Range:[* TO Lx15]", q.ToString());
+                    Assert.Equal("Age_L_Range:[* TO 15]", q.ToString());
                 }
             }
         }
@@ -402,7 +402,7 @@ namespace SlowTests.Tests.Linq
                     var q = from user in indexedUsers
                             where 15 < user.Age
                             select user;
-                    Assert.Equal("Age_L_Range:{Lx15 TO NULL}", q.ToString());
+                    Assert.Equal("Age_L_Range:{15 TO NULL}", q.ToString());
                 }
             }
         }
@@ -418,7 +418,7 @@ namespace SlowTests.Tests.Linq
                     var q = from user in indexedUsers
                             where 15 <= user.Age
                             select user;
-                    Assert.Equal("Age_L_Range:[Lx15 TO NULL]", q.ToString());
+                    Assert.Equal("Age_L_Range:[15 TO NULL]", q.ToString());
                 }
             }
         }
@@ -864,7 +864,7 @@ namespace SlowTests.Tests.Linq
                     var q = from user in indexedUsers
                             where user.Age > 3
                             select user;
-                    Assert.Equal("Age_L_Range:{Lx3 TO NULL}", q.ToString());
+                    Assert.Equal("Age_L_Range:{3 TO NULL}", q.ToString());
                 }
             }
         }

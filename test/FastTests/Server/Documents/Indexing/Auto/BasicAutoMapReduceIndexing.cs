@@ -54,14 +54,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
-                        Query = "Count_L_Range:[Lx2 TO Lx10]"
+                        Query = "Count_L_Range:[2 TO 10]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
 
                     queryResult = await mri.Query(new IndexQueryServerSide()
                     {
-                        Query = "Count_L_Range:[Lx10 TO NULL]"
+                        Query = "Count_L_Range:[10 TO NULL]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(0, queryResult.Results.Count);
@@ -385,14 +385,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
-                        Query = "Count_L_Range:[Lx2 TO Lx10]"
+                        Query = "Count_L_Range:[2 TO 10]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
 
                     queryResult = await mri.Query(new IndexQueryServerSide()
                     {
-                        Query = "Count_L_Range:[Lx10 TO NULL]"
+                        Query = "Count_L_Range:[10 TO NULL]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(0, queryResult.Results.Count);

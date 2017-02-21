@@ -89,12 +89,12 @@ namespace Raven.Server.Documents.Queries.Faceted
 
             if (RangeQueryParser.NumericRangeValue.IsMatch(parsedRange.LowValue))
             {
-                parsedRange.LowValue = NumericStringToSortableNumeric(parsedRange.LowValue);
+                parsedRange.LowValue = NumericStringToSortableNumeric(field, parsedRange.LowValue);
             }
 
             if (RangeQueryParser.NumericRangeValue.IsMatch(parsedRange.HighValue))
             {
-                parsedRange.HighValue = NumericStringToSortableNumeric(parsedRange.HighValue);
+                parsedRange.HighValue = NumericStringToSortableNumeric(field, parsedRange.HighValue);
             }
 
 
@@ -123,19 +123,20 @@ namespace Raven.Server.Documents.Queries.Faceted
             return value;
         }
 
-        private static string NumericStringToSortableNumeric(string value)
+        private static string NumericStringToSortableNumeric(string field, string value)
         {
-            var number = NumberUtil.StringToNumber(value);
-            if (number is long)
+            var rangeType = FieldUtil.GetRangeTypeFromFieldName(field);
+            switch (rangeType)
             {
-                return NumericUtils.LongToPrefixCoded((long)number);
+                case RangeType.Long:
+                    var longValue = NumberUtil.StringToLong(value);
+                    return NumericUtils.LongToPrefixCoded(longValue.Value);
+                case RangeType.Double:
+                    var doubleValue = NumberUtil.StringToDouble(value);
+                    return NumericUtils.DoubleToPrefixCoded(doubleValue.Value);
+                default:
+                    throw new ArgumentException($"Unknown type for '{rangeType}' which started as '{value}'");
             }
-            if (number is double)
-            {
-                return NumericUtils.DoubleToPrefixCoded((double)number);
-            }
-
-            throw new ArgumentException("Unknown type for " + number.GetType() + " which started as " + value);
         }
 
         private static bool IsInclusive(char ch)

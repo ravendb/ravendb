@@ -80,10 +80,10 @@ namespace SlowTests.MailingList
                                 Mode = FacetMode.Ranges,
                                 Ranges = new List<string>
                                 {
-                                    "[NULL TO Dx0]",
-                                    "[Dx0.001 TO Dx0.999]",
-                                    "[Dx0.999 TO Dx1.999]",
-                                    "[Dx1.999 TO NULL]"
+                                    "[NULL TO 0]",
+                                    "[0.001 TO 0.999]",
+                                    "[0.999 TO 1.999]",
+                                    "[1.999 TO NULL]"
                                 }
                             }
                         }

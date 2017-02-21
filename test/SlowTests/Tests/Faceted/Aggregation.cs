@@ -442,8 +442,8 @@ namespace SlowTests.Tests.Faceted
                     facetResult = r.Results["Total"];
                     Assert.Equal(4, facetResult.Values.Count);
 
-                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "[NULL TO Dx100]").Sum);
-                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "{Dx1500 TO NULL]").Sum);
+                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "[NULL TO 100]").Sum);
+                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "{1500 TO NULL]").Sum);
 
 
                 }

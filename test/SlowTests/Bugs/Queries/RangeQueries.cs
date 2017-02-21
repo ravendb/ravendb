@@ -21,7 +21,7 @@ namespace SlowTests.Bugs.Queries
                         .Where(x => x.Sequence < 300 && x.Sequence > 150 )
                         .ToString();
 
-                    Assert.Equal("Sequence_L_Range:{Lx150 TO Lx300}", str);
+                    Assert.Equal("Sequence_L_Range:{150 TO 300}", str);
                 }
             }
         }
@@ -37,7 +37,7 @@ namespace SlowTests.Bugs.Queries
                         .Where(x => 150 > x.Sequence && x.Sequence < 300)
                         .ToString();
 
-                    Assert.Equal("Sequence_L_Range:{Lx150 TO Lx300}", str);
+                    Assert.Equal("Sequence_L_Range:{150 TO 300}", str);
                 }
             }
         }
@@ -53,7 +53,7 @@ namespace SlowTests.Bugs.Queries
                         .Where(x => 150 > x.Sequence && 300 < x.Sequence)
                         .ToString();
 
-                    Assert.Equal("Sequence_L_Range:{Lx150 TO Lx300}", str);
+                    Assert.Equal("Sequence_L_Range:{150 TO 300}", str);
                 }
             }
         }
@@ -69,7 +69,7 @@ namespace SlowTests.Bugs.Queries
                         .Where(x => x.Sequence >= 150 && x.Sequence <= 300)
                         .ToString();
 
-                    Assert.Equal("Sequence_L_Range:[Lx150 TO Lx300]", str);
+                    Assert.Equal("Sequence_L_Range:[150 TO 300]", str);
                 }
             }
         }
