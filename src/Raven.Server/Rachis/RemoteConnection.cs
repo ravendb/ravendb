@@ -12,23 +12,24 @@ namespace Raven.Server.Rachis
 {
     public class RemoteConnection : IDisposable
     {
+        private readonly string _dest;
+        private string _src;
         private readonly Stream _stream;
         private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
-        private string _debugSource;
         private Logger _log;
 
-        public string DebugSource => _debugSource;
-
-        public RemoteConnection(Stream stream)
+        public RemoteConnection(string dest, Stream stream)
         {
+            _dest = new Uri(dest).Fragment ?? dest;
             _stream = stream;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
         }
 
-        public RemoteConnection(string debugSource, Stream stream)
+        public RemoteConnection(string dest, string src, Stream stream)
         {
-            _debugSource = debugSource;
-            _log = LoggingSource.Instance.GetLogger<RemoteConnection>(debugSource);
+            _dest = new Uri(dest).Fragment ?? dest;
+            _src = new Uri(src).Fragment ?? src;
+            _log = LoggingSource.Instance.GetLogger<RemoteConnection>(_src + " > " + _dest);
             _stream = stream;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
         }
@@ -56,7 +57,7 @@ namespace Raven.Server.Rachis
         {
             using (var writer = new BlittableJsonTextWriter(context, _stream))
             {
-                Console.WriteLine(_debugSource +" -> "+  msg);
+                Console.WriteLine(_src + " > " + _dest + msg);
 
                 context.Write(writer, msg);
             }
@@ -201,7 +202,7 @@ namespace Raven.Server.Rachis
 
             public void ReadExactly(int size)
             {
-                if(_buffer.Length < size)
+                if (_buffer.Length < size)
                     _buffer = new byte[Bits.NextPowerOf2(size)];
                 var remaining = 0;
                 while (remaining < size)
@@ -290,18 +291,21 @@ namespace Raven.Server.Rachis
                 json.BlittableValidation();
                 ValidateMessage(nameof(RachisHello), json);
                 var rachisHello = JsonDeserializationRachis<RachisHello>.Deserialize(json);
-                _debugSource = rachisHello.DebugSourceIdentifier ?? "unknown";
-                _log = LoggingSource.Instance.GetLogger<RemoteConnection>(_debugSource);
+                _src = 
+                    new Uri(rachisHello.DebugSourceIdentifier).Fragment ??
+                    rachisHello.DebugSourceIdentifier ?? 
+                    "unknown";
+                _log = LoggingSource.Instance.GetLogger<RemoteConnection>(_src + " > " + _dest);
                 return rachisHello;
             }
         }
 
         public override string ToString()
         {
-            return _debugSource;
+            return _src + " > " + _dest;
         }
 
-        private static void ValidateMessage(string expectedType,BlittableJsonReaderObject json)
+        private static void ValidateMessage(string expectedType, BlittableJsonReaderObject json)
         {
             string type;
             if (json.TryGet("Type", out type) == false || type != expectedType)

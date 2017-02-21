@@ -122,7 +122,9 @@ namespace Raven.Server.Rachis
                             {
                                 _thread = new Thread(HandleVoteRequest)
                                 {
-                                    Name = "Elector thread for " + rv.Source,
+                                    Name =
+                                        "Elector thread for " + 
+                                        (new Uri(_engine.Url).Fragment ?? _engine.Url) + " > " + (new Uri(rv.Source).Fragment ?? rv.Source),
                                     IsBackground = true
                                 };
                                 _thread.Start();

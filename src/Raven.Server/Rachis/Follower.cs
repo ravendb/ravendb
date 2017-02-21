@@ -17,7 +17,6 @@ namespace Raven.Server.Rachis
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
         private Thread _thread;
-        public string DebugCurrentLeader { get; private set; }
 
         public Follower(RachisConsensus engine, RemoteConnection remoteConnection)
         {
@@ -132,7 +131,6 @@ namespace Raven.Server.Rachis
         private void NegotiateWithLeader(TransactionOperationContext context, AppendEntries fstAppendEntries)
         {
             // only the leader can send append entries, so if we accepted it, it's the leader
-            DebugCurrentLeader = _connection.DebugSource;
 
             if (fstAppendEntries.Term > _engine.CurrentTerm)
             {
@@ -421,7 +419,7 @@ namespace Raven.Server.Rachis
 
             _thread = new Thread(Run)
             {
-                Name = "Follower thread from " + _connection.DebugSource,
+                Name = "Follower thread from " + _connection,
                 IsBackground = true
             };
             _thread.Start(validAppendEntries);

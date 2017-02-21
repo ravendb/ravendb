@@ -88,7 +88,7 @@ namespace Raven.Server.Rachis
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        _connection = new RemoteConnection(_url,stream);
+                        _connection = new RemoteConnection(_url, _engine.Url, stream);
                         using (_connection)
                         {
                             _engine.AppendStateDisposable(_leader, _connection);
@@ -526,7 +526,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(Run)
             {
-                Name = "Follower Ambasaddor for " + _url,
+                Name = "Follower Ambasaddor for " + (new Uri(_engine.Url).Fragment ?? _engine.Url) + " > " + (new Uri(_url).Fragment ?? _url),
                 IsBackground = true
             };
             _thread.Start();

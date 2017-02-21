@@ -75,7 +75,7 @@ namespace Raven.Server.Rachis
 
             _thread = new Thread(Run)
             {
-                Name = "Consensus Leader - " + _engine.Url,
+                Name = "Consensus Leader - " + (new Uri(_engine.Url).Fragment ?? _engine.Url),
                 IsBackground = true
             };
             _thread.Start();

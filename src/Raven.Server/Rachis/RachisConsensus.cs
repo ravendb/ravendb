@@ -417,7 +417,7 @@ namespace Raven.Server.Rachis
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(tcpClient.GetStream());
+                remoteConnection = new RemoteConnection(_url, tcpClient.GetStream());
                 try
                 {
                     RachisHello initialMessage;
@@ -554,8 +554,6 @@ namespace Raven.Server.Rachis
 
             if (lastIndex >= upto)
                 return;
-
-            Console.WriteLine(upto);
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             while (true)

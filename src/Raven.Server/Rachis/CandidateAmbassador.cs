@@ -31,7 +31,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(Run)
             {
-                Name = "Candidate Ambasaddor for " + _url,
+                Name = "Candidate Ambasaddor for " + (new Uri(_engine.Url).Fragment ?? _engine.Url) + " > " + (new Uri(_url).Fragment ?? _url),
                 IsBackground = true
             };
             _thread.Start();
@@ -73,7 +73,7 @@ namespace Raven.Server.Rachis
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        using (var connection = new RemoteConnection(_url, stream))
+                        using (var connection = new RemoteConnection(_url, _engine.Url, stream))
                         {
                             _engine.AppendStateDisposable(_candidate, connection);
                             while (_candidate.Running)

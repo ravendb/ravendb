@@ -157,8 +157,7 @@ namespace Tryouts
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, 0);
             tcpListener.Start();
-            var url = "http://localhost:" + ((IPEndPoint) tcpListener.LocalEndpoint).Port + "/# < " +
-                      (char) (65 + (_count++)) + " >";
+            var url = "http://localhost:" + ((IPEndPoint) tcpListener.LocalEndpoint).Port + "/#"+(char) (65 + (_count++));
 
             var serverA = StorageEnvironmentOptions.CreateMemoryOnly();
             if (bootstrap)
