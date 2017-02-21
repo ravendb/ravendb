@@ -408,10 +408,12 @@ namespace Raven.Server.Documents.Indexes
 
                 var currentMaxNumberOfOutputs = statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument)?.Reader.ReadLittleEndianInt32();
 
-                *(int*)statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int)) =
-                    currentMaxNumberOfOutputs > stats.MaxNumberOfOutputsPerDocument
+                using (var add = statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int)))
+                {
+                    *(int*)add.Ptr = currentMaxNumberOfOutputs > stats.MaxNumberOfOutputsPerDocument
                         ? currentMaxNumberOfOutputs.Value
                         : stats.MaxNumberOfOutputsPerDocument;
+                }
 
                 if (_index.Type.IsMapReduce())
                 {
