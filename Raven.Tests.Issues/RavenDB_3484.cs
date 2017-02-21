@@ -274,7 +274,8 @@ namespace Raven.Tests.Issues
 
                     var pending = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
                     {
-                        Strategy = SubscriptionOpeningStrategy.WaitForFree
+                        Strategy = SubscriptionOpeningStrategy.WaitForFree,
+                        ClientAliveNotificationInterval = TimeSpan.FromSeconds(5)
                     });
 
                     Assert.Null(pending.SubscriptionConnectionException);
