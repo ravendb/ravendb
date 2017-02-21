@@ -471,34 +471,38 @@ namespace Raven.Client.Document
             rootServicePoint.ConnectionLimit = 256;
             rootServicePoint.MaxIdleTime = Timeout.Infinite;
 
-            databaseCommandsGenerator = () =>
-            {
-                string databaseUrl = Url;
-                if (string.IsNullOrEmpty(DefaultDatabase) == false)
-                {
-                    databaseUrl = rootDatabaseUrl;
-                    databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
-                }
-                return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
-                    currentSessionId, GetReplicationInformerForDatabase, null,
-                    Listeners.ConflictListeners, true));
-            };
-
             asyncDatabaseCommandsGenerator = () =>
             {
-                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, Listeners.ConflictListeners, true);
+                // we have a non-system database if we stated a default database that is not a system database or if we have a predefined url
+                if (string.IsNullOrEmpty(DefaultDatabase)== false && DefaultDatabase != Constants.SystemDatabase || Url != rootDatabaseUrl)
+                {
+                    var databaseUrl = Url;
+                    if (string.IsNullOrEmpty(DefaultDatabase)==false)
+                        databaseUrl = rootDatabaseUrl + "/databases/" + DefaultDatabase;
 
-                if (string.IsNullOrEmpty(DefaultDatabase))
-                    return asyncServerClient;
-                return asyncServerClient.ForDatabase(DefaultDatabase);
+                    return new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
+                        currentSessionId, GetReplicationInformerForDatabase, DefaultDatabase,
+                        Listeners.ConflictListeners, true);
+                }
+
+                return new AsyncServerClient(rootDatabaseUrl, Conventions,
+                            new OperationCredentials(ApiKey, Credentials),
+                            jsonRequestFactory, currentSessionId,
+                            GetReplicationInformerForDatabase, Constants.SystemDatabase, Listeners.ConflictListeners, true);
+
+                
             };
+
+            databaseCommandsGenerator = () => new ServerClient((AsyncServerClient)asyncDatabaseCommandsGenerator());
+
+            
         }
 
 
         public IDocumentStoreReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
         {
             var key = Url;
-            dbName = dbName ?? Constants.SystemDatabase;
+            dbName = dbName ?? DefaultDatabase;
             if (string.IsNullOrEmpty(dbName) == false)
             {
                 key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
