@@ -194,11 +194,11 @@ namespace Sparrow.Json
             var first = true;
             foreach (var str in strArray)
             {
-                if (first)
+                if (first == false)
                 {
                     WriteComma();
-                    first = false;
                 }
+                first = false;
 
                 if (str == null)
                 {
