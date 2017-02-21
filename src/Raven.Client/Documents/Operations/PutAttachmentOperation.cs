@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -61,11 +62,16 @@ namespace Raven.Client.Documents.Operations
                 url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeUriString(_documentId)}&name={Uri.EscapeUriString(_name)}";
                 if (string.IsNullOrWhiteSpace(_contentType) == false)
                     url += $"&contentType={Uri.EscapeUriString(_contentType)}";
-                return new HttpRequestMessage
+                var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Put,
                     Content = new StreamContent(_stream)
                 };
+
+                if (_etag.HasValue)
+                    request.Headers.IfMatch.Add(new EntityTagHeaderValue($"\"{_etag.Value}\""));
+
+                return request;
             }
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
