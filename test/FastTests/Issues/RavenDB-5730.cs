@@ -63,7 +63,7 @@ namespace FastTests.Issues
                 session.Store(new ReplicationDocument
                 {
                     Destinations = destinations
-                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
 

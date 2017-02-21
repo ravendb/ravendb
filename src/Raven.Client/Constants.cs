@@ -204,7 +204,7 @@ namespace Raven.Client
 
                 public const string ReplicationDestinationsId = "Raven/Replication/Destinations";
 
-                public const string DocumentReplicationConfiguration = "Raven/Replication/Documents/Configuration";
+                public const string ReplicationConfigurationDocument = "Raven/Replication/Documents/Configuration";
             }
 
             public class Versioning

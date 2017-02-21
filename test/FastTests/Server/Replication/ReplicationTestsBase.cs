@@ -321,7 +321,7 @@ namespace FastTests.Server.Replication
                                 }
                             }
                         }
-                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
 
                 session.SaveChanges();
             }
@@ -337,7 +337,7 @@ namespace FastTests.Server.Replication
                 {
                     Destinations = destinations,
                     DocumentConflictResolution = conflictResolution
-                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
         }
@@ -359,7 +359,7 @@ namespace FastTests.Server.Replication
                 {
                     Destinations = destinations,
                     DocumentConflictResolution = builtinConflictResolution
-                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
         }
@@ -380,7 +380,7 @@ namespace FastTests.Server.Replication
                 session.Store(new ReplicationDocument
                 {
                     Destinations = destinations
-                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
         }
@@ -413,7 +413,7 @@ namespace FastTests.Server.Replication
                 }
 
                 configOptions.Destinations = destinations;
-                session.Store(configOptions, Constants.Documents.Replication.DocumentReplicationConfiguration);
+                session.Store(configOptions, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
         }
@@ -425,7 +425,7 @@ namespace FastTests.Server.Replication
             using (var session = fromStore.OpenSession())
             {
                 replicationConfigDocument =
-                    session.Load<ReplicationDocument>(Constants.Documents.Replication.DocumentReplicationConfiguration);
+                    session.Load<ReplicationDocument>(Constants.Documents.Replication.ReplicationConfigurationDocument);
 
                 if (replicationConfigDocument == null)
                     return;
@@ -456,7 +456,7 @@ namespace FastTests.Server.Replication
                 session.Store(new ReplicationDocument
                 {
                     Destinations = toDestinations.ToList()
-                }, Constants.Documents.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
         }

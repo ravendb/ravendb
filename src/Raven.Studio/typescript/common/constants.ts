@@ -49,3 +49,5 @@ const enum filesystemConfigurationChangeAction {
 }
 
 const DEV_BUILD_NUMBER = 40;
+
+const documentReplicationConfiguration = "Raven/Replication/Documents/Configuration";
