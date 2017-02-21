@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes
 
             _filter = CollectionOfBloomFilters.Load(mode, indexContext);
 
-            return _filter;
+            return null;
         }
 
         public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

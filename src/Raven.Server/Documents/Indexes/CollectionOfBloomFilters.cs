@@ -10,7 +10,7 @@ using Voron.Data.BTrees;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class CollectionOfBloomFilters : IDisposable
+    public class CollectionOfBloomFilters
     {
         public enum Mode
         {
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes
 
         public BloomFilter this[int index] => _filters[index];
 
-        public static CollectionOfBloomFilters Load(Mode mode, TransactionOperationContext indexContext)
+        public static unsafe CollectionOfBloomFilters Load(Mode mode, TransactionOperationContext indexContext)
         {
             var tree = indexContext.Transaction.InnerTransaction.CreateTree("IndexedDocs");
             var collection = new CollectionOfBloomFilters(mode, tree, indexContext);
@@ -60,10 +60,10 @@ namespace Raven.Server.Documents.Indexes
                         switch (reader.Length)
                         {
                             case BloomFilter32.PtrSize:
-                                filter = new BloomFilter32(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader, tree);
+                                filter = new BloomFilter32(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader.Base, tree, writeable: false);
                                 break;
                             case BloomFilter64.PtrSize:
-                                filter = new BloomFilter64(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader, tree);
+                                filter = new BloomFilter64(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader.Base, tree, writeable: false);
                                 break;
                             default:
                                 throw new InvalidOperationException($"Unsupported bloom filter size ({reader.Length}) for '{it.CurrentKey}' filter.");
@@ -90,19 +90,30 @@ namespace Raven.Server.Documents.Indexes
             AddFilter(CreateNewFilter(0, _mode));
         }
 
-        internal BloomFilter CreateNewFilter(int number, Mode mode)
+        internal unsafe BloomFilter CreateNewFilter(int number, Mode mode)
         {
             Slice key;
             Slice.From(_context.Allocator, number.ToString("D9"), out key);
 
+            // we can safely pass raw pointers here and dispose DirectAdd scopes immediately because 
+            // filters' content will be written to overflows
+
             if (mode == Mode.X64)
             {
-                var ptr64 = _tree.DirectAdd(key, BloomFilter64.PtrSize);
-                return new BloomFilter64(key, ptr64, _tree);
+                Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter64.PtrSize));
+
+                using (var ptr64 = _tree.DirectAdd(key, BloomFilter64.PtrSize))
+                {
+                    return new BloomFilter64(key, ptr64.Ptr, _tree, writeable: true);
+                }     
             }
 
-            var ptr32 = _tree.DirectAdd(key, BloomFilter32.PtrSize);
-            return new BloomFilter32(key, ptr32, _tree);
+            Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter32.PtrSize));
+
+            using (var ptr32 = _tree.DirectAdd(key, BloomFilter32.PtrSize))
+            {
+                return new BloomFilter32(key, ptr32.Ptr, _tree, writeable: true);
+            }
         }
 
         internal void AddFilter(BloomFilter filter)
@@ -171,54 +182,33 @@ namespace Raven.Server.Documents.Indexes
             AddFilter(CreateNewFilter(_filters.Length, _mode));
         }
 
-        public void Dispose()
-        {
-            if (_filters == null)
-                return;
-
-            foreach (var filter in _filters)
-            {
-                filter.Dispose();
-            }
-        }
-
-        public class BloomFilter32 : BloomFilter
+        public unsafe class BloomFilter32 : BloomFilter
         {
             public const int PtrSize = 32 * 1024;
             public const int MaxCapacity = 25000;
 
             private const ulong M = (PtrSize - CountSize) * BitVector.BitsPerByte;
 
-            public BloomFilter32(Slice key, Tree.DirectAddScope addScope, Tree tree)
-                : base(key, addScope, tree, M, PtrSize, MaxCapacity)
-            {
-            }
-
-            public BloomFilter32(Slice key, ValueReader reader, Tree tree)
-                : base(key, reader, tree, M, PtrSize, MaxCapacity)
+            public BloomFilter32(Slice key, byte* ptr, Tree tree, bool writeable)
+                : base(key, ptr, tree, writeable, M, PtrSize, MaxCapacity)
             {
             }
         }
 
-        public class BloomFilter64 : BloomFilter
+        public unsafe class BloomFilter64 : BloomFilter
         {
             public const int PtrSize = 16 * 1024 * 1024;
             public const int MaxCapacity = 10000000;
 
             private const ulong M = (PtrSize - CountSize) * BitVector.BitsPerByte;
 
-            public BloomFilter64(Slice key, Tree.DirectAddScope addScope, Tree tree)
-                : base(key, addScope, tree, M, PtrSize, MaxCapacity)
-            {
-            }
-
-            public BloomFilter64(Slice key, ValueReader reader, Tree tree)
-                : base(key, reader, tree, M, PtrSize, MaxCapacity)
+            public BloomFilter64(Slice key, byte* ptr, Tree tree, bool writeable)
+                : base(key, ptr, tree, writeable, M, PtrSize, MaxCapacity)
             {
             }
         }
 
-        public abstract unsafe class BloomFilter : IDisposable
+        public abstract unsafe class BloomFilter
         {
             public const int CountSize = sizeof(int);
 
@@ -229,7 +219,6 @@ namespace Raven.Server.Documents.Indexes
             private readonly Tree _tree;
             private readonly ulong _m;
             private readonly int _ptrSize;
-            private Tree.DirectAddScope _addScope;
             private byte* _dataPtr;
             private int* _countPtr;
 
@@ -241,18 +230,7 @@ namespace Raven.Server.Documents.Indexes
 
             public readonly int Capacity;
 
-            protected BloomFilter(Slice key, Tree.DirectAddScope addScope, Tree tree, ulong m, int ptrSize, int capacity)
-                : this(key, addScope.Ptr, tree, true, m, ptrSize, capacity)
-            {
-                _addScope = addScope;
-            }
-
-            protected BloomFilter(Slice key, ValueReader reader, Tree tree, ulong m, int ptrSize, int capacity)
-                : this(key, reader.Base, tree, false, m, ptrSize, capacity)
-            {
-            }
-
-            private BloomFilter(Slice key, byte* basePtr, Tree tree, bool writeable, ulong m, int ptrSize, int capacity)
+            protected BloomFilter(Slice key, byte* basePtr, Tree tree, bool writeable, ulong m, int ptrSize, int capacity)
             {
                 _key = key;
                 _basePtr = basePtr;
@@ -331,11 +309,16 @@ namespace Raven.Server.Documents.Indexes
                 if (Writeable)
                     return;
 
-                Debug.Assert(_addScope == null);
+                // we can safely pass the raw pointer here and dispose DirectAdd scope immediately because 
+                // filter's content will be written to an overflow
 
-                _addScope = _tree.DirectAdd(_key, _ptrSize);
-                UnmanagedMemory.Copy(_addScope.Ptr, _basePtr, _ptrSize);
-                Initialize(_addScope.Ptr);
+                Debug.Assert(_tree.ShouldGoToOverflowPage(_ptrSize));
+
+                using (var add = _tree.DirectAdd(_key, _ptrSize))
+                {
+                    UnmanagedMemory.Copy(add.Ptr, _basePtr, _ptrSize);
+                    Initialize(add.Ptr);
+                }
 
                 Writeable = true;
             }
@@ -369,11 +352,6 @@ namespace Raven.Server.Documents.Indexes
             private static void SetBitToTrue(byte* ptr, ulong ptrPosition, int bitPosition)
             {
                 ptr[ptrPosition] |= (byte)(1 << bitPosition);
-            }
-
-            public void Dispose()
-            {
-                _addScope?.Dispose();
             }
         }
     }
