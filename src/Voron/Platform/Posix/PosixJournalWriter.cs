@@ -61,29 +61,14 @@ namespace Voron.Platform.Posix
             if (length < journalSize)
             {
                 length = journalSize;
-                int result;
-                if ((options.SafePosixOpenFlags & PerPlatformValues.OpenFlags.O_DIRECT) == 0)
+                try
                 {
-                    // fallocate doesn't supported, we'll use lseek instead
-                    result = Syscall.AllocateUsingLseek(_fd, journalSize);
+                    PosixHelper.AllocateFileSpace(options, _fd, (ulong) journalSize,filename);
                 }
-                else
-                {
-                    result = Syscall.posix_fallocate(_fd, IntPtr.Zero, (UIntPtr) journalSize);
-                }
-                if (result != 0)
+                catch (Exception)
                 {
                     Syscall.close(_fd);
-                    _fd = -1;
-                    try
-                    {
-                        File.Delete(filename);
-                    }
-                    catch (Exception)
-                    {
-                        // nothing we can do here
-                    }
-                    PosixHelper.ThrowLastError(result, "when allocating " + filename);
+                    throw;
                 }
             }
 

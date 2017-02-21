@@ -39,8 +39,7 @@ namespace Voron.Platform.Posix
                 if (result != (int) Errno.EINTR)
                     break;
                 if (retries-- > 0)
-                    throw new IOException(
-                        "Tried too many times to call posix_fallocate, but always got EINTR, cannot retry again");
+                    throw new IOException($"Tried too many times to call posix_fallocate {file}, but always got EINTR, cannot retry again");
             }
             if (result == (int) Errno.ENOSPC)
             {
