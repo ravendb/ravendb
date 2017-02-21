@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using Sparrow.Collections;
 using System.Diagnostics;
 using Sparrow.Binary;
 
@@ -84,9 +85,10 @@ namespace Sparrow.Json
 
         private const int CachedSortsSize = 512;
         private readonly CachedSort[] _cachedSorts = new CachedSort[CachedSortsSize]; // size is fixed and used in GetPropertiesHashedIndex
+
         private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
         private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
-        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(LazyStringValueComparer.Instance);
+        private readonly FastDictionary<LazyStringValue, PropertyName, LazyStringValueStructComparer> _propertyNameToId = new FastDictionary<LazyStringValue, PropertyName, LazyStringValueStructComparer>(default(LazyStringValueStructComparer));
         private bool _propertiesNeedSorting;
 
         public int PropertiesDiscovered;
@@ -138,7 +140,7 @@ namespace Sparrow.Json
             // in different order. 
             // we'll assume the later and move the property around, this is safe to 
             // do because we ignore the properties showing up after the PropertiesDiscovered
-            
+
             var old = _docPropNames[PropertiesDiscovered];
             _docPropNames[PropertiesDiscovered] = _docPropNames[prop.PropertyId];
             old.PropertyId = _docPropNames[PropertiesDiscovered].PropertyId;
