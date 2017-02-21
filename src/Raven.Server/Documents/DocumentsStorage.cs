@@ -1000,14 +1000,14 @@ namespace Raven.Server.Documents
 
             if (_conflictCount > 0)
             {
-                if (local.Item2 != null && local.Item1 != null)
-                {
-                    // Something is wrong, we can't have conflicts and local document/tombstone
-                    throw new InvalidDataException($"we can't have conflicts and local document/tombstone with the key {loweredKey}");
-                }
                 var conflicts = GetConflictsFor(context, loweredKey);
                 if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
                 {
+                    if (local.Item2 != null || local.Item1 != null)
+                    {
+                        // Something is wrong, we can't have conflicts and local document/tombstone
+                        throw new InvalidDataException($"we can't have conflicts and local document/tombstone with the key {loweredKey}");
+                    }
                     collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out etag);
                 }
             }
@@ -1027,7 +1027,7 @@ namespace Raven.Server.Documents
                     if (local.Item2 == null && local.Item1 == null)
                     {
                         // we adding a tombstone without having any pervious document, it could happened if this was called
-                        // from the incoming replication.
+                        // from the incoming replication or if we delete document that wasn't exist at the first place.
 
                         if (expectedEtag != null)
                             throw new ConcurrencyException(
@@ -1036,7 +1036,7 @@ namespace Raven.Server.Documents
 
                         if (collectionName == null)
                         {
-                            // throw
+                            // this basically mean that we tried to delete document that doesn't exist.
                             return null;
                         }
 
