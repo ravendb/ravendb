@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -104,6 +104,8 @@ namespace Raven.SlowTests.Replication
                 store.Initialize();
                 var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
                 await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
+                var systemReplicationInformerForDatabase = store.GetReplicationInformerForDatabase(Constants.SystemDatabase);
+                await systemReplicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands.ForSystemDatabase());
                 Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinations.Count);
 
                 foreach (var ravenDbServer in servers)

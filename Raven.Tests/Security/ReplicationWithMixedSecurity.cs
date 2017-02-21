@@ -161,9 +161,16 @@ namespace Raven.Tests.Security
 
             servers[0].Dispose();
 
-            using (var session = store1.OpenAsyncSession())
+            using (var store1Fresh = new DocumentStore
             {
-                Assert.NotNull(await session.LoadAsync<Company>(1));
+                Url = store1.Url,
+                DefaultDatabase = store1.DefaultDatabase
+            }.Initialize())
+            {
+                using (var session = store1Fresh.OpenAsyncSession())
+                {
+                    Assert.NotNull(await session.LoadAsync<Company>(1));
+                }
             }
         }
 
@@ -205,7 +212,12 @@ namespace Raven.Tests.Security
 
             TellSecondInstanceToReplicateToFirstInstance(apiKey);
 
-            using (var session = store2.OpenAsyncSession())
+            using (var store2Fresh = new DocumentStore
+            {
+                Url=store2.Url,
+                DefaultDatabase = store2.DefaultDatabase
+            }.Initialize())
+            using (var session = store2Fresh.OpenAsyncSession())
             {
                 await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
                 await session.SaveChangesAsync();
@@ -219,7 +231,12 @@ namespace Raven.Tests.Security
 
             servers[1].Dispose();
 
-            using (var session = store2.OpenAsyncSession())
+            using (var store2Fresh = new DocumentStore
+            {
+                Url=store2.Url,
+                DefaultDatabase = store2.DefaultDatabase
+            }.Initialize())
+            using (var session = store2Fresh.OpenAsyncSession())
             {
                 Assert.NotNull(await session.LoadAsync<Company>(1));
             }

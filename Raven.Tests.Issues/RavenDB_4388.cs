@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Net;
-
+using Raven.Abstractions.Replication;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -17,7 +17,10 @@ namespace Raven.Tests.Issues
         public void ShouldCleanupCache()
         {
             ServicePointManager.MaxServicePointIdleTime = 1;
-            using (var store = NewRemoteDocumentStore())
+            using (var store = NewRemoteDocumentStore(configureStore: x =>
+            {
+                x.Conventions.FailoverBehavior=FailoverBehavior.FailImmediately;
+            }))
             {
                 store.DatabaseCommands.Get("keys/1");
 

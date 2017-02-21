@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Tests.Bundles.Versioning;
 using Raven.Tests.Common;
@@ -38,10 +39,20 @@ namespace Raven.Tests.Bundles.Replication.Async
 
             servers[0].Dispose();
 
-            using (var session = store1.OpenAsyncSession())
+            using (var store1Fresh = new DocumentStore
             {
-                var company = await session.LoadAsync<Company>("companies/1");
-                Assert.NotNull(company);
+                Url = store1.Url,
+                DefaultDatabase = store1.DefaultDatabase
+            })
+            {
+                store1Fresh.Initialize();
+                var informer = store1Fresh.GetReplicationInformerForDatabase(store1.DefaultDatabase);
+                using (var session = store1.OpenAsyncSession())
+                {
+                    informer.UpdateReplicationInformationIfNeeded((AsyncServerClient)store1Fresh.AsyncDatabaseCommands).Wait();
+                    var company = await session.LoadAsync<Company>("companies/1");
+                    Assert.NotNull(company);
+                }
             }
         }
 
@@ -95,15 +106,28 @@ namespace Raven.Tests.Bundles.Replication.Async
 
             servers[0].Dispose();
 
-            using (var session = store1.OpenAsyncSession())
+            using (var store1Fresh = new DocumentStore
             {
-                var company = await session.LoadAsync<Company>("companies/1");
-                Assert.NotNull(company);
-                company.Name = "different";
-                var invalidOperationException = await AssertAsync.Throws<InvalidOperationException>(async () => await session.SaveChangesAsync());
-                Assert.Equal("Could not replicate POST operation to secondary node, failover behavior is: AllowReadsFromSecondaries",
-                    invalidOperationException.Message);
+                Url = store2.Url,
+                DefaultDatabase = store2.DefaultDatabase
+            })
+            {
+                store1Fresh.Initialize();
+                var informer = store1Fresh.GetReplicationInformerForDatabase(store1.DefaultDatabase);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    informer.UpdateReplicationInformationIfNeeded((AsyncServerClient)store1Fresh.AsyncDatabaseCommands).Wait();
+                    var company = await session.LoadAsync<Company>("companies/1");
+                    Assert.NotNull(company);
+                    company.Name = "different";
+                    var invalidOperationException = await AssertAsync.Throws<InvalidOperationException>(async () => await session.SaveChangesAsync());
+                    Assert.Equal("Could not replicate POST operation to secondary node, failover behavior is: AllowReadsFromSecondaries",
+                        invalidOperationException.Message);
+                }
             }
+
+            
         }
 
         [Fact]
@@ -126,16 +150,26 @@ namespace Raven.Tests.Bundles.Replication.Async
             }
 
             await WaitForReplication(store2);
-
             servers[0].Dispose();
 
-            using (var session = store1.OpenAsyncSession())
+            using (var store1Fresh = new DocumentStore
             {
-                var company = await session.LoadAsync<Company>("companies/1");
-                Assert.NotNull(company);
-                company.Name = "different";
-                await session.SaveChangesAsync();
+                Url = store2.Url,
+                DefaultDatabase = store2.DefaultDatabase
+            })
+            {
+                store1Fresh.Initialize();
+                var informer = store1Fresh.GetReplicationInformerForDatabase(store1.DefaultDatabase);
+                using (var session = store1Fresh.OpenAsyncSession())
+                {
+                    informer.UpdateReplicationInformationIfNeeded((AsyncServerClient)store1Fresh.AsyncDatabaseCommands).Wait();
+                    var company = await session.LoadAsync<Company>("companies/1");
+                    Assert.NotNull(company);
+                    company.Name = "different";
+                    await session.SaveChangesAsync();
+                }
             }
+
         }
 
         private async Task WaitForReplication(IDocumentStore store2)
