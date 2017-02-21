@@ -513,7 +513,8 @@ namespace Raven.Client.Document
             if (FailoverServers == null)
                 return result;
 
-            if (dbName == DefaultDatabase)
+            if (dbName == DefaultDatabase ||
+                DefaultDatabase == null && dbName == Constants.SystemDatabase)
             {
                 if (FailoverServers.IsSetForDefaultDatabase && result.FailoverServers == null)
                     result.FailoverServers = FailoverServers.ForDefaultDatabase;
