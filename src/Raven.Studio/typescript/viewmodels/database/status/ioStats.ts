@@ -842,7 +842,10 @@ class metrics extends viewModelBase {
 
     private drawGaps(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
 
-        const range = xScale.range();
+        // xScale.range has screen pixels locations of Activity periods
+        // xScale.domain has Start & End times of Activity periods
+
+        const range = xScale.range(); 
         context.strokeStyle = metrics.colors.gaps;
 
         for (let i = 1; i < range.length; i += 2) {
@@ -853,8 +856,11 @@ class metrics extends viewModelBase {
             context.lineTo(gapX, this.totalHeight);
             context.stroke();
 
-            const indexToGapFinderPosition = (i - 1) / 2;
-            const gapInfo = this.gapFinder.gapsPositions[indexToGapFinderPosition];
+            // Can't use xScale.invert here because there are Duplicate Values in xScale.range,
+            // Using direct array access to xScale.domain instead
+            const gapStartTime = xScale.domain()[i]; 
+            const gapInfo = this.gapFinder.getGapInfoByTime(gapStartTime);
+
             if (gapInfo) {
                 // Register gap for tooltip 
                 this.hitTest.registerGapItem(gapX - 5, metrics.axisHeight, 10, this.totalHeight,

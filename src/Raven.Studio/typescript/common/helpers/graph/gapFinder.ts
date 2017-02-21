@@ -2,8 +2,8 @@
 
 class gapFinder {
 
-    domain: Date[] = [];
-    gapsPositions: timeGapInfo[] = [];
+    domain: Date[] = []; // Activity Start & End times, i.e [start1, end1, start2, end2, etc...]
+    gapsPositions: timeGapInfo[] = []; // Gaps Start Time + Duration 
 
     minTime: Date;
     maxTime: Date;
@@ -21,6 +21,10 @@ class gapFinder {
         const trimmedDomain = gapFinder.trimDomain(this.domain, timeRange[0], timeRange[1]);
 
         return gapFinder.createScaleInternal(totalWidth, paddingBetweenGaps, trimmedDomain);
+    }
+
+    getGapInfoByTime(gapStartTime: Date): timeGapInfo {
+        return (this.gapsPositions.find(g => g.start.getTime() === gapStartTime.getTime()));
     }
 
     /**
