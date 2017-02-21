@@ -168,5 +168,7 @@ namespace Raven.Client
             if (configuration.FailoverBehavior.HasValue)
                 FailoverBehavior = configuration.FailoverBehavior.Value;
         }
+
+        public TimeSpan TimeToWaitBetweenReplicationTopologyUpdates = TimeSpan.FromMinutes(5);
     }
 }
