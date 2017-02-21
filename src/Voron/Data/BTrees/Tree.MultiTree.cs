@@ -64,7 +64,7 @@ namespace Voron.Data.BTrees
             if (item->Flags == TreeNodeFlags.MultiValuePageRef)
             {
                 var existingTree = OpenMultiValueTree(key, item);
-                existingTree.DirectAdd(value, 0);
+                existingTree.DirectAdd(value, 0).Dispose();
                 return;
             }
 
@@ -128,12 +128,12 @@ namespace Voron.Data.BTrees
             {
                 Slice existingValue;
                 using (nestedPage.GetNodeKey(_llt, i, out existingValue))
-                    tree.DirectAdd(existingValue, 0);
+                    tree.DirectAdd(existingValue, 0).Dispose();
             }
-            tree.DirectAdd(value, 0);
+            tree.DirectAdd(value, 0).Dispose();
             _tx.AddMultiValueTree(this, key, tree);
             // we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
-            DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
+            DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef).Dispose();
         }
 
         private void ExpandMultiTreeNestedPageSize(Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
@@ -148,29 +148,30 @@ namespace Voron.Data.BTrees
                 Delete(key); // release our current page
                 TreePage nestedPage = new TreePage(tempPagePointer, (ushort)currentSize);
 
-                var ptr = DirectAdd(key, newSize);
-
-                var newNestedPage = new TreePage(ptr, newSize)
+                using (var add = DirectAdd(key, newSize))
                 {
-                    Lower = (ushort)Constants.Tree.PageHeaderSize,
-                    Upper = newSize,
-                    TreeFlags = TreePageFlags.Leaf,
-                    PageNumber = -1L, // mark as invalid page number
-                    Flags = 0
-                };
+                    var newNestedPage = new TreePage(add.Ptr, newSize)
+                    {
+                        Lower = (ushort) Constants.Tree.PageHeaderSize,
+                        Upper = newSize,
+                        TreeFlags = TreePageFlags.Leaf,
+                        PageNumber = -1L, // mark as invalid page number
+                        Flags = 0
+                    };
 
-                ByteStringContext allocator = _llt.Allocator;
-                for (int i = 0; i < nestedPage.NumberOfEntries; i++)
-                {
-                    var nodeHeader = nestedPage.GetNode(i);
+                    ByteStringContext allocator = _llt.Allocator;
+                    for (int i = 0; i < nestedPage.NumberOfEntries; i++)
+                    {
+                        var nodeHeader = nestedPage.GetNode(i);
 
-                    Slice nodeKey;
-                    using (TreeNodeHeader.ToSlicePtr(allocator, nodeHeader, out nodeKey))
-                        newNestedPage.AddDataNode(i, nodeKey, 0);
+                        Slice nodeKey;
+                        using (TreeNodeHeader.ToSlicePtr(allocator, nodeHeader, out nodeKey))
+                            newNestedPage.AddDataNode(i, nodeKey, 0);
+                    }
+
+                    newNestedPage.Search(_llt, value);
+                    newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0);
                 }
-
-                newNestedPage.Search(_llt, value);
-                newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0);
             }
         }
 
@@ -186,27 +187,28 @@ namespace Voron.Data.BTrees
                 // otherwise, we would have to put this in overflow page, and that won't save us any space anyway
 
                 var tree = Create(_llt, _tx, TreeFlags.MultiValue);
-                tree.DirectAdd(value, 0);
+                tree.DirectAdd(value, 0).Dispose();
                 _tx.AddMultiValueTree(this, key, tree);
 
-                DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
+                DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef).Dispose();
                 return;
             }
 
             var actualPageSize = (ushort)Math.Min(Bits.NextPowerOf2(requiredPageSize), maxNodeSize - Constants.Tree.NodeHeaderSize);
 
-            var ptr = DirectAdd(key, actualPageSize);
-
-            var nestedPage = new TreePage(ptr, actualPageSize)
+            using (var add = DirectAdd(key, actualPageSize))
             {
-                PageNumber = -1L,// hint that this is an inner page
-                Lower = (ushort)Constants.Tree.PageHeaderSize,
-                Upper = actualPageSize,
-                TreeFlags = TreePageFlags.Leaf,
-                Flags = 0
-            };
+                var nestedPage = new TreePage(add.Ptr, actualPageSize)
+                {
+                    PageNumber = -1L, // hint that this is an inner page
+                    Lower = (ushort) Constants.Tree.PageHeaderSize,
+                    Upper = actualPageSize,
+                    TreeFlags = TreePageFlags.Leaf,
+                    Flags = 0
+                };
 
-            nestedPage.AddDataNode(0, value, 0);
+                nestedPage.AddDataNode(0, value, 0);
+            }
         }
 
         public void MultiDelete(Slice key, Slice value)

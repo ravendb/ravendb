@@ -253,11 +253,7 @@ namespace Voron.Data.Tables
             var ptr = DirectRead(id, out size);
             if (ptr == null)
                 return;
-
-            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
-            NumberOfEntries--;
-            stats->NumberOfEntries = NumberOfEntries;
-
+            
             var tvr = new TableValueReader(ptr, size);
             DeleteValueFromIndex(id, ref tvr);
 
@@ -267,14 +263,25 @@ namespace Voron.Data.Tables
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
                 var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
                 _overflowPageCount -= numberOfPages;
-                stats->OverflowPageCount = _overflowPageCount;
-
+                
                 for (int i = 0; i < numberOfPages; i++)
                 {
                     _tx.LowLevelTransaction.FreePage(page.PageNumber + i);
                 }
-                return;
             }
+
+            NumberOfEntries--;
+
+            using (var updateStats = _tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats)))
+            {
+                var stats = (TableSchemaStats*)updateStats.Ptr;
+
+                stats->NumberOfEntries = NumberOfEntries;
+                stats->OverflowPageCount = _overflowPageCount;
+            }
+
+            if (largeValue)
+                return;
 
             var density = ActiveDataSmallSection.Free(id);
             if (ActiveDataSmallSection.Contains(id) || density > 0.5)
@@ -352,20 +359,19 @@ namespace Voron.Data.Tables
             // Any changes done to this method should be reproduced in the Insert below, as they're used when compacting.
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
-            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
-            NumberOfEntries++;
-            stats->NumberOfEntries = NumberOfEntries;
 
             int size = builder.Size;
 
             byte* pos;
             long id;
+
             if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
                 id = AllocateFromSmallActiveSection(size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-                    throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
+                    throw new InvalidOperationException(
+                        $"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
 
                 // Memory Copy into final position.
                 builder.CopyTo(pos);
@@ -375,7 +381,6 @@ namespace Voron.Data.Tables
                 var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
                 _overflowPageCount += numberOfOverflowPages;
-                stats->OverflowPageCount = _overflowPageCount;
 
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
@@ -388,6 +393,16 @@ namespace Voron.Data.Tables
 
             var tvr = new TableValueReader(pos, size);
             InsertIndexValuesFor(id, ref tvr);
+
+            NumberOfEntries++;
+
+            using (var updateStats = _tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats)))
+            {
+                var stats = (TableSchemaStats*)updateStats.Ptr;
+
+                stats->NumberOfEntries = NumberOfEntries;
+                stats->OverflowPageCount = _overflowPageCount;
+            }
 
             return id;
         }
@@ -451,9 +466,6 @@ namespace Voron.Data.Tables
         {
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
-            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
-            NumberOfEntries++;
-            stats->NumberOfEntries = NumberOfEntries;
 
             int size = reader.Size;
 
@@ -471,7 +483,6 @@ namespace Voron.Data.Tables
                 var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
                 _overflowPageCount += numberOfOverflowPages;
-                stats->OverflowPageCount = _overflowPageCount;
 
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
@@ -486,6 +497,16 @@ namespace Voron.Data.Tables
 
             var tvr = new TableValueReader(pos, size);
             InsertIndexValuesFor(id, ref tvr);
+
+            NumberOfEntries++;
+
+            using (var updateStats = _tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats)))
+            {
+                var stats = (TableSchemaStats*)updateStats.Ptr;
+
+                stats->NumberOfEntries = NumberOfEntries;
+                stats->OverflowPageCount = _overflowPageCount;
+            }
 
             return id;
         }
@@ -960,8 +981,12 @@ namespace Voron.Data.Tables
                     continue;
 
                 var treeName = item.Key;
-                var header = (TreeRootHeader*)_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader));
-                tree.State.CopyTo(header);
+
+                using (var add = _tableTree.DirectAdd(treeName, sizeof(TreeRootHeader)))
+                {
+                    var header = (TreeRootHeader*)add.Ptr;
+                    tree.State.CopyTo(header);
+                }
             }
         }
 

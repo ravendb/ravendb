@@ -95,14 +95,25 @@ namespace Raven.Server.Documents.Indexes
             Slice key;
             Slice.From(_context.Allocator, number.ToString("D9"), out key);
 
+            // we can safely pass raw pointers here and dispose DirectAdd scopes immediately because 
+            // filters' content will be written to overflows
+
             if (mode == Mode.X64)
             {
-                var ptr64 = _tree.DirectAdd(key, BloomFilter64.PtrSize);
-                return new BloomFilter64(key, ptr64, _tree, writeable: true);
+                Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter64.PtrSize));
+
+                using (var ptr64 = _tree.DirectAdd(key, BloomFilter64.PtrSize))
+                {
+                    return new BloomFilter64(key, ptr64.Ptr, _tree, writeable: true);
+                }     
             }
 
-            var ptr32 = _tree.DirectAdd(key, BloomFilter32.PtrSize);
-            return new BloomFilter32(key, ptr32, _tree, writeable: true);
+            Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter32.PtrSize));
+
+            using (var ptr32 = _tree.DirectAdd(key, BloomFilter32.PtrSize))
+            {
+                return new BloomFilter32(key, ptr32.Ptr, _tree, writeable: true);
+            }
         }
 
         internal void AddFilter(BloomFilter filter)
@@ -178,8 +189,8 @@ namespace Raven.Server.Documents.Indexes
 
             private const ulong M = (PtrSize - CountSize) * BitVector.BitsPerByte;
 
-            public BloomFilter32(Slice key, byte* basePtr, Tree tree, bool writeable)
-                : base(key, basePtr, tree, writeable, M, PtrSize, MaxCapacity)
+            public BloomFilter32(Slice key, byte* ptr, Tree tree, bool writeable)
+                : base(key, ptr, tree, writeable, M, PtrSize, MaxCapacity)
             {
             }
         }
@@ -191,8 +202,8 @@ namespace Raven.Server.Documents.Indexes
 
             private const ulong M = (PtrSize - CountSize) * BitVector.BitsPerByte;
 
-            public BloomFilter64(Slice key, byte* basePtr, Tree tree, bool writeable)
-                : base(key, basePtr, tree, writeable, M, PtrSize, MaxCapacity)
+            public BloomFilter64(Slice key, byte* ptr, Tree tree, bool writeable)
+                : base(key, ptr, tree, writeable, M, PtrSize, MaxCapacity)
             {
             }
         }
@@ -298,10 +309,16 @@ namespace Raven.Server.Documents.Indexes
                 if (Writeable)
                     return;
 
-                var ptr = _tree.DirectAdd(_key, _ptrSize);
-                UnmanagedMemory.Copy(ptr, _basePtr, _ptrSize);
+                // we can safely pass the raw pointer here and dispose DirectAdd scope immediately because 
+                // filter's content will be written to an overflow
 
-                Initialize(ptr);
+                Debug.Assert(_tree.ShouldGoToOverflowPage(_ptrSize));
+
+                using (var add = _tree.DirectAdd(_key, _ptrSize))
+                {
+                    UnmanagedMemory.Copy(add.Ptr, _basePtr, _ptrSize);
+                    Initialize(add.Ptr);
+                }
 
                 Writeable = true;
             }

@@ -33,7 +33,7 @@ namespace Voron.Data.Tables
         private readonly Tree _parentTree;
         internal static readonly Slice AllocationStorage;
         private const byte BitmapSize = sizeof(long)*4;
-        private const int NumberOfPagesInSection = BitmapSize*8;
+        internal const int NumberOfPagesInSection = BitmapSize*8;
         public const string AllocationStorageName = "Allocation-Storage";
 
         static NewPageAllocator()
@@ -66,10 +66,12 @@ namespace Voron.Data.Tables
             var initialPageNumber = allocatePage.PageNumber;
 
             bool isNew;
-            var ptr = fst.DirectAdd(initialPageNumber, out isNew);
-            if (isNew == false)
-                ThrowInvalidExistingBuffer();
-            Memory.Set(ptr, 0, BitmapSize); // mark all pages as free 
+            using (var add = fst.DirectAdd(initialPageNumber, out isNew))
+            {
+                if (isNew == false)
+                    ThrowInvalidExistingBuffer();
+                Memory.Set(add.Ptr, 0, BitmapSize); // mark all pages as free 
+            }
             return allocatePage;
         }
 
@@ -159,21 +161,25 @@ namespace Voron.Data.Tables
         private unsafe void SetValue(FixedSizeTree fst, long pageNumber, int positionInBitmap)
         {
             bool isNew;
-            var ptr = fst.DirectAdd(pageNumber, out isNew);
-            if (isNew)
-                ThrowInvalidNewBuffer();
+            using (var add = fst.DirectAdd(pageNumber, out isNew))
+            {
+                if (isNew)
+                    ThrowInvalidNewBuffer();
 
-            ptr[positionInBitmap/8] |= (byte) (1 << (positionInBitmap%8));
+                add.Ptr[positionInBitmap / 8] |= (byte) (1 << (positionInBitmap % 8));
+            }
         }
 
         private unsafe void UnsetValue(FixedSizeTree fst, long pageNumber, int positionInBitmap)
         {
             bool isNew;
-            var ptr = fst.DirectAdd(pageNumber, out isNew);
-            if (isNew)
-                ThrowInvalidNewBuffer();
+            using (var add = fst.DirectAdd(pageNumber, out isNew))
+            {
+                if (isNew)
+                    ThrowInvalidNewBuffer();
 
-            ptr[positionInBitmap/8] &= (byte) ~(1 << (positionInBitmap%8));
+                add.Ptr[positionInBitmap / 8] &= (byte) ~(1 << (positionInBitmap % 8));
+            }
         }
 
         private static unsafe bool GetBitInBuffer(int positionInBitmap, byte* ptr)
