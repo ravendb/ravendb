@@ -2041,9 +2041,10 @@ namespace Raven.Server.Documents
 
                 if (changeVector == null)
                 {
+                    var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, 4) : null;
                     changeVector = SetDocumentChangeVectorForLocalChange(context,
                         keySlice,
-                        ref oldValue, newEtag);
+                        oldChangeVector, newEtag);
                 }
 
                 if (collectionName.IsSystem == false && (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
@@ -2215,13 +2216,10 @@ namespace Raven.Server.Documents
 
         private ChangeVectorEntry[] SetDocumentChangeVectorForLocalChange(
             DocumentsOperationContext context, Slice loweredKey,
-            ref TableValueReader oldValue, long newEtag)
+            ChangeVectorEntry[] oldChangeVector, long newEtag)
         {
-            if (oldValue.Pointer != null)
-            {
-                var changeVector = GetChangeVectorEntriesFromTableValueReader(ref oldValue, 4);
-                return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, changeVector);
-            }
+            if (oldChangeVector != null)
+                return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, oldChangeVector);
 
             return GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey, newEtag);
         }
@@ -2740,13 +2738,13 @@ namespace Raven.Server.Documents
         private void UpdateDocumentAfterAttachmentPut(DocumentsOperationContext context, byte* lowerDocumentId, int lowerDocumentIdSize, 
             string documentId, string name, long modifiedTicks)
         {
-            Slice lowerKeySlice;
-            using (Slice.External(context.Allocator, lowerDocumentId, lowerDocumentIdSize, out lowerKeySlice))
+            Slice documentIdSlice;
+            using (Slice.External(context.Allocator, lowerDocumentId, lowerDocumentIdSize, out documentIdSlice))
             {
                 Document document;
                 try
                 {
-                    document = Get(context, lowerKeySlice);
+                    document = Get(context, documentIdSlice);
                     if (document == null)
                         throw new InvalidOperationException($"Cannot put attachment {name} on a not exist document '{documentId}'.");
                 }
@@ -2761,33 +2759,24 @@ namespace Raven.Server.Documents
                 var collectionName = ExtractCollectionName(context, documentId, document.Data);
                 var docsTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
-                TableValueReader oldDocument;
-                Slice documentIdSlice;
-                Slice.External(context.Allocator, lowerDocumentId, lowerDocumentIdSize, out documentIdSlice);
-                if (docsTable.ReadByKey(documentIdSlice, out oldDocument) == false)
-                {
-                    // Cannot happen as we tested for this already
-                    throw new InvalidOperationException($"Cannot put attachment {name} on a not exist document '{documentId}'.");
-                }
-
-                var changeVector = SetDocumentChangeVectorForLocalChange(context, documentIdSlice, ref oldDocument, newEtag);
+                var changeVector = SetDocumentChangeVectorForLocalChange(context, documentIdSlice, document.ChangeVector, newEtag);
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
                     var transactionMarker = context.GetTransactionMarker();
-                    var docTbv = new TableValueBuilder
-                        {
-                            {lowerDocumentId, lowerDocumentIdSize},
-                            newEtagBigEndian,
-                            {document.Key.Buffer, document.Key.Size},
-                            {document.Data.BasePointer, document.Data.Size},
-                            {(byte*) pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length},
-                            modifiedTicks,
-                            (int) (document.Flags | DocumentFlags.HasAttachments),
-                            transactionMarker
-                        };
+                    var tbv = new TableValueBuilder
+                    {
+                        {document.LoweredKey.Buffer, document.LoweredKey.Size},
+                        newEtagBigEndian,
+                        {document.Key.Buffer, document.Key.Size},
+                        {document.Data.BasePointer, document.Data.Size},
+                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length},
+                        modifiedTicks,
+                        (int) (document.Flags | DocumentFlags.HasAttachments),
+                        transactionMarker
+                    };
 
-                    docsTable.Update(oldDocument.Id, docTbv);
+                    docsTable.Update(document.StorageId, tbv);
                 }
 
                 _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
