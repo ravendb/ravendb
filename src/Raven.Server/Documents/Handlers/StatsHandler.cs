@@ -33,6 +33,7 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfTransformers = transformersCount;
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
+                stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();
 
                 stats.Indexes = new IndexInformation[indexes.Count];
                 for (var i = 0; i < indexes.Count; i++)

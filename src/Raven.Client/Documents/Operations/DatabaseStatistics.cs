@@ -57,6 +57,8 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         public bool Is64Bit { get; set; }
 
+        public string Pager { get; set; }
+
         public DateTime? LastIndexingTime { get; set; }
     }
 

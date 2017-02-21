@@ -19,6 +19,7 @@ namespace Voron.Platform.Posix
 {
     public unsafe class Posix32BitsMemoryMapPager : PosixAbstractPager
     {
+        private readonly StorageEnvironmentOptions _options;
         private int _fd;
         private readonly bool _isSyncDirAllowed;
         private readonly bool _copyOnWriteMode;
@@ -36,6 +37,7 @@ namespace Voron.Platform.Posix
         public Posix32BitsMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null,
             bool usePageProtection = false) : base(options, usePageProtection)
         {
+            _options = options;
             FileName = file;
 
             if (Options.CopyOnWriteMode)
@@ -46,7 +48,7 @@ namespace Voron.Platform.Posix
 
             PosixHelper.EnsurePathExists(FileName);
 
-            _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | options.SafePosixOpenFlags,
+            _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
             {
@@ -64,7 +66,7 @@ namespace Voron.Platform.Posix
                 _totalAllocationSize != GetFileSize())
             {
                 _totalAllocationSize = NearestSizeToAllocationGranularity(_totalAllocationSize);
-                PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize, file);
+                PosixHelper.AllocateFileSpace(_options, _fd, (ulong)_totalAllocationSize, file);
             }
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(file) == -1)
@@ -76,7 +78,12 @@ namespace Voron.Platform.Posix
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize +
                                    ((_totalAllocationSize % Constants.Storage.PageSize) == 0 ? 0 : 1);
 
-            SetPagerState(CreatePagerState());
+            SetPagerState(new PagerState(this)
+            {
+                Files = null,
+                MapBase = null,
+                AllocationInfos = new PagerState.AllocationInfo[0]
+            });
         }
 
         private static void ThrowNotSupportedOption(string file)
@@ -314,33 +321,6 @@ namespace Voron.Platform.Posix
             return transactionState;
         }
 
-        private PagerState CreatePagerState()
-        {
-            var fileSize = GetFileSize();
-            var mmflags = _copyOnWriteMode ? MmapFlags.MAP_PRIVATE : MmapFlags.MAP_SHARED;
-            var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (UIntPtr)fileSize,
-                                                      MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                                                      mmflags, _fd, IntPtr.Zero);
-
-            if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
-            {
-                var err = Marshal.GetLastWin32Error();
-
-                PosixHelper.ThrowLastError(err, $"Unable to map {fileSize / Constants.Size.Kilobyte:#,#} kb starting at page 0 on {FileName}");
-            }
-
-            NativeMemory.RegisterFileMapping(FileName, startingBaseAddressPtr, fileSize);
-
-            var newPager = new PagerState(this)
-            {
-                Files = null,
-                MapBase = null,
-                AllocationInfos = new PagerState.AllocationInfo[0]
-            };
-
-            return newPager;
-        }
-
         private void TxOnOnDispose(IPagerLevelTransactionState lowLevelTransaction)
         {
             if (lowLevelTransaction.PagerTransactionState32Bits == null)
@@ -515,7 +495,7 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize), FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, (ulong)(_totalAllocationSize + allocationSize), FileName);
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(FileName) == -1)
             {
@@ -523,24 +503,10 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err);
             }
 
-            PagerState newPagerState = CreatePagerState();
-            if (newPagerState == null)
-            {
-                var errorMessage = string.Format(
-                    "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
-                    (_totalAllocationSize + allocationSize));
-
-                throw new OutOfMemoryException(errorMessage);
-            }
-
-            newPagerState.DebugVerify(newLengthAfterAdjustment);
-
-            SetPagerState(newPagerState);
-
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
-            return newPagerState;
+            return null;
         }
 
         public override string ToString()

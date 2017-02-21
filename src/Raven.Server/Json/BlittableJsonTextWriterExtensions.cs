@@ -683,6 +683,10 @@ namespace Raven.Server.Json
             writer.WriteBool(statistics.Is64Bit);
             writer.WriteComma();
 
+            writer.WritePropertyName((nameof(statistics.Pager)));
+            writer.WriteString(statistics.Pager);
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(statistics.LastDocEtag)));
             if (statistics.LastDocEtag.HasValue)
                 writer.WriteInteger(statistics.LastDocEtag.Value);
