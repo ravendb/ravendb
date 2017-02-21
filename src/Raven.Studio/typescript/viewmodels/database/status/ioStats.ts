@@ -162,7 +162,9 @@ class metrics extends viewModelBase {
     private static readonly itemHeight = 19;
     private static readonly itemMargin = 1;    
     private static readonly minItemWidth = 1;
-   
+
+    private static readonly initialOffset = 100;
+    private static readonly step = 200;
     private static readonly minGapSize = 10 * 1000; // 10 seconds      
     private static readonly axisHeight = 35; 
 
@@ -172,7 +174,7 @@ class metrics extends viewModelBase {
     private static readonly dataSyncString = "DataSync";
     private static readonly dataFlushString = "DataFlush";       
 
-     /* observables */
+    /* observables */
        
     private importFileName = ko.observable<string>();   
     private isImport = ko.observable<boolean>(false);
@@ -427,12 +429,16 @@ class metrics extends viewModelBase {
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
 
         const context = this.brushSection.getContext("2d");
-        this.drawXaxis(context, this.xBrushTimeScale, 0, metrics.brushSectionHeight, 5, 5);
+
+        // 2. Draw scale
+        const ticks = this.getTicks(this.xBrushTimeScale);
+        this.drawXaxisTimeLines(context, ticks, 0, metrics.brushSectionHeight);
+        this.drawXaxisTimeLabels(context, ticks, 5, 5);
 
         context.strokeStyle = metrics.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
 
-        // 2. Draw accumulative data in the brush section (the top area)
+        // 3. Draw accumulative data in the brush section (the top area)
         let yStartItem: number;
         const visibleTimeFrame = this.xNumericScale.domain().map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
         const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 0);
@@ -458,7 +464,7 @@ class metrics extends viewModelBase {
                             break;                        
                     }
                    
-                    // 3. Draw item in main canvas area 
+                    // 4. Draw item in main canvas area 
                     const startDate = this.isoParser.parse(recentItem.Start);
                     const x1 = xScale(startDate);
                     let dx = extentFunc(recentItem.Duration);
@@ -473,6 +479,7 @@ class metrics extends viewModelBase {
     }
 
     private drawBrushGaps(context: CanvasRenderingContext2D) {
+        context.beginPath();
         context.strokeStyle = metrics.colors.gaps;
 
         for (let i = 0; i < this.gapFinder.gapsPositions.length; i++) {
@@ -484,6 +491,7 @@ class metrics extends viewModelBase {
         }
 
         context.stroke();
+        context.closePath();
     }
 
     private prepareBrush() {
@@ -604,36 +612,47 @@ class metrics extends viewModelBase {
         return Array.from(result);
     }
 
-    private drawXaxis(context: CanvasRenderingContext2D, scale: d3.time.Scale<number, number>, yStart: number, yEnd: number, timePaddingLeft: number, timePaddingTop: number) {
+    private getTicks(scale: d3.time.Scale<number, number>): Date[] {       
+        return d3.range(metrics.initialOffset, this.totalWidth - metrics.step, metrics.step)
+                 .map(y => scale.invert(y));   
+    }
+
+    private drawXaxisTimeLines(context: CanvasRenderingContext2D, ticks: Date[], yStart: number, yEnd: number) {
         try {
-            context.save();
-
-            const step = 200;
-            const initialOffset = 100;
-
-            const ticks = d3.range(initialOffset, this.totalWidth - step, step)
-                .map(y => scale.invert(y));
-
-            context.strokeStyle = metrics.colors.axis;
-            context.fillStyle = metrics.colors.axis;
-
-            // 1. Draw vertical dotted lines in brush section
+            context.save();                                      
             context.beginPath();
-            context.setLineDash([4, 2]);
-            ticks.forEach((x, i) => {                
-                context.moveTo(initialOffset + (i * step) + 0.5, yStart);
-                context.lineTo(initialOffset + (i * step) + 0.5, yEnd);
+
+            context.setLineDash([4, 2]);           
+            context.strokeStyle = metrics.colors.axis;    
+          
+            ticks.forEach((x, i) => {
+                context.moveTo(metrics.initialOffset + (i * metrics.step) + 0.5, yStart);
+                context.lineTo(metrics.initialOffset + (i * metrics.step) + 0.5, yEnd);
             });
-            context.stroke();
 
-            // 2. Draw the time
+            context.stroke();
+            context.closePath();        
+        }
+        finally {
+            context.restore();
+        }
+    }
+
+    private drawXaxisTimeLabels(context: CanvasRenderingContext2D, ticks: Date[], timePaddingLeft: number, timePaddingTop: number) {
+        try {
+            context.save();                  
             context.beginPath();
+
             context.textAlign = "left";
             context.textBaseline = "top";
             context.font = "10px Lato";
-            ticks.forEach((x, i) => {              
-                context.fillText(this.xTickFormat(x), initialOffset + (i * step) + timePaddingLeft, timePaddingTop); 
+            context.fillStyle = metrics.colors.axis;
+           
+            ticks.forEach((x, i) => {
+                context.fillText(this.xTickFormat(x), metrics.initialOffset + (i * metrics.step) + timePaddingLeft, timePaddingTop);
             });
+
+            context.closePath();     
         }
         finally {
             context.restore();
@@ -684,9 +703,17 @@ class metrics extends viewModelBase {
             // 1. Draw tracks background 
             this.drawTracksBackground(context, xScale);           
 
-            // 2. Draw vertical dotted lines in main section                  
+            // 2. Draw vertical dotted time lines & time labels in main section                  
             if (xScale.domain().length) {
-                this.drawXaxis(context, xScale, this.yScale(this.data.Environments[0].Path) - 3, this.totalHeight, -20, 17);
+                const ticks = this.getTicks(xScale);
+
+                context.save();              
+                context.rect(0, metrics.axisHeight - 3 , this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+                context.clip();
+                this.drawXaxisTimeLines(context, ticks, this.yScale(this.data.Environments[0].Path) - 3, this.totalHeight);                
+                context.restore();
+
+                this.drawXaxisTimeLabels(context, ticks, -20, 17);
             }          
 
             // 3. Draw all other data (track name + items on track)                                 
@@ -778,7 +805,7 @@ class metrics extends viewModelBase {
         context.fillStyle = metrics.colors.trackBackground;
         this.data.Environments.forEach(env => {  
              if (!this.filtered(env.Path)) {
-                - context.fillRect(0, this.yScale(env.Path), this.totalWidth, metrics.openedTrackHeight);
+                 context.fillRect(0, this.yScale(env.Path), this.totalWidth, metrics.openedTrackHeight);
              }               
         });
 
@@ -841,20 +868,19 @@ class metrics extends viewModelBase {
     }
 
     private drawGaps(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
-
         // xScale.range has screen pixels locations of Activity periods
         // xScale.domain has Start & End times of Activity periods
 
         const range = xScale.range(); 
+       
+        context.beginPath();
         context.strokeStyle = metrics.colors.gaps;
-
+       
         for (let i = 1; i < range.length; i += 2) {
             const gapX = Math.floor(range[i]) + 0.5;
-
-            context.beginPath();
+         
             context.moveTo(gapX, metrics.axisHeight);
-            context.lineTo(gapX, this.totalHeight);
-            context.stroke();
+            context.lineTo(gapX, this.totalHeight);          
 
             // Can't use xScale.invert here because there are Duplicate Values in xScale.range,
             // Using direct array access to xScale.domain instead
@@ -867,6 +893,9 @@ class metrics extends viewModelBase {
                     { durationInMillis: gapInfo.durationInMillis, start: gapInfo.start });
             }
         }
+
+        context.stroke();
+        context.closePath();
     }
 
     private onToggleIndexes() {
