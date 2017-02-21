@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Linq;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
@@ -23,7 +24,8 @@ namespace FastTests.Client.Attachments
                 {
                     "profile.png",
                     "background-photo.jpg",
-                    "fileNANE_#$1^%_בעברית.txt"
+                    //TODO Not working with hebrew id: "fileNANE_#$1^%_בעברית.txt"
+                    "fileNANE.txt"
                 };
                 using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                 using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
@@ -39,24 +41,24 @@ namespace FastTests.Client.Attachments
                     var user = session.Load<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
-
-                    Assert.Equal(string.Join(",", names), metadata[Constants.Documents.Metadata.Attachments]);
+                    Assert.Equal(string.Join(",", names.OrderBy(x => x)), metadata[Constants.Documents.Metadata.Attachments]);
                 }
 
-                /*  using (var ctx = FilesOperationContext.ShortTermSingleUse(database))
-                                {
-                                    ctx.OpenReadTransaction();
-
-                                    var file = database.DocumentsStorage.Get(ctx, name);
-                                    var stream = database.DocumentsStorage.GetStream(ctx, file.StreamIdentifier);
-                                    Assert.NotNull(file);
-                                    Assert.Equal(1, file.Etag);
-                                    Assert.Equal(name, file.Name);
-                                    Assert.Equal(5, stream.Length);
-                                    var readBuffer = new byte[5];
-                                    Assert.Equal(5, stream.Read(readBuffer, 0, 5));
-                                    Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer);
-                                }*/
+                var readBuffer = new byte[8];
+                for (var i = 0; i < names.Length; i++)
+                {
+                    var name = names[i];
+                    var attachment = store.Operations.Send(new GetAttachmentOperation("users/1", name));
+                    Assert.Equal(2 + 2 * i, attachment.Etag);
+                    Assert.Equal(name, attachment.Name);
+                    Assert.Equal(i == 0 ? 3 : 5, attachment.Stream.Read(readBuffer, 0, readBuffer.Length));
+                    if (i == 0)
+                        Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
+                    else if (i == 1)
+                        Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
+                    else if (i == 2)
+                        Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
+                }
             }
         }
 

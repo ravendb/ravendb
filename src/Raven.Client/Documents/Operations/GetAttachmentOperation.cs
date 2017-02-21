@@ -9,37 +9,31 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class PutAttachmentOperation : IOperation<long>
+    public class GetAttachmentOperation : IOperation<AttachmentResult>
     {
         private readonly string _documentId;
         private readonly string _name;
-        private readonly Stream _stream;
-        private readonly string _contentType;
         private readonly long? _etag;
 
-        public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType, long? etag = null)
+        public GetAttachmentOperation(string documentId, string name, long? etag = null)
         {
             _documentId = documentId;
             _name = name;
-            _stream = stream;
-            _contentType = contentType;
             _etag = etag;
         }
 
-        public RavenCommand<long> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<AttachmentResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _etag);
+            return new GetAttachmentCommand(_documentId, _name, _etag);
         }
 
-        private class PutAttachmentCommand : RavenCommand<long>
+        private class GetAttachmentCommand : RavenCommand<AttachmentResult>
         {
             private readonly string _documentId;
             private readonly string _name;
-            private readonly Stream _stream;
-            private readonly string _contentType;
             private readonly long? _etag;
 
-            public PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, long? etag)
+            public GetAttachmentCommand(string documentId, string name, long? etag)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -48,30 +42,40 @@ namespace Raven.Client.Documents.Operations
 
                 _documentId = documentId;
                 _name = name;
-                _stream = stream;
-                _contentType = contentType;
                 _etag = etag;
+
+                ResponseType = RavenCommandResponseType.Stream;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeUriString(_documentId)}&name={Uri.EscapeUriString(_name)}";
-                if (string.IsNullOrWhiteSpace(_contentType) == false)
-                    url += $"&contentType={Uri.EscapeUriString(_contentType)}";
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethods.Put,
-                    Content = new StreamContent(_stream)
+                    Method = HttpMethods.Get,
                 };
 
                 if (_etag.HasValue)
-                    request.Headers.IfMatch.Add(new EntityTagHeaderValue($"\"{_etag.Value}\""));
+                    request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue($"\"{_etag.Value}\""));
 
                 return request;
             }
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
+                ThrowInvalidResponse();
+            }
+
+            public override void SetResponse(Stream stream, string contentType, long etag, bool fromCache)
+            {
+                Result = new AttachmentResult
+                {
+                    Stream = stream,
+                    ContentType = contentType,
+                    Etag = etag,
+                    Name = _name,
+                    DocumentId = _documentId,
+                };
             }
 
             public override bool IsReadRequest => false;
