@@ -5,7 +5,7 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 class getReplicationsCommand extends getDocumentWithMetadataCommand {
 
     constructor(db: database) {
-        super("Raven/DocumentReplication/Configuration", db, true);
+        super(documentReplicationConfiguration, db, true);
     }
 
 }

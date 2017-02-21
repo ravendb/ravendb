@@ -579,7 +579,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly AlertRaised _databaseMismatchAlert = AlertRaised.Create(
                    "Replication source mismatch",
-                   $"Replication source does not match this database, outgoing replication is disabled until this will be fixed at {Constants.Documents.Replication.DocumentReplicationConfiguration}.",
+                   $"Replication source does not match this database, outgoing replication is disabled until this will be fixed at {Constants.Documents.Replication.ReplicationConfigurationDocument}.",
                    AlertType.Replication,
                    NotificationSeverity.Error,
                    "DatabaseMismatch"
@@ -602,9 +602,9 @@ namespace Raven.Server.Documents.Replication
                 {
                     var djv = replicationDocument.ToJson();
                     using (var doc = context.ReadObject(djv,
-                        Constants.Documents.Replication.DocumentReplicationConfiguration))
+                        Constants.Documents.Replication.ReplicationConfigurationDocument))
                     {
-                        _database.DocumentsStorage.Put(context, Constants.Documents.Replication.DocumentReplicationConfiguration,
+                        _database.DocumentsStorage.Put(context, Constants.Documents.Replication.ReplicationConfigurationDocument,
                             null, doc);
                         tx.Commit();
                     }
@@ -754,7 +754,7 @@ namespace Raven.Server.Documents.Replication
 
         private void OnSystemDocumentChange(DocumentChange change)
         {
-            if (!change.Key.Equals(Constants.Documents.Replication.DocumentReplicationConfiguration, StringComparison.OrdinalIgnoreCase))
+            if (!change.Key.Equals(Constants.Documents.Replication.ReplicationConfigurationDocument, StringComparison.OrdinalIgnoreCase))
                 return;
 
             if (_log.IsInfoEnabled)
@@ -798,7 +798,7 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
             {
-                var configurationDocument = _database.DocumentsStorage.Get(context, Constants.Documents.Replication.DocumentReplicationConfiguration);
+                var configurationDocument = _database.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 ReplicationDocument replicationDoc = null;
 
                 if (configurationDocument != null)
@@ -838,9 +838,9 @@ namespace Raven.Server.Documents.Replication
                     ThrowConflictingResolvers(uid, version, replicationDoc.DefaultResolver.ResolvingDatabaseId);
 
                 var djv = replicationDoc.ToJson();
-                var replicatedBlittable = context.ReadObject(djv, Constants.Documents.Replication.DocumentReplicationConfiguration);
+                var replicatedBlittable = context.ReadObject(djv, Constants.Documents.Replication.ReplicationConfigurationDocument);
 
-                _database.DocumentsStorage.Put(context, Constants.Documents.Replication.DocumentReplicationConfiguration, null, replicatedBlittable);
+                _database.DocumentsStorage.Put(context, Constants.Documents.Replication.ReplicationConfigurationDocument, null, replicatedBlittable);
 
                 context.Transaction.Commit();// will force reload of all connections as side affect
             }
@@ -862,7 +862,7 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var configurationDocument = _database.DocumentsStorage.Get(context, Constants.Documents.Replication.DocumentReplicationConfiguration);
+                var configurationDocument = _database.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
 
                 if (configurationDocument == null)
                     return null;
