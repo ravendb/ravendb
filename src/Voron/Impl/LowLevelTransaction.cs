@@ -706,10 +706,14 @@ namespace Voron.Impl
             if (Flags != TransactionFlags.ReadWrite)
                 ThrowReadTranscationCannotDoAsyncCommit();
 
+            // we have to check the state before we complete the transaction
+            // because that would change whatever we need to write to the journal
+            var writeToJournalIsRequired = WriteToJournalIsRequired();
+
             CommitStage1_CompleteTransaction();
 
             var nextTx = new LowLevelTransaction(this);
-            AsyncCommit = WriteToJournalIsRequired()
+            AsyncCommit = writeToJournalIsRequired
                   ? Task.Run(() => { CommitStage2_WriteToJournal(); })
                   : Task.CompletedTask;
             try
