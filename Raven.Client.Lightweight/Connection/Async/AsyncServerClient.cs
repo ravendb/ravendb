@@ -101,9 +101,7 @@ namespace Raven.Client.Connection.Async
             this.replicationInformerGetter = replicationInformerGetter;
             this.replicationInformer = replicationInformerGetter(databaseName);
             this.readStripingBase = replicationInformer.GetReadStripingBase(incrementReadStripe);
-
-            if (this.url != MultiDatabase.GetRootDatabaseUrl(url))
-                this.replicationInformer.UpdateReplicationInformationIfNeeded(this);
+            this.replicationInformer.UpdateReplicationInformationIfNeeded(this);
         }
 
         public void Dispose()
@@ -633,7 +631,7 @@ namespace Raven.Client.Connection.Async
             if (databaseUrl == url)
                 return this;
 
-            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, databaseName, conflictListeners, false) { operationsHeaders = operationsHeaders };
+            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, Constants.SystemDatabase, conflictListeners, false) { operationsHeaders = operationsHeaders };
         }
 
         public NameValueCollection OperationsHeaders
