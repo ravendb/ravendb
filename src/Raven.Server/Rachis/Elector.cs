@@ -38,7 +38,8 @@ namespace Raven.Server.Rachis
                             return;
                         }
 
-                        if (_engine.CurrentState == RachisConsensus.State.Leader)
+                        if (_engine.CurrentState == RachisConsensus.State.Leader ||
+                            _engine.CurrentState == RachisConsensus.State.LeaderElect)
                         {
                             _connection.Send(context, new RequestVoteResponse
                             {
@@ -97,21 +98,20 @@ namespace Raven.Server.Rachis
                             return;
                         }
 
-                        if (rv.IsForcedElection == false &&
-                            _engine.Timeout.TimeSinceLastDeferral() < _engine.ElectionTimeoutMs / 2)
-                        {
-                            _connection.Send(context, new RequestVoteResponse
-                            {
-                                Term = _engine.CurrentTerm,
-                                VoteGranted = false,
-                                Message = "My leader is keeping me up to date, so I don't want to vote for you"
-                            });
-                            _connection.Dispose();
-                            return;
-                        }
-
                         if (rv.IsTrialElection)
                         {
+                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeoutMs / 2) == false)
+                            {
+                                _connection.Send(context, new RequestVoteResponse
+                                {
+                                    Term = _engine.CurrentTerm,
+                                    VoteGranted = false,
+                                    Message = "My leader is keeping me up to date, so I don't want to vote for you"
+                                });
+                                _connection.Dispose();
+                                return;
+                            }
+
                             _connection.Send(context, new RequestVoteResponse
                             {
                                 Term = rv.Term,
@@ -123,8 +123,8 @@ namespace Raven.Server.Rachis
                                 _thread = new Thread(HandleVoteRequest)
                                 {
                                     Name =
-                                        "Elector thread for " + 
-                                        (new Uri(_engine.Url).Fragment ?? _engine.Url) + " > " + (new Uri(rv.Source).Fragment ?? rv.Source),
+                                        "Elector thread for " +
+                                        (new Uri(rv.Source).Fragment ?? rv.Source) + " > " + (new Uri(_engine.Url).Fragment ?? _engine.Url),
                                     IsBackground = true
                                 };
                                 _thread.Start();

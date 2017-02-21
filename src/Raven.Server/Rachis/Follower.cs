@@ -77,7 +77,7 @@ namespace Raven.Server.Rachis
 
                             var lastAppliedIndex = _engine.GetLastCommitIndex(context);
 
-                            if (lastEntryIndexToCommit != lastAppliedIndex)
+                            if (lastEntryIndexToCommit > lastAppliedIndex)
                             {
                                 _engine.Apply(context, lastEntryIndexToCommit);
                             }
@@ -168,10 +168,11 @@ namespace Raven.Server.Rachis
 
             using (context.OpenWriteTransaction())
             {
-                InstallSnapshot(context, snapshot);
-                
-                _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
-                _engine.TruncateLogBefore(context, snapshot.LastIncludedIndex);
+                if (InstallSnapshot(context))
+                {
+                    _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
+                    _engine.TruncateLogBefore(context, snapshot.LastIncludedIndex);
+                }
 
                 // snapshot always has the latest topology
                 if (snapshot.Topology == null)
@@ -196,16 +197,19 @@ namespace Raven.Server.Rachis
             _engine.Timeout.Defer();
         }
 
-        private unsafe void InstallSnapshot(TransactionOperationContext context, InstallSnapshot snapshot)
+        private unsafe bool InstallSnapshot(TransactionOperationContext context)
         {
             var txw = context.Transaction.InnerTransaction;
             var sp = Stopwatch.StartNew();
             var reader = _connection.CreateReader();
+            bool installedSnapshot = false;
             while (true)
             {
                 var type = (RootObjectType)reader.ReadInt32();
                 if (type == RootObjectType.None)
-                    break;
+                    return installedSnapshot;
+
+                installedSnapshot = true;
 
                 int size;
                 Slice key;

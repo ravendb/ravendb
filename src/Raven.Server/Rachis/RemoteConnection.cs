@@ -57,7 +57,7 @@ namespace Raven.Server.Rachis
         {
             using (var writer = new BlittableJsonTextWriter(context, _stream))
             {
-                Console.WriteLine(_src + " > " + _dest + msg);
+                Console.WriteLine($"{_src} > {_dest}: - {msg}");
 
                 context.Write(writer, msg);
             }
@@ -279,6 +279,7 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
+            _stream?.Dispose();
             _buffer?.Dispose();
         }
 

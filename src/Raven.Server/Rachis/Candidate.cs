@@ -91,7 +91,7 @@ namespace Raven.Server.Rachis
                         trialElectionsCount++;
                 }
 
-                var majority = (_voters.Count/2) + 1;
+                var majority = ((_voters.Count + 1) / 2) + 1;
                 if (realElectionsCount >= majority)
                 {
                     _engine.SwitchToLeaderState();
@@ -133,6 +133,7 @@ namespace Raven.Server.Rachis
 
         public void WaitForChangeInState()
         {
+            _peersWaiting.Set();
             _stateChange.Task.Wait();
         }
 

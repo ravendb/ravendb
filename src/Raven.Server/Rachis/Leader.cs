@@ -247,7 +247,6 @@ namespace Raven.Server.Rachis
 
         private void VoteOfNoConfidence()
         {
-            Console.WriteLine("Nobody is talking to me?!");
             //TODO: List all the voters and their times
             throw new TimeoutException("Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
                                        "Assuming that I'm not the leader and stepping down");
@@ -270,7 +269,8 @@ namespace Raven.Server.Rachis
 
             var maxIndexOnQuorum = GetMaxIndexOnQuorum(VotersMajority);
 
-            if (_lastCommit == maxIndexOnQuorum)
+            if (_lastCommit == maxIndexOnQuorum ||
+                maxIndexOnQuorum == 0)
                 return; // nothing to do here
 
             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -283,6 +283,8 @@ namespace Raven.Server.Rachis
 
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < _engine.CurrentTerm)
                     return;// can't commit until at least one entry from our term has been published
+
+                _engine.TakeOffice();
 
                 _lastCommit = maxIndexOnQuorum;
 
@@ -395,7 +397,7 @@ namespace Raven.Server.Rachis
                 if (votesSoFar >= minSize)
                     return _nodesPerIndex.Keys[i];
             }
-            return -1;
+            return 0;
         }
 
         private void CheckPromotables()

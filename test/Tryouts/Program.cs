@@ -6,7 +6,7 @@
         {
             using (var basicCluster = new BasicCluster())
             {
-                basicCluster.ClusterWithThreeNodesAndElections().Wait();
+                basicCluster.ClusterWithFiveNodesAndMultipleElections().Wait();
             }
         }
     }

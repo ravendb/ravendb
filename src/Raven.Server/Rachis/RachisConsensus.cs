@@ -66,7 +66,7 @@ namespace Raven.Server.Rachis
         {
             public void Dispose()
             {
-                
+
             }
         }
     }
@@ -77,6 +77,7 @@ namespace Raven.Server.Rachis
             Passive,
             Candidate,
             Follower,
+            LeaderElect,
             Leader
         }
 
@@ -139,6 +140,7 @@ namespace Raven.Server.Rachis
 
         private Leader _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>();
+        private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>();
 
         protected RachisConsensus(StorageEnvironmentOptions options, string url)
         {
@@ -212,6 +214,19 @@ namespace Raven.Server.Rachis
 
         protected abstract void InitializeState(TransactionOperationContext context);
 
+
+        public async Task WaitForState(State state)
+        {
+            while (true)
+            {
+                var task = _stateChanged.Task;
+                if (CurrentState == state)
+                    return;
+                await task;
+            }
+        }
+
+
         public async Task WaitForTopology(Leader.TopologyModification modification)
         {
             while (true)
@@ -253,27 +268,43 @@ namespace Raven.Server.Rachis
 
         public void SetNewState(State state, IDisposable disposable)
         {
+            List<IDisposable> toDispose;
+
             lock (_disposables)
             {
                 _currentLeader = null;
-                foreach (var t in _disposables)
-                {
-                    t.Dispose();
-                }
+                toDispose = new List<IDisposable>(_disposables);
 
                 _disposables.Clear();
 
                 if (disposable != null)
-                {
-                    CurrentState = state;
                     _disposables.Add(disposable);
-                }
-                else // if we are back to null state, wait to become leader
-                {
-                    CurrentState = state;
+                else // if we are back to null state, wait to become candidate if no one talks to us
                     Timeout.Start(SwitchToCandidateState);
-                }
             }
+
+            UpdateState(state);
+
+            foreach (var t in toDispose)
+            {
+                t.Dispose();
+            }
+        }
+
+        public void TakeOffice()
+        {
+            if (CurrentState != State.LeaderElect)
+                return;
+
+            UpdateState(State.Leader);
+        }
+
+
+        private void UpdateState(State state)
+        {
+            CurrentState = state;
+            ThreadPool.QueueUserWorkItem(
+                _ => { Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>()).TrySetResult(null); });
         }
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
@@ -294,7 +325,7 @@ namespace Raven.Server.Rachis
                 Log.Info("Switching to leader state");
             }
             var leader = new Leader(this);
-            SetNewState(State.Leader, leader);
+            SetNewState(State.LeaderElect, leader);
             _currentLeader = leader;
             leader.Start();
         }
@@ -367,7 +398,7 @@ namespace Raven.Server.Rachis
             return topologyJson;
         }
 
-        private static BlittableJsonReaderObject SetTopology(RachisConsensus engine,Transaction tx, JsonOperationContext context, ClusterTopology topology)
+        private static BlittableJsonReaderObject SetTopology(RachisConsensus engine, Transaction tx, JsonOperationContext context, ClusterTopology topology)
         {
             var djv = new DynamicJsonValue
             {
@@ -512,7 +543,7 @@ namespace Raven.Server.Rachis
             else
             {
                 long lastIndexTerm;
-                GetLastTruncated(context, out lastIndex,out lastIndexTerm);
+                GetLastTruncated(context, out lastIndex, out lastIndexTerm);
             }
             lastIndex += 1;
             var tvb = new TableValueBuilder
@@ -531,7 +562,7 @@ namespace Raven.Server.Rachis
         {
             long lastIndex;
             long lastTerm;
-            GetLastCommitIndex(context,out lastIndex, out lastTerm);
+            GetLastCommitIndex(context, out lastIndex, out lastTerm);
 
             long entryTerm;
             long entryIndex;
@@ -574,7 +605,7 @@ namespace Raven.Server.Rachis
                 table.Delete(reader.Id);
             }
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
-            var data = (long*) state.DirectAdd(LastTruncatedSlice, sizeof(long)*2);
+            var data = (long*)state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2);
             data[0] = entryIndex;
             data[1] = entryTerm;
         }
@@ -585,32 +616,25 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
 
-            var firstIndexToFind = entries[0].Index;
-            long reversedEntryIndex = Bits.SwapBytes(firstIndexToFind - 1);
+            long reversedEntryIndex = -1;
 
             BlittableJsonReaderObject lastTopology = null;
 
             Slice key;
             using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long), out key))
             {
-                long prevIndex = firstIndexToFind - 1;
-                TableValueReader reader;
-                if (prevIndex != 0)
+                var lastEntryIndex = GetLastEntryIndex(context);
+                var firstIndexInEntriesThatWeHaveNotSeen = 0;
+                foreach (var entry in entries)
                 {
-                    if (table.ReadByKey(key, out reader) == false)
-                    {
-                        long lastTruncatedIndex;
-                        long _;
-                        GetLastTruncated(context,out lastTruncatedIndex, out _);
-                        if (lastTruncatedIndex != firstIndexToFind-1)
-                        {
-                            throw new InvalidOperationException(
-                                $"Was asked to append {firstIndexToFind} but couldn\'t find {prevIndex} in the log");
-                        }
-                    }
+                    if (entry.Index > lastEntryIndex)
+                        break;
+
+                    firstIndexInEntriesThatWeHaveNotSeen++;
                 }
-              
-                for (var index = 0; index < entries.Count; index++)
+                var prevIndex = lastEntryIndex;
+
+                for (var index = firstIndexInEntriesThatWeHaveNotSeen; index < entries.Count; index++)
                 {
                     var entry = entries[index];
                     if (entry.Index != prevIndex + 1)
@@ -621,10 +645,11 @@ namespace Raven.Server.Rachis
 
                     prevIndex = entry.Index;
                     reversedEntryIndex = Bits.SwapBytes(entry.Index);
+                    TableValueReader reader;
                     if (table.ReadByKey(key, out reader)) // already exists
                     {
                         int size;
-                        var term = *(long*) reader.Read(1, out size);
+                        var term = *(long*)reader.Read(1, out size);
                         Debug.Assert(size == sizeof(long));
                         if (term == entry.Term)
                             continue; // same, can skip
@@ -695,7 +720,7 @@ namespace Raven.Server.Rachis
                     return null;
                 }
                 int size;
-                flags = *(RachisEntryFlags*) reader.Read(3, out size);
+                flags = *(RachisEntryFlags*)reader.Read(3, out size);
                 Debug.Assert(size == sizeof(RachisEntryFlags));
                 var ptr = reader.Read(2, out size);
                 return new BlittableJsonReaderObject(ptr, size, context);
@@ -738,13 +763,21 @@ namespace Raven.Server.Rachis
             var read = state.Read(LastCommitSlice);
             if (read != null)
             {
-                var oldValue = read.Reader.ReadLittleEndianInt64();
-                if (oldValue >= index)
+                var reader = read.Reader;
+                var oldIndex = reader.ReadLittleEndianInt64();
+                if (oldIndex > index)
                     throw new InvalidOperationException(
-                        $"Cannot reduce the last commit index (is {oldValue} but was requested to reduce to {index})");
+                        $"Cannot reduce the last commit index (is {oldIndex} but was requested to reduce to {index})");
+                if (oldIndex == index)
+                {
+                    var oldTerm = reader.ReadLittleEndianInt64();
+                    if (oldTerm != term)
+                        throw new InvalidOperationException(
+                            $"Cannot change just the last commit index (is {oldIndex} term, was {oldTerm} but was requested to change it ot {term})");
+                }
             }
 
-            var data = (long*)state.DirectAdd(LastCommitSlice, sizeof(long)*2);
+            var data = (long*)state.DirectAdd(LastCommitSlice, sizeof(long) * 2);
             data[0] = index;
             data[1] = term;
         }
@@ -797,7 +830,7 @@ namespace Raven.Server.Rachis
             {
                 long lastTruncatedIndex;
                 long _;
-                GetLastTruncated(context,out lastTruncatedIndex, out _);
+                GetLastTruncated(context, out lastTruncatedIndex, out _);
                 return lastTruncatedIndex;
             }
             int size;

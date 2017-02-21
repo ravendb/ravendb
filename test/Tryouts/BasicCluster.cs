@@ -22,6 +22,91 @@ namespace Tryouts
     public class BasicCluster : IDisposable
     {
         [Fact]
+        public async Task ClusterWithFiveNodesAndMultipleElections()
+        {
+            var a = SetupServer(true);
+            var b = SetupServer();
+            var c = SetupServer();
+            var d = SetupServer();
+            var e = SetupServer();
+
+            var followers = new[] {b, c, d, e};
+
+            var followersUpgraded = followers.Select(x => x.WaitForTopology(Leader.TopologyModification.Voter)).ToArray();
+            foreach (var follower in followers)
+            {
+                await a.AddToClusterAsync(follower.Url);
+            }
+
+            await Task.WhenAll(followersUpgraded);
+
+            var leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_=>x)).ToArray();
+
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    {
+                        ["Name"] = "test",
+                        ["Value"] = i
+                    }, "test"));
+                }
+            }
+
+            foreach (var follower in followers)
+            {
+                Disconnect(follower.Url, a.Url);
+            }
+
+            var leader = await await Task.WhenAny(leaderSelected);
+
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                for (int i = 10; i < 20; i++)
+                {
+                    await leader.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    {
+                        ["Name"] = "test",
+                        ["Value"] = i
+                    }, "test"));
+                }
+            }
+
+            followers = followers.Except(new[] {leader}).ToArray();
+
+            leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_ => x)).ToArray();
+
+            foreach (var follower in followers)
+            {
+                Disconnect(follower.Url, leader.Url);
+            }
+
+            leader = await await Task.WhenAny(leaderSelected);
+
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                for (int i = 20; i < 30; i++)
+                {
+                    await leader.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    {
+                        ["Name"] = "test",
+                        ["Value"] = i
+                    }, "test"));
+                }
+            }
+
+            TransactionOperationContext context;
+            using (leader.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                var actual = leader.StateMachine.Read(context, "test");
+                var expected = Enumerable.Range(0, 30).Sum();
+                Assert.Equal(expected, actual);
+            }
+        }
+
+        [Fact]
         public async Task ClusterWithThreeNodesAndElections()
         {
             var a = SetupServer(true);
@@ -37,8 +122,8 @@ namespace Tryouts
             await bUpgraded;
             await cUpgraded;
 
-
-            Console.WriteLine("READY!!!");
+            var bLeader = b.WaitForState(RachisConsensus.State.Leader);
+            var cLeader = c.WaitForState(RachisConsensus.State.Leader);
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -55,8 +140,8 @@ namespace Tryouts
             Disconnect(b.Url, a.Url);
             Disconnect(c.Url, a.Url);
 
-            Console.ReadLine();
 
+            await Task.WhenAny(bLeader, cLeader);
         }
 
         [Fact]
