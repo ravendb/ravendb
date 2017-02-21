@@ -23,6 +23,7 @@ namespace Voron.Platform.Posix
     /// </summary>
     public unsafe class PosixTempMemoryMapPager : PosixAbstractPager
     {
+        private readonly StorageEnvironmentOptions _options;
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
@@ -30,6 +31,7 @@ namespace Voron.Platform.Posix
         public PosixTempMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null)
             : base(options)
         {
+            _options = options;
             FileName = file;
             PosixHelper.EnsurePathExists(file);
 
@@ -46,7 +48,7 @@ namespace Voron.Platform.Posix
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
             _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
-            PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize, FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, (ulong)_totalAllocationSize, FileName);
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
             SetPagerState(CreatePagerState());
@@ -82,7 +84,7 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize), FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, (ulong)(_totalAllocationSize + allocationSize), FileName);
 
             _totalAllocationSize += allocationSize;
 

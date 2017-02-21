@@ -12,22 +12,24 @@ namespace Voron.Platform.Posix
 {
     public unsafe class PosixMemoryMapPager : PosixAbstractPager
     {
+        private readonly StorageEnvironmentOptions _options;
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
         private readonly bool _isSyncDirAllowed;
         private readonly bool _copyOnWriteMode;
         public override long TotalAllocationSize => _totalAllocationSize;
-        public PosixMemoryMapPager(StorageEnvironmentOptions options,string file, long? initialFileSize = null,
+        public PosixMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null,
             bool usePageProtection = false) : base(options, usePageProtection)
         {
+            _options = options;
             FileName = file;
             _copyOnWriteMode = options.CopyOnWriteMode && file.EndsWith(Constants.DatabaseFilename);
             _isSyncDirAllowed = PosixHelper.CheckSyncDirectoryAllowed(FileName);
 
             PosixHelper.EnsurePathExists(FileName);
 
-            _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | options.SafePosixOpenFlags,
+            _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
             {
@@ -47,7 +49,7 @@ namespace Voron.Platform.Posix
                 _totalAllocationSize != GetFileSize())
             {
                 _totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
-                PosixHelper.AllocateFileSpace(_fd, (ulong) _totalAllocationSize, file);
+                PosixHelper.AllocateFileSpace(_options, _fd, (ulong) _totalAllocationSize, file);
             }
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(file) == -1)
@@ -99,7 +101,7 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_fd, (ulong) (_totalAllocationSize + allocationSize), FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, (ulong) (_totalAllocationSize + allocationSize), FileName);
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(FileName) == -1)
             {

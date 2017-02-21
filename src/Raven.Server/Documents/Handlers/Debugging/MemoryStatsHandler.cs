@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var currentProcess = Process.GetCurrentProcess();
             var workingSet = currentProcess.WorkingSet64;
+            if (Sparrow.Platform.PlatformDetails.RunningOnPosix)
+                workingSet *= 4096; // TODO: bug in the framework, reports pages instead of bytes
             long totalUnmanagedAllocations = 0;
             long totalMapping = 0;
             var fileMappingByDir = new Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>>();

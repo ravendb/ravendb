@@ -20,18 +20,26 @@ namespace Voron.Platform.Posix
 {
     public class PosixHelper
     {
-        public static void AllocateFileSpace(int fd, ulong size, string file)
+        public static void AllocateFileSpace(StorageEnvironmentOptions options, int fd, ulong size, string file)
         {
             int result;
             int retries = 1024;
             while (true)
             {
-                result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr) size);
+                if ((options.SafePosixOpenFlags & PerPlatformValues.OpenFlags.O_DIRECT) == 0)
+                {
+                    // fallocate is not supported, we'll use lseek instead
+                    result = Syscall.AllocateUsingLseek(fd, (long)size);
+                }
+                else
+                {
+                    result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr)size);
+                }
+
                 if (result != (int) Errno.EINTR)
                     break;
                 if (retries-- > 0)
-                    throw new IOException(
-                        "Tried too many times to call posix_fallocate, but always got EINTR, cannot retry again");
+                    throw new IOException($"Tried too many times to call posix_fallocate {file}, but always got EINTR, cannot retry again");
             }
             if (result == (int) Errno.ENOSPC)
             {
@@ -40,7 +48,8 @@ namespace Voron.Platform.Posix
                     if (file.StartsWith(drive.RootDirectory.Name))
                         throw new DiskFullException(drive, file, (long)size);
                 }
-                // shouldn't happen, and we can throw normally here
+				// shouldn't happen, and we can throw normally here
+                throw new DiskFullException(null, file, (long)size);
             }
             if (result != 0)
                 ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");
