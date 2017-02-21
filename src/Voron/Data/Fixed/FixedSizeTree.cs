@@ -17,7 +17,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.Fixed
 {
-    public unsafe partial class FixedSizeTree : IDisposable
+    public unsafe partial class FixedSizeTree : IDisposable, ITree
     {
         internal const int BranchEntrySize = sizeof(long) + sizeof(long);
         private readonly LowLevelTransaction _tx;
@@ -34,6 +34,7 @@ namespace Voron.Data.Fixed
         private RootObjectType? _type;
         private Stack<FixedSizeTreePage> _cursor;
         private int _changes;
+        private DirectAddScope _addScope;
 
         public LowLevelTransaction Llt => _tx;
 
@@ -57,6 +58,8 @@ namespace Voron.Data.Fixed
 
         public void RepurposeInstance(Slice treeName, bool clone)
         {
+            _addScope = new DirectAddScope(this);
+
             if (clone)
             {
                 if(_treeName.HasValue)
@@ -167,9 +170,11 @@ namespace Voron.Data.Fixed
                 throw new InvalidOperationException($"The value size must be of size '{_valSize}' but was of size '{val.Size}'.");
 
             bool isNew;
-            var pos = DirectAdd(key, out isNew);
-            if (val.HasValue && val.Size != 0)
-                val.CopyTo(pos);
+            using (var add = DirectAdd(key, out isNew))
+            {
+                if (val.HasValue && val.Size != 0)
+                    val.CopyTo(add.Ptr);
+            }
 
             return isNew;
         }
@@ -183,7 +188,7 @@ namespace Voron.Data.Fixed
             }
         }
 
-        public byte* DirectAdd(long key, out bool isNew)
+        public DirectAddScope DirectAdd(long key, out bool isNew)
         {
             if (_tx.Flags == TransactionFlags.Read)
                 throw new InvalidOperationException("Cannot add a value in a read only transaction");
@@ -205,7 +210,7 @@ namespace Voron.Data.Fixed
                 default:
                     throw new ArgumentOutOfRangeException(_type.ToString());
             }
-            return pos;
+            return _addScope.Open(pos);
         }
 
         private byte* AddLargeEntry(long key, out bool isNew)

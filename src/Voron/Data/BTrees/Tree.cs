@@ -15,7 +15,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe partial class Tree : IDisposable
+    public unsafe partial class Tree : IDisposable, ITree
     {
         private readonly TreeMutableState _state;
         private readonly bool _isPageLocatorOwned;
@@ -1295,55 +1295,6 @@ namespace Voron.Data.BTrees
                 return new ValueReader(overFlowPage.Pointer + Constants.Tree.PageHeaderSize, overFlowPage.OverflowSize);
             }
             return new ValueReader((byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, node->DataSize);
-        }
-
-        public class DirectAddScope : IDisposable
-        {
-            private readonly Tree _tree;
-            private uint _usage;
-            private string _allocationStacktrace = null;
-
-            public byte* Ptr;
-
-            public DirectAddScope(Tree tree)
-            {
-                _usage = 0;
-                _tree = tree;
-                Ptr = null;
-            }
-
-            public DirectAddScope Open(byte* writePos)
-            {
-                if (_usage++ > 0)
-                    ThrowScopeAlreadyOpen(_tree, _allocationStacktrace);
-
-                Ptr = writePos;
-#if DEBUG
-                // uncomment for debugging purposes only
-                //_allocationStacktrace = Environment.StackTrace;
-#endif
-                return this;
-            }
-
-            private static void ThrowScopeAlreadyOpen(Tree tree, string previousOpenStacktrace)
-            {
-                var message = $"Write operation already requested on a tree name: {tree.Name}. " +
-                              $"{nameof(Tree.DirectAdd)} method cannot be called recursively while the scope is already opened.";
-
-                if (previousOpenStacktrace != null)
-                {
-                    message += $"{Environment.NewLine}Stacktrace of previous {nameof(DirectAddScope)}:" +
-                               $"{Environment.NewLine}{previousOpenStacktrace}{Environment.NewLine} --- end of {nameof(DirectAddScope)} allocation ---{Environment.NewLine}";
-                }
-
-                throw new InvalidOperationException(message);
-            }
-
-            public void Dispose()
-            {
-                _usage--;
-                Ptr = null;
-            }
         }
     }
 }
