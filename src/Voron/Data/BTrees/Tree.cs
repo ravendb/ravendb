@@ -1301,6 +1301,7 @@ namespace Voron.Data.BTrees
         {
             private readonly Tree _tree;
             private uint _usage;
+            private string _allocationStacktrace = null;
 
             public byte* Ptr;
 
@@ -1314,16 +1315,28 @@ namespace Voron.Data.BTrees
             public DirectAddScope Open(byte* writePos)
             {
                 if (_usage++ > 0)
-                    ThrowScopeAlreadyOpen(_tree);
+                    ThrowScopeAlreadyOpen(_tree, _allocationStacktrace);
 
                 Ptr = writePos;
-
+#if DEBUG
+                // uncomment for debugging purposes only
+                //_allocationStacktrace = Environment.StackTrace;
+#endif
                 return this;
             }
 
-            private static void ThrowScopeAlreadyOpen(Tree tree)
+            private static void ThrowScopeAlreadyOpen(Tree tree, string previousOpenStacktrace)
             {
-                throw new InvalidOperationException($"Write operation already requested on a tree name: {tree.Name}. DirectAdd method cannot be called recursively while the add scope is already opened.");
+                var message = $"Write operation already requested on a tree name: {tree.Name}. " +
+                              $"{nameof(Tree.DirectAdd)} method cannot be called recursively while the scope is already opened.";
+
+                if (previousOpenStacktrace != null)
+                {
+                    message += $"{Environment.NewLine}Stacktrace of previous {nameof(DirectAddScope)}:" +
+                               $"{Environment.NewLine}{previousOpenStacktrace}{Environment.NewLine} --- end of {nameof(DirectAddScope)} allocation ---{Environment.NewLine}";
+                }
+
+                throw new InvalidOperationException(message);
             }
 
             public void Dispose()
