@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
                 {
                     var result = session.Advanced.DocumentQuery<DynamicMultiMapDataSetIndex.Result, DynamicMultiMapDataSetIndex>()
                         .WaitForNonStaleResults()
-                        .AddOrder("N1_Range", true, typeof(double))
+                        .AddOrder("N1_D_Range", true)
                         .Take(128)
                         .ToList();
                     Assert.Equal(50, result.Count); //FAIL(:

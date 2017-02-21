@@ -1399,7 +1399,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             fieldName = FieldUtil.ApplyRangeSuffixIfNecessary(fieldName, fieldType);
-            _documentQuery.AddOrder(fieldName, descending, fieldType);
+            _documentQuery.AddOrder(fieldName, descending);
         }
 
         private bool _insideSelect;

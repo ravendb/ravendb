@@ -40,14 +40,6 @@ namespace Raven.Client.Documents.Session
         TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending = false);
 
         /// <summary>
-        ///     Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
-        /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="descending">if set to <c>true</c> [descending].</param>
-        /// <param name="fieldType">the type of the field to be sorted.</param>
-        TSelf AddOrder(string fieldName, bool descending, Type fieldType);
-
-        /// <summary>
         ///     Callback to get the results of the query
         /// </summary>
         void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);

@@ -144,7 +144,7 @@ namespace SlowTests.MailingList
                 {
                     var items = s.Advanced.DocumentQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()
                         .WaitForNonStaleResults()
-                        .AddOrder("N1_Range", true, typeof(double))
+                        .AddOrder("N1_D_Range", true)
                         .SelectFields<WithDynamicIndex.ProjectionItem>("SongId", "NumericAttributes")
                         .Take(128)
                         .ToList();

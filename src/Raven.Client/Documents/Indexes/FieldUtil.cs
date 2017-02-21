@@ -41,8 +41,15 @@ namespace Raven.Client.Documents.Indexes
             if (rangeType == RangeType.None)
                 return fieldName;
 
-            if (fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffixLong) || fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble))
-                return fieldName;
+            if (fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
+            {
+                var index = fieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length - 1;
+                var ch = fieldName[index];
+                if (ch == 'L' || ch == 'D')
+                    return fieldName;
+
+                throw new InvalidOperationException($"Client does not support '{Constants.Documents.Indexing.Fields.RangeFieldSuffix}' suffix any longer. Please use '{Constants.Documents.Indexing.Fields.RangeFieldSuffixLong}' or '{Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble}' suffixes.");
+            }
 
             if (rangeType == RangeType.Long)
                 return fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;

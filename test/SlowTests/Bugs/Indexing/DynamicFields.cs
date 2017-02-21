@@ -45,7 +45,7 @@ namespace SlowTests.Bugs.Indexing
                     from p in products
                     select new
                     {
-                        _ = p.Attributes.Select(attribute => new NumericField(attribute.Name + "_Range", Field.Store.NO, true).SetDoubleValue((double)attribute.NumericValue))
+                        _ = p.Attributes.Select(attribute => new NumericField(attribute.Name + "_D_Range", Field.Store.NO, true).SetDoubleValue((double)attribute.NumericValue))
                     };
             }
         }
@@ -71,7 +71,7 @@ namespace SlowTests.Bugs.Indexing
                     from p in products
                     select new
                     {
-                        _ = p.Attributes.Select(attribute => new NumericField(attribute.Name + "_Range", Field.Store.NO, true).SetLongValue(attribute.IntValue))
+                        _ = p.Attributes.Select(attribute => new NumericField(attribute.Name + "_L_Range", Field.Store.NO, true).SetLongValue(attribute.IntValue))
                     };
             }
         }

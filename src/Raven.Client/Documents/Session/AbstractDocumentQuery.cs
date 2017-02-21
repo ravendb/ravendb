@@ -854,17 +854,6 @@ namespace Raven.Client.Documents.Session
         /// <param name = "descending">if set to <c>true</c> [descending].</param>
         public void AddOrder(string fieldName, bool descending)
         {
-            AddOrder(fieldName, descending, null);
-        }
-
-        /// <summary>
-        ///   Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
-        /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        /// <param name = "fieldType">the type of the field to be sorted.</param>
-        public void AddOrder(string fieldName, bool descending, Type fieldType)
-        {
             fieldName = EnsureValidFieldName(new WhereParams
             {
                 FieldName = fieldName
@@ -2083,12 +2072,6 @@ If you really want to do in memory filtering on the data returned from the query
         IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
         {
             AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder(string fieldName, bool descending, Type fieldType)
-        {
-            AddOrder(fieldName, descending, fieldType);
             return this;
         }
 

@@ -206,8 +206,8 @@ namespace SlowTests.Tests.Querying
         {
             // should DocumentQuery<T> understand how to generate range field names?
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereGreaterThan("Age_Range", 3);
-            Assert.Equal("Age_Range:{Lx3 TO NULL}", q.ToString());
+                .WhereGreaterThan("Age_L_Range", 3);
+            Assert.Equal("Age_L_Range:{Lx3 TO NULL}", q.ToString());
         }
 
         private class IndexedUser

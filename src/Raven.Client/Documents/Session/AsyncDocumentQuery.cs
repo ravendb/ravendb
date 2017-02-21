@@ -840,18 +840,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
-        /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="descending">if set to <c>true</c> [descending].</param>
-        /// <param name="fieldType">the type of the field to be sorted.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder(string fieldName, bool descending, Type fieldType)
-        {
-            AddOrder(fieldName, descending, fieldType);
-            return this;
-        }
-
-        /// <summary>
         /// Simplified method for opening a new clause within the query
         /// </summary>
         /// <returns></returns>
