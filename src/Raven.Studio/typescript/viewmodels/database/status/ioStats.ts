@@ -792,6 +792,7 @@ class metrics extends viewModelBase {
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
         context.save();
 
+        context.beginPath();
         context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
         context.clip();
 
