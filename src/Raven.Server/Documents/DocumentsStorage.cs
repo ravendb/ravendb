@@ -2758,7 +2758,7 @@ namespace Raven.Server.Documents
 
                 var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
-                var oldChangeVector = tvr.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref tvr, 4) : null;
+                var oldChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, 4);
                 var changeVector = SetDocumentChangeVectorForLocalChange(context, loweredKey, oldChangeVector, newEtag);
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
