@@ -47,5 +47,7 @@ namespace Raven.Client
         /// in async manner
         /// </summary>
         public Func<HttpResponseMessage, OperationCredentials, Task<Action<HttpClient>>> HandleForbiddenResponseAsync { get; set; }
+
+        public TimeSpan TimeToWaitBetweenReplicationTopologyUpdates { get; set; }
     }
 }

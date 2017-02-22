@@ -92,7 +92,7 @@ namespace Raven.Database.Server.Controllers
                 var waitTimeToLeader = leaderSeekRetries * 75;
 
                 if (leaderSeekRetries > 0 && Log.IsDebugEnabled)
-                    Log.Debug("Redirect To Leader: leader not found, retrying {0} times out of {1}. This time will wait for { 2} miliseconds", leaderSeekRetries, NUMBER_OF_REDIRECT_FIND_LEADER_RETRIES, waitTimeToLeader);
+                    Log.Debug("Redirect To Leader: leader not found, retrying {0} times out of {1}. This time will wait for {2} miliseconds", leaderSeekRetries, NUMBER_OF_REDIRECT_FIND_LEADER_RETRIES, waitTimeToLeader);
 
                 leaderNode = ClusterManager.Engine.GetLeaderNode(waitTimeToLeader);
             }

@@ -1047,6 +1047,7 @@ namespace Raven.Abstractions.Smuggler
                 Operations.ShowProgress("Begin reading documents");
                 var documentCount = await ImportDocuments(jsonReader).ConfigureAwait(false);
                 Operations.ShowProgress(string.Format("Done with reading documents, total: {0}", documentCount));
+                
                 return documentCount;
             });
 
