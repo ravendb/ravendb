@@ -169,18 +169,21 @@ namespace Sparrow.Json
             if (numberOfEscapeSequences == 0)
             {
                 WriteRawString(strBuffer, size);
+
+                EnsureBuffer(1);
+                _buffer[_pos++] = Quote;
+
+                return;
             }
-            else
-            {
-                UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
-            }
+
+            UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
 
             EnsureBuffer(1);
             _buffer[_pos++] = Quote;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteStringJoin(IEnumerable<LazyStringValue> strArray)
+        public void WriteStringJoin(LazyStringValue[] strArray)
         {
             if (strArray == null)
             {
@@ -191,14 +194,11 @@ namespace Sparrow.Json
             EnsureBuffer(1);
             _buffer[_pos++] = Quote;
 
-            var first = true;
-            foreach (var str in strArray)
+            for (var i = 0; i < strArray.Length; i++)
             {
-                if (first == false)
-                {
+                var str = strArray[i];
+                if (i != 0)
                     WriteComma();
-                }
-                first = false;
 
                 if (str == null)
                 {
@@ -214,11 +214,10 @@ namespace Sparrow.Json
                 if (numberOfEscapeSequences == 0)
                 {
                     WriteRawString(strBuffer, size);
+                    continue;
                 }
-                else
-                {
-                    UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
-                }
+
+                UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
             }
 
             EnsureBuffer(1);
