@@ -368,7 +368,9 @@ namespace Raven.Server.Documents
             ModifiedsSystemDocuments,
             HasMore
         }
-        int _maxTimeToWait = 1000;
+
+        const int MaxTimeToWait = 1000;
+
         private bool _alreadyListeningToPreviousOperationEnd;
 
 
@@ -397,11 +399,10 @@ namespace Raven.Server.Documents
                     }
                     return GetPendingOperationsStatus(context);
                 }
-                if (sp.ElapsedMilliseconds > _maxTimeToWait)
+                if (sp.ElapsedMilliseconds > MaxTimeToWait)
                 {
                     if (previousOperation != null)
                     {
-                        _maxTimeToWait += 10;
                         continue;
                     }
                     if (_log.IsInfoEnabled)
