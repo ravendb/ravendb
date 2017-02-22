@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -20,22 +21,24 @@ namespace SlowTests.Server.Rachis
             var leader = await CreateNetworkAndGetLeader(clusterSize);
             var nonLeader = GetFirstNonLeader();
             var tasks = new List<Task>();
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            long lastIndex;
+            TransactionOperationContext context;
+            using (leader.ContextPool.AllocateOperationContext(out context))
             {
                 for (var i = 0; i < CommandCount; i++)
                 {
-                    tasks.Add(leader.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    tasks.Add(leader.PutAsync(context.ReadObject(new DynamicJsonValue
                     {
                         ["Name"] = "test",
                         ["Value"] = i
                     }, "test")));
                 }
+                using (context.OpenReadTransaction())
+                    lastIndex = leader.GetLastEntryIndex(context);
             }
-            bool indexChanged = true;
-            while (indexChanged)
-            {
-                indexChanged = nonLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.AnyChange, 0).Wait(1000);
-            }
+            var waitForAllCommits = nonLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+            Assert.True(await Task.WhenAny(waitForAllCommits, Task.Delay(5000)) == waitForAllCommits, "didn't commit in time");
+
             Assert.True(tasks.All(t=>t.Status == TaskStatus.RanToCompletion),"Some commands didn't complete");
         }
     }

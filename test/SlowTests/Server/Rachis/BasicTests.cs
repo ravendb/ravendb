@@ -18,9 +18,8 @@ namespace SlowTests.Server.Rachis
         [InlineData(7)] 
         public async Task CanApplyCommitAcrossAllCluster(int amount)
         {
-            expected = 10;
             var leader = await CreateNetworkAndGetLeader(amount);
-            SetupPredicateForCluster(Predicate);
+            SetupPredicateForCluster((machine, context) => machine.Read(context, "test") == 10);
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 for (var i = 0; i < 5; i++)
@@ -33,13 +32,6 @@ namespace SlowTests.Server.Rachis
                 }
             }
             await WaitOnPredicateForCluster(TimeSpan.FromSeconds(150));
-        }
-
-        private int expected;
-        public bool Predicate(CountingStateMachine machine, TransactionOperationContext context)
-        {
-            var actual = machine.Read(context, "test");
-            return actual == expected;
         }
     }
 }

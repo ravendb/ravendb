@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace Tryouts
+namespace SlowTests.Server.Rachis
 {
     public class BasicCluster : RachisConsensusTestBase
     {
