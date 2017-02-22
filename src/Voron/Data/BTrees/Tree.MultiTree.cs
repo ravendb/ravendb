@@ -123,7 +123,7 @@ namespace Voron.Data.BTrees
             EnsureNestedPagePointer(page, item, ref nestedPage, ref nestedPagePtr);
 
             // we now have to convert this into a tree instance, instead of just a nested page
-            var tree = Create(_llt, _tx, TreeFlags.MultiValue);
+            var tree = Create(_llt, _tx, key, TreeFlags.MultiValue);
             for (int i = 0; i < nestedPage.NumberOfEntries; i++)
             {
                 Slice existingValue;
@@ -186,7 +186,7 @@ namespace Voron.Data.BTrees
                 // no choice, very big value, we might as well just put it in its own tree from the get go...
                 // otherwise, we would have to put this in overflow page, and that won't save us any space anyway
 
-                var tree = Create(_llt, _tx, TreeFlags.MultiValue);
+                var tree = Create(_llt, _tx, key, TreeFlags.MultiValue);
                 tree.DirectAdd(value, 0).Dispose();
                 _tx.AddMultiValueTree(this, key, tree);
 
@@ -343,8 +343,7 @@ namespace Voron.Data.BTrees
             Debug.Assert(childTreeHeader->RootPageNumber < _llt.State.NextPageNumber);
             Debug.Assert(childTreeHeader->Flags == TreeFlags.MultiValue);
 
-            tree = Open(_llt, _tx, childTreeHeader);
-            tree.Name = key;
+            tree = Open(_llt, _tx, key, childTreeHeader);
             _tx.AddMultiValueTree(this, key, tree);
             return tree;
         }

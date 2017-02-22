@@ -252,10 +252,8 @@ namespace Voron
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
-                using (var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root))
+                using (var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, header->TransactionId == 0 ? &entry.Root : &header->Root))
                 {
-                    root.Name = Constants.RootTreeNameSlice;
-
                     tx.UpdateRootsIfNeeded(root);
 
                     using (var treesTx = new Transaction(tx))
@@ -310,7 +308,7 @@ namespace Voron
 
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
-            using (var root = Tree.Create(tx, null))
+            using (var root = Tree.Create(tx, null, Constants.RootTreeNameSlice))
             {
 
                 // important to first create the root trees, then set them on the env

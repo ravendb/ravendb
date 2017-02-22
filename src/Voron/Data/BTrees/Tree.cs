@@ -15,7 +15,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe partial class Tree : IDisposable, ITree
+    public unsafe partial class Tree : IDisposable
     {
         private readonly TreeMutableState _state;
         private readonly bool _isPageLocatorOwned;
@@ -27,7 +27,7 @@ namespace Voron.Data.BTrees
         public event Action<long, PageFlags> PageModified;
         public event Action<long, PageFlags> PageFreed;
 
-        public Slice Name { get; set; }
+        public Slice Name { get; private set; }
 
         public TreeMutableState State => _state;
 
@@ -39,10 +39,11 @@ namespace Voron.Data.BTrees
 
         private readonly DirectAddScope _addScope;
 
-        private Tree(LowLevelTransaction llt, Transaction tx, long root, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
+        private Tree(LowLevelTransaction llt, Transaction tx, long root, Slice name, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
             _llt = llt;
             _tx = tx;
+            Name = name;
             _newPageAllocator = newPageAllocator;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
             _isPageLocatorOwned = pageLocator == null;
@@ -53,20 +54,21 @@ namespace Voron.Data.BTrees
                 RootPageNumber = root
             };
 
-            _addScope = new DirectAddScope(this);
+            _addScope = new DirectAddScope(Name.ToString());
         }
 
-        public Tree(LowLevelTransaction llt, Transaction tx, TreeMutableState state)
+        public Tree(LowLevelTransaction llt, Transaction tx, Slice name, TreeMutableState state)
         {
             _llt = llt;
             _tx = tx;
+            Name = name;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
             _isPageLocatorOwned = true;
             _pageLocator = llt.PersistentContext.AllocatePageLocator(llt);
             _state = new TreeMutableState(llt);
             _state = state;
 
-            _addScope = new DirectAddScope(this);
+            _addScope = new DirectAddScope(Name.ToString());
         }
 
         public bool IsLeafCompressionSupported
@@ -75,10 +77,10 @@ namespace Voron.Data.BTrees
             get { return (State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed; }
         }
 
-        public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree,
+        public static Tree Open(LowLevelTransaction llt, Transaction tx, Slice name, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree,
              NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
-            return new Tree(llt, tx, header->RootPageNumber, newPageAllocator, pageLocator)
+            return new Tree(llt, tx, header->RootPageNumber, name, newPageAllocator, pageLocator)
             {
                 _state =
                 {
@@ -94,7 +96,7 @@ namespace Voron.Data.BTrees
             };
         }
 
-        public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree,
+        public static Tree Create(LowLevelTransaction llt, Transaction tx, Slice name, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree,
              NewPageAllocator newPageAllocator = null, 
              PageLocator pageLocator = null)
         {
@@ -103,10 +105,9 @@ namespace Voron.Data.BTrees
 
             var newPage = newPageAllocator?.AllocateSinglePage(0) ?? llt.AllocatePage(1);
 
-
             TreePage newRootPage = PrepareTreePage(TreePageFlags.Leaf, 1, newPage);
             
-            var tree = new Tree(llt, tx, newRootPage.PageNumber, newPageAllocator, pageLocator)
+            var tree = new Tree(llt, tx, newRootPage.PageNumber, name, newPageAllocator, pageLocator)
             {
                 _state =
                 {
@@ -1295,6 +1296,11 @@ namespace Voron.Data.BTrees
                 return new ValueReader(overFlowPage.Pointer + Constants.Tree.PageHeaderSize, overFlowPage.OverflowSize);
             }
             return new ValueReader((byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, node->DataSize);
+        }
+
+        public void Rename(Slice newName)
+        {
+            Name = newName;
         }
     }
 }
