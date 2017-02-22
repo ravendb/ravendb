@@ -2658,8 +2658,8 @@ namespace Raven.Server.Documents
                 return default(long); // never reached
             }
 
-            var newEtag = GenerateNextEtag();
-            var newEtagBigEndian = Bits.SwapBytes(newEtag);
+            var attachmenEtag = GenerateNextEtag();
+            var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -2669,13 +2669,16 @@ namespace Raven.Server.Documents
             int documentIdSize; // not in use
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerDocumentId, out lowerDocumentIdSize, out documentIdPtr, out documentIdSize);
 
+            // Update the document with an etag which is bigger than the attachmenEtag
+            var updateDocumentEtag = GenerateNextEtag();
+            var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
+            UpdateDocumentAfterAttachmentPut(context, lowerDocumentId, lowerDocumentIdSize, documentId, name, updateDocumentEtag, modifiedTicks);
+
             byte* lowerName;
             int lowerNameSize;
             byte* namePtr;
             int nameSize;
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, name, out lowerName, out lowerNameSize, out namePtr, out nameSize);
-
-            var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
             Slice contentTypeSlice;
             DocumentKeyWorker.GetSliceFromKey(context, contentType, out contentTypeSlice);
@@ -2695,19 +2698,18 @@ namespace Raven.Server.Documents
                 TableValueReader oldValue;
                 if (table.ReadByKey(keySlice, out oldValue))
                 {
-                    throw new InvalidOperationException("Cannot overwrite exisitng attachment.");
+                    throw new InvalidOperationException("Cannot overwrite an exisitng attachment.");
 
                     /*int size;
                     var pOldEtag = oldValue.Read(1, out size);
                     var oldEtag = Bits.SwapBytes(*(long*) pOldEtag);
 
                     if (expectedEtag != null && oldEtag != expectedEtag)
-                        throw new ConcurrencyException(
-                $"Attachment {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-            {
-                ActualETag = oldEtag,
-                ExpectedETag = expectedEtag ?? -1
-            };
+                        throw new ConcurrencyException($"Attachment {name} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                        {
+                            ActualETag = oldEtag,
+                            ExpectedETag = expectedEtag ?? -1
+                        };
 
                     table.Update(oldValue.Id, tbv);*/
                 }
@@ -2725,18 +2727,15 @@ namespace Raven.Server.Documents
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
                 tree.AddStream(keySlice, stream);
 
-                // Update the document
-                UpdateDocumentAfterAttachmentPut(context, lowerDocumentId, lowerDocumentIdSize, documentId, name, modifiedTicks);
-
                 _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
             }
 
-            return newEtag;
+            return attachmenEtag;
         }
 
         private void UpdateDocumentAfterAttachmentPut(DocumentsOperationContext context, byte* lowerDocumentId, int lowerDocumentIdSize, 
-            string documentId, string name, long modifiedTicks)
+            string documentId, string name, long newEtag, long modifiedTicks)
         {
             Slice loweredKey;
             using (Slice.External(context.Allocator, lowerDocumentId, lowerDocumentIdSize, out loweredKey))
@@ -2757,7 +2756,6 @@ namespace Raven.Server.Documents
                     ThrowDocumentNotFound(context, loweredKey, documentId, name);
                 }
 
-                var newEtag = GenerateNextEtag();
                 var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
                 var oldChangeVector = tvr.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref tvr, 4) : null;
