@@ -5,11 +5,66 @@ namespace Raven.Client.Documents.Indexes
 {
     internal static class FieldUtil
     {
+        public static string RemoveRangeSuffixIfNecessary(string fieldName)
+        {
+            if (fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) == false)
+                return fieldName;
+
+            var index = fieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length - 1;
+            if (index < 1)
+                return fieldName;
+
+            var ch = fieldName[index];
+            switch (ch)
+            {
+                case 'L':
+                case 'D':
+                    return fieldName.Substring(0, index - 1);
+                default:
+                    return fieldName;
+            }
+        }
+
+        public static RangeType GetRangeTypeFromFieldName(string fieldName, out string originalFieldName)
+        {
+            if (fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
+            {
+                var index = fieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length - 1;
+                if (index < 1)
+                {
+                    originalFieldName = fieldName;
+                    return RangeType.None;
+                }
+
+                var ch = fieldName[index];
+                switch (ch)
+                {
+                    case 'L':
+                        originalFieldName = fieldName.Substring(0, index - 1);
+                        return RangeType.Long;
+                    case 'D':
+                        originalFieldName = fieldName.Substring(0, index - 1);
+                        return RangeType.Double;
+                    default:
+                        throw new NotSupportedException($"Could not extract range type from '{fieldName}' field.");
+                }
+            }
+
+            originalFieldName = fieldName;
+            return RangeType.None;
+        }
+
         public static RangeType GetRangeTypeFromFieldName(string fieldName)
         {
             if (fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
             {
-                var ch = fieldName[fieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length - 1];
+                var index = fieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length - 1;
+                if (index < 1)
+                {
+                    return RangeType.None;
+                }
+
+                var ch = fieldName[index];
                 switch (ch)
                 {
                     case 'L':
@@ -17,7 +72,7 @@ namespace Raven.Client.Documents.Indexes
                     case 'D':
                         return RangeType.Double;
                     default:
-                        throw new NotSupportedException($"Could not extract range type from '{fieldName}' field.");
+                        throw new InvalidOperationException($"Client does not support '{Constants.Documents.Indexing.Fields.RangeFieldSuffix}' suffix any longer. Please use '{Constants.Documents.Indexing.Fields.RangeFieldSuffixLong}' or '{Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble}' suffixes.");
                 }
             }
 

@@ -1122,25 +1122,13 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 if (IsDynamicMapReduce)
                 {
-                    DynamicMapReduceField renamedField;
+                    string name;
+                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(whereParams.FieldName, out name);
 
-                    if (whereParams.FieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                    {
-                        var rangeType = FieldUtil.GetRangeTypeFromFieldName(whereParams.FieldName);
-                        var name = whereParams.FieldName.Substring(0, whereParams.FieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
+                    var renamedField = DynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == name);
 
-                        renamedField = DynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == name);
-
-                        if (renamedField != null)
-                            return whereParams.FieldName = FieldUtil.ApplyRangeSuffixIfNecessary(renamedField.Name, rangeType);
-                    }
-                    else
-                    {
-                        renamedField = DynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == whereParams.FieldName);
-
-                        if (renamedField != null)
-                            return whereParams.FieldName = renamedField.Name;
-                    }
+                    if (renamedField != null)
+                        return whereParams.FieldName = FieldUtil.ApplyRangeSuffixIfNecessary(renamedField.Name, rangeType);
                 }
 
                 return whereParams.FieldName;

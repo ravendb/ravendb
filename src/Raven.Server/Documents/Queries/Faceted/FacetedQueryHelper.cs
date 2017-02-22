@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using Lucene.Net.Util;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
-using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {
@@ -78,19 +76,13 @@ namespace Raven.Server.Documents.Queries.Faceted
 
         public static SortOptions GetSortOptionsForFacet(string field, Dictionary<string, IndexField> fields)
         {
-            if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
+            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 
             IndexField value;
             if (fields.TryGetValue(field, out value) == false || value.SortOption.HasValue == false)
                 return SortOptions.None;
 
             return value.SortOption.Value;
-        }
-
-        public static string TryTrimRangeSuffix(string fieldName)
-        {
-            return fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) ? fieldName.Substring(0, fieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length) : fieldName;
         }
 
         public static bool IsStringNumber(string value)
