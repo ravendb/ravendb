@@ -213,7 +213,7 @@ namespace Raven.Client.Http
 
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out long cachedEtag, out BlittableJsonReaderObject cachedValue)
         {
-            if (command.IsReadRequest)
+            if (command.IsReadRequest && command.ResponseType != RavenCommandResponseType.Stream)
             {
                 if (request.Method != HttpMethod.Get)
                     url = request.Method + "-" + url;

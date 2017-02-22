@@ -13,27 +13,24 @@ namespace Raven.Client.Documents.Operations
     {
         private readonly string _documentId;
         private readonly string _name;
-        private readonly long? _etag;
 
-        public GetAttachmentOperation(string documentId, string name, long? etag = null)
+        public GetAttachmentOperation(string documentId, string name)
         {
             _documentId = documentId;
             _name = name;
-            _etag = etag;
         }
 
         public RavenCommand<AttachmentResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetAttachmentCommand(_documentId, _name, _etag);
+            return new GetAttachmentCommand(_documentId, _name);
         }
 
         private class GetAttachmentCommand : RavenCommand<AttachmentResult>
         {
             private readonly string _documentId;
             private readonly string _name;
-            private readonly long? _etag;
 
-            public GetAttachmentCommand(string documentId, string name, long? etag)
+            public GetAttachmentCommand(string documentId, string name)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -42,7 +39,6 @@ namespace Raven.Client.Documents.Operations
 
                 _documentId = documentId;
                 _name = name;
-                _etag = etag;
 
                 ResponseType = RavenCommandResponseType.Stream;
             }
@@ -54,7 +50,6 @@ namespace Raven.Client.Documents.Operations
                 {
                     Method = HttpMethods.Get,
                 };
-                AddEtagIfNotNull(_etag, request);
                 return request;
             }
 
@@ -75,7 +70,7 @@ namespace Raven.Client.Documents.Operations
                 };
             }
 
-            public override bool IsReadRequest => false;
+            public override bool IsReadRequest => true;
         }
     }
 }

@@ -75,6 +75,7 @@ namespace Raven.Client.Http
                 if (ResponseType == RavenCommandResponseType.Array)
                 {
                     var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
+                    // TODO: Either cache also arrays or the better way is to remove all array respones by converting them to objects.
                     SetResponse(array.Item1, fromCache: false);
                     return;
                 }
@@ -82,6 +83,7 @@ namespace Raven.Client.Http
                 var contentType = response.Content.Headers.ContentType?.ToString();
                 // ReSharper disable once PossibleInvalidOperationException
                 var etag = response.GetEtagHeader().Value;
+                // We do not cache the stream response.
                 // TODO: How do we make sure to keep the stream open?
                 // Should we write to stream that the user give us instead of return a stream?
                 SetResponse(stream, contentType, etag, fromCache: false);
@@ -104,15 +106,15 @@ namespace Raven.Client.Http
 
         protected void AddEtagIfNotNull(long? etag, HttpRequestMessage request)
         {
+#if DEBUG
             if (IsReadRequest)
             {
                 if (ResponseType != RavenCommandResponseType.Stream)
                     throw new InvalidOperationException("No need to add the etag for Get requests as the request executer will add it.");
 
-                if (etag.HasValue)
-                    request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{etag.Value}\"");
-                return;
+                throw new InvalidOperationException("Stream responses are not cached so not etag should be used.");
             }
+#endif
 
             if (etag.HasValue)
                 request.Headers.TryAddWithoutValidation("If-Match", $"\"{etag.Value}\"");
