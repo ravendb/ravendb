@@ -76,7 +76,7 @@ namespace SlowTests.MailingList
                             },
                             new Facet
                             {
-                                Name = "Price_Range",
+                                Name = "Price_D_Range",
                                 Mode = FacetMode.Ranges,
                                 Ranges = new List<string>
                                 {
@@ -99,7 +99,7 @@ namespace SlowTests.MailingList
                     var query = s.Query<Product>("Products/Stats");
                     var facetResults = query.ToFacets("facets/StatsFacet");
 
-                    var priceFacet = facetResults.Results["Price_Range"];
+                    var priceFacet = facetResults.Results["Price_D_Range"];
 
                     foreach (var val in priceFacet.Values)
                         Assert.NotEqual(0, val.Hits);

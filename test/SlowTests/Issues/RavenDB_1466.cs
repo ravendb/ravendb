@@ -176,28 +176,28 @@ namespace SlowTests.Issues
 
         private static void AssertResults(FacetedQueryResult[] multiFacetedSearchResults)
         {
-            var northResults = multiFacetedSearchResults[0].Results["Salary_Range"].Values;
+            var northResults = multiFacetedSearchResults[0].Results["Salary_D_Range"].Values;
             Assert.Equal(1, northResults[0].Hits);
             Assert.Equal(1, northResults[1].Hits);
             Assert.Equal(0, northResults[2].Hits);
             Assert.Equal(0, northResults[3].Hits);
             Assert.Equal(0, northResults[4].Hits);
 
-            var southResults = multiFacetedSearchResults[1].Results["Salary_Range"].Values;
+            var southResults = multiFacetedSearchResults[1].Results["Salary_D_Range"].Values;
             Assert.Equal(0, southResults[0].Hits);
             Assert.Equal(1, southResults[1].Hits);
             Assert.Equal(0, southResults[2].Hits);
             Assert.Equal(0, southResults[3].Hits);
             Assert.Equal(0, southResults[4].Hits);
 
-            var eastResults = multiFacetedSearchResults[2].Results["Salary_Range"].Values;
+            var eastResults = multiFacetedSearchResults[2].Results["Salary_D_Range"].Values;
             Assert.Equal(0, eastResults[0].Hits);
             Assert.Equal(0, eastResults[1].Hits);
             Assert.Equal(2, eastResults[2].Hits);
             Assert.Equal(0, eastResults[3].Hits);
             Assert.Equal(0, eastResults[4].Hits);
 
-            var westResults = multiFacetedSearchResults[3].Results["Salary_Range"].Values;
+            var westResults = multiFacetedSearchResults[3].Results["Salary_D_Range"].Values;
             Assert.Equal(1, westResults[0].Hits);
             Assert.Equal(0, westResults[1].Hits);
             Assert.Equal(0, westResults[2].Hits);

@@ -36,7 +36,7 @@ namespace SlowTests.Tests.Faceted
                             //In Lucene [ is inclusive, { is exclusive
                             new Facet
                                 {
-                                    Name = "Cost_Range",
+                                    Name = "Cost_D_Range",
                                     Mode = FacetMode.Ranges,
                                     Ranges =
                                         {
@@ -49,7 +49,7 @@ namespace SlowTests.Tests.Faceted
                                 },
                             new Facet
                                 {
-                                    Name = "Megapixels_Range",
+                                    Name = "Megapixels_D_Range",
                                     Mode = FacetMode.Ranges,
                                     Ranges =
                                         {
@@ -318,7 +318,7 @@ namespace SlowTests.Tests.Faceted
 
             //Go through the expected (in-memory) results and check that there is a corresponding facet result
             //Not the prettiest of code, but it works!!!
-            var costFacets = facetResults.Results["Cost_Range"].Values;
+            var costFacets = facetResults.Results["Cost_D_Range"].Values;
             CheckFacetCount(filteredData.Count(x => x.Cost <= 200.0m),
                             costFacets.FirstOrDefault(x => x.Range == "[NULL TO 200]"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 200.0m && x.Cost <= 400),
@@ -331,7 +331,7 @@ namespace SlowTests.Tests.Faceted
                             costFacets.FirstOrDefault(x => x.Range == "[800 TO NULL]"));
 
             //Test the Megapixels_Range facets using the same method
-            var megapixelsFacets = facetResults.Results["Megapixels_Range"].Values;
+            var megapixelsFacets = facetResults.Results["Megapixels_D_Range"].Values;
             CheckFacetCount(filteredData.Where(x => x.Megapixels <= 3.0m).Count(),
                             megapixelsFacets.FirstOrDefault(x => x.Range == "[NULL TO 3]"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count(),

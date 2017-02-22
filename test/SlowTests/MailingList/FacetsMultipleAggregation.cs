@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
                     DisplayName = "Prices",
                     Mode = FacetMode.Ranges,
                     Aggregation = FacetAggregation.Min,
-                    AggregationField = "Prices_Range",
+                    AggregationField = "Prices_D_Range",
                     TermSortMode = FacetTermSortMode.ValueAsc,
                     Ranges = {"[* TO *]"}
                 },
@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
                     Mode = FacetMode.Ranges,
                     MaxResults = 1,
                     Aggregation = FacetAggregation.Max,
-                    AggregationField = "Prices_Range",
+                    AggregationField = "Prices_D_Range",
                     Ranges = {"[* TO *]"}
                 },
             };

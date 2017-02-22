@@ -27,7 +27,7 @@ namespace SlowTests.Tests.Faceted
                 new Facet {Name = "Manufacturer"},
                 new Facet
                 {
-                    Name = "Cost_Range",
+                    Name = "Cost_D_Range",
                     Mode = FacetMode.Ranges,
                     Ranges =
                     {
@@ -40,7 +40,7 @@ namespace SlowTests.Tests.Faceted
                 },
                 new Facet
                 {
-                    Name = "Price_Range",
+                    Name = "Price_D_Range",
                     Mode = FacetMode.Ranges,
                     Ranges =
                     {

@@ -87,21 +87,8 @@ namespace Raven.Server.Documents.Queries.Faceted
                 HighValue = trimmedHigh.Substring(0, trimmedHigh.Length - 1)
             };
 
-            if (RangeQueryParser.NumericRangeValue.IsMatch(parsedRange.LowValue))
-            {
-                parsedRange.LowValue = NumericStringToSortableNumeric(field, parsedRange.LowValue);
-            }
-
-            if (RangeQueryParser.NumericRangeValue.IsMatch(parsedRange.HighValue))
-            {
-                parsedRange.HighValue = NumericStringToSortableNumeric(field, parsedRange.HighValue);
-            }
-
-
-            if (parsedRange.LowValue == "NULL" || parsedRange.LowValue == "*")
-                parsedRange.LowValue = null;
-            if (parsedRange.HighValue == "NULL" || parsedRange.HighValue == "*")
-                parsedRange.HighValue = null;
+            parsedRange.LowValue = ConvertFieldValue(field, parsedRange.LowValue);
+            parsedRange.HighValue = ConvertFieldValue(field, parsedRange.HighValue);
 
             parsedRange.LowValue = UnescapeValueIfNecessary(parsedRange.LowValue);
             parsedRange.HighValue = UnescapeValueIfNecessary(parsedRange.HighValue);
@@ -123,8 +110,11 @@ namespace Raven.Server.Documents.Queries.Faceted
             return value;
         }
 
-        private static string NumericStringToSortableNumeric(string field, string value)
+        private static string ConvertFieldValue(string field, string value)
         {
+            if (NumberUtil.IsNull(value))
+                return null;
+
             var rangeType = FieldUtil.GetRangeTypeFromFieldName(field);
             switch (rangeType)
             {
@@ -135,7 +125,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                     var doubleValue = NumberUtil.StringToDouble(value);
                     return NumericUtils.DoubleToPrefixCoded(doubleValue.Value);
                 default:
-                    throw new ArgumentException($"Unknown type for '{rangeType}' which started as '{value}'");
+                    return value;
             }
         }
 

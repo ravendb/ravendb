@@ -6,6 +6,7 @@
 
 using System;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -38,8 +39,7 @@ namespace Raven.Client.Documents.Indexes
             if (number == null)
                 return null;
 
-            if ("NULL".Equals(number, StringComparison.OrdinalIgnoreCase) ||
-                "*".Equals(number, StringComparison.OrdinalIgnoreCase))
+            if (IsNull(number))
                 return null;
 
             if (number.Length == 0)
@@ -56,14 +56,19 @@ namespace Raven.Client.Documents.Indexes
             if (number == null)
                 return null;
 
-            if ("NULL".Equals(number, StringComparison.OrdinalIgnoreCase) ||
-                "*".Equals(number, StringComparison.OrdinalIgnoreCase))
+            if (IsNull(number))
                 return null;
 
             if (number.Length == 0)
                 throw new ArgumentException("String must be greater than 0 characters");
 
             return double.Parse(number, CultureInfo.InvariantCulture);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsNull(string value)
+        {
+            return "NULL".Equals(value, StringComparison.OrdinalIgnoreCase) || "*".Equals(value, StringComparison.OrdinalIgnoreCase);
         }
     }
 }
