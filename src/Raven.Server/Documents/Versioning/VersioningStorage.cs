@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
 
-            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtags], etag))
+            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag))
             {
                 yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref tvr.Reader));
             }
