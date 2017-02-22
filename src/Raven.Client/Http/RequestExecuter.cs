@@ -249,8 +249,9 @@ namespace Raven.Client.Http
                 case HttpStatusCode.NotFound:
                     if (command.ResponseType == RavenCommandResponseType.Object)
                         command.SetResponse((BlittableJsonReaderObject)null, fromCache: false);
-                    else
+                    else if (command.ResponseType == RavenCommandResponseType.Array)
                         command.SetResponse((BlittableJsonReaderArray)null, fromCache: false);
+                    command.SetResponse(null, null, 0, fromCache: false);
                     return true;
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:

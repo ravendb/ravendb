@@ -13,32 +13,38 @@ namespace Raven.Client.Documents.Operations
     {
         private readonly string _documentId;
         private readonly string _name;
+        private readonly Action<Stream> _handleStreamResponse;
 
-        public GetAttachmentOperation(string documentId, string name)
+        public GetAttachmentOperation(string documentId, string name, Action<Stream> handleStreamResponse)
         {
             _documentId = documentId;
             _name = name;
+            _handleStreamResponse = handleStreamResponse;
         }
 
         public RavenCommand<AttachmentResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetAttachmentCommand(_documentId, _name);
+            return new GetAttachmentCommand(_documentId, _name, _handleStreamResponse);
         }
 
         private class GetAttachmentCommand : RavenCommand<AttachmentResult>
         {
             private readonly string _documentId;
             private readonly string _name;
+            private readonly Action<Stream> _handleStreamResponse;
 
-            public GetAttachmentCommand(string documentId, string name)
+            public GetAttachmentCommand(string documentId, string name, Action<Stream> handleStreamResponse)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
                 if (string.IsNullOrWhiteSpace(name))
                     throw new ArgumentNullException(nameof(name));
+                if (string.IsNullOrWhiteSpace(name))
+                    throw new ArgumentNullException(nameof(handleStreamResponse));
 
                 _documentId = documentId;
                 _name = name;
+                _handleStreamResponse = handleStreamResponse;
 
                 ResponseType = RavenCommandResponseType.Stream;
             }
@@ -60,9 +66,12 @@ namespace Raven.Client.Documents.Operations
 
             public override void SetResponse(Stream stream, string contentType, long etag, bool fromCache)
             {
+                if (stream == null)
+                    return;
+
+                _handleStreamResponse(stream);
                 Result = new AttachmentResult
                 {
-                    Stream = stream,
                     ContentType = contentType,
                     Etag = etag,
                     Name = _name,

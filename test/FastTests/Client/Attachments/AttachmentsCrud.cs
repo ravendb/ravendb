@@ -48,16 +48,19 @@ namespace FastTests.Client.Attachments
                 for (var i = 0; i < names.Length; i++)
                 {
                     var name = names[i];
-                    var attachment = store.Operations.Send(new GetAttachmentOperation("users/1", name));
-                    Assert.Equal(2 + 2 * i, attachment.Etag);
-                    Assert.Equal(name, attachment.Name);
-                    Assert.Equal(i == 0 ? 3 : 5, attachment.Stream.Read(readBuffer, 0, readBuffer.Length));
-                    if (i == 0)
-                        Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
-                    else if (i == 1)
-                        Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
-                    else if (i == 2)
-                        Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
+                    using (var attachmentStream = new MemoryStream(readBuffer))
+                    {
+                        var attachment = store.Operations.Send(new GetAttachmentOperation("users/1", name, stream => stream.CopyTo(attachmentStream)));
+                        Assert.Equal(2 + 2 * i, attachment.Etag);
+                        Assert.Equal(name, attachment.Name);
+                        Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
+                        if (i == 0)
+                            Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
+                        else if (i == 1)
+                            Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
+                        else if (i == 2)
+                            Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
+                    }
                 }
             }
         }

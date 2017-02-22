@@ -84,9 +84,8 @@ namespace Raven.Client.Http
                 // ReSharper disable once PossibleInvalidOperationException
                 var etag = response.GetEtagHeader().Value;
                 // We do not cache the stream response.
-                // TODO: How do we make sure to keep the stream open?
-                // Should we write to stream that the user give us instead of return a stream?
-                SetResponse(stream, contentType, etag, fromCache: false);
+                var uncompressedStream = await RequestExecuter.ReadAsStreamUncompressedAsync(response);
+                SetResponse(uncompressedStream, contentType, etag, fromCache: false);
             }
         }
 
