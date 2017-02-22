@@ -2146,7 +2146,7 @@ namespace Raven.Server.Documents
         private static void ThrowConcurrentExceptionOnMissingDoc(string key, long expectedEtag)
         {
             throw new ConcurrencyException(
-                $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                $"Document {key} does not exist, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
             {
                 ExpectedETag = expectedEtag
             };
@@ -2807,7 +2807,7 @@ namespace Raven.Server.Documents
                     throw new InvalidOperationException($"Cannot put attachment {name} on a document '{documentId}' with a conflict.", e);
                 }
             }
-            throw new InvalidOperationException($"Cannot put attachment {name} on a not exist document '{documentId}'.");
+            throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
         }
 
         private IEnumerable<LazyStringValue> GetAttachmentsInternal(DocumentsOperationContext context, Slice startSlice)
@@ -2938,7 +2938,7 @@ namespace Raven.Server.Documents
         private static void ThrowConcurrentExceptionOnMissingAttacment(string documentId, string name, long expectedEtag)
         {
             throw new ConcurrencyException(
-                $"Attachment {name} of '{documentId}' does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                $"Attachment {name} of '{documentId}' does not exist, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
             {
                 ExpectedETag = expectedEtag
             };
@@ -2972,7 +2972,11 @@ namespace Raven.Server.Documents
             {
                 document = Get(context, lowerDocumentId);
                 if (document == null)
-                    throw new InvalidOperationException($"Cannot delete attachment {name} on a not exist document '{documentId}'.");
+                {
+                    if (expectedEtag != null)
+                        throw new InvalidOperationException($"Document {documentId} is not exists and maybe already deleted but attachment {name} expected to be there with the {expectedEtag} etag.");
+                    return; //NOP, already deleted
+                }
             }
             catch (DocumentConflictException e)
             {
@@ -2981,12 +2985,15 @@ namespace Raven.Server.Documents
 
             var attachment = GetAttachment(context, keySlice);
             if (attachment == null)
+            {
+                if (expectedEtag != null)
+                    throw new InvalidOperationException($"Attachment {name} of document {documentId} is not exists and maybe already deleted but expected to be there with the {expectedEtag} etag.");
                 return; //NOP, already deleted
+            }
 
             if (expectedEtag != null && attachment.Etag != expectedEtag)
             {
-                throw new ConcurrencyException(
-                    $"Attachment {name} of document '{documentId}' has etag {attachment.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                throw new ConcurrencyException($"Attachment {name} of document '{documentId}' has etag {attachment.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                 {
                     ActualETag = attachment.Etag,
                     ExpectedETag = (long) expectedEtag
