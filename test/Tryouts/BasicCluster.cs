@@ -139,7 +139,7 @@ namespace Tryouts
         [Fact]
         public async Task ClusterWithLateJoiningNodeRequiringSnapshot()
         {
-            var expected = Enumerable.Range(0, 10).Sum();
+            var expected = 45;
             var a = SetupServer(true);
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -182,7 +182,7 @@ namespace Tryouts
         [Fact]
         public async Task ClusterWithTwoNodes()
         {
-            var expected = Enumerable.Range(0, 10).Sum();
+            var expected = 45;
             var a = SetupServer(true);
             var b = SetupServer();
 
@@ -244,7 +244,7 @@ namespace Tryouts
                 using (rachis.ContextPool.AllocateOperationContext(out context))
                 using (context.OpenReadTransaction())
                 {
-                    Assert.Equal(Enumerable.Range(0, 10).Sum(), rachis.StateMachine.Read(context, "test"));
+                    Assert.Equal(45, rachis.StateMachine.Read(context, "test"));
                 }
             }
         }

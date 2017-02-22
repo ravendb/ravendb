@@ -28,7 +28,7 @@ namespace Raven.Server.Rachis
     public class RachisConsensus<TStateMachine> : RachisConsensus
         where TStateMachine : RachisStateMachine, new()
     {
-        public RachisConsensus(StorageEnvironmentOptions options, string url) : base(options, url)
+        public RachisConsensus(StorageEnvironmentOptions options, string url,int? seed = null) : base(options, url, seed)
         {
         }
 
@@ -141,9 +141,12 @@ namespace Raven.Server.Rachis
         private Leader _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>();
         private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>();
+        private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>();
+        private int? _seed;
 
-        protected RachisConsensus(StorageEnvironmentOptions options, string url)
+        protected RachisConsensus(StorageEnvironmentOptions options, string url,int? seed = null)
         {
+            _seed = seed;
             _options = options;
             _url = url;
             Log = LoggingSource.Instance.GetLogger<RachisConsensus>(options.BasePath);
@@ -176,8 +179,9 @@ namespace Raven.Server.Rachis
 
                     tx.Commit();
                 }
-
-                Timeout = new TimeoutEvent(new Random().Next((ElectionTimeoutMs / 3) * 2, ElectionTimeoutMs));
+                //We want to be able to reproduce rare issues that are related to timing
+                var rand = _seed.HasValue ? new Random(_seed.Value) : new Random();
+                Timeout = new TimeoutEvent(rand.Next(ElectionTimeoutMs / 3 * 2, ElectionTimeoutMs));
 
                 // if we don't have a topology id, then we are passive
                 // an admin needs to let us know that it is fine, either
@@ -226,7 +230,6 @@ namespace Raven.Server.Rachis
             }
         }
 
-
         public async Task WaitForTopology(Leader.TopologyModification modification)
         {
             while (true)
@@ -264,6 +267,13 @@ namespace Raven.Server.Rachis
 
                 await task;
             }
+        }
+
+        public enum CommitIndexModification
+        {
+            Equal,
+            GreaterOrEqual,
+            AnyChange
         }
 
         public void SetNewState(State state, IDisposable disposable)
@@ -465,7 +475,7 @@ namespace Raven.Server.Rachis
                     }
 
                     if (initialMessage.TopologyId != clusterTopology.TopologyId &&
-                        string.IsNullOrEmpty(clusterTopology.TopologyId) == false)
+                        String.IsNullOrEmpty(clusterTopology.TopologyId) == false)
                     {
                         throw new InvalidOperationException(
                             $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
@@ -755,6 +765,8 @@ namespace Raven.Server.Rachis
             term = reader.ReadLittleEndianInt64();
         }
 
+        
+
         public unsafe void SetLastCommitIndex(TransactionOperationContext context, long index, long term)
         {
             Debug.Assert(context.Transaction != null);
@@ -780,6 +792,41 @@ namespace Raven.Server.Rachis
             var data = (long*)state.DirectAdd(LastCommitSlice, sizeof(long) * 2);
             data[0] = index;
             data[1] = term;
+
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+            {
+                Interlocked.Exchange(ref _commitIndexChanged, new TaskCompletionSource<object>()).TrySetResult(null);
+            };
+        }
+
+        public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value)
+        {
+            while (true)
+            {
+                var task = _commitIndexChanged.Task;
+                TransactionOperationContext context;
+                using (ContextPool.AllocateOperationContext(out context))
+                using (context.OpenReadTransaction())
+                {
+                    var commitIndex = GetLastCommitIndex(context);
+                    switch (modification)
+                    {
+                        case CommitIndexModification.Equal:
+                            if (value == commitIndex)
+                                return;
+                            break;
+                        case CommitIndexModification.GreaterOrEqual:
+                            if (value <= commitIndex)
+                                return;
+                            break;
+                        case CommitIndexModification.AnyChange:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
+                    }
+                }
+                await task;
+            }
         }
 
         public unsafe Tuple<long, long> GetLogEntriesRange(TransactionOperationContext context)
@@ -906,7 +953,7 @@ namespace Raven.Server.Rachis
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             *(long*)state.DirectAdd(CurrentTermSlice, sizeof(long)) = term;
 
-            votedFor = votedFor ?? string.Empty;
+            votedFor = votedFor ?? String.Empty;
 
             var size = Encoding.UTF8.GetByteCount(votedFor);
 

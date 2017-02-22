@@ -161,10 +161,10 @@ namespace Raven.Server.Rachis
             }
 
             // at this point, the leader will send us a snapshot message
-            // in most cases, it is an empty snaphsot, then start regular append entries
+            // in most cases, it is an empty snapshot, then start regular append entries
             // the reason we send this is to simplify the # of states in the protocol
 
-            var snapshot = _connection.ReadInstallSnapshot(context);
+           var snapshot = _connection.ReadInstallSnapshot(context);
 
             using (context.OpenWriteTransaction())
             {
@@ -172,6 +172,13 @@ namespace Raven.Server.Rachis
                 {
                     _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                     _engine.TruncateLogBefore(context, snapshot.LastIncludedIndex);
+                }
+                else
+                {
+                    if (_engine.GetLastEntryIndex(context) != snapshot.LastIncludedIndex)
+                    {
+                        throw new InvalidOperationException("The snapshot installation had failed we will need to get a new one...");
+                    }
                 }
 
                 // snapshot always has the latest topology
@@ -202,20 +209,19 @@ namespace Raven.Server.Rachis
             var txw = context.Transaction.InnerTransaction;
             var sp = Stopwatch.StartNew();
             var reader = _connection.CreateReader();
-            bool installedSnapshot = false;
             while (true)
             {
-                var type = (RootObjectType)reader.ReadInt32();
-                if (type == RootObjectType.None)
-                    return installedSnapshot;
-
-                installedSnapshot = true;
+                var type = reader.ReadInt32();
+                if (type == -1)
+                    return false;
 
                 int size;
                 Slice key;
                 long entries;
-                switch (type)
+                switch ((RootObjectType)type)
                 {
+                    case RootObjectType.None:
+                        return true;
                     case RootObjectType.VariableSizeTree:
 
                         size = reader.ReadInt32();

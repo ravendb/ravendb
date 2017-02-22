@@ -229,9 +229,10 @@ namespace Raven.Server.Rachis
                         LastIncludedTerm = _engine.GetTermForKnownExisting(context, earliestIndexEtry),
                         Topology = _engine.GetTopologyRaw(context),
                     });
+             
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
                     {
-                        binaryWriter.Write((int) RootObjectType.None);
+                        binaryWriter.Write(-1);
                     }
                 }
                 else
@@ -250,7 +251,7 @@ namespace Raven.Server.Rachis
                         LastIncludedTerm = term,
                         Topology = _engine.GetTopologyRaw(context),
                     });
-
+                   
                     WriteSnapshotToFile(context, new BufferedStream(stream));
 
                     UpdateLastMatchFromFollower(_followerMatchIndex);
