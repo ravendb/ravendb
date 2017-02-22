@@ -91,7 +91,7 @@ namespace Raven.Server.Rachis
                         trialElectionsCount++;
                 }
 
-                var majority = (_voters.Count/2) + 1;
+                var majority = ((_voters.Count + 1) / 2) + 1;
                 if (realElectionsCount >= majority)
                 {
                     _engine.SwitchToLeaderState();
@@ -133,6 +133,7 @@ namespace Raven.Server.Rachis
 
         public void WaitForChangeInState()
         {
+            _peersWaiting.Set();
             _stateChange.Task.Wait();
         }
 
@@ -140,7 +141,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(Run)
             {
-                Name = "Consensus Leader - " + _engine.Url,
+                Name = "Candidate for - " + (new Uri(_engine.Url).Fragment ?? _engine.Url),
                 IsBackground = true
             };
             _thread.Start();

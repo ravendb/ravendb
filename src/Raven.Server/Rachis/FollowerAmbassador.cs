@@ -88,7 +88,7 @@ namespace Raven.Server.Rachis
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        _connection = new RemoteConnection(_url,stream);
+                        _connection = new RemoteConnection(_url, _engine.Url, stream);
                         using (_connection)
                         {
                             _engine.AppendStateDisposable(_leader, _connection);
@@ -225,13 +225,14 @@ namespace Raven.Server.Rachis
                     // we don't need a snapshot, so just send updated topology
                     _connection.Send(context, new InstallSnapshot
                     {
-                        LastIncludedIndex = 0,
-                        LastIncludedTerm = 0,
+                        LastIncludedIndex = earliestIndexEtry,
+                        LastIncludedTerm = _engine.GetTermForKnownExisting(context, earliestIndexEtry),
                         Topology = _engine.GetTopologyRaw(context),
                     });
+             
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
                     {
-                        binaryWriter.Write((int) RootObjectType.None);
+                        binaryWriter.Write(-1);
                     }
                 }
                 else
@@ -250,7 +251,7 @@ namespace Raven.Server.Rachis
                         LastIncludedTerm = term,
                         Topology = _engine.GetTopologyRaw(context),
                     });
-
+                   
                     WriteSnapshotToFile(context, new BufferedStream(stream));
 
                     UpdateLastMatchFromFollower(_followerMatchIndex);
@@ -526,7 +527,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(Run)
             {
-                Name = "Follower Ambasaddor for " + _url,
+                Name = "Follower Ambasaddor for " + (new Uri(_engine.Url).Fragment ?? _engine.Url) + " > " + (new Uri(_url).Fragment ?? _url),
                 IsBackground = true
             };
             _thread.Start();

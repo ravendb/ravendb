@@ -17,7 +17,6 @@ namespace Raven.Server.Rachis
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
         private Thread _thread;
-        public string DebugCurrentLeader { get; private set; }
 
         public Follower(RachisConsensus engine, RemoteConnection remoteConnection)
         {
@@ -78,7 +77,7 @@ namespace Raven.Server.Rachis
 
                             var lastAppliedIndex = _engine.GetLastCommitIndex(context);
 
-                            if (lastEntryIndexToCommit != lastAppliedIndex)
+                            if (lastEntryIndexToCommit > lastAppliedIndex)
                             {
                                 _engine.Apply(context, lastEntryIndexToCommit);
                             }
@@ -132,7 +131,6 @@ namespace Raven.Server.Rachis
         private void NegotiateWithLeader(TransactionOperationContext context, AppendEntries fstAppendEntries)
         {
             // only the leader can send append entries, so if we accepted it, it's the leader
-            DebugCurrentLeader = _connection.DebugSource;
 
             if (fstAppendEntries.Term > _engine.CurrentTerm)
             {
@@ -163,17 +161,25 @@ namespace Raven.Server.Rachis
             }
 
             // at this point, the leader will send us a snapshot message
-            // in most cases, it is an empty snaphsot, then start regular append entries
+            // in most cases, it is an empty snapshot, then start regular append entries
             // the reason we send this is to simplify the # of states in the protocol
 
-            var snapshot = _connection.ReadInstallSnapshot(context);
+           var snapshot = _connection.ReadInstallSnapshot(context);
 
             using (context.OpenWriteTransaction())
             {
-                InstallSnapshot(context, snapshot);
-                
-                _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
-                _engine.TruncateLogBefore(context, snapshot.LastIncludedIndex);
+                if (InstallSnapshot(context))
+                {
+                    _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
+                    _engine.TruncateLogBefore(context, snapshot.LastIncludedIndex);
+                }
+                else
+                {
+                    if (_engine.GetLastEntryIndex(context) != snapshot.LastIncludedIndex)
+                    {
+                        throw new InvalidOperationException("The snapshot installation had failed we will need to get a new one...");
+                    }
+                }
 
                 // snapshot always has the latest topology
                 if (snapshot.Topology == null)
@@ -198,22 +204,24 @@ namespace Raven.Server.Rachis
             _engine.Timeout.Defer();
         }
 
-        private unsafe void InstallSnapshot(TransactionOperationContext context, InstallSnapshot snapshot)
+        private unsafe bool InstallSnapshot(TransactionOperationContext context)
         {
             var txw = context.Transaction.InnerTransaction;
             var sp = Stopwatch.StartNew();
             var reader = _connection.CreateReader();
             while (true)
             {
-                var type = (RootObjectType)reader.ReadInt32();
-                if (type == RootObjectType.None)
-                    break;
+                var type = reader.ReadInt32();
+                if (type == -1)
+                    return false;
 
                 int size;
                 Slice key;
                 long entries;
-                switch (type)
+                switch ((RootObjectType)type)
                 {
+                    case RootObjectType.None:
+                        return true;
                     case RootObjectType.VariableSizeTree:
 
                         size = reader.ReadInt32();
@@ -424,7 +432,7 @@ namespace Raven.Server.Rachis
 
             _thread = new Thread(Run)
             {
-                Name = "Follower thread from " + _connection.DebugSource,
+                Name = "Follower thread from " + _connection,
                 IsBackground = true
             };
             _thread.Start(validAppendEntries);
