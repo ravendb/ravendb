@@ -14,9 +14,53 @@
                     </li>
                 </ul>
             </div>
+            
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary" data-bind="click: newDocument">
+                    <i class="icon-plus"></i>
+                    <span>New document</span>
+                </button>
+                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bind="enable: inSpecificCollection">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="#" data-bind="click: newDocumentInCollection.bind($root)"><i class="icon-plus"></i> New document in current collection</a></li>
+                </ul>
+            </div>
+            
+            <div class="pull-right">
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-danger">
+                        <span class="icon-trash"></span> <span>Delete</span>
+                    </button>
+                </div>
+                
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn" data-toggle="button">
+                        <span class="icon-copy"></span> <span>Copy</span>
+                    </button>
+                    <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Copy IDs</a></li>
+                    </ul>
+                </div>
+                
+                <div class="btn-group-sm btn-group">
+                    <button type="button" class="btn btn-prerelease" disabled="disabled"  data-toggle="button">
+                        <span class="icon-export"></span> <span>Export</span>
+                    </button>
+                    <button type="button" class="btn btn-prerelease" disabled="disabled" data-toggle="button">
+                        <span class="icon-table"></span> <span>Display</span>
+                    </button>
+                </div>
+               
+            </div>
         </div>
         <div class="flex-window-scroll">
-            <virtual-grid params="controller: gridController"></virtual-grid>
+            <virtual-grid class="resizable" params="controller: gridController"></virtual-grid>
         </div>
     </div>
 </div>
@@ -55,14 +99,7 @@
                     <label for="documents_all">&nbsp;</label>
                 </div>
             </div>
-            <div class="btn-group">
-                <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newDocument.bind($root)" title="Create new document (Alt+N)">
-                    <i class="icon-plus"></i> New document
-                </button>
-                <button type="button" class="btn btn-primary" data-bind="click: newDocumentInCollection.bind($root)" title="Create new document (Alt+N)">
-                    <i class="icon-plus"></i> New document in current collection
-                </button>
-            </div>
+            
             <div class="btn-group">
                 <button type="button" class="btn btn-default" data-bind="click: refresh, disable: showLoadingIndicator() || isInitialized() == false" title="Refresh from server">
                     Refresh
@@ -140,7 +177,13 @@
             press <span class="select-link" data-bind="click: $root.refresh.bind($root)">here</span> to refresh.
         </div>
 
-        <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyDocumentsAutoSelected, isAllAutoSelected: isAllDocumentsAutoSelected, noResultsMessage: 'No documents were found!', container: '#documents-page-right-container' }"></div>
+        <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable',
+                 customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, 
+                selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', 
+                customFunctions: currentCustomFunctions, collections: collections, 
+                rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyDocumentsAutoSelected,
+                 isAllAutoSelected: isAllDocumentsAutoSelected, noResultsMessage: 'No documents were found!',
+                 container: '#documents-page-right-container' }"></div>
     </div>
 </div>
 -->

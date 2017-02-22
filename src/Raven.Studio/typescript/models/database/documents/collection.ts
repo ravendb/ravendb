@@ -1,6 +1,6 @@
 import pagedList = require("common/pagedList");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
-import getAllDocumentsCommand = require("commands/database/documents/getAllDocumentsCommand");
+import getAllDocumentsMetadataCommand = require("commands/database/documents/getAllDocumentsMetadataCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import database = require("models/resources/database");
 import cssGenerator = require("common/cssGenerator");
@@ -35,7 +35,7 @@ class collection {
     fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         //TODO: use doc-preview endpoint for fetching this!
         if (this.isAllDocuments) {
-            return new getAllDocumentsCommand(this.db, skip, take).execute();
+            return new getAllDocumentsMetadataCommand(this.db, skip, take).execute();
         } else {
             return new getDocumentsFromCollectionCommand(this, skip, take).execute();
         }

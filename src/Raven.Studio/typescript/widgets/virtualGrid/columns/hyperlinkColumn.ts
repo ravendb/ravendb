@@ -19,9 +19,15 @@ class hyperlinkColumn<T> extends textColumn<T> {
     renderCell(item: T, isSelected: boolean): string {
         const hyperlinkValue = this.hrefAccessor(item);
 
-        const preparedValue = this.prepareValue(item);
-        //TODO: add support for stripes
-        return `<div class="cell hyperlink-cell" title="${preparedValue.title}" style="width: ${this.width}"><a href="${hyperlinkValue ? hyperlinkValue.toString() : "javascript:void(0)"}">${preparedValue.rawText}</a></div>`;
+        if (hyperlinkValue) {
+            // decorate with link
+            const preparedValue = this.prepareValue(item);
+
+            return `<div class="cell text-cell ${preparedValue.typeCssClass}" title="${preparedValue.title}" style="width: ${this.width}"><a href="${hyperlinkValue}">${preparedValue.rawText}</a></div>`;
+        } else {
+            // fallback to plain text column
+            return super.renderCell(item, isSelected);
+        }
     }
 }
 

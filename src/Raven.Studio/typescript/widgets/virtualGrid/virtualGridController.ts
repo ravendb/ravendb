@@ -10,6 +10,8 @@ interface virtualGridController<T> {
     headerVisible(value: boolean): void;
 
     reset(): void;
+
+    getSelectedItems(): T[]; //TODO: refactor to list of selected indexes or 'all' selected except list of ids
 }
 
 export = virtualGridController;

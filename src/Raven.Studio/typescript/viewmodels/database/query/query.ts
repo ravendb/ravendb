@@ -36,6 +36,11 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import queryCriteria = require("models/database/query/queryCriteria");
 import queryTransformerParameter = require("models/database/query/queryTransformerParameter");
 
+import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import pagedResult = require("widgets/virtualGrid/pagedResult");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+
 type indexItem = {
     name: string;
     isMapReduce: boolean;
@@ -47,6 +52,8 @@ type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
 type rangeSearchType = "Numeric Double" | "Numeric Long" | "Alphabetical" | "Datetime";
 
+type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
+
 class query extends viewModelBase {
 
     static readonly ContainerSelector = "#queryContainer";
@@ -56,6 +63,8 @@ class query extends viewModelBase {
     static readonly SearchTypes: stringSearchType[] = ["Starts With", "Ends With", "Contains", "Exact"];
     static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Long", "Alphabetical", "Datetime"];
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
+
+    private gridController = ko.observable<virtualGridController<any>>();
 
     recentQueries = ko.observableArray<storedQueryDto>();
     allTransformers = ko.observableArray<Raven.Client.Documents.Transformers.TransformerDefinition>();
@@ -90,7 +99,7 @@ class query extends viewModelBase {
     uiTransformer = ko.observable<string>(); // represents UI value, which might not be yet applied to criteria 
     uiTransformerParameters = ko.observableArray<queryTransformerParameter>(); // represents UI value, which might not be yet applied to criteria 
 
-    queryResults = ko.observable<pagedList>();
+    fetcher = ko.observable<fetcherType>();
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any>>();
     requestedIndexForQuery = ko.observable<string>();
     staleResult: KnockoutComputed<boolean>;
@@ -333,6 +342,19 @@ class query extends viewModelBase {
         this.registerDisposableHandler($(window), "storage", () => this.loadRecentQueries());
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+
+        const grid = this.gridController();
+
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.collections().map(x => x.name), false, true);
+
+        grid.headerVisible(true);
+        grid.init((s, t) => this.fetcher()(s, t), (w, r) => documentsProvider.findColumns(w, r));
+
+        this.fetcher.subscribe(() => grid.reset());
+    }
+
     private loadRecentQueries() {
         recentQueriesStorage.getRecentQueriesWithIndexNameCheck(this.activeDatabase())
             .done(queries => this.recentQueries(queries));
@@ -434,7 +456,7 @@ class query extends viewModelBase {
         return sortPart + (sortPart && transformerPart ? " and " : "") + transformerPart;
     }
 
-    runQuery(): pagedList {
+    runQuery() {
         eventsCollector.default.reportEvent("query", "run");
         this.queryTextHasFocus(false);
         this.closeAddFilter();
@@ -495,14 +517,10 @@ class query extends viewModelBase {
                         }
                     });
             };
-            const resultsList = new pagedList(resultsFetcher);
-            this.queryResults(resultsList);
+
+            this.fetcher(resultsFetcher);
             this.recordQueryRun(this.criteria());
-
-            return resultsList;
         }
-
-        return null;
     }
 
     editSelectedIndex() {
@@ -557,6 +575,7 @@ class query extends viewModelBase {
     //TODO: deprecated?
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
+            /* TODO
             ko.postbox.subscribe("ViewItem", (itemNumber: number) => {
                 this.queryResults().getNthItem(itemNumber)
                     .done((item: document) => {
@@ -564,7 +583,7 @@ class query extends viewModelBase {
 
                         app.showBootstrapDialog(new showDataDialog(item.getId(), JSON.stringify(dto, null, 2)));
                     });
-            })
+            })*/
         ];
     }
 
