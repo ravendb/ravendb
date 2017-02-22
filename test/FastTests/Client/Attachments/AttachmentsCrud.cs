@@ -78,6 +78,11 @@ namespace FastTests.Client.Attachments
                             Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
                     }
                 }
+                using (var attachmentStream = new MemoryStream(readBuffer))
+                {
+                    var notExistsAttachment = store.Operations.Send(new GetAttachmentOperation("users/1", "not-there", stream => stream.CopyTo(attachmentStream)));
+                    Assert.Null(notExistsAttachment);
+                }
             }
         }
 

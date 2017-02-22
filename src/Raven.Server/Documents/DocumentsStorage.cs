@@ -2659,10 +2659,9 @@ namespace Raven.Server.Documents
                 return default(AttachmentResult); // never reached
             }
 
+            // Attachment etag should be generated before generating the updateDocumentEtag
             var attachmenEtag = GenerateNextEtag();
-            var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
-
-            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            var updateDocumentEtag = GenerateNextEtag();
 
             byte* lowerDocumentId;
             int lowerDocumentIdSize;
@@ -2671,7 +2670,6 @@ namespace Raven.Server.Documents
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerDocumentId, out lowerDocumentIdSize, out documentIdPtr, out documentIdSize);
 
             // Update the document with an etag which is bigger than the attachmenEtag
-            var updateDocumentEtag = GenerateNextEtag();
             var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
             UpdateDocumentAfterAttachmentPut(context, lowerDocumentId, lowerDocumentIdSize, documentId, name, updateDocumentEtag, modifiedTicks);
 
@@ -2687,6 +2685,8 @@ namespace Raven.Server.Documents
             Slice keySlice;
             using (GetAttachmentKey(context, lowerDocumentId, lowerDocumentIdSize, lowerName, lowerNameSize, out keySlice))
             {
+                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
                 var tbv = new TableValueBuilder
                 {
                     {keySlice.Content.Ptr, keySlice.Size},
@@ -2853,6 +2853,8 @@ namespace Raven.Server.Documents
             using (GetAttachmentKey(context, lowerKey.Content.Ptr, lowerKey.Size, lowerName.Content.Ptr, lowerName.Size, out keySlice))
             {
                 var attachment = GetAttachment(context, keySlice);
+                if (attachment == null)
+                    return null;
 
                 var stream = GetAttachmentStream(context, keySlice);
                 if (stream == null)
