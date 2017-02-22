@@ -117,10 +117,10 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsKey", ByteStringType.Immutable, out AttachmentsKeySlice);
-            Slice.From(StorageEnvironment.LabelsContext, "AttachmentsKeyIndexSlice", ByteStringType.Immutable, out AttachmentsKeyIndexSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "AttachmentsKeyIndex", ByteStringType.Immutable, out AttachmentsKeyIndexSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Attachments", ByteStringType.Immutable, out AttachmentsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsMetadata", ByteStringType.Immutable, out AttachmentsMetadataSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "AttachmentsEtagSlice", ByteStringType.Immutable, out AttachmentsEtagSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "AttachmentsEtag", ByteStringType.Immutable, out AttachmentsEtagSlice);
 
             /*
             Collection schema is:
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents
 
 
             // The attachments schema is as follows
-            // 7 fields (lowered document id, recored separator, lowered name, etag, name, content type, last modified, stream identifier)
+            // 5 fields (lowered document id AND record separator AND lowered name, etag, name, content type, last modified, stream identifier)
             // We are you using the record separator in order to avoid loading another files that has the same key prefix, 
             //      e.g. fitz(record-separator)profile.png and fitz0(record-separator)profile.png, without the record separator we would have to load also fitz0 and filter it.
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
