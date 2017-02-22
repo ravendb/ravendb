@@ -43,16 +43,10 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + attachment.Etag + "\"";
-
-                // Ensure that files are not cached at the browser side.
-                HttpContext.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-                HttpContext.Response.Headers["Expires"] = "0";
-
-                HttpContext.Response.Headers["Content-Type"] = attachment.ContentType.ToString();
-
                 var fileName = Path.GetFileName(attachment.Name);
                 HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"";
+                HttpContext.Response.Headers["Content-Type"] = attachment.ContentType.ToString();
+                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + attachment.Etag + "\"";
                 // TODO: HttpContext.Response.Headers["Content-Range"] = ;
 
                 using (var stream = attachment.Stream)
