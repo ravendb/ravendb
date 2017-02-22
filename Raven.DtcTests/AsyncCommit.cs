@@ -54,6 +54,48 @@ namespace Raven.Tests.Bugs
         }
 
         [Fact]
+        public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalse_OnInclude()
+        {
+            using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
+            {
+                EnsureDtcIsSupported(documentStore);
+
+                using (var s = documentStore.OpenSession())
+                {
+                    s.Store(new AccurateCount.User { Name = "B" }, "users/1");
+                    s.Store(new AccurateCount.User { Name = "A", Manager = "users/1"}, "users/2");
+
+                    s.SaveChanges();
+                }
+
+                var task = new Task(() =>
+                {
+                    using (var s = documentStore.OpenSession())
+                    {
+                        s.Advanced.AllowNonAuthoritativeInformation = false;
+                        var user = s.Include<AccurateCount.User>(x=>x.Manager).Load("users/2");
+                        var manager = s.Load<AccurateCount.User>(user.Manager);
+                        Assert.Equal("Rahien", manager.Name);
+                    }
+                });
+
+                using (var s = documentStore.OpenSession())
+                using (var scope = new TransactionScope())
+                {
+                    var user = s.Load<AccurateCount.User>("users/1");
+                    user.Name = "Rahien";
+                    s.SaveChanges();
+                    task.Start();
+                    Assert.False(task.Wait(250, CancellationToken.None));
+                    scope.Complete();
+                }
+
+                task.Wait();
+            }
+        }
+
+
+        [Fact]
         public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalseWhenQuerying()
         {
             using (var documentStore = NewDocumentStore(requestedStorage: "esent"))

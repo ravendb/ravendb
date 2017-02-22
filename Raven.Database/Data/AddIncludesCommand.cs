@@ -18,7 +18,7 @@ namespace Raven.Database.Data
         public AddIncludesCommand(
             DocumentDatabase database, 
             TransactionInformation transactionInformation, 
-            Action<Etag, RavenJObject> add, 
+            Action<Etag, RavenJObject, bool> add, 
             string[] includes,
             HashSet<string> loadedIds)
         {
@@ -39,7 +39,7 @@ namespace Raven.Database.Data
 
         private string[] Includes { get; set; }
 
-        private Action<Etag,RavenJObject> Add { get; set; }
+        private Action<Etag,RavenJObject, bool> Add { get; set; }
 
         private DocumentDatabase Database { get; set; }
 
@@ -72,7 +72,7 @@ namespace Raven.Database.Data
                 return false;
 
             Debug.Assert(includedDoc.Etag != null);
-            Add(includedDoc.Etag, includedDoc.ToJson());
+            Add(includedDoc.Etag, includedDoc.ToJson(), includedDoc.NonAuthoritativeInformation??false);
 
             return true;
         }
