@@ -26,7 +26,7 @@ namespace Raven.Server.Documents
         public DateTime LastModified;
         public DocumentFlags Flags;
         public short TransactionMarker;
-        public IEnumerable<LazyStringValue> Attachments;
+        public LazyStringValue[] Attachments;
 
         public unsafe ulong DataHash
         {

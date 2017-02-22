@@ -2822,15 +2822,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<LazyStringValue> GetAttachmentNamesForDocument(DocumentsOperationContext context, LazyStringValue lowerDocumentId)
+        private LazyStringValue[] GetAttachmentNamesForDocument(DocumentsOperationContext context, LazyStringValue lowerDocumentId)
         {
             Slice startSlice;
-            // TODO: Should we use here an enumerator or reutrn an array and dispose?
-            /*using (*/
-            GetAttachmentPrefix(context, lowerDocumentId.Buffer, lowerDocumentId.Size, out startSlice);
-            /*)*/
+            using (GetAttachmentPrefix(context, lowerDocumentId.Buffer, lowerDocumentId.Size, out startSlice))
             {
-                return GetAttachmentsInternal(context, startSlice);
+                return GetAttachmentsInternal(context, startSlice).ToArray();
             }
         }
 
