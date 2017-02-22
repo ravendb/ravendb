@@ -272,9 +272,10 @@ namespace Voron.Data.Tables
 
             NumberOfEntries--;
 
-            using (var updateStats = _tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats)))
+            byte* updatePtr;
+            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats),out updatePtr))
             {
-                var stats = (TableSchemaStats*)updateStats.Ptr;
+                var stats = (TableSchemaStats*)updatePtr;
 
                 stats->NumberOfEntries = NumberOfEntries;
                 stats->OverflowPageCount = _overflowPageCount;
@@ -396,9 +397,10 @@ namespace Voron.Data.Tables
 
             NumberOfEntries++;
 
-            using (var updateStats = _tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats)))
+            byte* ptr;
+            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats),out ptr))
             {
-                var stats = (TableSchemaStats*)updateStats.Ptr;
+                var stats = (TableSchemaStats*)ptr;
 
                 stats->NumberOfEntries = NumberOfEntries;
                 stats->OverflowPageCount = _overflowPageCount;
@@ -500,9 +502,10 @@ namespace Voron.Data.Tables
 
             NumberOfEntries++;
 
-            using (var updateStats = _tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats)))
+            byte* ptr;
+            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats),out ptr))
             {
-                var stats = (TableSchemaStats*)updateStats.Ptr;
+                var stats = (TableSchemaStats*)ptr;
 
                 stats->NumberOfEntries = NumberOfEntries;
                 stats->OverflowPageCount = _overflowPageCount;
@@ -982,9 +985,10 @@ namespace Voron.Data.Tables
 
                 var treeName = item.Key;
 
-                using (var add = _tableTree.DirectAdd(treeName, sizeof(TreeRootHeader)))
+                byte* ptr;
+                using (_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader),out ptr))
                 {
-                    var header = (TreeRootHeader*)add.Ptr;
+                    var header = (TreeRootHeader*)ptr;
                     tree.State.CopyTo(header);
                 }
             }

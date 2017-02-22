@@ -97,22 +97,23 @@ namespace Raven.Server.Documents.Indexes
 
             // we can safely pass raw pointers here and dispose DirectAdd scopes immediately because 
             // filters' content will be written to overflows
+            byte* ptr;
 
             if (mode == Mode.X64)
             {
                 Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter64.PtrSize));
 
-                using (var ptr64 = _tree.DirectAdd(key, BloomFilter64.PtrSize))
+                using (_tree.DirectAdd(key, BloomFilter64.PtrSize,out ptr))
                 {
-                    return new BloomFilter64(key, ptr64.Ptr, _tree, writeable: true);
+                    return new BloomFilter64(key, ptr, _tree, writeable: true);
                 }     
             }
 
             Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter32.PtrSize));
 
-            using (var ptr32 = _tree.DirectAdd(key, BloomFilter32.PtrSize))
+            using (_tree.DirectAdd(key, BloomFilter32.PtrSize,out ptr))
             {
-                return new BloomFilter32(key, ptr32.Ptr, _tree, writeable: true);
+                return new BloomFilter32(key, ptr, _tree, writeable: true);
             }
         }
 
@@ -314,10 +315,11 @@ namespace Raven.Server.Documents.Indexes
 
                 Debug.Assert(_tree.ShouldGoToOverflowPage(_ptrSize));
 
-                using (var add = _tree.DirectAdd(_key, _ptrSize))
+                byte* ptr;
+                using (_tree.DirectAdd(_key, _ptrSize,out ptr))
                 {
-                    UnmanagedMemory.Copy(add.Ptr, _basePtr, _ptrSize);
-                    Initialize(add.Ptr);
+                    UnmanagedMemory.Copy(ptr, _basePtr, _ptrSize);
+                    Initialize(ptr);
                 }
 
                 Writeable = true;

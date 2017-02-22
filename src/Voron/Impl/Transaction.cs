@@ -158,8 +158,9 @@ namespace Voron.Impl
                     var key = multiValueTree.Key.Item2;
                     var childTree = multiValueTree.Value;
 
-                    using (var add = parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef))
-                        childTree.State.CopyTo((TreeRootHeader*)add.Ptr);
+                    byte* ptr;
+                    using (parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out ptr))
+                        childTree.State.CopyTo((TreeRootHeader*)ptr);
                 }
             }
 
@@ -171,8 +172,9 @@ namespace Voron.Impl
                 var treeState = tree.State;
                 if (treeState.IsModified)
                 {
-                    using (var add = _lowLevelTransaction.RootObjects.DirectAdd(tree.Name, sizeof(TreeRootHeader)))
-                        treeState.CopyTo((TreeRootHeader*)add.Ptr);
+                    byte* ptr;
+                    using (_lowLevelTransaction.RootObjects.DirectAdd(tree.Name, sizeof(TreeRootHeader),out ptr))
+                        treeState.CopyTo((TreeRootHeader*)ptr);
                 }
             }
 
@@ -308,8 +310,9 @@ namespace Voron.Impl
 
             _lowLevelTransaction.RootObjects.Delete(fromName);
 
-            using (var add = _lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader)))
-                fromTree.State.CopyTo((TreeRootHeader*)add.Ptr);
+            byte* ptr;
+            using (_lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader), out ptr))
+                fromTree.State.CopyTo((TreeRootHeader*) ptr);
 
             fromTree.Rename(toName);
             fromTree.State.IsModified = true;
@@ -342,8 +345,9 @@ namespace Voron.Impl
             tree = Tree.Create(_lowLevelTransaction, this, name, flags, pageLocator: pageLocator);
             tree.State.RootObjectType = type;
 
-            using (var space = _lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader)))
-                tree.State.CopyTo((TreeRootHeader*)space.Ptr);
+            byte* ptr;
+            using (_lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader),out ptr))
+                tree.State.CopyTo((TreeRootHeader*)ptr);
 
             tree.State.IsModified = true;
             AddTree(name, tree);

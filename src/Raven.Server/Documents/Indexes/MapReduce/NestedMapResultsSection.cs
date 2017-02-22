@@ -77,9 +77,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 readResult = _parent.Read(_nestedValueKey);
                                 break;
                             }
-                            using (var dataStart = _parent.DirectAdd(_nestedValueKey, reader.Length))
+                            byte* ptr;
+                            using (_parent.DirectAdd(_nestedValueKey, reader.Length,out ptr))
                             {
-                                var pos = dataStart.Ptr + ((byte*)entry - reader.Base + sizeof(ResultHeader));
+                                var pos = ptr + ((byte*)entry - reader.Base + sizeof(ResultHeader));
                                 Memory.Copy(pos, result.BasePointer, result.Size);
                                 return;// just overwrite it completely
                             }
@@ -100,8 +101,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 newEntry->Size = (ushort)result.Size;
                 Memory.Copy(tmp.TempPagePointer + dataPosInTempPage + sizeof(ResultHeader), result.BasePointer, result.Size);
                 dataPosInTempPage += result.Size + sizeof(ResultHeader);
-                using (var dest = _parent.DirectAdd(_nestedValueKey, dataPosInTempPage))
-                    Memory.Copy(dest.Ptr, tmp.TempPagePointer, dataPosInTempPage);
+                byte* destPtr;
+                using (_parent.DirectAdd(_nestedValueKey, dataPosInTempPage,out destPtr))
+                    Memory.Copy(destPtr, tmp.TempPagePointer, dataPosInTempPage);
 
                 _dataSize += result.Size + sizeof(ResultHeader);
             }
@@ -145,8 +147,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 currentId = entry->Id;
 
-                using (var item = newHome.DirectAdd(key, entry->Size))
-                    Memory.Copy(item.Ptr, (byte*)entry + sizeof(ResultHeader), entry->Size);
+                byte* ptr;
+                using (newHome.DirectAdd(key, entry->Size,out ptr))
+                    Memory.Copy(ptr, (byte*)entry + sizeof(ResultHeader), entry->Size);
 
                 entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
             }
@@ -225,8 +228,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         reader.Base + copiedDataStart + sizeof(ResultHeader) + entry->Size, copiedDataEnd);
 
                     var sizeAfterDel = (int)(copiedDataStart + copiedDataEnd);
-                    using (var newVal = _parent.DirectAdd(_nestedValueKey, sizeAfterDel))
-                        Memory.Copy(newVal.Ptr, tmp.TempPagePointer, sizeAfterDel);
+                    byte* ptr;
+                    using ( _parent.DirectAdd(_nestedValueKey, sizeAfterDel,out ptr))
+                        Memory.Copy(ptr, tmp.TempPagePointer, sizeAfterDel);
 
                     _dataSize -= reader.Length - sizeAfterDel;
                     break;

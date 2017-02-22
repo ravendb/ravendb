@@ -238,11 +238,12 @@ namespace Raven.Server.Rachis
                                 size = reader.ReadInt32();
                                 reader.ReadExactly(size);
 
-                                using (var add = tree.DirectAdd(key, size))
+                                byte* ptr;
+                                using (tree.DirectAdd(key, size,out ptr))
                                 {
                                     fixed (byte* pBuffer = reader.Buffer)
                                     {
-                                        Memory.Copy(add.Ptr, pBuffer, size);
+                                        Memory.Copy(ptr, pBuffer, size);
                                     }
                                 }
                             }

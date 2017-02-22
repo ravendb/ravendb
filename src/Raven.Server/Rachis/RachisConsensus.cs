@@ -165,8 +165,9 @@ namespace Raven.Server.Rachis
                     var read = state.Read(CurrentTermSlice);
                     if (read == null || read.Reader.Length != sizeof(long))
                     {
-                        using (var add = state.DirectAdd(CurrentTermSlice, sizeof(long)))
-                        *(long*)add.Ptr= CurrentTerm = 0;
+                        byte* ptr;
+                        using (state.DirectAdd(CurrentTermSlice, sizeof(long), out ptr))
+                            *(long*) ptr = CurrentTerm = 0;
                     }
                     else
                         CurrentTerm = read.Reader.ReadLittleEndianInt64();
@@ -391,9 +392,10 @@ namespace Raven.Server.Rachis
         public static unsafe void SetTopology(RachisConsensus engine, Transaction tx, BlittableJsonReaderObject topologyJson)
         {
             var state = tx.CreateTree(GlobalStateSlice);
-            using (var add = state.DirectAdd(TopologySlice, topologyJson.Size))
+            byte* ptr;
+            using (state.DirectAdd(TopologySlice, topologyJson.Size,out ptr))
             {
-                topologyJson.CopyTo(add.Ptr);
+                topologyJson.CopyTo(ptr);
             }
 
             if (engine == null)
@@ -581,9 +583,10 @@ namespace Raven.Server.Rachis
                 table.Delete(reader.Id);
             }
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
-            using (var add = state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2))
+            byte* ptr;
+            using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2,out ptr))
             {
-                var data = (long*)add.Ptr;
+                var data = (long*)ptr;
                 data[0] = entryIndex;
                 data[1] = entryTerm;
             }
@@ -754,9 +757,10 @@ namespace Raven.Server.Rachis
                         $"Cannot reduce the last commit index (is {oldValue} but was requested to reduce to {index})");
             }
 
-            using (var add = state.DirectAdd(LastCommitSlice, sizeof(long) * 2))
+            byte* ptr;
+            using (state.DirectAdd(LastCommitSlice, sizeof(long) * 2,out ptr))
             {
-                var data = (long*) add.Ptr;
+                var data = (long*) ptr;
                 data[0] = index;
                 data[1] = term;
             }
@@ -884,20 +888,21 @@ namespace Raven.Server.Rachis
                 throw new ConcurrencyException($"The current term {CurrentTerm} is larger than {term}, aborting change");
 
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
-            using (var add = state.DirectAdd(CurrentTermSlice, sizeof(long)))
+            byte* ptr;
+            using (state.DirectAdd(CurrentTermSlice, sizeof(long),out ptr))
             {
-                *(long*)add.Ptr= term;
+                *(long*)ptr = term;
             }
             
             votedFor = votedFor ?? string.Empty;
 
             var size = Encoding.UTF8.GetByteCount(votedFor);
 
-            using (var add = state.DirectAdd(VotedForSlice, size))
+            using (state.DirectAdd(VotedForSlice, size,out ptr))
             {
                 fixed (char* pVotedFor = votedFor)
                 {
-                    Encoding.UTF8.GetBytes(pVotedFor, votedFor.Length, add.Ptr, size);
+                    Encoding.UTF8.GetBytes(pVotedFor, votedFor.Length, ptr, size);
                 }
             }
 

@@ -42,8 +42,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public unsafe void StoreNextMapResultId()
         {
-            using (var nextId = MapPhaseTree.DirectAdd(LastMapResultIdKey, sizeof(long)))
-                *(long*)nextId.Ptr = NextMapResultId;
+            byte* ptr;
+            using (MapPhaseTree.DirectAdd(LastMapResultIdKey, sizeof(long),out ptr))
+                *(long*)ptr = NextMapResultId;
         }
 
         public unsafe void Initialize(Tree mapEntriesTree)

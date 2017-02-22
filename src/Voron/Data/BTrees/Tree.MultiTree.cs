@@ -59,12 +59,13 @@ namespace Voron.Data.BTrees
             page = ModifyPage(page);
 
             var item = page.GetNode(page.LastSearchPosition);
+            byte* _;
 
             // already was turned into a multi tree, not much to do here
             if (item->Flags == TreeNodeFlags.MultiValuePageRef)
             {
                 var existingTree = OpenMultiValueTree(key, item);
-                existingTree.DirectAdd(value, 0).Dispose();
+                existingTree.DirectAdd(value, 0,out _).Dispose();
                 return;
             }
 
@@ -128,12 +129,14 @@ namespace Voron.Data.BTrees
             {
                 Slice existingValue;
                 using (nestedPage.GetNodeKey(_llt, i, out existingValue))
-                    tree.DirectAdd(existingValue, 0).Dispose();
+                {
+                    tree.DirectAdd(existingValue, 0,out _).Dispose();
+                }
             }
-            tree.DirectAdd(value, 0).Dispose();
+            tree.DirectAdd(value, 0,out _).Dispose();
             _tx.AddMultiValueTree(this, key, tree);
             // we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
-            DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef).Dispose();
+            DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out _).Dispose();
         }
 
         private void ExpandMultiTreeNestedPageSize(Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
@@ -148,9 +151,10 @@ namespace Voron.Data.BTrees
                 Delete(key); // release our current page
                 TreePage nestedPage = new TreePage(tempPagePointer, (ushort)currentSize);
 
-                using (var add = DirectAdd(key, newSize))
+                byte* ptr;
+                using (DirectAdd(key, newSize,out ptr))
                 {
-                    var newNestedPage = new TreePage(add.Ptr, newSize)
+                    var newNestedPage = new TreePage(ptr, newSize)
                     {
                         Lower = (ushort) Constants.Tree.PageHeaderSize,
                         Upper = newSize,
@@ -187,18 +191,20 @@ namespace Voron.Data.BTrees
                 // otherwise, we would have to put this in overflow page, and that won't save us any space anyway
 
                 var tree = Create(_llt, _tx, key, TreeFlags.MultiValue);
-                tree.DirectAdd(value, 0).Dispose();
+                byte* _;
+                tree.DirectAdd(value, 0,out _).Dispose();
                 _tx.AddMultiValueTree(this, key, tree);
 
-                DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef).Dispose();
+                DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out _).Dispose();
                 return;
             }
 
             var actualPageSize = (ushort)Math.Min(Bits.NextPowerOf2(requiredPageSize), maxNodeSize - Constants.Tree.NodeHeaderSize);
 
-            using (var add = DirectAdd(key, actualPageSize))
+            byte* ptr;
+            using (DirectAdd(key, actualPageSize, out ptr))
             {
-                var nestedPage = new TreePage(add.Ptr, actualPageSize)
+                var nestedPage = new TreePage(ptr, actualPageSize)
                 {
                     PageNumber = -1L, // hint that this is an inner page
                     Lower = (ushort) Constants.Tree.PageHeaderSize,

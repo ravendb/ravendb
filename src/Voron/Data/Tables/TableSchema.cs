@@ -382,9 +382,10 @@ namespace Voron.Data.Tables
                     tableTree.Add(ActiveSectionSlice, pageNumber);
                 }
 
-                using (var add = tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats)))
+                byte* ptr;
+                using (tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats),out ptr))
                 {
-                    var stats = (TableSchemaStats*)add.Ptr;
+                    var stats = (TableSchemaStats*)ptr;
                     stats->NumberOfEntries = 0;
                 }
 
@@ -402,9 +403,9 @@ namespace Voron.Data.Tables
                         
                         using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, newPageAllocator: tablePageAllocator))
                         {
-                            using (var add = tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader)))
+                            using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader),out ptr))
                             {
-                                indexTree.State.CopyTo((TreeRootHeader*) add.Ptr);
+                                indexTree.State.CopyTo((TreeRootHeader*) ptr);
                             }
                         }
                     }
@@ -420,9 +421,9 @@ namespace Voron.Data.Tables
                     {
                         using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, newPageAllocator: tablePageAllocator))
                         {
-                            using (var add = tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader)))
+                            using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader),out ptr))
                             {
-                                indexTree.State.CopyTo((TreeRootHeader*)add.Ptr);
+                                indexTree.State.CopyTo((TreeRootHeader*)ptr);
                             }
                         }
                     }
@@ -435,11 +436,11 @@ namespace Voron.Data.Tables
                 // Serialize the schema into the table's tree
                 var serializer = SerializeSchema();
 
-                using (var schemaRepresentation = tableTree.DirectAdd(SchemasSlice, serializer.Length))
+                using (tableTree.DirectAdd(SchemasSlice, serializer.Length, out ptr))
                 {
                     fixed (byte* source = serializer)
                     {
-                        Memory.Copy(schemaRepresentation.Ptr, source, serializer.Length);
+                        Memory.Copy(ptr, source, serializer.Length);
                     }
                 }
             }
