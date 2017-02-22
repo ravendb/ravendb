@@ -13,10 +13,11 @@ import appUrl = require("common/appUrl");
 import pagedResultSet = require("common/pagedResultSet");
 import pagedResult = require("widgets/virtualGrid/pagedResult");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
-import virtualColumn = require("widgets/virtualGrid/virtualColumn");
-import hyperlinkColumn = require("widgets/virtualGrid/hyperlinkColumn");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import documentHelpers = require("common/helpers/database/documentHelpers");
 import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 
 class connectedDocuments {
 
@@ -35,6 +36,8 @@ class connectedDocuments {
     isRecentActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.recent);
     isStarredActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.starred);
 
+    gridController = ko.observable<virtualGridController<connectedDocument>>();
+
     static connectedDocsTabs = {
         related: "related",
         collection: "collection",
@@ -43,13 +46,22 @@ class connectedDocuments {
     };
 
     constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (docId: string) => void) {
-
         _.bindAll(this, "toggleStar" as keyof this);
 
         this.document = document;
         this.db = db;
         this.document.subscribe((doc) => this.onDocumentLoaded(doc));
         this.loadDocumentAction = loadDocument;
+    }
+
+    compositionComplete() {
+        const grid = this.gridController();
+        grid.headerVisible(false);
+        grid.rowSelectionCheckboxVisible(false);
+        grid.useColumns(this.columns);
+        grid.init((s, t) => this.fetchCurrentTabDocs(s, t));
+
+        this.currentTab.subscribe(() => this.gridController().reset());
     }
 
     fetchCurrentTabDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {

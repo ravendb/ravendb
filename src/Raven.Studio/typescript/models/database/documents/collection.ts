@@ -12,28 +12,21 @@ class collection implements ICollectionBase {
     isAllDocuments = false;
     bindings = ko.observable<string[]>();
 
-    public collectionName : string;
+    name: string;
     private documentsList: pagedList;
-    static readonly  allDocsCollectionName = "All Documents";
+    static readonly allDocsCollectionName = "All Documents";
     static readonly systemDocusCollectionName = "@system";
     private static collectionColorMaps: resourceStyleMap[] = [];
 
-    //TODO: name is duplicate of collectionName? 
-    constructor(public name: string, public ownerDatabase: database, docCount: number = 0) {
-        this.collectionName = name;
+    constructor(name: string, public ownerDatabase: database, docCount: number = 0) {
+        this.name = name;
         this.isAllDocuments = name === collection.allDocsCollectionName;
         this.colorClass = collection.getCollectionCssClass(name, ownerDatabase);
         this.documentCount(docCount);
     }
 
     get isSystemDocuments() {
-        return this.collectionName === collection.systemDocusCollectionName;
-    }
-
-    // Notifies consumers that this collection should be the selected one.
-    // Called from the UI when a user clicks a collection the documents page.
-    activate() {
-        ko.postbox.publish("ActivateCollection", this);
+        return this.name === collection.systemDocusCollectionName;
     }
 
     prettyLabel(text: string) {
@@ -67,8 +60,8 @@ class collection implements ICollectionBase {
         }
     }
 
-    static createAllDocsCollection(ownerDatabase: database): collection {
-        return new collection(collection.allDocsCollectionName, ownerDatabase);
+    static createAllDocsCollection(ownerDatabase: database, documentsCount: number): collection {
+        return new collection(collection.allDocsCollectionName, ownerDatabase, documentsCount);
     }
 
     static getCollectionCssClass(entityName: string, db: database): string {
