@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
@@ -19,7 +18,6 @@ namespace Raven.Client.Documents.Commands
 
         public string[] Ids;
         public string[] Includes;
-        public long? Etag;
 
         public string Transformer;
         public Dictionary<string, object> TransformerParameters;
@@ -84,9 +82,6 @@ namespace Raven.Client.Documents.Commands
             {
                 Method = HttpMethod.Get,
             };
-
-            if (Etag.HasValue)
-                request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue($"\"{Etag.Value}\""));
 
             if (Id != null)
             {
