@@ -639,9 +639,9 @@ namespace Voron.Data.Tables
             if (treeHeader == null)
                 throw new InvalidOperationException($"Cannot find tree {name} in table {Name}");
 
-            tree = Tree.Open(_tx.LowLevelTransaction, _tx, (TreeRootHeader*)treeHeader, newPageAllocator: _tablePageAllocator);
+            tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, newPageAllocator: _tablePageAllocator);
             _treesBySliceCache[name] = tree;
-            tree.Name = name;
+
             return tree;
         }
 

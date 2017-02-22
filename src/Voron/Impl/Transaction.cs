@@ -69,8 +69,7 @@ namespace Voron.Impl
                 if (header->RootObjectType != type)
                     ThrowInvalidTreeType(treeName, type, header);
 
-                tree = Tree.Open(_lowLevelTransaction, this, header, type, newPageAllocator, pageLocator);
-                tree.Name = treeName;
+                tree = Tree.Open(_lowLevelTransaction, this, treeName, header, type, newPageAllocator, pageLocator);
 
                 if ((tree.State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
                     tree.InitializeCompression();
@@ -312,7 +311,7 @@ namespace Voron.Impl
             using (var add = _lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader)))
                 fromTree.State.CopyTo((TreeRootHeader*)add.Ptr);
 
-            fromTree.Name = toName;
+            fromTree.Rename(toName);
             fromTree.State.IsModified = true;
 
             // _trees already ensrued already created in ReadTree
@@ -340,8 +339,7 @@ namespace Voron.Impl
                 throw new InvalidOperationException("No such tree: '" + name +
                                                     "' and cannot create trees in read transactions");
 
-            tree = Tree.Create(_lowLevelTransaction, this, flags,  pageLocator: pageLocator);
-            tree.Name = name;
+            tree = Tree.Create(_lowLevelTransaction, this, name, flags, pageLocator: pageLocator);
             tree.State.RootObjectType = type;
 
             using (var space = _lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader)))
