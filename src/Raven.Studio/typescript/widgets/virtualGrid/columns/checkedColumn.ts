@@ -7,9 +7,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
  */
 class checkedColumn implements virtualColumn {
     readonly header = `<div class="checkbox checkbox-table-selector"><input class="checked-column-header styled" type="checkbox" /><label></label></div>`;
-    readonly width = checkedColumn.columnWidth + "px";
-
-    static readonly columnWidth = 38;
+    readonly width = "38px";
 
     renderCell(item: Object, isSelected: boolean): string {
         if (isSelected) {

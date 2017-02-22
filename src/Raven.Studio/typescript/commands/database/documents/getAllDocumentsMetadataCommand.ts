@@ -4,7 +4,7 @@ import pagedResultSet = require("common/pagedResultSet");
 import document = require("models/database/documents/document");
 import endpoints = require("endpoints");
 
-class getAllDocumentsCommand extends commandBase {
+class getAllDocumentsMetadataCommand extends commandBase {
 
     constructor(private ownerDatabase: database, private skip: number, private take: number) {
         super();
@@ -29,7 +29,8 @@ class getAllDocumentsCommand extends commandBase {
     private fetchDocs(): JQueryPromise<document[]> {
         const args = {
             start: this.skip,
-            pageSize: this.take
+            pageSize: this.take,
+            'metadata-only': true
         };
 
         const docSelector = (docs: resultsDto<documentDto>) => docs.Results.map(d => new document(d));
@@ -45,4 +46,4 @@ class getAllDocumentsCommand extends commandBase {
     }
 }
 
-export = getAllDocumentsCommand;
+export = getAllDocumentsMetadataCommand;

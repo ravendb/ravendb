@@ -5,6 +5,12 @@
         position: relative;
     }
 
+    .column-container.flex-window-head {
+        height: 32px;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
     .column {
         display: inline-block;
         text-overflow: ellipsis;
@@ -46,12 +52,6 @@
     .text-cell {
         text-overflow: ellipsis; 
         overflow: hidden;
-        color: white;
-    }
-
-    .hyperlink-cell {
-        text-overflow: ellipsis; 
-        overflow: hidden;
     }
 
     .checkbox {
@@ -71,4 +71,29 @@
     .token-string {
         color:#eca136;
     }
+
+    .viewport.flex-window-scroll {
+        overflow-x: auto;
+    }
+}
+
+.resizable {
+    .virtual-grid {
+        .column {
+            position: relative;
+
+            &:before {
+                content: '';
+                background-color: @gray-dark;
+                display: block;
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                right: 5px;
+                width: 3px;
+                cursor: ew-resize;
+            }
+        }
+    }
+
 }

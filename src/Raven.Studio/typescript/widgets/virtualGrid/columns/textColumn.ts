@@ -61,8 +61,8 @@ class textColumn<T> implements virtualColumn {
 
         if (_.isUndefined(cellValue)) {
             return {
-                rawText: "undefined",
-                title: "undefined",
+                rawText: "",
+                title: "",
                 typeCssClass: "token-undefined"
             }
         }

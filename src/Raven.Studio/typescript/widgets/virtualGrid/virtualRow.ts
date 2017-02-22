@@ -22,6 +22,10 @@ class virtualRow {
         return this._top;
     }
 
+    get data(): Object {
+        return this.item;
+    }
+
     /**
      * Gets the index of the row this virtual row is displaying.
      */
