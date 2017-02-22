@@ -57,7 +57,7 @@ namespace Raven.Server.Rachis
         {
             using (var writer = new BlittableJsonTextWriter(context, _stream))
             {
-                Console.WriteLine($"{_src} > {_dest}: - {msg}");
+                Console.WriteLine($"{DateTime.UtcNow} {_src} > {_dest}: - {msg}");
 
                 context.Write(writer, msg);
             }
@@ -68,7 +68,7 @@ namespace Raven.Server.Rachis
         {
             if (_log?.IsInfoEnabled == true)
             {
-                _log.Info($"Voting {rvr.VoteGranted} for term {rvr.Term} becaise: {rvr.Message}");
+                _log.Info($"Voting {rvr.VoteGranted} for term {rvr.Term} because: {rvr.Message}");
             }
 
             Send(context, new DynamicJsonValue

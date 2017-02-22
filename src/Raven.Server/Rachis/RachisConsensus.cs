@@ -773,7 +773,7 @@ namespace Raven.Server.Rachis
                     var oldTerm = reader.ReadLittleEndianInt64();
                     if (oldTerm != term)
                         throw new InvalidOperationException(
-                            $"Cannot change just the last commit index (is {oldIndex} term, was {oldTerm} but was requested to change it ot {term})");
+                            $"Cannot change just the last commit index (is {oldIndex} term, was {oldTerm} but was requested to change it to {term})");
                 }
             }
 
