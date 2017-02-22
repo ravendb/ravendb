@@ -150,7 +150,7 @@ namespace Sparrow.Json
             return prop;
         }
 
-        public void Sort(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
+        public void Sort(FastList<BlittableJsonDocumentBuilder.PropertyTag> properties)
         {
             var index = GetPropertiesHashedIndex(properties);
 
@@ -159,14 +159,14 @@ namespace Sparrow.Json
             {
                 UpdatePropertiesSortOrder();
             }
-            var cachedSort = _cachedSorts[index];
 
+            var cachedSort = _cachedSorts[index];
             if (cachedSort?.Sorting.Count != properties.Count)
             {
                 UnlikelySortProperties(properties);
                 return;
             }
-            
+
             // we are frequently going to see documents with ids in the same order
             // so we can take advantage of that by remember the previous sort, we 
             // check if the values are the same, and if so, save the sort
@@ -178,11 +178,11 @@ namespace Sparrow.Json
                     cachedSort.Sorting[i].Tmp = properties[i];
                 }
                 else
-                {
+                    {
                     UnlikelySortProperties(properties);
                     return;
+                    }
                 }
-            }
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (int i = 0; i < cachedSort.Sorting.Count; i++)
@@ -198,7 +198,7 @@ namespace Sparrow.Json
             
         }
 
-        private int GetPropertiesHashedIndex(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
+        private int GetPropertiesHashedIndex(FastList<BlittableJsonDocumentBuilder.PropertyTag> properties)
         {
             int hash = 0;
             for (int i = 0; i < properties.Count; i++)
@@ -213,7 +213,7 @@ namespace Sparrow.Json
             return hash;
         }
 
-        private void UnlikelySortProperties(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
+        private void UnlikelySortProperties(FastList<BlittableJsonDocumentBuilder.PropertyTag> properties)
         {
             _hasDuplicates = false;
 

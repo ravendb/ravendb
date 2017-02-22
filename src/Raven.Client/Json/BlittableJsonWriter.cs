@@ -8,23 +8,23 @@ namespace Raven.Client.Json
 {
     internal class BlittableJsonWriter : JsonWriter
     {
-        private readonly ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> _manualBlittalbeJsonDocumentBuilder;
+        private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _manualBlittableJsonDocumentBuilder;
         private bool _first;
         private readonly DocumentInfo _documentInfo;
 
         public BlittableJsonWriter(JsonOperationContext context, DocumentInfo documentInfo = null,
             BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter<UnmanagedWriteBuffer> writer = null)
         {
-            _manualBlittalbeJsonDocumentBuilder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context, mode ?? BlittableJsonDocumentBuilder.UsageMode.None, writer);
-            _manualBlittalbeJsonDocumentBuilder.Reset(mode ?? BlittableJsonDocumentBuilder.UsageMode.None);
-            _manualBlittalbeJsonDocumentBuilder.StartWriteObjectDocument();
+            _manualBlittableJsonDocumentBuilder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context, mode ?? BlittableJsonDocumentBuilder.UsageMode.None, writer);
+            _manualBlittableJsonDocumentBuilder.Reset(mode ?? BlittableJsonDocumentBuilder.UsageMode.None);
+            _manualBlittableJsonDocumentBuilder.StartWriteObjectDocument();
             _documentInfo = documentInfo;
             _first = true;
         }
 
         public override void WriteStartObject()
         {
-            _manualBlittalbeJsonDocumentBuilder.StartWriteObject();
+            _manualBlittableJsonDocumentBuilder.StartWriteObject();
             if (!_first) return;
             _first = false;
             WriteMetadata();
@@ -35,59 +35,59 @@ namespace Raven.Client.Json
             if (_documentInfo == null) return;
             if (_documentInfo.Metadata?.Modifications != null && (_documentInfo.Metadata.Modifications.Properties.Count > 0))
             {
-                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
-                _manualBlittalbeJsonDocumentBuilder.StartWriteObject();
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
+                _manualBlittableJsonDocumentBuilder.StartWriteObject();
 
                 foreach (var prop in _documentInfo.Metadata.Modifications.Properties)
                 {
-                    _manualBlittalbeJsonDocumentBuilder.WritePropertyName(prop.Item1);
+                    _manualBlittableJsonDocumentBuilder.WritePropertyName(prop.Item1);
                     var value = prop.Item2;
 
                     if (value == null)
                     {
-                        _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+                        _manualBlittableJsonDocumentBuilder.WriteValueNull();
                         continue;
                     }
 
                     var strValue = value as string;
                     if (strValue != null)
-                        _manualBlittalbeJsonDocumentBuilder.WriteValue(strValue);
+                        _manualBlittableJsonDocumentBuilder.WriteValue(strValue);
                     else if (value is long)
-                        _manualBlittalbeJsonDocumentBuilder.WriteValue((long)value);
+                        _manualBlittableJsonDocumentBuilder.WriteValue((long)value);
                     else if (value is double)
-                        _manualBlittalbeJsonDocumentBuilder.WriteValue((double)value);
+                        _manualBlittableJsonDocumentBuilder.WriteValue((double)value);
                     else if (value is decimal)
-                        _manualBlittalbeJsonDocumentBuilder.WriteValue((decimal)value);
+                        _manualBlittableJsonDocumentBuilder.WriteValue((decimal)value);
                     else if (value is float)
-                        _manualBlittalbeJsonDocumentBuilder.WriteValue((float)value);
+                        _manualBlittableJsonDocumentBuilder.WriteValue((float)value);
                     else if (value is bool)
-                        _manualBlittalbeJsonDocumentBuilder.WriteValue((bool)value);
+                        _manualBlittableJsonDocumentBuilder.WriteValue((bool)value);
                     else if (value is LazyDoubleValue)
-                        _manualBlittalbeJsonDocumentBuilder.WriteValue((LazyDoubleValue) value);
+                        _manualBlittableJsonDocumentBuilder.WriteValue((LazyDoubleValue) value);
                     else
                         throw new NotSupportedException($"The value type {value.GetType().FullName} of key {prop.Item1} is not supported in the metadata");
                 }
 
                 if (_documentInfo.Collection != null)
                 {
-                    _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Collection);
-                    _manualBlittalbeJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
+                    _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Collection);
+                    _manualBlittableJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
                 }
 
-                _manualBlittalbeJsonDocumentBuilder.WriteObjectEnd();
+                _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
                 _documentInfo.Metadata.Modifications = null;
             }
             else if (_documentInfo.Metadata != null)
             {
-                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
-                _manualBlittalbeJsonDocumentBuilder.StartWriteObject();
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
+                _manualBlittableJsonDocumentBuilder.StartWriteObject();
                 var ids = _documentInfo.Metadata.GetPropertiesByInsertionOrder();
 
                 foreach (var id in ids)
                 {
                     var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                     _documentInfo.Metadata.GetPropertyByIndex(id, ref propertyDetails);
-                    _manualBlittalbeJsonDocumentBuilder.WritePropertyName(propertyDetails.Name);
+                    _manualBlittableJsonDocumentBuilder.WritePropertyName(propertyDetails.Name);
 
                     switch (propertyDetails.Token & BlittableJsonReaderBase.TypesMask)
                     {
@@ -95,68 +95,68 @@ namespace Raven.Client.Json
                             //in this case it can only be change vector (since it is the only array in the metadata)
                             ThrowIfNotSupportedArrayProperty(propertyDetails);
 
-                            _manualBlittalbeJsonDocumentBuilder.StartWriteArray();
+                            _manualBlittableJsonDocumentBuilder.StartWriteArray();
                             var changeVectorArray = propertyDetails.Value as BlittableJsonReaderArray;
                             if (changeVectorArray != null)
                             {
                                 var changeVectorEntryPropDetails = new BlittableJsonReaderObject.PropertyDetails();
                                 foreach (BlittableJsonReaderObject entry in changeVectorArray)
                                 {
-                                    _manualBlittalbeJsonDocumentBuilder.StartWriteObject();
+                                    _manualBlittableJsonDocumentBuilder.StartWriteObject();
                                     var propsIndexes = entry.GetPropertiesByInsertionOrder();
                                     foreach (var index in propsIndexes)
                                     {
                                         entry.GetPropertyByIndex(index, ref changeVectorEntryPropDetails);
-                                        _manualBlittalbeJsonDocumentBuilder.WritePropertyName(changeVectorEntryPropDetails.Name);
+                                        _manualBlittableJsonDocumentBuilder.WritePropertyName(changeVectorEntryPropDetails.Name);
                                         switch (changeVectorEntryPropDetails.Token)
                                         {
                                             case BlittableJsonToken.Integer:
-                                                _manualBlittalbeJsonDocumentBuilder.WriteValue((long)changeVectorEntryPropDetails.Value);
+                                                _manualBlittableJsonDocumentBuilder.WriteValue((long)changeVectorEntryPropDetails.Value);;
                                                 break;
                                             case BlittableJsonToken.String:
-                                                _manualBlittalbeJsonDocumentBuilder.WriteValue(changeVectorEntryPropDetails.Value.ToString());
+                                                _manualBlittableJsonDocumentBuilder.WriteValue(changeVectorEntryPropDetails.Value.ToString());
                                                 break;
                                         }
 
                                     }
-                                    _manualBlittalbeJsonDocumentBuilder.WriteObjectEnd();
+                                    _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
                                 }
                             }
-                            _manualBlittalbeJsonDocumentBuilder.WriteArrayEnd();
+                            _manualBlittableJsonDocumentBuilder.WriteArrayEnd();
                             break;
                         case BlittableJsonToken.Integer:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue((long) propertyDetails.Value);
+                            _manualBlittableJsonDocumentBuilder.WriteValue((long) propertyDetails.Value);
                             break;
                         case BlittableJsonToken.Float:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue((float) propertyDetails.Value);
+                            _manualBlittableJsonDocumentBuilder.WriteValue((float)propertyDetails.Value);
                             break;
                         case BlittableJsonToken.String:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());
+                            _manualBlittableJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());
                             break;
                         case BlittableJsonToken.CompressedString:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());
+                            _manualBlittableJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());
                             break;
                         case BlittableJsonToken.Boolean:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValue((bool) propertyDetails.Value);
+                            _manualBlittableJsonDocumentBuilder.WriteValue((bool)propertyDetails.Value);
                             break;
                         case BlittableJsonToken.Null:
-                            _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+                            _manualBlittableJsonDocumentBuilder.WriteValueNull();
                             break;
                         default:
                             throw new NotSupportedException();
                     }
                 }
-                _manualBlittalbeJsonDocumentBuilder.WriteObjectEnd();
+                _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
             }
             else if (_documentInfo.Collection != null)
             {
-                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
-                _manualBlittalbeJsonDocumentBuilder.StartWriteObject();
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
+                _manualBlittableJsonDocumentBuilder.StartWriteObject();
 
-                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Collection);
-                _manualBlittalbeJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Collection);
+                _manualBlittableJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
 
-                _manualBlittalbeJsonDocumentBuilder.WriteObjectEnd();
+                _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
             }
         }
 
@@ -171,118 +171,118 @@ namespace Raven.Client.Json
 
         public override void WriteEndObject()
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteObjectEnd();
+            _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
         }
 
         public void FinalizeDocument()
         {
-            _manualBlittalbeJsonDocumentBuilder.FinalizeDocument();
+            _manualBlittableJsonDocumentBuilder.FinalizeDocument();
         }
 
         public override void WriteStartArray()
         {
-            _manualBlittalbeJsonDocumentBuilder.StartWriteArray();
+            _manualBlittableJsonDocumentBuilder.StartWriteArray();
         }
 
         public override void WriteEndArray()
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteArrayEnd();
+            _manualBlittableJsonDocumentBuilder.WriteArrayEnd();
         }
 
         public override void WritePropertyName(string name)
         {
-            _manualBlittalbeJsonDocumentBuilder.WritePropertyName(name);
+            _manualBlittableJsonDocumentBuilder.WritePropertyName(name);
         }
 
         public override void WritePropertyName(string name, bool escape)
         {
-            _manualBlittalbeJsonDocumentBuilder.WritePropertyName(name);
+            _manualBlittableJsonDocumentBuilder.WritePropertyName(name);
         }
 
         public override void WriteNull()
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(string value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(int value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(long value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(float value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(double value)
         {
             if (double.IsNaN(value))
             {
-                _manualBlittalbeJsonDocumentBuilder.WriteValue("NaN");
+                _manualBlittableJsonDocumentBuilder.WriteValue("NaN");
                 return;
             }
 
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(bool value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(short value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(byte value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(decimal value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(DateTime value)
         {
             var s = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(s);
+            _manualBlittableJsonDocumentBuilder.WriteValue(s);
         }
 
         public override void WriteValue(DateTimeOffset value)
         {
             var s = value.ToString(Default.DateTimeOffsetFormatsToWrite);
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(s);
+            _manualBlittableJsonDocumentBuilder.WriteValue(s);
         }
 
         public override void WriteValue(int? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(long? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(float? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(double? value)
@@ -291,148 +291,148 @@ namespace Raven.Client.Json
             {
                 if (double.IsNaN(value.Value))
                 {
-                    _manualBlittalbeJsonDocumentBuilder.WriteValue("NaN");
+                    _manualBlittableJsonDocumentBuilder.WriteValue("NaN");
                     return;
                 }
 
-                _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
             }
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(bool? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(short? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(byte? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(decimal? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue((float)value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue((float)value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(DateTime? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value.GetDefaultRavenFormat(isUtc: value.Value.Kind == DateTimeKind.Utc));
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.GetDefaultRavenFormat(isUtc: value.Value.Kind == DateTimeKind.Utc));
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(DateTimeOffset? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value.ToString(Default.DateTimeOffsetFormatsToWrite));
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString(Default.DateTimeOffsetFormatsToWrite));
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         protected override void Dispose(bool disposing)
         {
-            _manualBlittalbeJsonDocumentBuilder.Dispose();
+            _manualBlittableJsonDocumentBuilder.Dispose();
         }
 
         public BlittableJsonReaderObject CreateReader()
         {
-            return _manualBlittalbeJsonDocumentBuilder.CreateReader();
+            return _manualBlittableJsonDocumentBuilder.CreateReader();
         }
 
         public override void WriteValue(Guid value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value.ToString());
+            _manualBlittableJsonDocumentBuilder.WriteValue(value.ToString());
         }
 
         public override void WriteValue(Guid? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value.ToString());
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString());
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(char value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value.ToString());
+            _manualBlittableJsonDocumentBuilder.WriteValue(value.ToString());
         }
 
         public override void WriteValue(char? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value.ToString());
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString());
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(sbyte value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(sbyte? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(uint value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(uint? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(ushort value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(ushort? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(ulong value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue((long)value);
+            _manualBlittableJsonDocumentBuilder.WriteValue((long)value);
         }
 
         public override void WriteValue(ulong? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue((long)value.Value);
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue((long)value.Value);
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(TimeSpan value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value.ToString());
+            _manualBlittableJsonDocumentBuilder.WriteValue(value.ToString());
         }
 
         public override void WriteValue(TimeSpan? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.ToString());
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.ToString());
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(byte[] value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(Convert.ToBase64String(value));
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(Convert.ToBase64String(value));
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(Uri value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.ToString());
-            else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.ToString());
+            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(object value)

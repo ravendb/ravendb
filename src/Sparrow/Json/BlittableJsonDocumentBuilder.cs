@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json.Parsing;
 
@@ -127,7 +129,7 @@ namespace Sparrow.Json
                         currentState.CurrentProperty = prop;
                         currentState.MaxPropertyId = prop.PropertyId;
                         currentState.FirstWrite = _writer.Position;
-                        currentState.Properties = new List<PropertyTag>
+                        currentState.Properties = new FastList<PropertyTag>
                         {
                             new PropertyTag
                             {
@@ -142,8 +144,11 @@ namespace Sparrow.Json
                         };
                         continue;
                     case ContinuationState.CompleteDocumentArray:
-                        currentState.Properties[0].Type = (byte)_writeToken.WrittenToken;
-                        currentState.Properties[0].Position = _writeToken.ValuePos;
+                        currentState.Properties[0] = new PropertyTag(                        
+                            type: (byte)_writeToken.WrittenToken,
+                            property: currentState.Properties[0].Property,                           
+                            position: _writeToken.ValuePos
+                        );
 
                         // Register property position, name id (PropertyId) and type (object type and metadata)
                         _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
@@ -153,14 +158,14 @@ namespace Sparrow.Json
                         if (_state.CurrentTokenType != JsonParserToken.StartObject)
                             ThrowExpectedStartOfObject();
                         currentState.State = ContinuationState.ReadPropertyName;
-                        currentState.Properties = new List<PropertyTag>();
+                        currentState.Properties = new FastList<PropertyTag>();
                         currentState.FirstWrite = _writer.Position;
                         continue;
                     case ContinuationState.ReadArray:
                         if (_state.CurrentTokenType != JsonParserToken.StartArray)
                             ThrowExpectedStartOfArray();
-                        currentState.Types = new List<BlittableJsonToken>();
-                        currentState.Positions = new List<int>();
+                        currentState.Types = new FastList<BlittableJsonToken>();
+                        currentState.Positions = new FastList<int>();
                         currentState.State = ContinuationState.ReadArrayValue;
                         continue;
                     case ContinuationState.ReadArrayValue:
@@ -189,8 +194,7 @@ namespace Sparrow.Json
                     case ContinuationState.CompleteArray:
 
                         var arrayToken = BlittableJsonToken.StartArray;
-                        var arrayInfoStart = _writer.WriteArrayMetadata(currentState.Positions, currentState.Types,
-                            ref arrayToken);
+                        var arrayInfoStart = _writer.WriteArrayMetadata(currentState.Positions, currentState.Types, ref arrayToken);
 
                         _writeToken = new WriteToken
                         {
@@ -209,9 +213,8 @@ namespace Sparrow.Json
 
                         if (_state.CurrentTokenType == JsonParserToken.EndObject)
                         {
-                            _modifier?.EndOBject();
-                            _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite,
-                                currentState.MaxPropertyId);
+                            _modifier?.EndObject();
+                            _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
                             if (_continuationState.Count == 0)
                                 return true;
                             currentState = _continuationState.Pop();
@@ -373,22 +376,29 @@ namespace Sparrow.Json
         public struct BuildingState
         {
             public ContinuationState State;
-            public List<PropertyTag> Properties;
+            public FastList<PropertyTag> Properties;
             public CachedProperties.PropertyName CurrentProperty;
             public int MaxPropertyId;
-            public List<BlittableJsonToken> Types;
-            public List<int> Positions;
+            public FastList<BlittableJsonToken> Types;
+            public FastList<int> Positions;
             public long FirstWrite;
         }
 
 
-        public class PropertyTag
+        public struct PropertyTag
         {
             public int Position;
-            public CachedProperties.PropertyName Property;
+			public CachedProperties.PropertyName Property;
             public byte Type;
 
-            public override string ToString()
+            public PropertyTag(byte type, CachedProperties.PropertyName property, int position)
+            {
+                this.Type = type;
+                this.Property = property;
+                this.Position = position;
+            }
+			
+			public override string ToString()
             {
                 return $"{nameof(Position)}: {Position}, {nameof(Property)}: {Property.Comparer} {Property.PropertyId}, {nameof(Type)}: {(BlittableJsonToken)Type}";
             }
@@ -478,7 +488,7 @@ namespace Sparrow.Json
     public interface IBlittableDocumentModifier
     {
         void StartObject();
-        void EndOBject();
+        void EndObject();
         bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state);
     }
 

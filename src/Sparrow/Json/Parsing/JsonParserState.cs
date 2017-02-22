@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Sparrow.Collections;
 
 namespace Sparrow.Json.Parsing
 {
@@ -12,7 +13,7 @@ namespace Sparrow.Json.Parsing
         public JsonParserToken CurrentTokenType;
         public JsonParserTokenContinuation Continuation;
 
-        public readonly List<int> EscapePositions = new List<int>();
+        public readonly FastList<int> EscapePositions = new FastList<int>();
 
         public static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"' };
         public static readonly byte[] EscapeCharsAsBytes = { (byte)'\b', (byte)'\t', (byte)'\r', (byte)'\n', (byte)'\f', (byte)'\\', (byte)'"' };
@@ -72,6 +73,30 @@ namespace Sparrow.Json.Parsing
         }
 
         public static void FindEscapePositionsIn(List<int> buffer, byte* str, int len, int previousComputedMaxSize)
+        {
+            buffer.Clear();
+            if (previousComputedMaxSize == 5)
+            {
+                // if the value is 5, then we got no escape positions, see: FindEscapePositionsMaxSize
+                // and we don't have to do any work
+                return;
+            }
+            var lastEscape = 0;
+            for (int i = 0; i < len; i++)
+            {
+                for (int j = 0; j < EscapeCharsAsBytes.Length; j++)
+                {
+                    if (str[i] == EscapeCharsAsBytes[j])
+                    {
+                        buffer.Add(i - lastEscape);
+                        lastEscape = i + 1;
+                        break;
+                    }
+                }
+            }
+        }
+
+        public static void FindEscapePositionsIn(FastList<int> buffer, byte* str, int len, int previousComputedMaxSize)
         {
             buffer.Clear();
             if (previousComputedMaxSize == 5)

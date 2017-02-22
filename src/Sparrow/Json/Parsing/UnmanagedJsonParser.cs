@@ -456,15 +456,20 @@ namespace Sparrow.Json.Parsing
                 {
                     var b = _inputBuffer[_pos++];
                     _charPos++;
+
                     if (_escapeMode == false)
                     {
+                        // PERF: Early escape to avoid jumping around in the code layout.
+                        if (b != _currentQuote && b != (byte) '\\')
+                            continue;
+
                         if (b == _currentQuote)
                         {
                             _unmanagedWriteBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart - 1
                                 /*don't include the last quote*/);
                             return true;
                         }
-                        if (b == (byte) '\\')
+                        else // Then it is '\\'
                         {
                             _escapeMode = true;
                             _unmanagedWriteBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart - 1

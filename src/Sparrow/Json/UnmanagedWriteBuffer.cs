@@ -37,6 +37,7 @@ namespace Sparrow.Json
             _returnBuffer = context.GetManagedBuffer(out _buffer);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(byte[] buffer, int start, int count)
         {
             fixed (byte* p = buffer)
@@ -204,13 +205,17 @@ namespace Sparrow.Json
 
         public bool IsDisposed => _current == null;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(byte* buffer, int length)
         {
+#if DEBUG
+            // PERF: This check will only happen in debug mode because it will fail with a NRE anyways on release.
             if (_current == null)
             {
                 ThrowOnDisposed();
                 return;
             }
+#endif
             if (length == 0)
                 return;
 
@@ -222,11 +227,11 @@ namespace Sparrow.Json
             }
             else
             {
-                UnlikelyWrite(buffer, length);
+                WriteUnlikely(buffer, length);
             }
         }
 
-        private void UnlikelyWrite(byte* buffer, int length)
+        private void WriteUnlikely(byte* buffer, int length)
         {
             var bufferPosition = 0;
             var lengthLeft = length;
@@ -281,15 +286,29 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteByte(byte data)
         {
+#if DEBUG
+            // PERF: This check will only happen in debug mode because it will fail anyways with a NRE anyways on release.
             if (_current == null)
             {
                 ThrowOnDisposed();
                 return;
             }
+#endif
             if (_current.Used == _current.Allocation.SizeInBytes)
-            {
-                AllocateNextSegment(1, allowGrowth: true);
-            }
+                goto Grow; // PERF: Diminish the size of the most common path.
+
+            _sizeInBytes++;
+            *(_current.Address + _current.Used) = data;
+            _current.Used++;
+            return;
+
+            Grow:
+            WriteByteUnlikely(data);
+        }
+
+        private void WriteByteUnlikely(byte data)
+        {
+            AllocateNextSegment(1, allowGrowth: true);
             _sizeInBytes++;
             *(_current.Address + _current.Used) = data;
             _current.Used++;
@@ -319,13 +338,17 @@ namespace Sparrow.Json
             return copiedBytes;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear()
         {
+#if DEBUG
+            // PERF: This check will only happen in debug mode because it will fail anyways with a NRE anyways on release.
             if (_current == null)
             {
                 ThrowOnDisposed();
                 return;
             }
+#endif
 
             _current.Used = 0;
             _sizeInBytes = 0;

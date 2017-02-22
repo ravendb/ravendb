@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
@@ -33,7 +34,6 @@ namespace Raven.Server.Smuggler.Documents
 
         private long _buildVersion;
 
-        private readonly Size _resetThreshold = new Size(32, SizeUnit.Megabytes);
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
 
         public StreamSource(Stream stream, JsonOperationContext context)
@@ -147,14 +147,17 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_readingMetadataObject == false)
                     return;
+
                 _depth++;
             }
 
-            public void EndOBject()
+            public void EndObject()
             {
                 if (_readingMetadataObject == false)
                     return;
+
                 _depth--;
+
                 Debug.Assert(_depth >= 0);
                 if (_depth == 0)
                     _readingMetadataObject = false;
@@ -412,6 +415,7 @@ namespace Raven.Server.Smuggler.Documents
                 throw new InvalidDataException("Expected property @metadata.Raven-Replication-History to have array type, but was: " +
                                                state.CurrentTokenType);
             }
+
 
             public void Dispose()
             {
