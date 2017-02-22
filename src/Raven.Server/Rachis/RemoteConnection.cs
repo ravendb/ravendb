@@ -57,6 +57,8 @@ namespace Raven.Server.Rachis
         {
             using (var writer = new BlittableJsonTextWriter(context, _stream))
             {
+                Console.WriteLine($"{DateTime.UtcNow} {_src} > {_dest}: - {msg}");
+
                 context.Write(writer, msg);
             }
         }

@@ -140,7 +140,7 @@ namespace Raven.Server.Rachis
             long prevTerm;
             using (context.OpenReadTransaction())
             {
-                prevTerm = _engine.GetTermFor(context,fstAppendEntries.PrevLogIndex) ?? 0;
+                prevTerm = _engine.GetTermFor(context, fstAppendEntries.PrevLogIndex) ?? 0;
             }
             if (prevTerm != fstAppendEntries.PrevLogTerm)
             {
@@ -164,7 +164,7 @@ namespace Raven.Server.Rachis
             // in most cases, it is an empty snapshot, then start regular append entries
             // the reason we send this is to simplify the # of states in the protocol
 
-           var snapshot = _connection.ReadInstallSnapshot(context);
+            var snapshot = _connection.ReadInstallSnapshot(context);
 
             using (context.OpenWriteTransaction())
             {
@@ -176,7 +176,7 @@ namespace Raven.Server.Rachis
                 else
                 {
                     var lastEntryIndex = _engine.GetLastEntryIndex(context);
-                    if (lastEntryIndex != snapshot.LastIncludedIndex)
+                    if (lastEntryIndex < snapshot.LastIncludedIndex)
                     {
                         throw new InvalidOperationException($"The snapshot installation had failed because the last included index {snapshot.LastIncludedIndex} in term {snapshot.LastIncludedTerm} doesn't match the last entry {lastEntryIndex}");
                     }
@@ -248,7 +248,7 @@ namespace Raven.Server.Rachis
                                 reader.ReadExactly(size);
 
                                 byte* ptr;
-                                using (tree.DirectAdd(key, size,out ptr))
+                                using (tree.DirectAdd(key, size, out ptr))
                                 {
                                     fixed (byte* pBuffer = reader.Buffer)
                                     {
@@ -445,41 +445,58 @@ namespace Raven.Server.Rachis
             {
                 using (this)
                 {
-                    TransactionOperationContext context;
-                    using (_engine.ContextPool.AllocateOperationContext(out context))
+                    try
                     {
-                        NegotiateWithLeader(context, (AppendEntries)obj);
-                    }
+                        TransactionOperationContext context;
+                        using (_engine.ContextPool.AllocateOperationContext(out context))
+                        {
+                            NegotiateWithLeader(context, (AppendEntries) obj);
+                        }
 
-                    FollowerSteadyState();
+                        FollowerSteadyState();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                    catch (AggregateException ae)
+                        when (
+                            ae.InnerException is OperationCanceledException ||
+                            ae.InnerException is ObjectDisposedException)
+                    {
+                    }
+                    catch (Exception e)
+                    {
+                        TransactionOperationContext context;
+                        using (_engine.ContextPool.AllocateOperationContext(out context))
+                        {
+                            _connection.Send(context, e);
+                        }
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info("Failed to talk to leader: " + _engine.Url, e);
+                        }
+                    }
                 }
             }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (AggregateException ae)
-                when (ae.InnerException is OperationCanceledException || ae.InnerException is ObjectDisposedException)
-            {
-            }
-            catch (Exception e)
+            catch(Exception e)
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to leader: " + _engine.Url, e);
+                    _engine.Log.Info("Failed to dispose follower when talking leader: " + _engine.Url, e);
                 }
             }
         }
 
         public void Dispose()
-        {
-            _connection.Dispose();
+{
+    _connection.Dispose();
 
-            if (_thread != null &&
-                _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
-        }
+    if (_thread != null &&
+        _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+        _thread.Join();
+}
     }
 }
