@@ -54,10 +54,7 @@ namespace Raven.Client.Documents.Operations
                 {
                     Method = HttpMethods.Get,
                 };
-
-                if (_etag.HasValue)
-                    request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue($"\"{_etag.Value}\""));
-
+                AddEtagIfNotNull(_etag, request);
                 return request;
             }
 

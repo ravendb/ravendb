@@ -101,6 +101,22 @@ namespace Raven.Client.Http
         {
             throw new InvalidDataException("Response is invalid.");
         }
+
+        protected void AddEtagIfNotNull(long? etag, HttpRequestMessage request)
+        {
+            if (IsReadRequest)
+            {
+                if (ResponseType != RavenCommandResponseType.Stream)
+                    throw new InvalidOperationException("No need to add the etag for Get requests as the request executer will add it.");
+
+                if (etag.HasValue)
+                    request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{etag.Value}\"");
+                return;
+            }
+
+            if (etag.HasValue)
+                request.Headers.TryAddWithoutValidation("If-Match", $"\"{etag.Value}\"");
+        }
     }
 
     public enum RavenCommandResponseType

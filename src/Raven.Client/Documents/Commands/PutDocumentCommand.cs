@@ -29,10 +29,7 @@ namespace Raven.Client.Documents.Commands
                     Context.Write(stream, Document);
                 }),
             };
-
-            if (Etag.HasValue)
-                request.Headers.IfMatch.Add(new EntityTagHeaderValue($"\"{Etag.Value}\""));
-
+            AddEtagIfNotNull(Etag, request);
             return request;
         }
 

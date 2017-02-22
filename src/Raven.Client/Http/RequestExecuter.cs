@@ -164,7 +164,7 @@ namespace Raven.Client.Http
                         return;
                     }
 
-                    request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue("\"" + cachedEtag + "\""));
+                    request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedEtag}\"");
                 }
 
                 var sp = Stopwatch.StartNew();
