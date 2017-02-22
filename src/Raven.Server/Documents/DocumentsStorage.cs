@@ -2737,7 +2737,7 @@ namespace Raven.Server.Documents
                 Etag = attachmenEtag,
                 ContentType = contentType,
                 Name = name,
-                DocumentId = documentId,
+                DocumentId = documentId, // TODO: Return the documentId from the storage, which may be with a different casing.
             };
         }
 
