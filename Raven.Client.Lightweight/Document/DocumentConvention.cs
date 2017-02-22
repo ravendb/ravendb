@@ -101,6 +101,7 @@ namespace Raven.Client.Document
             IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
             AcceptGzipContent = true;
             RequestTimeSlaThresholdInMilliseconds = 100;
+            TimeToWaitBetweenReplicationTopologyUpdates = TimeSpan.FromMinutes(5);
         }
 
         private IEnumerable<object> DefaultApplyReduceFunction(
@@ -801,6 +802,7 @@ namespace Raven.Client.Document
         /// </summary>
         /// <value>The find identity property.</value>
         public Func<MemberInfo, bool> FindIdentityProperty { get; set; }
+        
 
         /// <summary>
         /// Gets the identity property.

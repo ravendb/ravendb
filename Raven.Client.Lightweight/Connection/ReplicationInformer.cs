@@ -53,7 +53,7 @@ namespace Raven.Client.Connection
             if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
                 return new CompletedTask();
 
-            if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+            if (lastReplicationUpdate.Add(Conventions.TimeToWaitBetweenReplicationTopologyUpdates) > SystemTime.UtcNow)
                 return new CompletedTask();
 
             lock (replicationLock)
@@ -69,7 +69,7 @@ namespace Raven.Client.Connection
 
                 firstTime = false;
 
-                if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+                if (lastReplicationUpdate.Add(Conventions.TimeToWaitBetweenReplicationTopologyUpdates) > SystemTime.UtcNow)
                     return new CompletedTask();
 
                 var taskCopy = refreshReplicationInformationTask;

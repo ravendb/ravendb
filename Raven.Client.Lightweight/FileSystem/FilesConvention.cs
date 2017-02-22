@@ -23,6 +23,7 @@ namespace Raven.Client.FileSystem
             ShouldCacheRequest = url => true;
             MaxNumberOfRequestsPerSession = 30;
             ReplicationInformerFactory = (url, jsonRequestFactory) => new FilesReplicationInformer(this, jsonRequestFactory);
+            TimeToWaitBetweenReplicationTopologyUpdates = TimeSpan.FromMinutes(5);
         }
 
         /// <summary>

@@ -502,31 +502,28 @@ namespace Raven.Client.Document
             rootServicePoint.ConnectionLimit = 256;
             rootServicePoint.MaxIdleTime = Timeout.Infinite;
 #endif
-
-            databaseCommandsGenerator = () =>
-            {
-                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
-                   currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, null,
-                   Listeners.ConflictListeners, true);
-
-                var serverClient = new ServerClient(asyncServerClient);
-
-                if (string.IsNullOrEmpty(DefaultDatabase))
-                    return serverClient;
-                return serverClient.ForDatabase(DefaultDatabase);
-            };
-
             asyncDatabaseCommandsGenerator = () =>
             {
-                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), 
-                    jsonRequestFactory,currentSessionId, 
-                    GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, null,
-                    Listeners.ConflictListeners, true);
+                // we have a non-system database if we stated a default database that is not a system database or if we have a predefined url
+                if (string.IsNullOrEmpty(DefaultDatabase) == false && DefaultDatabase != Constants.SystemDatabase || Url != rootDatabaseUrl)
+                {
+                    var databaseUrl = Url;
+                    if (string.IsNullOrEmpty(DefaultDatabase) == false)
+                        databaseUrl = rootDatabaseUrl + "/databases/" + DefaultDatabase;
 
-                if (string.IsNullOrEmpty(DefaultDatabase))
-                    return asyncServerClient;
-                return asyncServerClient.ForDatabase(DefaultDatabase);
+                    return new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
+                        currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, DefaultDatabase,
+                        Listeners.ConflictListeners, true);
+                }
+
+                return new AsyncServerClient(rootDatabaseUrl, Conventions,
+                            new OperationCredentials(ApiKey, Credentials),
+                            jsonRequestFactory, currentSessionId,
+                            GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, Constants.SystemDatabase, Listeners.ConflictListeners, true);
             };
+            databaseCommandsGenerator = () => new ServerClient((AsyncServerClient)asyncDatabaseCommandsGenerator());
+
+           
         }
 
         public IDocumentStoreReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
@@ -543,7 +540,7 @@ namespace Raven.Client.Document
             if (FailoverServers == null)
                 return result;
 
-            if (dbName == DefaultDatabase)
+            if (dbName == DefaultDatabase || DefaultDatabase == null && dbName == Constants.SystemDatabase)
             {
                 if (FailoverServers.IsSetForDefaultDatabase && result.FailoverServers == null)
                     result.FailoverServers = FailoverServers.ForDefaultDatabase;
@@ -561,6 +558,7 @@ namespace Raven.Client.Document
             bool incrementStrippingBase)
         {
             var key = Url;
+            databaseName = databaseName ?? DefaultDatabase;
             if (string.IsNullOrEmpty(databaseName) == false)
                 key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + databaseName;
 
@@ -597,7 +595,7 @@ namespace Raven.Client.Document
             if (FailoverServers == null)
                 return requestExecuter;
 
-            if (databaseName == DefaultDatabase)
+            if (databaseName == DefaultDatabase || DefaultDatabase==null && databaseName == Constants.SystemDatabase)
             {
                 if (FailoverServers.IsSetForDefaultDatabase && requestExecuter.FailoverServers == null)
                     requestExecuter.FailoverServers = FailoverServers.ForDefaultDatabase;
