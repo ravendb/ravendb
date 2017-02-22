@@ -156,6 +156,7 @@ namespace Voron.Impl
             foreach (var scratchPagerState in previous._pagerStates)
             {
                 scratchPagerState.AddRef();
+                _pagerStates.Add(scratchPagerState);
             }
 
             EnsureNoDuplicateTransactionId(_id);
