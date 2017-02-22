@@ -658,7 +658,7 @@ namespace Raven.Database.Server.Controllers
                     .Where(x => x != null)
                 );
             var command = new AddIncludesCommand(Database, GetRequestTransaction(),
-                                                 (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+                                                 (etag, doc, _) => queryResult.Includes.Add(doc), includes, loadedIds);
             foreach (var result in queryResult.Results)
             {
                 command.Execute(result);
