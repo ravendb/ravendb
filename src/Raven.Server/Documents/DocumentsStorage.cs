@@ -86,7 +86,6 @@ namespace Raven.Server.Documents
             Name = 2,
             ContentType = 3,
             LastModified = 4,
-            StreamIdentifier = 5,
         }
 
         private enum DocumentsTable
@@ -2693,7 +2692,6 @@ namespace Raven.Server.Documents
                     modifiedTicks,
                 };
 
-                Slice streamIdentifierSlice;
                 TableValueReader oldValue;
                 if (table.ReadByKey(keySlice, out oldValue))
                 {
@@ -2711,10 +2709,6 @@ namespace Raven.Server.Documents
                 ExpectedETag = expectedEtag ?? -1
             };
 
-                    var streamIdentifier = oldValue.Read(streamIdentifierPosition, out size);
-                    tbv.Add(streamIdentifier, size);
-                    streamIdentifierScope = Slice.External(context.Allocator, streamIdentifier, size, out streamIdentifierSlice);
-
                     table.Update(oldValue.Id, tbv);*/
                 }
                 else
@@ -2724,15 +2718,12 @@ namespace Raven.Server.Documents
                         ThrowConcurrentExceptionOnMissingAttacment(documentId, name, expectedEtag.Value);
                     }
 
-                    tbv.Add(newEtag); // streamIdentifier
-                    tbv.SliceFromLocation(context.Allocator, (int) AttachmentsTable.StreamIdentifier, out streamIdentifierSlice);
-
                     table.Insert(tbv);
                 }
 
                 // Insert the stream
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                tree.AddStream(streamIdentifierSlice, stream);
+                tree.AddStream(keySlice, stream);
 
                 // Update the document
                 UpdateDocumentAfterAttachmentPut(context, lowerDocumentId, lowerDocumentIdSize, documentId, name, modifiedTicks);
@@ -2859,7 +2850,14 @@ namespace Raven.Server.Documents
             using (DocumentKeyWorker.GetSliceFromKey(context, name, out lowerName))
             using (GetAttachmentKey(context, lowerKey.Content.Ptr, lowerKey.Size, lowerName.Content.Ptr, lowerName.Size, out keySlice))
             {
-                return GetAttachment(context, keySlice);
+                var attachment = GetAttachment(context, keySlice);
+
+                var stream = GetAttachmentStream(context, keySlice);
+                if (stream == null)
+                    throw new FileNotFoundException("Attachment is not found. This should not happen.");
+                attachment.Stream = stream;
+
+                return attachment;
             }
         }
 
@@ -2875,10 +2873,10 @@ namespace Raven.Server.Documents
             return file;
         }
 
-        public Stream GetAttachmentStream(DocumentsOperationContext context, Slice streamIdentifier)
+        public Stream GetAttachmentStream(DocumentsOperationContext context, Slice keySlice)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
-            return tree.ReadStream(streamIdentifier);
+            return tree.ReadStream(keySlice);
         }
 
         private IDisposable GetAttachmentKey(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, byte* lowerName, int lowerNameSize, out Slice keySlice)
@@ -2928,9 +2926,6 @@ namespace Raven.Server.Documents
 
             ptr = tvr.Read((int) AttachmentsTable.ContentType, out size);
             result.ContentType = new LazyStringValue(null, ptr, size, context);
-
-            var streamIdentifier = tvr.Read((int) AttachmentsTable.StreamIdentifier, out size);
-            Slice.External(context.Allocator, streamIdentifier, size, out result.StreamIdentifier);
 
             return result;
         }
@@ -2989,27 +2984,27 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException($"Cannot delete attachment {name} on a document '{documentId}' with a conflict.", e);
             }
 
-            var file = GetAttachment(context, keySlice);
-            if (file == null)
+            var attachment = GetAttachment(context, keySlice);
+            if (attachment == null)
                 return; //NOP, already deleted
 
-            if (expectedEtag != null && file.Etag != expectedEtag)
+            if (expectedEtag != null && attachment.Etag != expectedEtag)
             {
                 throw new ConcurrencyException(
-                    $"Attachment {name} of document '{documentId}' has etag {file.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                    $"Attachment {name} of document '{documentId}' has etag {attachment.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                 {
-                    ActualETag = file.Etag,
+                    ActualETag = attachment.Etag,
                     ExpectedETag = (long) expectedEtag
                 };
             }
 
-            EnsureLastEtagIsPersisted(context, file.Etag);
+            EnsureLastEtagIsPersisted(context, attachment.Etag);
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            table.Delete(file.StorageId);
+            table.Delete(attachment.StorageId);
 
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-            tree.DeleteStream(file.StreamIdentifier);
+            tree.DeleteStream(keySlice);
 
             // TODO: Get attachment count for this doc, and if zero remove HasAttachments from flags
 

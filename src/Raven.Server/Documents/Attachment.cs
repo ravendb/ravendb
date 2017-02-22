@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Sparrow.Json;
 using Voron;
 
@@ -15,8 +16,7 @@ namespace Raven.Server.Documents
 
         public LazyStringValue Name;
         public LazyStringValue ContentType;
-
-        public Slice StreamIdentifier;
+        public Stream Stream;
 
         public static string Canonize(string name, bool trimEnd = true)
         {

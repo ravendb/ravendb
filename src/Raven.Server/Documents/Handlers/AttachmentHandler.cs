@@ -51,17 +51,14 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.Headers["Content-Type"] = attachment.ContentType.ToString();
 
-                var stream = Database.DocumentsStorage.GetAttachmentStream(context, attachment.StreamIdentifier);
-                if (stream == null)
-                {
-                    throw new FileNotFoundException("Attachment is not found. This should not happen.");
-                }
-
                 var fileName = Path.GetFileName(attachment.Name);
                 HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"";
                 // TODO: HttpContext.Response.Headers["Content-Range"] = ;
 
-                await stream.CopyToAsync(ResponseBodyStream());
+                using (var stream = attachment.Stream)
+                {
+                    await stream.CopyToAsync(ResponseBodyStream());
+                }
             }
         }
 
