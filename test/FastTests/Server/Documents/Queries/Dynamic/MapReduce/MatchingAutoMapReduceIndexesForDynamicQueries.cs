@@ -429,7 +429,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create("LineItems", new IndexQueryServerSide
             {
                 Query = "Price:70",
-                SortedFields = new[] { new SortedField("Price_Range") },
+                SortedFields = new[] { new SortedField("Price_L_Range") },
             });
 
             var result = _sut.Match(dynamicQuery);

@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 case SortOptions.StringVal:
                 //case SortOptions.Custom: // TODO arek
                 case SortOptions.None:
-                    throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", FacetedQueryHelper.TryTrimRangeSuffix(facet.AggregationField)));
+                    throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", FieldUtil.RemoveRangeSuffixIfNecessary(facet.AggregationField)));
                 case SortOptions.Numeric:
                     var name = facet.AggregationField;
                     var rangeType = FieldUtil.GetRangeTypeFromFieldName(name);
