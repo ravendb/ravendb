@@ -3,13 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using System.IO;
 using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -66,37 +65,62 @@ namespace Raven.Server.Documents.Handlers
                 var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
                 var contentType = GetStringQueryString("contentType", false) ?? "";
 
+                AttachmentResult result;
                 var tempPath = GetUniqueTempFileName(Database.DocumentsStorage.Environment.Options.DataPager.Options.TempPath, "attachment.", "put");
                 using (var file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan))
                 {
-                    await RequestBodyStream().CopyToAsync(file, 81920, Database.DatabaseShutdown);
-                    file.Position = 0;
-
-                    var etag = GetLongFromHeaders("If-Match");
-
-                    var cmd = new MergedPutAttachmentCommand
+                    JsonOperationContext.ManagedPinnedBuffer buffer;
+                    using (context.GetManagedBuffer(out buffer))
                     {
-                        Database = Database,
-                        ExpectedEtag = etag,
-                        DocumentId = id,
-                        Name = name,
-                        Stream = file,
-                        ContentType = contentType,
-                    };
-                    await Database.TxMerger.Enqueue(cmd);
-                    cmd.ExceptionDispatchInfo?.Throw();
+                        var requestStream = RequestBodyStream();
+                        // TODO: Improve this to be more efficient: read more from the network while we writing to disk.
+                        var count = await requestStream.ReadAsync(buffer.Buffer.Array, 0, buffer.Length, Database.DatabaseShutdown);
+                        while (count > 0)
+                        {
+                            await file.WriteAsync(buffer.Buffer.Array, 0, count, Database.DatabaseShutdown);
+                            count = await requestStream.ReadAsync(buffer.Buffer.Array, 0, buffer.Length, Database.DatabaseShutdown);
+                        }
+                        file.Position = 0;
 
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                        var etag = GetLongFromHeaders("If-Match");
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(PutResult.ETag));
-                        writer.WriteInteger(cmd.EtagResult);
-
-                        writer.WriteEndObject();
+                        var cmd = new MergedPutAttachmentCommand
+                        {
+                            Database = Database,
+                            ExpectedEtag = etag,
+                            DocumentId = id,
+                            Name = name,
+                            Stream = file,
+                            ContentType = contentType,
+                        };
+                        await Database.TxMerger.Enqueue(cmd);
+                        cmd.ExceptionDispatchInfo?.Throw();
+                        result = cmd.Result;
                     }
+                }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(AttachmentResult.Etag));
+                    writer.WriteInteger(result.Etag);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(AttachmentResult.Name));
+                    writer.WriteString(result.Name);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(AttachmentResult.DocumentId));
+                    writer.WriteString(result.DocumentId);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(AttachmentResult.ContentType));
+                    writer.WriteString(result.ContentType);
+
+                    writer.WriteEndObject();
                 }
             }
         }
@@ -155,7 +179,7 @@ namespace Raven.Server.Documents.Handlers
             public long? ExpectedEtag;
             public DocumentDatabase Database;
             public ExceptionDispatchInfo ExceptionDispatchInfo;
-            public long EtagResult;
+            public AttachmentResult Result;
             public string ContentType;
             public Stream Stream;
 
@@ -163,7 +187,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    EtagResult = Database.DocumentsStorage.PutAttachment(context, DocumentId, Name, ContentType, ExpectedEtag, Stream);
+                    Result = Database.DocumentsStorage.PutAttachment(context, DocumentId, Name, ContentType, ExpectedEtag, Stream);
                 }
                 catch (ConcurrencyException e)
                 {

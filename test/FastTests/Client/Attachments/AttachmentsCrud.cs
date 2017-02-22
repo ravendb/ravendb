@@ -28,12 +28,28 @@ namespace FastTests.Client.Attachments
                     "fileNANE.txt"
                 };
                 using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
-                using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
-                using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
-                    store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "image/jpeg"));
-                    store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
+                    Assert.Equal(2, result.Etag);
+                    Assert.Equal(names[0], result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                }
+                using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "image/jpeg"));
+                    Assert.Equal(4, result.Etag);
+                    Assert.Equal(names[1], result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/jpeg", result.ContentType);
+                }
+                using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
+                    Assert.Equal(6, result.Etag);
+                    Assert.Equal(names[2], result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("", result.ContentType);
                 }
 
                 using (var session = store.OpenSession())

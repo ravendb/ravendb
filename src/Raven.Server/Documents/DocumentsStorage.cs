@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Patch;
@@ -2649,13 +2650,13 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public long PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType, long? expectedEtag, Stream stream,
+        public AttachmentResult PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType, long? expectedEtag, Stream stream,
             long? lastModifiedTicks = null)
         {
             if (context.Transaction == null)
             {
                 ThrowRequiresTransaction();
-                return default(long); // never reached
+                return default(AttachmentResult); // never reached
             }
 
             var attachmenEtag = GenerateNextEtag();
@@ -2731,7 +2732,13 @@ namespace Raven.Server.Documents
                 _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
             }
 
-            return attachmenEtag;
+            return new AttachmentResult
+            {
+                Etag = attachmenEtag,
+                ContentType = contentType,
+                Name = name,
+                DocumentId = documentId,
+            };
         }
 
         private void UpdateDocumentAfterAttachmentPut(DocumentsOperationContext context, byte* lowerDocumentId, int lowerDocumentIdSize, 

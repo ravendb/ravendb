@@ -4,12 +4,13 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
+using Raven.Client.Json.Converters;
 using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class PutAttachmentOperation : IOperation<long>
+    public class PutAttachmentOperation : IOperation<AttachmentResult>
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -26,12 +27,12 @@ namespace Raven.Client.Documents.Operations
             _etag = etag;
         }
 
-        public RavenCommand<long> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<AttachmentResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _etag);
         }
 
-        private class PutAttachmentCommand : RavenCommand<long>
+        private class PutAttachmentCommand : RavenCommand<AttachmentResult>
         {
             private readonly string _documentId;
             private readonly string _name;
@@ -71,6 +72,7 @@ namespace Raven.Client.Documents.Operations
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
+                Result = JsonDeserializationClient.AttachmentResult(response);
             }
 
             public override bool IsReadRequest => false;
