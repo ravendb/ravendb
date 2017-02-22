@@ -175,9 +175,10 @@ namespace Raven.Server.Rachis
                 }
                 else
                 {
-                    if (_engine.GetLastEntryIndex(context) != snapshot.LastIncludedIndex)
+                    var lastEntryIndex = _engine.GetLastEntryIndex(context);
+                    if (lastEntryIndex != snapshot.LastIncludedIndex)
                     {
-                        throw new InvalidOperationException("The snapshot installation had failed we will need to get a new one...");
+                        throw new InvalidOperationException($"The snapshot installation had failed because the last included index {snapshot.LastIncludedIndex} in term {snapshot.LastIncludedTerm} doesn't match the last entry {lastEntryIndex}");
                     }
                 }
 
