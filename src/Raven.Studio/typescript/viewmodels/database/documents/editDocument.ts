@@ -120,6 +120,8 @@ class editDocument extends viewModelBase {
         // preload json newline friendly mode to avoid issues with document save
         (ace as any).config.loadModule("ace/mode/json_newline_friendly");
 
+        this.connectedDocuments.compositionComplete();
+
         this.focusOnEditor();
     }
 

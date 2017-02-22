@@ -1,10 +1,11 @@
-﻿import virtualColumn = require("widgets/virtualGrid/virtualColumn");
+﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
 /**
  * Virtual grid column that renders hyperlinks.
  */
 class hyperlinkColumn implements virtualColumn {
-    readonly cellClass = "hyperlink-cell";
 
     /**
      * Creates a new hyperlink column.
@@ -16,15 +17,16 @@ class hyperlinkColumn implements virtualColumn {
     constructor(
         public dataMemberName: string,
         public hrefMemberName: string,
-        public display: string,
+        public header: string,
         public width: string) {
     }
 
     renderCell(item: Object, isSelected: boolean): string {
         const cellValue: Object | null = (item as any)[this.dataMemberName];
         const hyperlinkValue: Object | null = (item as any)[this.hrefMemberName];
-        
-        return `<a href="${hyperlinkValue ? hyperlinkValue.toString() : "javascript:void(0)"}">${cellValue ? cellValue.toString() : ""}</a>`;
+
+        //TODO: get title
+        return `<div class="cell hyperlink-cell"><a href="${hyperlinkValue ? hyperlinkValue.toString() : "javascript:void(0)"}">${cellValue ? cellValue.toString() : ""}</a></div>`;
     }
 }
 

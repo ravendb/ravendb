@@ -1,30 +1,17 @@
 ﻿.virtual-grid {
-	height: 100%;
-	display: flex;
-	flex-direction: column;
     background-color:@gray-base;
 
-    .column-container {
-	    flex-grow: 1;
-    }
-
-    .viewport {
-	    flex-grow: 2;
-	    overflow-y: auto;
-        min-height: 0px;
-    }
-
     .viewport-scroller {
-	    position: relative;
+        position: relative;
     }
 
     .column {
-	    display: inline-block;
-	    text-overflow: ellipsis;
-	    overflow: hidden;
-	    text-align: left;
-	    border-bottom: 2px solid rgb(221, 221, 221);
-	    height: 100%;
+        display: inline-block;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        text-align: left;
+        border-bottom: 2px solid rgb(221, 221, 221);
+        height: 100%;
     }
 
     .checked-column-header {
@@ -34,14 +21,14 @@
     }
 
     .virtual-row {
-	    position: absolute;
-	    top: 0;
-	    left: 0;
-	    right: 0;
-	    white-space: nowrap;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        white-space: nowrap;
 
         &.even {
-	        background-color: fadeout(@gray-darker, 50%);
+            background-color: fadeout(@gray-darker, 50%);
         }
 
         &.selected {
@@ -57,12 +44,13 @@
     }
 
     .text-cell {
-	    text-overflow: ellipsis; 
-	    overflow: hidden;
+        text-overflow: ellipsis; 
+        overflow: hidden;
         color: white;
     }
 
-    .checked-cell {
+    .checkbox {
         text-align: center;
+        width: 38px;
     }
 }

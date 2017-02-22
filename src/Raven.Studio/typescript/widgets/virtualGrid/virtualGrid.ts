@@ -3,13 +3,14 @@
 import virtualRow = require("widgets/virtualGrid/virtualRow");
 import pagedResult = require("widgets/virtualGrid/pagedResult");
 import itemFetch = require("widgets/virtualGrid/itemFetch");
-import virtualColumn = require("widgets/virtualGrid/virtualColumn");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridConfig = require("widgets/virtualGrid/virtualGridConfig");
-import virtualGridConfigDefaults = require("widgets/virtualGrid/virtualGridConfigDefaults");
-import textColumn = require("widgets/virtualGrid/textColumn");
-import checkedColumn = require("widgets/virtualGrid/checkedColumn");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 
 class virtualGrid<T> {
+
     private items: T[] = []; // The items loaded asynchronously.
     private totalItemCount: number | null = null;
     private virtualRows: virtualRow[] = []; // These are the fixed number of elements that get displayed on screen. Each virtual row displays an element from .items array. As the user scrolls, rows will be recycled to represent different items.
@@ -26,22 +27,41 @@ class virtualGrid<T> {
     private isGridVisible = false;
     private selectedIndices: number[] = [];
     private renderHandle = 0;
-    private settings = new virtualGridConfigDefaults();
+    private settings = new virtualGridConfig();
+    private controller: virtualGridController<T>;
     
     private static readonly minItemFetchCount = 100;
     private static readonly viewportSelector = ".viewport";
     private static readonly viewportScrollerSelector = ".viewport-scroller";
 
-    constructor(params: virtualGridConfig<T>) {
-        this.gridId = "vg-" + (1 + Math.random()).toString().replace(".", "");
+    constructor(params: { controller: KnockoutObservable<virtualGridController<T>> }) {
+        this.gridId = _.uniqueId("vg-");
         
-        // Configure the grid using the parameters passed in from HTML.
-        $.extend(this.settings, params);
-        this.initializeColumns();
         this.isSelectAllChecked.subscribe(allSelected => this.selectAllChanged(allSelected));
-        if (params.resetItems) {
-            params.resetItems.subscribe(() => this.resetItems());
+
+        this.initController();
+
+        if (params.controller) {
+            params.controller(this.controller);
         }
+    }
+
+    private initController() {
+        this.controller = {
+            headerVisible: v => this.settings.showHeader(v),
+            useColumns: columns => this.settings.customColumns = columns,
+            useDefaultColumns: () => this.settings.customColumns = undefined,
+            rowSelectionCheckboxVisible: v => this.settings.showRowSelectionCheckbox = v,
+            init: fetcher => this.init(fetcher),
+            reset: () => this.resetItems(),
+        }
+    }
+
+    private init(fetcher: (skip: number, take: number) => JQueryPromise<pagedResult<T>>) {
+        this.settings.fetcher = fetcher;
+
+        this.initializeColumns();
+
         this.fetchItems(0, 100);
     }
 
@@ -82,12 +102,12 @@ class virtualGrid<T> {
 
     private initializeColumns() {
         // If the consumer code passed in some columns, use those.
-        if (this.settings.columns && this.settings.columns.length > 0) {
+        if (this.settings.customColumns && this.settings.customColumns.length > 0) {
             // Also, insert the row selection checkbox column if we're configured to do so.
             if (this.settings.showRowSelectionCheckbox) {
-                this.columns([new checkedColumn() as virtualColumn].concat(this.settings.columns));
+                this.columns([new checkedColumn() as virtualColumn].concat(this.settings.customColumns));
             } else {
-                this.columns(this.settings.columns);
+                this.columns(this.settings.customColumns);
             }
         }
     }
@@ -319,8 +339,9 @@ class virtualGrid<T> {
 
     private assignColumnFromItems(items: T[]): void {
         const propertySet = {};
-        const itemPropertyNames: string[] = [].concat.apply([], items.map(i => Object.keys(i)));
-        const uniquePropertyNames = new Set(itemPropertyNames);
+        const uniquePropertyNames = new Set<string>();
+        items.map(i => _.keys(i).forEach(key => uniquePropertyNames.add(key)));
+        
         const columnNames = Array.from(uniquePropertyNames);
         const viewportWidth = this.$viewportElement.prop("clientWidth");
         const checkedColumnWidth = this.settings.showRowSelectionCheckbox ? checkedColumn.columnWidth : 0;
@@ -345,7 +366,7 @@ class virtualGrid<T> {
 
     private gridClicked(e: JQueryEventObject) {
         if (e.target) {
-            const $target = $(e.target);
+            const $target = this.normalizeTarget($(e.target));
             // If we clicked the the checked column header, toggle select all.
             if ($target.hasClass("checked-column-header")) {
                 this.isSelectAllChecked(!this.isSelectAllChecked());
@@ -359,6 +380,18 @@ class virtualGrid<T> {
         }
     }
 
+    private normalizeTarget($target: JQuery) {
+        const tagName = _.toLower($target.prop("tagName"));
+        if (tagName === "label") {
+            const input = $target.prev("input");
+            if (input) {
+                return input;
+            }
+        }
+
+        return $target;
+    }
+
     private findRowIndexForCell(cellElement: JQuery): number | null {
         return this.virtualRows
             .filter(r => r.element.find(cellElement).length > 0)
@@ -369,11 +402,19 @@ class virtualGrid<T> {
      * Clears the items from the grid and refetches the first chunk of items.
      */
     private resetItems() {
+        if (!this.settings.fetcher) {
+            throw new Error("No fetcher defined, call init() method on virtualGridController");
+        }
+
         this.items.length = 0;
         this.totalItemCount = null;
         this.queuedFetch = null;
         this.isLoading(false);
+        this.$viewportElement.scrollTop(0);
         this.virtualRows.forEach(r => r.reset());
+        this.columns([]);
+        this.selectedIndices = [];
+        this.initializeColumns();
         this.fetchItems(0, 100);
     }
 
@@ -419,24 +460,15 @@ class virtualGrid<T> {
     static install() {
         const componentName = "virtual-grid";
         if (!ko.components.isRegistered(componentName)) {
-            // TODO: we may want to move this to an HTML file that's fetched with RequireJS. Knockout components do support this.
             ko.components.register(componentName, {
                 viewModel: virtualGrid,
                 template: `
-<div class="virtual-grid" data-bind="attr: { id: gridId }">
-    <!-- Columns -->
-    <div class="column-container" data-bind="foreach: columns, visible: settings.showColumns"><div class="column" data-bind="style: { width: $data.width }"><strong data-bind="html: $data.display"></strong></div></div>    
-
-    <!-- Viewport -->
-    <!-- The viewport is the section of the grid showing visible rows -->
-    <div class="viewport" data-bind="css: { 'columns-visible': settings.showColumns }">
-
-        <!-- The viewport scroller is the very tall scrolling part -->
+<div class="virtual-grid flex-window stretch" data-bind="attr: { id: gridId }">
+    <div class="column-container flex-window-head" data-bind="foreach: columns, visible: settings.showHeader"><div class="column" data-bind="style: { width: $data.width }"><strong data-bind="html: $data.header"></strong></div></div>    
+    <div class="viewport flex-window-scroll" data-bind="css: { 'header-visible': settings.showHeader }">
         <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px' }, template: { afterRender: afterRender.bind($data) }">
-
         </div>
     </div>
-    
 </div>
 `
             });
