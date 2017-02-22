@@ -1087,7 +1087,7 @@ namespace Raven.Server.Documents
 
                         if (expectedEtag != null)
                             throw new ConcurrencyException(
-                                $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                                $"Document {key} does not exist, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
 
 
                         if (collectionName == null)
@@ -1113,7 +1113,7 @@ namespace Raven.Server.Documents
                     {
                         if (expectedEtag != null)
                             throw new ConcurrencyException(
-                                $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                                $"Document {key} does not exist, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
                     
                         // we update the tombstone
                         etag = CreateTombstone(context,
@@ -2983,8 +2983,10 @@ namespace Raven.Server.Documents
                 if (document == null)
                 {
                     if (expectedEtag != null)
-                        throw new InvalidOperationException($"Document {documentId} is not exists and maybe already deleted but attachment {name} expected to be there with the {expectedEtag} etag.");
-                    return; //NOP, already deleted
+                        throw new ConcurrencyException($"Document {documentId} does not exist, but delete was called on attachment {name} with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+
+                    // this basically mean that we tried to delete attachment that doesn't exist.
+                    return;
                 }
             }
             catch (DocumentConflictException e)
@@ -2996,8 +2998,10 @@ namespace Raven.Server.Documents
             if (attachment == null)
             {
                 if (expectedEtag != null)
-                    throw new InvalidOperationException($"Attachment {name} of document {documentId} is not exists and maybe already deleted but expected to be there with the {expectedEtag} etag.");
-                return; //NOP, already deleted
+                    throw new ConcurrencyException($"Attachment {name} of document {documentId} does not exist, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+
+                // this basically mean that we tried to delete attachment that doesn't exist.
+                return;
             }
 
             if (expectedEtag != null && attachment.Etag != expectedEtag)
