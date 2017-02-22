@@ -66,8 +66,8 @@ namespace Raven.Server.Documents.Handlers
                 var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
                 var contentType = GetStringQueryString("contentType", false) ?? "";
 
-                var tempPath = GetUniqueTempFileName(Path.GetTempPath(), "tmp");
-                using (var file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose) )
+                var tempPath = GetUniqueTempFileName(Database.DocumentsStorage.Environment.Options.DataPager.Options.TempPath, "attachment.", "put");
+                using (var file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan))
                 {
                     await RequestBodyStream().CopyToAsync(file, 81920, Database.DatabaseShutdown);
                     file.Position = 0;
@@ -126,14 +126,12 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        const string TempFilePrefix = "RavenDB.";
-
-        private static string GetUniqueTempFileName(string tempPath, string extension)
+        private static string GetUniqueTempFileName(string tempPath, string prefix, string extension)
         {
             int attempt = 0;
             while (true)
             {
-                string fileName = TempFilePrefix + Path.GetRandomFileName();
+                string fileName = prefix + Path.GetRandomFileName();
                 fileName = Path.ChangeExtension(fileName, extension);
                 fileName = Path.Combine(tempPath, fileName);
 
