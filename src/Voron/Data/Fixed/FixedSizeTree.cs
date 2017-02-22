@@ -76,7 +76,7 @@ namespace Voron.Data.Fixed
 
             public void Dispose()
             {
-
+                _parent._directAddUsage--;
             }
 
 

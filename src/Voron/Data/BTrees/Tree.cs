@@ -18,6 +18,7 @@ namespace Voron.Data.BTrees
     public unsafe partial class Tree : IDisposable
     {
         private int _directAddUsage;
+
         private readonly TreeMutableState _state;
         private readonly bool _isPageLocatorOwned;
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
@@ -38,8 +39,6 @@ namespace Voron.Data.BTrees
 
         public LowLevelTransaction Llt => _llt;
 
-        private readonly DirectAddScope _addScope;
-
         private Tree(LowLevelTransaction llt, Transaction tx, long root, Slice name, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
             _llt = llt;
@@ -54,8 +53,6 @@ namespace Voron.Data.BTrees
             {
                 RootPageNumber = root
             };
-
-            _addScope = new DirectAddScope(this);
         }
 
         public Tree(LowLevelTransaction llt, Transaction tx, Slice name, TreeMutableState state)
@@ -68,8 +65,6 @@ namespace Voron.Data.BTrees
             _pageLocator = llt.PersistentContext.AllocatePageLocator(llt);
             _state = new TreeMutableState(llt);
             _state = state;
-
-            _addScope = new DirectAddScope(this);
         }
 
         public bool IsLeafCompressionSupported
@@ -409,7 +404,7 @@ namespace Voron.Data.BTrees
 
             public void Dispose()
             {
-                
+                _parent._directAddUsage--;
             }
 
 
