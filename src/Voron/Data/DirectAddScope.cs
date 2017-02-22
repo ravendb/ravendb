@@ -7,7 +7,7 @@ namespace Voron.Data
     {
         private readonly object _tree;
         private uint _usage;
-#if DEBUG
+#if VALIDATE_DIRECT_ADD_STACKTRACE
         private string _allocationStacktrace = null;
 #endif
         public byte* Ptr;
@@ -30,7 +30,7 @@ namespace Voron.Data
             }
             else
             {
-#if DEBUG
+#if VALIDATE_DIRECT_ADD_STACKTRACE
                 ThrowScopeAlreadyOpen(_tree, _allocationStacktrace);
 #else
                 ThrowScopeAlreadyOpen(_tree, null);
