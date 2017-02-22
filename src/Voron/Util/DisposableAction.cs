@@ -9,9 +9,9 @@ using System;
 namespace Voron.Util
 {
     /// <summary>
-    /// A helper class that translate between Disposable and Action
+    /// A helper struct that translate between Disposable and Action
     /// </summary>
-    public class DisposableAction : IDisposable
+    public struct DisposableAction : IDisposable
     {
         private readonly Action _action;
 
