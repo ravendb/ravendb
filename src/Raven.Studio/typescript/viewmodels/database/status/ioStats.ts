@@ -491,7 +491,6 @@ class metrics extends viewModelBase {
         }
 
         context.stroke();
-        context.closePath();
     }
 
     private prepareBrush() {
@@ -630,8 +629,7 @@ class metrics extends viewModelBase {
                 context.lineTo(metrics.initialOffset + (i * metrics.step) + 0.5, yEnd);
             });
 
-            context.stroke();
-            context.closePath();        
+            context.stroke();      
         }
         finally {
             context.restore();
@@ -641,7 +639,6 @@ class metrics extends viewModelBase {
     private drawXaxisTimeLabels(context: CanvasRenderingContext2D, ticks: Date[], timePaddingLeft: number, timePaddingTop: number) {
         try {
             context.save();                  
-            context.beginPath();
 
             context.textAlign = "left";
             context.textBaseline = "top";
@@ -651,8 +648,6 @@ class metrics extends viewModelBase {
             ticks.forEach((x, i) => {
                 context.fillText(this.xTickFormat(x), metrics.initialOffset + (i * metrics.step) + timePaddingLeft, timePaddingTop);
             });
-
-            context.closePath();     
         }
         finally {
             context.restore();
@@ -717,7 +712,6 @@ class metrics extends viewModelBase {
             }          
 
             // 3. Draw all other data (track name + items on track)                                 
-            context.beginPath();        
             context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
             context.clip(); 
             
@@ -797,7 +791,6 @@ class metrics extends viewModelBase {
 
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
         context.save();
-        context.beginPath();
 
         context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
         context.clip();
@@ -815,7 +808,6 @@ class metrics extends viewModelBase {
             this.drawTrackName(context, metrics.indexesString, this.yScale(metrics.indexesString));
         }
 
-        context.closePath();
         context.restore();
     }
 
@@ -895,7 +887,6 @@ class metrics extends viewModelBase {
         }
 
         context.stroke();
-        context.closePath();
     }
 
     private onToggleIndexes() {

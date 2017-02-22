@@ -691,7 +691,6 @@ class metrics extends viewModelBase {
             });
 
             context.stroke();
-            context.closePath();
         }
         finally {
             context.restore();
@@ -701,7 +700,6 @@ class metrics extends viewModelBase {
     private drawXaxisTimeLabels(context: CanvasRenderingContext2D, ticks: Date[], timePaddingLeft: number, timePaddingTop: number) {
         try {
             context.save();
-            context.beginPath();
 
             context.textAlign = "left";
             context.textBaseline = "top";
@@ -710,9 +708,7 @@ class metrics extends viewModelBase {
            
             ticks.forEach((x, i) => {
                 context.fillText(this.xTickFormat(x), metrics.initialOffset + (i * metrics.step) + timePaddingLeft, timePaddingTop);
-            });
-
-            context.closePath();
+            });            
         }
         finally {
             context.restore();
@@ -792,7 +788,6 @@ class metrics extends viewModelBase {
 
             context.save();
             try {
-                context.beginPath();
                 context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
                 context.clip();
 
@@ -812,7 +807,6 @@ class metrics extends viewModelBase {
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
         context.save();
 
-        context.beginPath();
         context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
         context.clip();
 
@@ -986,7 +980,6 @@ class metrics extends viewModelBase {
         }
 
         context.stroke();
-        context.closePath();
     }
 
     private onToggleIndex(indexName: string) {
