@@ -29,7 +29,7 @@ namespace SlowTests.Bugs.Indexing
             //inMemoryRavenConfiguration.Initialize();
 
             //var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed };
-            //var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.NumericLong };
+            //var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.Numeric };
             //var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
 
             //var simpleIndex = new SimpleIndex(ramDirectory, 0, new IndexDefinition
@@ -68,7 +68,7 @@ namespace SlowTests.Bugs.Indexing
             using (var session = store.OpenSession())
             {
                 var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed };
-                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.NumericLong };
+                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.Numeric };
                 var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
 
                 store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition

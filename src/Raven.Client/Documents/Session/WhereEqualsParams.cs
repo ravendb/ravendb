@@ -1,5 +1,3 @@
-using System;
-
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
@@ -31,8 +29,6 @@ namespace Raven.Client.Documents.Session
         /// Should the field be analyzed
         /// </summary>
         public bool IsAnalyzed { get; set; }
-
-        internal Type FieldTypeForIdentifier { get; set; }
 
         /// <summary>
         /// Should the field allow wildcards

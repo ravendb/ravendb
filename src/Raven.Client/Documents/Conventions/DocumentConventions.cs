@@ -435,20 +435,29 @@ namespace Raven.Client.Documents.Conventions
             return false;
         }
 
-        public bool UsesRangeType(object o)
+        public static RangeType GetRangeType(object o)
         {
             if (o == null)
-                return false;
+                return RangeType.None;
+
             var type = o as Type ?? o.GetType();
+            return GetRangeType(type);
+        }
+
+        public static RangeType GetRangeType(Type type)
+        {
             var nonNullable = Nullable.GetUnderlyingType(type);
             if (nonNullable != null)
                 type = nonNullable;
 
-            if (type == typeof(int) || type == typeof(long) || type == typeof(double) || type == typeof(float) ||
-                type == typeof(decimal) || type == typeof(TimeSpan) || type == typeof(short))
-                return true;
+            if (type == typeof(int) || type == typeof(long) || type == typeof(short) || type == typeof(TimeSpan))
+                return RangeType.Long;
 
-            return _customRangeTypes.Contains(type);
+            if (type == typeof(double) || type == typeof(float) || type == typeof(decimal))
+                return RangeType.Double;
+
+            return RangeType.None;
+            //return _customRangeTypes.Contains(type); TODO [ppekrol]
         }
 
         /// <summary>

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Extensions;
 
@@ -35,12 +37,15 @@ namespace Raven.Client.Documents.Linq
         public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, string displayName = null)
         {
             var propertyPath = path.ToPropertyPath('_');
-            if (IsNumeric(path))
+
+            var rangeType = GetRangeType(path);
+            if (rangeType != RangeType.None)
             {
-                var tmp = propertyPath + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
+                var tmp = FieldUtil.ApplyRangeSuffixIfNecessary(propertyPath, rangeType);
                 _renames[propertyPath] = tmp;
                 propertyPath = tmp;
             }
+
             if (displayName == null)
                 displayName = propertyPath;
             if (_facets.Count > 0)
@@ -62,21 +67,16 @@ namespace Raven.Client.Documents.Linq
             return this;
         }
 
-        private bool IsNumeric(Expression<Func<T, object>> path)
+        private static RangeType GetRangeType(Expression<Func<T, object>> path)
         {
             var unaryExpression = path.Body as UnaryExpression;
             if (unaryExpression == null)
-                return false;
+                return RangeType.None;
             if (unaryExpression.NodeType != ExpressionType.Convert &&
                 unaryExpression.NodeType != ExpressionType.ConvertChecked)
-                return false;
-            var type = unaryExpression.Operand.Type;
-            return type == typeof(int) ||
-                   type == typeof(long) ||
-                   type == typeof(short) ||
-                   type == typeof(decimal) ||
-                   type == typeof(double) ||
-                   type == typeof(float);
+                return RangeType.None;
+
+            return DocumentConventions.GetRangeType(unaryExpression.Operand.Type);
         }
 
         public DynamicAggregationQuery<T> AddRanges(params Expression<Func<T, bool>>[] paths)

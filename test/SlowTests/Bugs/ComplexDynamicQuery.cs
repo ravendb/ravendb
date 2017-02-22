@@ -6,7 +6,7 @@ namespace SlowTests.Bugs
 {
     public class ComplexDynamicQuery : RavenTestBase
     {
-        [Fact(Skip = "Missing feature : RavenDB-6155 ")]
+        [Fact]
         public void UsingNestedCollections()
         {
             using(var store = GetDocumentStore())

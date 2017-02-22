@@ -199,7 +199,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact(Skip = "Missing feature: Optimistic concurrency")]
+        [Fact]
         public void CanUseOptmisticConcurrency()
         {
             const string entityId = "users/1";
@@ -226,7 +226,7 @@ namespace SlowTests.Core.Session
                     user.Name = "Name";
                     session.Store(user);
                     var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
-                    Assert.Equal("PUT attempted on document '" + entityId + "' using a non current etag", e.Message);
+                    Assert.Equal($"Document {entityId} has etag 2, but Put was called with etag 1. Optimistic concurrency violation, transaction will be aborted.", e.Message);
                 }
             }
         }

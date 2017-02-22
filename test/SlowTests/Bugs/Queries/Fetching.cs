@@ -19,7 +19,7 @@ namespace SlowTests.Bugs.Queries
                     {
                         s.Store(new
                         {
-                            Id = "item-"+i,
+                            Id = "item-" + i,
                             Tags = new[]
                             {
 
@@ -55,6 +55,6 @@ namespace SlowTests.Bugs.Queries
                 }
             }
         }
-        
+
     }
 }

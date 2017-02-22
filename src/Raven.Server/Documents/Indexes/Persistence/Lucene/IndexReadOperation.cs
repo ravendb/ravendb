@@ -302,9 +302,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
 
                 if (InvariantCompare.IsSuffix(x.Field, Constants.Documents.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
-                {
-                    sortOptions = SortOptions.NumericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be verified
-                }
+                    sortOptions = SortOptions.Numeric;
 
                 return new SortField(IndexField.ReplaceInvalidCharactersInFieldName(x.Field), (int)sortOptions, x.Descending);
             }).ToArray());

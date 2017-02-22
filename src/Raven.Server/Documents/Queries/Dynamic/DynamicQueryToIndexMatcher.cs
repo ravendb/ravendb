@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
 
                 if (sortFieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                    sortFieldName = sortFieldName.Substring(0, sortFieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length);
+                    sortFieldName = sortFieldName.Substring(0, sortFieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
 
                 IndexField indexField = null;
                 // if the field is not in the output, then we can't sort on it. 

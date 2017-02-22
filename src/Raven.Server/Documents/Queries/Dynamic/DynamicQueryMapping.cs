@@ -135,13 +135,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         }
 
                         if (InvariantCompare.IsSuffix(field, Constants.Documents.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
-                            field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length);
+                            field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
 
                         fields.Add(Tuple.Create(SimpleQueryParser.TranslateField(field), field));
                     }
                 }
 
-                dynamicMapFields = fields.Select(x => new DynamicQueryMappingItem(x.Item1.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) ? x.Item1.Substring(0, x.Item1.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length) : x.Item1, FieldMapReduceOperation.None));
+                dynamicMapFields = fields.Select(x => new DynamicQueryMappingItem(x.Item1.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) ? x.Item1.Substring(0, x.Item1.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length) : x.Item1, FieldMapReduceOperation.None));
 
                 numericFields = fields.Where(x => x.Item1.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix)).Select(x => x.Item1).Distinct().ToArray();
             }
@@ -186,8 +186,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     sortInfo.Add(new DynamicSortInfo
                     {
-                        Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length),
-                        FieldType = SortOptions.NumericDefault
+                        Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length),
+                        FieldType = SortOptions.Numeric
                     });
                 }
             }
@@ -208,8 +208,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         sortInfo.Add(new DynamicSortInfo
                         {
-                            Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length),
-                            FieldType = SortOptions.NumericDefault
+                            Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length),
+                            FieldType = SortOptions.Numeric
                         });
                     }
                     else

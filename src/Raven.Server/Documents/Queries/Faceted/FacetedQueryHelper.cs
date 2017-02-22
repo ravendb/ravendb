@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Lucene.Net.Util;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Extensions;
@@ -11,14 +12,14 @@ namespace Raven.Server.Documents.Queries.Faceted
 {
     public static class FacetedQueryHelper
     {
-        private static readonly Dictionary<Type, object> NumericalTypes = new Dictionary<Type, object>
+        private static readonly Dictionary<Type, RangeType> NumericalTypes = new Dictionary<Type, RangeType>
         {
-            { typeof(decimal), null },
-            { typeof(int), null },
-            { typeof(long), null },
-            { typeof(short), null },
-            { typeof(float), null },
-            { typeof(double), null }
+            { typeof(decimal), RangeType.Double },
+            { typeof(int), RangeType.Long },
+            { typeof(long), RangeType.Long },
+            { typeof(short), RangeType.Long },
+            { typeof(float), RangeType.Double },
+            { typeof(double), RangeType.Double }
         };
 
         public static bool IsAggregationNumerical(FacetAggregation aggregation)
@@ -36,15 +37,19 @@ namespace Raven.Server.Documents.Queries.Faceted
             }
         }
 
-        public static bool IsAggregationTypeNumerical(string aggregationType)
+        public static RangeType GetRangeTypeForAggregationType(string aggregationType)
         {
             if (aggregationType == null)
-                return false;
+                return RangeType.None;
             var type = Type.GetType(aggregationType, false, true);
             if (type == null)
-                return false;
+                return RangeType.None;
 
-            return NumericalTypes.ContainsKey(type);
+            RangeType rangeType;
+            if (NumericalTypes.TryGetValue(type, out rangeType) == false)
+                return RangeType.None;
+
+            return rangeType;
         }
 
         public static string GetRangeName(string field, string text, Dictionary<string, IndexField> fields)
@@ -57,13 +62,14 @@ namespace Raven.Server.Documents.Queries.Faceted
                 case SortOptions.StringVal:
                     //case SortOptions.Custom: // TODO [arek]
                     return text;
-                case SortOptions.NumericLong:
+                case SortOptions.Numeric:
                     if (IsStringNumber(text))
                         return text;
-                    return NumericUtils.PrefixCodedToLong(text).ToInvariantString();
-                case SortOptions.NumericDouble:
-                    if (IsStringNumber(text))
-                        return text;
+
+                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(field);
+                    if (rangeType == RangeType.Long)
+                        return NumericUtils.PrefixCodedToLong(text).ToInvariantString();
+
                     return NumericUtils.PrefixCodedToDouble(text).ToInvariantString();
                 default:
                     throw new ArgumentException($"Can't get range name from '{sortOptions}' sort option for '{field}' field.");
@@ -73,7 +79,7 @@ namespace Raven.Server.Documents.Queries.Faceted
         public static SortOptions GetSortOptionsForFacet(string field, Dictionary<string, IndexField> fields)
         {
             if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length);
+                field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length);
 
             IndexField value;
             if (fields.TryGetValue(field, out value) == false || value.SortOption.HasValue == false)
@@ -84,7 +90,7 @@ namespace Raven.Server.Documents.Queries.Faceted
 
         public static string TryTrimRangeSuffix(string fieldName)
         {
-            return fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) ? fieldName.Substring(0, fieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length) : fieldName;
+            return fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) ? fieldName.Substring(0, fieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length) : fieldName;
         }
 
         public static bool IsStringNumber(string value)

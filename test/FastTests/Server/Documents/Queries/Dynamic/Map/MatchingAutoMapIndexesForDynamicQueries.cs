@@ -212,7 +212,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Name = "Address.ZipCode",
                     Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.NumericDefault
+                    SortOption = SortOptions.Numeric
                 },
             });
 
@@ -220,7 +220,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
-                SortedFields = new[] { new SortedField("Address.ZipCode_Range") },
+                SortedFields = new[] { new SortedField("Address.ZipCode_D_Range") },
             });
 
             var result = _sut.Match(dynamicQuery);
@@ -247,7 +247,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Weight:70",
-                SortedFields = new[] { new SortedField("Weight_Range") },
+                SortedFields = new[] { new SortedField("Weight_D_Range") },
             });
 
             var result = _sut.Match(dynamicQuery);
@@ -292,7 +292,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Name = "Age",
                     Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.NumericDefault
+                    SortOption = SortOptions.Numeric
                 },
             });
 
@@ -300,8 +300,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQueryWithStringSorting = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
-                Query = "Age_Range:{Lx9 TO NULL}",
-                SortedFields = new[] { new SortedField("Age_Range") },
+                Query = "Age_L_Range:{9 TO NULL}",
+                SortedFields = new[] { new SortedField("Age_L_Range") },
             });
 
             var result = _sut.Match(dynamicQueryWithStringSorting);
@@ -311,8 +311,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQueryWithNoneSorting = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
-                Query = "Age_Range:31",
-                SortedFields = new[] { new SortedField("Age_Range") },
+                Query = "Age_D_Range:31",
+                SortedFields = new[] { new SortedField("Age_D_Range") },
             });
 
             result = _sut.Match(dynamicQueryWithNoneSorting);

@@ -29,7 +29,7 @@ namespace SlowTests.MailingList
                       from item in items
                       select new { item.Val };
                 Store(x => x.Val, FieldStorage.Yes);
-                Sort(x => x.Val, SortOptions.NumericDefault);
+                Sort(x => x.Val, SortOptions.Numeric);
             }
         }
 

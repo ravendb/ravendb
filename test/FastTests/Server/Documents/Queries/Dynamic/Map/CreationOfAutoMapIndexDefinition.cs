@@ -142,7 +142,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "Name:A*",
                 SortedFields = new[]
                 {
-                    new SortedField("Age_Range"),
+                    new SortedField("Age_L_Range"),
                 },
             });
 
@@ -156,7 +156,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             var nameField = definition.GetField("Name");
             Assert.Null(nameField.SortOption);
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
         }
 
         [Fact]
@@ -192,7 +192,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "Name:A*",
                 SortedFields = new[]
                 {
-                    new SortedField("Address.ZipCode_Range"),
+                    new SortedField("Address.ZipCode_D_Range"),
                 },
             });
 
@@ -206,7 +206,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             var nameField = definition.GetField("Name");
             Assert.Null(nameField.SortOption);
             var ageField = definition.GetField("Address.ZipCode");
-            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
         }
 
         [Fact]
@@ -214,7 +214,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
-                Query = "Age_Range:{Lx30 TO NULL}"
+                Query = "Age_D_Range:{30 TO NULL}"
             });
 
             var definition = _sut.CreateAutoIndexDefinition();
@@ -224,7 +224,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.True(definition.ContainsField("Age"));
             Assert.Equal("Auto/Users/ByAgeSortByAge", definition.Name);
             var nameField = definition.GetField("Age");
-            Assert.Equal(SortOptions.NumericDefault, nameField.SortOption);
+            Assert.Equal(SortOptions.Numeric, nameField.SortOption);
         }
 
         [Fact]
@@ -235,7 +235,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "FirstName:A*",
                 SortedFields = new[]
                 {
-                    new SortedField("Count_Range"),
+                    new SortedField("Count_L_Range"),
                 },
             });
 
@@ -246,7 +246,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "LastName:A*",
                 SortedFields = new[]
                 {
-                    new SortedField("Age_Range"),
+                    new SortedField("Age_D_Range"),
                 },
             });
 
@@ -263,10 +263,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAgeAndCountAndFirstNameAndLastNameSortByAgeCount", definition.Name);
 
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
 
             var countField = definition.GetField("Count");
-            Assert.Equal(SortOptions.NumericDefault, countField.SortOption);
+            Assert.Equal(SortOptions.Numeric, countField.SortOption);
         }
 
         [Fact]
@@ -277,7 +277,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "FirstName:A* LastName:a*",
                 SortedFields = new[]
                 {
-                    new SortedField("Count_Range"),
+                    new SortedField("Count_L_Range"),
                 },
             });
 
@@ -288,8 +288,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "FirstName:A* AddressId:addresses/1",
                 SortedFields = new[]
                 {
-                    new SortedField("Age_Range"),
-                    new SortedField("Count_Range")
+                    new SortedField("Age_D_Range"),
+                    new SortedField("Count_L_Range")
                 },
             });
 
@@ -307,10 +307,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAddressIdAndAgeAndCountAndFirstNameAndLastNameSortByAgeCount", definition.Name);
 
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
 
             var countField = definition.GetField("Count");
-            Assert.Equal(SortOptions.NumericDefault, countField.SortOption);
+            Assert.Equal(SortOptions.Numeric, countField.SortOption);
         }
 
         private void create_dynamic_mapping_for_users_collection(string query)

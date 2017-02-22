@@ -68,14 +68,6 @@ namespace Raven.Client.Documents.Session
         void AddOrder(string fieldName, bool descending);
 
         /// <summary>
-        ///   Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
-        /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        /// <param name = "fieldType">the type of the field to be sorted.</param>
-        void AddOrder(string fieldName, bool descending, Type fieldType);
-
-        /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
         /// </summary>
         /// <param name = "path">The path.</param>

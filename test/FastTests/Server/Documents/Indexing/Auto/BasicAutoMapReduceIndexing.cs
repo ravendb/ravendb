@@ -54,14 +54,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
-                        Query = "Count_Range:[Lx2 TO Lx10]"
+                        Query = "Count_L_Range:[2 TO 10]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
 
                     queryResult = await mri.Query(new IndexQueryServerSide()
                     {
-                        Query = "Count_Range:[Lx10 TO NULL]"
+                        Query = "Count_L_Range:[10 TO NULL]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(0, queryResult.Results.Count);
@@ -238,7 +238,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Name = "Count",
                     Highlighted = true,
                     Storage = FieldStorage.Yes,
-                    SortOption = SortOptions.NumericDefault,
+                    SortOption = SortOptions.Numeric,
                     MapReduceOperation = FieldMapReduceOperation.Count
                 };
 
@@ -257,7 +257,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Name = "Sum",
                     Highlighted = false,
                     Storage = FieldStorage.Yes,
-                    SortOption = SortOptions.NumericDefault,
+                    SortOption = SortOptions.Numeric,
                     MapReduceOperation = FieldMapReduceOperation.Sum
                 };
 
@@ -284,7 +284,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[0].Definition.MapFields["Count"].Name);
-                Assert.Equal(SortOptions.NumericDefault, indexes[0].Definition.MapFields["Count"].SortOption);
+                Assert.Equal(SortOptions.Numeric, indexes[0].Definition.MapFields["Count"].SortOption);
                 Assert.True(indexes[0].Definition.MapFields["Count"].Highlighted);
                 Assert.Equal(FieldMapReduceOperation.Count, indexes[0].Definition.MapFields["Count"].MapReduceOperation);
 
@@ -307,10 +307,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(2, indexes[1].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[1].Definition.MapFields["Count"].Name);
                 Assert.Equal(FieldMapReduceOperation.Count, indexes[1].Definition.MapFields["Count"].MapReduceOperation);
-                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Count"].SortOption);
+                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Count"].SortOption);
                 Assert.Equal("Sum", indexes[1].Definition.MapFields["Sum"].Name);
                 Assert.Equal(FieldMapReduceOperation.Sum, indexes[1].Definition.MapFields["Sum"].MapReduceOperation);
-                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Sum"].SortOption);
+                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Sum"].SortOption);
 
                 definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
 
@@ -385,14 +385,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
-                        Query = "Count_Range:[Lx2 TO Lx10]"
+                        Query = "Count_L_Range:[2 TO 10]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
 
                     queryResult = await mri.Query(new IndexQueryServerSide()
                     {
-                        Query = "Count_Range:[Lx10 TO NULL]"
+                        Query = "Count_L_Range:[10 TO NULL]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(0, queryResult.Results.Count);

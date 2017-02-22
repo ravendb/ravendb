@@ -137,7 +137,7 @@ namespace SlowTests.MailingList
                 Map = docs => from doc in docs
                               select new { MonthNum = doc.MonthNum };
 
-                Sort(x => x.MonthNum, SortOptions.NumericDefault);
+                Sort(x => x.MonthNum, SortOptions.Numeric);
             }
         }
 

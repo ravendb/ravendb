@@ -31,7 +31,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-4916")]
         public void QueryLuceneMinusOperator()
         {
             using (var store = GetDocumentStore())
@@ -71,7 +71,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-4916")]
         public void QueryLuceneNotOperator()
         {
             using (var store = GetDocumentStore())

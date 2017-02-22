@@ -27,7 +27,7 @@ namespace SlowTests.Bugs
             {
                 Map = activities => from activity in activities
                                     let mapping = from state in activity.Items
-                                                  select new 
+                                                  select new
                                                   {
                                                       Owner = activity.Owner,
                                                       Host = new Uri(state.Url.ToString()).Host,
@@ -51,8 +51,8 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact(Skip = "BlittableJsonWriter.WriteValue(Uri value) is not supported ")]
-        public void ShouldNotConvertUriToStringWhenIndexing ()
+        [Fact]
+        public void ShouldNotConvertUriToStringWhenIndexing()
         {
             using (var store = GetDocumentStore())
             {
@@ -61,32 +61,32 @@ namespace SlowTests.Bugs
                 var activities1 = new WebItems()
                 {
                     Owner = "owner",
-                    Items = new List<WebItem> 
-                    {  
+                    Items = new List<WebItem>
+                    {
                         new WebItem{ Url = new Uri (@"http://domain1.com") },
-                        new WebItem{ Url = new Uri (@"http://domain2.com") }, 
-                        new WebItem{ Url = new Uri (@"http://domain3.com") }, 
+                        new WebItem{ Url = new Uri (@"http://domain2.com") },
+                        new WebItem{ Url = new Uri (@"http://domain3.com") },
                     }
                 };
 
                 var activities2 = new WebItems()
                 {
                     Owner = "owner",
-                    Items = new List<WebItem> 
-                    {  
+                    Items = new List<WebItem>
+                    {
                         new WebItem{ Url = new Uri (@"http://domain2.com") },
-                        new WebItem{ Url = new Uri (@"http://domain3.com") }, 
-                        new WebItem{ Url = new Uri (@"http://domain4.com") }, 
+                        new WebItem{ Url = new Uri (@"http://domain3.com") },
+                        new WebItem{ Url = new Uri (@"http://domain4.com") },
                     }
                 };
 
-                using ( var session = store.OpenSession() )
+                using (var session = store.OpenSession())
                 {
                     session.Store(activities1, "test1");
                     session.Store(activities2, "test2");
                     session.SaveChanges();
                 }
-                
+
                 WaitForIndexing(store);
 
                 var db = GetDocumentDatabaseInstanceFor(store).Result;

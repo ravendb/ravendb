@@ -7,7 +7,7 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Indexes;
+using Raven.Client;
 using Raven.Client.Documents.Transformers;
 using Xunit;
 
@@ -15,7 +15,7 @@ namespace SlowTests.Bugs
 {
     public class AccessingMetadataInTransformer : RavenTestBase
     {
-        [Fact(Skip = "AbstractIndexCreationTask.MetadataFor() is not supported")]
+        [Fact]
         public void ShouldNotResultInNullReferenceException()
         {
             using (var store = GetDocumentStore())
@@ -60,7 +60,7 @@ namespace SlowTests.Bugs
                     from doc in docs
                     select new Transformed
                     {                       
-                        DateUpdated = MetadataFor(doc).Value<DateTime>("Last-Modified")
+                        DateUpdated = MetadataFor(doc).Value<DateTime>(Constants.Documents.Metadata.LastModified)
                     };
             }
         }
