@@ -400,7 +400,7 @@ namespace Voron.Data.Tables
                     if (_primaryKey.IsGlobal == false)
                     {
                         
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, newPageAllocator: tablePageAllocator))
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, newPageAllocator: tablePageAllocator))
                         {
                             using (var add = tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader)))
                             {
@@ -418,7 +418,7 @@ namespace Voron.Data.Tables
                 {
                     if (indexDef.IsGlobal == false)
                     {
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, newPageAllocator: tablePageAllocator))
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, newPageAllocator: tablePageAllocator))
                         {
                             using (var add = tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader)))
                             {

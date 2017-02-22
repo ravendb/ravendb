@@ -17,7 +17,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.Fixed
 {
-    public unsafe partial class FixedSizeTree : IDisposable, ITree
+    public unsafe partial class FixedSizeTree : IDisposable
     {
         internal const int BranchEntrySize = sizeof(long) + sizeof(long);
         private readonly LowLevelTransaction _tx;
@@ -34,7 +34,7 @@ namespace Voron.Data.Fixed
         private RootObjectType? _type;
         private Stack<FixedSizeTreePage> _cursor;
         private int _changes;
-        private DirectAddScope _addScope;
+        private readonly DirectAddScope _addScope;
 
         public LowLevelTransaction Llt => _tx;
 
@@ -58,7 +58,7 @@ namespace Voron.Data.Fixed
 
         public void RepurposeInstance(Slice treeName, bool clone)
         {
-            _addScope = new DirectAddScope(this);
+            _addScope.Reset();
 
             if (clone)
             {
@@ -120,6 +120,8 @@ namespace Voron.Data.Fixed
             _maxEmbeddedEntries = (Constants.Storage.PageSize / 8) / _entrySize;
             if (_maxEmbeddedEntries == 0)
                 ThrowInvalidFixedTreeValueSize();
+
+            _addScope = new DirectAddScope(null);
 
             RepurposeInstance(treeName, clone);
         }
@@ -1490,7 +1492,7 @@ namespace Voron.Data.Fixed
             }
         }
 
-        private IDisposable ModifyLargeHeader(out FixedSizeTreeHeader.Large* largeHeader)
+        private DirectAddScope ModifyLargeHeader(out FixedSizeTreeHeader.Large* largeHeader)
         {
             var largeHeaderScope = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
 
