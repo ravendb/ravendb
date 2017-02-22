@@ -121,7 +121,7 @@ namespace Voron.Data.Fixed
             if (_maxEmbeddedEntries == 0)
                 ThrowInvalidFixedTreeValueSize();
 
-            _addScope = new DirectAddScope(null);
+            _addScope = new DirectAddScope(this);
 
             RepurposeInstance(treeName, clone);
         }
@@ -1499,6 +1499,11 @@ namespace Voron.Data.Fixed
             largeHeader = (FixedSizeTreeHeader.Large*)largeHeaderScope.Ptr;
 
             return largeHeaderScope;
+        }
+
+        public override string ToString()
+        {
+            return Name.ToString();
         }
     }
 }

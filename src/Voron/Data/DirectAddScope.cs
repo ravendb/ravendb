@@ -5,45 +5,44 @@ namespace Voron.Data
 {
     public unsafe class DirectAddScope : IDisposable
     {
-        private readonly string _treeName;
+        private readonly object _tree;
         private uint _usage;
 #if DEBUG
         private string _allocationStacktrace = null;
 #endif
         public byte* Ptr;
 
-        public DirectAddScope(string treeName)
+        public DirectAddScope(object tree)
         {
             _usage = 0;
-            _treeName = treeName;
+            _tree = tree;
             Ptr = null;
         }
-
+        
         public DirectAddScope Open(byte* writePos)
         {
             if (_usage++ <= 0)
             {
                 Ptr = writePos;
-#if DEBUG
-                // uncomment for debugging purposes only
-                //_allocationStacktrace = Environment.StackTrace;
+#if VALIDATE_DIRECT_ADD_STACKTRACE
+                _allocationStacktrace = Environment.StackTrace;
 #endif
             }
             else
             {
 #if DEBUG
-                ThrowScopeAlreadyOpen(_treeName, _allocationStacktrace);
+                ThrowScopeAlreadyOpen(_tree, _allocationStacktrace);
 #else
-                ThrowScopeAlreadyOpen(_treeName, null);
+                ThrowScopeAlreadyOpen(_tree, null);
 #endif
             }
 
             return this;
         }
 
-        private static void ThrowScopeAlreadyOpen(string treeName, string previousOpenStacktrace)
+        private static void ThrowScopeAlreadyOpen(object tree, string previousOpenStacktrace)
         {
-            var message = $"Write operation already requested on a tree name: {treeName}. " +
+            var message = $"Write operation already requested on a tree name: {tree}. " +
                           $"{nameof(Tree.DirectAdd)} method cannot be called recursively while the scope is already opened.";
 
             if (previousOpenStacktrace != null)
@@ -66,7 +65,7 @@ namespace Voron.Data
             if (_usage <= 0)
                 return;
 
-            ThrowScopeAlreadyOpen(_treeName, null);
+            ThrowScopeAlreadyOpen(_tree, null);
         }
     }
 }

@@ -54,7 +54,7 @@ namespace Voron.Data.BTrees
                 RootPageNumber = root
             };
 
-            _addScope = new DirectAddScope(Name.ToString());
+            _addScope = new DirectAddScope(this);
         }
 
         public Tree(LowLevelTransaction llt, Transaction tx, Slice name, TreeMutableState state)
@@ -68,7 +68,7 @@ namespace Voron.Data.BTrees
             _state = new TreeMutableState(llt);
             _state = state;
 
-            _addScope = new DirectAddScope(Name.ToString());
+            _addScope = new DirectAddScope(this);
         }
 
         public bool IsLeafCompressionSupported
