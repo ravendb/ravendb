@@ -946,6 +946,9 @@ namespace Voron.Data.BTrees
 
         internal void FreePage(TreePage p)
         {
+#if VALIDATE
+            p.Freed = true;
+#endif
             PageFreed?.Invoke(p.PageNumber, p.Flags);
 
             if (p.IsOverflow)
