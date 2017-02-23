@@ -5,6 +5,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
+using Raven.Database.Bundles.Replication.Impl;
 using Raven.Tests.Common;
 using Xunit;
 
@@ -13,6 +14,23 @@ namespace Raven.Tests.Bundles.Replication
     public class ConflictResolving: ReplicationBase
     {
         [Fact]
+        public void ShouldResolveConflictsToLatest()
+        {
+            ResolveConflictsCore(StraightforwardConflictResolution.ResolveToLatest, (store, id) =>
+            {
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>(id);
+                    Assert.Equal("Remote", company.Name);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                   Assert.Equal(2, ReplicationData.GetHistory(metadata).ToList().Count);
+                    return true;
+                }
+            });
+        }
+
+
+        [Fact]
         public void ShouldResolveConflictsToRemote()
         {
             ResolveConflictsCore(StraightforwardConflictResolution.ResolveToRemote, (store,id) =>
@@ -20,7 +38,9 @@ namespace Raven.Tests.Bundles.Replication
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>(id);
+                    var metadata = session.Advanced.GetMetadataFor(company);
                     Assert.Equal(company.Name,"Remote");
+                    Assert.Equal(2, ReplicationData.GetHistory(metadata).ToList().Count);
                     return true;
                 }
             });
@@ -34,7 +54,7 @@ namespace Raven.Tests.Bundles.Replication
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>(id);
-                    Assert.Equal(null,company);
+                    Assert.Equal(null,company);                   
                     return true;
                 }
             }, deleteRemote:true);
@@ -49,6 +69,9 @@ namespace Raven.Tests.Bundles.Replication
                 {
                     var company = session.Load<Company>(id);
                     Assert.Equal(company.Name, "Remote");
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    Assert.Equal(2, ReplicationData.GetHistory(metadata).ToList().Count);
+
                     return true;
                 }
             }, deleteLocal: true);
@@ -63,6 +86,8 @@ namespace Raven.Tests.Bundles.Replication
                 {
                     var company = session.Load<Company>(id);
                     Assert.Equal(company.Name, "Local");
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    Assert.Equal(2, ReplicationData.GetHistory(metadata).ToList().Count);
                     return true;
                 }
             });
@@ -91,6 +116,9 @@ namespace Raven.Tests.Bundles.Replication
                 {
                     var company = session.Load<Company>(id);
                     Assert.Equal(company.Name, "Local");
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    Assert.Equal(2, ReplicationData.GetHistory(metadata).ToList().Count);
+
                     return true;
                 }
             }, deleteRemote: true);
@@ -98,8 +126,8 @@ namespace Raven.Tests.Bundles.Replication
         }
         private void ResolveConflictsCore(StraightforwardConflictResolution resolution, Func<IDocumentStore,string,bool> assertFunc,bool deleteLocal = false, bool deleteRemote = false)
         {
-            using (var remote = CreateStore())
-            using (var local = CreateStore())
+            using (var remote = CreateStore(useFiddler:true))
+            using (var local = CreateStore(useFiddler:true))
             {
                 TellFirstInstanceToReplicateToSecondInstance();
                 string id;

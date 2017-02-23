@@ -4,6 +4,7 @@ using System.Text;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Bundles.Replication.Impl;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Plugins
@@ -20,6 +21,11 @@ namespace Raven.Bundles.Replication.Plugins
             var success = TryResolve(id, metadata, document, existingDoc, getDocument, out metadataToSave, out documentToSave);
             if (success == false)
                 return false;
+
+            var history = ReplicationData.GetHistory(metadata);
+            var existingHistory = ReplicationData.GetHistory(existingDoc.Metadata);
+            ReplicationData.SetHistory(metadataToSave, Historian.MergeReplicationHistories(history, existingHistory));
+            metadataToSave[Constants.RavenReplicationMergedHistory] = true;
 
             // here we make sure that we keep a deleted document deleted, rather than "reviving" it.
             var ravenDeleteMarker = existingDoc.Metadata.Value<string>("Raven-Delete-Marker");

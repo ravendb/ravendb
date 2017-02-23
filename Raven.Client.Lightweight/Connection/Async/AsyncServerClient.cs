@@ -3001,7 +3001,7 @@ namespace Raven.Client.Connection.Async
         }
 
         internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, TimeSpan? timeout = null)
-        {
+        {            
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric, timeout);
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {

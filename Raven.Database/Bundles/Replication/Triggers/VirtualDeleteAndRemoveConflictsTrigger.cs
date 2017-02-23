@@ -105,7 +105,7 @@ namespace Raven.Bundles.Replication.Triggers
 
         private void HandleDocument(JsonDocumentMetadata metadata)
         {
-            deletedHistory.Value = new RavenJArray(ReplicationData.GetHistory(metadata.Metadata))
+            deletedHistory.Value = new RavenJArray(ReplicationData.GetOrCreateHistory(metadata.Metadata))
             {
                 new RavenJObject
                 {
