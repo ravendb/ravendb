@@ -80,7 +80,36 @@ namespace Raven.Server.Rachis
             });
         }
 
+        public void Send(JsonOperationContext context, LogLengthNegotiation lln)
+        {
+            Send(context, new DynamicJsonValue
+            {
+                ["Type"] = nameof(LogLengthNegotiation),
+                [nameof(LogLengthNegotiation.Term)] = lln.Term,
+                [nameof(LogLengthNegotiation.PrevLogIndex)] = lln.PrevLogIndex,
+                [nameof(LogLengthNegotiation.PrevLogTerm)] = lln.PrevLogTerm,
 
+            });
+        }
+
+        public void Send(JsonOperationContext context, LogLengthNegotiationResponse lln)
+        {
+            Send(context, new DynamicJsonValue
+            {
+                ["Type"] = nameof(LogLengthNegotiationResponse),
+                [nameof(LogLengthNegotiationResponse.Status)] = lln.Status,
+
+                [nameof(LogLengthNegotiationResponse.Message)] = lln.Message,
+                [nameof(LogLengthNegotiationResponse.CurrentTerm)] = lln.CurrentTerm,
+                [nameof(LogLengthNegotiationResponse.LastLogIndex)] = lln.LastLogIndex,
+
+                [nameof(LogLengthNegotiationResponse.MaxIndex)] = lln.MaxIndex,
+                [nameof(LogLengthNegotiationResponse.MinIndex)] = lln.MinIndex,
+                [nameof(LogLengthNegotiationResponse.MidpointIndex)] = lln.MidpointIndex,
+                [nameof(LogLengthNegotiationResponse.MidpointTerm)] = lln.MidpointTerm,
+
+            });
+        }
 
         public void Send(JsonOperationContext context, RequestVote rv)
         {
@@ -263,17 +292,7 @@ namespace Raven.Server.Rachis
                 [nameof(AppendEntriesResponse.CurrentTerm)] = aer.CurrentTerm,
                 [nameof(AppendEntriesResponse.LastLogIndex)] = aer.LastLogIndex,
             };
-            var negotiation = aer.Negotiation;
-            if (negotiation != null)
-            {
-                msg[nameof(AppendEntriesResponse.Negotiation)] = new DynamicJsonValue
-                {
-                    [nameof(Negotiation.MaxIndex)] = negotiation.MaxIndex,
-                    [nameof(Negotiation.MinIndex)] = negotiation.MinIndex,
-                    [nameof(Negotiation.MidpointIndex)] = negotiation.MidpointIndex,
-                    [nameof(Negotiation.MidpointTerm)] = negotiation.MidpointTerm,
-                };
-            }
+            
             Send(context, msg);
         }
 

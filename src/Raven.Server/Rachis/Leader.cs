@@ -75,7 +75,8 @@ namespace Raven.Server.Rachis
 
             _thread = new Thread(Run)
             {
-                Name = "Consensus Leader - " + (new Uri(_engine.Url).Fragment ?? _engine.Url),
+                Name =
+                    $"Consensus Leader - {(new Uri(_engine.Url).Fragment ?? _engine.Url)} in term {_engine.CurrentTerm}",
                 IsBackground = true
             };
             _thread.Start();
@@ -247,6 +248,9 @@ namespace Raven.Server.Rachis
 
         private void VoteOfNoConfidence()
         {
+            if (TimeoutEvent.Disable)
+                return;
+
             //TODO: List all the voters and their times
             throw new TimeoutException("Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
                                        "Assuming that I'm not the leader and stepping down");

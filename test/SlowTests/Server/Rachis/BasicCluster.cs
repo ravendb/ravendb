@@ -13,9 +13,11 @@ namespace SlowTests.Server.Rachis
 {
     public class BasicCluster : RachisConsensusTestBase
     {
+
         [Fact]
         public async Task ClusterWithFiveNodesAndMultipleElections()
         {
+            PredictableSeeds = true;
             var a = SetupServer(true);
             var b = SetupServer();
             var c = SetupServer();
@@ -68,7 +70,7 @@ namespace SlowTests.Server.Rachis
             followers = followers.Except(new[] {leader}).ToArray();
 
             leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_ => x)).ToArray();
-
+      
             foreach (var follower in followers)
             {
                 Disconnect(follower.Url, leader.Url);

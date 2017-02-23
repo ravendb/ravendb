@@ -1004,8 +1004,11 @@ namespace Raven.Server.Rachis
             return read?.Reader.ReadString(read.Reader.Length);
         }
 
+        public event EventHandler OnDispose;
+
         public virtual void Dispose()
         {
+            OnDispose?.Invoke(this,EventArgs.Empty);
             ThreadPool.QueueUserWorkItem(_ => _topologyChanged.TrySetCanceled());
             ContextPool?.Dispose();
             _persistentState?.Dispose();

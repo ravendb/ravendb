@@ -103,20 +103,19 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private AppendEntries CheckIfValidAppendEntries()
+        private LogLengthNegotiation CheckIfValidLeader()
         {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             {
-                var fstAppendEntries = _connection.Read<AppendEntries>(context);
+                var logLength = _connection.Read<LogLengthNegotiation>(context);
 
-                if (fstAppendEntries.Term < _engine.CurrentTerm)
+                if (logLength.Term < _engine.CurrentTerm)
                 {
-                    _connection.Send(context, new AppendEntriesResponse
+                    _connection.Send(context, new LogLengthNegotiationResponse
                     {
-                        Success = false,
-                        Message =
-                            $"The incoming term {fstAppendEntries.Term} is smaller than current term {_engine.CurrentTerm} and is therefor rejected",
+                        Status = LogLengthNegotiationResponse.ResponseStatus.Rejected,
+                        Message = $"The incoming term {logLength.Term} is smaller than current term {_engine.CurrentTerm} and is therefor rejected",
                         CurrentTerm = _engine.CurrentTerm
                     });
                     _connection.Dispose();
@@ -124,41 +123,43 @@ namespace Raven.Server.Rachis
                 }
 
                 _engine.Timeout.Defer();
-                return fstAppendEntries;
+                return logLength;
             }
         }
 
-        private void NegotiateWithLeader(TransactionOperationContext context, AppendEntries fstAppendEntries)
+        private void NegotiateWithLeader(TransactionOperationContext context, LogLengthNegotiation negotiation)
         {
             // only the leader can send append entries, so if we accepted it, it's the leader
-
-            if (fstAppendEntries.Term > _engine.CurrentTerm)
+            
+            if (negotiation.Term > _engine.CurrentTerm)
             {
-                _engine.FoundAboutHigherTerm(fstAppendEntries.Term);
+                _engine.FoundAboutHigherTerm(negotiation.Term);
             }
 
             long prevTerm;
             using (context.OpenReadTransaction())
             {
-                prevTerm = _engine.GetTermFor(context, fstAppendEntries.PrevLogIndex) ?? 0;
+                prevTerm = _engine.GetTermFor(context, negotiation.PrevLogIndex) ?? 0;
             }
-            if (prevTerm != fstAppendEntries.PrevLogTerm)
+            if (prevTerm != negotiation.PrevLogTerm)
             {
                 // we now have a mismatch with the log position, and need to negotiate it with 
                 // the leader
-                NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, fstAppendEntries);
+                NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, negotiation);
             }
             else
             {
                 // this (or the negotiation above) completes the negotiation process
-                _connection.Send(context, new AppendEntriesResponse
+                _connection.Send(context, new LogLengthNegotiationResponse
                 {
-                    Success = true,
-                    Message = $"Found a log index / term match at {fstAppendEntries.PrevLogIndex} with term {prevTerm}",
+                    Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                    Message = $"Found a log index / term match at {negotiation.PrevLogIndex} with term {prevTerm}",
                     CurrentTerm = _engine.CurrentTerm,
-                    LastLogIndex = fstAppendEntries.PrevLogIndex
+                    LastLogIndex = negotiation.PrevLogIndex
                 });
             }
+
+            _engine.Timeout.Defer();
 
             // at this point, the leader will send us a snapshot message
             // in most cases, it is an empty snapshot, then start regular append entries
@@ -332,12 +333,8 @@ namespace Raven.Server.Rachis
         }
 
         private void NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context,
-            RemoteConnection connection, AppendEntries aer)
+            RemoteConnection connection, LogLengthNegotiation negotiation)
         {
-            if (aer.EntriesCount != 0)
-                // if leader sent entries, we can't negotiate, so it invalid state, shouldn't happen
-                throw new InvalidOperationException(
-                    "BUG: Need to negotiate with the leader, but it sent entries, so can't negotiate");
             long minIndex;
             long maxIndex;
             long midpointTerm;
@@ -348,9 +345,9 @@ namespace Raven.Server.Rachis
 
                 if (minIndex == 0) // no entries at all
                 {
-                    connection.Send(context, new AppendEntriesResponse
+                    connection.Send(context, new LogLengthNegotiationResponse
                     {
-                        Success = true,
+                        Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                         Message = "No entries at all here, give me everything from the start",
                         CurrentTerm = _engine.CurrentTerm,
                         LastLogIndex = 0
@@ -361,7 +358,7 @@ namespace Raven.Server.Rachis
 
                 maxIndex = Math.Min(
                     _engine.GetLastEntryIndex(context), // max
-                    aer.PrevLogIndex
+                    negotiation.PrevLogIndex
                 );
 
                 midpointIndex = (maxIndex + minIndex) / 2;
@@ -377,22 +374,22 @@ namespace Raven.Server.Rachis
                 // TODO: cancellation
                 //_cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                connection.Send(context, new AppendEntriesResponse
+                connection.Send(context, new LogLengthNegotiationResponse
                 {
-                    Success = true,
+                    Status = LogLengthNegotiationResponse.ResponseStatus.Negotiation,
                     Message =
                         $"Term/Index mismatch from leader, need to figure out at what point the logs match, range: {maxIndex} - {minIndex} | {midpointIndex} in term {midpointTerm}",
                     CurrentTerm = _engine.CurrentTerm,
-                    Negotiation = new Negotiation
-                    {
-                        MaxIndex = maxIndex,
-                        MinIndex = minIndex,
-                        MidpointIndex = midpointIndex,
-                        MidpointTerm = midpointTerm
-                    }
+                    MaxIndex = maxIndex,
+                    MinIndex = minIndex,
+                    MidpointIndex = midpointIndex,
+                    MidpointTerm = midpointTerm
                 });
 
-                var response = connection.Read<AppendEntries>(context);
+                var response = connection.Read<LogLengthNegotiation>(context);
+
+                _engine.Timeout.Defer();
+
                 using (context.OpenReadTransaction())
                 {
                     if (_engine.GetTermFor(context, response.PrevLogIndex) == response.PrevLogTerm)
@@ -409,9 +406,9 @@ namespace Raven.Server.Rachis
                     midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
 
-            connection.Send(context, new AppendEntriesResponse
+            connection.Send(context, new LogLengthNegotiationResponse()
             {
-                Success = true,
+                Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                 Message = $"Found a log index / term match at {midpointIndex} with term {midpointTerm}",
                 CurrentTerm = _engine.CurrentTerm,
                 LastLogIndex = midpointIndex
@@ -420,8 +417,8 @@ namespace Raven.Server.Rachis
 
         public void TryAcceptConnection()
         {
-            var validAppendEntries = CheckIfValidAppendEntries();
-            if (validAppendEntries == null)
+            var negotiation = CheckIfValidLeader();
+            if (negotiation == null)
             {
                 _connection.Dispose();
                 return; // did not accept connection
@@ -433,10 +430,10 @@ namespace Raven.Server.Rachis
 
             _thread = new Thread(Run)
             {
-                Name = "Follower thread from " + _connection,
+                Name = $"Follower thread from {_connection} in term {negotiation.Term}",
                 IsBackground = true
             };
-            _thread.Start(validAppendEntries);
+            _thread.Start(negotiation);
         }
 
         private void Run(object obj)
@@ -450,7 +447,7 @@ namespace Raven.Server.Rachis
                         TransactionOperationContext context;
                         using (_engine.ContextPool.AllocateOperationContext(out context))
                         {
-                            NegotiateWithLeader(context, (AppendEntries) obj);
+                            NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
 
                         FollowerSteadyState();
@@ -481,7 +478,7 @@ namespace Raven.Server.Rachis
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
@@ -491,12 +488,12 @@ namespace Raven.Server.Rachis
         }
 
         public void Dispose()
-{
-    _connection.Dispose();
+        {
+            _connection.Dispose();
 
-    if (_thread != null &&
-        _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-        _thread.Join();
-}
+            if (_thread != null &&
+                _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                _thread.Join();
+        }
     }
 }

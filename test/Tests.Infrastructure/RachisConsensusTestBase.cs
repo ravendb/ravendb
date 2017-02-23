@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -19,6 +20,8 @@ namespace Tests.Infrastructure
 {
     public class RachisConsensusTestBase : IDisposable
     {
+        protected bool PredictableSeeds;
+
         protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount)
         {
             var leaderIndex = _random.Next(0, nodeCount);
@@ -57,16 +60,13 @@ namespace Tests.Infrastructure
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, 0);
             tcpListener.Start();
-            var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/#" + (char)(65 + (_count++));
+            var ch = (char)(65 + (_count++));
+            var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/#" + ch;
 
             var serverA = StorageEnvironmentOptions.CreateMemoryOnly();
             if (bootstrap)
                 RachisConsensus.Bootstarp(serverA, url);
-            int seed;
-            if (ServersToSeeds.TryGetValue(url, out seed) == false) // We want to be able to run tests with known seeds
-            {
-                seed = _random.Next(int.MaxValue);
-            }
+            int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
             var rachis = new RachisConsensus<CountingStateMachine>(serverA, url, seed);
             rachis.Initialize();
             _listeners.Add(tcpListener);
@@ -96,6 +96,8 @@ namespace Tests.Infrastructure
 
         private async Task AcceptConnection(TcpListener tcpListener, RachisConsensus rachis)
         {
+            rachis.OnDispose += (sender, args) => tcpListener.Stop();
+
             while (true)
             {
                 TcpClient tcpClient;
@@ -113,7 +115,7 @@ namespace Tests.Infrastructure
                     {
                         ConcurrentSet<string> set;
                         if (_rejectionList.TryGetValue(rachis.Url, out set) && set.Contains(hello.DebugSourceIdentifier))
-                            throw new EndOfStreamException("Simulated failure");
+                            throw new InvalidComObjectException("Simulated failure");
                         var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
                         connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
                     }
@@ -142,7 +144,6 @@ namespace Tests.Infrastructure
                 }
             }
         }
-        protected Dictionary<string, int> ServersToSeeds = new Dictionary<string, int>();
 
         private readonly ConcurrentDictionary<string, ConcurrentSet<string>> _rejectionList = new ConcurrentDictionary<string, ConcurrentSet<string>>();
         private readonly ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>> _connections = new ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>>();

@@ -6,6 +6,8 @@ namespace Raven.Server.Rachis
 {
     public class TimeoutEvent : IDisposable
     {
+        public static bool Disable;
+
         private readonly int _timeoutPeriod;
         private readonly ManualResetEventSlim _timeoutEventSlim = new ManualResetEventSlim();
         private ExceptionDispatchInfo _edi;
@@ -38,6 +40,8 @@ namespace Raven.Server.Rachis
                     lock (this)
                     {
                         if (_timeoutHappened == null)
+                            return;
+                        if (Disable)
                             return;
                          _timeoutHappened?.Invoke();
                         _timeoutHappened = null;
