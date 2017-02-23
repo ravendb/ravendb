@@ -102,10 +102,7 @@ namespace Raven.Client.Documents.Operations
                         _context.Write(stream, _patch);
                     })
                 };
-
-                if (_etag.HasValue)
-                    request.Headers.TryAddWithoutValidation("If-Match", _etag.ToString());
-
+                AddEtagIfNotNull(_etag, request);
                 return request;
             }
 

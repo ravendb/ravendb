@@ -704,7 +704,7 @@ namespace Voron.Data.Tables
             reader  = new TableValueReader(id, ptr, size);
         }
 
-        public class SeekResult
+        public struct SeekResult
         {
             public Slice Key;
             public IEnumerable<TableValueHolder> Results;

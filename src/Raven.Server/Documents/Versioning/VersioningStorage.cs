@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Versioning
     {
         private static readonly Slice KeyAndChangeVectorSlice;
         public static readonly Slice KeyAndEtagSlice;
-        public static readonly Slice RevisionsEtags;
+        public static readonly Slice RevisionsEtagsSlice;
         private static Logger _logger;
 
         private static readonly TableSchema DocsSchema;
@@ -77,7 +77,8 @@ namespace Raven.Server.Documents.Versioning
         {
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndChangeVector", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable, out KeyAndEtagSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "RevisionsEtags", ByteStringType.Immutable, out RevisionsEtags);
+            Slice.From(StorageEnvironment.LabelsContext, "RevisionsEtags", ByteStringType.Immutable, out RevisionsEtagsSlice);
+
 
             DocsSchema = new TableSchema();
 
@@ -98,7 +99,7 @@ namespace Raven.Server.Documents.Versioning
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)Columns.Etag,
-                Name = RevisionsEtags
+                Name = RevisionsEtagsSlice
             });
         }
 
@@ -355,7 +356,7 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
 
-            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtags], etag))
+            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag))
             {
                 var document = TableValueToDocument(context, ref tvr.Reader);
                 yield return document;
@@ -369,7 +370,7 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
 
-            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtags], etag))
+            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag))
             {
                 yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref tvr.Reader));
             }
@@ -454,7 +455,7 @@ namespace Raven.Server.Documents.Versioning
         public long GetNumberOfRevisionDocuments(DocumentsOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
-            return table.GetNumberEntriesFor(DocsSchema.FixedSizeIndexes[RevisionsEtags]);
+            return table.GetNumberEntriesFor(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice]);
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using System.Net.Http.Headers;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -28,7 +29,7 @@ namespace Raven.Client.Documents.Commands
                     Context.Write(stream, Document);
                 }),
             };
-
+            AddEtagIfNotNull(Etag, request);
             return request;
         }
 

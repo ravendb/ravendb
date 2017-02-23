@@ -30,10 +30,7 @@ namespace Raven.Client.Documents.Commands
             {
                 Method = HttpMethod.Delete
             };
-
-            if (_etag.HasValue)
-                request.Headers.IfMatch.Add(new EntityTagHeaderValue($"\"{_etag}\""));
-
+            AddEtagIfNotNull(_etag, request);
             return request;
         }
 

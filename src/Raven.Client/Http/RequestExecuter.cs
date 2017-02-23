@@ -164,7 +164,7 @@ namespace Raven.Client.Http
                         return;
                     }
 
-                    request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue("\"" + cachedEtag + "\""));
+                    request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedEtag}\"");
                 }
 
                 var sp = Stopwatch.StartNew();
@@ -213,7 +213,7 @@ namespace Raven.Client.Http
 
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out long cachedEtag, out BlittableJsonReaderObject cachedValue)
         {
-            if (command.IsReadRequest)
+            if (command.IsReadRequest && command.ResponseType != RavenCommandResponseType.Stream)
             {
                 if (request.Method != HttpMethod.Get)
                     url = request.Method + "-" + url;
@@ -249,8 +249,9 @@ namespace Raven.Client.Http
                 case HttpStatusCode.NotFound:
                     if (command.ResponseType == RavenCommandResponseType.Object)
                         command.SetResponse((BlittableJsonReaderObject)null, fromCache: false);
-                    else
+                    else if (command.ResponseType == RavenCommandResponseType.Array)
                         command.SetResponse((BlittableJsonReaderArray)null, fromCache: false);
+                    command.SetResponse(null, null, 0, fromCache: false);
                     return true;
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:

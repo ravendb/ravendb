@@ -1,10 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
-using System.Threading;
 
 namespace Sparrow.Json
 {
@@ -152,7 +151,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteString(LazyStringValue str)
+        public void WriteString(LazyStringValue str)
         {
             if (str == null)
             {
@@ -173,13 +172,14 @@ namespace Sparrow.Json
 
                 EnsureBuffer(1);
                 _buffer[_pos++] = Quote;
+
                 return;
             }
 
             UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
         }
 
-        private unsafe void UnlikelyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
+        private void UnlikelyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
             byte* strBuffer, int size)
         {
             while (numberOfEscapeSequences > 0)
@@ -227,7 +227,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteString(LazyCompressedStringValue str)
+        public void WriteString(LazyCompressedStringValue str)
         {
             AllocatedMemoryData allocated;
             var strBuffer = str.DecompressToTempBuffer(out allocated);
