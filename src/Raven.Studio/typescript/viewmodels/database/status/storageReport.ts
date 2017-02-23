@@ -149,10 +149,19 @@ class storageReport extends viewModelBase {
 
     private mapPreAllocatedBuffers(buffersReport: Voron.Debugging.PreAllocatedBuffersReport): storageReportItem {
         const allocationTree = this.mapTree(buffersReport.AllocationTree);
-        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "buffers", false, buffersReport.PreAllocatedBuffersSpaceInBytes);
+        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "reserved", false, buffersReport.PreAllocatedBuffersSpaceInBytes);
         buffersSpace.pageCount = buffersReport.NumberOfPreAllocatedPages;
 
-        return new storageReportItem("Pre Allocated Buffers", "buffers", false, buffersReport.AllocatedSpaceInBytes, [allocationTree, buffersSpace]);
+        const preAllocatedBuffers = new storageReportItem("Pre Allocated Buffers", "reserved", false, buffersReport.AllocatedSpaceInBytes, [allocationTree, buffersSpace]);
+        preAllocatedBuffers.customSizeProvider = (header: boolean) => {
+            const allocatedSizeFormatted = generalUtils.formatBytesToSize(buffersReport.AllocatedSpaceInBytes);
+            if (header) {
+                return allocatedSizeFormatted;
+            }
+            const originalSizeFormatted = generalUtils.formatBytesToSize(buffersReport.OriginallyAllocatedSpaceInBytes);
+            return `<span title="${allocatedSizeFormatted} available out of ${originalSizeFormatted} reserved">${allocatedSizeFormatted} (out of ${originalSizeFormatted})</span>`;
+        }
+        return preAllocatedBuffers;
     }
 
     private mapTables(tables: Voron.Data.Tables.TableReport[]): storageReportItem {

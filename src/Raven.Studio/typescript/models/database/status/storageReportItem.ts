@@ -18,6 +18,7 @@ class storageReportItem {
     w?: number; // used for storing text width
     numberOfEntries: number = null;
     lazyLoadChildren = false;
+    customSizeProvider: (header: boolean) => string;
 
     constructor(name: string, type: string, showType: boolean, size: number, internalChildren: storageReportItem[] = null) {
         this.name = name;
@@ -27,8 +28,8 @@ class storageReportItem {
         this.internalChildren = internalChildren;
     }
 
-    formatSize() {
-        return generalUtils.formatBytesToSize(this.size);
+    formatSize(header: boolean) {
+        return this.customSizeProvider ? this.customSizeProvider(header) : generalUtils.formatBytesToSize(this.size);
     }
 
     formatPercentage(parentSize: number) {
