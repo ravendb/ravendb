@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Net.Http;
+using Raven.Client.Documents.Conventions;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
@@ -19,7 +21,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public long? Etag { get; }
         public HttpMethod Method => HttpMethod.Delete;
 
-        public DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DynamicJsonValue
             {

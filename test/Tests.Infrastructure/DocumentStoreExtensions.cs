@@ -237,7 +237,7 @@ namespace FastTests
 
             public async Task BatchAsync(List<ICommandData> commands)
             {
-                var command = new BatchCommand(Context, commands);
+                var command = new BatchCommand(_store.Conventions, Context, commands);
 
                 await RequestExecuter.ExecuteAsync(command, Context);
             }
@@ -248,7 +248,7 @@ namespace FastTests
                 return AsyncHelpers.RunSync(() => RawGetJsonAsync<TResult>(url));
             }
 
-            public async Task<TResult> RawGetJsonAsync<TResult>(string url) 
+            public async Task<TResult> RawGetJsonAsync<TResult>(string url)
                 where TResult : BlittableJsonReaderBase
             {
                 var command = new GetJsonCommand<TResult>(url);

@@ -229,7 +229,7 @@ namespace SlowTests.MailingList
 
         #endregion
 
-        [Fact(Skip = "RavenDB-6308")]
+        [Fact]
         public void ScriptedPatchShouldNotResultInConcurrencyExceptionForNewlyInsertedDocument()
         {
             using (var store = GetDocumentStore())
@@ -262,12 +262,25 @@ namespace SlowTests.MailingList
 
                 using (var commands = store.Commands())
                 {
+                    dynamic user1 = commands.Get("users/1");
+                    dynamic user2 = commands.Get("users/2");
+
+                    var relations1 = user1.Relations;
+                    var relations2 = user2.Relations;
+
+                    Assert.Equal(0, relations1.Length);
+                    Assert.Equal(0, relations2.Length);
+
                     commands.Batch(patches.ToList());
 
-                    var user1 = commands.Get("users/1");
-                    var user2 = commands.Get("users/2");
+                    user1 = commands.Get("users/1");
+                    user2 = commands.Get("users/2");
 
-                    throw new NotImplementedException();
+                    relations1 = user1.Relations;
+                    relations2 = user2.Relations;
+
+                    Assert.Equal(1, relations1.Length);
+                    Assert.Equal(1, relations2.Length);
                 }
             }
         }
