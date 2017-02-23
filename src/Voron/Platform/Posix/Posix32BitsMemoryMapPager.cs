@@ -458,26 +458,16 @@ namespace Voron.Platform.Posix
 
         public override void Sync(long totalUnsynced)
         {
-            var currentState = GetPagerStateAndAddRefAtomically();
-            try
+            using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
             {
-                using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
+                metric.IncrementSize(totalUnsynced);
+                metric.IncrementFileSize(_totalAllocationSize);
+
+                if (Syscall.fsync(_fd) == -1)
                 {
-                    foreach (var alloc in currentState.AllocationInfos)
-                    {
-                        metric.IncrementSize(alloc.Size);
-                        var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (UIntPtr)alloc.Size, MsyncFlags.MS_SYNC);
-                        if (result == -1)
-                        {
-                            var err = Marshal.GetLastWin32Error();
-                            PosixHelper.ThrowLastError(err, "msync on " + FileName);
-                        }
-                    }
+                    var err = Marshal.GetLastWin32Error();
+                    PosixHelper.ThrowLastError(err, "fsync " + FileName);
                 }
-            }
-            finally
-            {
-                currentState.Release();
             }
         }
 
