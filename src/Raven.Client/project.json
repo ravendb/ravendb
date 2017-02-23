@@ -85,7 +85,7 @@
         "System.IO.FileSystem": "4.3.0",
         "System.Linq": "4.3.0",
         "System.Linq.Queryable": "4.3.0",
-        "System.Net.Http": "4.3.0",
+        "System.Net.Http": "4.3.1",
         "System.Net.NameResolution": "4.3.0",
         "System.Net.Requests": "4.3.0",
         "System.Net.Sockets": "4.3.0",

@@ -26,7 +26,7 @@
       "version": "1.1.0"
     },
     "Voron": "4.0.0-*",
-    "xunit": "2.2.0-beta4-build3444"
+    "xunit": "2.2.0"
   },
 
   "frameworks": {
