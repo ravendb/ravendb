@@ -265,7 +265,7 @@ namespace FastTests
 
             documentInfo.Document = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
 
-            var putCommand = new PutDocumentCommand()
+            var putCommand = new PutDocumentCommand
             {
                 Id = id,
                 Etag = documentInfo.ETag,

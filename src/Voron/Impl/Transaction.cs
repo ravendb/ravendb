@@ -25,7 +25,7 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
-        private Dictionary<string, Table> _tables;
+        private Dictionary<Slice, Table> _tables;
 
         private Dictionary<Slice, Tree> _trees;
 
@@ -119,33 +119,34 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Table OpenTable(TableSchema schema, string name, bool throwIfDoesNotExist = true)
+        public Table OpenTable(TableSchema schema, string name)
         {
-            if (_tables == null)
-                _tables = new Dictionary<string, Table>(StringComparer.Ordinal);
-
-            Table openTable;
-            if (_tables.TryGetValue(name, out openTable))
-                return openTable;
-
             Slice nameSlice;
-            Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice);
-            // intentionally not disposing the name here, it is valid for the lifetime of the table
-            openTable = OpenTable(schema, nameSlice, throwIfDoesNotExist);
-
-            _tables.Add(name, openTable);
-
-            return openTable;
+            using (Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice))
+            {
+                return OpenTable(schema, nameSlice);
+            }
         }
 
-        public Table OpenTable(TableSchema schema, Slice name, bool throwIfDoesNotExist = true)
+        public Table OpenTable(TableSchema schema, Slice name)
         {
+            if(_tables == null)
+                _tables = new Dictionary<Slice, Table>(SliceComparer.Instance);
+
+            Table value;
+            if (_tables.TryGetValue(name, out value))
+                return value;
+
             var tableTree = ReadTree(name, RootObjectType.Table);
 
             if (tableTree == null)
                 return null;
 
-            return new Table(schema, name, this, tableTree);
+            var clonedName = name.Clone(Allocator);
+
+            value = new Table(schema, clonedName, this, tableTree);
+            _tables[clonedName] = value;
+            return value;
         }
 
         internal void PrepareForCommit()

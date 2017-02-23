@@ -16,9 +16,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Client.Indexing.StaticIndexesFromClient())
+                using (var a = new FastTests.Server.Basic.Crud())
                 {
-                    a.Can_Put_And_Replace().Wait();
+                    a.CanOverwriteDocumentWithSmallerValue();
                 }
             }
             

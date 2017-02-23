@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 
@@ -23,8 +24,18 @@ namespace Raven.Client.Json
             {
                 var propDetails = new BlittableJsonReaderObject.PropertyDetails();
                 _source.GetPropertyByIndex(index, ref propDetails);
-                _metadata[propDetails.Name] = propDetails.Value.ToString();
+                _metadata[propDetails.Name] = ConvertValue(propDetails.Value);
             }
+        }
+
+        private string ConvertValue(object value)
+        {
+            var arr = value as BlittableJsonReaderArray;
+            if (arr != null)
+            {
+                return string.Join(",", arr.Items.Select(x => x.ToString()));
+            }
+            return value.ToString();
         }
 
         public string this[string key]
@@ -35,9 +46,9 @@ namespace Raven.Client.Json
                     return _metadata[key];
                 object value;
                 if (_source.TryGetMember(key, out value))
-                    return value.ToString();
+                    return ConvertValue(value);
 
-                throw new KeyNotFoundException(key + "is not in the metadata");
+                throw new KeyNotFoundException(key + " is not in the metadata");
             }
 
             set
@@ -66,8 +77,8 @@ namespace Raven.Client.Json
                 foreach (var prop in _source.GetPropertiesByInsertionOrder())
                 {
                     var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                    _source.GetPropertyByIndex(prop, ref propDetails);                    
-                    values.Add(propDetails.Value.ToString());
+                    _source.GetPropertyByIndex(prop, ref propDetails);
+                    values.Add(ConvertValue(propDetails));
                 }
                 return values;
             }
@@ -147,8 +158,8 @@ namespace Raven.Client.Json
 
             object val;
             if (_source.TryGetMember(key, out val))
-            {                
-                value = val.ToString();
+            {
+                value = ConvertValue(val);
                 return true;
             }
             value = null;
