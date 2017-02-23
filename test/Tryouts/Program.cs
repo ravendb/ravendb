@@ -16,9 +16,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.Documents.ModifyExistingDocument())
+                using (var a = new SlowTests.Bugs.CanGetScores())
                 {
-                    a.ShouldThrowIfChangeCollection().Wait();
+                    a.FromQueryWithOrderByScoreThenNameDescending();
                 }
             }
             
