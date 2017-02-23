@@ -5,10 +5,14 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import EVENTS = require("common/constants/events");
 import viewModelBase = require("viewmodels/viewModelBase");
+import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 import selectColumns = require("viewmodels/common/selectColumns");
 import selectCsvColumnsDialog = require("viewmodels/common/selectCsvColumns");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import messagePublisher = require("common/messagePublisher");
+
+import notificationCenter = require("common/notifications/notificationCenter");
 
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
@@ -44,7 +48,7 @@ class documents extends viewModelBase {
     private collectionToSelectName: string;
     private collections = ko.observableArray<collection>();
     private currentCollection = ko.observable<collection>();
-    private gridController = ko.observable<virtualGridController<any>>();
+    private gridController = ko.observable<virtualGridController<document>>();
 
     constructor() {
         super();
@@ -146,52 +150,61 @@ class documents extends viewModelBase {
         }
     }
 
+    deleteSelected() {
+        const selection = this.gridController().getSelection();
+        if (selection.count === 0) {
+            throw new Error("No elements to delete");
+        }
+
+        if (selection.mode === "inclusive") {
+            const idsToDelete = selection.included.map(x => x.getId());
+            const deleteDocsDialog = new deleteDocuments(selection.included, this.activeDatabase());
+            deleteDocsDialog.deletionTask.done(() => {
+                this.gridController().reset();
+            });
+
+            app.showBootstrapDialog(deleteDocsDialog);
+        } else {
+            // exclusive
+            const excludedIds = selection.excluded.map(x => x.getId());
+
+            const deleteCollectionDialog = new deleteCollection(this.currentCollection().name, this.activeDatabase(), selection.count, excludedIds);
+
+            deleteCollectionDialog.operationIdTask.done((operationId: operationIdDto) => {
+                notificationCenter.instance.resourceOperationsWatch.monitorOperation(operationId.OperationId)
+                    .done(() => {
+                        if (excludedIds.length === 0) {
+                            messagePublisher.reportSuccess(`Deleted collection ${this.currentCollection().name}`);
+                        } else {
+                            messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.currentCollection().name}`);   
+                        }
+
+                        if (excludedIds.length === 0) {
+                            // deleted entire collection to go all documents
+                            const allDocsCollection = this.collections().find(x => x.isAllDocuments);
+                            if (this.currentCollection() !== allDocsCollection) {
+                                this.currentCollection(allDocsCollection);
+                            }
+                        }
+
+                        this.gridController().reset();
+                    });
+            });
+            app.showBootstrapDialog(deleteCollectionDialog);
+        }
+    }
+
     /*
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
-    selectedDocumentIndices = ko.observableArray<number>();
     selectedDocumentsText: KnockoutComputed<string>;
-    hasDocuments: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
 
-    documentsSelection: KnockoutComputed<checkbox>;
-    hasAnyDocumentsSelected: KnockoutComputed<boolean>;
-    hasAllDocumentsSelected: KnockoutComputed<boolean>;
-    isAnyDocumentsAutoSelected = ko.observable<boolean>(false);
-    isAllDocumentsAutoSelected = ko.observable<boolean>(false);
     canCopyAllSelected: KnockoutComputed<boolean>;
 
     constructor() {
         super();
 
         this.selectedCollection.subscribe(c => this.selectedCollectionChanged(c));
-        this.hasDocuments = ko.computed(() => {
-            var selectedCollection: collection = this.selectedCollection();
-            if (!!selectedCollection) {
-                if (selectedCollection.name === collection.allDocsCollectionName) {
-                    return this.documentsCount() > 0;
-                }
-                return this.selectedCollection().documentCount() > 0;
-            }
-            return false;
-        });
-        this.hasAnyDocumentsSelected = ko.computed(() => this.selectedDocumentIndices().length > 0);
-        this.hasAllDocumentsSelected = ko.computed(() => {
-            var numOfSelectedDocuments = this.selectedDocumentIndices().length;
-            if (!!this.selectedCollection() && numOfSelectedDocuments !== 0) {
-                return numOfSelectedDocuments === this.selectedCollection().documentCount();
-            }
-            return false;
-        });
-        this.documentsSelection = ko.computed(() => {
-            var selected = this.selectedDocumentIndices();
-            if (this.hasAllDocumentsSelected()) {
-                return checkbox.Checked;
-            }
-            if (selected.length > 0) {
-                return checkbox.SomeChecked;
-            }
-            return checkbox.UnChecked;
-        });
         this.canCopyAllSelected = ko.computed(() => {
             this.showLoadingIndicator(); //triggers computing the new cached selected items
             var numOfSelectedDocuments = this.selectedDocumentIndices().length;
@@ -303,26 +316,7 @@ class documents extends viewModelBase {
         }
     }
 
-    deleteCollection(collection: collection) {
-        if (collection) {
-            var viewModel = new deleteCollection(collection, this.activeDatabase());
-            viewModel.deletionTask.done((result: operationIdDto) => {
-                if (!collection.isAllDocuments) {
-                    this.collections.remove(collection);
-
-                    var selectedCollection: collection = this.selectedCollection();
-                    if (collection.name === selectedCollection.name) {
-                        this.selectCollection(this.allDocumentsCollection());
-                    }
-                } else {
-                    this.selectNone();
-                }
-
-                this.updateGridAfterOperationComplete(collection, result.OperationId);
-            });
-            app.showBootstrapDialog(viewModel);
-        }
-    }
+   
 
     private updateGridAfterOperationComplete(collection: collection, operationId: number) {
         /* TODO var getOperationStatusTask = new getOperationStatusCommand(collection.ownerDatabase, operationId);
@@ -443,58 +437,6 @@ class documents extends viewModelBase {
         this.showCollectionChanged(false);
     }
 
-    toggleSelectAll() {
-        var docsGrid = this.getDocumentsGrid();
-
-        if (!!docsGrid) {
-            if (this.hasAnyDocumentsSelected()) {
-                docsGrid.selectNone();
-            } else {
-                docsGrid.selectSome();
-
-                this.isAnyDocumentsAutoSelected(this.hasAllDocumentsSelected() == false);
-            }
-        }
-    }
-
-    selectAll() {
-        var docsGrid = this.getDocumentsGrid();
-        var c: collection = this.selectedCollection();
-
-        if (!!docsGrid && !!c) {
-            docsGrid.selectAll(c.documentCount());
-        }
-    }
-
-    selectNone() {
-        var docsGrid = this.getDocumentsGrid();
-
-        if (!!docsGrid) {
-            docsGrid.selectNone();
-        }
-    }
-
-    editSelectedDoc() {
-        eventsCollector.default.reportEvent("document", "edit");
-        var grid = this.getDocumentsGrid();
-        if (grid) {
-            grid.editLastSelectedItem();
-        }
-    }
-
-    deleteSelectedDocs() {
-        if (this.selectedCollection().isSystemDocuments === false && this.hasAllDocumentsSelected() && !this.selectedCollection().isAllDocuments) {
-            eventsCollector.default.reportEvent("collection", "delete");
-            this.deleteCollection(this.selectedCollection());
-        } else {
-            eventsCollector.default.reportEvent("documents", "delete");
-            var grid = this.getDocumentsGrid();
-            if (grid) {
-                grid.deleteSelectedItems();
-            }
-        }
-    }
-
     copySelectedDocs() {
         eventsCollector.default.reportEvent("documents", "copy");
         var grid = this.getDocumentsGrid();
@@ -509,15 +451,6 @@ class documents extends viewModelBase {
         if (grid) {
             grid.copySelectedDocIds();
         }
-    }
-
-    private getDocumentsGrid(): virtualTable {
-        var gridContents = $(documents.gridSelector).children()[0];
-        if (gridContents) {
-            return ko.dataFor(gridContents);
-        }
-
-        return null;
     }
 
     private sortCollections() {

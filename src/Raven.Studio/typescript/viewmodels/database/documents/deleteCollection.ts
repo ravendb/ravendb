@@ -6,21 +6,23 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class deleteCollection extends dialogViewModelBase {
 
-    public deletionTask = $.Deferred<operationIdDto>();
+    operationIdTask = $.Deferred<operationIdDto>();
     private deletionStarted = false;
     isAllDocuments: boolean;
 
-    constructor(private collection: collection, private db: database) {
+    constructor(private collectionName: string, private db: database, private itemsToDelete: number, private excludedIds: Array<string>) {
         super();
-        this.isAllDocuments = collection.isAllDocuments;
+        this.isAllDocuments = collection.allDocumentsCollectionName === collectionName;
     }
 
     deleteCollection() {
-        var collectionName = this.isAllDocuments ? "*" : this.collection.name;
-        var deleteCommand = new deleteCollectionCommand(collectionName, this.db);
-        var deleteCommandTask = deleteCommand.execute();
-        deleteCommandTask.done((result) => this.deletionTask.resolve(result));
-        deleteCommandTask.fail(response => this.deletionTask.reject(response));
+        const collectionName = this.isAllDocuments ? "*" : this.collectionName;
+
+        new deleteCollectionCommand(collectionName, this.db, this.excludedIds)
+            .execute()
+            .done((result) => this.operationIdTask.resolve(result))
+            .fail(response => this.operationIdTask.reject(response));
+
         this.deletionStarted = true;
         dialog.close(this);
     }
@@ -33,7 +35,7 @@ class deleteCollection extends dialogViewModelBase {
         // If we were closed via X button or other dialog dismissal, reject the deletion task since
         // we never started it.
         if (!this.deletionStarted) {
-            this.deletionTask.reject();
+            this.operationIdTask.reject();
         }
     }
 }
