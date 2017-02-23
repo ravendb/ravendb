@@ -80,6 +80,11 @@ namespace Raven.Server.Documents
             LastModified = 6,
         }
 
+        // The attachments schema is as follows
+        // 5 fields (lowered document id AND record separator AND lowered name, etag, name, content type, last modified)
+        // We are you using the record separator in order to avoid loading another files that has the same key prefix, 
+        //      e.g. fitz(record-separator)profile.png and fitz0(record-separator)profile.png, without the record separator we would have to load also fitz0 and filter it.
+        // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
         private enum AttachmentsTable
         {
             LoweredDocumentIdAndRecordSeparatorAndLoweredName = 0,
@@ -222,12 +227,6 @@ namespace Raven.Server.Documents
                 Name = DeletedEtagsSlice
             });
 
-
-            // The attachments schema is as follows
-            // 5 fields (lowered document id AND record separator AND lowered name, etag, name, content type, last modified, stream identifier)
-            // We are you using the record separator in order to avoid loading another files that has the same key prefix, 
-            //      e.g. fitz(record-separator)profile.png and fitz0(record-separator)profile.png, without the record separator we would have to load also fitz0 and filter it.
-            // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
             AttachmentsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName,
