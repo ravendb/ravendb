@@ -848,7 +848,7 @@ namespace Raven.Tests.Helpers
 
             }*/
 
-        protected void WaitForUserToContinueTheTest(bool debug = true, string url = null, string startPage = null)
+        protected void WaitForUserToContinueTheTest(bool debug = true, string url = null, string startPage = null,int port = 8079)
         {
             if (debug && Debugger.IsAttached == false)
                 return;
@@ -856,7 +856,7 @@ namespace Raven.Tests.Helpers
 
             using (var documentStore = new DocumentStore
             {
-                Url = url ?? "http://localhost:8079"
+                Url = url ?? "http://localhost:" + port
             }.Initialize())
             {
                 var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);

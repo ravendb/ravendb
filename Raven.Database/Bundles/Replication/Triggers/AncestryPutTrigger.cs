@@ -30,9 +30,20 @@ namespace Raven.Database.Bundles.Replication.Triggers
             using (Database.DisableAllTriggersForCurrentThread())
             {
                 var documentMetadata = GetDocumentMetadata(key);
-                if (documentMetadata != null)
+                if (documentMetadata == null)
                 {
-                    var history = new RavenJArray(ReplicationData.GetHistory(documentMetadata));
+                    var history = new RavenJArray()
+                    {
+                        new RavenJObject
+                            {
+                                {Constants.RavenReplicationVersion, metadata[Constants.RavenReplicationVersion]},
+                                {Constants.RavenReplicationSource, metadata[Constants.RavenReplicationSource]}
+                            }
+                    };
+                    
+                }
+                else {
+                    var history = new RavenJArray(ReplicationData.GetOrCreateHistory(documentMetadata));
 
                     if (documentMetadata.ContainsKey(Constants.RavenReplicationMergedHistory) == false)
                     {

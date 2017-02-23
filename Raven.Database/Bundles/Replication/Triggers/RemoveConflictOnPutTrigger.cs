@@ -60,7 +60,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
 
                     if (deletedMetadata != null)
                     {
-                        var conflictHistory = new RavenJArray(ReplicationData.GetHistory(deletedMetadata));
+                        var conflictHistory = new RavenJArray(ReplicationData.GetOrCreateHistory(deletedMetadata));
                         conflictHistory.Add(new RavenJObject
                         {
                             {Constants.RavenReplicationVersion, deletedMetadata[Constants.RavenReplicationVersion]},

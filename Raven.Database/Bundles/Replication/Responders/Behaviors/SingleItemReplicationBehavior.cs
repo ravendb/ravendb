@@ -233,7 +233,7 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                 };
             }
                         
-            var existingHistory = ReplicationData.GetHistory(existingMetadata);
+            var existingHistory = ReplicationData.GetOrCreateHistory(existingMetadata);
             if (currentReplicationEntry != null &&
                 existingHistory.Any(x => RavenJTokenEqualityComparer.Default.Equals(
                     ((RavenJObject)x)[Constants.RavenReplicationSource], currentReplicationEntry[Constants.RavenReplicationSource])
@@ -249,7 +249,7 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                 if (log.IsDebugEnabled)
                     log.Debug("Replicating deleted item {0} from {1} that was deleted locally. Merging histories.", id, Src);
 
-                var newHistory = ReplicationData.GetHistory(newMetadata);
+                var newHistory = ReplicationData.GetOrCreateHistory(newMetadata);
                 if (currentReplicationEntry != null)
                     newHistory.Add(currentReplicationEntry);
 

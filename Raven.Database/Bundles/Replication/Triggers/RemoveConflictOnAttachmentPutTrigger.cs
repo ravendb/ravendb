@@ -35,7 +35,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
                 if (oldVersion.Metadata[Constants.RavenReplicationConflict] == null)
                     return;
 
-                var history = new RavenJArray(ReplicationData.GetHistory(metadata));
+                var history = new RavenJArray(ReplicationData.GetOrCreateHistory(metadata));
                 metadata[Constants.RavenReplicationHistory] = history;
 
                 // this is a conflict document, holding document keys in the 
@@ -53,7 +53,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
                     Database.Attachments.DeleteStatic(id, null);
 
                     // add the conflict history to the mix, so we make sure that we mark that we resolved the conflict
-                    var conflictHistory = new RavenJArray(ReplicationData.GetHistory(attachment.Metadata));
+                    var conflictHistory = new RavenJArray(ReplicationData.GetOrCreateHistory(attachment.Metadata));
                     conflictHistory.Add(new RavenJObject
                     {
                         {Constants.RavenReplicationVersion, attachment.Metadata[Constants.RavenReplicationVersion]},
