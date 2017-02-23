@@ -244,15 +244,16 @@ namespace Voron.Debugging
 
         public static PreAllocatedBuffersReport GetReport(NewPageAllocator preAllocatedBuffers, bool calculateExactSizes)
         {
-            var numberOfPreAllocatedPages = preAllocatedBuffers.GetNumberOfPreAllocatedFreePages();
+            var buffersReport = preAllocatedBuffers.GetNumberOfPreAllocatedFreePages();
             var allocationTreeReport = GetReport(preAllocatedBuffers.GetAllocationStorageFst(), calculateExactSizes);
 
             return new PreAllocatedBuffersReport
             {
-                AllocatedSpaceInBytes = (numberOfPreAllocatedPages + allocationTreeReport.PageCount) * Constants.Storage.PageSize,
-                PreAllocatedBuffersSpaceInBytes = numberOfPreAllocatedPages * Constants.Storage.PageSize,
-                NumberOfPreAllocatedPages = numberOfPreAllocatedPages,
+                AllocatedSpaceInBytes = (buffersReport.NumberOfFreePages + allocationTreeReport.PageCount) * Constants.Storage.PageSize,
+                PreAllocatedBuffersSpaceInBytes = buffersReport.NumberOfFreePages * Constants.Storage.PageSize,
+                NumberOfPreAllocatedPages = buffersReport.NumberOfFreePages,
                 AllocationTree = allocationTreeReport,
+                OriginallyAllocatedSpaceInBytes = (buffersReport.NumberOfOriginallyAllocatedPages + allocationTreeReport.PageCount) * Constants.Storage.PageSize
             };
         }
 

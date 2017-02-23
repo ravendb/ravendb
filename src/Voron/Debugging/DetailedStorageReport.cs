@@ -72,5 +72,6 @@ namespace Voron.Debugging
         public long PreAllocatedBuffersSpaceInBytes { get; set; }
         public long NumberOfPreAllocatedPages { get; set; }
         public TreeReport AllocationTree { get; set; }
+        public long OriginallyAllocatedSpaceInBytes { get; set; }
     }
 }

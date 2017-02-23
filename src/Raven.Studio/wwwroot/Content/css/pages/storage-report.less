@@ -4,7 +4,7 @@
 @chart-subscriptions-color: #d1711b;
 @chart-configuration-color: #c73774;
 @chart-free-color: @gray-darker;
-@chart-buffers-color: #435d78;
+@chart-reserved-color: #435d78;
 @chart-data-color: #8d6cab;
 @chart-tables-color: #7cb82f;
 @chart-table_data-color: #4dcb80;
@@ -111,11 +111,11 @@
             }
         }
 
-        &.buffers {
-            fill: @chart-buffers-color;
+        &.reserved {
+            fill: @chart-reserved-color;
 
             &:hover {
-                fill: lighten(@chart-buffers-color,5%);
+                fill: lighten(@chart-reserved-color,5%);
             }
         }
 
@@ -286,11 +286,11 @@
                 }
             }
 
-            &.buffers {
-                background-color: @chart-buffers-color;
+            &.reserved {
+                background-color: @chart-reserved-color;
 
                 &:hover {
-                    background-color: lighten(@chart-buffers-color,5%);
+                    background-color: lighten(@chart-reserved-color,5%);
                 }
             }
 
