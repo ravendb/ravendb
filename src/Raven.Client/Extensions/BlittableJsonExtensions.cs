@@ -15,30 +15,13 @@ namespace Raven.Client.Extensions
             foreach (BlittableJsonReaderObject entryJson in vectorJson)
             {
                 if (!entryJson.TryGet(nameof(ChangeVectorEntry.DbId), out result[iter].DbId))
-                    throw new InvalidDataException();
+                    throw new InvalidDataException("Tried to find " + nameof(ChangeVectorEntry.DbId) + " property in change vector, but didn't find.");
                 if (!entryJson.TryGet(nameof(ChangeVectorEntry.Etag), out result[iter].Etag))
-                    throw new InvalidDataException();
+                    throw new InvalidDataException("Tried to find "+ nameof(ChangeVectorEntry.Etag) + " property in change vector, but didn't find.");
 
                 iter++;
             }
             return result;
-        }
-
-        public static string ToJsonString(this BlittableJsonReaderArray vectorJson)
-        {
-            var result = new StringBuilder();
-            result.Append("[");
-            bool first = true;
-            foreach (BlittableJsonReaderObject entryJson in vectorJson)
-            {
-                if (first == false)
-                    result.Append(",");
-                first = false;
-                result.Append(entryJson);
-            }
-
-            result.Append("]");
-            return result.ToString();
         }
 
         public static BlittableJsonReaderObject GetMetadata(this BlittableJsonReaderObject document)

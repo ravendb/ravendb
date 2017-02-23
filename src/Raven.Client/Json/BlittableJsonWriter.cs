@@ -66,11 +66,15 @@ namespace Raven.Client.Json
                     _documentInfo.Metadata.GetPropertyByIndex(id, ref propertyDetails);
                     _manualBlittalbeJsonDocumentBuilder.WritePropertyName(propertyDetails.Name);
 
-                    switch (propertyDetails.Token)
+                    switch (propertyDetails.Token & ~BlittableJsonToken.OffsetSizeByte)
                     {
-                        //in this case it can only be change vector (since it is the only array in the metadata)
-                        //not sure how viable/maintenable this is.
-                        case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeByte:
+                        case BlittableJsonToken.StartArray:
+                            //in this case it can only be change vector (since it is the only array in the metadata)
+                            if (propertyDetails.Name != "@change-vector")
+                            {
+                                throw new NotSupportedException("Expected to the array to be property called 'ChangeVector', but found " + propertyDetails.Name + ", this is not supported.");
+                            }
+
                             _manualBlittalbeJsonDocumentBuilder.StartWriteArray();
                             var changeVectorArray = propertyDetails.Value as BlittableJsonReaderArray;
                             if (changeVectorArray != null)

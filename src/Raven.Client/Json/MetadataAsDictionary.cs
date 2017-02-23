@@ -35,10 +35,8 @@ namespace Raven.Client.Json
                     return _metadata[key];
                 object value;
                 if (_source.TryGetMember(key, out value))
-                {
-                    var blittableArray = value as BlittableJsonReaderArray;
-                    return blittableArray != null ? blittableArray.ToJsonString() : value.ToString();
-                }
+                    return value.ToString();
+
                 throw new KeyNotFoundException(key + "is not in the metadata");
             }
 
@@ -68,11 +66,8 @@ namespace Raven.Client.Json
                 foreach (var prop in _source.GetPropertiesByInsertionOrder())
                 {
                     var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                    _source.GetPropertyByIndex(prop, ref propDetails);
-                    var blittableArray = propDetails.Value as BlittableJsonReaderArray;
-                    values.Add(blittableArray != null ? 
-                                    blittableArray.ToJsonString() : 
-                                    propDetails.Value.ToString());
+                    _source.GetPropertyByIndex(prop, ref propDetails);                    
+                    values.Add(propDetails.Value.ToString());
                 }
                 return values;
             }
@@ -152,9 +147,8 @@ namespace Raven.Client.Json
 
             object val;
             if (_source.TryGetMember(key, out val))
-            {
-                var blittableArray = val as BlittableJsonReaderArray;
-                value = blittableArray != null ? blittableArray.ToJsonString() : val.ToString();
+            {                
+                value = val.ToString();
                 return true;
             }
             value = null;

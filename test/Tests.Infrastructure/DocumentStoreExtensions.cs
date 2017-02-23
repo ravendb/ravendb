@@ -153,14 +153,7 @@ namespace FastTests
                 await RequestExecuter.ExecuteAsync(command, Context);
 
                 return command.Result;
-            }
-
-            public ResolveConflictResult ResolveConflictsFor(string id, ChangeVectorEntry[] changeVectorToSolveFor)
-            {
-                var resolveConflictsCommand = new ResolveConflictCommand(id,changeVectorToSolveFor, Context);
-                RequestExecuter.Execute(resolveConflictsCommand, Context);
-                return resolveConflictsCommand.Result;
-            }
+            }          
 
             public GetConflictsResult.Conflict[] GetConflictsFor(string id)
             {

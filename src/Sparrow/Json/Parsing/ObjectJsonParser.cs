@@ -440,7 +440,7 @@ namespace Sparrow.Json.Parsing
                     foreach (var item in itemArray)
                     {
                         var convertible = item as IConvertible<DynamicJsonValue>;
-                        if (convertible != null && convertible.CanConvert())
+                        if (convertible != null)
                         {
                             jsonArray.Add(convertible.Convert());
                         }

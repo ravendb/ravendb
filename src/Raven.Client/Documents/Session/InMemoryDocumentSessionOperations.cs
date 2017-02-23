@@ -206,7 +206,7 @@ namespace Raven.Client.Documents.Session
 
             var documentInfo = GetDocumentInfo(instance);
             BlittableJsonReaderArray changeVectorJson;
-            if (documentInfo.Metadata.TryGet(Constants.Documents.Replication.ChangeVector, out changeVectorJson))
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out changeVectorJson))
                 return changeVectorJson.ToVector();
 
             return new ChangeVectorEntry[0];

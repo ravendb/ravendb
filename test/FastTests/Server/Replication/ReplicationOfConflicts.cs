@@ -49,44 +49,7 @@ namespace FastTests.Server.Replication
 
             Assert.Empty(GetConflicts(store1, "foo/bar"));
             Assert.Empty(GetConflicts(store2, "foo/bar"));
-        }
-
-        [Fact]
-        public async Task ResolveConflictFor_when_there_is_no_conflicts_should_return_proper_result()
-        {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
-            {
-                SetupReplication(master, slave);
-
-                using (var session = master.OpenSession())
-                {
-                    session.Store(new User()
-                    {
-                        Name = "Karmel"
-                    }, "users/1");
-                    session.SaveChanges();
-                }
-
-                WaitForDocument(slave, "users/1");
-
-                using (var session = slave.OpenSession())
-                {
-                    var doc = session.Load<User>("users/1");
-                    var changeVector = session.Advanced.GetChangeVectorFor(doc);
-
-                    //sanity check asserts
-                    Assert.Equal(1,changeVector.Length);
-                    Assert.True(changeVector[0].Etag > 0);
-                    var masterDatabaseStore = await GetDocumentDatabaseInstanceFor(master);
-                    Assert.Equal(masterDatabaseStore.DbId,changeVector[0].DbId);
-                    //end of sanity check asserts
-
-                    var result = slave.Commands().ResolveConflictsFor("users/1", changeVector);
-                    Assert.Equal(result.Result,ResolveConflictResult.ResultType.NotConflicted);
-                }
-            }
-        }
+        }  
 
         [Fact]
         public void CanManuallyResolveConflict_with_tombstone()
@@ -142,9 +105,7 @@ namespace FastTests.Server.Replication
                         Assert.NotEmpty(e.Conflicts);
                         Assert.Equal(2, e.Conflicts.Count);
 
-                        var conflictToResolveWith = e.Conflicts.FirstOrDefault(x => x.Doc == null); //the one with tombstone
-                        var result = slave.Commands().ResolveConflictsFor("users/1", conflictToResolveWith.ChangeVector);
-                        Assert.Equal(result.Result,ResolveConflictResult.ResultType.Resolved);
+                        slave.Commands().Delete("users/1",null);//resolve conflict to the one with tombstone
                     }
                 }
 

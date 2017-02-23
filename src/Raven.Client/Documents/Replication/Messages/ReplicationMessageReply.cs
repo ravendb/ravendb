@@ -81,10 +81,6 @@ namespace Raven.Client.Documents.Replication.Messages
             };
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool CanConvert() => true;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public DynamicJsonValue Convert()
         {
             return ToJson();
