@@ -908,8 +908,7 @@ namespace Raven.Server.Documents
                 Slice startSlice;
                 using (GetAttachmentPrefix(context, document.LoweredKey.Buffer, document.LoweredKey.Size, out startSlice))
                 {
-                    // TODO: To IEnumerable
-                    document.Attachments = GetAttachmentNamesForDocument(context, startSlice).ToArray();
+                    document.Attachments = GetAttachmentNamesForDocument(context, startSlice);
                 }
             }
 
