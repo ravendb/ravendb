@@ -2848,6 +2848,7 @@ namespace Raven.Server.Documents
         private IEnumerable<LazyStringValue> GetAttachmentNamesForDocument(DocumentsOperationContext context, Slice startSlice)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            // TODO: Use table.SeekForwardFrom(AttachmentsSchema.Key, startSlice, true)
             foreach (var sr in table.SeekForwardFrom(AttachmentsSchema.Indexes[AttachmentsKeyIndexSlice], startSlice, true))
             {
                 foreach (var tvr in sr.Results)
@@ -2902,33 +2903,23 @@ namespace Raven.Server.Documents
             return tree.ReadStream(keySlice);
         }
 
-        private IDisposable GetAttachmentKey(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, byte* lowerName, int lowerNameSize, out Slice keySlice)
+        private ReleaseMemory GetAttachmentKey(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, byte* lowerName, int lowerNameSize, out Slice keySlice)
         {
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1 + lowerNameSize);
             Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
             keyMem.Ptr[lowerKeySize + 1] = (byte) 30; // the record separator
             Memory.CopyInline(keyMem.Ptr + lowerKeySize + 1, lowerName, lowerNameSize);
             keySlice = new Slice(SliceOptions.Key, keyMem);
-
-            return new DisposableAction(() =>
-            {
-                if (keyMem.HasValue)
-                    context.Allocator.Release(ref keyMem);
-            });
+            return new ReleaseMemory(keyMem, context);
         }
 
-        private IDisposable GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice keySlice)
+        private ReleaseMemory GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice keySlice)
         {
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
             Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
             keyMem.Ptr[lowerKeySize + 1] = (byte)30; // the record separator
             keySlice = new Slice(SliceOptions.Key, keyMem);
-
-            return new DisposableAction(() =>
-            {
-                if (keyMem.HasValue)
-                    context.Allocator.Release(ref keyMem);
-            });
+            return new ReleaseMemory(keyMem, context);
         }
 
         private static Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)

@@ -1156,7 +1156,7 @@ namespace Raven.Server.Json
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(Constants.Documents.Metadata.Attachments);
-                    writer.WriteStringJoin(document.Attachments);
+                    writer.WriteArray(document.Attachments);
                 }
             }
             if (document.Etag != 0)
@@ -1411,5 +1411,21 @@ namespace Raven.Server.Json
 
             writer.WriteEndArray();
         }
+
+        public static void WriteArray(this BlittableJsonTextWriter writer, IEnumerable<LazyStringValue> items)
+        {
+            writer.WriteStartArray();
+            var first = true;
+            foreach (var item in items)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteString(item);
+            }
+            writer.WriteEndArray();
+        }
+
     }
 }

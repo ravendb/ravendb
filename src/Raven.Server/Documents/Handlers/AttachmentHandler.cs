@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System;
 using System.IO;
 using System.Net;
 using System.Runtime.ExceptionServices;
@@ -11,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron.Exceptions;
 
@@ -46,11 +49,18 @@ namespace Raven.Server.Documents.Handlers
                 HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"";
                 HttpContext.Response.Headers["Content-Type"] = attachment.ContentType.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + attachment.Etag + "\"";
-                // TODO: HttpContext.Response.Headers["Content-Range"] = ;
 
+                JsonOperationContext.ManagedPinnedBuffer buffer;
+                using (context.GetManagedBuffer(out buffer))
                 using (var stream = attachment.Stream)
                 {
-                    await stream.CopyToAsync(ResponseBodyStream());
+                    var responseStream = ResponseBodyStream();
+                    var count = await stream.ReadAsync(buffer.Buffer.Array, 0, buffer.Length, Database.DatabaseShutdown);
+                    while (count > 0)
+                    {
+                        await responseStream.WriteAsync(buffer.Buffer.Array, 0, count, Database.DatabaseShutdown);
+                        count = await stream.ReadAsync(buffer.Buffer.Array, 0, buffer.Length, Database.DatabaseShutdown);
+                    }
                 }
             }
         }
@@ -66,14 +76,13 @@ namespace Raven.Server.Documents.Handlers
                 var contentType = GetStringQueryString("contentType", false) ?? "";
 
                 AttachmentResult result;
-                var tempPath = GetUniqueTempFileName(Database.DocumentsStorage.Environment.Options.DataPager.Options.TempPath, "attachment.", "put");
+                var tempPath = Path.Combine(Database.DocumentsStorage.Environment.Options.DataPager.Options.TempPath, $"attachment.{Guid.NewGuid():N}.put");
                 using (var file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan))
                 {
                     JsonOperationContext.ManagedPinnedBuffer buffer;
                     using (context.GetManagedBuffer(out buffer))
                     {
                         var requestStream = RequestBodyStream();
-                        // TODO: Improve this to be more efficient: read more from the network while we writing to disk.
                         var count = await requestStream.ReadAsync(buffer.Buffer.Array, 0, buffer.Length, Database.DatabaseShutdown);
                         while (count > 0)
                         {
@@ -98,6 +107,8 @@ namespace Raven.Server.Documents.Handlers
                         result = cmd.Result;
                     }
                 }
+                // Linux does not clean the file, so we should clean it manually
+                IOExtensions.DeleteFile(tempPath);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -147,28 +158,6 @@ namespace Raven.Server.Documents.Handlers
                 cmd.ExceptionDispatchInfo?.Throw();
 
                 NoContentStatus();
-            }
-        }
-
-        private static string GetUniqueTempFileName(string tempPath, string prefix, string extension)
-        {
-            int attempt = 0;
-            while (true)
-            {
-                string fileName = prefix + Path.GetRandomFileName();
-                fileName = Path.ChangeExtension(fileName, extension);
-                fileName = Path.Combine(tempPath, fileName);
-
-                try
-                {
-                    if (File.Exists(fileName) == false)
-                        return fileName;
-                }
-                catch (IOException ex)
-                {
-                    if (++attempt == 10)
-                        throw new IOException("No unique temporary file name is available.", ex);
-                }
             }
         }
 
