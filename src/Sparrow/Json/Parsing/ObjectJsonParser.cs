@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using Sparrow.Extensions;
 using Sparrow.Utils;
@@ -428,6 +430,23 @@ namespace Sparrow.Json.Parsing
                 if (current is Enum)
                 {
                     current = current.ToString();
+                    continue;
+                }
+
+                var itemArray = current as Array;
+                if (itemArray != null)
+                {
+                    var jsonArray = new DynamicJsonArray();
+                    foreach (var item in itemArray)
+                    {
+                        var convertible = item as IConvertible<DynamicJsonValue>;
+                        if (convertible != null)
+                        {
+                            jsonArray.Add(convertible.Convert());
+                        }
+                    }
+
+                    current = jsonArray;
                     continue;
                 }
 

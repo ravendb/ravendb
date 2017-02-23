@@ -213,7 +213,6 @@ namespace Raven.Server
             {
                 djv[nameof(DocumentConflictException.DocId)] = documentConflictException.DocId;
                 djv[nameof(DocumentConflictException.Conflicts)] = documentConflictException.GetConflicts();
-                return;
             }
         }
 

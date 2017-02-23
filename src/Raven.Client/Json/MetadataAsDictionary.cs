@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Json
@@ -35,6 +36,7 @@ namespace Raven.Client.Json
                 object value;
                 if (_source.TryGetMember(key, out value))
                     return value.ToString();
+
                 throw new KeyNotFoundException(key + "is not in the metadata");
             }
 
@@ -64,7 +66,7 @@ namespace Raven.Client.Json
                 foreach (var prop in _source.GetPropertiesByInsertionOrder())
                 {
                     var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                    _source.GetPropertyByIndex(prop, ref propDetails);
+                    _source.GetPropertyByIndex(prop, ref propDetails);                    
                     values.Add(propDetails.Value.ToString());
                 }
                 return values;
@@ -145,7 +147,7 @@ namespace Raven.Client.Json
 
             object val;
             if (_source.TryGetMember(key, out val))
-            {
+            {                
                 value = val.ToString();
                 return true;
             }

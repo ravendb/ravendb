@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -1001,11 +1002,11 @@ namespace Raven.Server.Documents
 
             if (_conflictCount > 0)
             {
-                var conflicts = GetConflictsFor(context, loweredKey);
-                if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
-                {
-                    if (local.Item2 != null || local.Item1 != null)
+                    var conflicts = GetConflictsFor(context, loweredKey);
+                    if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
                     {
+                    if (local.Item2 != null || local.Item1 != null)
+                        {
                         // Something is wrong, we can't have conflicts and local document/tombstone
                         throw new InvalidDataException($"we can't have conflicts and local document/tombstone with the key {loweredKey}");
                     }
@@ -1030,16 +1031,16 @@ namespace Raven.Server.Documents
                         // we adding a tombstone without having any pervious document, it could happened if this was called
                         // from the incoming replication or if we delete document that wasn't exist at the first place.
 
-                        if (expectedEtag != null)
-                            throw new ConcurrencyException(
-                                $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                if (expectedEtag != null)
+                    throw new ConcurrencyException(
+                        $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
 
 
                         if (collectionName == null)
                         {
                             // this basically mean that we tried to delete document that doesn't exist.
                             return null;
-                        }
+            }
 
                         etag = CreateTombstone(context,
                             lowerKey,
@@ -1079,45 +1080,45 @@ namespace Raven.Server.Documents
                 {
                     // just delete the document
                     var doc = local.Item1;
-                    if (expectedEtag != null && doc.Etag != expectedEtag)
-                    {
-                        throw new ConcurrencyException(
-                            $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-                        {
-                            ActualETag = doc.Etag,
+            if (expectedEtag != null && doc.Etag != expectedEtag)
+            {
+                throw new ConcurrencyException(
+                    $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                {
+                    ActualETag = doc.Etag,
                             ExpectedETag = (long)expectedEtag
-                        };
-                    }
+                };
+            }
 
-                    EnsureLastEtagIsPersisted(context, doc.Etag);
+            EnsureLastEtagIsPersisted(context, doc.Etag);
 
-                    collectionName = ExtractCollectionName(context, loweredKey, doc.Data);
-                    var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+            collectionName = ExtractCollectionName(context, loweredKey, doc.Data);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
-                    int size;
-                    var ptr = table.DirectRead(doc.StorageId, out size);
-                    var tvr = new TableValueReader(ptr, size);
+            int size;
+            var ptr = table.DirectRead(doc.StorageId, out size);
+            var tvr = new TableValueReader(ptr, size);
 
                     lowerKey = tvr.Read(0, out lowerSize);
                     keyPtr = tvr.Read(2, out keySize);
 
-                    etag = CreateTombstone(context,
-                        lowerKey,
-                        lowerSize,
-                        keyPtr,
-                        keySize,
-                        doc.Etag,
-                        collectionName,
-                        doc.ChangeVector,
-                        lastModifiedTicks,
-                        changeVector,
-                        doc.Flags);
+            etag = CreateTombstone(context,
+                lowerKey,
+                lowerSize,
+                keyPtr,
+                keySize,
+                doc.Etag,
+                collectionName,
+                doc.ChangeVector,
+                lastModifiedTicks,
+                changeVector,
+                doc.Flags);
 
-                    if (collectionName.IsSystem == false)
-                    {
-                        _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, loweredKey);
-                    }
-                    table.Delete(doc.StorageId);
+            if (collectionName.IsSystem == false)
+            {
+                _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, loweredKey);
+            }
+            table.Delete(doc.StorageId);
                 }
             }
 
@@ -1225,17 +1226,24 @@ namespace Raven.Server.Documents
             var conflicts = GetConflictsFor(context, loweredKey);
             if (conflicts.Count > 0)
             {
-                var changeVectors = new List<ChangeVectorEntry[]>();
+                var conflictRecords = new List<GetConflictsResult.Conflict>();
                 foreach (var conflict in conflicts)
-                    changeVectors.Add(conflict.ChangeVector);
+                {
+                    conflictRecords.Add(new GetConflictsResult.Conflict
+                    {
+                        Doc = conflict.Doc,
+                        Key = conflict.Key,
+                        ChangeVector = conflict.ChangeVector
+                    });
+                }
 
-                ThrowDocumentConflictException(loweredKey, changeVectors);
+                ThrowDocumentConflictException(loweredKey, conflictRecords);
             }
         }
 
-        private static void ThrowDocumentConflictException(Slice loweredKey, List<ChangeVectorEntry[]> changeVectors)
+        private static void ThrowDocumentConflictException(Slice loweredKey, List<GetConflictsResult.Conflict> conflicts)
         {
-            throw new DocumentConflictException(loweredKey.ToString(), changeVectors);
+            throw new DocumentConflictException(loweredKey.ToString(), conflicts);
         }
 
         public long GenerateNextEtag()
@@ -1269,9 +1277,9 @@ namespace Raven.Server.Documents
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
             var documentEtagBigEndian = Bits.SwapBytes(etag);
 
-            Slice loweredKey;
-            using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
-            {
+                Slice loweredKey;
+                using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
+                {
                 if (changeVector == null)
                 {
                     changeVector = GetMergedConflictChangeVectorsAndDeleteConflicts(
@@ -1283,7 +1291,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     DeleteConflictsFor(context, loweredKey);
-                }
+            }
             }
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -1561,7 +1569,7 @@ namespace Raven.Server.Documents
                         _documentDatabase.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
                     return;
                 }              
-            }
+                }
 
             // because we are resolving to a conflict, and putting a document will
             // delete all the conflicts, we have to create a copy of the document
@@ -1970,7 +1978,7 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
+                changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
                 }
             }
                 
@@ -1981,13 +1989,12 @@ namespace Raven.Server.Documents
                 DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
             }
 
-
             var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
             {
-                TableValueReader oldValue = default(TableValueReader);
+                var oldValue = default(TableValueReader);
                 if (knownNewKey == false)
                 {
                     table.ReadByKey(keySlice, out oldValue);
@@ -2003,8 +2010,8 @@ namespace Raven.Server.Documents
                 if (collectionName.IsSystem == false && (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
                     bool hasVersion =
-                    _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
-                    key, document, changeVector) ?? false;
+                        _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
+                        key, document, changeVector) ?? false;
                     if (hasVersion)
                     {
                         flags |= DocumentFlags.Versioned;

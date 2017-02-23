@@ -104,6 +104,8 @@ namespace Raven.Client
 
                 public const string RavenClrType = "Raven-Clr-Type";
 
+                public const string ChangeVector = "@change-vector";
+
                 public const string HasValue = "HasValue";
             }
 

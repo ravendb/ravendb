@@ -1,12 +1,12 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
-using Raven.Server.Extensions;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -62,15 +62,15 @@ namespace Raven.Server.Documents.Handlers
                 {
                     array.Add(new DynamicJsonValue
                     {
-                        ["Key"] = conflict.Key,
-                        ["ChangeVector"] = conflict.ChangeVector.ToJson(),
-                        ["Doc"] = conflict.Doc
+                        [nameof(GetConflictsResult.Conflict.Key)] = conflict.Key,
+                        [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
+                        [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc
                     });
                 }
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Results"] = array
+                    [nameof(GetConflictsResult.Results)] = array
                 });
 
                 return Task.CompletedTask;

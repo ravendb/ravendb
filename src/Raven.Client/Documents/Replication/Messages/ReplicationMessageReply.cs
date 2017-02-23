@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Replication.Messages
@@ -35,7 +37,18 @@ namespace Raven.Client.Documents.Replication.Messages
         public int? ResolverVersion { get; set; }
     }
 
-    public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>
+    public static class ChangeVectorExtensions
+    {
+        public static DynamicJsonArray ToJson(this ChangeVectorEntry[] self)
+        {
+            var results = new DynamicJsonArray();
+            foreach (var entry in self)
+                results.Add(entry.ToJson());
+            return results;
+        }
+    }
+
+    public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>, IConvertible<DynamicJsonValue>
     {
         public Guid DbId;
         public long Etag;
@@ -66,6 +79,11 @@ namespace Raven.Client.Documents.Replication.Messages
                 [nameof(DbId)] = DbId.ToString(),
                 [nameof(Etag)] = Etag
             };
+        }
+
+        public DynamicJsonValue Convert()
+        {
+            return ToJson();
         }
     }
 }
