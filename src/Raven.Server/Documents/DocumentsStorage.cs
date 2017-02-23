@@ -2654,7 +2654,8 @@ namespace Raven.Server.Documents
             // Update the document with an etag which is bigger than the attachmenEtag
             var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
             CollectionName collectionName;
-            UpdateDocumentAfterAttachmentWrite(context, lowerDocumentId, lowerDocumentIdSize, documentId, name, updateDocumentEtag, modifiedTicks, out collectionName);
+            UpdateDocumentAfterAttachmentWrite(context, lowerDocumentId, lowerDocumentIdSize, documentId, name, updateDocumentEtag, 
+                modifiedTicks, out collectionName, false, null);
 
             byte* lowerName;
             int lowerNameSize;
@@ -2724,9 +2725,9 @@ namespace Raven.Server.Documents
             };
         }
 
-        private bool UpdateDocumentAfterAttachmentWrite(DocumentsOperationContext context, byte* lowerDocumentId, int lowerDocumentIdSize, string documentId, string name, long newEtag, long modifiedTicks, out CollectionName collectionName, bool? hasMoreAttachments = null, long? expectedEtag = null)
+        private bool UpdateDocumentAfterAttachmentWrite(DocumentsOperationContext context, byte* lowerDocumentId, int lowerDocumentIdSize, string documentId, string name, 
+            long newEtag, long modifiedTicks, out CollectionName collectionName, bool isDelete, long? expectedEtag)
         {
-            var isDelete = hasMoreAttachments != null;
             Slice loweredKey;
             using (Slice.External(context.Allocator, lowerDocumentId, lowerDocumentIdSize, out loweredKey))
             {
@@ -2755,18 +2756,7 @@ namespace Raven.Server.Documents
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
                     var transactionMarker = context.GetTransactionMarker();
-                    var flags = *(DocumentFlags*) tvr.Read((int) DocumentsTable.Flags, out size);
-                    if (isDelete)
-                    {
-                        if (hasMoreAttachments == false)
-                        {
-                            flags &= ~DocumentFlags.HasAttachments;
-                        }
-                    }
-                    else
-                    {
-                        flags |= DocumentFlags.HasAttachments;
-                    }
+                    var flags = *(DocumentFlags*) tvr.Read((int) DocumentsTable.Flags, out size) | DocumentFlags.HasAttachments;
                     var tbv = new TableValueBuilder
                     {
                         {tvr.Read((int) DocumentsTable.LoweredKey, out size), size},
@@ -2782,11 +2772,8 @@ namespace Raven.Server.Documents
                     table.Update(tvr.Id, tbv);
                 }
 
-                if (isDelete == false)
-                {
-                    _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
-                    _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(data.Size);
-                }
+                _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
+                _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(data.Size);
 
                 context.Transaction.AddAfterCommitNotification(new AttachmentChange
                 {
@@ -2972,9 +2959,8 @@ namespace Raven.Server.Documents
             Slice startSlice;
             using (GetAttachmentPrefix(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, out startSlice))
             {
-                var hasMoreAttachments = GetAttachmentNamesForDocument(context, startSlice).Skip(1).Any(); // Checking for at least two attachments
                 var isExists = UpdateDocumentAfterAttachmentWrite(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, documentId, name,
-                    updateDocumentEtag, modifiedTicks, out collectionName, hasMoreAttachments);
+                    updateDocumentEtag, modifiedTicks, out collectionName, true, expectedEtag);
                 if (isExists == false)
                     return;
             }
@@ -2999,6 +2985,7 @@ namespace Raven.Server.Documents
             }
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            // TODO: Do not delete here, but update instead with a delete marker
             table.Delete(attachment.StorageId);
 
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
