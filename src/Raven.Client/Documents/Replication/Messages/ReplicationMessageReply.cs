@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Replication.Messages
         }
     }
 
-    public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>, IConvertible<DynamicJsonValue>
+    public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>
     {
         public Guid DbId;
         public long Etag;
@@ -79,11 +79,6 @@ namespace Raven.Client.Documents.Replication.Messages
                 [nameof(DbId)] = DbId.ToString(),
                 [nameof(Etag)] = Etag
             };
-        }
-
-        public DynamicJsonValue Convert()
-        {
-            return ToJson();
         }
     }
 }
