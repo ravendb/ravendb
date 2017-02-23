@@ -275,7 +275,7 @@ class editSqlReplication extends viewModelBase {
         this.editedReplication().script(this.script());
 
         if (this.initialReplicationId !== currentDocumentId) {
-            delete this.editedReplication().__metadata.etag();
+            this.editedReplication().__metadata.etag(undefined);
             delete this.editedReplication().__metadata.lastModified;
         }
 
