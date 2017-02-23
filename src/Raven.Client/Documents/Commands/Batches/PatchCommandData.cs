@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Net.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
@@ -27,18 +29,18 @@ namespace Raven.Client.Documents.Commands.Batches
         public PatchRequest PatchIfMissing { get; }
         public HttpMethod Method => HttpMethods.Patch;
 
-        public DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
             var json = new DynamicJsonValue
             {
                 [nameof(Key)] = Key,
                 [nameof(Etag)] = Etag,
-                [nameof(Patch)] = Patch.ToJson(),
+                [nameof(Patch)] = Patch.ToJson(conventions, context),
                 [nameof(Method)] = Method.Method
             };
 
             if (PatchIfMissing != null)
-                json[nameof(PatchIfMissing)] = PatchIfMissing?.ToJson();
+                json[nameof(PatchIfMissing)] = PatchIfMissing?.ToJson(conventions, context);
 
             return json;
         }

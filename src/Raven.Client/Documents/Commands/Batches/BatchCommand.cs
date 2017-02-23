@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -15,8 +16,10 @@ namespace Raven.Client.Documents.Commands.Batches
         private readonly BlittableJsonReaderObject[] _commands;
         private readonly BatchOptions _options;
 
-        public BatchCommand(JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null)
+        public BatchCommand(DocumentConventions conventions, JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null)
         {
+            if (conventions == null)
+                throw new ArgumentNullException(nameof(conventions));
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
             if (commands == null)
@@ -28,7 +31,7 @@ namespace Raven.Client.Documents.Commands.Batches
             for (var i = 0; i < commands.Count; i++)
             {
                 var command = commands[i];
-                _commands[i] = _context.ReadObject(command.ToJson(), "command");
+                _commands[i] = _context.ReadObject(command.ToJson(conventions, context), "command");
             }
 
             _options = options;

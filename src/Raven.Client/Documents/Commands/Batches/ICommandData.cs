@@ -1,4 +1,6 @@
 ﻿using System.Net.Http;
+using Raven.Client.Documents.Conventions;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
@@ -11,6 +13,6 @@ namespace Raven.Client.Documents.Commands.Batches
 
         HttpMethod Method { get; }
 
-        DynamicJsonValue ToJson();
+        DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context);
     }
 }
