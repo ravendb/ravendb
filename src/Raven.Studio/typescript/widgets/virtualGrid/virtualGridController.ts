@@ -2,6 +2,7 @@
 
 import pagedResult = require("widgets/virtualGrid/pagedResult");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection");
 
 interface virtualGridController<T> { 
 
@@ -11,7 +12,7 @@ interface virtualGridController<T> {
 
     reset(): void;
 
-    getSelectedItems(): T[]; //TODO: refactor to list of selected indexes or 'all' selected except list of ids
+    getSelection(): virtualGridSelection<T>;
 }
 
 export = virtualGridController;

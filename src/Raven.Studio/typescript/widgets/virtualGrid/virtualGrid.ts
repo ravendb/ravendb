@@ -10,6 +10,7 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
+import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection");
 
 class virtualGrid<T> {
 
@@ -27,9 +28,9 @@ class virtualGrid<T> {
     private isLoading = ko.observable(false);
     private queuedFetch: itemFetch | null = null;
     private columns = ko.observableArray<virtualColumn>();
-    private isSelectAllChecked = ko.observable<boolean | null>(false);
     private isGridVisible = false;
-    private selectedIndices: number[] = [];
+    private selectionDiff: number[] = [];
+    private inIncludeSelectionMode: boolean = true;
     private renderHandle = 0;
     private settings = new virtualGridConfig();
     private controller: virtualGridController<T>;
@@ -44,8 +45,6 @@ class virtualGrid<T> {
     constructor(params: { controller: KnockoutObservable<virtualGridController<T>> }) {
         this.gridId = _.uniqueId("vg-");
         
-        this.isSelectAllChecked.subscribe(allSelected => this.selectAllChanged(allSelected));
-
         this.initController();
 
         if (params.controller) {
@@ -58,7 +57,7 @@ class virtualGrid<T> {
             headerVisible: v => this.settings.showHeader(v),
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
             reset: () => this.resetItems(),
-            getSelectedItems: () => this.getSelectedItems()
+            getSelection: () => this.getSelection()
         }
     }
 
@@ -261,6 +260,14 @@ class virtualGrid<T> {
         }
     }
 
+    private isSelected(index: number) {
+        if (this.inIncludeSelectionMode) {
+            return _.includes(this.selectionDiff, index);
+        } else {
+            return !_.includes(this.selectionDiff, index);
+        }
+    }
+
     private layoutVirtualRowPositions() {
         // This is hot path, called multiple times when scrolling. 
         // Keep allocations to a minimum.
@@ -280,7 +287,7 @@ class virtualGrid<T> {
 
                 // Populate it with data.
                 const rowIndex = Math.floor(positionCheck / virtualRow.height);
-                const isChecked = this.selectedIndices.indexOf(rowIndex) !== -1;
+                const isChecked = this.isSelected(rowIndex);
                 rowAtPosition.populate(this.items[rowIndex], rowIndex, isChecked, columns);
             }
 
@@ -308,7 +315,7 @@ class virtualGrid<T> {
                 totalVisible++;
 
                 // Fill it with the data we've got loaded. If there's no data, it will display the loading indicator.
-                const isRowChecked = this.selectedIndices.indexOf(virtualRow.index) !== -1;
+                const isRowChecked = this.isSelected(virtualRow.index);
                 virtualRow.populate(this.items[virtualRow.index], virtualRow.index, isRowChecked, columns);
             }
         }
@@ -414,7 +421,7 @@ class virtualGrid<T> {
                 this.handleAction(actionValue, this.findRowForCell($target));
             } else if ($target.hasClass("checked-column-header")) {
                 // If we clicked the the checked column header, toggle select all.
-                this.isSelectAllChecked(!this.isSelectAllChecked());
+                this.handleSelectAllClicked();
             } else if ($target.hasClass("checked-cell-input")) {
                 // If we clicked a checked cell, toggle its selected state.
                 const rowIndex = this.findRowForCell($target).index;
@@ -457,49 +464,62 @@ class virtualGrid<T> {
         this.$viewportElement.scrollTop(0);
         this.virtualRows.forEach(r => r.reset());
         this.columns([]);
-        this.selectedIndices = [];
+        this.inIncludeSelectionMode = true;
+        this.selectionDiff = [];
 
         this.fetchItems(0, 100);
     }
 
-    private getSelectedItems(): T[] {
-        return this.selectedIndices
+    private getSelection(): virtualGridSelection<T> {
+        const mappedDiff = this.selectionDiff
             .map(idx => this.items[idx]);
+
+        const selected = this.getSelectionCount();
+        const totalCount = this.totalItemCount;
+
+        if (selected > 0 && selected === totalCount) {
+            // force exclusive mode - user probably selected all items manually
+            return {
+                mode: "exclusive",
+                included: [],
+                excluded: [],
+                count: selected,
+                totalCount: totalCount
+            }
+        } else {
+            return {
+                mode: this.inIncludeSelectionMode ? "inclusive" : "exclusive",
+                included: this.inIncludeSelectionMode ? mappedDiff : [],
+                excluded: this.inIncludeSelectionMode ? [] : mappedDiff,
+                count: selected,
+                totalCount: totalCount
+            }
+        }
+    }
+
+    private getSelectionCount() {
+        return this.inIncludeSelectionMode ? this.selectionDiff.length : this.totalItemCount - this.selectionDiff.length;
     }
 
     private toggleRowSelected(rowIndex: number) {
-        const selectionIndex = this.selectedIndices.indexOf(rowIndex);
-        if (selectionIndex === -1) {
-            this.selectedIndices.push(rowIndex);
+        const isSelected = this.isSelected(rowIndex);
+
+        if (this.inIncludeSelectionMode) {
+            if (isSelected) {
+                _.pull(this.selectionDiff, rowIndex);
+            } else {
+                this.selectionDiff.push(rowIndex);
+            }
         } else {
-            this.selectedIndices.splice(selectionIndex, 1);
-        }
-
-        // If we had all selected or none selected, remove that state.
-        if (this.isSelectAllChecked() === true || this.isSelectAllChecked() === false) {
-            this.isSelectAllChecked(null);
-            $(".checked-column-header").prop("checked", false);
-        }
-
-        this.render();
-    }
-
-    /*
-     * Handles when the "select all" observable changes, either by clicking the check column header or via code.
-     */
-    private selectAllChanged(allSelected: boolean | null) {
-        // When selectAll is set to false, remove all selected indices.
-        if (allSelected === false) {
-            this.selectedIndices.length = 0;
-        } else if (allSelected === true) {
-            this.selectedIndices.length = this.items.length;
-            for (let i = 0; i < this.selectedIndices.length; i++) {
-                this.selectedIndices[i] = i;
+            if (isSelected) {
+                this.selectionDiff.push(rowIndex);
+            } else {
+                _.pull(this.selectionDiff, rowIndex);
             }
         }
 
-        // Note: allSelected can be set to null, meaning some items are checked while others are not.
-
+        this.syncSelectAll();
+       
         this.render();
     }
 
@@ -510,6 +530,48 @@ class virtualGrid<T> {
         }
 
         handler.handle(row);
+    }
+
+    private handleSelectAllClicked() {
+        if (this.getSelectionCount()) {
+            // something is selected - deselect all
+            this.inIncludeSelectionMode = true;
+            this.selectionDiff = [];
+        } else {
+            // select all
+            this.inIncludeSelectionMode = false;
+            this.selectionDiff = [];
+        }
+
+        this.syncSelectAll();
+        this.render();
+    }
+
+    private syncSelectAll() {
+        const $checkboxHeader = $(".checked-column-header", this.$gridElement);
+
+        const selectionCount = this.getSelectionCount();
+        if (selectionCount === 0) {
+            // none selected
+            $checkboxHeader.prop({
+                checked: false,
+                readonly: false,
+                indeterminate: false
+            });
+        } else if (selectionCount === this.totalItemCount) {
+            // all selected
+            $checkboxHeader.prop({
+                checked: true,
+                readonly: false,
+                indeterminate: false
+            });
+        } else {
+            $checkboxHeader.prop({
+                readonly: true,
+                indeterminate: true,
+                checked: false
+            });
+        }
     }
 
     /**

@@ -8,7 +8,6 @@ import collection = require("models/database/documents/collection");
 import counterSummary = require("models/counter/counterSummary");
 import counterGroup = require("models/counter/counterGroup");
 import pagedResultSet = require("common/pagedResultSet");
-import deleteItems = require("viewmodels/common/deleteItems");
 import copyDocuments = require("viewmodels/database/documents/copyDocuments");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
@@ -775,23 +774,7 @@ class ctor {
     }
 
     deleteSelectedItems() {
-        var items = this.getSelectedItems();
-        var deleteDocsVm = new deleteItems(items, activeResourceTracker.default.resource(), this.focusableGridSelector);
-
-        deleteDocsVm.deletionTask.done(() => {
-            var deletedDocIndices = items.map(d => this.items.indexOf(d));
-            deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
-            this.recycleRows().forEach(r => r.isChecked(_.includes(this.settings.selectedIndices(), r.rowIndex()))); // Update row checked states.
-            this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
-            this.items.invalidateCache(); // Causes the cache of items to be discarded.
-            this.onGridScrolled(); // Forces a re-fetch of the rows in view.
-
-            // Forces recalculation of recycled rows, in order to eliminate "duplicate" after delete
-            // note: won't run on delete of last document(s) of a collection in order to prevent race condition 
-            // with changes api. Now we don't use changes api to update the documents list, so this isn't a problem.
-            this.onWindowHeightChanged();
-        });
-        app.showBootstrapDialog(deleteDocsVm);
+        throw new Error("Delete is not supported. This class is deprecated.");
     }
 
     getDocumentHref(documentId: string): string {
