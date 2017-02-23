@@ -2586,11 +2586,15 @@ namespace Raven.Server.Documents
 
                     Slice tableNameSlice;
                     Slice.External(tx.Allocator, ptr, size, out tableNameSlice);// intentionally not disposing, will be disposed by the tx
-                    var tableTree = tx.CreateTree(tableNameSlice, RootObjectType.Table);
-                    NewPageAllocator.MaybePrefetchSections(tableTree, tx.LowLevelTransaction);
+                   
+                    var collectionName = new CollectionName(collection);
+                    result.Add(collection, collectionName);
 
+                    var documentsTree = tx.ReadTree(collectionName.GetTableName(CollectionTableType.Documents), RootObjectType.Table);
+                    NewPageAllocator.MaybePrefetchSections(documentsTree, tx.LowLevelTransaction);
 
-                    result.Add(collection, new CollectionName(collection));
+                    var tombstonesTree = tx.ReadTree(collectionName.GetTableName(CollectionTableType.Tombstones), RootObjectType.Table);
+                    NewPageAllocator.MaybePrefetchSections(tombstonesTree, tx.LowLevelTransaction);
                 }
             }
 
