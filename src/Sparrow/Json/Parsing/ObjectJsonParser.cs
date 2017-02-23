@@ -433,23 +433,6 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                var itemArray = current as Array;
-                if (itemArray != null)
-                {
-                    var jsonArray = new DynamicJsonArray();
-                    foreach (var item in itemArray)
-                    {
-                        var convertible = item as IConvertible<DynamicJsonValue>;
-                        if (convertible != null)
-                        {
-                            jsonArray.Add(convertible.Convert());
-                        }
-                    }
-
-                    current = jsonArray;
-                    continue;
-                }
-
                 throw new InvalidOperationException("Got unknown type: " + current.GetType() + " " + current);
             }
         }
