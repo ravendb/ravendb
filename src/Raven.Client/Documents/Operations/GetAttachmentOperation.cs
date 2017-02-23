@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -13,9 +12,9 @@ namespace Raven.Client.Documents.Operations
     {
         private readonly string _documentId;
         private readonly string _name;
-        private readonly Action<Stream> _handleStreamResponse;
+        private readonly Action<AttachmentResult, Stream> _handleStreamResponse;
 
-        public GetAttachmentOperation(string documentId, string name, Action<Stream> handleStreamResponse)
+        public GetAttachmentOperation(string documentId, string name, Action<AttachmentResult, Stream> handleStreamResponse)
         {
             _documentId = documentId;
             _name = name;
@@ -31,9 +30,9 @@ namespace Raven.Client.Documents.Operations
         {
             private readonly string _documentId;
             private readonly string _name;
-            private readonly Action<Stream> _handleStreamResponse;
+            private readonly Action<AttachmentResult, Stream> _handleStreamResponse;
 
-            public GetAttachmentCommand(string documentId, string name, Action<Stream> handleStreamResponse)
+            public GetAttachmentCommand(string documentId, string name, Action<AttachmentResult, Stream> handleStreamResponse)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -69,7 +68,6 @@ namespace Raven.Client.Documents.Operations
                 if (stream == null)
                     return;
 
-                _handleStreamResponse(stream);
                 Result = new AttachmentResult
                 {
                     ContentType = contentType,
@@ -77,6 +75,8 @@ namespace Raven.Client.Documents.Operations
                     Name = _name,
                     DocumentId = _documentId,
                 };
+
+                _handleStreamResponse(Result, stream);
             }
 
             public override bool IsReadRequest => true;

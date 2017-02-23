@@ -66,7 +66,7 @@ namespace FastTests.Client.Attachments
                     var name = names[i];
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     {
-                        var attachment = store.Operations.Send(new GetAttachmentOperation("users/1", name, stream => stream.CopyTo(attachmentStream)));
+                        var attachment = store.Operations.Send(new GetAttachmentOperation("users/1", name, (result,stream) => stream.CopyTo(attachmentStream)));
                         Assert.Equal(2 + 2 * i, attachment.Etag);
                         Assert.Equal(name, attachment.Name);
                         Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
@@ -80,8 +80,55 @@ namespace FastTests.Client.Attachments
                 }
                 using (var attachmentStream = new MemoryStream(readBuffer))
                 {
-                    var notExistsAttachment = store.Operations.Send(new GetAttachmentOperation("users/1", "not-there", stream => stream.CopyTo(attachmentStream)));
+                    var notExistsAttachment = store.Operations.Send(new GetAttachmentOperation("users/1", "not-there", (result, stream) => stream.CopyTo(attachmentStream)));
                     Assert.Null(notExistsAttachment);
+                }
+            }
+        }
+
+        [Fact]
+        public void DeleteAttachments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                for (int i = 1; i <= 3; i++)
+                {
+                    using (var profileStream = new MemoryStream(Enumerable.Range(1, 3 * i).Select(x => (byte)x).ToArray()))
+                        store.Operations.Send(new PutAttachmentOperation("users/1", "file" + i, profileStream, "image/png"));
+                }
+
+                store.Operations.Send(new DeleteAttachmentOperation("users/1", "file2"));
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    Assert.Equal("file1,file3", metadata[Constants.Documents.Metadata.Attachments]);
+                }
+
+                var readBuffer = new byte[16];
+                using (var attachmentStream = new MemoryStream(readBuffer))
+                {
+                    var attachment = store.Operations.Send(new GetAttachmentOperation("users/1", "file1", (result, stream) => stream.CopyTo(attachmentStream)));
+                    Assert.Equal(2, attachment.Etag);
+                    Assert.Equal("file1", attachment.Name);
+                    Assert.Equal(3, attachmentStream.Position);
+                    Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
+                }
+                using (var attachmentStream = new MemoryStream(readBuffer))
+                {
+                    var attachment = store.Operations.Send(new GetAttachmentOperation("users/1", "file3", (result, stream) => stream.CopyTo(attachmentStream)));
+                    Assert.Equal(6, attachment.Etag);
+                    Assert.Equal("file3", attachment.Name);
+                    Assert.Equal(9, attachmentStream.Position);
+                    Assert.Equal(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9}, readBuffer.Take(9));
                 }
             }
         }

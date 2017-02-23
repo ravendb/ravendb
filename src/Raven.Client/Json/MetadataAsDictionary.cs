@@ -46,7 +46,7 @@ namespace Raven.Client.Json
                 object value;
                 if (_source.TryGetMember(key, out value))
                     return ConvertValue(value);
-                throw new KeyNotFoundException(key + "is not in the metadata");
+                throw new KeyNotFoundException(key + " is not in the metadata");
             }
 
             set

@@ -48,8 +48,6 @@ namespace Raven.Server.Documents
         private static readonly Slice ConflictedCollectionSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
-        private static readonly Slice AttachmentsKeySlice;
-        private static readonly Slice AttachmentsKeyIndexSlice;
         private static readonly Slice AttachmentsSlice;
         private static readonly Slice AttachmentsMetadataSlice;
         private static readonly Slice AttachmentsEtagSlice;
@@ -121,8 +119,6 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "AttachmentsKey", ByteStringType.Immutable, out AttachmentsKeySlice);
-            Slice.From(StorageEnvironment.LabelsContext, "AttachmentsKeyIndex", ByteStringType.Immutable, out AttachmentsKeyIndexSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Attachments", ByteStringType.Immutable, out AttachmentsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsMetadata", ByteStringType.Immutable, out AttachmentsMetadataSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsEtag", ByteStringType.Immutable, out AttachmentsEtagSlice);
@@ -231,13 +227,6 @@ namespace Raven.Server.Documents
             {
                 StartIndex = (int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName,
                 Count = 1,
-                Name = AttachmentsKeySlice
-            });
-            AttachmentsSchema.DefineIndex(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = (int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName,
-                Count = 1,
-                Name = AttachmentsKeyIndexSlice
             });
             AttachmentsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
@@ -527,8 +516,7 @@ namespace Raven.Server.Documents
                 yield break;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Documents));
 
             if (table == null)
                 yield break;
@@ -609,8 +597,7 @@ namespace Raven.Server.Documents
                 yield break;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Documents));
 
             if (table == null)
                 yield break;
@@ -824,8 +811,7 @@ namespace Raven.Server.Documents
                 yield break;
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Tombstones));
 
             if (table == null)
                 yield break;
@@ -852,8 +838,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents),
-                throwIfDoesNotExist: false
+                collectionName.GetTableName(CollectionTableType.Documents)
                 );
 
             // ReSharper disable once UseNullPropagation
@@ -879,8 +864,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Tombstones));
 
             // ReSharper disable once UseNullPropagation
             if (table == null)
@@ -905,8 +889,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Tombstones));
 
             if (table == null)
                 return 0;
@@ -925,6 +908,7 @@ namespace Raven.Server.Documents
                 Slice startSlice;
                 using (GetAttachmentPrefix(context, document.LoweredKey.Buffer, document.LoweredKey.Size, out startSlice))
                 {
+                    // TODO: To IEnumerable
                     document.Attachments = GetAttachmentNamesForDocument(context, startSlice).ToArray();
                 }
             }
@@ -2410,16 +2394,14 @@ namespace Raven.Server.Documents
             if (tombstones)
             {
                 table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                    collectionName.GetTableName(CollectionTableType.Tombstones),
-                    throwIfDoesNotExist: false);
+                    collectionName.GetTableName(CollectionTableType.Tombstones));
 
                 indexDef = TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice];
             }
             else
             {
                 table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                    collectionName.GetTableName(CollectionTableType.Documents),
-                    throwIfDoesNotExist: false);
+                    collectionName.GetTableName(CollectionTableType.Documents));
                 indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
             }
             if (table == null)
@@ -2479,8 +2461,7 @@ namespace Raven.Server.Documents
             }
 
             var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Documents));
 
             if (collectionTable == null)
             {
@@ -2505,8 +2486,7 @@ namespace Raven.Server.Documents
                 return;
 
             var table = transaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Tombstones));
             if (table == null)
                 return;
 
@@ -2675,7 +2655,7 @@ namespace Raven.Server.Documents
             // Update the document with an etag which is bigger than the attachmenEtag
             var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
             CollectionName collectionName;
-            UpdateDocumentAfterAttachmentPut(context, lowerDocumentId, lowerDocumentIdSize, documentId, name, updateDocumentEtag, modifiedTicks, out collectionName);
+            UpdateDocumentAfterAttachmentWrite(context, lowerDocumentId, lowerDocumentIdSize, documentId, name, updateDocumentEtag, modifiedTicks, out collectionName);
 
             byte* lowerName;
             int lowerNameSize;
@@ -2745,7 +2725,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        private bool UpdateDocumentAfterAttachmentPut(DocumentsOperationContext context, byte* lowerDocumentId, int lowerDocumentIdSize, string documentId, string name, long newEtag, long modifiedTicks, out CollectionName collectionName, bool? hasMoreAttachments = null, long? expectedEtag = null)
+        private bool UpdateDocumentAfterAttachmentWrite(DocumentsOperationContext context, byte* lowerDocumentId, int lowerDocumentIdSize, string documentId, string name, long newEtag, long modifiedTicks, out CollectionName collectionName, bool? hasMoreAttachments = null, long? expectedEtag = null)
         {
             var isDelete = hasMoreAttachments != null;
             Slice loweredKey;
@@ -2779,7 +2759,10 @@ namespace Raven.Server.Documents
                     var flags = *(DocumentFlags*) tvr.Read((int) DocumentsTable.Flags, out size);
                     if (isDelete)
                     {
-                        flags &= ~DocumentFlags.HasAttachments;
+                        if (hasMoreAttachments == false)
+                        {
+                            flags &= ~DocumentFlags.HasAttachments;
+                        }
                     }
                     else
                     {
@@ -2848,13 +2831,9 @@ namespace Raven.Server.Documents
         private IEnumerable<LazyStringValue> GetAttachmentNamesForDocument(DocumentsOperationContext context, Slice startSlice)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            // TODO: Use table.SeekForwardFrom(AttachmentsSchema.Key, startSlice, true)
-            foreach (var sr in table.SeekForwardFrom(AttachmentsSchema.Indexes[AttachmentsKeyIndexSlice], startSlice, true))
+            foreach (var sr in table.SeekByPrimaryKey(startSlice, true))
             {
-                foreach (var tvr in sr.Results)
-                {
-                    yield return TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr.Reader);
-                }
+                yield return TableValueToKey(context, (int) AttachmentsTable.Name, ref sr.Reader);
             }
         }
 
@@ -2907,7 +2886,7 @@ namespace Raven.Server.Documents
         {
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1 + lowerNameSize);
             Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize + 1] = (byte) 30; // the record separator
+            keyMem.Ptr[lowerKeySize] = (byte) 30; // the record separator
             Memory.CopyInline(keyMem.Ptr + lowerKeySize + 1, lowerName, lowerNameSize);
             keySlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
@@ -2917,7 +2896,7 @@ namespace Raven.Server.Documents
         {
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
             Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize + 1] = (byte)30; // the record separator
+            keyMem.Ptr[lowerKeySize] = (byte) 30; // the record separator
             keySlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
         }
@@ -2995,7 +2974,8 @@ namespace Raven.Server.Documents
             using (GetAttachmentPrefix(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, out startSlice))
             {
                 var hasMoreAttachments = GetAttachmentNamesForDocument(context, startSlice).Skip(1).Any(); // Checking for at least two attachments
-                var isExists = UpdateDocumentAfterAttachmentPut(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, documentId, name, updateDocumentEtag, modifiedTicks, out collectionName, hasMoreAttachments);
+                var isExists = UpdateDocumentAfterAttachmentWrite(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, documentId, name,
+                    updateDocumentEtag, modifiedTicks, out collectionName, hasMoreAttachments);
                 if (isExists == false)
                     return;
             }
@@ -3018,9 +2998,6 @@ namespace Raven.Server.Documents
                     ExpectedETag = (long) expectedEtag
                 };
             }
-
-            // TODO: Maybe this can be removed as we already save the document with a bigger etag
-            EnsureLastEtagIsPersisted(context, attachment.Etag);
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             table.Delete(attachment.StorageId);
