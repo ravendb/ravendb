@@ -1,5 +1,6 @@
 using System;
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Xunit;
 
@@ -50,7 +51,7 @@ namespace SlowTests.MailingList
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
 
-                    string offset;
+                    StringValues offset;
                     Assert.True(metadata.TryGetValue("DateTime-ToCheck", out offset));
                     var result = DateTimeOffset.Parse(offset); // No exception is thrown here
                     Assert.IsType<DateTimeOffset>(result);
@@ -72,7 +73,7 @@ namespace SlowTests.MailingList
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
 
-                    string offset;
+                    StringValues offset;
                     Assert.True(metadata.TryGetValue("DateTime-ToCheck", out offset));
                     var result = DateTimeOffset.Parse(offset); // An exception should not be thrown here, after changing the entity
 
@@ -117,7 +118,7 @@ namespace SlowTests.MailingList
                 {
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
-                    string offset;
+                    StringValues offset;
                     Assert.True(metadata.TryGetValue("DateTime-ToCheck", out offset));
                     var result = DateTime.Parse(offset); // No exception is thrown here
                     Assert.IsType<DateTime>(result);
@@ -139,7 +140,7 @@ namespace SlowTests.MailingList
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
 
-                    string offset;
+                    StringValues offset;
                     Assert.True(metadata.TryGetValue("DateTime-ToCheck", out offset));
                     var result = DateTime.Parse(offset); // An exception should not be thrown here, after changing the entity
 

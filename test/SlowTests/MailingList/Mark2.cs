@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -42,7 +43,7 @@ namespace SlowTests.MailingList
  }
 }");
 
-                    commands.Put("TestCases/TST00001", null, json, new Dictionary<string, string>
+                    commands.Put("TestCases/TST00001", null, json, new Dictionary<string, StringValues>
                     {
                         {Constants.Documents.Metadata.Collection, "TestCases"}
                     });
@@ -55,7 +56,7 @@ namespace SlowTests.MailingList
 
                     commands.Put("TestCases/TST00002", null,
                         json,
-                        new Dictionary<string, string>
+                        new Dictionary<string, StringValues>
                         {
                             {Constants.Documents.Metadata.Collection, "TestCases"}
                         });

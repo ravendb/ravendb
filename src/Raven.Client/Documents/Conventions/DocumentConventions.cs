@@ -358,6 +358,7 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(new JsonDateTimeISO8601Converter());
             jsonSerializer.Converters.Add(new JsonLuceneDateTimeConverter());
             jsonSerializer.Converters.Add(new JsonObjectConverter());
+            jsonSerializer.Converters.Add(new StringValuesConverter());
             // TODO: Iftah
             //var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
             //if (jsonSerializer.Converters.Count == 0)

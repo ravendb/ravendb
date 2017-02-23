@@ -12,6 +12,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -183,7 +184,7 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="T"></typeparam>
         /// <param name="instance">The instance.</param>
         /// <returns></returns>
-        public IDictionary<string, string> GetMetadataFor<T>(T instance)
+        public IDictionary<string, StringValues> GetMetadataFor<T>(T instance)
         {
             if(instance == null)
                 throw new ArgumentNullException(nameof(instance));
@@ -1275,7 +1276,7 @@ more responsive application.
 
         public BlittableJsonReaderObject Document { get; set; }
 
-        public IDictionary<string, string> MetadataInstance { get; set; }
+        public IDictionary<string, StringValues> MetadataInstance { get; set; }
 
         public object Entity { get; set; }
 

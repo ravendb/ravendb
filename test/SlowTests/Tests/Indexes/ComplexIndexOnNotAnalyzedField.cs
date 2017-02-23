@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -29,7 +30,7 @@ namespace SlowTests.Tests.Indexes
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}")))
                     {
                         var json = commands.Context.ReadForMemory(stream, "doc");
-                        commands.Put("companies/", null, json, new Dictionary<string, string> { { Constants.Documents.Metadata.Collection, "Companies" } });
+                        commands.Put("companies/", null, json, new Dictionary<string, StringValues> { { Constants.Documents.Metadata.Collection, "Companies" } });
                     }
 
                     store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition

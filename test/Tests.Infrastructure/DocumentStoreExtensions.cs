@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -60,12 +61,12 @@ namespace FastTests
                 return (TEntity)_store.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), json);
             }
 
-            public PutResult Put(string id, long? etag, object data, Dictionary<string, string> metadata)
+            public PutResult Put(string id, long? etag, object data, Dictionary<string, StringValues> metadata)
             {
                 return AsyncHelpers.RunSync(() => PutAsync(id, etag, data, metadata));
             }
 
-            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, string> metadata, CancellationToken cancellationToken = default(CancellationToken))
+            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, StringValues> metadata, CancellationToken cancellationToken = default(CancellationToken))
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));

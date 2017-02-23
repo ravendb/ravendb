@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
@@ -117,7 +118,7 @@ namespace Raven.Client.Documents.Session
         ///     and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        IDictionary<string, string> GetMetadataFor<T>(T instance);
+        IDictionary<string, StringValues> GetMetadataFor<T>(T instance);
 
 
         /// <summary>

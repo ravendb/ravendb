@@ -1,5 +1,6 @@
 using System.Dynamic;
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
@@ -33,10 +34,10 @@ namespace SlowTests.Bugs.Queries
 
                     var metadata = session.Advanced.GetMetadataFor(loaded);
 
-                    string token;
+                    StringValues token;
 
                     Assert.True(metadata.TryGetValue(PropertyName , out token));
-                    Assert.NotNull(token);
+                    Assert.NotNull(token[0]);
 
                 }
             }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -34,9 +35,9 @@ namespace SlowTests.Core.Commands
 
                 using (var commands = store.Commands())
                 {
-                    commands.Put("contacts/1", null, contact1, new Dictionary<string, string> { { "@collection", "Contacts" } });
-                    commands.Put("contacts/2", null, contact2, new Dictionary<string, string> { { "@collection", "Contacts" } });
-                    commands.Put("contacts/3", null, contact3, new Dictionary<string, string> { { "@collection", "Contacts" } });
+                    commands.Put("contacts/1", null, contact1, new Dictionary<string, StringValues> { { "@collection", "Contacts" } });
+                    commands.Put("contacts/2", null, contact2, new Dictionary<string, StringValues> { { "@collection", "Contacts" } });
+                    commands.Put("contacts/3", null, contact3, new Dictionary<string, StringValues> { { "@collection", "Contacts" } });
 
                     store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                     {
@@ -120,7 +121,7 @@ namespace SlowTests.Core.Commands
                 {
                     for (int i = 0; i < 30; i++)
                     {
-                        commands.Put("users/" + i, null, new User { Name = "Name" + i }, new Dictionary<string, string> { { "@collection", "Users" } });
+                        commands.Put("users/" + i, null, new User { Name = "Name" + i }, new Dictionary<string, StringValues> { { "@collection", "Users" } });
                     }
                 }
 
@@ -162,7 +163,7 @@ namespace SlowTests.Core.Commands
                                 Cost = i * 100D,
                                 Megapixels = i * 1D
                             },
-                            new Dictionary<string, string> { { "@collection", "Cameras" } });
+                            new Dictionary<string, StringValues> { { "@collection", "Cameras" } });
                     }
 
 
@@ -335,10 +336,10 @@ namespace SlowTests.Core.Commands
 
                 using (var commands = store.Commands())
                 {
-                    commands.Put("users/1", null, new User { Name = "John Smith" }, new Dictionary<string, string> { { "@collection", "Users" } });
-                    commands.Put("users/2", null, new User { Name = "Jack Johnson" }, new Dictionary<string, string> { { "@collection", "Users" } });
-                    commands.Put("users/3", null, new User { Name = "Robery Jones" }, new Dictionary<string, string> { { "@collection", "Users" } });
-                    commands.Put("users/4", null, new User { Name = "David Jones" }, new Dictionary<string, string> { { "@collection", "Users" } });
+                    commands.Put("users/1", null, new User { Name = "John Smith" }, new Dictionary<string, StringValues> { { "@collection", "Users" } });
+                    commands.Put("users/2", null, new User { Name = "Jack Johnson" }, new Dictionary<string, StringValues> { { "@collection", "Users" } });
+                    commands.Put("users/3", null, new User { Name = "Robery Jones" }, new Dictionary<string, StringValues> { { "@collection", "Users" } });
+                    commands.Put("users/4", null, new User { Name = "David Jones" }, new Dictionary<string, StringValues> { { "@collection", "Users" } });
                 }
 
                 WaitForIndexing(store);

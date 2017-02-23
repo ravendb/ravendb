@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Exceptions;
@@ -144,7 +145,7 @@ namespace FastTests.Server.Replication
                 //now actually resolve the conflict
                 //(resolve by using first variant)
                 var resolution = conflicts[0];
-                destination.Commands().Put(resolution.Key, null, resolution.Doc, new Dictionary<string, string>());
+                destination.Commands().Put(resolution.Key, null, resolution.Doc, new Dictionary<string, StringValues>());
 
                 //this shouldn't throw since we have just resolved the conflict
                 var fetchedDoc = destination.Commands().Get("docs/1");

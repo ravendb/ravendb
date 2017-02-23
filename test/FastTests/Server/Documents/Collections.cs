@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Xunit;
@@ -16,17 +17,17 @@ namespace FastTests.Server.Documents
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Put("orders/1", null, new { }, new Dictionary<string, string>
+                    commands.Put("orders/1", null, new { }, new Dictionary<string, StringValues>
                     {
                         {Constants.Documents.Metadata.Collection, "Orders"}
                     });
 
-                    commands.Put("orders/2", null, new { }, new Dictionary<string, string>
+                    commands.Put("orders/2", null, new { }, new Dictionary<string, StringValues>
                     {
                         {Constants.Documents.Metadata.Collection, "orders"}
                     });
 
-                    commands.Put("people/1", null, new { }, new Dictionary<string, string>
+                    commands.Put("people/1", null, new { }, new Dictionary<string, StringValues>
                     {
                         {Constants.Documents.Metadata.Collection, "People"}
                     });

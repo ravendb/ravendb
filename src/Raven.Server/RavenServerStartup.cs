@@ -155,7 +155,7 @@ namespace Raven.Server
                 var response = context.Response;
 
                 MaybeSetExceptionStatusCode(response, e);
-
+            
                 JsonOperationContext ctx;
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                 {
