@@ -16,9 +16,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.Basic.Crud())
+                using (var a = new FastTests.Server.Documents.Patching.AdvancedPatching())
                 {
-                    a.CanOverwriteDocumentWithSmallerValue();
+                    a.ShouldThrowConcurrencyExceptionIfNonCurrentEtagWasSpecified().Wait();
                 }
             }
             

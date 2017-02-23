@@ -137,12 +137,13 @@ namespace Voron.Impl
             if (_tables.TryGetValue(name, out value))
                 return value;
 
-            var tableTree = ReadTree(name, RootObjectType.Table);
+            var clonedName = name.Clone(Allocator);
+
+            var tableTree = ReadTree(clonedName, RootObjectType.Table);
 
             if (tableTree == null)
                 return null;
 
-            var clonedName = name.Clone(Allocator);
 
             value = new Table(schema, clonedName, this, tableTree);
             _tables[clonedName] = value;

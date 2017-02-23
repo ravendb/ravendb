@@ -730,7 +730,8 @@ namespace Raven.Server.Documents
         public Document Get(DocumentsOperationContext context, Slice loweredKey)
         {
             TableValueReader tvr;
-            if (GetTableValueReaderForDocument(context, loweredKey, out tvr)) return null;
+            if (GetTableValueReaderForDocument(context, loweredKey, out tvr) == false)
+                return null;
 
             var doc = TableValueToDocument(context, ref tvr);
             
@@ -748,9 +749,9 @@ namespace Raven.Server.Documents
             {
                 if (_conflictCount > 0)
                     ThrowOnDocumentConflict(context, loweredKey);
-                return true;
+                return false;
             }
-            return false;
+            return true;
         }
 
         public bool HasMoreOfTombstonesAfter(
@@ -2762,7 +2763,7 @@ namespace Raven.Server.Documents
             {
                 TableValueReader tvr;
                 var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, loweredKey, out tvr);
-                if (hasDoc)
+                if (hasDoc == false)
                     throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
 
                 UpdateDocumentForAttachmentChange(context, documentId, name, newEtag, modifiedTicks, tvr, loweredKey, DocumentChangeTypes.PutAttachment);
