@@ -879,7 +879,8 @@ namespace Raven.Server.Documents
             ptr = tvr.Read(1, out size);
             result.Etag = Bits.SwapBytes(*(long*)ptr);
 
-            result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
+            ptr = tvr.Read(3, out size);
+            result.Data = new BlittableJsonReaderObject(ptr, size, context);
 
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, 4);
 
@@ -1523,8 +1524,8 @@ namespace Raven.Server.Documents
                     existingDoc.IsEqualTo(incomingDoc))
             {
                 // no real conflict here, both documents have identical content
-                existingDoc.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
-                Put(context, existingDoc.Key, null, existingDoc.Data, lastModifiedTicks, existingDoc.ChangeVector);
+                var mergedChangeVector= ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
+                Put(context, key, null, incomingDoc, lastModifiedTicks, mergedChangeVector);
                 return true;
             }
 
@@ -1566,6 +1567,8 @@ namespace Raven.Server.Documents
             // delete all the conflicts, we have to create a copy of the document
             // in order to avoid the data we are saving from being removed while
             // we are saving it
+
+            // the resolved document could be an update of the existing document, so it's a good idea to clone it also before updating.
             using (var clone = conflict.Doc.Clone(ctx))
             {
                 // handle the case where we resolve a conflict for a document from a different collection
@@ -1915,6 +1918,10 @@ namespace Raven.Server.Documents
                 ThrowRequiresTransaction();
                 return default(PutOperationResults);// never reached
             }
+#if DEBUG
+            var documentDebugHash = document.DebugHash;
+            document.BlittableValidation();
+#endif
 
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
@@ -2066,6 +2073,12 @@ namespace Raven.Server.Documents
                 IsSystemDocument = collectionName.IsSystem,
             });
 
+#if DEBUG
+            if (document.DebugHash != documentDebugHash)
+            {
+                throw new InvalidDataException("The incoming document " + key+ " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
+            }
+#endif
 
             return new PutOperationResults
             {
