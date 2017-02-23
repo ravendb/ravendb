@@ -152,9 +152,14 @@ namespace Raven.Database.Indexing
                 .Select(x => x.Data.JsonDeserialization<IndexingError>())
                 .OrderBy(x => x.Timestamp);
 
+            var errorsForNonExistingIndexes = new List<IndexingError>();
+            var indexNames = IndexStorage.IndexNames.ToList();
             foreach (var error in errors)
             {
-                indexingErrors.Enqueue(error);
+                if (indexNames.Contains(error.IndexName) == false)
+                    errorsForNonExistingIndexes.Add(error);
+                else
+                    indexingErrors.Enqueue(error);
             }
 
             TransactionalStorage.Batch(accessor =>
@@ -167,6 +172,12 @@ namespace Raven.Database.Indexing
 
                     accessor.Lists.Remove("Raven/Indexing/Errors/" + error.IndexName, error.Id.ToString(CultureInfo.InvariantCulture));
                 }
+
+                errorsForNonExistingIndexes.ForEach(error =>
+                {
+                    accessor.Lists.Remove("Raven/Indexing/Errors/" + error.IndexName, error.Id.ToString(CultureInfo.InvariantCulture));
+                    accessor.General.MaybePulseTransaction();
+                });
             });
 
             errorsCounter = errors.Max(x => x.Id);
@@ -455,6 +466,9 @@ namespace Raven.Database.Indexing
                 {
                     accessor.Lists.Remove("Raven/Indexing/Errors/" + indexName, removedError.Id.ToString(CultureInfo.InvariantCulture));
                 }
+
+                using (TransactionalStorage.DisableBatchNesting())
+                    accessor.Lists.RemoveAllOlderThan("Raven/Indexing/Errors/" + indexName, DateTime.MaxValue);
             });
         }
 
