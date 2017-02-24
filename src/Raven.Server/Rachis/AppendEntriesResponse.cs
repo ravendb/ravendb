@@ -9,8 +9,5 @@
         public bool Success { get; set; } 
 
         public string Message { get; set; }
-
-        //This is used when a follower and a leader need to agree on a matched index
-        public Negotiation Negotiation { get; set; }
     }
 }

@@ -6,6 +6,8 @@ namespace Raven.Server.Rachis
 {
     public class TimeoutEvent : IDisposable
     {
+        public static bool Disable;
+
         private readonly int _timeoutPeriod;
         private readonly ManualResetEventSlim _timeoutEventSlim = new ManualResetEventSlim();
         private ExceptionDispatchInfo _edi;
@@ -16,6 +18,7 @@ namespace Raven.Server.Rachis
         public TimeoutEvent(int timeoutPeriod)
         {
             _timeoutPeriod = timeoutPeriod;
+            _lastDeferredTicks = DateTime.UtcNow.Ticks;
             _timer = new Timer(Callback, null, Timeout.Infinite, Timeout.Infinite);
         }
 
@@ -34,9 +37,16 @@ namespace Raven.Server.Rachis
             {
                 if (_timeoutEventSlim.IsSet == false)
                 {
-                    _timeoutHappened?.Invoke();
-                    _timeoutHappened = null;
-                    _timer.Change(Timeout.Infinite, Timeout.Infinite);
+                    lock (this)
+                    {
+                        if (_timeoutHappened == null)
+                            return;
+                        if (Disable)
+                            return;
+                         _timeoutHappened?.Invoke();
+                        _timeoutHappened = null;
+                        _timer.Change(Timeout.Infinite, Timeout.Infinite);
+                    }
                     return;
                 }
                 _timeoutEventSlim.Reset();
@@ -55,11 +65,14 @@ namespace Raven.Server.Rachis
             _timeoutEventSlim.Set();
         }
 
-        public int TimeSinceLastDeferral()
+        public bool ExpiredLastDeferral(int maxInInMs)
         {
             var ticks = Interlocked.Read(ref _lastDeferredTicks);
-            var elapsed = DateTime.UtcNow - new DateTime(ticks);
-            return (int) elapsed.TotalMilliseconds;
+            var elapsed = (DateTime.UtcNow - new DateTime(ticks));
+            if (elapsed < TimeSpan.Zero)
+                return true; // if times goes backward (clock shift, etc), assume expired
+
+            return elapsed.TotalMilliseconds > maxInInMs;
         }
 
         public void Dispose()

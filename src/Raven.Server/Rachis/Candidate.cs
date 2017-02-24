@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
+using Raven.Client.Exceptions;
 
 namespace Raven.Server.Rachis
 {
@@ -33,74 +34,92 @@ namespace Raven.Server.Rachis
 
         private void Run()
         {
-            //TODO: Error handling!
-
-            Running = true;
-
-            TransactionOperationContext context;
-            ClusterTopology clusterTopology;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenReadTransaction())
+            using (this)
             {
-                ElectionTerm = _engine.CurrentTerm + 1;
-
-                clusterTopology = _engine.GetTopology(context);
-
-                tx.Commit();
-            }
-
-            if (IsForcedElection)
-            {
-                CastVoteForSelf();
-            }
-
-            foreach (var voter in clusterTopology.Voters)
-            {
-                if (voter == _engine.Url)
-                    continue; // we already voted for ourselves
-                var candidateAmbassador = new CandidateAmbassador(_engine, this,voter, clusterTopology.ApiKey);
-                _voters.Add(candidateAmbassador);
-                _engine.AppendStateDisposable(this, candidateAmbassador);
-                candidateAmbassador.Start();
-            }
-            while (Running)
-            {
-                if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)
+                try
                 {
-                    // timeout? 
+                    Running = true;
+
+                    TransactionOperationContext context;
+                    ClusterTopology clusterTopology;
+                    using (_engine.ContextPool.AllocateOperationContext(out context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        ElectionTerm = _engine.CurrentTerm + 1;
+
+                        clusterTopology = _engine.GetTopology(context);
+
+                        tx.Commit();
+                    }
+
                     if (IsForcedElection)
                     {
                         CastVoteForSelf();
                     }
 
-                    StateChange(); // will wake ambassadors and make them ping peers again
-                    continue;
-                }
-                if (Running == false)
-                    return;
+                    foreach (var voter in clusterTopology.Voters)
+                    {
+                        if (voter == _engine.Url)
+                            continue; // we already voted for ourselves
+                        var candidateAmbassador = new CandidateAmbassador(_engine, this, voter, clusterTopology.ApiKey);
+                        _voters.Add(candidateAmbassador);
+                        try
+                        {
+                            _engine.AppendStateDisposable(this, candidateAmbassador);
+                        }
+                        catch (ConcurrencyException)
+                        {
+                            return; // we lost the election, because someone else changed our state to follower
+                        }
+                        candidateAmbassador.Start();
+                    }
+                    while (Running)
+                    {
+                        if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)
+                        {
+                            // timeout? 
+                            if (IsForcedElection)
+                            {
+                                CastVoteForSelf();
+                            }
 
-                _peersWaiting.Reset();
+                            StateChange(); // will wake ambassadors and make them ping peers again
+                            continue;
+                        }
+                        if (Running == false)
+                            return;
 
-                var trialElectionsCount = 1;
-                var realElectionsCount = 1;
-                foreach (var ambassador in _voters)
-                {
-                    if (ambassador.ReadlElectionWonAtTerm == ElectionTerm)
-                        realElectionsCount++;
-                    if (ambassador.TrialElectionWonAtTerm == ElectionTerm)
-                        trialElectionsCount++;
-                }
+                        _peersWaiting.Reset();
 
-                var majority = (_voters.Count/2) + 1;
-                if (realElectionsCount >= majority)
-                {
-                    _engine.SwitchToLeaderState();
-                    break;
+                        var trialElectionsCount = 1;
+                        var realElectionsCount = 1;
+                        foreach (var ambassador in _voters)
+                        {
+                            if (ambassador.ReadlElectionWonAtTerm == ElectionTerm)
+                                realElectionsCount++;
+                            if (ambassador.TrialElectionWonAtTerm == ElectionTerm)
+                                trialElectionsCount++;
+                        }
+
+                        var majority = ((_voters.Count + 1) / 2) + 1;
+                        if (realElectionsCount >= majority)
+                        {
+                            _engine.SwitchToLeaderState();
+                            break;
+                        }
+                        if (RunRealElectionAtTerm != ElectionTerm &&
+                            trialElectionsCount >= majority)
+                        {
+                            CastVoteForSelf();
+                        }
+                    }
                 }
-                if (RunRealElectionAtTerm != ElectionTerm && 
-                    trialElectionsCount >= majority)
+                catch (Exception e)
                 {
-                    CastVoteForSelf();
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info("Failure during candidancy run", e);
+                    }
                 }
             }
         }
@@ -133,6 +152,7 @@ namespace Raven.Server.Rachis
 
         public void WaitForChangeInState()
         {
+            _peersWaiting.Set();
             _stateChange.Task.Wait();
         }
 
@@ -140,7 +160,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(Run)
             {
-                Name = "Consensus Leader - " + _engine.Url,
+                Name = "Candidate for - " + (new Uri(_engine.Url).Fragment ?? _engine.Url),
                 IsBackground = true
             };
             _thread.Start();
