@@ -45,7 +45,7 @@ type filterType = "in" | "string" | "range";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
-type rangeSearchType = "Numeric Double" | "Numeric Int" | "Numeric Long" | "Alphabetical" | "Datetime";
+type rangeSearchType = "Numeric Double" | "Numeric Long" | "Alphabetical" | "Datetime";
 
 class query extends viewModelBase {
 
@@ -54,7 +54,7 @@ class query extends viewModelBase {
     static readonly $body = $("body");
 
     static readonly SearchTypes: stringSearchType[] = ["Starts With", "Ends With", "Contains", "Exact"];
-    static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Int", "Numeric Long", "Alphabetical", "Datetime"];
+    static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Long", "Alphabetical", "Datetime"];
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
 
     recentQueries = ko.observableArray<storedQueryDto>();
@@ -743,12 +743,9 @@ class query extends viewModelBase {
             newQueryPart += " AND ";
         }
 
-        const fromPrefix = filter.rangeFrom() ? this.getRangePrefix(filter.rangeSearchType()) : "";
-        const toPrefix = filter.rangeTo() ? this.getRangePrefix(filter.rangeSearchType()) : "";
+        const rangePrefix = this.getRangePrefix(filter.rangeSearchType());
 
-        const rangePrefix = filter.rangeSearchType().startsWith("Numeric") ? "_Range" : "";
-
-        newQueryPart += filter.searchField() + rangePrefix + ":[" + fromPrefix + from + " TO " + toPrefix + to + "]";
+        newQueryPart += filter.searchField() + rangePrefix + ":[" + from + " TO " + to + "]";
 
         this.criteria().queryText(this.criteria().queryText() + newQueryPart);
 
@@ -756,11 +753,9 @@ class query extends viewModelBase {
 
     private getRangePrefix(type: rangeSearchType): string {
         if (type === "Numeric Double") {
-            return "Dx";
+            return "_D_Range";
         } else if (type === "Numeric Long") {
-            return "Lx";
-        } else if (type === "Numeric Int") {
-            return "Ix";
+            return "_L_Range";
         }
         return "";
     }
