@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes
 
         public static CollectionOfBloomFilters Load(Mode mode, TransactionOperationContext indexContext)
         {
-            var tree = indexContext.Transaction.InnerTransaction.CreateTree("IndexedDocs");
+            var tree = indexContext.Transaction.InnerTransaction.CreateTree("BloomFilters");
             var count = GetCount(tree, ref mode);
             var collection = new CollectionOfBloomFilters(mode, tree, indexContext);
 
