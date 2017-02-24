@@ -36,6 +36,15 @@ namespace Sparrow.Json
             }
         }
 
+        private class PropertyPosition
+        {
+            public int PropertyId;
+            public int SortedPosition;
+            public BlittableJsonDocumentBuilder.PropertyTag Tmp;
+        }
+
+        private readonly List<PropertyPosition> _cachedSort = new List<PropertyPosition>();
+        private int _cacheSortCount ;
         private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
         private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
         private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(LazyStringValueComparer.Instance);
@@ -90,7 +99,8 @@ namespace Sparrow.Json
             // in different order. 
             // we'll assume the later and move the property around, this is safe to 
             // do because we ignore the properties showing up after the PropertiesDiscovered
-
+            _cacheSortCount = 0;
+            _cachedSort.Clear();
             var old = _docPropNames[PropertiesDiscovered];
             _docPropNames[PropertiesDiscovered] = _docPropNames[prop.PropertyId];
             old.PropertyId = _docPropNames[PropertiesDiscovered].PropertyId;
@@ -104,33 +114,95 @@ namespace Sparrow.Json
         {
             // Sort object properties metadata by property names
             if (_propertiesNeedSorting)
+                UpdatePropertiesSortOrder();
+
+            if (_cachedSort.Count != properties.Count)
             {
-                int index = 0;
-                foreach (var o in _propertiesSortOrder)
+                UnlikelySortProperties(properties);
+                return;
+            }
+            
+            // we are frequently going to see documents with ids in the same order
+            // so we can take advantage of that by remember the previous sort, we 
+            // check if the values are the same, and if so, save the sort
+
+            for (int i = 0; i < properties.Count; i++)
+            {
+                if (_cachedSort[i].PropertyId == properties[i].PropertyId)
                 {
-                    o.Key.GlobalSortOrder = index++;
+                    _cachedSort[i].Tmp = properties[i];
                 }
-                _propertiesNeedSorting = false;
+                else
+                {
+                    UnlikelySortProperties(properties);
+                    return;
+                }
+            }
+            if (properties.Count != _cacheSortCount)
+            {
+                properties.RemoveRange(_cacheSortCount, properties.Count - _cacheSortCount);
             }
 
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (int i = 0; i < _cachedSort.Count; i++)
+            {
+                properties[_cachedSort[i].SortedPosition] = _cachedSort[i].Tmp;
+            }
+        }
+
+        private void UnlikelySortProperties(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
+        {
             _hasDuplicates = false;
             properties.Sort(this);
+
+            _cachedSort.Clear();
+            _cacheSortCount = properties.Count;
+
+            for (int i = 0; i < properties.Count; i++)
+            {
+                _cachedSort.Add(new PropertyPosition
+                {
+                    PropertyId = properties[i].PropertyId,
+                    SortedPosition = i
+                });
+            }
 
             // The item comparison method has a side effect, which can modify the _hasDuplicates field.
             // This can either be true or false at any given time. 
             if (_hasDuplicates)
             {
                 // leave just the latest
-                for (int i = 0; i < properties.Count-1; i++)
+                for (int i = 0; i < properties.Count - 1; i++)
                 {
                     if (properties[i].PropertyId == properties[i + 1].PropertyId)
                     {
+                        _cacheSortCount--;
+                        _cachedSort[i + 1] = new PropertyPosition
+                        {
+                            PropertyId = properties[i + 1].PropertyId,
+                            // set it to the previous value, so it'll just overwrite
+                            // this saves us a check and more complex code
+                            SortedPosition = i 
+                        };
+
                         properties.RemoveAt(i + 1);
+
                         i--;
                     }
                 }
             }
+        }
 
+        private void UpdatePropertiesSortOrder()
+        {
+            int index = 0;
+            foreach (var o in _propertiesSortOrder)
+            {
+                o.Key.GlobalSortOrder = index++;
+            }
+            _cachedSort.Clear();
+            _cacheSortCount = 0;
+            _propertiesNeedSorting = false;
         }
 
         private bool _hasDuplicates;

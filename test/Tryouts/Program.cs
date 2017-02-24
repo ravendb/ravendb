@@ -4,9 +4,9 @@
     {
         public static void Main(string[] args)
         {
-            using (var a = new SlowTests.Server.Rachis.BasicCluster())
+            using (var a = new FastTests.Server.Documents.Indexing.Static.CollisionsOfReduceKeyHashes())
             {
-                a.ClusterWithFiveNodesAndMultipleElections().Wait();
+                a.Static_index_should_produce_multiple_outputs(numberOfUsers: 5, locations: new[] {"Israel", "Poland"}).Wait();
             }
         }
     }
