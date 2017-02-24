@@ -27,10 +27,7 @@ namespace SlowTests.Tests
                 };
 
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
-                using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions
-                {
-                    SubscriptionId = subsId
-                }))
+                using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
 
                     var bc = new BlockingCollection<Thing>();

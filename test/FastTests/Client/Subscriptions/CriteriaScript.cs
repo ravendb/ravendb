@@ -32,10 +32,7 @@ namespace FastTests.Client.Subscriptions
                     FilterJavaScript = " return this.Name == 'ThingNo3'",
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
-                using (var subscription = subscriptionManager.Open<Thing>(new SubscriptionConnectionOptions()
-                {
-                    SubscriptionId = subsId
-                }))
+                using (var subscription = subscriptionManager.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var list = new BlockingCollection<Thing>();
                     subscription.Subscribe(x =>

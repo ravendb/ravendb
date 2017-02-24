@@ -43,10 +43,7 @@ namespace FastTests.Client.Subscriptions
 
                     var users = new List<dynamic>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
-                    {
-                        SubscriptionId = id
-                    }))
+                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(id)))
                     {
 
                         var docs = new BlockingCollection<dynamic>();
@@ -121,10 +118,7 @@ namespace FastTests.Client.Subscriptions
 
                     var users = new List<User>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions
-                    {
-                        SubscriptionId = id
-                    }))
+                    using (var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(id)))
                     {
 
                         var docs = new BlockingCollection<User>();
@@ -203,10 +197,7 @@ namespace FastTests.Client.Subscriptions
 
                     var users = new List<dynamic>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
-                    {
-                        SubscriptionId = subscriptionId
-                    }))
+                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                     {
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
@@ -251,10 +242,7 @@ namespace FastTests.Client.Subscriptions
                     }
                 }
 
-                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
-                {
-                    SubscriptionId = subscriptionId
-                }))
+                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                 {
 
                     var docs = new BlockingCollection<dynamic>();

@@ -117,7 +117,7 @@ namespace Raven.Server.Documents
         public SubscriptionState OpenSubscription(SubscriptionConnection connection)
         {
             var subscriptionState = _subscriptionStates.GetOrAdd(connection.SubscriptionId,
-                _ => new SubscriptionState());
+                _ => new SubscriptionState(this));
             return subscriptionState;
         }
 
@@ -202,27 +202,22 @@ namespace Raven.Server.Documents
 
         public unsafe void DeleteSubscription(long id)
         {
-            SubscriptionState subscriptionState;
-            if (_subscriptionStates.TryRemove(id, out subscriptionState))
-            {
-                subscriptionState.EndConnection();
-                subscriptionState.Dispose();
-            }
-
+            DropSubscriptionConnection(id, "Deleted");
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.WriteTransaction(transactionPersistentContext))
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
 
-                long subscriptionId = id;
+                var subscriptionId = Bits.SwapBytes(id);
                 TableValueReader subscription;
                 Slice subsriptionSlice;
                 using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subsriptionSlice))
                 {
                     if (table.ReadByKey(subsriptionSlice, out subscription) == false)
                         return;
+
+                    table.DeleteByKey(subsriptionSlice);
                 }
-                table.Delete(subscription.Id);
 
                 tx.Commit();
 
@@ -233,18 +228,18 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool DropSubscriptionConnection(long subscriptionId)
+        public bool DropSubscriptionConnection(long subscriptionId, string reason)
         {
             SubscriptionState subscriptionState;
             if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState) == false)
                 return false;
 
-            subscriptionState.Connection.ConnectionException = new SubscriptionClosedException("Closed by request");
-            subscriptionState.RegisterRejectedConnection(subscriptionState.Connection, new SubscriptionClosedException("Closed by request"));
+            subscriptionState.Connection.ConnectionException = new SubscriptionClosedException(reason);
+            subscriptionState.RegisterRejectedConnection(subscriptionState.Connection, new SubscriptionClosedException(reason));
             subscriptionState.Connection.CancellationTokenSource.Cancel();
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Subscription with id {subscriptionId} connection was dropped");
+                _logger.Info($"Subscription with id {subscriptionId} connection was dropped. Reason: {reason}");
 
             return true;
         }
@@ -306,8 +301,7 @@ namespace Raven.Server.Documents
                 [nameof(SubscriptionConnectionOptions.TimeToWaitBeforeConnectionRetryMilliseconds)] = options.TimeToWaitBeforeConnectionRetryMilliseconds,
                 [nameof(SubscriptionConnectionOptions.IgnoreSubscribersErrors)] = options.IgnoreSubscribersErrors,
                 [nameof(SubscriptionConnectionOptions.Strategy)] = options.Strategy,
-                [nameof(SubscriptionConnectionOptions.MaxDocsPerBatch)] = options.MaxDocsPerBatch,
-                [nameof(SubscriptionConnectionOptions.ClientSubscriptionId)] = options.ClientSubscriptionId
+                [nameof(SubscriptionConnectionOptions.MaxDocsPerBatch)] = options.MaxDocsPerBatch
             };
         }
 
