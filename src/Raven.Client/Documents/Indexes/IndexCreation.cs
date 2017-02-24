@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// Helper class for creating indexes from implementations of <see cref="AbstractIndexCreationTask"/>.
     /// </summary>
-    internal static class IndexCreation
+    public static class IndexCreation
     {
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Client", typeof(IndexCreation).FullName);
 
@@ -393,7 +393,7 @@ namespace Raven.Client.Documents.Indexes
             }
         }
 
-        public static IndexDefinition[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConventions conventions,
+        internal static IndexDefinition[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConventions conventions,
             long? minimumEtagBeforeReplace = null)
         {
             var indexesToAdd = indexCreationTasks
