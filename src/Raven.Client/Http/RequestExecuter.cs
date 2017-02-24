@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,11 +24,9 @@ namespace Raven.Client.Http
 
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
 
-        private static readonly Lazy<HttpClient> GlobalHttpClient = new Lazy<HttpClient>(() =>
-        {
-            var httpMessageHandler = new HttpClientHandler();
-            return new HttpClient(httpMessageHandler);
-        });
+        private static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
+
+        private static readonly Lazy<HttpClient> GlobalHttpClient = new Lazy<HttpClient>(() => CreateClient(GlobalHttpClientTimeout));
 
         private readonly string _apiKey;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecuter>("Client");
@@ -46,8 +43,6 @@ namespace Raven.Client.Http
         public readonly AsyncLocal<AggresiveCacheOptions> AggressiveCaching = new AsyncLocal<AggresiveCacheOptions>();
 
         public readonly HttpCache Cache = new HttpCache();
-
-        private readonly HttpClient _httpClient = GlobalHttpClient.Value;
 
         private Topology _topology;
         private readonly Timer _updateTopologyTimer;
@@ -171,7 +166,20 @@ namespace Raven.Client.Http
                 HttpResponseMessage response;
                 try
                 {
-                    response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
+                    var client = GetHttpClientForCommand(command);
+                    if (command.Timeout.HasValue)
+                    {
+                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
+                        {
+                            cts.CancelAfter(command.Timeout.Value);
+                            response = await client.SendAsync(request, cts.Token).ConfigureAwait(false);
+                        }
+                    }
+                    else
+                    {
+                        response = await GetHttpClientForCommand(command).SendAsync(request, token).ConfigureAwait(false);
+                    }
+
                     sp.Stop();
                 }
                 catch (HttpRequestException e) // server down, network down
@@ -539,7 +547,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private async Task TestIfNodeAlive(ServerNode node)
+        private static async Task TestIfNodeAlive(ServerNode node)
         {
             var command = new GetTopologyCommand();
             string url;
@@ -548,7 +556,7 @@ namespace Raven.Client.Http
             var sp = Stopwatch.StartNew();
             try
             {
-                var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+                var response = await GlobalHttpClient.Value.SendAsync(request).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
                     node.IsFailed = false;
@@ -577,6 +585,23 @@ namespace Raven.Client.Http
             //_httpClient.Dispose();
         }
 
+        private static HttpClient CreateClient(TimeSpan timeout)
+        {
+            var httpMessageHandler = new HttpClientHandler();
+            return new HttpClient(httpMessageHandler)
+            {
+                Timeout = timeout
+            };
+        }
+
+        private static HttpClient GetHttpClientForCommand<T>(RavenCommand<T> command)
+        {
+            var timeout = command.Timeout;
+            if (timeout.HasValue && timeout > GlobalHttpClientTimeout)
+                throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
+
+            return GlobalHttpClient.Value;
+        }
 
         private class ShortTermSingleUseRequestExecuter : RequestExecuter
         {
