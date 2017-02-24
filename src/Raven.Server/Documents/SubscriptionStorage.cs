@@ -26,16 +26,17 @@ namespace Raven.Server.Documents
     // todo: implement functionality for limiting amount of opened subscriptions
     public class SubscriptionStorage : IDisposable
     {
+        private readonly DocumentDatabase _db;
         public static TimeSpan TwoMinutesTimespan = TimeSpan.FromMinutes(2);
         private readonly ConcurrentDictionary<long, SubscriptionState> _subscriptionStates = new ConcurrentDictionary<long, SubscriptionState>();
         private readonly TableSchema _subscriptionsSchema = new TableSchema();
         private readonly StorageEnvironment _environment;
         private readonly Logger _logger;
 
-        private readonly UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         public SubscriptionStorage(DocumentDatabase db)
         {
+            _db = db;
             var path = db.Configuration.Core.DataDirectory.Combine("Subscriptions");
 
             var options = db.Configuration.Core.RunInMemory
@@ -49,7 +50,6 @@ namespace Raven.Server.Documents
 
             _environment = new StorageEnvironment(options);
             var databaseName = db.Name;
-            _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling("Subscriptions", databaseName);
 
             _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(databaseName);
             _subscriptionsSchema.DefineKey(new TableSchema.SchemaIndexDef
@@ -65,7 +65,6 @@ namespace Raven.Server.Documents
             {
                 state.Dispose();
             }
-            _unmanagedBuffersPool.Dispose();
             _environment.Dispose();
         }
 
@@ -134,24 +133,31 @@ namespace Raven.Server.Documents
 
                 int oldCriteriaSize;
                 var now = SystemTime.UtcNow.Ticks;
+                var ptr = config.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out oldCriteriaSize);
 
-                var tvb = new TableValueBuilder
+                JsonOperationContext context;
+                using (_db.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 {
-                    {(byte*)&subscriptionId, sizeof (long)},
-                    {config.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out oldCriteriaSize), oldCriteriaSize},
-                    {(byte*)&lastEtag, sizeof (long)},
-                    {(byte*)&now, sizeof (long)}
-                };
-                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-                TableValueReader existingSubscription;
-                Slice subscriptionSlice;
-                using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subscriptionSlice))
-                {
-                    if (table.ReadByKey(subscriptionSlice, out existingSubscription) == false)
-                        return;
+                    var copy = context.GetMemory(oldCriteriaSize);
+                    Memory.Copy(copy.Address, ptr, oldCriteriaSize);
+                    var tvb = new TableValueBuilder
+                    {
+                        {(byte*)&subscriptionId, sizeof (long)},
+                        {copy.Address, oldCriteriaSize},
+                        {(byte*)&lastEtag, sizeof (long)},
+                        {(byte*)&now, sizeof (long)}
+                    };
+                    var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
+                    TableValueReader existingSubscription;
+                    Slice subscriptionSlice;
+                    using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subscriptionSlice))
+                    {
+                        if (table.ReadByKey(subscriptionSlice, out existingSubscription) == false)
+                            return;
+                    }
+                    table.Update(existingSubscription.Id, tvb);
+                    tx.Commit();
                 }
-                table.Update(existingSubscription.Id, tvb);
-                tx.Commit();
             }
         }
 

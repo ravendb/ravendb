@@ -317,7 +317,7 @@ namespace FastTests.Server.NotificationCenter
                         Assert.Equal(NotificationUpdateType.Postponed, posponed.UpdateType);
                     }
 
-                    Assert.True(SpinWait.SpinUntil(() => writer.SentNotifications.Count == 1, TimeSpan.FromSeconds(3)), $"Got: {writer.SentNotifications.Count}");
+                    Assert.True(SpinWait.SpinUntil(() => writer.SentNotifications.Count == 1, TimeSpan.FromSeconds(30)), $"Got: {writer.SentNotifications.Count}");
 
                     Assert.Equal(alert2.Id, writer.SentNotifications[0]);
                 }

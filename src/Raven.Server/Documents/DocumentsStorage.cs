@@ -2826,7 +2826,7 @@ namespace Raven.Server.Documents
                         {copyTvr.Read((int) DocumentsTable.LoweredKey, out size), size},
                         newEtagBigEndian,
                         {copyTvr.Read((int) DocumentsTable.Key, out size), size},
-                        {data.BasePointer, data.Size},
+                        {copyTvr.Read((int) DocumentsTable.Data, out size), size},
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
                         modifiedTicks,
                         (int) flags,

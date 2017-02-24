@@ -203,6 +203,21 @@ namespace Voron.Data.Tables
                 // We must read before we call TryWriteDirect, because it will modify the size
                 int oldDataSize;
                 var oldData = DirectRead(id, out oldDataSize);
+#if DEBUG
+                for (int i = 0; i < builder.Count; i++)
+                {
+                    Slice slice;
+                    using (builder.SliceFromLocation(_tx.Allocator, i, out slice))
+                    {
+                        if (slice.Content.Ptr >= oldData &&
+                            slice.Content.Ptr < oldData + oldDataSize)
+                        {
+                            throw new InvalidOperationException(
+                                "Invalid attempt to update data with the source equals to the range we are modifying. This is not permitted since it can cause data corruption when table defrag happens");
+                        }
+                    }
+                }
+#endif
 
                 byte* pos;
                 if (prevIsSmall && ActiveDataSmallSection.TryWriteDirect(id, size, out pos))

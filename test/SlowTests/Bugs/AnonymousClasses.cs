@@ -43,10 +43,8 @@ namespace SlowTests.Bugs
 
                     var metadata = s.Advanced.GetMetadataFor(entity);
 
-                    StringValues name;
-                    metadata.TryGetValue("@collection", out name);
-
-                    Assert.Null(name[0]);
+                    
+                    Assert.False(metadata.ContainsKey("@collection"));
                 }
             }
         }

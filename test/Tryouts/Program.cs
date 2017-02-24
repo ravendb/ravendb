@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Client.Attachments;
 using Lucene.Net.Store;
 using Sparrow.Utils;
 using Voron;
@@ -16,9 +17,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new SlowTests.Bugs.CanGetScores())
+                using (var a = new FastTests.Server.Documents.Indexing.LiveIndexingPerformanceCollectorTests())
                 {
-                    a.FromQueryWithOrderByScoreThenNameDescending();
+                    a.CanObtainLiveIndexingPerformanceStats().Wait();
                 }
             }
             
