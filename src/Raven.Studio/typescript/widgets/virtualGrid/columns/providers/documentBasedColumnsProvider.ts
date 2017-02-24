@@ -13,6 +13,12 @@ import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import app = require("durandal/app");
 
+type documentBasedColumnsProviderOpts = {
+    showRowSelectionCheckbox?: boolean;
+    enableInlinePreview?: boolean;
+    showSelectAllCheckbox?: boolean;
+}
+
 class documentBasedColumnsProvider {
 
     private static readonly minColumnWidth = 150;
@@ -21,14 +27,16 @@ class documentBasedColumnsProvider {
     private readonly collectionNames: string[];
     private readonly db: database;
     private readonly enableInlinePreview: boolean;
+    private readonly showSelectAllCheckbox: boolean;
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
-    constructor(db: database, collectionNames: string[], showRowSelectionCheckbox: boolean, enableInlinePreview: boolean) {
-        this.showRowSelectionCheckbox = showRowSelectionCheckbox;
+    constructor(db: database, collectionNames: string[], opts: documentBasedColumnsProviderOpts) {
+        this.showRowSelectionCheckbox = _.isBoolean(opts.showRowSelectionCheckbox) ? opts.showRowSelectionCheckbox : false;
         this.collectionNames = collectionNames;
         this.db = db;
-        this.enableInlinePreview = enableInlinePreview;
+        this.enableInlinePreview = _.isBoolean(opts.enableInlinePreview) ? opts.enableInlinePreview : false;
+        this.showSelectAllCheckbox = _.isBoolean(opts.showSelectAllCheckbox) ? opts.showSelectAllCheckbox : false;
     }
 
     findColumns(viewportWidth: number, results: pagedResult<document>): virtualColumn[] {
@@ -38,7 +46,7 @@ class documentBasedColumnsProvider {
         const initialColumns: virtualColumn[] = [];
 
         if (this.showRowSelectionCheckbox) {
-            initialColumns.push(new checkedColumn());
+            initialColumns.push(new checkedColumn(this.showSelectAllCheckbox));
         }
 
         if (this.enableInlinePreview) {

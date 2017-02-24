@@ -198,12 +198,14 @@
                 </div>
             </div>
         </div>
-        <div id="matchingDocumentsContainer" class="form-group" data-bind="if: showDocumentsPreview">
+        <div id="matchingDocumentsContainer" class="form-group" data-bind="visible: showDocumentsPreview">
             <div class="col-md-12">
                 <div>
                     <label>Matching Documents</label>
                 </div>
-                <div id="matchingDocumentsGrid" style="width: 100%; height: 300px" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCollectionPagedItems, dynamicHeightBottomMargin: 0, dynamicHeightTargetSelector: '#beforeAfterContainer', selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid' }"></div>
+                <div id="matchingDocumentsGrid" style="width: 100%; height: 300px">
+                    <virtual-grid class="resizable" params="controller: $root.gridController"></virtual-grid>
+                </div>
             </div>
         </div>
         <div class="form-group patch-preview-flag" data-bind="with: $root" id="beforeAfterContainer">

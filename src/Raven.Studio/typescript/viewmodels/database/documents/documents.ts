@@ -106,13 +106,14 @@ class documents extends viewModelBase {
 
         const grid = this.gridController();
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.getCollectionNames(), true, false);
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.getCollectionNames(),
+            { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true });
 
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchDocs(s, t), (w, r) => {
             if (this.currentCollection().isAllDocuments) {
                 return [
-                    new checkedColumn(),
+                    new checkedColumn(true),
                     new hyperlinkColumn<document>(x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
                     new textColumn<document>(x => x.__metadata.etag(), "ETag", "200px"),
                     new textColumn<document>(x => x.__metadata.lastModified(), "Last Modified", "300px"),
