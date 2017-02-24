@@ -462,12 +462,15 @@ namespace Sparrow.Json.Parsing
 
         private bool ParseString()
         {
+            byte* currentBuffer = _inputBuffer;
+
             while (true)
             {
                 _currentStrStart = _pos;
+
                 while (_pos < _bufSize)
                 {
-                    var b = _inputBuffer[_pos++];
+                    byte b = currentBuffer[_pos++];
                     _charPos++;
 
                     if (_escapeMode == false)
@@ -478,17 +481,14 @@ namespace Sparrow.Json.Parsing
 
                         if (b == _currentQuote)
                         {
-                            _unmanagedWriteBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart - 1
-                                /*don't include the last quote*/);
+                            _unmanagedWriteBuffer.Write(currentBuffer + _currentStrStart, _pos - _currentStrStart - 1 /*don't include the last quote*/);
                             return true;
                         }
-                        else // Then it is '\\'
-                        {
-                            _escapeMode = true;
-                            _unmanagedWriteBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart - 1
-                                /*don't include the escape */);
-                            _currentStrStart = _pos;
-                        }
+                        
+                        // Then it is '\\'
+                        _escapeMode = true;
+                        _unmanagedWriteBuffer.Write(currentBuffer + _currentStrStart, _pos - _currentStrStart - 1 /*don't include the escape */);
+                        _currentStrStart = _pos;
                     }
                     else
                     {
@@ -516,7 +516,7 @@ namespace Sparrow.Json.Parsing
                             if (_pos >= _bufSize)
                                 return false;
 
-                            if (_inputBuffer[_pos] == (byte)'\n')
+                            if (currentBuffer[_pos] == (byte)'\n')
                                 _pos++; // consume the \,\r,\n
                         }
                         else
@@ -536,8 +536,10 @@ namespace Sparrow.Json.Parsing
                         }
                     }
                 }
+
                 // copy the buffer to the native code, then refill
-                _unmanagedWriteBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart);
+                _unmanagedWriteBuffer.Write(currentBuffer + _currentStrStart, _pos - _currentStrStart);
+
                 if (_pos >= _bufSize)
                     return false;
             }
