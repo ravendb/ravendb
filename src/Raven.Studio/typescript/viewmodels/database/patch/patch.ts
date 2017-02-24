@@ -30,13 +30,22 @@ import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
 import genUtils = require("common/generalUtils");
 import queryCriteria = require("models/database/query/queryCriteria");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
+import pagedResult = require("widgets/virtualGrid/pagedResult");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
 type indexInfo = {
     name: string;
     isMapReduce: boolean;
 }
 
+type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
+
 class patch extends viewModelBase {
+
+    gridController = ko.observable<virtualGridController<document>>();
+    private fetcher = ko.observable<fetcherType>();
 
     displayName = "patch";
     indices = ko.observableArray<indexInfo>([]);
@@ -47,8 +56,6 @@ class patch extends viewModelBase {
     recentPatches = ko.observableArray<storedPatchDto>();
     savedPatches = ko.observableArray<patchDocument>();
 
-    currentCollectionPagedItems = ko.observable<pagedList>();
-    selectedDocumentIndices = ko.observableArray<number>();
     showDocumentsPreview: KnockoutObservable<boolean>;
 
     patchDocument = ko.observable<patchDocument>();
@@ -185,6 +192,33 @@ class patch extends viewModelBase {
         if (afterPatchEditorElement.length > 0) {
             this.afterPatchEditor = ko.utils.domData.get(afterPatchEditorElement[0], "aceEditor");
         }
+
+        const grid = this.gridController();
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.collections().map(x => x.name), {
+            showRowSelectionCheckbox: true,
+            showSelectAllCheckbox: false
+        });
+
+        const fakeFetcher: fetcherType = (s, t) => $.Deferred<pagedResult<document>>().resolve({
+            items: [],
+            totalResultCount: 0
+        });
+
+        grid.headerVisible(true);
+        grid.init((s, t) => this.fetcher() ? this.fetcher()(s, t) : fakeFetcher(s, t), (w, r) => documentsProvider.findColumns(w, r));
+
+        this.fetcher.subscribe(() => grid.reset());
+
+        grid.selection.subscribe(selection => {
+            if (selection.count === 1) {
+                var document = selection.included[0];
+                // load document directly from server as documents on list are loaded using doc-preview endpoint, which doesn't display entire document
+                this.loadDocumentToTest(document.__metadata.id);
+                this.documentKey(document.__metadata.id);
+            } else {
+                this.clearDocumentPreview();
+            }
+        });
     }
 
     activate(recentPatchHash?: string) {
@@ -214,20 +248,6 @@ class patch extends viewModelBase {
                     return this.documentKey();
                 case "Document":
                     return this.patchDocument().selectedItem();
-            }
-        });
-
-        this.selectedDocumentIndices.subscribe(list => {
-            if (list.length === 1) {
-                var firstCheckedOnList = list[0];
-                this.currentCollectionPagedItems().getNthItem(firstCheckedOnList)
-                    .done(document => {
-                        // load document directly from server as documents on list are loaded using doc-preview endpoint, which doesn't display entire document
-                        this.loadDocumentToTest(document.__metadata.id);
-                        this.documentKey(document.__metadata.id);
-                    });
-            } else {
-                this.clearDocumentPreview();
             }
         });
 
@@ -328,7 +348,7 @@ class patch extends viewModelBase {
             loadDocTask.done(document => {
                 this.beforePatchDoc(JSON.stringify(document.toDto(), null, 4));
                 this.beforePatchMeta(JSON.stringify(documentMetadata.filterMetadata(document.__metadata.toDto()), null, 4));
-            }).fail(this.clearDocumentPreview);
+            }).fail(() => this.clearDocumentPreview());
         } else {
             this.clearDocumentPreview();
         }
@@ -359,7 +379,7 @@ class patch extends viewModelBase {
                 $("#matchingDocumentsGrid").resize();
                 break;
             default:
-                this.currentCollectionPagedItems(null);
+                this.fetcher(null);
                 break;
         }
     }
@@ -388,11 +408,7 @@ class patch extends viewModelBase {
         this.patchDocument().selectedItem(coll.name);
 
         var fetcher = (skip: number, take: number) => coll.fetchDocuments(skip, take);
-        var list = new pagedList(fetcher);
-        list.collectionName = coll.name;
-
-        this.currentCollectionPagedItems(list);
-        list.fetch(0, 20).always(() => $("#matchingDocumentsGrid").resize());
+        this.fetcher(fetcher);
     }
 
     fetchAllIndexes(): JQueryPromise<any> {
@@ -422,7 +438,7 @@ class patch extends viewModelBase {
         this.runQuery();
     }
 
-    runQuery(): pagedList {
+    runQuery(): void {
         var selectedIndex = this.patchDocument().selectedItem();
         if (selectedIndex) {
             var queryText = this.queryText();
@@ -437,11 +453,8 @@ class patch extends viewModelBase {
                 var command = new queryIndexCommand(database, skip, take, criteria);
                 return command.execute();
             };
-            var resultsList = new pagedList(resultsFetcher);
-            this.currentCollectionPagedItems(resultsList);
-            return resultsList;
+            this.fetcher(resultsFetcher);
         }
-        return null;
     }
 
     savePatch() {

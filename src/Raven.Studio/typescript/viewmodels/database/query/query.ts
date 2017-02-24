@@ -347,7 +347,9 @@ class query extends viewModelBase {
 
         const grid = this.gridController();
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.collections().map(x => x.name), false, true);
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.collections().map(x => x.name), {
+            enableInlinePreview: true
+        });
 
         grid.headerVisible(true);
         grid.init((s, t) => this.fetcher()(s, t), (w, r) => documentsProvider.findColumns(w, r));
