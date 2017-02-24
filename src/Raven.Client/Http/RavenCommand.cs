@@ -24,6 +24,8 @@ namespace Raven.Client.Http
 
         public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;
 
+        public TimeSpan? Timeout { get; protected set; }
+
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
         public abstract void SetResponse(BlittableJsonReaderObject response, bool fromCache);
 
