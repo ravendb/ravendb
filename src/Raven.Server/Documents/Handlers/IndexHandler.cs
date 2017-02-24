@@ -354,8 +354,6 @@ namespace Raven.Server.Documents.Handlers
 
             var newIndexId = Database.IndexStore.ResetIndex(name);
 
-            NoContentStatus();
-
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
