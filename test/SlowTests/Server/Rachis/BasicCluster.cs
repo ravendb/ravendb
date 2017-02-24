@@ -14,7 +14,7 @@ namespace SlowTests.Server.Rachis
     public class BasicCluster : RachisConsensusTestBase
     {
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task ClusterWithFiveNodesAndMultipleElections()
         {
             PredictableSeeds = true;
@@ -24,7 +24,7 @@ namespace SlowTests.Server.Rachis
             var d = SetupServer();
             var e = SetupServer();
 
-            var followers = new[] {b, c, d, e};
+            var followers = new[] { b, c, d, e };
 
             var followersUpgraded = followers.Select(x => x.WaitForTopology(Leader.TopologyModification.Voter)).ToArray();
             foreach (var follower in followers)
@@ -34,7 +34,7 @@ namespace SlowTests.Server.Rachis
 
             await Task.WhenAll(followersUpgraded);
 
-            var leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_=>x)).ToArray();
+            var leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_ => x)).ToArray();
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -67,10 +67,10 @@ namespace SlowTests.Server.Rachis
                 }
             }
 
-            followers = followers.Except(new[] {leader}).ToArray();
+            followers = followers.Except(new[] { leader }).ToArray();
 
             leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_ => x)).ToArray();
-      
+
             foreach (var follower in followers)
             {
                 Disconnect(follower.Url, leader.Url);
@@ -100,7 +100,7 @@ namespace SlowTests.Server.Rachis
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task ClusterWithThreeNodesAndElections()
         {
             var a = SetupServer(true);
@@ -138,7 +138,7 @@ namespace SlowTests.Server.Rachis
             await Task.WhenAny(bLeader, cLeader);
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task ClusterWithLateJoiningNodeRequiringSnapshot()
         {
             var expected = 45;
@@ -181,7 +181,7 @@ namespace SlowTests.Server.Rachis
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task ClusterWithTwoNodes()
         {
             var expected = 45;
@@ -226,7 +226,7 @@ namespace SlowTests.Server.Rachis
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task CanSetupSingleNode()
         {
             var rachis = SetupServer(true);
