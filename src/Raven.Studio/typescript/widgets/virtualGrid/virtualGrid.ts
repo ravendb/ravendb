@@ -31,6 +31,9 @@ class virtualGrid<T> {
     private isGridVisible = false;
     private selectionDiff: number[] = [];
     private inIncludeSelectionMode: boolean = true;
+
+    private selection = ko.observable<virtualGridSelection<T>>();
+
     private renderHandle = 0;
     private settings = new virtualGridConfig();
     private controller: virtualGridController<T>;
@@ -44,7 +47,9 @@ class virtualGrid<T> {
 
     constructor(params: { controller: KnockoutObservable<virtualGridController<T>> }) {
         this.gridId = _.uniqueId("vg-");
-        
+
+        this.refreshSelection();
+
         this.initController();
 
         if (params.controller) {
@@ -57,7 +62,7 @@ class virtualGrid<T> {
             headerVisible: v => this.settings.showHeader(v),
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
             reset: () => this.resetItems(),
-            getSelection: () => this.getSelection() //TODO: as observable
+            selection: this.selection 
         }
     }
 
@@ -387,6 +392,7 @@ class virtualGrid<T> {
         }
 
         // Add these results to the .items array as necessary.
+        const oldTotalCount = this.items.length;
         this.items.length = results.totalResultCount;
         this.totalItemCount = results.totalResultCount;
         this.virtualHeight(results.totalResultCount * virtualRow.height);
@@ -394,6 +400,10 @@ class virtualGrid<T> {
         for (let i = 0; i < results.items.length; i++) {
             const rowIndex = i + skip;
             this.items[rowIndex] = results.items[i];
+        }
+
+        if (oldTotalCount !== results.totalResultCount) {
+            this.refreshSelection();
         }
 
         this.render();
@@ -469,10 +479,12 @@ class virtualGrid<T> {
         this.inIncludeSelectionMode = true;
         this.selectionDiff = [];
 
+        this.refreshSelection();
+
         this.fetchItems(0, 100);
     }
 
-    private getSelection(): virtualGridSelection<T> {
+    private refreshSelection(): void {
         const mappedDiff = this.selectionDiff
             .map(idx => this.items[idx]);
 
@@ -481,21 +493,21 @@ class virtualGrid<T> {
 
         if (selected > 0 && selected === totalCount) {
             // force exclusive mode - user probably selected all items manually
-            return {
+            this.selection({
                 mode: "exclusive",
                 included: [],
                 excluded: [],
                 count: selected,
                 totalCount: totalCount
-            }
+            });
         } else {
-            return {
+            this.selection({
                 mode: this.inIncludeSelectionMode ? "inclusive" : "exclusive",
                 included: this.inIncludeSelectionMode ? mappedDiff : [],
                 excluded: this.inIncludeSelectionMode ? [] : mappedDiff,
                 count: selected,
                 totalCount: totalCount
-            }
+            });
         }
     }
 
@@ -521,7 +533,7 @@ class virtualGrid<T> {
         }
 
         this.syncSelectAll();
-       
+        this.refreshSelection();
         this.render();
     }
 
@@ -546,6 +558,7 @@ class virtualGrid<T> {
         }
 
         this.syncSelectAll();
+        this.refreshSelection();
         this.render();
     }
 

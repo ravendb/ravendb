@@ -151,7 +151,7 @@ class documents extends viewModelBase {
     }
 
     deleteSelected() {
-        const selection = this.gridController().getSelection();
+        const selection = this.gridController().selection();
         if (selection.count === 0) {
             throw new Error("No elements to delete");
         }
