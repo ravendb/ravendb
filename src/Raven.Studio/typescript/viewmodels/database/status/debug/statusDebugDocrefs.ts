@@ -1,7 +1,5 @@
 import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import customColumns = require("models/database/documents/customColumns");
-import customColumnParams = require('models/database/documents/customColumnParams');
 import pagedList = require("common/pagedList");
 import getDocRefsCommand = require("commands/database/debug/getDocRefsCommand");
 import eventsCollector = require("common/eventsCollector");
@@ -9,7 +7,7 @@ import eventsCollector = require("common/eventsCollector");
 class statusDebugDocrefs extends viewModelBase {
 
     currentDocRefs = ko.observable<pagedList>();
-    columns = ko.observable(customColumns.empty());
+    //TODO: columns = ko.observable(customColumns.empty());
     docId = ko.observable<string>("");
     canSearch = ko.computed(() => this.docId().length > 0);
     
@@ -23,9 +21,10 @@ class statusDebugDocrefs extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('JHZ574');
+        /* TODO
         this.columns().columns([
             new customColumnParams({ Header: "Id", Binding: "Id", DefaultWidth: 300 }),
-        ]);
+        ]);*/
     }
 
     fetchDocRefs() {

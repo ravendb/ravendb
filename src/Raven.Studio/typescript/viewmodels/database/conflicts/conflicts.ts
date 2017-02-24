@@ -3,8 +3,6 @@ import appUrl = require("common/appUrl");
 import pagedList = require("common/pagedList");
 import database = require("models/resources/database");
 import conflictVersion = require("models/database/replication/conflictVersion");
-import customColumns = require("models/database/documents/customColumns");
-import customColumnParams = require('models/database/documents/customColumnParams');
 
 import changesContext = require("common/changesContext");
 
@@ -26,7 +24,7 @@ class conflicts extends viewModelBase {
 
     private refreshConflictsObservable = ko.observable<number>();
     private conflictsSubscription: KnockoutSubscription;
-    currentColumns = ko.observable(customColumns.empty());
+    //TODO: currentColumns = ko.observable(customColumns.empty());
     hasAnyConflict: KnockoutComputed<boolean>;
 
     static performedIndexChecks: Array<string> = [];
@@ -72,11 +70,12 @@ class conflicts extends viewModelBase {
             return false;
         });
 
+        /* TODO
         this.currentColumns().columns([
             new customColumnParams({ Header: "Detected At (UTC)", Binding: "conflictDetectedAt", DefaultWidth: 300 }),
             new customColumnParams({ Header: "Versions", Binding: "versions", DefaultWidth: 400, Template: 'versions-template' })
         ]);
-        this.currentColumns().customMode(true);
+        this.currentColumns().customMode(true);*/
 
         return this.performIndexCheck(this.activeDatabase()).then(() => {
             return this.loadReplicationSources(this.activeDatabase());

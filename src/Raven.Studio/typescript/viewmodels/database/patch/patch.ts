@@ -16,7 +16,6 @@ import savePatch = require('viewmodels/database/patch/savePatch');
 import executePatchConfirm = require('viewmodels/database/patch/executePatchConfirm');
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import executePatchCommand = require("commands/database/patch/executePatchCommand");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import evalByQueryCommand = require("commands/database/patch/evalByQueryCommand");
 import evalByCollectionCommand = require("commands/database/patch/evalByCollectionCommand");
 import documentMetadata = require("models/database/documents/documentMetadata");
@@ -587,7 +586,7 @@ class patch extends viewModelBase {
 
     executePatchOnSelected() {
         eventsCollector.default.reportEvent("patch", "run", "selected");
-        this.confirmAndExecutePatch(this.getDocumentsGrid().getSelectedItems().map(doc => doc.__metadata.id));
+        this.confirmAndExecutePatch(this.gridController().selection().included.map(x => x.getId()));
     }
 
     executePatchOnAll() {
@@ -731,15 +730,6 @@ class patch extends viewModelBase {
                 this.useIndex(this.patchDocument().selectedItem());
                 break;
         }
-    }
-
-    private getDocumentsGrid(): virtualTable {
-        var gridContents = $(patch.gridSelector).children()[0];
-        if (gridContents) {
-            return ko.dataFor(gridContents);
-        }
-
-        return null;
     }
 
     activateBeforeDoc() {

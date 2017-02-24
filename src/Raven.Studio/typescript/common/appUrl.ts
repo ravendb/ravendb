@@ -83,7 +83,6 @@ class appUrl {
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         editSqlReplication: ko.computed(() => appUrl.forEditSqlReplication(undefined, appUrl.currentDatabase())),
         sqlReplicationsConnections: ko.computed(() => appUrl.forSqlReplicationConnections(appUrl.currentDatabase())),
-        customFunctionsEditor: ko.computed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
         databaseStudioConfig: ko.computed(() => appUrl.forDatabaseStudioConfig(appUrl.currentDatabase())),
 
         statusDebug: ko.computed(() => appUrl.forStatusDebug(appUrl.currentDatabase())),
@@ -264,10 +263,6 @@ class appUrl {
 
     static forGlobalConfigQuotas(): string {
         return '#admin/settings/globalConfigQuotas';
-    }
-
-    static forGlobalConfigCustomFunctions(): string {
-        return '#admin/settings/globalConfigCustomFunctions';
     }
 
     static forGlobalConfigVersioning(): string {
@@ -592,9 +587,6 @@ class appUrl {
         return "#databases/settings/sqlReplicationConnectionStringsManagement?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forCustomFunctionsEditor(db: database): string {
-        return "#databases/settings/customFunctionsEditor?" + appUrl.getEncodedDbPart(db);
-    }
     static forDatabaseStudioConfig(db: database): string {
         return "#databases/settings/databaseStudioConfig?" + appUrl.getEncodedDbPart(db);
     }

@@ -779,10 +779,6 @@ interface counterStorageDto extends tenantDto {
 interface timeSeriesDto extends tenantDto {
 }
 
-interface customFunctionsDto {
-    Functions: string;
-}
-
 interface suggestionsDto {
     Suggestions: Array<string>;
 }

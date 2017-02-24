@@ -10,7 +10,6 @@ import createFolderInFilesystem = require("viewmodels/filesystem/files/createFol
 import treeBindingHandler = require("common/bindingHelpers/treeBindingHandler");
 import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import file = require("models/filesystem/file");
 import folder = require("models/filesystem/folder");
 import uploadItem = require("models/filesystem/uploadItem");
@@ -332,7 +331,7 @@ class filesystemFiles extends viewModelBase {
         }
     }
 
-    getFilesGrid(): virtualTable {
+    getFilesGrid() {
         var gridContents = $(filesystemFiles.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

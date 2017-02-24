@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import changeSubscription = require("common/changeSubscription");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
@@ -145,7 +144,7 @@ class types extends viewModelBase {
         }
     }
 
-    private getTypesGrid(): virtualTable {
+    private getTypesGrid() {
         var gridContents = $(types.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

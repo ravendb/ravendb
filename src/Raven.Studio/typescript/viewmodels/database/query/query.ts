@@ -17,19 +17,14 @@ import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
-import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
 import document = require("models/database/documents/document");
-import customColumnParams = require("models/database/documents/customColumnParams");
-import customColumns = require("models/database/documents/customColumns");
 import selectColumns = require("viewmodels/common/selectColumns");
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
-import customFunctions = require("models/database/documents/customFunctions");
 import transformerType = require("models/database/index/transformer");
 import getIndexSuggestionsCommand = require("commands/database/index/getIndexSuggestionsCommand");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
@@ -137,7 +132,6 @@ class query extends viewModelBase {
     contextName = ko.observable<string>();
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
-    currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
 
     indexSuggestions = ko.observableArray<indexSuggestion>([]);
     showSuggestions: KnockoutComputed<boolean>;
@@ -836,15 +830,6 @@ class query extends viewModelBase {
             .done(() => this.runQuery());
     }
 
-    private getQueryGrid(): virtualTable {
-        var gridContents = $(query.queryGridSelector).children()[0];
-        if (gridContents) {
-            return ko.dataFor(gridContents);
-        }
-
-        return null;
-    }
-
     extractQueryFields(): Array<queryFieldInfo> {
         var query = this.queryText();
         var luceneSimpleFieldRegex = /(\w+):\s*("((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|(\w+))/g;
@@ -904,7 +889,6 @@ class query extends viewModelBase {
 
         var selectColumnsViewModel: selectColumns = new selectColumns(
             this.currentColumnsParams().clone(),
-            this.currentCustomFunctions().clone(),
             this.contextName(),
             this.activeDatabase(),
             this.getQueryGrid().getColumnsNames());
@@ -915,18 +899,6 @@ class query extends viewModelBase {
 
             this.runQuery();
         });
-    }
-
-     private fetchCustomFunctions(db: database): JQueryPromise<any> {
-        var deferred = $.Deferred();
-
-        var customFunctionsCommand = new getEffectiveCustomFunctionsCommand(db).execute();
-        customFunctionsCommand.done((cf: configurationDocumentDto<customFunctionsDto>) => {
-            this.currentCustomFunctions(new customFunctions(cf.MergedDocument));
-        })
-            .always(() => deferred.resolve());
-
-        return deferred;
     }
 
      onIndexChanged(newIndexName: string) {
