@@ -115,27 +115,6 @@ namespace Sparrow.Json
             return prop;
         }
 
-        protected bool Equals(CachedProperties other)
-        {
-            return Equals(_context, other._context) && Equals(_cachedSorts, other._cachedSorts);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((CachedProperties) obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return ((_context != null ? _context.GetHashCode() : 0)*397) ^ (_cachedSorts != null ? _cachedSorts.GetHashCode() : 0);
-            }
-        }
-
         public void Sort(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
         {
             var index = GetPropertiesHashedIndex(properties);

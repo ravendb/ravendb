@@ -9,10 +9,24 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Client.Hilo())
+            var sp = Stopwatch.StartNew();
+            var jcp = new JsonContextPool();
+
+            for (int i = 0; i < 1000 * 1000; i++)
             {
-                a.Capacity_Should_Double();
+                JsonOperationContext context;
+                using (jcp.AllocateOperationContext(out context))
+                {
+                    context.ReadObject(new DynamicJsonValue
+                    {
+                        ["Test"] = i,
+                        ["Name"] = "frank",
+                        ["Age"] = 91
+                    }, "test");
+                }
             }
+
+            Console.WriteLine(sp.ElapsedMilliseconds.ToString("#,#"));
         }
     }
 }
