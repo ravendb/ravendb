@@ -216,26 +216,21 @@ namespace Sparrow.Json
 
         private static int SetPropertyIdSizeFlag(ref BlittableJsonToken objectToken, int maxPropId)
         {
-            int propertyIdSize;
             if (maxPropId <= byte.MaxValue)
             {
-                propertyIdSize = sizeof(byte);
+                
                 objectToken |= BlittableJsonToken.PropertyIdSizeByte;
+                return sizeof(byte);
             }
-            else
-            {
-                if (maxPropId <= ushort.MaxValue)
-                {
-                    propertyIdSize = sizeof(short);
-                    objectToken |= BlittableJsonToken.PropertyIdSizeShort;
-                }
-                else
-                {
-                    propertyIdSize = sizeof(int);
-                    objectToken |= BlittableJsonToken.PropertyIdSizeInt;
-                }
+
+            if (maxPropId <= ushort.MaxValue)
+            {                
+                objectToken |= BlittableJsonToken.PropertyIdSizeShort;
+                return sizeof(short);
             }
-            return propertyIdSize;
+
+            objectToken |= BlittableJsonToken.PropertyIdSizeInt;
+            return sizeof(int);
         }
 
         public int WritePropertyNames(int rootOffset)
@@ -287,26 +282,20 @@ namespace Sparrow.Json
 
         private static int SetOffsetSizeFlag(ref BlittableJsonToken objectToken, long distanceFromFirstProperty)
         {
-            int positionSize;
             if (distanceFromFirstProperty <= byte.MaxValue)
-            {
-                positionSize = sizeof(byte);
+            {                
                 objectToken |= BlittableJsonToken.OffsetSizeByte;
+                return sizeof(byte);
             }
-            else
+
+            if (distanceFromFirstProperty <= ushort.MaxValue)
             {
-                if (distanceFromFirstProperty <= ushort.MaxValue)
-                {
-                    positionSize = sizeof(short);
-                    objectToken |= BlittableJsonToken.OffsetSizeShort;
-                }
-                else
-                {
-                    positionSize = sizeof(int);
-                    objectToken |= BlittableJsonToken.OffsetSizeInt;
-                }
+                objectToken |= BlittableJsonToken.OffsetSizeShort;
+                return sizeof(short);
             }
-            return positionSize;
+
+            objectToken |= BlittableJsonToken.OffsetSizeInt;
+            return sizeof(int);
         }
 
 
@@ -317,22 +306,16 @@ namespace Sparrow.Json
             Debug.Assert(sizeOfValue == sizeof(byte) || sizeOfValue == sizeof(short) || sizeOfValue == sizeof(int), $"Unsupported size {sizeOfValue}");
 
             // PERF: With the current JIT at 12 of January of 2017 the switch statement dont get inlined.
-            if (sizeOfValue == sizeof(int))
-            {
-                _unmanagedWriteBuffer.WriteByte((byte)value);
-                _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
-                _unmanagedWriteBuffer.WriteByte((byte)(value >> 16));
-                _unmanagedWriteBuffer.WriteByte((byte)(value >> 24));
-            }
-            else if (sizeOfValue == sizeof(ushort))
-            {
-                _unmanagedWriteBuffer.WriteByte((byte)value);
-                _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
-            }
-            else
-            {
-                _unmanagedWriteBuffer.WriteByte((byte)value);
-            }
+            _unmanagedWriteBuffer.WriteByte((byte)value);
+            if (sizeOfValue == sizeof(byte))
+                return;
+
+            _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
+            if (sizeOfValue == sizeof(ushort))
+                return;
+
+            _unmanagedWriteBuffer.WriteByte((byte)(value >> 16));
+            _unmanagedWriteBuffer.WriteByte((byte)(value >> 24));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

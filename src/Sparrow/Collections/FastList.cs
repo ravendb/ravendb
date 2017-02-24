@@ -246,6 +246,38 @@ namespace Sparrow.Collections
             throw new ArgumentOutOfRangeException(nameof(index));
         }
 
+        // Removes a range of elements from this list.
+        // 
+        public void RemoveRange(int index, int count)
+        {
+            uint uindex = (uint)index;
+            if (uindex >= _size || (int)_size - index < count)
+                goto ERROR;
+
+            if (count <= 0)
+                return;
+
+            _size -= (uint) count;
+            if (index < _size)
+            {
+                Array.Copy(_items, index + count, _items, index, (int)_size - index);
+            }
+
+            _version++;
+
+            if (typeof(T) != typeof(int) && typeof(T) != typeof(uint) && typeof(T) != typeof(byte) &&
+                typeof(T) != typeof(short) && typeof(T) != typeof(long) && typeof(T) != typeof(ulong))
+            {
+                Array.Clear(_items, (int) _size, count);
+            }
+
+            return;            
+
+            ERROR:
+            ThrowWhenIndexIsOutOfRange(index);
+        }
+
+
         public Enumerator GetEnumerator()
         {
             return new Enumerator(this);
