@@ -41,6 +41,7 @@ namespace Voron.Data.Fixed
 
         public LowLevelTransaction Llt => _tx;
 
+        internal RootObjectType? Type => _type;
         public static ushort GetValueSize(LowLevelTransaction tx, Tree parent, Slice treeName)
         {
             var header = (FixedSizeTreeHeader.Embedded*)parent.DirectRead(treeName);

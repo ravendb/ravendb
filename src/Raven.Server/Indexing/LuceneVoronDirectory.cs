@@ -9,6 +9,7 @@ using Voron;
 using Voron.Data;
 using Voron.Impl;
 using Sparrow;
+using Voron.Data.Fixed;
 
 namespace Raven.Server.Indexing
 {
@@ -60,7 +61,8 @@ namespace Raven.Server.Indexing
             {
                 long length;
                 int version;
-                filesTree.GetStreamLengthAndVersion(str, out length, out version);
+                FixedSizeTree _;
+                filesTree.GetStreamLengthAndVersion(str, out length, out version, out _);
                 if (length == -1)
                     throw new FileNotFoundException(name);
                 return version;
@@ -90,7 +92,8 @@ namespace Raven.Server.Indexing
             {
                 long length;
                 int version;
-                filesTree.GetStreamLengthAndVersion(str, out length, out version);
+                FixedSizeTree _;
+                filesTree.GetStreamLengthAndVersion(str, out length, out version, out _);
                 if(length == -1)
                     throw new FileNotFoundException(name);
                 return length;

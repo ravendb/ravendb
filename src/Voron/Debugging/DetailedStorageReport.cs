@@ -55,6 +55,8 @@ namespace Voron.Debugging
         public long AllocatedSpaceInBytes { get; set; }
 
         public long UsedSpaceInBytes { get; set; }
+
+        public StreamsReport Streams { get; set; }
     }
 
     public class MultiValuesReport
@@ -73,5 +75,31 @@ namespace Voron.Debugging
         public long NumberOfPreAllocatedPages { get; set; }
         public TreeReport AllocationTree { get; set; }
         public long OriginallyAllocatedSpaceInBytes { get; set; }
+    }
+
+    public class StreamsReport
+    {
+        public List<StreamDetails> Streams { get; set; }
+
+        public long NumberOfStreams { get; set; }
+
+        public long TotalNumberOfAllocatedPages { get; set; }
+
+        public long AllocatedSpaceInBytes { get; set; }
+    }
+
+    public class StreamDetails
+    {
+        public string Name { get; set; }
+
+        public long Length { get; set; }
+
+        public int Version { get; set; }
+
+        public long NumberOfAllocatedPages { get; set; }
+
+        public long AllocatedSpaceInBytes { get; set; }
+
+        public TreeReport DetailsTree { get; set; }
     }
 }
