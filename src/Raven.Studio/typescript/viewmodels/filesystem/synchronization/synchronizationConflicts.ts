@@ -2,9 +2,6 @@ import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");
 import resolveConflict = require("viewmodels/filesystem/synchronization/resolveConflict");
-import customColumns = require("models/database/documents/customColumns");
-import customColumnParams = require('models/database/documents/customColumnParams');
-import virtualTable = require("widgets/virtualTable/viewModel");
 
 import filesystem = require("models/filesystem/filesystem");
 import changeSubscription = require("common/changeSubscription");
@@ -27,7 +24,7 @@ class synchronizationConflicts extends viewModelBase {
 
     currentConflictsPagedItems = ko.observable<pagedList>();
     selectedDocumentIndices = ko.observableArray<number>();
-    currentColumns = ko.observable(customColumns.empty());
+    //TODO: currentColumns = ko.observable(customColumns.empty());
     conflictsSelection: KnockoutComputed<checkbox>;
     hasAnyConflictsSelected: KnockoutComputed<boolean>;
     hasAllConflictsSelected: KnockoutComputed<boolean>;
@@ -80,13 +77,13 @@ class synchronizationConflicts extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink("NMDELS");
-
+        /* TODO:
         this.currentColumns().columns([
             new customColumnParams({ Header: "File Name", Binding: "fileName", DefaultWidth: 400 }),
             new customColumnParams({ Header: "Remote Server Url", Binding: "remoteServerUrl", DefaultWidth: 400 }),
             new customColumnParams({ Header: "Status", Binding: "status", DefaultWidth: 320 })
         ]);
-        this.currentColumns().customMode(true);
+        this.currentColumns().customMode(true);*/
 
         this.fetchConflicts(this.activeFilesystem());
     }
@@ -115,10 +112,10 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     selectedConflicts(): string[] {
-        return this.getDocumentsGrid().getSelectedItems().map(x => x.getId());
+        return this.getDocumentsGrid().getSelectedItems().map((x: any) => x.getId());
     }
 
-    private getDocumentsGrid(): virtualTable {
+    private getDocumentsGrid() {
         var gridContents = $(synchronizationConflicts.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

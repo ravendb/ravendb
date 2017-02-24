@@ -56,15 +56,6 @@ function getManageServerMenuItem() {
                 dynamicHash: appUrl.forGlobalConfigQuotas
             }),
             new leafMenuItem({
-                route: "admin/settings/globalConfigCustomFunctions",
-                moduleId: "viewmodels/manage/globalConfig/globalConfigCustomFunctions",
-                title: "Custom functions",
-                tooltip: "Global custom functions settings",
-                nav: true,
-                css: 'icon-custom-functions',
-                dynamicHash: appUrl.forGlobalConfigCustomFunctions
-            }),
-            new leafMenuItem({
                 route: "admin/settings/globalConfigVersioning",
                 moduleId: "viewmodels/manage/globalConfig/globalConfigVersioning",
                 title: "Versioning",

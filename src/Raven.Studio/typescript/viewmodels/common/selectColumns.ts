@@ -2,17 +2,14 @@ import document = require("models/database/documents/document");
 import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import customColumns = require("models/database/documents/customColumns");
-import customColumnParams = require("models/database/documents/customColumnParams");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
-import customFunctions = require("models/database/documents/customFunctions");
 import autoCompleterSupport = require("common/autoCompleterSupport");
 import messagePublisher = require("common/messagePublisher");
 import eventsCollector = require("common/eventsCollector");
 
 class selectColumns extends dialogViewModelBase {
-
+/* TODO:
     private nextTask = $.Deferred<customColumns>();
     nextTaskStarted = false;
     private form: JQuery;
@@ -24,7 +21,7 @@ class selectColumns extends dialogViewModelBase {
     private autoCompleterSupport: autoCompleterSupport;
     private columnsNames = ko.observableArray<string>([]);
 
-    constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context: any, private database: database, names: string[]) {
+    constructor(private customColumns: customColumns, private context: any, private database: database, names: string[]) {
         super();
         this.columnsNames(names);
         this.generateCompletionBase();
@@ -222,7 +219,7 @@ class selectColumns extends dialogViewModelBase {
                 columnParams.binding(newValue);
             });
         }
-    }
+    }*/
 }
 
 export = selectColumns;

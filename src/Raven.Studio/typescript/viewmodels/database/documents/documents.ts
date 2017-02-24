@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import EVENTS = require("common/constants/events");
@@ -18,14 +17,10 @@ import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import changeSubscription = require("common/changeSubscription");
-import customFunctions = require("models/database/documents/customFunctions");
-import customColumns = require("models/database/documents/customColumns");
-import customColumnParams = require("models/database/documents/customColumnParams");
 import collectionsStats = require("models/database/documents/collectionsStats");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
-import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 
 import eventsCollector = require("common/eventsCollector");
@@ -416,7 +411,7 @@ class documents extends viewModelBase {
             }
         });
 
-        var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
+        var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.contextName(), this.activeDatabase(), columnsNames);
         app.showBootstrapDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);
