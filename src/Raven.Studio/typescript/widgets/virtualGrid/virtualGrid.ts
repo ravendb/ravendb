@@ -57,7 +57,7 @@ class virtualGrid<T> {
             headerVisible: v => this.settings.showHeader(v),
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
             reset: () => this.resetItems(),
-            getSelection: () => this.getSelection()
+            getSelection: () => this.getSelection() //TODO: as observable
         }
     }
 
@@ -150,20 +150,22 @@ class virtualGrid<T> {
     }
 
     private gridScrolled() {
-        const currentScroll = [this.$viewportElement.scrollTop(), this.$viewportElement.scrollLeft()] as [number, number];
+        if (this.totalItemCount != null) {
+            const currentScroll = [this.$viewportElement.scrollTop(), this.$viewportElement.scrollLeft()] as [number, number];
 
-        // horizontal scroll
-        if (currentScroll[1] !== this.previousScroll[1]) {
-            this.syncHeaderShift();
+            // horizontal scroll
+            if (currentScroll[1] !== this.previousScroll[1]) {
+                this.syncHeaderShift();
+            }
+
+            // vertical scroll
+            if (currentScroll[0] !== this.previousScroll[0]) {
+                window.cancelAnimationFrame(this.scrollAnimationFrameHandle);
+                this.scrollAnimationFrameHandle = window.requestAnimationFrame(() => this.render());
+            }
+
+            this.previousScroll = currentScroll;
         }
-
-        // vertical scroll
-        if (currentScroll[0] !== this.previousScroll[0]) {
-            window.cancelAnimationFrame(this.scrollAnimationFrameHandle);
-            this.scrollAnimationFrameHandle = window.requestAnimationFrame(() => this.render());
-        }
-
-        this.previousScroll = currentScroll;
     }
 
     private render() {

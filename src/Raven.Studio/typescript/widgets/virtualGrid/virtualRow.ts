@@ -59,7 +59,7 @@ class virtualRow {
                 const html = this.createCellsHtml(item, columns, isSelected);
                 this.element.html(html);
             } else {
-                this.element.text("Loading...");
+                this.element.text("");
             }
 
             // Update the selected status. Displays as a different row color.
