@@ -34,11 +34,17 @@ namespace Raven.Server.Json
             }
 
             writer.WriteStartArray();
+            var first = true;
+
             for (int i = 0; i < changeVector.Length; i++)
             {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
                 var entry = changeVector[i];
                 writer.WriteChangeVectorEntry(entry);
-                writer.WriteComma();
             }
             writer.WriteEndArray();
         }
