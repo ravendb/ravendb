@@ -19,6 +19,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Sparrow.Collections
 {
@@ -105,15 +106,16 @@ namespace Sparrow.Collections
         }
 
         // Returns the top object on the stack without removing it.  If the stack
-        // is empty, Peek throws an InvalidOperationException.
+        // is empty, Peek throws an InvalidOperationException.        
         public T Peek()
         {
             if (_size == 0)
-            {
-                ThrowForEmptyStack();
-            }
+                goto Error;
 
             return _array[_size - 1];
+
+            Error:
+            return ThrowForEmptyStack();
         }
 
         public bool TryPeek(out T result)
@@ -130,18 +132,20 @@ namespace Sparrow.Collections
 
         // Pops an item from the top of the stack.  If the stack is empty, Pop
         // throws an InvalidOperationException.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T Pop()
         {
             if (_size == 0)
-            {
-                ThrowForEmptyStack();
-            }
+                goto Error;
 
             _version++;
             T item = _array[--_size];
             _array[_size] = default(T);
 
             return item;
+
+            Error:
+            return ThrowForEmptyStack();
         }
 
         public bool TryPop(out T result)
@@ -160,13 +164,23 @@ namespace Sparrow.Collections
         }
 
         // Pushes an item to the top of the stack.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Push(T item)
         {
             if (_size == _array.Length)
-            {
-                Array.Resize(ref _array, (_array.Length == 0) ? DefaultCapacity : 2 * _array.Length);
-            }
+                goto Grow;
 
+            _array[_size++] = item;
+            _version++;
+            return;
+
+            Grow:
+            PushUnlikely(item);
+        }
+
+        private void PushUnlikely(T item)
+        {
+            Array.Resize(ref _array, (_array.Length == 0) ? DefaultCapacity : 2 * _array.Length);
             _array[_size++] = item;
             _version++;
         }
@@ -187,7 +201,7 @@ namespace Sparrow.Collections
             return objArray;
         }
 
-        private void ThrowForEmptyStack()
+        private T ThrowForEmptyStack()
         {
             Debug.Assert(_size == 0);
             throw new InvalidOperationException("The stack is empty.");

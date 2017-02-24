@@ -11,7 +11,7 @@ namespace Sparrow.Json
 {
     public class BlittableJsonDocumentBuilder : IDisposable
     {
-        protected readonly Stack<BuildingState> _continuationState = new Stack<BuildingState>();
+        protected readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
 
         protected readonly JsonOperationContext _context;
         private UsageMode _mode;

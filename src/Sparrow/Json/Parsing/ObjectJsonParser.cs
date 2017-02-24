@@ -458,10 +458,14 @@ namespace Sparrow.Json.Parsing
 
             var size = byteCount + escapePositionsSize;
 
-            if (_currentStateBuffer != null)
-                _ctx.ReturnMemory(_currentStateBuffer);
+            // If we do not have a buffer or the buffer is too small, return the memory and get more.
+            if (_currentStateBuffer == null || _currentStateBuffer.SizeInBytes < size)
+            {
+                if (_currentStateBuffer != null)
+                    _ctx.ReturnMemory(_currentStateBuffer);
+                _currentStateBuffer = _ctx.GetMemory(size);
+            }
 
-            _currentStateBuffer = _ctx.GetMemory(size);
             _state.StringBuffer = _currentStateBuffer.Address;
 
             fixed (char* pChars = str)

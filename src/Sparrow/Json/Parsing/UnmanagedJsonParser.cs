@@ -36,6 +36,19 @@ namespace Sparrow.Json.Parsing
         private bool _escapeMode;
         private bool _maybeBeforePreamble = true;
 
+        static UnmanagedJsonParser()
+        {
+            ParseStringTable = new byte[255];
+            ParseStringTable['r'] = (byte)'\r';
+            ParseStringTable['n'] = (byte)'\n';
+            ParseStringTable['b'] = (byte)'\b';
+            ParseStringTable['f'] = (byte)'\f';
+            ParseStringTable['t'] = (byte)'\t';
+            ParseStringTable['"'] = (byte)'"';
+            ParseStringTable['\\'] = (byte)'\\';
+            ParseStringTable['/'] = (byte)'/';
+        }
+
         public UnmanagedJsonParser(JsonOperationContext ctx, JsonParserState state, string debugTag)
         {
             _ctx = ctx;
@@ -360,12 +373,23 @@ namespace Sparrow.Json.Parsing
 
         private bool ParseNumber()
         {
+            JsonParserState state = _state;
+            byte* currentBuffer = _inputBuffer;
             while (true)
             {
                 if (_pos >= _bufSize)
                     return false;
                 _charPos++;
-                var b = _inputBuffer[_pos++];
+
+                byte b = currentBuffer[_pos++];
+                if (b >= '0' && b <= '9')
+                {
+                    // PERF: This is a fast loop for the most common characters found on numbers.
+                    state.Long = (state.Long * 10) + b - (byte)'0';
+                    _unmanagedWriteBuffer.WriteByte(b);
+
+                    continue;
+                }
 
                 switch (b)
                 {
@@ -389,47 +413,33 @@ namespace Sparrow.Json.Parsing
                             throw CreateException("Already got '-' in this number value");
                         _isNegative = true;
                         break;
-                    case (byte)'0':
-                    case (byte)'1':
-                    case (byte)'2':
-                    case (byte)'3':
-                    case (byte)'4':
-                    case (byte)'5':
-                    case (byte)'6':
-                    case (byte)'7':
-                    case (byte)'8':
-                    case (byte)'9':
-                        _state.Long *= 10;
-                        _state.Long += b - (byte)'0';
-                        break;
-                    default:
-                        switch (b)
-                        {
-                            case (byte)'\r':
-                            case (byte)'\n':
-                                _line++;
-                                _charPos = 1;
-                                goto case (byte)' ';
-                            case (byte)' ':
-                            case (byte)'\t':
-                            case (byte)'\v':
-                            case (byte)'\f':
-                            case (byte)',':
-                            case (byte)']':
-                            case (byte)'}':
-                                if (_zeroPrefix && _unmanagedWriteBuffer.SizeInBytes != 1)
-                                    throw CreateException("Invalid number with zero prefix");
-                                if (_isNegative)
-                                    _state.Long *= -1;
-                                _state.CurrentTokenType = _isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
-                                _pos--; _charPos--;// need to re-read this char
-                                return true;
-                            default:
-                                throw CreateException("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
-                        }
-                }
-                _unmanagedWriteBuffer.WriteByte(b);
+                    case (byte)'\r':
+                    case (byte)'\n':
+                        _line++;
+                        _charPos = 1;
+                        goto case (byte)' ';
+                    case (byte)' ':
+                    case (byte)'\t':
+                    case (byte)'\v':
+                    case (byte)'\f':
+                    case (byte)',':
+                    case (byte)']':
+                    case (byte)'}':
+                        if (_zeroPrefix && _unmanagedWriteBuffer.SizeInBytes != 1)
+                            throw CreateException("Invalid number with zero prefix");
+                        if (_isNegative)
+                            state.Long *= -1;
 
+                        state.CurrentTokenType = _isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
+
+                        _pos--; _charPos--;// need to re-read this char
+
+                        return true;
+                    default:
+                        throw CreateException("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
+                }
+
+                _unmanagedWriteBuffer.WriteByte(b);
             }
         }
 
@@ -446,6 +456,9 @@ namespace Sparrow.Json.Parsing
             }
             return true;
         }
+
+        private const byte NoSubstitution = 0;
+        private static readonly byte[] ParseStringTable;
 
         private bool ParseString()
         {
@@ -488,52 +501,38 @@ namespace Sparrow.Json.Parsing
                             _prevEscapePosition = _unmanagedWriteBuffer.SizeInBytes + 1;
                         }
 
-                        switch (b)
+                        if (b == (byte)'\n')
                         {
-                            case (byte) 'r':
-                                _unmanagedWriteBuffer.WriteByte((byte) '\r');
-                                break;
-                            case (byte) 'n':
-                                _unmanagedWriteBuffer.WriteByte((byte) '\n');
-                                break;
-                            case (byte) 'b':
-                                _unmanagedWriteBuffer.WriteByte((byte) '\b');
-                                break;
-                            case (byte) 'f':
-                                _unmanagedWriteBuffer.WriteByte((byte) '\f');
-                                break;
-                            case (byte) 't':
-                                _unmanagedWriteBuffer.WriteByte((byte) '\t');
-                                break;
-                            case (byte) '"':
-                            case (byte) '\\':
-                            case (byte) '/':
-                                _unmanagedWriteBuffer.WriteByte(b);
-                                break;
-                            case (byte) '\r': // line continuation, skip
-                                // flush the buffer, but skip the \,\r chars
-                                if (_pos >= _bufSize)
-                                    return false;
+                            _line++;
+                            _charPos = 1;
+                        }
+                        else if (b == (byte)'\r')
+                        {
+                            if (_pos >= _bufSize)
+                                return false;
 
-                                _line++;
-                                _charPos = 1;
-                                if (_pos >= _bufSize)
-                                    return false;
+                            _line++;
+                            _charPos = 1;
+                            if (_pos >= _bufSize)
+                                return false;
 
-                                if (_inputBuffer[_pos] == (byte) '\n')
-                                    _pos++; // consume the \,\r,\n
-                                break;
-                            case (byte) '\n':
-                                _line++;
-                                _charPos = 1;
-                                break; // line continuation, skip
-                            case (byte) 'u': // unicode value
+                            if (_inputBuffer[_pos] == (byte)'\n')
+                                _pos++; // consume the \,\r,\n
+                        }
+                        else
+                        {
+                            byte op = ParseStringTable[b];
+                            if (op != NoSubstitution)
+                            {
+                                // We have a known substitution to apply
+                                _unmanagedWriteBuffer.WriteByte(op);
+                            }
+                            else if (b == (byte)'u')
+                            {
                                 if (ParseUnicodeValue() == false)
                                     return false;
-
-                                break;
-                            default:
-                                throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
+                            }
+                            else throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
                         }
                     }
                 }
