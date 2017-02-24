@@ -25,7 +25,7 @@
     "Validate": {
       "buildOptions": {
         "optimize": true,
-        "define": [ "VALIDATE", "VALIDATE_PAGES", "VALIDATE_DIRECT_ADD_STACKTRACE" ]
+        "define": [ "VALIDATE", "VALIDATE_PAGES" ]
       }
     }
   },
