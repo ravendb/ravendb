@@ -60,10 +60,11 @@
       "type": "build",
       "target": "project"
     },
+    "DotNetCross.Memory.Unsafe": "0.2.3.4",
     "Newtonsoft.Json": "9.0.1",
+    "System.Net.Security": "4.3.0",
     "System.Runtime.InteropServices.RuntimeInformation": "4.3.0",
-    "System.ServiceModel.Primitives": "4.3.0",
-    "System.Net.Security": "4.3.0"
+    "System.ServiceModel.Primitives": "4.3.0"
   },
 
   "frameworks": {
