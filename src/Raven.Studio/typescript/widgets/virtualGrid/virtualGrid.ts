@@ -451,8 +451,12 @@ class virtualGrid<T> {
             if (input) {
                 return input;
             }
+        } else if (tagName === "span") {
+            const button = $target.closest("button");
+            if (button) {
+                return button;
+            }
         }
-
         return $target;
     }
 
