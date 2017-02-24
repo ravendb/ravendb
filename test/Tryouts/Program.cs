@@ -1,12 +1,17 @@
-﻿namespace Tryouts
+﻿using System;
+using System.Diagnostics;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+
+namespace Tryouts
 {
     public class Program
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Server.Documents.Indexing.Static.CollisionsOfReduceKeyHashes())
+            using (var a = new FastTests.Client.Hilo())
             {
-                a.Static_index_should_produce_multiple_outputs(numberOfUsers: 5, locations: new[] {"Israel", "Poland"}).Wait();
+                a.Capacity_Should_Double();
             }
         }
     }
