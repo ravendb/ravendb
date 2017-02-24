@@ -404,7 +404,7 @@ namespace Raven.Server.Documents.Indexes
                 if (index.Configuration.RunInMemory)
                     return;
 
-                var name = index.GetIndexNameSafeForFileSystem();
+                var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.IndexId, index.Name);
 
                 var indexPath = index.Configuration.StoragePath.Combine(name);
 
@@ -570,7 +570,24 @@ namespace Raven.Server.Documents.Indexes
                 if (IndexDefinitionBase.TryReadIdFromDirectory(indexDirectory, out indexId, out indexName) == false)
                     continue;
 
-                indexes[indexId] = Tuple.Create(indexDirectory.FullName, indexName);
+                var nameFromMetadata = IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory.FullName);
+                string desiredIndexDirName;
+
+                if (nameFromMetadata != null && 
+                    indexDirectory.Name != 
+                    (desiredIndexDirName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexId, nameFromMetadata)))
+                {
+                    var newPath = new PathSetting(indexDirectory.FullName)
+                        .Combine("..")
+                        .Combine(desiredIndexDirName)
+                        .FullPath;
+
+                    IOExtensions.MoveDirectory(indexDirectory.FullName, newPath);
+
+                    indexes[indexId] = Tuple.Create(newPath, indexName);
+                }
+                else
+                    indexes[indexId] = Tuple.Create(indexDirectory.FullName, indexName);
             }
 
             foreach (var indexDirectory in indexes)
@@ -789,6 +806,19 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (lockTaken)
                     Monitor.Exit(_indexAndTransformerLocker);
+            }
+        }
+
+        public void RenameIndex(string oldIndexName, string newIndexName)
+        {
+            Index index;
+            if (_indexes.TryGetByName(oldIndexName, out index) == false)
+                throw new InvalidOperationException($"Index {oldIndexName} does not exist");
+
+            lock (_indexAndTransformerLocker)
+            {
+                index.Rename(newIndexName); // store new index name in 'metadata' file, actual dir rename will happen on next db load
+                _indexes.RenameIndex(index, newIndexName);
             }
         }
     }

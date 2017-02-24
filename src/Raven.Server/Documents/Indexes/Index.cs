@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' was already initialized.");
 
-                var name = GetIndexNameSafeForFileSystem();
+                var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(IndexId, Name);
 
                 var indexPath = configuration.StoragePath.Combine(name);
 
@@ -331,18 +331,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 _rwls?.ExitWriteLock();
             }
-        }
-
-        public string GetIndexNameSafeForFileSystem()
-        {
-            var name = Name;
-            foreach (var invalidPathChar in Path.GetInvalidFileNameChars())
-            {
-                name = name.Replace(invalidPathChar, '_');
-            }
-            if (name.Length < 64)
-                return $"{IndexId:0000}-{name}";
-            return $"{IndexId:0000}-{name.Substring(0, 64)}";
         }
 
         protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
@@ -1376,9 +1364,9 @@ namespace Raven.Server.Documents.Indexes
         {
             var stats = new IndexStats.MemoryStats();
 
-            var name = GetIndexNameSafeForFileSystem();
+            var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(IndexId, Name);
 
-            var indexPath = Configuration.StoragePath.Combine(GetIndexNameSafeForFileSystem());
+            var indexPath = Configuration.StoragePath.Combine(name);
 
             var indexTempPath = Configuration.TempPath?.Combine(name);
 
@@ -2172,7 +2160,7 @@ namespace Raven.Server.Documents.Indexes
 
                     Dispose();
 
-                    compactPath = Configuration.StoragePath.Combine(GetIndexNameSafeForFileSystem() + "_Compact");
+                    compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(IndexId, Name) + "_Compact");
 
                     using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath.FullPath))
                     {
