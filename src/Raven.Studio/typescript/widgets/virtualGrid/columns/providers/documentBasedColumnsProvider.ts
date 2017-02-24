@@ -50,7 +50,7 @@ class documentBasedColumnsProvider {
         }
 
         if (this.enableInlinePreview) {
-            const previewColumn = new actionColumn<document>((doc: document) => this.showPreview(doc), "Preview", "preview", "90px");
+            const previewColumn = new actionColumn<document>((doc: document) => this.showPreview(doc), "Preview", `<span class="icon-search"></span>`, "70px");
             initialColumns.push(previewColumn);
         }
 
