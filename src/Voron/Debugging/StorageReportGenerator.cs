@@ -123,7 +123,7 @@ namespace Voron.Debugging
             return journals.Select(journal => new JournalReport
             {
                 Number = journal.Number,
-                AllocatedSpaceInBytes = PagesToBytes(journal.JournalWriter.NumberOfAllocated4Kb)
+                AllocatedSpaceInBytes = journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte
             }).ToList();
         }
 
