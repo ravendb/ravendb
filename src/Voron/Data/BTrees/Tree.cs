@@ -19,6 +19,10 @@ namespace Voron.Data.BTrees
     {
         private int _directAddUsage;
 
+#if VALIDATE_DIRECT_ADD_STACKTRACE
+        private string _allocationStacktrace;
+#endif
+
         private readonly TreeMutableState _state;
         private readonly bool _isPageLocatorOwned;
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
@@ -93,7 +97,7 @@ namespace Voron.Data.BTrees
         }
 
         public static Tree Create(LowLevelTransaction llt, Transaction tx, Slice name, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree,
-             NewPageAllocator newPageAllocator = null, 
+             NewPageAllocator newPageAllocator = null,
              PageLocator pageLocator = null)
         {
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
@@ -102,7 +106,7 @@ namespace Voron.Data.BTrees
             var newPage = newPageAllocator?.AllocateSinglePage(0) ?? llt.AllocatePage(1);
 
             TreePage newRootPage = PrepareTreePage(TreePageFlags.Leaf, 1, newPage);
-            
+
             var tree = new Tree(llt, tx, newRootPage.PageNumber, name, newPageAllocator, pageLocator)
             {
                 _state =
@@ -216,7 +220,7 @@ namespace Voron.Data.BTrees
                 {
                     Memory.Copy(ptr, src, value.Length);
                 }
-            }  
+            }
         }
 
         public void Add(Slice key, Slice value)
@@ -285,7 +289,7 @@ namespace Voron.Data.BTrees
             var foundPage = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
 
             var page = ModifyPage(foundPage);
-            
+
             bool? shouldGoToOverflowPage = null;
             if (page.LastMatch == 0) // this is an update operation
             {
@@ -326,7 +330,7 @@ namespace Voron.Data.BTrees
             {
                 State.NumberOfEntries++;
             }
-            
+
             var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
             byte* overFlowPos = null;
             var pageNumber = -1L;
@@ -387,9 +391,6 @@ namespace Voron.Data.BTrees
         {
             private readonly Tree _parent;
 
-#if VALIDATE_DIRECT_ADD_STACKTRACE
-        private string _allocationStacktrace = null;
-#endif
             public DirectAddScope(Tree parent)
             {
                 _parent = parent;
@@ -397,8 +398,9 @@ namespace Voron.Data.BTrees
                 {
                     ThrowScopeAlreadyOpen();
                 }
+
 #if VALIDATE_DIRECT_ADD_STACKTRACE
-                _allocationStacktrace = Environment.StackTrace;
+                _parent._allocationStacktrace = Environment.StackTrace;
 #endif
             }
 
@@ -414,9 +416,7 @@ namespace Voron.Data.BTrees
                               $"{nameof(Tree.DirectAdd)} method cannot be called recursively while the scope is already opened.";
 
 #if VALIDATE_DIRECT_ADD_STACKTRACE
-
-                message += Environment.NewLine + _allocationStacktrace;
-
+                message += Environment.NewLine + _parent._allocationStacktrace;
 #endif
 
                 throw new InvalidOperationException(message);
@@ -916,7 +916,7 @@ namespace Voron.Data.BTrees
             }
             return c;
         }
-        
+
         internal TreePage NewPage(TreePageFlags flags, long nearbyPage)
         {
             var newPage = _newPageAllocator?.AllocateSinglePage(nearbyPage) ?? _llt.AllocatePage(1);
@@ -1241,7 +1241,7 @@ namespace Voron.Data.BTrees
             pos = null;
             return false;
         }
-        
+
         public Slice LastKeyOrDefault()
         {
             using (var it = Iterate(false))
