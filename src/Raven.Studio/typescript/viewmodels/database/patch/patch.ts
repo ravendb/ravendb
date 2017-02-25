@@ -7,7 +7,6 @@ import collectionsStats = require("models/database/documents/collectionsStats");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
-import pagedList = require("common/pagedList");
 import jsonUtil = require("common/jsonUtil");
 import appUrl = require("common/appUrl");
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");

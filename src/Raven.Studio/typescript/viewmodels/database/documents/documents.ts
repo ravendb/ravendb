@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
-import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import EVENTS = require("common/constants/events");
 import viewModelBase = require("viewmodels/viewModelBase");

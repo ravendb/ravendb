@@ -5,7 +5,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import messagePublisher = require("common/messagePublisher");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
