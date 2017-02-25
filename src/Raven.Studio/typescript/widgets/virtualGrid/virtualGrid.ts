@@ -3,45 +3,73 @@
 import virtualRow = require("widgets/virtualGrid/virtualRow");
 import pagedResult = require("widgets/virtualGrid/pagedResult");
 import itemFetch = require("widgets/virtualGrid/itemFetch");
-import virtualColumn = require("widgets/virtualGrid/virtualColumn");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridConfig = require("widgets/virtualGrid/virtualGridConfig");
-import virtualGridConfigDefaults = require("widgets/virtualGrid/virtualGridConfigDefaults");
-import textColumn = require("widgets/virtualGrid/textColumn");
-import checkedColumn = require("widgets/virtualGrid/checkedColumn");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
+import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
+import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection");
 
 class virtualGrid<T> {
+
     private items: T[] = []; // The items loaded asynchronously.
     private totalItemCount: number | null = null;
     private virtualRows: virtualRow[] = []; // These are the fixed number of elements that get displayed on screen. Each virtual row displays an element from .items array. As the user scrolls, rows will be recycled to represent different items.
     private gridId: string;
     private $gridElement: JQuery;
     private $viewportElement: JQuery;
+    private $columnContainer: JQuery;
     private gridElementHeight: number;
     private virtualHeight = ko.observable(0);
+    private virtualWidth = ko.observable<number>();
     private scrollAnimationFrameHandle = 0;
     private isLoading = ko.observable(false);
     private queuedFetch: itemFetch | null = null;
     private columns = ko.observableArray<virtualColumn>();
-    private isSelectAllChecked = ko.observable<boolean | null>(false);
     private isGridVisible = false;
-    private selectedIndices: number[] = [];
+    private selectionDiff: number[] = [];
+    private inIncludeSelectionMode: boolean = true;
+
+    private selection = ko.observable<virtualGridSelection<T>>();
+
     private renderHandle = 0;
-    private settings = new virtualGridConfigDefaults();
+    private settings = new virtualGridConfig();
+    private controller: virtualGridController<T>;
+    private previousScroll: [number, number] = [0, 0];
     
     private static readonly minItemFetchCount = 100;
     private static readonly viewportSelector = ".viewport";
+    private static readonly columnContainerSelector = ".column-container";
     private static readonly viewportScrollerSelector = ".viewport-scroller";
+    private static readonly minColumnWidth = 20;
 
-    constructor(params: virtualGridConfig<T>) {
-        this.gridId = "vg-" + (1 + Math.random()).toString().replace(".", "");
-        
-        // Configure the grid using the parameters passed in from HTML.
-        $.extend(this.settings, params);
-        this.initializeColumns();
-        this.isSelectAllChecked.subscribe(allSelected => this.selectAllChanged(allSelected));
-        if (params.resetItems) {
-            params.resetItems.subscribe(() => this.resetItems());
+    constructor(params: { controller: KnockoutObservable<virtualGridController<T>> }) {
+        this.gridId = _.uniqueId("vg-");
+
+        this.refreshSelection();
+
+        this.initController();
+
+        if (params.controller) {
+            params.controller(this.controller);
         }
+    }
+
+    private initController() {
+        this.controller = {
+            headerVisible: v => this.settings.showHeader(v),
+            init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
+            reset: () => this.resetItems(),
+            selection: this.selection 
+        }
+    }
+
+    private init(fetcher: (skip: number, take: number) => JQueryPromise<pagedResult<T>>, columnsProvider: (containerWidth:number, results: pagedResult<T>) => virtualColumn[]) {
+        this.settings.fetcher = fetcher;
+        this.settings.columnsProvider = columnsProvider;
+
         this.fetchItems(0, 100);
     }
 
@@ -55,8 +83,54 @@ class virtualGrid<T> {
         this.gridElementHeight = this.$gridElement.height();
         this.$gridElement.on("click", e => this.gridClicked(e));
         this.$viewportElement = this.$gridElement.find(virtualGrid.viewportSelector);
+        this.$columnContainer = this.$gridElement.find(virtualGrid.columnContainerSelector);
         this.initializeVirtualRows();
-        this.$gridElement.find(virtualGrid.viewportSelector).on("scroll", () => this.gridScrolled());
+        this.$viewportElement.on("scroll", () => this.gridScrolled());
+
+        //TODO: unbind this somewhere!
+        //TODO: bind only if resizable form
+        this.$gridElement.on("mousedown.columnResize", ".column", (e) => {
+            this.handleResize(e);
+
+            // Stop propagation of the event so the text selection doesn't fire up
+            if (e.stopPropagation) e.stopPropagation();
+            if (e.preventDefault) e.preventDefault();
+            e.cancelBubble = true;
+            e.returnValue = false;
+        });
+    }
+
+    private handleResize(e: JQueryEventObject) {
+        const $document = $(document);
+        const columnToResize = ko.dataFor(e.target) as virtualColumn;
+        const startX = e.pageX;
+        const columnWidthInPixels = virtualGridUtils.widthToPixels(columnToResize);
+        const columnIndex = this.columns.indexOf(columnToResize);
+
+        // since resize handles are pseudo html elements, we get invalid target
+        // check click location to distinguish between handle and title click
+        if (e.offsetX < columnWidthInPixels - 12) {
+            return;
+        }
+
+        $document.on("mousemove.columnResize", e => {
+            const dx = e.pageX - startX;
+            const requestedWidth = columnWidthInPixels + dx;
+            const currentWidth = Math.max(requestedWidth, virtualGrid.minColumnWidth) + "px";
+            $(`.column-container .column:eq(${columnIndex})`, this.$gridElement).innerWidth(currentWidth);
+            $(`.viewport .virtual-row .cell:nth-child(${columnIndex + 1})`, this.$gridElement).innerWidth(currentWidth);
+        });
+
+        $document.on("mouseup.columnResize", e => {
+            const dx = e.pageX - startX;
+            const requestedWidth = columnWidthInPixels + dx;
+            // write back new width as css value
+            columnToResize.width = Math.max(requestedWidth, virtualGrid.minColumnWidth) + "px";
+            this.syncVirtualWidth();
+
+            $document.off("mousemove.columnResize");
+            $document.off("mouseup.columnResize");
+        });
     }
 
     private initializeVirtualRows() {
@@ -80,21 +154,23 @@ class virtualGrid<T> {
         return rows;
     }
 
-    private initializeColumns() {
-        // If the consumer code passed in some columns, use those.
-        if (this.settings.columns && this.settings.columns.length > 0) {
-            // Also, insert the row selection checkbox column if we're configured to do so.
-            if (this.settings.showRowSelectionCheckbox) {
-                this.columns([new checkedColumn() as virtualColumn].concat(this.settings.columns));
-            } else {
-                this.columns(this.settings.columns);
-            }
-        }
-    }
-
     private gridScrolled() {
-        window.cancelAnimationFrame(this.scrollAnimationFrameHandle);
-        this.scrollAnimationFrameHandle = window.requestAnimationFrame(() => this.render());
+        if (this.totalItemCount != null) {
+            const currentScroll = [this.$viewportElement.scrollTop(), this.$viewportElement.scrollLeft()] as [number, number];
+
+            // horizontal scroll
+            if (currentScroll[1] !== this.previousScroll[1]) {
+                this.syncHeaderShift();
+            }
+
+            // vertical scroll
+            if (currentScroll[0] !== this.previousScroll[0]) {
+                window.cancelAnimationFrame(this.scrollAnimationFrameHandle);
+                this.scrollAnimationFrameHandle = window.requestAnimationFrame(() => this.render());
+            }
+
+            this.previousScroll = currentScroll;
+        }
     }
 
     private render() {
@@ -191,6 +267,14 @@ class virtualGrid<T> {
         }
     }
 
+    private isSelected(index: number) {
+        if (this.inIncludeSelectionMode) {
+            return _.includes(this.selectionDiff, index);
+        } else {
+            return !_.includes(this.selectionDiff, index);
+        }
+    }
+
     private layoutVirtualRowPositions() {
         // This is hot path, called multiple times when scrolling. 
         // Keep allocations to a minimum.
@@ -210,7 +294,7 @@ class virtualGrid<T> {
 
                 // Populate it with data.
                 const rowIndex = Math.floor(positionCheck / virtualRow.height);
-                const isChecked = this.selectedIndices.indexOf(rowIndex) !== -1;
+                const isChecked = this.isSelected(rowIndex);
                 rowAtPosition.populate(this.items[rowIndex], rowIndex, isChecked, columns);
             }
 
@@ -238,7 +322,7 @@ class virtualGrid<T> {
                 totalVisible++;
 
                 // Fill it with the data we've got loaded. If there's no data, it will display the loading indicator.
-                const isRowChecked = this.selectedIndices.indexOf(virtualRow.index) !== -1;
+                const isRowChecked = this.isSelected(virtualRow.index);
                 virtualRow.populate(this.items[virtualRow.index], virtualRow.index, isRowChecked, columns);
             }
         }
@@ -299,12 +383,16 @@ class virtualGrid<T> {
         failedRows.forEach(r => r.dataLoadError(error));
     }
 
+    //TODO: investigate if we fetch this properly
     private chunkFetched(results: pagedResult<T>, skip: number, take: number) {
         if (!this.columns() || this.columns().length === 0) {
-            this.assignColumnFromItems(results.items);
+            this.columns(this.settings.columnsProvider(this.$viewportElement.prop("clientWidth"), results));
+
+            this.syncVirtualWidth();
         }
 
         // Add these results to the .items array as necessary.
+        const oldTotalCount = this.items.length;
         this.items.length = results.totalResultCount;
         this.totalItemCount = results.totalResultCount;
         this.virtualHeight(results.totalResultCount * virtualRow.height);
@@ -314,44 +402,41 @@ class virtualGrid<T> {
             this.items[rowIndex] = results.items[i];
         }
 
+        if (oldTotalCount !== results.totalResultCount) {
+            this.refreshSelection();
+        }
+
         this.render();
     }
 
-    private assignColumnFromItems(items: T[]): void {
-        const propertySet = {};
-        const itemPropertyNames: string[] = [].concat.apply([], items.map(i => Object.keys(i)));
-        const uniquePropertyNames = new Set(itemPropertyNames);
-        const columnNames = Array.from(uniquePropertyNames);
-        const viewportWidth = this.$viewportElement.prop("clientWidth");
-        const checkedColumnWidth = this.settings.showRowSelectionCheckbox ? checkedColumn.columnWidth : 0;
-        const columnWidth = Math.floor(viewportWidth / columnNames.length) - checkedColumnWidth + "px";
-        
-        // Put Id and Name columns first.
-        const prioritizedColumns = ["Id", "Name"];
-        prioritizedColumns
-            .reverse()
-            .forEach(c => {
-                const columnIndex = columnNames.indexOf(c);
-                if (columnIndex >= 0) {
-                    columnNames.splice(columnIndex, 1);
-                    columnNames.unshift(c);
-                }
-            });
+    private syncHeaderShift() {
+        const leftScroll = this.$viewportElement.scrollLeft();
+        this.$columnContainer.css({ marginLeft: -leftScroll + 'px' });
+    }
 
-        // Insert the row selection checkbox column as necessary.
-        const initialColumns: virtualColumn[] = this.settings.showRowSelectionCheckbox ? [new checkedColumn()] : [];
-        this.columns(initialColumns.concat(columnNames.map(p => new textColumn(p, p, columnWidth))));
+    private syncVirtualWidth() {
+        if (_.every(this.columns(), x => x.width.endsWith("px"))) {
+            const widths = this.columns().map(x => virtualGridUtils.widthToPixels(x));
+            this.virtualWidth(_.sum(widths));
+        } else {
+            // can't auto calculate this
+            this.virtualWidth(undefined);
+        }
     }
 
     private gridClicked(e: JQueryEventObject) {
         if (e.target) {
-            const $target = $(e.target);
-            // If we clicked the the checked column header, toggle select all.
-            if ($target.hasClass("checked-column-header")) {
-                this.isSelectAllChecked(!this.isSelectAllChecked());
+            const $target = this.normalizeTarget($(e.target));
+            const actionValue = $target.attr("data-action");
+
+            if (actionValue) {
+                this.handleAction(actionValue, this.findRowForCell($target));
+            } else if ($target.hasClass("checked-column-header")) {
+                // If we clicked the the checked column header, toggle select all.
+                this.handleSelectAllClicked();
             } else if ($target.hasClass("checked-cell-input")) {
                 // If we clicked a checked cell, toggle its selected state.
-                const rowIndex = this.findRowIndexForCell($target);
+                const rowIndex = this.findRowForCell($target).index;
                 if (rowIndex !== null) {
                     this.toggleRowSelected(rowIndex);
                 }
@@ -359,58 +444,153 @@ class virtualGrid<T> {
         }
     }
 
-    private findRowIndexForCell(cellElement: JQuery): number | null {
+    private normalizeTarget($target: JQuery) {
+        const tagName = _.toLower($target.prop("tagName"));
+        if (tagName === "label") {
+            const input = $target.prev("input");
+            if (input) {
+                return input;
+            }
+        } else if (tagName === "span") {
+            const button = $target.closest("button");
+            if (button) {
+                return button;
+            }
+        }
+        return $target;
+    }
+
+    private findRowForCell(cellElement: JQuery): virtualRow {
         return this.virtualRows
-            .filter(r => r.element.find(cellElement).length > 0)
-            .map(r => r.index)[0];
+            .find(r => r.element.find(cellElement).length > 0);
     }
 
     /**
      * Clears the items from the grid and refetches the first chunk of items.
      */
     private resetItems() {
+        if (!this.settings.fetcher) {
+            throw new Error("No fetcher defined, call init() method on virtualGridController");
+        }
+
         this.items.length = 0;
         this.totalItemCount = null;
         this.queuedFetch = null;
         this.isLoading(false);
+        this.$viewportElement.scrollTop(0);
         this.virtualRows.forEach(r => r.reset());
+        this.columns([]);
+        this.inIncludeSelectionMode = true;
+        this.selectionDiff = [];
+
+        this.refreshSelection();
+
         this.fetchItems(0, 100);
     }
 
-    private toggleRowSelected(rowIndex: number) {
-        const selectionIndex = this.selectedIndices.indexOf(rowIndex);
-        if (selectionIndex === -1) {
-            this.selectedIndices.push(rowIndex);
+    private refreshSelection(): void {
+        const mappedDiff = this.selectionDiff
+            .map(idx => this.items[idx]);
+
+        const selected = this.getSelectionCount();
+        const totalCount = this.totalItemCount;
+
+        if (selected > 0 && selected === totalCount) {
+            // force exclusive mode - user probably selected all items manually
+            this.selection({
+                mode: "exclusive",
+                included: [],
+                excluded: [],
+                count: selected,
+                totalCount: totalCount
+            });
         } else {
-            this.selectedIndices.splice(selectionIndex, 1);
+            this.selection({
+                mode: this.inIncludeSelectionMode ? "inclusive" : "exclusive",
+                included: this.inIncludeSelectionMode ? mappedDiff : [],
+                excluded: this.inIncludeSelectionMode ? [] : mappedDiff,
+                count: selected,
+                totalCount: totalCount
+            });
         }
-
-        // If we had all selected or none selected, remove that state.
-        if (this.isSelectAllChecked() === true || this.isSelectAllChecked() === false) {
-            this.isSelectAllChecked(null);
-            $(".checked-column-header").prop("checked", false);
-        }
-
-        this.render();
     }
 
-    /*
-     * Handles when the "select all" observable changes, either by clicking the check column header or via code.
-     */
-    private selectAllChanged(allSelected: boolean | null) {
-        // When selectAll is set to false, remove all selected indices.
-        if (allSelected === false) {
-            this.selectedIndices.length = 0;
-        } else if (allSelected === true) {
-            this.selectedIndices.length = this.items.length;
-            for (let i = 0; i < this.selectedIndices.length; i++) {
-                this.selectedIndices[i] = i;
+    private getSelectionCount() {
+        return this.inIncludeSelectionMode ? this.selectionDiff.length : this.totalItemCount - this.selectionDiff.length;
+    }
+
+    private toggleRowSelected(rowIndex: number) {
+        const isSelected = this.isSelected(rowIndex);
+
+        if (this.inIncludeSelectionMode) {
+            if (isSelected) {
+                _.pull(this.selectionDiff, rowIndex);
+            } else {
+                this.selectionDiff.push(rowIndex);
+            }
+        } else {
+            if (isSelected) {
+                this.selectionDiff.push(rowIndex);
+            } else {
+                _.pull(this.selectionDiff, rowIndex);
             }
         }
 
-        // Note: allSelected can be set to null, meaning some items are checked while others are not.
-
+        this.syncSelectAll();
+        this.refreshSelection();
         this.render();
+    }
+
+    private handleAction(actionId: string, row: virtualRow) {
+        const handler = this.columns().find(x => x instanceof actionColumn && x.canHandle(actionId)) as actionColumn<T>;
+        if (!handler) {
+            throw new Error("Unable to find handler for: " + actionId + " at index: " + row.index);
+        }
+
+        handler.handle(row);
+    }
+
+    private handleSelectAllClicked() {
+        if (this.getSelectionCount()) {
+            // something is selected - deselect all
+            this.inIncludeSelectionMode = true;
+            this.selectionDiff = [];
+        } else {
+            // select all
+            this.inIncludeSelectionMode = false;
+            this.selectionDiff = [];
+        }
+
+        this.syncSelectAll();
+        this.refreshSelection();
+        this.render();
+    }
+
+    private syncSelectAll() {
+        const $checkboxHeader = $(".checked-column-header", this.$gridElement);
+
+        const selectionCount = this.getSelectionCount();
+        if (selectionCount === 0) {
+            // none selected
+            $checkboxHeader.prop({
+                checked: false,
+                readonly: false,
+                indeterminate: false
+            });
+        } else if (selectionCount === this.totalItemCount) {
+            // all selected
+            $checkboxHeader.prop({
+                checked: true,
+                readonly: false,
+                indeterminate: false
+            });
+        } else {
+            $checkboxHeader.prop({
+                readonly: true,
+                indeterminate: true,
+                checked: false
+            });
+        }
     }
 
     /**
@@ -419,24 +599,15 @@ class virtualGrid<T> {
     static install() {
         const componentName = "virtual-grid";
         if (!ko.components.isRegistered(componentName)) {
-            // TODO: we may want to move this to an HTML file that's fetched with RequireJS. Knockout components do support this.
             ko.components.register(componentName, {
                 viewModel: virtualGrid,
                 template: `
-<div class="virtual-grid" data-bind="attr: { id: gridId }">
-    <!-- Columns -->
-    <div class="column-container" data-bind="foreach: columns, visible: settings.showColumns"><div class="column" data-bind="style: { width: $data.width }"><strong data-bind="html: $data.display"></strong></div></div>    
-
-    <!-- Viewport -->
-    <!-- The viewport is the section of the grid showing visible rows -->
-    <div class="viewport" data-bind="css: { 'columns-visible': settings.showColumns }">
-
-        <!-- The viewport scroller is the very tall scrolling part -->
-        <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px' }, template: { afterRender: afterRender.bind($data) }">
-
+<div class="virtual-grid flex-window stretch" data-bind="attr: { id: gridId }">
+    <div class="column-container flex-window-head" data-bind="foreach: columns, visible: settings.showHeader"><div class="column" data-bind="style: { width: $data.width }"><strong data-bind="html: $data.header"></strong></div></div>    
+    <div class="viewport flex-window-scroll" data-bind="css: { 'header-visible': settings.showHeader }">
+        <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px', width: virtualWidth() + 'px' }, template: { afterRender: afterRender.bind($data) }">
         </div>
     </div>
-    
 </div>
 `
             });

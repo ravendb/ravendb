@@ -1,9 +1,7 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import changesContext = require("common/changesContext");
 import changeSubscription = require("common/changeSubscription");
-import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import counterStorage = require("models/counter/counterStorage");
 import counterChange = require("models/counter/counterChange");
@@ -25,7 +23,7 @@ class counters extends viewModelBase {
     selectedGroup = ko.observable<counterGroup>().subscribeTo("ActivateGroup").distinctUntilChanged();
     currentGroup = ko.observable<counterGroup>();
     groupToSelectName: string;
-    currentGroupPagedItems = ko.observable<pagedList>();
+    currentGroupPagedItems = ko.observable<any>(); //TODO: use type
     selectedCounterIndices = ko.observableArray<number>();
     selectedCountersText: KnockoutComputed<string>;
     hasCounters: KnockoutComputed<boolean>;
@@ -377,7 +375,7 @@ class counters extends viewModelBase {
         router.navigate(countersWithGroupUrl, false);
     }
 
-    private getCountersGrid(): virtualTable {
+    private getCountersGrid() {
         var gridContents = $(counters.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

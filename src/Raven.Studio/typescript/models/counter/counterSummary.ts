@@ -10,7 +10,7 @@ class counterSummary implements documentBase {
         this.Total = dto.Total;
     }
 
-    getEntityName() {
+    getCollection() {
         return (<any>this)["Group Name"];
     }
 

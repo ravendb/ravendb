@@ -14,6 +14,7 @@
 @chart-jurnal-color: #046293;
 @chart-jurnals-color: #008cc9;
 @chart-structure-color: #80ced0;
+@chart-stream-color: #24cae0;
 
 #storage-report {
 
@@ -116,6 +117,14 @@
 
             &:hover {
                 fill: lighten(@chart-reserved-color,5%);
+            }
+        }
+
+        &.stream {
+            fill: @chart-stream-color;
+
+            &:hover {
+                fill: lighten(@chart-stream-color,5%);
             }
         }
 
@@ -291,6 +300,14 @@
 
                 &:hover {
                     background-color: lighten(@chart-reserved-color,5%);
+                }
+            }
+
+            &.stream {
+                background-color: @chart-stream-color;
+
+                &:hover {
+                    background-color: lighten(@chart-stream-color,5%);
                 }
             }
 

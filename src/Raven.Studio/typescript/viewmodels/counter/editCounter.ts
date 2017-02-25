@@ -10,7 +10,6 @@ import getCounterCommand = require("commands/counter/getCounterCommand");
 import updateCounterCommand = require("commands/counter/updateCounterCommand");
 import resetCounterCommand = require("commands/counter/resetCounterCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-import deleteItems = require("viewmodels/common/deleteItems");
 
 class editCounter extends viewModelBase {
 
@@ -111,12 +110,13 @@ class editCounter extends viewModelBase {
             CounterName: this.counterName(),
             Total: this.counter().total()
         });
+        /* TODO
         var viewModel = new deleteItems([summary], this.activeCounterStorage());
         viewModel.deletionTask.done(() => {
             var countersUrl = appUrl.forCounterStorageCounters(null, this.activeCounterStorage());
             router.navigate(countersUrl);
         });
-        app.showBootstrapDialog(viewModel, editCounter.container);
+        app.showBootstrapDialog(viewModel, editCounter.container);*/
     }
 
     removeFromTopRecentCounters(groupName: string, counterName: string) {

@@ -3,14 +3,12 @@ import appUrl = require("common/appUrl");
 import app = require("durandal/app");
 import changesContext = require("common/changesContext");
 import filesystem = require("models/filesystem/filesystem");
-import pagedList = require("common/pagedList");
 import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand");
 import getFilesystemRevisionsCommand = require("commands/filesystem/getFilesystemRevisionsCommand");
 import createFolderInFilesystem = require("viewmodels/filesystem/files/createFolderInFilesystem");
 import treeBindingHandler = require("common/bindingHelpers/treeBindingHandler");
 import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import file = require("models/filesystem/file");
 import folder = require("models/filesystem/folder");
 import uploadItem = require("models/filesystem/uploadItem");
@@ -30,7 +28,7 @@ class filesystemFiles extends viewModelBase {
     static revisionsFolderId = "/$$revisions$$";
 
     appUrls: computedAppUrls;
-    allFilesPagedItems = ko.observable<pagedList>();
+    allFilesPagedItems = ko.observable<any>(); //TODO: use type
     selectedFilesIndices = ko.observableArray<number>();
     selectedFilesText: KnockoutComputed<string>;
     filesCount: KnockoutComputed<number>;
@@ -82,13 +80,14 @@ class filesystemFiles extends viewModelBase {
             return "";
         });
 
+        /* TODO
         this.filesCount = ko.computed(() => {
             if (!!this.allFilesPagedItems()) {
                 var p: pagedList = this.allFilesPagedItems();
                 return p.totalResultCount();
             }
             return 0;
-        });
+        });*/
 
         this.selectedFolderName = ko.computed(() => {
             if (!this.selectedFolder())
@@ -97,13 +96,14 @@ class filesystemFiles extends viewModelBase {
             return _.last(splittedName);
         });
 
+        /* TODO
         this.hasFiles = ko.computed(() => {
             if (!!this.allFilesPagedItems()) {
                 var p: pagedList = this.allFilesPagedItems();
                 return p.totalResultCount() > 0;
             }
             return false;
-        });
+        });*/
 
         this.hasAllFilesSelected = ko.computed(() => {
             var filesCount = this.filesCount();
@@ -183,7 +183,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     loadFiles() {
-        this.allFilesPagedItems(this.createPagedList(this.selectedFolder()));
+        //TODO: this.allFilesPagedItems(this.createPagedList(this.selectedFolder()));
     }
 
     folderChanged(newFolder: string) {
@@ -270,6 +270,7 @@ class filesystemFiles extends viewModelBase {
         }*/
     }
 
+    /* TODO
     createPagedList(directory: string): pagedList {
         var fetcher: fetcherDto<any>;
         if (directory === filesystemFiles.revisionsFolderId) {
@@ -280,7 +281,7 @@ class filesystemFiles extends viewModelBase {
 
         var list = new pagedList(fetcher);
         return list;
-    }
+    }*/
 
     fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         var task = new getFilesystemFilesCommand(this.activeFilesystem(), directory, skip, take).execute();
@@ -318,11 +319,12 @@ class filesystemFiles extends viewModelBase {
     }
 
     selectAll() {
+        /* TODO
         var filesGrid = this.getFilesGrid();
         if (!!filesGrid && !!this.allFilesPagedItems()) {
             var p: pagedList = this.allFilesPagedItems();
             filesGrid.selectAll(p.totalResultCount());
-        }
+        }*/
     }
 
     selectNone() {
@@ -332,7 +334,7 @@ class filesystemFiles extends viewModelBase {
         }
     }
 
-    getFilesGrid(): virtualTable {
+    getFilesGrid() {
         var gridContents = $(filesystemFiles.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

@@ -11,7 +11,7 @@ class queryIndexCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet<any>> {
+    execute(): JQueryPromise<pagedResultSet<document>> {
         const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>>) => new pagedResultSet(results.Results.map(d => new document(d)), results.TotalResults, results);
         return this.query(this.getUrl(), null, this.db, selector)
             .fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));

@@ -5,7 +5,6 @@ import getIndexDefinitionCommand = require("commands/database/index/getIndexDefi
 import facet = require("models/database/query/facet");
 import queryFacetsCommand = require("commands/database/query/queryFacetsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import eventsCollector = require("common/eventsCollector");
 
@@ -22,7 +21,7 @@ class reporting extends viewModelBase {
     addedValues = ko.observableArray<facet>();
     filter = ko.observable<string>();
     hasFilter = ko.observable(false);
-    reportResults = ko.observable<pagedList>();
+    reportResults = ko.observable<any>(); //TODO: use type
     totalQueryResults = ko.computed(() => this.reportResults() ? this.reportResults().totalResultCount() : null);
     queryDuration = ko.observable<string>();
     appUrls: computedAppUrls;
@@ -203,7 +202,7 @@ class reporting extends viewModelBase {
             return command.execute()
                 .done((resultSet: pagedResultSet<any>) => this.queryDuration(resultSet.additionalResultInfo));
         };
-        this.reportResults(new pagedList(resultsFetcher));
+        //TODO: this.reportResults(new pagedList(resultsFetcher));
     }
 
     toggleCacheEnable() {

@@ -4,14 +4,15 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents
 {
     internal class CollectionRunner
     {
-        private readonly DocumentsOperationContext _context;
-        private readonly DocumentDatabase _database;
+        protected readonly DocumentsOperationContext _context;
+        protected readonly DocumentDatabase _database;
 
         public CollectionRunner(DocumentDatabase database, DocumentsOperationContext context)
         {
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents
         }
 
 
-        public IOperationResult ExecuteDelete(string collectionName, CollectionOperationOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public virtual IOperationResult ExecuteDelete(string collectionName, CollectionOperationOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.DocumentsStorage.Delete(_context, key, null), token);
         }
@@ -30,8 +31,8 @@ namespace Raven.Server.Documents
             return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.Patch.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
         }
 
-        private IOperationResult ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
-             Action<DeterminateProgress> onProgress, Action<string> action, OperationCancelToken token)
+        protected IOperationResult ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
+             Action<DeterminateProgress> onProgress, Action<LazyStringValue> action, OperationCancelToken token)
         {
             const int batchSize = 1024;
             var progress = new DeterminateProgress();

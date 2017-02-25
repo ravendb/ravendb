@@ -2,13 +2,9 @@ import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");
 import resolveConflict = require("viewmodels/filesystem/synchronization/resolveConflict");
-import customColumns = require("models/database/documents/customColumns");
-import customColumnParams = require('models/database/documents/customColumnParams');
-import virtualTable = require("widgets/virtualTable/viewModel");
 
 import filesystem = require("models/filesystem/filesystem");
 import changeSubscription = require("common/changeSubscription");
-import pagedList = require("common/pagedList");
 
 import getFilesConflictsCommand = require("commands/filesystem/getFilesConflictsCommand");
 import resolveConflictCommand = require("commands/filesystem/resolveConflictCommand");
@@ -25,9 +21,9 @@ class synchronizationConflicts extends viewModelBase {
         resolved: "Resolved"
     };
 
-    currentConflictsPagedItems = ko.observable<pagedList>();
+    currentConflictsPagedItems = ko.observable<any>(); //TODO: use type
     selectedDocumentIndices = ko.observableArray<number>();
-    currentColumns = ko.observable(customColumns.empty());
+    //TODO: currentColumns = ko.observable(customColumns.empty());
     conflictsSelection: KnockoutComputed<checkbox>;
     hasAnyConflictsSelected: KnockoutComputed<boolean>;
     hasAllConflictsSelected: KnockoutComputed<boolean>;
@@ -41,8 +37,9 @@ class synchronizationConflicts extends viewModelBase {
 
         this.conflictsCount = ko.computed(() => {
             if (!!this.currentConflictsPagedItems()) {
+                /* TODO
                 var p: pagedList = this.currentConflictsPagedItems();
-                return p.totalResultCount();
+                return p.totalResultCount();*/
             }
             return 0;
         });
@@ -80,13 +77,13 @@ class synchronizationConflicts extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink("NMDELS");
-
+        /* TODO:
         this.currentColumns().columns([
             new customColumnParams({ Header: "File Name", Binding: "fileName", DefaultWidth: 400 }),
             new customColumnParams({ Header: "Remote Server Url", Binding: "remoteServerUrl", DefaultWidth: 400 }),
             new customColumnParams({ Header: "Status", Binding: "status", DefaultWidth: 320 })
         ]);
-        this.currentColumns().customMode(true);
+        this.currentColumns().customMode(true);*/
 
         this.fetchConflicts(this.activeFilesystem());
     }
@@ -106,19 +103,20 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     private fetchConflicts(fs: filesystem) {
-        this.currentConflictsPagedItems(this.createPagedList(fs));
+        //TODO : this.currentConflictsPagedItems(this.createPagedList(fs));
     }
 
+    /* TODO
     private createPagedList(fs: filesystem): pagedList {
         var fetcher = (skip: number, take: number) => new getFilesConflictsCommand(fs, skip, take).execute();
         return new pagedList(fetcher);
-    }
+    }*/
 
     selectedConflicts(): string[] {
-        return this.getDocumentsGrid().getSelectedItems().map(x => x.getId());
+        return this.getDocumentsGrid().getSelectedItems().map((x: any) => x.getId());
     }
 
-    private getDocumentsGrid(): virtualTable {
+    private getDocumentsGrid() {
         var gridContents = $(synchronizationConflicts.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);
@@ -220,8 +218,8 @@ class synchronizationConflicts extends viewModelBase {
      selectAll() {
         var conflictsGrid = this.getDocumentsGrid();
         if (!!conflictsGrid && !!this.currentConflictsPagedItems()) {
-            var p: pagedList = this.currentConflictsPagedItems();
-            conflictsGrid.selectAll(p.totalResultCount());
+            /* TODO var p: pagedList = this.currentConflictsPagedItems();
+            conflictsGrid.selectAll(p.totalResultCount());*/
         }
     }
 

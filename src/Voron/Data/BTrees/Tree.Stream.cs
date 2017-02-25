@@ -21,6 +21,10 @@ namespace Voron.Data.BTrees
         {
             [FieldOffset(0)]
             public long PageNumber;
+
+            [FieldOffset(0)]
+            public long TotalSize;
+
             [FieldOffset(8)]
             public int ChunkSize;
         }
@@ -83,7 +87,6 @@ namespace Voron.Data.BTrees
                     _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize);
                     RecordVersionAndSize();
                 }
-
             }
 
             private long WriteBufferToPage(byte* pBuffer, long size)
@@ -114,7 +117,7 @@ namespace Voron.Data.BTrees
             {
                 var chunkDetails = new ChunkDetails
                 {
-                    PageNumber = _totalSize,
+                    TotalSize = _totalSize,
                     ChunkSize = _version + 1
                 };
                 Slice value;
@@ -148,6 +151,8 @@ namespace Voron.Data.BTrees
             var writer = new StreamToPageWriter();
             writer.Init(this, key, initialNumberOfPagesPerChunk);
             writer.Write(stream);
+
+            State.Flags |= TreeFlags.Streams;
         }
 
         public VoronStream ReadStream(string key)
@@ -212,10 +217,10 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public void GetStreamLengthAndVersion(Slice key, out long length, out int version)
+        public void GetStreamLengthAndVersion(Slice key, out long length, out int version, out FixedSizeTree detailsTree)
         {
-            var tree = FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
-            if (tree.NumberOfEntries == 0)
+            detailsTree = FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
+            if (detailsTree.NumberOfEntries == 0)
             {
                 length = -1;
                 version = 0;
@@ -223,7 +228,7 @@ namespace Voron.Data.BTrees
             }
 
             Slice slice;
-            using (tree.Read(StreamSizeValue, out slice))
+            using (detailsTree.Read(StreamSizeValue, out slice))
             {
                 if (slice.HasValue == false)
                 {
@@ -233,7 +238,7 @@ namespace Voron.Data.BTrees
                 }
 
                 var chunkDetails = ((ChunkDetails*)slice.Content.Ptr);
-                length = chunkDetails->PageNumber;
+                length = chunkDetails->TotalSize;
                 version = chunkDetails->ChunkSize;
             }
         }

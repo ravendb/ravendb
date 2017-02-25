@@ -305,7 +305,7 @@ class editSqlReplication extends viewModelBase {
 
     attachReservedMetaProperties(id: string, target: documentMetadata) {
         //TODO: target.etag = '';
-        target.ravenEntityName = !target.ravenEntityName ? document.getEntityNameFromId(id) : target.ravenEntityName;
+        target.collection = target.collection || document.getCollectionFromId(id);
         target.id = id;
     }
 

@@ -1,8 +1,6 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import changeSubscription = require("common/changeSubscription");
-import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import timeSeries = require("models/timeSeries/timeSeries");
 import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
@@ -22,7 +20,7 @@ class timeSeriesTypes extends viewModelBase {
     selectedType = ko.observable<timeSeriesType>().subscribeTo("ActivateType").distinctUntilChanged();
     currentType = ko.observable<timeSeriesType>();
     typeToSelect: string;
-    currentTypePagedItems = ko.observable<pagedList>();
+    currentTypePagedItems = ko.observable<any>(); //TODO: use type
     selectedKeysIndices = ko.observableArray<number>();
     selectedKeysText: KnockoutComputed<string>;
     hasKeys: KnockoutComputed<boolean>;
@@ -272,7 +270,7 @@ class timeSeriesTypes extends viewModelBase {
         }
     }
 
-    private getKeysGrid(): virtualTable {
+    private getKeysGrid() {
         var gridContents = $(timeSeriesTypes.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

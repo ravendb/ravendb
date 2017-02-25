@@ -1,9 +1,10 @@
-﻿import virtualColumn = require("widgets/virtualGrid/virtualColumn");
+﻿/// <reference path="../../../typings/tsd.d.ts"/>
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
 /**
  * A virtual row. Contains an element displayed as a row in the grid. Gets recycled as the grid scrolls in order to create and manage fewer elements.
  */
-class VirtualRow {
+class virtualRow {
     private item: Object | null = null; // The last item populated into this virtual row.
     private isItemSelected = false;
     readonly element: JQuery;
@@ -11,14 +12,18 @@ class VirtualRow {
     private _index = -1;
     private even: boolean | null = null;
 
-    public static readonly height = 36;
+    static readonly height = 36;
 
     constructor() {
-        this.element = $(`<div class="virtual-row" style="height: ${VirtualRow.height}px; top: ${this.top}px"></div>`);
+        this.element = $(`<div class="virtual-row" style="height: ${virtualRow.height}px; top: ${this.top}px"></div>`);
     }
 
     get top(): number {
         return this._top;
+    }
+
+    get data(): Object {
+        return this.item;
     }
 
     /**
@@ -34,7 +39,7 @@ class VirtualRow {
 
     isOffscreen(scrollTop: number, scrollBottom: number) {
         const top = this.top;
-        const bottom = top + VirtualRow.height;
+        const bottom = top + virtualRow.height;
         return top > scrollBottom || bottom < scrollTop;
     }
 
@@ -54,7 +59,7 @@ class VirtualRow {
                 const html = this.createCellsHtml(item, columns, isSelected);
                 this.element.html(html);
             } else {
-                this.element.text("Loading...");
+                this.element.text("");
             }
 
             // Update the selected status. Displays as a different row color.
@@ -77,7 +82,7 @@ class VirtualRow {
             }
 
             // Move it to its proper position.
-            const desiredNewRowY = rowIndex * VirtualRow.height;
+            const desiredNewRowY = rowIndex * virtualRow.height;
             this.setElementTop(desiredNewRowY);
         }
     }
@@ -89,12 +94,12 @@ class VirtualRow {
         this._index = -1;
         this.even = null;
         this.element.text("");
+        this.element.removeClass("selected");
     }
 
     private createCellsHtml(item: Object, columns: virtualColumn[], isSelected: boolean): string {
-        const cellsHtml = columns
-            .map(c => `<div class="cell ${c.cellClass}" style="width: ${c.width}">${c.renderCell(item, isSelected)}</div>`);
-        return cellsHtml.join("");
+        return columns.map(c => c.renderCell(item, isSelected))
+            .join("");
     }
 
     private setElementTop(val: number) {
@@ -103,4 +108,4 @@ class VirtualRow {
     }
 }
 
-export = VirtualRow;
+export = virtualRow;

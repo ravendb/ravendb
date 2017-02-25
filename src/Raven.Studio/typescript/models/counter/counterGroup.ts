@@ -1,13 +1,12 @@
 import counterStorage = require("models/counter/counterStorage");
-import pagedList = require("common/pagedList");
 import getCountersCommand = require("commands/counter/getCountersCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");
 
-class counterGroup implements ICollectionBase {
+class counterGroup {
     colorClass = "";
     static allGroupsGroupName = "All Groups";
-    private countersList: pagedList;
+    private countersList: any; //TODO use type
     private static groupColorMaps: resourceStyleMap[] = [];
     countersCount = ko.observable<number>(0);
     countersCountWithThousandsSeparator = ko.computed(() => this.countersCount().toLocaleString());
@@ -25,7 +24,7 @@ class counterGroup implements ICollectionBase {
 
     getCounters() {
         if (!this.countersList) {
-            this.countersList = this.createPagedList();
+            //TODO: this.countersList = this.createPagedList();
         }
 
         return this.countersList;
@@ -52,12 +51,13 @@ class counterGroup implements ICollectionBase {
         return cssGenerator.getCssClass(entityName, counterGroup.groupColorMaps, cs);
     }
 
+    /* TODO
     private createPagedList(): pagedList {
         var fetcher = (skip: number, take: number) => this.fetchCounters(skip, take);
         var list = new pagedList(fetcher);
         list.collectionName = this.name;
         return list;
-    }
+    }*/
 
     private fetchCounters(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         var group = this.isAllGroupsGroup ? null : this.name;

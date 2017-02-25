@@ -123,7 +123,7 @@ namespace Voron.Debugging
             return journals.Select(journal => new JournalReport
             {
                 Number = journal.Number,
-                AllocatedSpaceInBytes = PagesToBytes(journal.JournalWriter.NumberOfAllocated4Kb)
+                AllocatedSpaceInBytes = journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte
             }).ToList();
         }
 
@@ -138,7 +138,7 @@ namespace Voron.Debugging
 
             var treeReport = new TreeReport
             {
-                Type = RootObjectType.FixedSizeTree,
+                Type = fst.Type ?? RootObjectType.FixedSizeTree,
                 Name = fst.Name.ToString(),
                 BranchPages = -1,
                 Depth = fst.Depth,
@@ -164,10 +164,15 @@ namespace Voron.Debugging
             }
 
             MultiValuesReport multiValues = null;
+            StreamsReport streams = null;
 
             if (tree.State.Flags == TreeFlags.MultiValueTrees)
             {
                 multiValues = CreateMultiValuesReport(tree);
+            }
+            else if (tree.State.Flags == (TreeFlags.FixedSizeTrees | TreeFlags.Streams))
+            {
+                streams = CreateStreamsReport(tree);
             }
 
             var density = pageDensities?.Average() ?? -1;
@@ -183,12 +188,60 @@ namespace Voron.Debugging
                 OverflowPages = tree.State.OverflowPages,
                 PageCount = tree.State.PageCount,
                 Density = density,
-                AllocatedSpaceInBytes = tree.State.PageCount * Constants.Storage.PageSize,
+                AllocatedSpaceInBytes = tree.State.PageCount * Constants.Storage.PageSize + (streams?.AllocatedSpaceInBytes ?? 0),
                 UsedSpaceInBytes = calculateExactSizes ? (long)(tree.State.PageCount * Constants.Storage.PageSize * density) : -1,
-                MultiValues = multiValues
+                MultiValues = multiValues,
+                Streams = streams
             };
 
             return treeReport;
+        }
+
+        private static StreamsReport CreateStreamsReport(Tree tree)
+        {
+            var streams = new List<StreamDetails>();
+
+            using (var it = tree.Iterate(false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    return new StreamsReport();
+
+                long totalNumberOfAllocatedPages = 0;
+                do
+                {
+                    long length;
+                    int version;
+
+                    FixedSizeTree detailsTree;
+                    tree.GetStreamLengthAndVersion(it.CurrentKey, out length, out version, out detailsTree);
+                    
+                    long numberOfAllocatedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(length);
+
+                    if (detailsTree.Type == RootObjectType.FixedSizeTree) // only if large fst, embedded already counted in parent
+                        numberOfAllocatedPages += detailsTree.PageCount;
+
+                    streams.Add(new StreamDetails
+                    {
+                        Name = it.CurrentKey.ToString(),
+                        Length = length,
+                        Version = version,
+                        NumberOfAllocatedPages = numberOfAllocatedPages,
+                        AllocatedSpaceInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
+                        DetailsTree = GetReport(detailsTree, false),
+                    });
+
+                    totalNumberOfAllocatedPages += numberOfAllocatedPages;
+
+                } while (it.MoveNext());
+                
+                return new StreamsReport
+                {
+                    Streams = streams,
+                    NumberOfStreams = tree.State.NumberOfEntries,
+                    TotalNumberOfAllocatedPages = totalNumberOfAllocatedPages,
+                    AllocatedSpaceInBytes = totalNumberOfAllocatedPages * Constants.Storage.PageSize
+                };
+            }
         }
 
         private static MultiValuesReport CreateMultiValuesReport(Tree tree)

@@ -519,10 +519,6 @@ interface documentBase extends dictionary<any> {
     getDocumentPropertyNames(): Array<string>;
 }
 
-interface ICollectionBase {
-    colorClass: string;
-}
-
 interface customColumnParamsDto {
     Header?: string;
     Binding: string;
@@ -781,10 +777,6 @@ interface counterStorageDto extends tenantDto {
 }
 
 interface timeSeriesDto extends tenantDto {
-}
-
-interface customFunctionsDto {
-    Functions: string;
 }
 
 interface suggestionsDto {

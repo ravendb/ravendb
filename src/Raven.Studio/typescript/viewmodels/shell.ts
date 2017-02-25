@@ -24,7 +24,6 @@ import registration = require("viewmodels/shell/registration");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
-import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 import enableResizeBindingHandler = require("common/bindingHelpers/enableResizeBindingHandler");
@@ -281,11 +280,6 @@ class shell extends viewModelBase {
         return false;
     }
 
-    launchDocEditor(docId?: string, docsList?: pagedList) {
-        var editDocUrl = appUrl.forEditDoc(docId, this.activeDatabase());
-        this.navigate(editDocUrl);
-    }
-
     loadServerConfig(): JQueryPromise<void> {
         const deferred = $.Deferred<void>();
 
@@ -327,10 +321,6 @@ class shell extends viewModelBase {
             .done(() => {
                 this.connectToRavenServer();
             });
-    }
-
-    getDocCssClass(doc: documentMetadataDto) {
-        return collection.getCollectionCssClass((<any>doc)["@metadata"]["@collection"], this.activeDatabase());
     }
 
     fetchServerBuildVersion() {

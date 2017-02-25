@@ -11,16 +11,16 @@ class getDocumentsFromCollectionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultSet<document>> {
-        var args = {
+        const args = {
             name: this.collection.name,
             start: this.skip,
             pageSize: this.take
         };
 
-        var resultsSelector = (dto: resultsDto<any>) => new pagedResultSet(dto.Results.map(x => new document(x)), this.collection.documentCount());
-        var url = endpoints.databases.collections.collectionsDocs;
+        const resultsSelector = (dto: resultsDto<any>) => new pagedResultSet(dto.Results.map(x => new document(x)), this.collection.documentCount());
+        const url = endpoints.databases.collections.collectionsDocs;
 
-        return this.query(url, args, this.collection.ownerDatabase, resultsSelector);
+        return this.query(url, args, this.collection.database, resultsSelector);
     }
 }
 
