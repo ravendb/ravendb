@@ -567,21 +567,6 @@ class query extends viewModelBase {
         app.showBootstrapDialog(viewModel);
     }
 
-    //TODO: deprecated?
-    createPostboxSubscriptions(): Array<KnockoutSubscription> {
-        return [
-            /* TODO
-            ko.postbox.subscribe("ViewItem", (itemNumber: number) => {
-                this.queryResults().getNthItem(itemNumber)
-                    .done((item: document) => {
-                        const dto = item.toDto(true);
-
-                        app.showBootstrapDialog(new showDataDialog(item.getId(), JSON.stringify(dto, null, 2)));
-                    });
-            })*/
-        ];
-    }
-
     private recordQueryRun(criteria: queryCriteria) {
         const newQuery: storedQueryDto = criteria.toStorageDto();
 

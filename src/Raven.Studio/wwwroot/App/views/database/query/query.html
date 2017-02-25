@@ -463,7 +463,7 @@
                 selectedIndices: selectedResultIndices
                 --
                     <div id="queryResultsGrid"
-                         data-bind="widget: { kind: 'virtualTable', itemsSource: queryResults, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', collections: collections, contextMenuOptions: ['copyitems', 'CopyIDs' , 'Delete', 'ViewItem' ], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
+                         data-bind="widget: { kind: 'virtualTable', itemsSource: queryResults, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', collections: collections, contextMenuOptions: ['copyitems', 'CopyIDs' , 'Delete'], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
                         <div class="panel-body">
                             <div class="suggestion-box" data-bind="visible: $root.showSuggestions, foreach: $root.indexSuggestions">
                                 <div>Did you mean <a data-bind="text: Suggestion, click: $root.applySuggestion.bind($root, $data)" href="#"></a> for the field <i data-bind="text: FieldName"></i>?</div>
