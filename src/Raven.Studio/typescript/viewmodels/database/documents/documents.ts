@@ -241,7 +241,6 @@ class documents extends viewModelBase {
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            ko.postbox.subscribe("ViewItem", () => this.editSelectedDoc()),
             ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => this.reloadDocumentsData(db)),
             ko.postbox.subscribe("SortCollections", () => this.sortCollections())
         ];
