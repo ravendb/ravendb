@@ -123,15 +123,15 @@ namespace Sparrow.Json
                         }
 
                         var fakeFieldName = _context.GetLazyStringForFieldWithCaching("_");
-                        var propIndex = _context.CachedProperties.GetPropertyId(fakeFieldName);
-                        currentState.CurrentPropertyId = propIndex;
-                        currentState.MaxPropertyId = propIndex;
+                        var prop = _context.CachedProperties.GetProperty(fakeFieldName);
+                        currentState.CurrentProperty = prop;
+                        currentState.MaxPropertyId = prop.PropertyId;
                         currentState.FirstWrite = _writer.Position;
                         currentState.Properties = new List<PropertyTag>
                         {
                             new PropertyTag
                             {
-                                PropertyId = propIndex
+                                Property = prop
                             }
                         };
                         currentState.State = ContinuationState.CompleteDocumentArray;
@@ -223,8 +223,8 @@ namespace Sparrow.Json
 
                         var property = CreateLazyStringValueFromParserState();
 
-                        currentState.CurrentPropertyId = _context.CachedProperties.GetPropertyId(property);
-                        currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentPropertyId);
+                        currentState.CurrentProperty = _context.CachedProperties.GetProperty(property);
+                        currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
                         currentState.State = ContinuationState.ReadPropertyValue;
                         continue;
                     case ContinuationState.ReadPropertyValue:
@@ -246,7 +246,7 @@ namespace Sparrow.Json
                         {
                             Position = _writeToken.ValuePos,
                             Type = (byte)_writeToken.WrittenToken,
-                            PropertyId = currentState.CurrentPropertyId
+                            Property = currentState.CurrentProperty
                         });
                         currentState.State = ContinuationState.ReadPropertyName;
                         continue;
@@ -374,7 +374,7 @@ namespace Sparrow.Json
         {
             public ContinuationState State;
             public List<PropertyTag> Properties;
-            public int CurrentPropertyId;
+            public CachedProperties.PropertyName CurrentProperty;
             public int MaxPropertyId;
             public List<BlittableJsonToken> Types;
             public List<int> Positions;
@@ -385,8 +385,13 @@ namespace Sparrow.Json
         public class PropertyTag
         {
             public int Position;
-            public int PropertyId;
+            public CachedProperties.PropertyName Property;
             public byte Type;
+
+            public override string ToString()
+            {
+                return $"{nameof(Position)}: {Position}, {nameof(Property)}: {Property.Comparer} {Property.PropertyId}, {nameof(Type)}: {(BlittableJsonToken)Type}";
+            }
         }
 
         [Flags]
