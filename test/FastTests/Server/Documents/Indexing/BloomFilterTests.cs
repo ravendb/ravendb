@@ -143,7 +143,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    var tree = context.Transaction.InnerTransaction.CreateTree("IndexedDocs");
+                    var tree = context.Transaction.InnerTransaction.CreateTree("BloomFilters");
                     tree.Increment("Count64", 2);
 
                     using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, tree, writeable: true, allocator: context.Allocator))

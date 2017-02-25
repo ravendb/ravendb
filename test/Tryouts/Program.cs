@@ -10,9 +10,9 @@ namespace Tryouts
         public static void Main(string[] args)
         {
 
-            using (var a = new SlowTests.Core.Commands.Indexes())
+            using (var a = new FastTests.Server.Documents.Indexing.BloomFilterTests())
             {
-                a.CanResetIndex().Wait();
+                a.CheckReadonly();
             }
         }
     }
