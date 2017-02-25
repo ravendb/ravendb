@@ -2,7 +2,6 @@ import app = require("durandal/app");
 import router = require("plugins/router");
 import changesContext = require("common/changesContext");
 import changeSubscription = require("common/changeSubscription");
-import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import counterStorage = require("models/counter/counterStorage");
 import counterChange = require("models/counter/counterChange");
@@ -24,7 +23,7 @@ class counters extends viewModelBase {
     selectedGroup = ko.observable<counterGroup>().subscribeTo("ActivateGroup").distinctUntilChanged();
     currentGroup = ko.observable<counterGroup>();
     groupToSelectName: string;
-    currentGroupPagedItems = ko.observable<pagedList>();
+    currentGroupPagedItems = ko.observable<any>(); //TODO: use type
     selectedCounterIndices = ko.observableArray<number>();
     selectedCountersText: KnockoutComputed<string>;
     hasCounters: KnockoutComputed<boolean>;

@@ -1,11 +1,10 @@
 import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import pagedList = require("common/pagedList");
 import getIdentitiesCommand = require("commands/database/debug/getIdentitiesCommand");
 
 class statusDebugIdentities extends viewModelBase {
 
-    currentIdentities = ko.observable<pagedList>();
+    /* TODO currentIdentities = ko.observable<pagedList>();
     //TODO: columns = ko.observable(customColumns.empty());
 
     resultsCount = ko.computed(() => {
@@ -17,11 +16,10 @@ class statusDebugIdentities extends viewModelBase {
 
     activate(args: any) {
         super.activate(args);
-        /* TODO
         this.columns().columns([
             new customColumnParams({ Header: "Key", Binding: "Key", DefaultWidth: 300 }),
             new customColumnParams({ Header: "Value", Binding: "Value", DefaultWidth: 300 }),
-        ]);*/
+        ]);
         this.updateHelpLink('JHZ574');
         this.fetchIdentities();
     }
@@ -35,7 +33,7 @@ class statusDebugIdentities extends viewModelBase {
             return new getIdentitiesCommand(db, skip, take).execute();
         }
         return new pagedList(fetcher);
-    }
+    }*/
 }
 
 export = statusDebugIdentities;

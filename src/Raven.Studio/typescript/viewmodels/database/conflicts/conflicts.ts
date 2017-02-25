@@ -1,6 +1,5 @@
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import pagedList = require("common/pagedList");
 import database = require("models/resources/database");
 import conflictVersion = require("models/database/replication/conflictVersion");
 
@@ -31,7 +30,7 @@ class conflicts extends viewModelBase {
     static conflictsIndexName = "Raven/ConflictDocuments";
     static conflictsTransformerName = "Raven/ConflictDocumentsTransformer";
 
-    currentConflictsPagedItems = ko.observable<pagedList>();
+    currentConflictsPagedItems = ko.observable<any>(); //TODO: use virtualGrid + type
     selectedDocumentIndices = ko.observableArray<number>();
 
     serverConflictResolution = ko.observable<string>();
@@ -94,7 +93,7 @@ class conflicts extends viewModelBase {
     }
 
     fetchConflicts(database: database) {
-        this.currentConflictsPagedItems(this.createPagedList(database));
+        //TODO: this.currentConflictsPagedItems(this.createPagedList(database));
     }
 
     loadReplicationSources(db: database): JQueryPromise<dictionary<string>> {
@@ -141,10 +140,11 @@ class conflicts extends viewModelBase {
         });
     }
 
+    /* TODO
     private createPagedList(database: database): pagedList {
         var fetcher = (skip: number, take: number) => new getConflictsCommand(database, skip, take).execute();
         return new pagedList(fetcher);
-    }
+    }*/
 
     getUrlForConflict(conflictVersion: conflictVersion) {
         return appUrl.forEditDoc(conflictVersion.id, this.activeDatabase());

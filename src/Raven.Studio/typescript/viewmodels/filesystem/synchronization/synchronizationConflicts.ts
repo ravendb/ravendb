@@ -5,7 +5,6 @@ import resolveConflict = require("viewmodels/filesystem/synchronization/resolveC
 
 import filesystem = require("models/filesystem/filesystem");
 import changeSubscription = require("common/changeSubscription");
-import pagedList = require("common/pagedList");
 
 import getFilesConflictsCommand = require("commands/filesystem/getFilesConflictsCommand");
 import resolveConflictCommand = require("commands/filesystem/resolveConflictCommand");
@@ -22,7 +21,7 @@ class synchronizationConflicts extends viewModelBase {
         resolved: "Resolved"
     };
 
-    currentConflictsPagedItems = ko.observable<pagedList>();
+    currentConflictsPagedItems = ko.observable<any>(); //TODO: use type
     selectedDocumentIndices = ko.observableArray<number>();
     //TODO: currentColumns = ko.observable(customColumns.empty());
     conflictsSelection: KnockoutComputed<checkbox>;
@@ -38,8 +37,9 @@ class synchronizationConflicts extends viewModelBase {
 
         this.conflictsCount = ko.computed(() => {
             if (!!this.currentConflictsPagedItems()) {
+                /* TODO
                 var p: pagedList = this.currentConflictsPagedItems();
-                return p.totalResultCount();
+                return p.totalResultCount();*/
             }
             return 0;
         });
@@ -103,13 +103,14 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     private fetchConflicts(fs: filesystem) {
-        this.currentConflictsPagedItems(this.createPagedList(fs));
+        //TODO : this.currentConflictsPagedItems(this.createPagedList(fs));
     }
 
+    /* TODO
     private createPagedList(fs: filesystem): pagedList {
         var fetcher = (skip: number, take: number) => new getFilesConflictsCommand(fs, skip, take).execute();
         return new pagedList(fetcher);
-    }
+    }*/
 
     selectedConflicts(): string[] {
         return this.getDocumentsGrid().getSelectedItems().map((x: any) => x.getId());
@@ -217,8 +218,8 @@ class synchronizationConflicts extends viewModelBase {
      selectAll() {
         var conflictsGrid = this.getDocumentsGrid();
         if (!!conflictsGrid && !!this.currentConflictsPagedItems()) {
-            var p: pagedList = this.currentConflictsPagedItems();
-            conflictsGrid.selectAll(p.totalResultCount());
+            /* TODO var p: pagedList = this.currentConflictsPagedItems();
+            conflictsGrid.selectAll(p.totalResultCount());*/
         }
     }
 

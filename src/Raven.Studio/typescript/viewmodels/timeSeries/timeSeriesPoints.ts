@@ -1,7 +1,6 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import changeSubscription = require("common/changeSubscription");
-import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import timeSeries = require("models/timeSeries/timeSeries");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
@@ -32,7 +31,7 @@ class timeSeriesPoints extends viewModelBase {
     duration = ko.observable<string>();
     durationType = ko.observable<string>();
 
-    pointsList = ko.observable<pagedList>();
+    pointsList = ko.observable<any>(); //TODO:
     selectedPointsIndices = ko.observableArray<number>();
     selectedPointsText: KnockoutComputed<string>;
     hasPoints: KnockoutComputed<boolean>;
@@ -120,13 +119,14 @@ class timeSeriesPoints extends viewModelBase {
                 this.maxPoint(result.MaxPoint);
                 this.endPointFilter(result.MaxPoint);
                 if (!this.pointsList()) {
-                    this.pointsList(this.createPointsPagedList());
+                    //TODO: this.pointsList(this.createPointsPagedList());
                 }
                 timeSeriesPoints.isInitialized(true);
             });
         }
     }
 
+    /* TODO
     private createPointsPagedList(): pagedList {
         var fetcher = (skip: number, take: number) => this.fetchPoints(skip, take,
             this.isFiltered() ? this.startPointFilter() : null,
@@ -134,7 +134,7 @@ class timeSeriesPoints extends viewModelBase {
         var list = new pagedList(fetcher);
         list.collectionName = this.key();
         return list;
-    }
+    }*/
 
     private fetchPoints(skip: number, take: number, start: string, end: string): JQueryPromise<pagedResultSet<timeSeriesPoint>> {
         var doneTask = $.Deferred<pagedResultSet<timeSeriesPoint>>();

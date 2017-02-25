@@ -1,4 +1,3 @@
-import pagedList = require("common/pagedList");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
 import getAllDocumentsMetadataCommand = require("commands/database/documents/getAllDocumentsMetadataCommand");
 import pagedResultSet = require("common/pagedResultSet");

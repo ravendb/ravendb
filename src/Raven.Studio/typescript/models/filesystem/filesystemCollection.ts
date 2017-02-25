@@ -1,4 +1,3 @@
-import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import filesystem = require("models/filesystem/filesystem");
 
@@ -7,7 +6,7 @@ class filesystemCollection{
     itemsCount: any = ko.observable(0);
     isAllItems = false;
     
-    private itemsList: pagedList;
+    private itemsList: any; //TODO use type
 
     constructor(public name: string, public owner: filesystem ) {
     }
@@ -18,24 +17,26 @@ class filesystemCollection{
         ko.postbox.publish("ActivateCollection", this);
     }
 
+    /* TODO
     getItems(): pagedList {
         if (!this.itemsList) {
             this.itemsList = this.createPagedList();
         }
 
         return this.itemsList;
-    }
+    }*/
 
     fetchItems(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         throw new Error('This method is abstract');
     }
 
+    /* TODO
     private createPagedList(): pagedList {
         var fetcher = (skip: number, take: number) => this.fetchItems(skip, take);
         var list = new pagedList(fetcher);
         list.collectionName = this.name;
         return list;
-    }
+    }*/
 
 }
 
