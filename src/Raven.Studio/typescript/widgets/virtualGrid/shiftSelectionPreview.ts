@@ -30,7 +30,7 @@ class shiftSelectionHandler implements disposable {
         const $document = $(document);
 
         $document.on("keydown." + this.gridId, (e: JQueryEventObject) => {
-            if (this.shiftSelectStartIndexCandidate && e.shiftKey) {
+            if (_.isNumber(this.shiftSelectStartIndexCandidate) && e.shiftKey) {
                 if (!this.moveHandler) {
                     this.moveHandler = this.createShiftSelectionHandler();
                     this.updateHints(e);
