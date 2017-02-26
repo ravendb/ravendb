@@ -29,11 +29,11 @@ class deleteDocuments extends dialogViewModelBase {
             .fail(response => this.deletionTask.reject(response));
 
         this.deletionStarted = true;
-        dialog.close(this);
+        dialog.close(this, true);
     }
 
     cancel() {
-        dialog.close(this);
+        dialog.close(this, false);
     }
 
     deactivate(args: any) {

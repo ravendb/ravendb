@@ -5,8 +5,11 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
+using Orders;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Session;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -85,32 +88,10 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var incomingStats = new DynamicJsonArray();
-                var outgoingStats = new DynamicJsonArray();
-                var resovlerStats = new DynamicJsonArray();
-
-                foreach (var e in stats.IncomingStats)
-                {
-                    incomingStats.Add(e.ToJson());
-                }
-
-                foreach (var e in stats.OutgoingStats)
-                {
-                    outgoingStats.Add(e.ToJson());
-                }
-
-                foreach (var e in stats.ResolverStats)
-                {
-                    resovlerStats.Add(e.ToJson());
-                }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["LiveStats"] = stats.LiveStats(),
-                    ["IncomingStats"] = incomingStats,
-                    ["OutgoingStats"] = outgoingStats,
-                    ["ResovlerStats"] = resovlerStats
-                });
+                stats.Update();
+                var entityToBlittable = new EntityToBlittable(null);
+                var json = entityToBlittable.ConvertEntityToBlittable(stats, new DocumentConventions(), context);
+                context.Write(writer, json);             
             }
             return Task.CompletedTask;
         }

@@ -243,7 +243,7 @@ namespace Voron.Impl.Paging
             var actualIncrease = Math.Min(_increaseSize, current / 2);
 
             // we then want to get the next power of two number, to get pretty file size
-            return current + Bits.NextPowerOf2(actualIncrease);
+            return Bits.NextPowerOf2(current + actualIncrease);
         }
 
 
