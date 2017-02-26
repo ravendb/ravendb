@@ -1,5 +1,9 @@
 /// <reference path="../tsd.d.ts"/>
 
+interface disposable {
+    dispose(): void;
+}
+
 interface dictionary<TValue> {
     [key: string]: TValue;
 }
