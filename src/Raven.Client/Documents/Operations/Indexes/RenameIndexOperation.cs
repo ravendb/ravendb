@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes/rename?name={Uri.EscapeUriString(_name)}&newName={Uri.EscapeUriString(_newName)}";
+                url = $"{node.Url}/databases/{node.Database}/indexes/rename?name={Uri.EscapeDataString(_name)}&newName={Uri.EscapeDataString(_newName)}";
 
                 return new HttpRequestMessage
                 {
