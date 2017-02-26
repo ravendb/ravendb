@@ -22,58 +22,53 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
-            DocumentsOperationContext readDocumentsContext;
-            using (ContextPool.AllocateOperationContext(out readDocumentsContext))
+            DocumentsOperationContext ctx;
+            using (ContextPool.AllocateOperationContext(out ctx))
             {
-                DocumentsOperationContext ctx;
-                using(ContextPool.AllocateOperationContext(out ctx))
+                var cmds = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream());
+
+                var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+
+                using (var mergedCmd = new MergedBatchCommand
                 {
-                    var cmds = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream());
-
-                    var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
-
-                    using (var mergedCmd = new MergedBatchCommand
+                    Database = Database,
+                    ParsedCommands = cmds,
+                    Reply = new DynamicJsonArray(),
+                })
+                {
+                    if (waitForIndexesTimeout != null)
+                        mergedCmd.ModifiedCollections = new HashSet<string>();
+                    try
                     {
-                        Database = Database,
-                        ParsedCommands = cmds,
-                        Reply = new DynamicJsonArray(),
-                    })
+                        await Database.TxMerger.Enqueue(mergedCmd);
+                    }
+                    catch (ConcurrencyException)
                     {
+                        HttpContext.Response.StatusCode = (int) HttpStatusCode.Conflict;
+                        throw;
+                    }
 
-                        if (waitForIndexesTimeout != null)
-                            mergedCmd.ModifiedCollections = new HashSet<string>();
-                        try
-                        {
-                            await Database.TxMerger.Enqueue(mergedCmd);
-                        }
-                        catch (ConcurrencyException)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                            throw;
-                        }
+                    var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
+                    if (waitForReplicasTimeout != null)
+                    {
+                        await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
+                    }
 
-                        var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
-                        if (waitForReplicasTimeout != null)
-                        {
-                            await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
-                        }
+                    if (waitForIndexesTimeout != null)
+                    {
+                        await
+                            WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag,
+                                mergedCmd.ModifiedCollections);
+                    }
 
-                        if (waitForIndexesTimeout != null)
-                        {
-                            await
-                                WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag,
-                                    mergedCmd.ModifiedCollections);
-                        }
+                    HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
 
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                        using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                    using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                    {
+                        ctx.Write(writer, new DynamicJsonValue
                         {
-                            ctx.Write(writer, new DynamicJsonValue
-                            {
-                                ["Results"] = mergedCmd.Reply
-                            });
-                        }
+                            ["Results"] = mergedCmd.Reply
+                        });
                     }
                 }
             }
