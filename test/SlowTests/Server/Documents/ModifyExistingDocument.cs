@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FastTests;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Xunit;
 
-namespace FastTests.Server.Documents
+namespace SlowTests.Server.Documents
 {
     public class ModifyExistingDocument : RavenTestBase
     {

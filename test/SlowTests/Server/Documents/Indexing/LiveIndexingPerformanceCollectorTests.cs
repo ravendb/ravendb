@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Xunit;
 
-namespace FastTests.Server.Documents.Indexing
+namespace SlowTests.Server.Documents.Indexing
 {
     public class LiveIndexingPerformanceCollectorTests : RavenTestBase
     {

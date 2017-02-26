@@ -1,18 +1,18 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
-using System.Linq;
-using Raven.Client;
-using Raven.Client.Documents.Indexes;
 
-namespace FastTests.Server.Documents.Indexing.Debugging
+namespace SlowTests.Server.Documents.Indexing.Debugging
 {
     public class RavenDB_5577 : RavenLowLevelTestBase
     {

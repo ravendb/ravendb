@@ -1,12 +1,11 @@
 ﻿using System.IO;
 using System.Threading;
-using Xunit;
 using Voron;
-using Voron.Data;
+using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class MemoryAccess : StorageTest
+    public class MemoryAccess : FastTests.Voron.StorageTest
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {

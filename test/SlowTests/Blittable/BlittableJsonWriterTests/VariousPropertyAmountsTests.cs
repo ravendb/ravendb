@@ -1,10 +1,11 @@
 ﻿using System.IO;
 using System.Text;
+using FastTests;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Xunit;
 
-namespace FastTests.Blittable.BlittableJsonWriterTests
+namespace SlowTests.Blittable.BlittableJsonWriterTests
 {
     public class VariousPropertyAmountsTests : NoDisposalNeeded
     {

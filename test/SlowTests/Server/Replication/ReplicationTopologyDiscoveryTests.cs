@@ -1,14 +1,12 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
+﻿using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Server.Config.Settings;
 using Xunit;
 
-namespace FastTests.Server.Replication
+namespace SlowTests.Server.Replication
 {
     public class ReplicationTopologyDiscoveryTests : ReplicationTestsBase
     {

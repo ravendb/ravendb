@@ -5,13 +5,13 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using FastTests.Voron.Bugs;
 using Voron;
-using Voron.Data;
 using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class IndexPointToNonLeafPageTests : StorageTest
+    public class IndexPointToNonLeafPageTests : FastTests.Voron.StorageTest
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {

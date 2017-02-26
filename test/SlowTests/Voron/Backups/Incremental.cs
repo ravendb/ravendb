@@ -6,15 +6,15 @@
 
 using System;
 using System.IO;
-using Xunit;
+using FastTests.Voron.Backups;
 using Voron;
-using Voron.Data;
 using Voron.Global;
 using Voron.Impl.Backup;
+using Xunit;
 
-namespace FastTests.Voron.Backups
+namespace SlowTests.Voron.Backups
 {
-    public class Incremental : StorageTest
+    public class Incremental : FastTests.Voron.StorageTest
     {
         IncrementalBackupTestUtils IncrementalBackupTestUtils = new IncrementalBackupTestUtils();
         protected override void Configure(StorageEnvironmentOptions options)

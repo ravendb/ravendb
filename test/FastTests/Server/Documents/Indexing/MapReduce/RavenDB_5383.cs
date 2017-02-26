@@ -14,7 +14,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
     {
         [Theory]
         [InlineData(1)]
-        [InlineData(1000)]
         public void When_map_results_do_not_change_then_we_skip_the_reduce_phase(int numberOfDocs)
         {
             using (var database = CreateDocumentDatabase())

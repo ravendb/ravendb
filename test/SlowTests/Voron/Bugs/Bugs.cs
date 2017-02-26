@@ -1,13 +1,13 @@
-﻿using Sparrow;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using FastTests.Voron.Tables;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
 using Xunit;
 
-namespace FastTests.Voron.Tables
+namespace SlowTests.Voron.Bugs
 {
     public unsafe class Bugs : TableStorageTest
     {
