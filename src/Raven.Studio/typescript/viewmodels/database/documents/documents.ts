@@ -38,11 +38,16 @@ class documents extends viewModelBase {
     static readonly allDocumentCollectionName = "__all_docs";
 
     inSpecificCollection: KnockoutComputed<boolean>;
+    deleteEnabled: KnockoutComputed<boolean>;
 
     private collectionToSelectName: string;
     private collections = ko.observableArray<collection>();
     private currentCollection = ko.observable<collection>();
     private gridController = ko.observable<virtualGridController<document>>();
+
+    spinners = {
+        delete: ko.observable<boolean>(false)
+    }
 
     constructor() {
         super();
@@ -54,6 +59,16 @@ class documents extends viewModelBase {
         this.inSpecificCollection = ko.pureComputed(() => {
             const currentCollection = this.currentCollection();
             return currentCollection && !currentCollection.isAllDocuments;
+        });
+        this.deleteEnabled = ko.pureComputed(() => {
+            const deleteInProgress = this.spinners.delete();
+            let selectedDocsCount = 0;
+            const controll = this.gridController();
+            if (controll) {
+                selectedDocsCount = controll.selection().count;
+            }
+
+            return !deleteInProgress && selectedDocsCount > 0;
         });
     }
 
@@ -154,11 +169,18 @@ class documents extends viewModelBase {
         if (selection.mode === "inclusive") {
             const idsToDelete = selection.included.map(x => x.getId());
             const deleteDocsDialog = new deleteDocuments(selection.included, this.activeDatabase());
-            deleteDocsDialog.deletionTask.done(() => {
-                this.gridController().reset();
-            });
+            deleteDocsDialog.deletionTask
+                .done(() => {
+                    this.gridController().reset();
+                })
+                .always(() => this.spinners.delete(false));
 
-            app.showBootstrapDialog(deleteDocsDialog);
+            app.showBootstrapDialog(deleteDocsDialog)
+                .done((deleting: boolean) => {
+                    if (deleting) {
+                        this.spinners.delete(true);
+                    }
+                });
         } else {
             // exclusive
             const excludedIds = selection.excluded.map(x => x.getId());
@@ -171,7 +193,7 @@ class documents extends viewModelBase {
                         if (excludedIds.length === 0) {
                             messagePublisher.reportSuccess(`Deleted collection ${this.currentCollection().name}`);
                         } else {
-                            messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.currentCollection().name}`);   
+                            messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.currentCollection().name}`);
                         }
 
                         if (excludedIds.length === 0) {
@@ -181,11 +203,18 @@ class documents extends viewModelBase {
                                 this.currentCollection(allDocsCollection);
                             }
                         }
-
+                    })
+                    .always(() => {
+                        this.spinners.delete(false);
                         this.gridController().reset();
                     });
             });
-            app.showBootstrapDialog(deleteCollectionDialog);
+            app.showBootstrapDialog(deleteCollectionDialog)
+                .done((deletionStarted: boolean) => {
+                    if (deletionStarted) {
+                        this.spinners.delete(true);
+                    }
+                });
         }
     }
 
