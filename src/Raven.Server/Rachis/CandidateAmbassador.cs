@@ -108,6 +108,7 @@ namespace Raven.Server.Rachis
 
                                     RequestVoteResponse rvr;
                                     var currentElectionTerm = _candidate.ElectionTerm;
+                                    var engineCurrentTerm = _engine.CurrentTerm;
                                     if (_candidate.IsForcedElection == false || 
                                         _candidate.RunRealElectionAtTerm != currentElectionTerm)
                                     {
@@ -125,7 +126,7 @@ namespace Raven.Server.Rachis
                                         if (rvr.Term > currentElectionTerm)
                                         {
                                             // we need to abort the current elections
-                                            _engine.SetNewState(RachisConsensus.State.Follower, null);
+                                            _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm);
                                             _engine.FoundAboutHigherTerm(rvr.Term);
                                             return;
                                         }
@@ -157,7 +158,7 @@ namespace Raven.Server.Rachis
                                     if (rvr.Term > currentElectionTerm)
                                     {
                                         // we need to abort the current elections
-                                        _engine.SetNewState(RachisConsensus.State.Follower, null);
+                                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm);
                                         _engine.FoundAboutHigherTerm(rvr.Term);
                                         return;
                                     }

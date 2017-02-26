@@ -48,12 +48,15 @@ namespace SlowTests.Server.Rachis
                 }
             }
 
+           
             foreach (var follower in followers)
             {
                 Disconnect(follower.Url, a.Url);
             }
 
             var leader = await await Task.WhenAny(leaderSelected);
+
+         
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -70,13 +73,15 @@ namespace SlowTests.Server.Rachis
             followers = followers.Except(new[] { leader }).ToArray();
 
             leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_ => x)).ToArray();
-
+           
             foreach (var follower in followers)
             {
                 Disconnect(follower.Url, leader.Url);
             }
 
             leader = await await Task.WhenAny(leaderSelected);
+
+          
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {

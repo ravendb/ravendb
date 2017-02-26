@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using SlowTests.Server.Rachis;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -9,10 +10,17 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-
-            using (var a = new FastTests.Server.Documents.Indexing.BloomFilterTests())
+            Console.WriteLine(Process.GetCurrentProcess().Id);
+            Console.WriteLine();
+            for (int i = 0; i < 10; i++)
             {
-                a.CheckReadonly();
+
+                var sp = Stopwatch.StartNew();
+                using (var a = new BasicCluster())
+                {
+                    a.ClusterWithFiveNodesAndMultipleElections().Wait();
+                }
+                Console.WriteLine(sp.Elapsed);
             }
         }
     }

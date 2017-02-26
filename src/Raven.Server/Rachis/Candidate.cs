@@ -63,6 +63,7 @@ namespace Raven.Server.Rachis
                             continue; // we already voted for ourselves
                         var candidateAmbassador = new CandidateAmbassador(_engine, this, voter, clusterTopology.ApiKey);
                         _voters.Add(candidateAmbassador);
+                        _voters.Add(candidateAmbassador);
                         try
                         {
                             _engine.AppendStateDisposable(this, candidateAmbassador);
@@ -104,7 +105,8 @@ namespace Raven.Server.Rachis
                         var majority = ((_voters.Count + 1) / 2) + 1;
                         if (realElectionsCount >= majority)
                         {
-                            _engine.SwitchToLeaderState();
+                            Running = false;
+                            _engine.SwitchToLeaderState(ElectionTerm);
                             break;
                         }
                         if (RunRealElectionAtTerm != ElectionTerm &&
@@ -118,7 +120,7 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info("Failure during candidancy run", e);
+                        _engine.Log.Info("Failure during candidacy run", e);
                     }
                 }
             }

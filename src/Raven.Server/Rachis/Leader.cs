@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.Http;
+using Newtonsoft.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -190,7 +192,7 @@ namespace Raven.Server.Rachis
                     {
                         case 0: // new entry
                             _newEntry.Reset();
-                            // release any waiting ambasaddors to send immediately
+                            // release any waiting ambassadors to send immediately
                             var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
                             ThreadPool.QueueUserWorkItem(o => ((TaskCompletionSource<object>)o).TrySetResult(null), old);
                             if (_voters.Count == 0)
@@ -514,30 +516,30 @@ namespace Raven.Server.Rachis
                 {
                     case TopologyModification.Voter:
                         clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Concat(new[] { node }).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).ToArray()
+                            clusterTopology.Voters.Concat(new[] { node }).OrderBy(x=>x).ToArray(),
+                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
                         );
                         break;
                     case TopologyModification.Promotable:
                         clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).ToArray(),
-                            clusterTopology.Promotables.Concat(new[] { node }).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).ToArray()
+                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.Promotables.Concat(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
                         );
                         break;
                     case TopologyModification.NonVoter:
                         clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).ToArray(),
-                            clusterTopology.NonVotingMembers.Concat(new[] { node }).ToArray()
+                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.NonVotingMembers.Concat(new[] { node }).OrderBy(x => x).ToArray()
                         );
                         break;
                     case TopologyModification.Remove:
                         clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).ToArray()
+                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
                         );
                         break;
                     default:
