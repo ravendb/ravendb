@@ -1,44 +1,11 @@
-{
-  "version": "4.0.0-*",
-  "description": "Raven.Client is the client library for accessing RavenDB",
+﻿{
+  "version": "1.0.0-*",
+  "description": "Lambda2JSCore",
   "authors": [
     "Hibernating Rhinos"
   ],
-  "packOptions": {
-    "summary": "This package includes the client API of RavenDB. RavenDB is a document database for the .NET platform, offering a flexible data model design to fit the needs of real world systems.",
-    "licenseUrl": "http://www.ravendb.net/licensing",
-    "repository": {
-      "type": "git",
-      "url": "https://github.com/ravendb/ravendb"
-    },
-    "requireLicenseAcceptance": true,
-    "iconUrl": "http://static.ravendb.net/logo-for-nuget.png",
-    "owners": [
-      "Hibernating Rhinos"
-    ],
-    "tags": [
-      "ravendb",
-      "client",
-      "database",
-      "nosql",
-      "doc db"
-    ],
-    "projectUrl": "https://ravendb.net",
-    "files": {
-      "mappings": {
-        "lib/netstandard1.3/": {
-          "includeFiles": [
-            "../Sparrow/bin/Release/netstandard1.3/Sparrow.dll"
-          ]
-        }
-      }
-    }
-  },
+
   "buildOptions": {
-    "allowUnsafe": true,
-    "define": [
-      "PORTABLE"
-    ],
     "compile": {
       "include": [
         "**/*.cs",
@@ -53,19 +20,8 @@
       }
     }
   },
-
   "dependencies": {
-    "Sparrow": {
-      "version": "4.0.0-*",
-      "type": "build",
-      "target": "project"
-    },
-    "DotNetCross.Memory.Unsafe": "0.2.3.4",
-    "Newtonsoft.Json": "9.0.1",
-    "System.Net.Security": "4.3.0",
-    "System.Runtime.InteropServices.RuntimeInformation": "4.3.0",
-    "System.ServiceModel.Primitives": "4.3.0",
-    "Lambda2Js.Core": "1.0.0-*"
+
   },
 
   "frameworks": {
@@ -87,7 +43,7 @@
         "System.IO.FileSystem": "4.3.0",
         "System.Linq": "4.3.0",
         "System.Linq.Queryable": "4.3.0",
-        "System.Net.Http": "4.3.1",
+        "System.Net.Http": "4.3.0",
         "System.Net.NameResolution": "4.3.0",
         "System.Net.Requests": "4.3.0",
         "System.Net.Sockets": "4.3.0",
