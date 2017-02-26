@@ -27,6 +27,9 @@
                 <ul class="dropdown-menu">
                     <li><a href="#" data-bind="click: newDocumentInCollection.bind($root)"><i class="icon-plus"></i> New document in current collection</a></li>
                 </ul>
+                <span data-bind="visible: isLoading">
+                    <span class="global-spinner"></span>
+                </span>
             </div>
             
             <div class="pull-right">

@@ -37,6 +37,7 @@ class documents extends viewModelBase {
 
     static readonly allDocumentCollectionName = "__all_docs";
 
+    isLoading = ko.observable<boolean>(false);
     inSpecificCollection: KnockoutComputed<boolean>;
     deleteEnabled: KnockoutComputed<boolean>;
 
@@ -107,7 +108,9 @@ class documents extends viewModelBase {
     }
 
     fetchDocs(skip: number, take: number): JQueryPromise<pagedResult<any>> {
-        return this.currentCollection().fetchDocuments(skip, take);
+        this.isLoading(true);
+        return this.currentCollection().fetchDocuments(skip, take)
+            .always(() => this.isLoading(false));
     }
 
     compositionComplete() {
