@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
+using SlowTests.Server.Replication;
 using Xunit;
 
 namespace StressTests.Issues
@@ -12,7 +13,7 @@ namespace StressTests.Issues
         {
             Parallel.For(0, 10, RavenTestHelper.DefaultParallelOptions, i =>
             {
-                using (var store = new ReplicationTombstoneTests())
+                using (var store = new ReplicationTombstoneTestsSlow())
                 {
                     store.Two_tombstones_should_replicate_in_master_master();
                 }

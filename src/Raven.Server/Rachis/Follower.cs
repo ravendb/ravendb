@@ -130,7 +130,7 @@ namespace Raven.Server.Rachis
         private void NegotiateWithLeader(TransactionOperationContext context, LogLengthNegotiation negotiation)
         {
             // only the leader can send append entries, so if we accepted it, it's the leader
-            
+
             if (negotiation.Term > _engine.CurrentTerm)
             {
                 _engine.FoundAboutHigherTerm(negotiation.Term);
@@ -221,7 +221,6 @@ namespace Raven.Server.Rachis
                     return false;
 
                 int size;
-                Slice key;
                 long entries;
                 switch ((RootObjectType)type)
                 {
@@ -231,13 +230,10 @@ namespace Raven.Server.Rachis
 
                         size = reader.ReadInt32();
                         reader.ReadExactly(size);
-                        Tree tree;
-
-                        using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
-                        {
-                            txw.DeleteTree(key);
-                            tree = txw.CreateTree(key);
-                        }
+                        Slice treeName;// will be freed on context close
+                        Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out treeName);
+                        txw.DeleteTree(treeName);
+                        var tree = txw.CreateTree(treeName);
 
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
@@ -246,13 +242,16 @@ namespace Raven.Server.Rachis
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
-                            using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
+                            Slice valKey;
+                            using (
+                                Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
+                                    out valKey))
                             {
                                 size = reader.ReadInt32();
                                 reader.ReadExactly(size);
 
                                 byte* ptr;
-                                using (tree.DirectAdd(key, size, out ptr))
+                                using (tree.DirectAdd(valKey, size, out ptr))
                                 {
                                     fixed (byte* pBuffer = reader.Buffer)
                                     {
@@ -268,22 +267,21 @@ namespace Raven.Server.Rachis
 
                         size = reader.ReadInt32();
                         reader.ReadExactly(size);
-                        Table table;
-                        using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
-                        {
-                            var tableTree = txw.ReadTree(key, RootObjectType.Table);
+                        Slice tableName;// will be freed on context close
+                        Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
+                            out tableName);
+                        var tableTree = txw.ReadTree(tableName, RootObjectType.Table);
 
-                            // Get the table schema
-                            var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
-                            var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
-                            if (schemaPtr == null)
-                                throw new InvalidOperationException(
-                                    "When trying to install snapshot, found missing table " + key);
+                        // Get the table schema
+                        var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                        var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+                        if (schemaPtr == null)
+                            throw new InvalidOperationException(
+                                "When trying to install snapshot, found missing table " + tableName);
 
-                            var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
+                        var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
 
-                            table = txw.OpenTable(schema, key);
-                        }
+                        var table = txw.OpenTable(schema, tableName);
 
                         // delete the table
                         TableValueReader tvr;
@@ -309,7 +307,6 @@ namespace Raven.Server.Rachis
                                 table.Insert(ref tvr);
                             }
                         }
-
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(type), type.ToString());

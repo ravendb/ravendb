@@ -13,7 +13,6 @@ namespace SlowTests.Server.Rachis
 {
     public class BasicCluster : RachisConsensusTestBase
     {
-
         [Fact]
         public async Task ClusterWithFiveNodesAndMultipleElections()
         {
@@ -162,22 +161,21 @@ namespace SlowTests.Server.Rachis
             }
 
             var b = SetupServer();
-            b.StateMachine.Predicate = (machine, ctx) => machine.Read(ctx, "test") == expected;
 
             await a.AddToClusterAsync(b.Url);
-
+            long lastIndex = 0;
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    lastIndex  = await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
                     {
                         ["Name"] = "test",
                         ["Value"] = i + 5
                     }, "test"));
                 }
             }
-            Assert.True(await b.StateMachine.ReachedExpectedAmount.WaitAsync(TimeSpan.FromSeconds(150)));
+            Assert.True(b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).Wait(5000));
             TransactionOperationContext context;
             using (b.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
@@ -193,8 +191,6 @@ namespace SlowTests.Server.Rachis
             var a = SetupServer(true);
             var b = SetupServer();
 
-            b.StateMachine.Predicate = (machine, context) => machine.Read(context, "test") == expected;
-
             await a.AddToClusterAsync(b.Url);
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -209,7 +205,7 @@ namespace SlowTests.Server.Rachis
                     }, "test")));
                 }
 
-                await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                var lastIndex = await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "test",
                     ["Value"] = 9
@@ -220,7 +216,9 @@ namespace SlowTests.Server.Rachis
                     Assert.Equal(TaskStatus.RanToCompletion, task.Status);
                 }
 
-                Assert.True(await b.StateMachine.ReachedExpectedAmount.WaitAsync(TimeSpan.FromSeconds(15)));
+                var waitForCommitIndexChange = b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+
+                Assert.True(waitForCommitIndexChange.Wait(TimeSpan.FromSeconds(5)));
 
                 TransactionOperationContext context;
                 using (b.ContextPool.AllocateOperationContext(out context))
@@ -255,8 +253,5 @@ namespace SlowTests.Server.Rachis
                 }
             }
         }
-
-
     }
-
 }

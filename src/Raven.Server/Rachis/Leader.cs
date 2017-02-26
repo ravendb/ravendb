@@ -25,8 +25,8 @@ namespace Raven.Server.Rachis
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>();
 
-        private readonly ConcurrentDictionary<long, TaskCompletionSource<object>> _entries =
-            new ConcurrentDictionary<long, TaskCompletionSource<object>>();
+        private readonly ConcurrentDictionary<long, Tuple<long, TaskCompletionSource<long>>> _entries =
+            new ConcurrentDictionary<long, Tuple<long, TaskCompletionSource<long>>>();
 
         private int _hasNewTopology;
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
@@ -306,10 +306,14 @@ namespace Raven.Server.Rachis
                 if (kvp.Key > _lastCommit)
                     continue;
 
-                TaskCompletionSource<object> value;
+                Tuple<long, TaskCompletionSource<long>> value;
                 if (_entries.TryRemove(kvp.Key, out value))
                 {
-                    ThreadPool.QueueUserWorkItem(o => ((TaskCompletionSource<object>)o).TrySetResult(null), value);
+                    ThreadPool.QueueUserWorkItem(o =>
+                    {
+                        var tuple = (Tuple<long, TaskCompletionSource<long>>)o;
+                        tuple.Item2.TrySetResult(tuple.Item1);
+                    }, value);
                 }
             }
             if (_entries.Count != 0)
@@ -430,9 +434,8 @@ namespace Raven.Server.Rachis
 
         }
 
-        public Task PutAsync(BlittableJsonReaderObject cmd)
+        public Task<long> PutAsync(BlittableJsonReaderObject cmd)
         {
-            TaskCompletionSource<object> tcs;
             long index;
 
             TransactionOperationContext context;
@@ -442,7 +445,8 @@ namespace Raven.Server.Rachis
                 index = _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
             }
-            _entries[index] = tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<long>();
+            _entries[index] = Tuple.Create(index, tcs);
 
             _newEntry.Set();
             return tcs.Task;
@@ -457,9 +461,13 @@ namespace Raven.Server.Rachis
                 _newEntriesArrived.TrySetCanceled();
                 foreach (var entry in _entries)
                 {
-                    entry.Value.TrySetCanceled();
+                    entry.Value.Item2.TrySetCanceled();
                 }
             });
+
+            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                _thread.Join();
+
             var ae = new ExceptionAggregator("Could not properly dispose Leader");
             foreach (var ambasaddor in _nonVoters)
             {
@@ -474,9 +482,7 @@ namespace Raven.Server.Rachis
             {
                 ae.Execute(ambasaddor.Value.Dispose);
             }
-            //TODO: shutdown notification of some kind?
-            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
+        
 
             _newEntry.Dispose();
             _voterResponded.Dispose();
@@ -504,7 +510,7 @@ namespace Raven.Server.Rachis
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
             {
-                if (_topologyModification != null)
+                if (Interlocked.CompareExchange(ref _topologyModification, null, null) != null)
                 {
                     task = null;
                     return false;
@@ -549,12 +555,12 @@ namespace Raven.Server.Rachis
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
-                TaskCompletionSource<object> tcs;
-                _entries[index] = tcs = new TaskCompletionSource<object>();
+                var tcs = new TaskCompletionSource<long>();
+                _entries[index] =Tuple.Create(index, tcs);
                 _topologyModification = task = tcs.Task.ContinueWith(_ =>
-               {
-                   _topologyModification = null;
-               });
+                {
+                    Interlocked.Exchange(ref _topologyModification, null);
+                });
                 context.Transaction.Commit();
             }
             Interlocked.Exchange(ref _hasNewTopology, 1);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -19,19 +20,24 @@ namespace SlowTests.Server.Rachis
         public async Task CanApplyCommitAcrossAllCluster(int amount)
         {
             var leader = await CreateNetworkAndGetLeader(amount);
-            SetupPredicateForCluster((machine, context) => machine.Read(context, "test") == 10);
+            long lastIndex = 0;
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    await leader.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    lastIndex =  await leader.PutAsync(ctx.ReadObject(new DynamicJsonValue
                     {
                         ["Name"] = "test",
                         ["Value"] = i 
                     }, "test"));
                 }
             }
-            await WaitOnPredicateForCluster(TimeSpan.FromSeconds(150));
+
+            foreach (var r in RachisConsensuses)
+            {
+                Assert.True(r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).Wait(5000));   
+            }
+            
         }
     }
 }

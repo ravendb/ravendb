@@ -16,7 +16,7 @@ namespace SlowTests.Server.Rachis
         [Fact]
         public async Task When_command_committed_CompletionTaskSource_is_notified()
         {
-            const int CommandCount = 10;
+            const int commandCount = 10;
             const int clusterSize = 3;
             var leader = await CreateNetworkAndGetLeader(clusterSize);
             var nonLeader = GetFirstNonLeader();
@@ -25,7 +25,7 @@ namespace SlowTests.Server.Rachis
             TransactionOperationContext context;
             using (leader.ContextPool.AllocateOperationContext(out context))
             {
-                for (var i = 0; i < CommandCount; i++)
+                for (var i = 0; i < commandCount; i++)
                 {
                     tasks.Add(leader.PutAsync(context.ReadObject(new DynamicJsonValue
                     {

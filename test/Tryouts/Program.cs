@@ -18,7 +18,7 @@ namespace Tryouts
                 var sp = Stopwatch.StartNew();
                 using (var a = new BasicCluster())
                 {
-                    a.ClusterWithFiveNodesAndMultipleElections().Wait();
+                    a.ClusterWithLateJoiningNodeRequiringSnapshot().Wait();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

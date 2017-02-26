@@ -356,7 +356,7 @@ namespace Raven.Server.Rachis
             leader.Start();
         }
 
-        public Task PutAsync(BlittableJsonReaderObject cmd)
+        public Task<long> PutAsync(BlittableJsonReaderObject cmd)
         {
             var leader = _currentLeader;
             if (leader == null)

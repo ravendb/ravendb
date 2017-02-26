@@ -109,9 +109,7 @@ namespace Raven.Server.Rachis
                                     AppendEntries appendEntries;
                                     using (context.OpenReadTransaction())
                                     {
-                                        var table = context.Transaction.InnerTransaction.OpenTable(
-                                            RachisConsensus.LogsTable,
-                                            RachisConsensus.EntriesSlice);
+                                        var table = context.Transaction.InnerTransaction.OpenTable(RachisConsensus.LogsTable, RachisConsensus.EntriesSlice);
 
                                         var reveredNextIndex = Bits.SwapBytes(_followerMatchIndex + 1);
                                         Slice key;

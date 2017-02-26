@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -29,7 +30,7 @@ namespace Tests.Infrastructure
             {
                 SetupServer(i == leaderIndex);
             }
-            var leader = _rachisConsensuses[leaderIndex];
+            var leader = RachisConsensuses[leaderIndex];
             var followerUpgradedToVoterTasks = new List<Task>();
             for (var i = 0; i < nodeCount; i++)
             {
@@ -37,20 +38,22 @@ namespace Tests.Infrastructure
                 {
                     continue;
                 }
-                var follower = _rachisConsensuses[i];
+                var follower = RachisConsensuses[i];
                 await leader.AddToClusterAsync(follower.Url);
                 followerUpgradedToVoterTasks.Add(follower.WaitForTopology(Leader.TopologyModification.Voter));
             }
-            var timeout = 5000*nodeCount;
+            var timeout = 5000*nodeCount ;
+            if (Debugger.IsAttached)
+                timeout *= 100;
             Assert.True(Task.WhenAll(followerUpgradedToVoterTasks).Wait(timeout),$"Cluster didn't become stable after {timeout}ms");
-            Assert.True(_rachisConsensuses[leaderIndex].CurrentState == RachisConsensus.State.Leader,"The leader has changed while waiting for cluster to become stable");
+            Assert.True(RachisConsensuses[leaderIndex].CurrentState == RachisConsensus.State.Leader,"The leader has changed while waiting for cluster to become stable");
             return leader;
         }
 
         protected RachisConsensus<CountingStateMachine> GetFirstNonLeader()
         {
             return
-                _rachisConsensuses.First(
+                RachisConsensuses.First(
                     x =>
                         x.CurrentState != RachisConsensus.State.Leader &&
                         x.CurrentState != RachisConsensus.State.LeaderElect);
@@ -70,28 +73,10 @@ namespace Tests.Infrastructure
             var rachis = new RachisConsensus<CountingStateMachine>(serverA, url, seed);
             rachis.Initialize();
             _listeners.Add(tcpListener);
-            _rachisConsensuses.Add(rachis);
+            RachisConsensuses.Add(rachis);
             var task = AcceptConnection(tcpListener, rachis);
             _mustBeSuccessfulTasks.Add(task);
             return rachis;
-        }
-
-        protected void SetupPredicateForCluster(Func<CountingStateMachine, TransactionOperationContext, bool> predicate,
-            IEnumerable<RachisConsensus<CountingStateMachine>> except = null)
-        {
-            var nodes = except == null ? _rachisConsensuses : _rachisConsensuses.Except(except);
-            foreach (var node in nodes)
-            {
-                node.StateMachine.Predicate = predicate;
-            }
-        }
-
-        protected async Task WaitOnPredicateForCluster(TimeSpan timeout, IEnumerable<RachisConsensus<CountingStateMachine>> except = null)
-        {
-            var nodes = except == null ? _rachisConsensuses : _rachisConsensuses.Except(except);
-            var waitTasks = nodes.Select(x => x.StateMachine.ReachedExpectedAmount.WaitAsync(timeout)).ToArray();
-            await Task.WhenAll(waitTasks);
-            Assert.True(waitTasks.All(x=>x.IsCompleted && x.Result), $"Not all nodes reached the predicate condition in time (time={timeout})");
         }
 
         private async Task AcceptConnection(TcpListener tcpListener, RachisConsensus rachis)
@@ -105,7 +90,7 @@ namespace Tests.Infrastructure
                 {
                     tcpClient = await tcpListener.AcceptTcpClientAsync();
                 }
-                catch (ObjectDisposedException)
+                catch (InvalidOperationException)
                 {
                     break;
                 }
@@ -148,14 +133,14 @@ namespace Tests.Infrastructure
         private readonly ConcurrentDictionary<string, ConcurrentSet<string>> _rejectionList = new ConcurrentDictionary<string, ConcurrentSet<string>>();
         private readonly ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>> _connections = new ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>>();
         private readonly List<TcpListener> _listeners = new List<TcpListener>();
-        private readonly List<RachisConsensus<CountingStateMachine>> _rachisConsensuses = new List<RachisConsensus<CountingStateMachine>>();
+        protected readonly List<RachisConsensus<CountingStateMachine>> RachisConsensuses = new List<RachisConsensus<CountingStateMachine>>();
         private readonly List<Task> _mustBeSuccessfulTasks = new List<Task>();        
         private readonly Random _random = new Random();
         private int _count;
 
         public void Dispose()
         {
-            foreach (var rc in _rachisConsensuses)
+            foreach (var rc in RachisConsensuses)
             {
                 rc.Dispose();
             }
@@ -173,9 +158,6 @@ namespace Tests.Infrastructure
 
         public class CountingStateMachine : RachisStateMachine
         {
-            public Func<CountingStateMachine, TransactionOperationContext, bool> Predicate;
-            public AsyncManualResetEvent ReachedExpectedAmount = new AsyncManualResetEvent();
-
             public long Read(TransactionOperationContext context, string name)
             {
                 var tree = context.Transaction.InnerTransaction.ReadTree("values");
@@ -194,22 +176,11 @@ namespace Tests.Infrastructure
                 var tree = context.Transaction.InnerTransaction.CreateTree("values");
                 tree.Increment(name, val);
 
-                if (Predicate?.Invoke(this, context) == true)
-                {
-                    context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose +=
-                        tx =>
-                        {
-                            ReachedExpectedAmount.Set();
-                        };
-                }
             }
 
             public override void OnSnapshotInstalled(TransactionOperationContext context)
             {
-                if (Predicate?.Invoke(this, context) == true)
-                {
-                    ReachedExpectedAmount.Set();
-                }
+            
             }
 
             public override bool ShouldSnapshot(Slice slice, RootObjectType type)
