@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Documents.Replication;
 using Sparrow.Json.Parsing;
 
@@ -14,45 +15,64 @@ namespace Raven.Server.Documents.Replication
         Failed
     }
 
+    public class LiveStats
+    {
+        public DateTime SampledAt;
+        public Dictionary<string, DateTime> OutgoingHeartbeats = new Dictionary<string, DateTime>();
+        public Dictionary<string, DateTime> IncomingHeartbeats = new Dictionary<string, DateTime>();
+        public string ConflictResolverStatus;
+        public long ConflictsCount;
+
+        public void Sample(DocumentReplicationLoader loader, ReplicationStatistics stats)
+        {
+            OutgoingHeartbeats.Clear();
+            IncomingHeartbeats.Clear();
+
+            SampledAt = DateTime.UtcNow;
+            ConflictsCount = loader.ConflictsCount;
+            ConflictResolverStatus = loader.ResolveConflictsTask.Status.ToString();
+            var outgoingReplicationHandlers = loader.OutgoingHandlers ?? Enumerable.Empty<OutgoingReplicationHandler>();
+
+            foreach (var o in outgoingReplicationHandlers)
+            {
+                OutgoingHeartbeats[o.FromToString] = new DateTime(o.LastHeartbeatTicks);
+            }
+
+            var incomingReplicationHandlers = loader.IncomingHandlers ?? Enumerable.Empty<IncomingReplicationHandler>();
+            foreach (var i in incomingReplicationHandlers)
+            {
+                IncomingHeartbeats[i.FromToString] = new DateTime(i.LastHeartbeatTicks);
+            }
+        }
+    }
+
     public class ReplicationStatistics
     {
         private const int MaxEntries = 1024;
         public ConcurrentQueue<IStatsEntry> OutgoingStats = new ConcurrentQueue<IStatsEntry>();
         public ConcurrentQueue<IStatsEntry> IncomingStats = new ConcurrentQueue<IStatsEntry>();
         public Queue<IStatsEntry> ResolverStats = new Queue<IStatsEntry>();
+        public LiveStats CurrentStats = new LiveStats();
 
         private readonly DocumentReplicationLoader _loader;
+        private readonly SemaphoreSlim _locker = new SemaphoreSlim(1);
 
         public ReplicationStatistics(DocumentReplicationLoader loader)
         {
             _loader = loader;
         }
 
-        public DynamicJsonValue LiveStats()
+        public void Update()
         {
-            var outgoingHeartBeats = new DynamicJsonValue();
-            var incomingHeartBeats = new DynamicJsonValue();
-            var outgoingReplicationHandlers = _loader.OutgoingHandlers ?? Enumerable.Empty<OutgoingReplicationHandler>();
-
-            foreach (var o in outgoingReplicationHandlers)
+            _locker.Wait(5);
+            try
             {
-                outgoingHeartBeats[o.FromToString] = new DateTime(o.LastHeartbeatTicks);
+                CurrentStats.Sample(_loader, this);
             }
-
-            var incomingReplicationHandlers = _loader.IncomingHandlers ?? Enumerable.Empty<IncomingReplicationHandler>();
-            foreach (var i in incomingReplicationHandlers)
+            finally
             {
-                incomingHeartBeats[i.FromToString] = new DateTime(i.LastHeartbeatTicks);
-            }
-
-            return new DynamicJsonValue
-            {
-                ["SampledAt"] = DateTime.UtcNow,
-                ["OutgoingHeartbeats"] = outgoingHeartBeats,
-                ["IncomingHeartbeats"] = incomingHeartBeats,
-                ["ConflictResolverStatus"] = _loader.ResolveConflictsTask.Status.ToString(),
-                ["ConflictsCount"] = _loader.ConflictsCount
-            };
+                _locker.Release();
+            }           
         }
 
         public interface IStatsEntry
