@@ -24,11 +24,11 @@ class deleteCollection extends dialogViewModelBase {
             .fail(response => this.operationIdTask.reject(response));
 
         this.deletionStarted = true;
-        dialog.close(this);
+        dialog.close(this, true);
     }
 
     cancel() {
-        dialog.close(this);
+        dialog.close(this, false);
     }
 
     deactivate() {

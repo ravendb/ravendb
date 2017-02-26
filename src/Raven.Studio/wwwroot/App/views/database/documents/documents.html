@@ -31,7 +31,7 @@
             
             <div class="pull-right">
                 <div class="btn-group btn-group-sm">
-                    <button type="button" class="btn btn-danger" data-bind="click: deleteSelected">
+                    <button type="button" class="btn btn-danger" data-bind="click: deleteSelected, css: { 'btn-spinner': spinners.delete() }, enable: deleteEnabled">
                         <span class="icon-trash"></span> <span>Delete</span>
                     </button>
                 </div>
