@@ -58,7 +58,7 @@ namespace Raven.Database.Storage
         JsonDocumentMetadata DocumentMetadataByKey(string key);
 
         bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag);
-        AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata);
+        AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata, InvokeSource source = InvokeSource.Default);
 
         void IncrementDocumentCount(int value);
         AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting);
@@ -66,6 +66,12 @@ namespace Raven.Database.Storage
         void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag);
         Etag GetBestNextDocumentEtag(Etag etag);
         DebugDocumentStats GetDocumentStatsVerySlowly(Action<string> progress, CancellationToken token);
+    }
+
+    public enum InvokeSource
+    {
+        Default = 1,
+        FromConflictAtReplication = 2
     }
 
     public class DocumentFetchError

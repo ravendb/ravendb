@@ -228,11 +228,14 @@ namespace Raven.Database.Actions
             }
         }
 
-        private void RemoveMetadataReservedProperties(RavenJObject metadata)
+        private void RemoveMetadataReservedProperties(RavenJObject metadata, InvokeSource source = InvokeSource.Default)
         {
             RemoveReservedProperties(metadata);
             metadata.Remove("Raven-Last-Modified");
-            metadata.Remove("Last-Modified");
+            if (source != InvokeSource.FromConflictAtReplication)
+            {
+                metadata.Remove("Last-Modified");
+            }
         }
 
         private void RemoveReservedProperties(RavenJObject document)
@@ -707,14 +710,14 @@ namespace Raven.Database.Actions
             itemsToInclude = docRetriever.ItemsToInclude;
             return result;
         }
-
-
-        public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation, IEnumerable<string> participatingIds = null)
+        
+        public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation, 
+            IEnumerable<string> participatingIds = null,InvokeSource source = InvokeSource.Default)
         {
             WorkContext.MetricsCounters.DocsPerSecond.Mark();
             key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
             RemoveReservedProperties(document);
-            RemoveMetadataReservedProperties(metadata);
+            RemoveMetadataReservedProperties(metadata,source);
             var newEtag = Etag.Empty;
 
             using (Database.DocumentLock.Lock())
@@ -734,11 +737,13 @@ namespace Raven.Database.Actions
 
                         Database.PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
-                        var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
+                        var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata, source);
                         newEtag = addDocumentResult.Etag;
 
                         Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions, participatingIds);
+
                         metadata[Constants.LastModified] = addDocumentResult.SavedAt;
+                        
                         metadata.EnsureSnapshot(
                             "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
                         document.EnsureSnapshot(

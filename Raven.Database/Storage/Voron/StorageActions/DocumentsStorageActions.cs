@@ -602,7 +602,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             return true;
         }
 
-        public AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata)
+        public AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata, InvokeSource source = InvokeSource.Default)
         {
             if (string.IsNullOrEmpty(key))
                 throw new ArgumentNullException("key");
@@ -612,7 +612,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             DateTime savedAt;
             var normalizedKey = CreateKey(key);
-            var isUpdate = WriteDocumentData(key, normalizedKey, etag, data, metadata, out newEtag, out existingEtag, out savedAt);
+            var isUpdate = WriteDocumentData(key, normalizedKey, etag, data, metadata, source, out newEtag, out existingEtag, out savedAt);
 
             if (logger.IsDebugEnabled) { logger.Debug("AddDocument() - {0} document with key = '{1}'", isUpdate ? "Updated" : "Added", key); }
 
@@ -821,7 +821,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        private bool WriteDocumentData(string key, string normalizedKey, Etag etag, RavenJObject data, RavenJObject metadata, out Etag newEtag, out Etag existingEtag, out DateTime savedAt)
+        private bool WriteDocumentData(string key, string normalizedKey, Etag etag, RavenJObject data, RavenJObject metadata, InvokeSource source,
+            out Etag newEtag, out Etag existingEtag, out DateTime savedAt)
         {
             var normalizedKeySlice = (Slice)normalizedKey;
             var keyByEtagDocumentIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
@@ -856,7 +857,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             tableStorage.Documents.Add(writeBatch.Value, normalizedKeySlice, dataStream, existingVersion ?? 0);
 
             newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-            savedAt = SystemTime.UtcNow;
+            var keepLastModified = source == InvokeSource.FromConflictAtReplication && metadata.ContainsKey(Constants.LastModified);
+            savedAt = keepLastModified ? metadata.Value<DateTime>(Constants.LastModified) : SystemTime.UtcNow;
 
             var isUpdated = PutDocumentMetadataInternal(key, normalizedKeySlice, metadata, newEtag, savedAt);
 

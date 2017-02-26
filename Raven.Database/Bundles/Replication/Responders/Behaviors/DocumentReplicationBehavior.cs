@@ -11,6 +11,7 @@ using Raven.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Json.Linq;
+using Raven.Database.Actions;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -35,7 +36,7 @@ namespace Raven.Bundles.Replication.Responders
 
         protected override void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, RavenJObject incoming)
         {
-            Database.Documents.Put(id, etag, incoming, metadata, null);
+            Database.Documents.Put(id, etag, incoming, metadata, null, null, InvokeSource.FromConflictAtReplication);
             Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
         }
 
@@ -44,7 +45,7 @@ namespace Raven.Bundles.Replication.Responders
         {
             existingMetadata.Add(Constants.RavenReplicationConflictDocument, true);
             existingMetadata.Add(Constants.RavenReplicationConflict, true);
-            Actions.Documents.AddDocument(existingDocumentConflictId, Etag.Empty, existingItem.DataAsJson, existingItem.Metadata);
+            Actions.Documents.AddDocument(existingDocumentConflictId, Etag.Empty, existingItem.DataAsJson, existingItem.Metadata,InvokeSource.FromConflictAtReplication);
             var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? Etag.Empty : existingItem.Etag;
             Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
             var conflictsArray = new RavenJArray(existingDocumentConflictId, newDocumentConflictId);
@@ -58,7 +59,7 @@ namespace Raven.Bundles.Replication.Responders
                                                               {Constants.RavenReplicationConflict, true},
                                                               {"@Http-Status-Code", 409},
                                                               {"@Http-Status-Description", "Conflict"}
-                                                          });
+                                                          }, InvokeSource.FromConflictAtReplication);
 
             return new CreatedConflict()
             {
@@ -95,7 +96,10 @@ namespace Raven.Bundles.Replication.Responders
             if (existingDoc != null)
             {
                 ReplicationTask.EnsureReplicationInformationInMetadata(existingDoc.Metadata, Database);
-
+                if (existingDoc.Metadata.ContainsKey(Constants.LastModified) == false)
+                {
+                    existingDoc.Metadata.Add(Constants.LastModified, existingDoc.LastModified);
+                }
                 existingItem = existingDoc;
                 existingEtag = existingDoc.Etag;
                 deleted = false;
