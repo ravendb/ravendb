@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -161,7 +162,7 @@ namespace Raven.Server
                 {
                     var djv = new DynamicJsonValue
                     {
-                        [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{context.Request.Path}?{context.Request.QueryString}",
+                        [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{context.Request.Path}{context.Request.QueryString}",
                         [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
                         [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message
                     };
@@ -177,6 +178,10 @@ namespace Raven.Server
                         errorString = e.ToString();
                     }
 
+                    var f = Guid.NewGuid() + ".error";
+                    File.WriteAllText(f,
+                        $"{context.Request.Path}{context.Request.QueryString}" + Environment.NewLine + errorString);
+
                     djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = errorString;
 
                     MaybeAddAdditionalExceptionData(djv, e);
@@ -186,6 +191,8 @@ namespace Raven.Server
                         var json = ctx.ReadObject(djv, "exception");
                         writer.WriteObject(json);
                     }
+
+                    File.Delete(f);
                 }
             }
         }
