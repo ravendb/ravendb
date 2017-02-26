@@ -173,10 +173,7 @@ class documents extends viewModelBase {
             const idsToDelete = selection.included.map(x => x.getId());
             const deleteDocsDialog = new deleteDocuments(selection.included, this.activeDatabase());
             deleteDocsDialog.deletionTask
-                .done(() => {
-                    this.gridController().reset();
-                })
-                .always(() => this.spinners.delete(false));
+                .always(() => this.onDeleteCompleted());
 
             app.showBootstrapDialog(deleteDocsDialog)
                 .done((deleting: boolean) => {
@@ -207,10 +204,7 @@ class documents extends viewModelBase {
                             }
                         }
                     })
-                    .always(() => {
-                        this.spinners.delete(false);
-                        this.gridController().reset();
-                    });
+                    .always(() => this.onDeleteCompleted());
             });
             app.showBootstrapDialog(deleteCollectionDialog)
                 .done((deletionStarted: boolean) => {
@@ -219,6 +213,11 @@ class documents extends viewModelBase {
                     }
                 });
         }
+    }
+
+    private onDeleteCompleted() {
+        this.spinners.delete(false);
+        this.gridController().reset(false);
     }
 
     /*
