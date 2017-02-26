@@ -14,7 +14,7 @@ namespace SlowTests.Server.Rachis
     public class BasicCluster : RachisConsensusTestBase
     {
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task ClusterWithFiveNodesAndMultipleElections()
         {
             PredictableSeeds = true;
@@ -105,7 +105,7 @@ namespace SlowTests.Server.Rachis
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task ClusterWithThreeNodesAndElections()
         {
             var a = SetupServer(true);
@@ -143,7 +143,7 @@ namespace SlowTests.Server.Rachis
             await Task.WhenAny(bLeader, cLeader);
         }
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task ClusterWithLateJoiningNodeRequiringSnapshot()
         {
             var expected = 45;
@@ -186,7 +186,7 @@ namespace SlowTests.Server.Rachis
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task ClusterWithTwoNodes()
         {
             var expected = 45;
@@ -231,7 +231,7 @@ namespace SlowTests.Server.Rachis
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task CanSetupSingleNode()
         {
             var rachis = SetupServer(true);
