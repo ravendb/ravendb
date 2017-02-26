@@ -1043,11 +1043,11 @@ namespace Raven.Server.Documents
 
             if (_conflictCount > 0)
             {
-                    var conflicts = GetConflictsFor(context, loweredKey);
-                    if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
-                    {
+                var conflicts = GetConflictsFor(context, loweredKey);
+                if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
+                {
                     if (local.Item2 != null || local.Item1 != null)
-                        {
+                    {
                         // Something is wrong, we can't have conflicts and local document/tombstone
                         throw new InvalidDataException($"we can't have conflicts and local document/tombstone with the key {loweredKey}");
                     }
@@ -1056,7 +1056,6 @@ namespace Raven.Server.Documents
             }
             else
             {
-
                 byte* lowerKey;
                 int lowerSize;
                 byte* keyPtr;
@@ -1064,9 +1063,9 @@ namespace Raven.Server.Documents
 
                 if (key != null)
                 {
-                    DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, 
+                    DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key,
                         out lowerKey, out lowerSize, out keyPtr, out keySize);
-                
+
                     if (local.Item2 == null && local.Item1 == null)
                     {
                         // we adding a tombstone without having any pervious document, it could happened if this was called
@@ -1075,7 +1074,6 @@ namespace Raven.Server.Documents
                         if (expectedEtag != null)
                             throw new ConcurrencyException(
                                 $"Document {key} does not exist, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
-
 
                         if (collectionName == null)
                         {
@@ -1101,19 +1099,19 @@ namespace Raven.Server.Documents
                         if (expectedEtag != null)
                             throw new ConcurrencyException(
                                 $"Document {key} does not exist, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
-                    
+
                         // we update the tombstone
                         etag = CreateTombstone(context,
-                                lowerKey,
-                                lowerSize,
-                                keyPtr,
-                                keySize,
-                                local.Item2.Etag,
-                                collectionName,
-                                local.Item2.ChangeVector,
-                                lastModifiedTicks,
-                                changeVector,
-                                DocumentFlags.None);
+                            lowerKey,
+                            lowerSize,
+                            keyPtr,
+                            keySize,
+                            local.Item2.Etag,
+                            collectionName,
+                            local.Item2.ChangeVector,
+                            lastModifiedTicks,
+                            changeVector,
+                            DocumentFlags.None);
 
                     }
                 }
@@ -1121,45 +1119,47 @@ namespace Raven.Server.Documents
                 {
                     // just delete the document
                     var doc = local.Item1;
-            if (expectedEtag != null && doc.Etag != expectedEtag)
-            {
-                throw new ConcurrencyException(
-                    $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-                {
-                    ActualETag = doc.Etag,
-                            ExpectedETag = (long)expectedEtag
-                };
-            }
+                    if (expectedEtag != null && doc.Etag != expectedEtag)
+                    {
+                        throw new ConcurrencyException(
+                            $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                        {
+                            ActualETag = doc.Etag,
+                            ExpectedETag = (long) expectedEtag
+                        };
+                    }
 
-            EnsureLastEtagIsPersisted(context, doc.Etag);
+                    EnsureLastEtagIsPersisted(context, doc.Etag);
 
-            collectionName = ExtractCollectionName(context, loweredKey, doc.Data);
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                    collectionName = ExtractCollectionName(context, loweredKey, doc.Data);
+                    var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
-            int size;
-            var ptr = table.DirectRead(doc.StorageId, out size);
-            var tvr = new TableValueReader(ptr, size);
+                    int size;
+                    var ptr = table.DirectRead(doc.StorageId, out size);
+                    var tvr = new TableValueReader(ptr, size);
 
                     lowerKey = tvr.Read(0, out lowerSize);
                     keyPtr = tvr.Read(2, out keySize);
 
-            etag = CreateTombstone(context,
-                lowerKey,
-                lowerSize,
-                keyPtr,
-                keySize,
-                doc.Etag,
-                collectionName,
-                doc.ChangeVector,
-                lastModifiedTicks,
-                changeVector,
-                doc.Flags);
+                    etag = CreateTombstone(context,
+                        lowerKey,
+                        lowerSize,
+                        keyPtr,
+                        keySize,
+                        doc.Etag,
+                        collectionName,
+                        doc.ChangeVector,
+                        lastModifiedTicks,
+                        changeVector,
+                        doc.Flags);
 
-            if (collectionName.IsSystem == false)
-            {
-                _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, loweredKey);
-            }
-            table.Delete(doc.StorageId);
+                    if (collectionName.IsSystem == false)
+                    {
+                        _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, loweredKey);
+                    }
+                    table.Delete(doc.StorageId);
+
+                    DeleteAttachmentsOfDocument(context, loweredKey);
                 }
             }
 
@@ -1183,6 +1183,26 @@ namespace Raven.Server.Documents
                 Etag = etag
             };
 
+        }
+
+        private void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice loweredDocumentId)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            Slice startSlice;
+            using (GetAttachmentPrefix(context, loweredDocumentId.Content.Ptr, loweredDocumentId.Size, out startSlice))
+            {
+                table.DeleteByPrimaryKeyPrefix(startSlice, holder =>
+                {
+                    var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+                    int size;
+                    var ptr = holder.Reader.Read((int) AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, out size);
+                    Slice keySlice;
+                    using (Slice.External(context.Allocator, ptr, size, out keySlice))
+                    {
+                        tree.DeleteStream(keySlice);
+                    }
+                });
+            }
         }
 
         public struct DeleteOperationResult
@@ -2854,6 +2874,37 @@ namespace Raven.Server.Documents
             }
         }
 
+        [Conditional("DEBUG")]
+        public void AssertNoAttachmentsForDocument(DocumentsOperationContext context, string documentId)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
+            byte* lowerDocumentId;
+            int lowerDocumentIdSize;
+            byte* documentIdPtr; // not in use
+            int documentIdSize; // not in use
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerDocumentId, out lowerDocumentIdSize,
+                out documentIdPtr, out documentIdSize);
+
+            Slice startSlice;
+            using (GetAttachmentPrefix(context, lowerDocumentId, lowerDocumentIdSize, out startSlice))
+            {
+                foreach (var sr in table.SeekByPrimaryKey(startSlice, true))
+                {
+                    var attachment = TableValueToAttachment(context, ref sr.Reader);
+                    throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");
+                }
+
+                var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+                using (var it = tree.Iterate(false))
+                {
+                    it.RequiredPrefix = startSlice;
+                    if (it.Seek(it.RequiredPrefix))
+                        throw new InvalidOperationException($"Found attachment stream for attachment key {it.CurrentKey} which should be deleted.");
+                }
+            }
+        }
+
         private bool IsAttachmentDeleted(ref TableValueReader reader)
         {
             int size;
@@ -2915,12 +2966,12 @@ namespace Raven.Server.Documents
             return new ReleaseMemory(keyMem, context);
         }
 
-        private ReleaseMemory GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice keySlice)
+        private ReleaseMemory GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice startSlice)
         {
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
             Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
             keyMem.Ptr[lowerKeySize] = (byte) 30; // the record separator
-            keySlice = new Slice(SliceOptions.Key, keyMem);
+            startSlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
         }
 

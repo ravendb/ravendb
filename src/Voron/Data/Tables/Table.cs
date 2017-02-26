@@ -817,7 +817,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public bool SeekOnePrimaryKey(Slice slice,out TableValueReader reader)
+        public bool SeekOnePrimaryKey(Slice slice, out TableValueReader reader)
         {
             Debug.Assert(slice.Options != SliceOptions.Key, "Should be called with only AfterAllKeys or BeforeAllKeys");
 
@@ -939,6 +939,37 @@ namespace Voron.Data.Tables
             }
 
             return deleted;
+        }
+
+        public void DeleteByPrimaryKeyPrefix(Slice startSlice, Action<TableValueHolder> beforeDelete = null)
+        {
+            var pk = _schema.Key;
+            var tree = GetTree(pk);
+            var prefix = startSlice.Clone(_tx.Allocator);
+            TableValueHolder tableValueHolder = null;
+            while (true)
+            {
+                using (var it = tree.Iterate(false))
+                {
+                    it.RequiredPrefix = prefix;
+                    if (it.Seek(it.RequiredPrefix) == false)
+                        return;
+
+                    long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+
+                    if (beforeDelete != null)
+                    {
+                        int size;
+                        var ptr = DirectRead(id, out size);
+                        if (tableValueHolder == null)
+                            tableValueHolder = new TableValueHolder();
+                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
+                        beforeDelete(tableValueHolder);
+                    }
+
+                    Delete(id);
+                }
+            }
         }
 
         public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete,
