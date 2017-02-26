@@ -10,7 +10,7 @@ namespace SlowTests.Server.Rachis
 {
     public class BasicTests : RachisConsensusTestBase
     {
-        [Fact]
+        [Theory]
         [InlineData(2)]
         [InlineData(3)]
         [InlineData(4)]

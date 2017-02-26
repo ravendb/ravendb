@@ -63,7 +63,6 @@ namespace Raven.Server.Rachis
                             continue; // we already voted for ourselves
                         var candidateAmbassador = new CandidateAmbassador(_engine, this, voter, clusterTopology.ApiKey);
                         _voters.Add(candidateAmbassador);
-                        _voters.Add(candidateAmbassador);
                         try
                         {
                             _engine.AppendStateDisposable(this, candidateAmbassador);
