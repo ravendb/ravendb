@@ -23,7 +23,9 @@ namespace SlowTests.Voron.Compaction
         public void ShouldOccupyLessSpace()
         {
             var r = new Random();
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
+            storageEnvironmentOptions.ManualFlushing = true;
+            using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -51,12 +53,14 @@ namespace SlowTests.Voron.Compaction
 
                     tx.Commit();
                 }
+                env.FlushLogToDataFile();
             }
 
             var oldSize = StorageCompactionTests.GetDirSize(new DirectoryInfo(DataDir));
-
+            storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
+            storageEnvironmentOptions.ManualFlushing = true;
             var compactedData = Path.Combine(DataDir, "Compacted");
-            StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
+            StorageCompaction.Execute(storageEnvironmentOptions,
                 (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
 
             var newSize = StorageCompactionTests.GetDirSize(new DirectoryInfo(compactedData));
