@@ -11,6 +11,7 @@ import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection");
+import shiftSelectionPreview = require("widgets/virtualGrid/shiftSelectionPreview");
 
 class virtualGrid<T> {
 
@@ -33,6 +34,7 @@ class virtualGrid<T> {
     private inIncludeSelectionMode: boolean = true;
 
     private selection = ko.observable<virtualGridSelection<T>>();
+    private shiftSelection: shiftSelectionPreview;
 
     private renderHandle = 0;
     private settings = new virtualGridConfig();
@@ -46,7 +48,7 @@ class virtualGrid<T> {
     private static readonly minColumnWidth = 20;
 
     constructor(params: { controller: KnockoutObservable<virtualGridController<T>> }) {
-        this.gridId = _.uniqueId("vg-");
+        this.gridId = _.uniqueId("vg_");
 
         this.refreshSelection();
 
@@ -73,6 +75,10 @@ class virtualGrid<T> {
         this.fetchItems(0, 100);
     }
 
+    dispose() {
+        this.shiftSelection.dispose();
+    }
+
     // Called by Knockout once the grid has been rendered.
     private afterRender() {
         this.initializeUIElements();
@@ -87,7 +93,6 @@ class virtualGrid<T> {
         this.initializeVirtualRows();
         this.$viewportElement.on("scroll", () => this.gridScrolled());
 
-        //TODO: unbind this somewhere!
         //TODO: bind only if resizable form
         this.$gridElement.on("mousedown.columnResize", ".column", (e) => {
             this.handleResize(e);
@@ -98,6 +103,21 @@ class virtualGrid<T> {
             e.cancelBubble = true;
             e.returnValue = false;
         });
+
+        this.shiftSelection = new shiftSelectionPreview(this.gridId, () => this.virtualRows, (s, e) => this.checkIfAllRecordsInRangeAreLoaded(s, e));
+        this.shiftSelection.init();
+    }
+
+    private checkIfAllRecordsInRangeAreLoaded(start: number, end: number): boolean {
+        if (start > end) {
+            throw new Error("invalid range");
+        }
+        const items = this.items;
+        for (let i = start; i < end; i++) {
+            if (!items[i])
+                return false;
+        }
+        return true;
     }
 
     private handleResize(e: JQueryEventObject) {
@@ -438,7 +458,9 @@ class virtualGrid<T> {
                 // If we clicked a checked cell, toggle its selected state.
                 const rowIndex = this.findRowForCell($target).index;
                 if (rowIndex !== null) {
-                    this.toggleRowSelected(rowIndex);
+                    this.toggleRowSelected(rowIndex, e.shiftKey);
+
+                    virtualGridUtils.deselect();
                 }
             }
         }
@@ -519,26 +541,52 @@ class virtualGrid<T> {
         return this.inIncludeSelectionMode ? this.selectionDiff.length : this.totalItemCount - this.selectionDiff.length;
     }
 
-    private toggleRowSelected(rowIndex: number) {
+    private toggleRowSelected(rowIndex: number, withShift: boolean) {
         const isSelected = this.isSelected(rowIndex);
 
-        if (this.inIncludeSelectionMode) {
-            if (isSelected) {
-                _.pull(this.selectionDiff, rowIndex);
+        let newShiftStartIndex: number = null;
+
+        const selectUsingRange = withShift && !!this.shiftSelection.selectionRange;
+
+        if (selectUsingRange) {
+            const [startIdx, endIdxInclusive] = this.shiftSelection.selectionRange;
+
+            if (this.inIncludeSelectionMode) {
+                for (let idx = startIdx; idx <= endIdxInclusive; idx++) {
+                    if (!_.includes(this.selectionDiff, idx)) {
+                        this.selectionDiff.push(idx);
+                    }
+                }
             } else {
-                this.selectionDiff.push(rowIndex);
+                for (let idx = startIdx; idx <= endIdxInclusive; idx++) {
+                    if (_.includes(this.selectionDiff, idx)) {
+                        _.pull(this.selectionDiff, idx);
+                    }
+                }
             }
+
         } else {
-            if (isSelected) {
-                this.selectionDiff.push(rowIndex);
+            if (this.inIncludeSelectionMode) {
+                if (isSelected) {
+                    _.pull(this.selectionDiff, rowIndex);
+                } else {
+                    this.selectionDiff.push(rowIndex);
+                    newShiftStartIndex = rowIndex;
+                }
             } else {
-                _.pull(this.selectionDiff, rowIndex);
+                if (isSelected) {
+                    this.selectionDiff.push(rowIndex);
+                } else {
+                    _.pull(this.selectionDiff, rowIndex);
+                    newShiftStartIndex = rowIndex;
+                }
             }
         }
 
         this.syncSelectAll();
         this.refreshSelection();
         this.render();
+        this.shiftSelection.lastShiftIndex(newShiftStartIndex);
     }
 
     private handleAction(actionId: string, row: virtualRow) {

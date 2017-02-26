@@ -13,6 +13,20 @@ const entityMap: any = {
     '=': '&#x3D;'
 };
 
+function deselect() {
+    try {
+        if ((document as any).selection) {
+            // Timeout neccessary for IE9					
+            setTimeout(function () {
+                (document as any).selection.empty();
+            });
+        } else {
+            window.getSelection().removeAllRanges();
+        }
+    } catch (err) {
+    }
+}
+
 function escapeHtml(string: string) {
     return String(string).replace(/[&<>"'`=\/]/g, s => entityMap[s]);
 }
@@ -26,5 +40,6 @@ function widthToPixels(column: virtualColumn) {
 
 export = {
     escape: escapeHtml,
-    widthToPixels: widthToPixels
+    widthToPixels: widthToPixels,
+    deselect: deselect
 };
