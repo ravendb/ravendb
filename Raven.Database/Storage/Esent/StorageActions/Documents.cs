@@ -777,7 +777,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], value);
         }
 
-        public AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata)
+        public AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata, InvokeSource source = InvokeSource.Default)
         {
             if (key == null) throw new ArgumentNullException("key");
             var byteCount = Encoding.Unicode.GetByteCount(key);
@@ -830,7 +830,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
                         Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
                                       newEtag.TransformToValueForEsentSorting());
 
-                        savedAt = SystemTime.UtcNow;
+                        var keepLastModified = source == InvokeSource.FromConflictAtReplication && metadata.ContainsKey(Constants.LastModified);
+                        savedAt = keepLastModified ? metadata.Value<DateTime>(Constants.LastModified) : SystemTime.UtcNow;
+
                         Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
                         using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
