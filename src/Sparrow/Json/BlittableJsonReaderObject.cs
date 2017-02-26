@@ -152,7 +152,16 @@ namespace Sparrow.Json
         public int Size => _size;
 
         public int Count => _propCount;
-        public byte* BasePointer => _mem;
+        public byte* BasePointer
+        {
+            get
+            {
+                if (_parent != null)
+                    InvalidAttemptToCopyNestedObject();
+                
+                return _mem;
+            }
+        }
 
         public ulong DebugHash => Hashing.XXHash64.Calculate(_mem, (ulong)_size);
 
@@ -668,7 +677,15 @@ namespace Sparrow.Json
 
         public void CopyTo(byte* ptr)
         {
+            if(_parent != null)
+                InvalidAttemptToCopyNestedObject();
             Memory.Copy(ptr, _mem, _size);
+        }
+
+        private static void InvalidAttemptToCopyNestedObject()
+        {
+            throw new InvalidOperationException(
+                "Attempted to copy a nested object. This will actually copy the whole object, which is probably not what you wanted.");
         }
 
         public BlittableJsonReaderObject Clone(JsonOperationContext context)

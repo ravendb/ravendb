@@ -13,7 +13,7 @@ namespace SlowTests.Server.Rachis
 {
     public class CommandsTests: RachisConsensusTestBase
     {
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task When_command_committed_CompletionTaskSource_is_notified()
         {
             const int CommandCount = 10;

@@ -36,13 +36,13 @@ namespace Raven.Server.Rachis
                 using (_engine.ContextPool.AllocateOperationContext(out context))
                 {
                     var appendEntries = _connection.Read<AppendEntries>(context);
-                    _engine.Timeout.Defer();
+                    _engine.Timeout.Defer(_connection.Source);
                     if (appendEntries.EntriesCount != 0)
                     {
                         for (int i = 0; i < appendEntries.EntriesCount; i++)
                         {
                             entries.Add(_connection.ReadRachisEntry(context));
-                            _engine.Timeout.Defer();
+                            _engine.Timeout.Defer(_connection.Source);
                         }
                     }
 
@@ -97,7 +97,7 @@ namespace Raven.Server.Rachis
                         Success = true
                     });
 
-                    _engine.Timeout.Defer();
+                    _engine.Timeout.Defer(_connection.Source);
 
                 }
             }
@@ -122,7 +122,7 @@ namespace Raven.Server.Rachis
                     return null;
                 }
 
-                _engine.Timeout.Defer();
+                _engine.Timeout.Defer(_connection.Source);
                 return logLength;
             }
         }
@@ -159,7 +159,7 @@ namespace Raven.Server.Rachis
                 });
             }
 
-            _engine.Timeout.Defer();
+            _engine.Timeout.Defer(_connection.Source);
 
             // at this point, the leader will send us a snapshot message
             // in most cases, it is an empty snapshot, then start regular append entries
@@ -186,7 +186,10 @@ namespace Raven.Server.Rachis
                 // snapshot always has the latest topology
                 if (snapshot.Topology == null)
                     throw new InvalidOperationException("Expected to get topology on snapshot");
-                RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, snapshot.Topology);
+                using (var topology = context.ReadObject(snapshot.Topology, "topology"))
+                {
+                    RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, topology);
+                }
 
                 context.Transaction.Commit();
             }
@@ -203,7 +206,7 @@ namespace Raven.Server.Rachis
                 _engine.SnapshotInstalled(context);
             }
 
-            _engine.Timeout.Defer();
+            _engine.Timeout.Defer(_connection.Source);
         }
 
         private unsafe bool InstallSnapshot(TransactionOperationContext context)
@@ -369,7 +372,7 @@ namespace Raven.Server.Rachis
 
             while (minIndex < maxIndex)
             {
-                _engine.Timeout.Defer();
+                _engine.Timeout.Defer(_connection.Source);
 
                 // TODO: cancellation
                 //_cancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -388,7 +391,7 @@ namespace Raven.Server.Rachis
 
                 var response = connection.Read<LogLengthNegotiation>(context);
 
-                _engine.Timeout.Defer();
+                _engine.Timeout.Defer(_connection.Source);
 
                 using (context.OpenReadTransaction())
                 {
@@ -425,7 +428,8 @@ namespace Raven.Server.Rachis
             }
 
             // if leader / candidate, this remove them from play and revert to follower mode
-            _engine.SetNewState(RachisConsensus.State.Follower, this);
+            var engineCurrentTerm = _engine.CurrentTerm;
+            _engine.SetNewState(RachisConsensus.State.Follower, this, engineCurrentTerm);
             _engine.Timeout.Start(_engine.SwitchToCandidateState);
 
             _thread = new Thread(Run)
@@ -440,6 +444,8 @@ namespace Raven.Server.Rachis
         {
             try
             {
+                _engine.Timeout.Start(_engine.SwitchToCandidateState);
+
                 using (this)
                 {
                     try

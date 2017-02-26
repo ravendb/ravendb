@@ -28,7 +28,7 @@ namespace Raven.Server.Rachis
     public class RachisConsensus<TStateMachine> : RachisConsensus
         where TStateMachine : RachisStateMachine, new()
     {
-        public RachisConsensus(StorageEnvironmentOptions options, string url,int? seed = null) : base(options, url, seed)
+        public RachisConsensus(StorageEnvironmentOptions options, string url, int? seed = null) : base(options, url, seed)
         {
         }
 
@@ -42,7 +42,7 @@ namespace Raven.Server.Rachis
 
         public override void Dispose()
         {
-            SetNewState(State.Follower, new NullDisposable());
+            SetNewState(State.Follower, new NullDisposable(), -1);
             StateMachine?.Dispose();
             base.Dispose();
         }
@@ -144,7 +144,7 @@ namespace Raven.Server.Rachis
         private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>();
         private int? _seed;
 
-        protected RachisConsensus(StorageEnvironmentOptions options, string url,int? seed = null)
+        protected RachisConsensus(StorageEnvironmentOptions options, string url, int? seed = null)
         {
             _seed = seed;
             _options = options;
@@ -172,7 +172,7 @@ namespace Raven.Server.Rachis
                     {
                         byte* ptr;
                         using (state.DirectAdd(CurrentTermSlice, sizeof(long), out ptr))
-                            *(long*) ptr = CurrentTerm = 0;
+                            *(long*)ptr = CurrentTerm = 0;
                     }
                     else
                         CurrentTerm = read.Reader.ReadLittleEndianInt64();
@@ -200,15 +200,16 @@ namespace Raven.Server.Rachis
                 CurrentState = State.Follower;
                 if (topology.Voters.Length == 1)
                 {
+                    var electionTerm = CurrentTerm + 1;
                     using (ContextPool.AllocateOperationContext(out context))
                     using (var tx = context.OpenWriteTransaction())
                     {
 
-                        CastVoteInTerm(context, CurrentTerm + 1, Url);
+                        CastVoteInTerm(context, electionTerm, Url);
 
                         tx.Commit();
                     }
-                    SwitchToLeaderState();
+                    SwitchToLeaderState(electionTerm);
                 }
                 else
                     Timeout.Start(SwitchToCandidateState);
@@ -280,12 +281,18 @@ namespace Raven.Server.Rachis
             AnyChange
         }
 
-        public void SetNewState(State state, IDisposable disposable)
+        public void SetNewState(State state, IDisposable disposable, long expectedTerm)
         {
             List<IDisposable> toDispose;
 
-            lock (_disposables)
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenWriteTransaction()) // we just use the write transaction lock here
             {
+                if (expectedTerm != CurrentTerm && expectedTerm != -1)
+                    throw new ConcurrencyException(
+                        $"Attempted to switch state to {state} on expected term {expectedTerm} but the real term is {CurrentTerm}");
+
                 _currentLeader = null;
                 toDispose = new List<IDisposable>(_disposables);
 
@@ -299,10 +306,13 @@ namespace Raven.Server.Rachis
 
             UpdateState(state);
 
-            foreach (var t in toDispose)
+            Task.Run(() =>
             {
-                t.Dispose();
-            }
+                foreach (var t in toDispose)
+                {
+                    t.Dispose();
+                }
+            });
         }
 
         public void TakeOffice()
@@ -323,7 +333,9 @@ namespace Raven.Server.Rachis
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
         {
-            lock (_disposables)
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenWriteTransaction())// using write tx just for the lock here
             {
                 if (ReferenceEquals(_disposables[0], parentState) == false)
                     throw new ConcurrencyException(
@@ -332,14 +344,14 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void SwitchToLeaderState()
+        public void SwitchToLeaderState(long electionTerm)
         {
             if (Log.IsInfoEnabled)
             {
                 Log.Info("Switching to leader state");
             }
             var leader = new Leader(this);
-            SetNewState(State.LeaderElect, leader);
+            SetNewState(State.LeaderElect, leader, electionTerm);
             _currentLeader = leader;
             leader.Start();
         }
@@ -376,7 +388,7 @@ namespace Raven.Server.Rachis
                 Log.Info("Switching to candidate state");
             }
             var candidate = new Candidate(this);
-            SetNewState(State.Candidate, candidate);
+            SetNewState(State.Candidate, candidate, CurrentTerm);
             candidate.Start();
         }
 
@@ -434,7 +446,7 @@ namespace Raven.Server.Rachis
         {
             var state = tx.CreateTree(GlobalStateSlice);
             byte* ptr;
-            using (state.DirectAdd(TopologySlice, topologyJson.Size,out ptr))
+            using (state.DirectAdd(TopologySlice, topologyJson.Size, out ptr))
             {
                 topologyJson.CopyTo(ptr);
             }
@@ -623,7 +635,7 @@ namespace Raven.Server.Rachis
             }
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             byte* ptr;
-            using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2,out ptr))
+            using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2, out ptr))
             {
                 var data = (long*)ptr;
                 data[0] = entryIndex;
@@ -776,7 +788,7 @@ namespace Raven.Server.Rachis
             term = reader.ReadLittleEndianInt64();
         }
 
-        
+
 
         public unsafe void SetLastCommitIndex(TransactionOperationContext context, long index, long term)
         {
@@ -801,9 +813,9 @@ namespace Raven.Server.Rachis
             }
 
             byte* ptr;
-            using (state.DirectAdd(LastCommitSlice, sizeof(long) * 2,out ptr))
+            using (state.DirectAdd(LastCommitSlice, sizeof(long) * 2, out ptr))
             {
-                var data = (long*) ptr;
+                var data = (long*)ptr;
                 data[0] = index;
                 data[1] = term;
             }
@@ -967,16 +979,16 @@ namespace Raven.Server.Rachis
 
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             byte* ptr;
-            using (state.DirectAdd(CurrentTermSlice, sizeof(long),out ptr))
+            using (state.DirectAdd(CurrentTermSlice, sizeof(long), out ptr))
             {
                 *(long*)ptr = term;
             }
-            
+
             votedFor = votedFor ?? String.Empty;
 
             var size = Encoding.UTF8.GetByteCount(votedFor);
 
-            using (state.DirectAdd(VotedForSlice, size,out ptr))
+            using (state.DirectAdd(VotedForSlice, size, out ptr))
             {
                 fixed (char* pVotedFor = votedFor)
                 {
@@ -1008,7 +1020,7 @@ namespace Raven.Server.Rachis
 
         public virtual void Dispose()
         {
-            OnDispose?.Invoke(this,EventArgs.Empty);
+            OnDispose?.Invoke(this, EventArgs.Empty);
             ThreadPool.QueueUserWorkItem(_ => _topologyChanged.TrySetCanceled());
             ContextPool?.Dispose();
             _persistentState?.Dispose();

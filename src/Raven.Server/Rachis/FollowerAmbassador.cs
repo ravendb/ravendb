@@ -441,18 +441,20 @@ namespace Raven.Server.Rachis
 
         private long? InitialNegotiationWithFollower()
         {
+            UpdateLastMatchFromFollower(0);
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             {
                 ClusterTopology clusterTopology;
                 LogLengthNegotiation lln;
+                var engineCurrentTerm = _engine.CurrentTerm;
                 using (context.OpenReadTransaction())
                 {
                     clusterTopology = _engine.GetTopology(context);
                     var lastIndexEntry = _engine.GetLastEntryIndex(context);
                     lln = new LogLengthNegotiation
                     {
-                        Term = _engine.CurrentTerm,
+                        Term = engineCurrentTerm,
                         PrevLogIndex = lastIndexEntry,
                         PrevLogTerm = _engine.GetTermForKnownExisting(context, lastIndexEntry),
                     };
@@ -473,10 +475,10 @@ namespace Raven.Server.Rachis
                 // need to negotiate
                 do
                 {
-                    if (llr.CurrentTerm > _engine.CurrentTerm)
+                    if (llr.CurrentTerm > engineCurrentTerm)
                     {
                         // we need to abort the current leadership
-                        _engine.SetNewState(RachisConsensus.State.Follower, null);
+                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm);
                         _engine.FoundAboutHigherTerm(llr.CurrentTerm);
                         return null;
                     }
@@ -488,6 +490,8 @@ namespace Raven.Server.Rachis
 
                     if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Rejected)
                         throw new InvalidOperationException("Failed to get acceptable status from " + _url +" because " + llr.Message);
+
+                    UpdateLastMatchFromFollower(0);
 
                     using (context.OpenReadTransaction())
                     {
@@ -503,7 +507,7 @@ namespace Raven.Server.Rachis
                         var midIndex = (llr.MinIndex + llr.MaxIndex) / 2;
                         lln = new LogLengthNegotiation
                         {
-                            Term = _engine.CurrentTerm,
+                            Term = engineCurrentTerm,
                             PrevLogIndex = midIndex,
                             PrevLogTerm = _engine.GetTermForKnownExisting(context, midIndex),
                         };
@@ -516,10 +520,11 @@ namespace Raven.Server.Rachis
 
         public void Start()
         {
+            UpdateLastMatchFromFollower(0);
             _thread = new Thread(Run)
             {
                 Name =
-                    $"Follower Ambasaddor for {(new Uri(_engine.Url).Fragment ?? _engine.Url)} > {(new Uri(_url).Fragment ?? _url)} in term {_engine.CurrentTerm}",
+                    $"Follower Ambassador for {(new Uri(_engine.Url).Fragment ?? _engine.Url)} > {(new Uri(_url).Fragment ?? _url)} in term {_engine.CurrentTerm}",
                 IsBackground = true
             };
             _thread.Start();

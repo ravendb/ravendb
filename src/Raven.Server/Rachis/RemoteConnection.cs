@@ -4,6 +4,7 @@ using System.IO;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -17,6 +18,8 @@ namespace Raven.Server.Rachis
         private readonly Stream _stream;
         private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
         private Logger _log;
+
+        public string Source => _src;
 
         public RemoteConnection(string dest, Stream stream)
         {
@@ -53,12 +56,21 @@ namespace Raven.Server.Rachis
             }
         }
 
+     //   private static ConcurrentDictionary<string, Lazy<StreamWriter>> _writers = new ConcurrentDictionary<string, Lazy<StreamWriter>>();
+
         private void Send(JsonOperationContext context, BlittableJsonReaderObject msg)
         {
             using (var writer = new BlittableJsonTextWriter(context, _stream))
             {
-                //Console.WriteLine($"{DateTime.UtcNow} {_src} > {_dest}: - {msg}");
-
+       /*         var streamWriter = _writers.GetOrAdd(_dest, d => new Lazy<StreamWriter>(() => File.CreateText(d + ".log")))
+                    .Value;
+                lock (streamWriter)
+                {
+                    streamWriter.WriteLine($"{DateTime.UtcNow:O} {_src} > {_dest}: - {msg}");
+                    streamWriter.Flush();
+                }
+                //Console.WriteLine($"{DateTime.UtcNow:O} {_src} > {_dest}: - {msg}");
+				*/
                 context.Write(writer, msg);
             }
         }

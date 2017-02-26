@@ -100,13 +100,14 @@ namespace Raven.Server.Rachis
 
                         if (rv.IsTrialElection)
                         {
-                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeoutMs / 2) == false)
+                            string currentLeader;
+                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeoutMs / 2,out currentLeader) == false)
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {
                                     Term = _engine.CurrentTerm,
                                     VoteGranted = false,
-                                    Message = "My leader is keeping me up to date, so I don't want to vote for you"
+                                    Message = $"My leader {currentLeader} is keeping me up to date, so I don't want to vote for you"
                                 });
                                 _connection.Dispose();
                                 return;
@@ -158,8 +159,7 @@ namespace Raven.Server.Rachis
                         }
                         else
                         {
-                            _engine.SetNewState(RachisConsensus.State.Follower, this);
-                            _engine.Timeout.Start(_engine.SwitchToCandidateState);
+                            _engine.SetNewState(RachisConsensus.State.Follower, this, rv.Term);
 
                             _connection.Send(context, new RequestVoteResponse
                             {
