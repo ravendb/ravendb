@@ -111,6 +111,7 @@ namespace Raven.Server.Smuggler.Documents
             private bool _readingMetadataObject;
             private int _depth;
             private State _state = State.None;
+            private bool _verifyStartArray;
 
             public LazyStringValue Id;
 
@@ -135,11 +136,12 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             private enum State
-                {
+            {
                 None,
                 ReadingId,
                 IgnorePropertyEtag,
-                IgnoreProperty
+                IgnoreProperty,
+                IgnoreArray
             }
 
             public void StartObject()
@@ -147,10 +149,10 @@ namespace Raven.Server.Smuggler.Documents
                 if (_readingMetadataObject == false)
                     return;
                 _depth++;
-        }
+            }
 
             public void EndOBject()
-        {
+            {
                 if (_readingMetadataObject == false)
                     return;
                 _depth--;
@@ -158,7 +160,6 @@ namespace Raven.Server.Smuggler.Documents
                 if (_depth == 0)
                     _readingMetadataObject = false;
             }
-
 
             public unsafe bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state)
             {
@@ -180,6 +181,24 @@ namespace Raven.Server.Smuggler.Documents
                             state.CurrentTokenType != JsonParserToken.Integer)
                             ThrowInvalidEtagType(state);
                         break;
+                    case State.IgnoreArray:
+                        if (_verifyStartArray)
+                        {
+                            if (reader.Read() == false)
+                                return false;
+
+                            _verifyStartArray = false;
+
+                            if (state.CurrentTokenType != JsonParserToken.StartArray)
+                                ThrowInvalidReplicationHistoryType(state);
+                        }
+
+                        while (state.CurrentTokenType != JsonParserToken.EndArray)
+                        {
+                            if (reader.Read() == false)
+                                return false;
+                        }
+                        break;
                     case State.ReadingId:
                         if (reader.Read() == false)
                             return false;
@@ -188,11 +207,11 @@ namespace Raven.Server.Smuggler.Documents
                         Id = CreateLazyStringValueFromParserState(state);
                         break;
                 }
+
                 _state = State.None;
 
                 while (true)
                 {
-
                     if (reader.Read() == false)
                         return false;
 
@@ -201,13 +220,14 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_readingMetadataObject == false)
                     {
-                        if (state.StringSize == 9 && state.StringBuffer[0] == (byte)'@' &&
-                            *(long*)(state.StringBuffer + 1) == 7022344802737087853)
+                        if (state.StringSize == 9 && state.StringBuffer[0] == (byte) '@' &&
+                            *(long*) (state.StringBuffer + 1) == 7022344802737087853)
                         {
                             _readingMetadataObject = true;
-            }
+                        }
                         return true;
-        }
+                    }
+
                     switch (state.StringSize)
                     {
                         case 3:// @id
@@ -245,7 +265,7 @@ namespace Raven.Server.Smuggler.Documents
                             {
                                 if (reader.Read() == false)
                                 {
-                                    _state = State.IgnorePropertyEtag;
+                                    _state = State.IgnoreProperty;
                                     return false;
                                 }
                                 if (state.CurrentTokenType == JsonParserToken.StartArray ||
@@ -253,7 +273,6 @@ namespace Raven.Server.Smuggler.Documents
                                     ThrowInvalidMetadataProperty(state);
                             }
                             break;
-
                         case 17: //Raven-Entity-Name --> @collection
                             if (*(long*)state.StringBuffer == 7945807069737017682 &&
                                *(long*)(state.StringBuffer + sizeof(long)) == 7881666780093245812)
@@ -267,11 +286,11 @@ namespace Raven.Server.Smuggler.Documents
                             if (*(long*)state.StringBuffer == 7011028672080929106 &&
                                *(long*)(state.StringBuffer + sizeof(long)) == 7379539893622240371 &&
                                *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 25961 &&
-                              state.StringBuffer[18] == (byte)'d')
+                               state.StringBuffer[18] == (byte)'d')
                             {
                                 if (reader.Read() == false)
                                 {
-                                    _state = State.IgnorePropertyEtag;
+                                    _state = State.IgnoreProperty;
                                     return false;
                                 }
                                 if (state.CurrentTokenType == JsonParserToken.StartArray ||
@@ -279,7 +298,93 @@ namespace Raven.Server.Smuggler.Documents
                                     ThrowInvalidMetadataProperty(state);
                             }
                             break;
-                        default:// accept this property
+                        case 24: //Raven-Replication-Source
+                            if (*(long*)state.StringBuffer == 7300947898092904786 &&
+                               *(long*)(state.StringBuffer + sizeof(long)) == 8028075772393122928 &&
+                               *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 7305808869229538670)
+                            {
+                                if (reader.Read() == false)
+                                {
+                                    _state = State.IgnoreProperty;
+                                    return false;
+                                }
+                                if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                                    state.CurrentTokenType == JsonParserToken.StartObject)
+                                    ThrowInvalidMetadataProperty(state);
+                            }
+                            break;
+                        case 25: //Raven-Replication-Version OR Raven-Replication-History
+                            if (*(long*)state.StringBuffer != 7300947898092904786 ||
+                               *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928)
+                                break;
+
+                            var value = *(long*)(state.StringBuffer + sizeof(long) + sizeof(long));
+                            var lastByte = state.StringBuffer[24];
+                            if (value == 8028074745928232302 && lastByte == (byte) 'n' ||
+                                value == 8245937481775066478 && lastByte == (byte) 'y')
+                            {
+                                var isReplicationHistory = lastByte == (byte)'y';
+                                if (reader.Read() == false)
+                                {
+                                    _verifyStartArray = isReplicationHistory;
+                                    _state = isReplicationHistory ? State.IgnoreArray : State.IgnoreProperty;
+                                    return false;
+                                }
+
+                                // Raven-Replication-History is an array
+                                if (isReplicationHistory)
+                                {
+                                    if (state.CurrentTokenType != JsonParserToken.StartArray)
+                                        ThrowInvalidReplicationHistoryType(state);
+
+                                    do
+                                    {
+                                        if (reader.Read() == false)
+                                        {
+                                            _state = State.IgnoreArray;
+                                            return false;
+                                        }
+                                    } while (state.CurrentTokenType != JsonParserToken.EndArray);
+                                }
+                                else if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                                    state.CurrentTokenType == JsonParserToken.StartObject)
+                                    ThrowInvalidMetadataProperty(state);
+                            }
+                            break;
+                        case 29: //Non-Authoritative-Information
+                            if (*(long*)state.StringBuffer == 7526769800038477646 &&
+                               *(long*)(state.StringBuffer + sizeof(long)) == 8532478930943832687 &&
+                               *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 7886488383206796645 &&
+                               *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) == 1869182049 &&
+                               state.StringBuffer[28] == (byte)'n')
+                            {
+                                if (reader.Read() == false)
+                                {
+                                    _state = State.IgnoreProperty;
+                                    return false;
+                                }
+                                if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                                    state.CurrentTokenType == JsonParserToken.StartObject)
+                                    ThrowInvalidMetadataProperty(state);
+                            }
+                            break;
+                        case 32: //Raven-Replication-Merged-History
+                            if (*(long*)state.StringBuffer == 7300947898092904786 &&
+                               *(long*)(state.StringBuffer + sizeof(long)) == 8028075772393122928 &&
+                               *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 7234302117464059246 &&
+                               *(long*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) == 8751179571877464109)
+                            {
+                                if (reader.Read() == false)
+                                {
+                                    _state = State.IgnoreProperty;
+                                    return false;
+                                }
+                                if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                                    state.CurrentTokenType == JsonParserToken.StartObject)
+                                    ThrowInvalidMetadataProperty(state);
+                            }
+                            break;
+                        default: // accept this property
                             return true;
                     }
                 }
@@ -303,6 +408,11 @@ namespace Raven.Server.Smuggler.Documents
                                                state.CurrentTokenType);
             }
 
+            private static void ThrowInvalidReplicationHistoryType(JsonParserState state)
+            {
+                throw new InvalidDataException("Expected property @metadata.Raven-Replication-History to have array type, but was: " +
+                                               state.CurrentTokenType);
+            }
 
             public void Dispose()
             {
