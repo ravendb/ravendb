@@ -14,14 +14,14 @@ namespace Raven.Server.Utils
 
         public static void Print()
         {
-            const string asciiHeader = @"        ____                       ____  _{0}       |  _ \ __ ___   _____ _ __ |  _ \| |__{0}       | |_) / _` \ \ / / _ \ '_ \| | | | '_ \{0}       |  _ < (_| |\ V /  __/ | | | |_| | |_) |{0}       |_| \_\__,_| \_/ \___|_| |_|____/|_.__/{0}{0}";
+            const string asciiHeader = @"       _____                       _____  ____ {0}      |  __ \                     |  __ \|  _ \ {0}      | |__) |__ ___   _____ _ __ | |  | | |_) |{0}      |  _  // _` \ \ / / _ \ '_ \| |  | |  _ < {0}      | | \ \ (_| |\ V /  __/ | | | |__| | |_) |{0}      |_|  \_\__,_| \_/ \___|_| |_|_____/|____/ {0}{0}";
             ConsoleWriteLineWithColor(ConsoleColor.DarkRed, asciiHeader, Environment.NewLine);
             ConsoleWriteLineWithColor(ConsoleColor.Cyan, "      Safe by default, optimized for efficiency");
             Console.WriteLine();
 
             const string lineBorder = "+---------------------------------------------------------------+";
 
-            ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}, SemVer {2},  Commit {3}, PID {4}, {5} bits",
+            ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits",
                 ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion ,ServerVersion.CommitHash, Process.GetCurrentProcess().Id,
                 IntPtr.Size * 8);
             ConsoleWriteLineWithColor(ConsoleColor.DarkCyan, " Source Code (git repo): https://github.com/ravendb/ravendb");

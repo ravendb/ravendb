@@ -10,9 +10,11 @@ interface virtualGridController<T> {
 
     headerVisible(value: boolean): void;
 
-    reset(): void;
+    reset(hard?: boolean): void;
 
     selection: KnockoutObservable<virtualGridSelection<T>>;
+
+    getSelectedItems(): T[];
 }
 
 export = virtualGridController;

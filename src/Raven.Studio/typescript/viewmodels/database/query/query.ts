@@ -338,6 +338,8 @@ class query extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        this.setupDisableReasons();
+
         const grid = this.gridController();
 
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.collections().map(x => x.name), {
