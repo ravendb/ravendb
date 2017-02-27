@@ -6,49 +6,30 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Platform.Posix;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
-using Voron.Platform.Win32;
 
 namespace Voron.Platform.Posix
 {
     public class PosixHelper
     {
-        public static void AllocateFileSpace(StorageEnvironmentOptions options, int fd, ulong size, string file)
+        public static void AllocateFileSpace(StorageEnvironmentOptions options, int fd, long size, string file)
         {
-            int result;
-            int retries = 1024;
-            while (true)
-            {
-                if ((options.SafePosixOpenFlags & PerPlatformValues.OpenFlags.O_DIRECT) == 0)
-                {
-                    // fallocate is not supported, we'll use lseek instead
-                    result = Syscall.AllocateUsingLseek(fd, (long)size);
-                }
-                else
-                {
-                    result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr)size);
-                }
+            bool usingLseek;
+            var result = Syscall.AllocateFileSpace(fd, size, file, out usingLseek);
 
-                if (result != (int) Errno.EINTR)
-                    break;
-                if (retries-- > 0)
-                    throw new IOException($"Tried too many times to call posix_fallocate {file}, but always got EINTR, cannot retry again");
-            }
-            if (result == (int) Errno.ENOSPC)
+            if (result == (int)Errno.ENOSPC)
             {
                 foreach (var drive in DriveInfo.GetDrives())
                 {
                     if (file.StartsWith(drive.RootDirectory.Name))
                         throw new DiskFullException(drive, file, (long)size);
                 }
-				// shouldn't happen, and we can throw normally here
+                // shouldn't happen, and we can throw normally here
                 throw new DiskFullException(null, file, (long)size);
             }
             if (result != 0)
@@ -58,7 +39,7 @@ namespace Voron.Platform.Posix
         public static void ThrowLastError(int lastError, string msg = null)
         {
             if (Enum.IsDefined(typeof(Errno), lastError) == false)
-                throw new InvalidOperationException("Unknown errror " + lastError);
+                throw new InvalidOperationException("Unknown errror ='" + lastError + "'. Message: " + msg);
             var error = (Errno) lastError;
             switch (error)
             {
@@ -119,23 +100,33 @@ namespace Voron.Platform.Posix
 
         public static bool CheckSyncDirectoryAllowed(string path)
         {
-            DriveInfo[] allDrives = DriveInfo.GetDrives();
-
-            foreach (DriveInfo d in allDrives)
+            var allMounts = DriveInfo.GetDrives();
+            var syncAllowed = true;
+            var matchSize = 0;
+            foreach (var m in allMounts)
             {
-                if (path.Contains(d.Name))
+                var mountNameSize = m.Name.Length;
+                if (path.StartsWith(m.Name))
                 {
-                    switch (d.DriveFormat)
+                    if (mountNameSize > matchSize)
                     {
-                        // TODO : Add other types
-                        case "cifs":
-                            return false;
-                        default:
-                            return true;
+                        matchSize = mountNameSize;
+                        switch (m.DriveFormat)
+                        {
+                            // TODO : Add other types                            
+                            case "cifs":
+                                syncAllowed = false;
+                                break;
+                            default:
+                                syncAllowed = true;
+                                break;
+                        }
+                        if (m.DriveType == DriveType.Unknown)
+                            syncAllowed = false;
                     }
                 }
             }
-            return true;
+            return syncAllowed;
         }
 
         public static int SyncDirectory(string path)
