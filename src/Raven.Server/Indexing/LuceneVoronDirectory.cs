@@ -103,13 +103,11 @@ namespace Raven.Server.Indexing
         public override void DeleteFile(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            var readResult = filesTree.Read(name);
+            var readResult = filesTree.ReadStream(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            Slice str;
-            using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
-                filesTree.Delete(str);
+            filesTree.DeleteStream(name);
         }
 
         public override IndexInput OpenInput(string name)
