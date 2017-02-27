@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;

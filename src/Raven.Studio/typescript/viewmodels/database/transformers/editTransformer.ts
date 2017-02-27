@@ -13,6 +13,7 @@ import formatIndexCommand = require("commands/database/index/formatIndexCommand"
 import eventsCollector = require("common/eventsCollector");
 import renameTransformerCommand = require("commands/database/transformers/renameTransformerCommand");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
+import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import database = require("models/resources/database");
 
 class editTransformer extends viewModelBase {
@@ -30,8 +31,12 @@ class editTransformer extends viewModelBase {
     renameMode = ko.observable<boolean>(false);
     renameInProgress = ko.observable<boolean>(false);
     canEditTransformerName: KnockoutComputed<boolean>;
+
     private indexesNames = ko.observableArray<string>();
+    private transformersNames = ko.observableArray<string>();
+
     globalValidationGroup: KnockoutValidationGroup;
+    renameValidationGroup: KnockoutValidationGroup;
     
     constructor() {
         super();
@@ -69,6 +74,7 @@ class editTransformer extends viewModelBase {
         this.initValidation();
         this.initializeDirtyFlag();
         this.fetchIndexes();
+        this.fetchTransformers();
     }
 
     attached() {
@@ -97,6 +103,12 @@ class editTransformer extends viewModelBase {
                 },
                 {
                     validator: (val: string) => {
+                        return !_.includes(this.transformersNames(), val);
+                    },
+                    message: "Already being used by an existing transformer."
+                },
+                {
+                    validator: (val: string) => {
                         return !_.includes(this.indexesNames(), val);
                     },
                     message: "Already being used by an existing index."
@@ -110,6 +122,10 @@ class editTransformer extends viewModelBase {
         this.globalValidationGroup = ko.validatedObservable({
             userTransformerName: this.editedTransformer().name,
             userTransformerContent: this.editedTransformer().transformResults
+        });
+
+        this.renameValidationGroup = ko.validatedObservable({
+            userTransformerName: this.editedTransformer().name
         });
     }
 
@@ -181,6 +197,15 @@ class editTransformer extends viewModelBase {
             });
     }
 
+    private fetchTransformers() {
+        const db = this.activeDatabase();
+        return new getTransformersCommand(db)
+            .execute()
+            .done((transformers: Raven.Client.Documents.Transformers.TransformerDefinition[]) => {
+                this.transformersNames(transformers.map(t => t.Name));
+            });
+    }
+
     updateUrl(transformerName: string) {
         router.navigate(appUrl.forEditTransformer(transformerName, this.activeDatabase()), false);
     }
@@ -223,26 +248,29 @@ class editTransformer extends viewModelBase {
     }
 
     renameTransformer() {
-        const newName = this.editedTransformer().name();
-        const oldName = this.loadedTransformerName();
+        if (this.isValid(this.renameValidationGroup)) {
+            const newName = this.editedTransformer().name();
+            const oldName = this.loadedTransformerName();
 
-        this.renameInProgress(true);
+            this.renameInProgress(true);
 
-        new renameTransformerCommand(oldName, newName, this.activeDatabase())
-            .execute()
-            .always(() => this.renameInProgress(false))
-            .done(() => {
-                this.dirtyFlag().reset();
+            new renameTransformerCommand(oldName, newName, this.activeDatabase())
+                .execute()
+                .always(() => this.renameInProgress(false))
+                .done(() => {
+                    this.dirtyFlag().reset();
 
-                this.loadedTransformerName(newName);
-                this.updateUrl(this.editedTransformer().name());
-                this.renameMode(false);
-            });
+                    this.loadedTransformerName(newName);
+                    this.updateUrl(this.editedTransformer().name());
+                    this.renameMode(false);
+                });
+        }
     }
 
     cancelRename() {
         this.renameMode(false);
         this.editedTransformer().name(this.loadedTransformerName());
+        this.renameValidationGroup.errors.showAllMessages(false);
     }
   
 }

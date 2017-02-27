@@ -20,7 +20,7 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutTransformerOperation(Name, new TransformerDefinition
+                store.Admin.Send(new PutTransformerOperation(new TransformerDefinition
                 {
                     Name = Name,
                     TransformResults = "from user in results select new { user.Age, user.Name }"
@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                 var transformers = store.Admin.Send(new GetTransformersOperation(0, 10));
                 var transformerId = transformers[0].TransfomerId;
 
-                store.Admin.Send(new PutTransformerOperation(Name, new TransformerDefinition
+                store.Admin.Send(new PutTransformerOperation(new TransformerDefinition
                 {
                     Name = Name,
                     TransformResults = "from user in results select new { Name = user.Name }"

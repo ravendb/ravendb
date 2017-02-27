@@ -33,6 +33,7 @@ import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexF
 import configurationItem = require("models/database/index/configurationItem");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import configuration = require("configuration");
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import eventsCollector = require("common/eventsCollector");
 import database = require("models/resources/database");
@@ -56,6 +57,7 @@ class editIndex extends viewModelBase {
     additionalStoragePaths = ko.observableArray<string>([]);
     selectedIndexPath: KnockoutComputed<string>;
 
+    private indexesNames = ko.observableArray<string>();
     private transformersNames = ko.observableArray<string>();
 
     queryUrl = ko.observable<string>();
@@ -154,6 +156,7 @@ class editIndex extends viewModelBase {
 
         this.initValidation();
         this.fetchTransformers();
+        this.fetchIndexes();
     }
 
     private initValidation() {
@@ -163,6 +166,11 @@ class editIndex extends viewModelBase {
                     return !_.includes(this.transformersNames(), val);
                 },
                 message: "Already being used by an existing transformer."
+            }, {
+                validator: (val: string) => {
+                    return !_.includes(this.indexesNames(), val);
+                },
+                message: "Already being used by an existing index."
             }]
         });
     }
@@ -173,6 +181,15 @@ class editIndex extends viewModelBase {
             .execute()
             .done((transformers: Raven.Client.Documents.Transformers.TransformerDefinition[]) => {
                 this.transformersNames(transformers.map(t => t.Name));
+            });
+    }
+
+    private fetchIndexes() {
+        const db = this.activeDatabase()
+        new getIndexNamesCommand(db)
+            .execute()
+            .done((indexesNames) => {
+                this.indexesNames(indexesNames);
             });
     }
 
@@ -500,26 +517,30 @@ class editIndex extends viewModelBase {
     }
 
     renameIndex() {
-        const newName = this.editedIndex().name();
-        const oldName = this.originalIndexName;
+        if (this.isValid(this.editedIndex().renameValidationGroup)) {
+            const newName = this.editedIndex().name();
+            const oldName = this.originalIndexName;
 
-        this.renameInProgress(true);
+            this.renameInProgress(true);
 
-        new renameIndexCommand(oldName, newName, this.activeDatabase())
-            .execute()
-            .always(() => this.renameInProgress(false))
-            .done(() => {
-                this.dirtyFlag().reset();
+            new renameIndexCommand(oldName, newName, this.activeDatabase())
+                .execute()
+                .always(() => this.renameInProgress(false))
+                .done(() => {
+                    this.dirtyFlag().reset();
 
-                this.originalIndexName = newName;
-                this.updateUrl(this.editedIndex().name());
-                this.renameMode(false);
-            });
+                    this.originalIndexName = newName;
+                    this.updateUrl(this.editedIndex().name());
+                    this.renameMode(false);
+                });
+        }
     }
 
     cancelRename() {
         this.renameMode(false);
-        this.editedIndex().name(this.originalIndexName);
+        const editedIndex = this.editedIndex();
+        editedIndex.name(this.originalIndexName);
+        editedIndex.renameValidationGroup.errors.showAllMessages(false);
     }
 
     /* TODO

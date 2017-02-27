@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Transformers;
 using Raven.Server.Config.Settings;
@@ -249,6 +250,39 @@ namespace Raven.Server.Documents.Transformers
 
         public void Dispose()
         {
+        }
+
+        public void Rename(string oldTransformerName, string newTransformerName)
+        {
+            Transformer transformer;
+            if (_transformers.TryGetByName(oldTransformerName, out transformer) == false)
+                throw new InvalidOperationException($"Index {oldTransformerName} does not exist");
+
+            lock (_indexAndTransformerLocker)
+            {
+                var index = _documentDatabase.IndexStore.GetIndex(newTransformerName);
+                if (index != null)
+                {
+                    throw new IndexOrTransformerAlreadyExistException(
+                        $"Cannot rename transformer to {newTransformerName} because an index having the same name already exists");
+                }
+
+                Transformer _;
+                if (_transformers.TryGetByName(newTransformerName, out _))
+                {
+                    throw new IndexOrTransformerAlreadyExistException(
+                        $"Cannot rename transformer to {newTransformerName} because a transformer having the same name already exists");
+                }
+
+                transformer.Rename(newTransformerName);
+                _transformers.RenameTransformer(transformer, oldTransformerName, newTransformerName);
+            }
+
+            _documentDatabase.Changes.RaiseNotifications(new TransformerChange
+            {
+                Name = oldTransformerName,
+                Type = TransformerChangeTypes.TransformerRenamed
+            });
         }
     }
 }
