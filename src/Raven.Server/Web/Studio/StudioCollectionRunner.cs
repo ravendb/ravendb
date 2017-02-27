@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
@@ -17,13 +19,35 @@ namespace Raven.Server.Web.Studio
             _excludeIds = excludeIds;
         }
 
-        public override IOperationResult ExecuteDelete(string collectionName, CollectionOperationOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override unsafe IOperationResult ExecuteDelete(string collectionName, CollectionOperationOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            if (_excludeIds.Count == 0)
+            if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
             {
-                return base.ExecuteDelete(collectionName, options, documentsOperationContext, onProgress, token);
+                if (_excludeIds.Count == 0)
+                {
+                    // all documents w/o exclusions -> filter system documents
+                    return ExecuteOperation(collectionName, options, _context, onProgress, key =>
+                    {
+                        if (!CollectionName.IsSystemDocument(key.Buffer, key.Length))
+                        {
+                            _database.DocumentsStorage.Delete(_context, key, null);
+                        }
+                    }, token);
+                }
+                // all documents w/ exluclusions -> delete only not excluded and not system
+                return ExecuteOperation(collectionName, options, _context, onProgress, key =>
+                {
+                    if (_excludeIds.Contains(key) == false && !CollectionName.IsSystemDocument(key.Buffer, key.Length))
+                    {
+                        _database.DocumentsStorage.Delete(_context, key, null);
+                    }
+                }, token);
             }
 
+            if (_excludeIds.Count == 0)
+                return base.ExecuteDelete(collectionName, options, documentsOperationContext, onProgress, token);
+
+            // specific collection w/ exclusions
             return ExecuteOperation(collectionName, options, _context, onProgress, key =>
             {
                 if (_excludeIds.Contains(key) == false)
@@ -31,6 +55,29 @@ namespace Raven.Server.Web.Studio
                     _database.DocumentsStorage.Delete(_context, key, null);
                 }
             }, token);
+        }
+
+        protected override List<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
+        {
+            if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
+                return _database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize).ToList();
+
+            return base.GetDocuments(context, collectionName, startEtag, batchSize);
+        }
+
+        protected override long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
+        {
+            if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
+                return _database.DocumentsStorage.GetNumberOfDocuments(context);
+
+            return base.GetTotalCountForCollection(context, collectionName);
+        }
+
+        protected override long GetLastEtagForCollection(DocumentsOperationContext context, string collection)
+        {
+            return collection == Constants.Documents.Indexing.AllDocumentsCollection
+                ? DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction)
+                : base.GetLastEtagForCollection(context, collection);
         }
     }
 }
