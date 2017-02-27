@@ -282,7 +282,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
                 WaitForIndexing(store1);
-                Assert.True(WaitForDocument(store2, "marker"));
+                Assert.True(WaitForDocument(store2, "marker2"));
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 using (context.OpenReadTransaction())
