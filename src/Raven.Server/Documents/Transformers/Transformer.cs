@@ -8,6 +8,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -185,6 +186,17 @@ namespace Raven.Server.Documents.Transformers
                 return;
 
             File.Delete(path.FullPath);
+        }
+
+        public void Rename(string newName)
+        {
+            lock (_locker)
+            {
+                var oldName = Name;
+                Definition.Name = newName;
+                Persist();
+                IOExtensions.DeleteFile(GetPath(TransformerId, oldName, _configuration).FullPath);
+            }
         }
     }
 }

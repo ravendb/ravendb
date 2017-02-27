@@ -116,7 +116,9 @@ namespace Raven.Client.Documents.Changes
 
         IndexMarkedAsErrored = 512,
 
-        SideBySideReplace = 1024
+        SideBySideReplace = 1024,
+
+        Renamed = 2048
     }
 
     public enum TransformerChangeTypes
@@ -124,7 +126,8 @@ namespace Raven.Client.Documents.Changes
         None = 0,
 
         TransformerAdded = 1,
-        TransformerRemoved = 2
+        TransformerRemoved = 2,
+        TransformerRenamed = 4
     }
 
     public class IndexChange : DatabaseChange

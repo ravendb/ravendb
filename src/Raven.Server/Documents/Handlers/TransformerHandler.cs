@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
 
-            Thread.Sleep(2000);//TODO: implement me and remove this sleep!
+            Database.TransformerStore.Rename(name, newName);
 
             return NoContent();
         }

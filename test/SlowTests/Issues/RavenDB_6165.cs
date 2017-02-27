@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Documents.Transformers;
-using Raven.Server.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -21,6 +20,14 @@ namespace SlowTests.Issues
             public Users_ByName()
             {
                 Map = users => from user in users select new {user.Name};
+            }
+        }
+
+        private class Users_FullName_Transformer : AbstractTransformerCreationTask<User>
+        {
+            public Users_FullName_Transformer()
+            {
+                TransformResults = users => from user in users select new { FullName = user.Name + " " + user.LastName };
             }
         }
 
@@ -64,7 +71,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Cannot_rename_if_there_is_index_or_transformer_having_the_same_name()
+        public void Cannot_rename_index_if_there_is_index_or_transformer_having_the_same_name()
         {
             var path = NewDataPath();
 
@@ -99,8 +106,77 @@ namespace SlowTests.Issues
 
                 Assert.Throws<IndexOrTransformerAlreadyExistException>(
                    () => documentStore.Admin.Send(new RenameIndexOperation(usersByName.IndexName, existingTransformerName)));
+            }
+        }
 
-                var stats = documentStore.Admin.Send(new GetStatisticsOperation());
+        [Theory]
+        [InlineData("my-transformer")]
+        public async Task Can_rename_transformer(string newTransformerName)
+        {
+            var path = NewDataPath();
+
+            using (var documentStore = GetDocumentStore(path: path))
+            {
+                var usersTransformer = new Users_FullName_Transformer();
+                usersTransformer.Execute(documentStore);
+
+                documentStore.Admin.Send(new RenameTransformerOperation(usersTransformer.TransformerName, newTransformerName));
+
+                var database = await GetDatabase(documentStore.DefaultDatabase);
+
+                var transformer = database.TransformerStore.GetTransformer(1);
+
+                Assert.Equal(newTransformerName, transformer.Name);
+                Assert.Equal(1, database.TransformerStore.GetTransformers().Count());
+            }
+
+            using (var documentStore = GetDocumentStore(path: path))
+            {
+                var database = await GetDatabase(documentStore.DefaultDatabase);
+
+                var transformer = database.TransformerStore.GetTransformer(1);
+
+                Assert.Equal(newTransformerName, transformer.Name);
+                Assert.Equal(1, database.TransformerStore.GetTransformers().Count());
+            }
+        }
+
+        [Fact]
+        public void Cannot_rename_transformer_if_there_is_index_or_transformer_having_the_same_name()
+        {
+            var path = NewDataPath();
+
+            using (var documentStore = GetDocumentStore(path: path))
+            {
+                var usersTransformer = new Users_FullName_Transformer();
+                usersTransformer.Execute(documentStore);
+
+                var existingIndexName = "Users_ByName_Exists";
+
+                documentStore
+                    .Admin
+                    .Send(new PutIndexesOperation(new IndexDefinition
+                    {
+                        Name = existingIndexName,
+                        Maps = { "from user in docs.Users select new { user.Name }" },
+                        Type = IndexType.Map
+                    }));
+
+                var existingTransformerName = "Users_Transformer";
+
+                documentStore.Admin.Send(new PutTransformerOperation(new TransformerDefinition
+                {
+                    Name = existingTransformerName,
+                    TransformResults = "from user in results select new { user.FirstName, user.LastName }"
+                }));
+
+                WaitForIndexing(documentStore);
+
+                Assert.Throws<IndexOrTransformerAlreadyExistException>(
+                    () => documentStore.Admin.Send(new RenameTransformerOperation(usersTransformer.TransformerName, existingIndexName)));
+
+                Assert.Throws<IndexOrTransformerAlreadyExistException>(
+                   () => documentStore.Admin.Send(new RenameTransformerOperation(usersTransformer.TransformerName, existingTransformerName)));
             }
         }
     }
