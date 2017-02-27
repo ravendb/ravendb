@@ -150,8 +150,7 @@ namespace Raven.Server.ServerWide
                         _lastEtag = 0;
                     else
                     {
-                        int size;
-                        _lastEtag = Bits.SwapBytes(*(long*) reader.Reader.Read(3, out size));
+                        _lastEtag = DocumentsStorage.TableValueToEtag(3, ref reader.Reader);
                     }
                 }
             }

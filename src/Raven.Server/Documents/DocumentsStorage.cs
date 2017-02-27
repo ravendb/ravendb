@@ -886,9 +886,7 @@ namespace Raven.Server.Documents
             if (result == null)
                 return 0;
 
-            int size;
-            var ptr = result.Reader.Read(1, out size);
-            return Bits.SwapBytes(*(long*)ptr);
+            return TableValueToEtag(1, ref result.Reader);
         }
 
         public long GetNumberOfTombstonesWithDocumentEtagLowerThan(DocumentsOperationContext context, string collection, long etag)
@@ -936,8 +934,7 @@ namespace Raven.Server.Documents
 
             result.Key = TableValueToKey(context, (int) DocumentsTable.Key, ref tvr);
 
-            ptr = tvr.Read((int)DocumentsTable.Etag, out size);
-            result.Etag = Bits.SwapBytes(*(long*)ptr);
+            result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
 
             result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out size), size, context);
 
@@ -970,8 +967,7 @@ namespace Raven.Server.Documents
                 result.Doc = new BlittableJsonReaderObject(read, size, context);
             }
 
-            var etag = tvr.Read((int)ConflictsTable.Etag, out size);
-            result.Etag = Bits.SwapBytes(*(long*)etag);
+            result.Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr);
 
             result.Collection = new LazyStringValue(null, tvr.Read((int)ConflictsTable.Collection, out size), size,
                 context);
@@ -1007,12 +1003,8 @@ namespace Raven.Server.Documents
             result.LoweredKey = new LazyStringValue(null, ptr, size, context);
 
             result.Key = TableValueToKey(context, 3, ref tvr);
-            //result.Key = new LazyStringValue(null, ptr, size, context);
-
-            ptr = tvr.Read(1, out size);
-            result.Etag = Bits.SwapBytes(*(long*)ptr);
-            ptr = tvr.Read(2, out size);
-            result.DeletedEtag = Bits.SwapBytes(*(long*)ptr);
+            result.Etag = TableValueToEtag(1, ref tvr);
+            result.DeletedEtag = TableValueToEtag(2, ref tvr);
 
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, 4);
 
@@ -1051,11 +1043,11 @@ namespace Raven.Server.Documents
 
             if (_conflictCount > 0)
             {
-                    var conflicts = GetConflictsFor(context, loweredKey);
-                    if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
-                    {
+                var conflicts = GetConflictsFor(context, loweredKey);
+                if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
+                {
                     if (local.Item2 != null || local.Item1 != null)
-                        {
+                    {
                         // Something is wrong, we can't have conflicts and local document/tombstone
                         throw new InvalidDataException($"we can't have conflicts and local document/tombstone with the key {loweredKey}");
                     }
@@ -1064,7 +1056,6 @@ namespace Raven.Server.Documents
             }
             else
             {
-
                 byte* lowerKey;
                 int lowerSize;
                 byte* keyPtr;
@@ -1072,9 +1063,9 @@ namespace Raven.Server.Documents
 
                 if (key != null)
                 {
-                    DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, 
+                    DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key,
                         out lowerKey, out lowerSize, out keyPtr, out keySize);
-                
+
                     if (local.Item2 == null && local.Item1 == null)
                     {
                         // we adding a tombstone without having any pervious document, it could happened if this was called
@@ -1083,7 +1074,6 @@ namespace Raven.Server.Documents
                         if (expectedEtag != null)
                             throw new ConcurrencyException(
                                 $"Document {key} does not exist, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
-
 
                         if (collectionName == null)
                         {
@@ -1109,19 +1099,19 @@ namespace Raven.Server.Documents
                         if (expectedEtag != null)
                             throw new ConcurrencyException(
                                 $"Document {key} does not exist, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
-                    
+
                         // we update the tombstone
                         etag = CreateTombstone(context,
-                                lowerKey,
-                                lowerSize,
-                                keyPtr,
-                                keySize,
-                                local.Item2.Etag,
-                                collectionName,
-                                local.Item2.ChangeVector,
-                                lastModifiedTicks,
-                                changeVector,
-                                DocumentFlags.None);
+                            lowerKey,
+                            lowerSize,
+                            keyPtr,
+                            keySize,
+                            local.Item2.Etag,
+                            collectionName,
+                            local.Item2.ChangeVector,
+                            lastModifiedTicks,
+                            changeVector,
+                            DocumentFlags.None);
 
                     }
                 }
@@ -1129,45 +1119,47 @@ namespace Raven.Server.Documents
                 {
                     // just delete the document
                     var doc = local.Item1;
-            if (expectedEtag != null && doc.Etag != expectedEtag)
-            {
-                throw new ConcurrencyException(
-                    $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-                {
-                    ActualETag = doc.Etag,
-                            ExpectedETag = (long)expectedEtag
-                };
-            }
+                    if (expectedEtag != null && doc.Etag != expectedEtag)
+                    {
+                        throw new ConcurrencyException(
+                            $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                        {
+                            ActualETag = doc.Etag,
+                            ExpectedETag = (long) expectedEtag
+                        };
+                    }
 
-            EnsureLastEtagIsPersisted(context, doc.Etag);
+                    EnsureLastEtagIsPersisted(context, doc.Etag);
 
-            collectionName = ExtractCollectionName(context, loweredKey, doc.Data);
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                    collectionName = ExtractCollectionName(context, loweredKey, doc.Data);
+                    var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
-            int size;
-            var ptr = table.DirectRead(doc.StorageId, out size);
-            var tvr = new TableValueReader(ptr, size);
+                    int size;
+                    var ptr = table.DirectRead(doc.StorageId, out size);
+                    var tvr = new TableValueReader(ptr, size);
 
                     lowerKey = tvr.Read(0, out lowerSize);
                     keyPtr = tvr.Read(2, out keySize);
 
-            etag = CreateTombstone(context,
-                lowerKey,
-                lowerSize,
-                keyPtr,
-                keySize,
-                doc.Etag,
-                collectionName,
-                doc.ChangeVector,
-                lastModifiedTicks,
-                changeVector,
-                doc.Flags);
+                    etag = CreateTombstone(context,
+                        lowerKey,
+                        lowerSize,
+                        keyPtr,
+                        keySize,
+                        doc.Etag,
+                        collectionName,
+                        doc.ChangeVector,
+                        lastModifiedTicks,
+                        changeVector,
+                        doc.Flags);
 
-            if (collectionName.IsSystem == false)
-            {
-                _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, loweredKey);
-            }
-            table.Delete(doc.StorageId);
+                    if (collectionName.IsSystem == false)
+                    {
+                        _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, loweredKey);
+                    }
+                    table.Delete(doc.StorageId);
+
+                    DeleteAttachmentsOfDocument(context, loweredKey);
                 }
             }
 
@@ -1191,6 +1183,26 @@ namespace Raven.Server.Documents
                 Etag = etag
             };
 
+        }
+
+        private void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice loweredDocumentId)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            Slice startSlice;
+            using (GetAttachmentPrefix(context, loweredDocumentId.Content.Ptr, loweredDocumentId.Size, out startSlice))
+            {
+                table.DeleteByPrimaryKeyPrefix(startSlice, holder =>
+                {
+                    var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+                    int size;
+                    var ptr = holder.Reader.Read((int) AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, out size);
+                    Slice keySlice;
+                    using (Slice.External(context.Allocator, ptr, size, out keySlice))
+                    {
+                        tree.DeleteStream(keySlice);
+                    }
+                });
+            }
         }
 
         public struct DeleteOperationResult
@@ -2094,9 +2106,7 @@ namespace Raven.Server.Documents
                     }
                     else
                     {
-                        int size;
-                        var pOldEtag = oldValue.Read(1, out size);
-                        var oldEtag = Bits.SwapBytes(*(long*)pOldEtag);
+                        var oldEtag = TableValueToEtag(1, ref oldValue);
                         //TODO
                         if (expectedEtag != null && oldEtag != expectedEtag)
                             ThrowConcurrentException(key, expectedEtag, oldEtag);
@@ -2709,10 +2719,8 @@ namespace Raven.Server.Documents
                 {
                     throw new NotImplementedException("Cannot overwrite an exisitng attachment.");
 
-                    /*int size;
-                    var pOldEtag = oldValue.Read(1, out size);
-                    var oldEtag = Bits.SwapBytes(*(long*) pOldEtag);
-
+                    /*
+                    var oldEtag = TableValueToEtag(context, 1, ref oldValue);
                     if (expectedEtag != null && oldEtag != expectedEtag)
                         throw new ConcurrencyException($"Attachment {name} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                         {
@@ -2860,8 +2868,48 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             foreach (var sr in table.SeekByPrimaryKey(startSlice, true))
             {
+                if (IsAttachmentDeleted(ref sr.Reader))
+                    continue;
                 yield return TableValueToKey(context, (int) AttachmentsTable.Name, ref sr.Reader);
             }
+        }
+
+        [Conditional("DEBUG")]
+        public void AssertNoAttachmentsForDocument(DocumentsOperationContext context, string documentId)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
+            byte* lowerDocumentId;
+            int lowerDocumentIdSize;
+            byte* documentIdPtr; // not in use
+            int documentIdSize; // not in use
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerDocumentId, out lowerDocumentIdSize,
+                out documentIdPtr, out documentIdSize);
+
+            Slice startSlice;
+            using (GetAttachmentPrefix(context, lowerDocumentId, lowerDocumentIdSize, out startSlice))
+            {
+                foreach (var sr in table.SeekByPrimaryKey(startSlice, true))
+                {
+                    var attachment = TableValueToAttachment(context, ref sr.Reader);
+                    throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");
+                }
+
+                var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+                using (var it = tree.Iterate(false))
+                {
+                    it.RequiredPrefix = startSlice;
+                    if (it.Seek(it.RequiredPrefix))
+                        throw new InvalidOperationException($"Found attachment stream for attachment key {it.CurrentKey} which should be deleted.");
+                }
+            }
+        }
+
+        private bool IsAttachmentDeleted(ref TableValueReader reader)
+        {
+            int size;
+            reader.Read((int) AttachmentsTable.Name, out size);
+            return size == 0;
         }
 
         public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name)
@@ -2899,8 +2947,7 @@ namespace Raven.Server.Documents
             if (table.ReadByKey(keySlice, out tvr) == false)
                 return null;
 
-            var file = TableValueToAttachment(context, ref tvr);
-            return file;
+            return TableValueToAttachment(context, ref tvr);
         }
 
         public Stream GetAttachmentStream(DocumentsOperationContext context, Slice keySlice)
@@ -2919,17 +2966,21 @@ namespace Raven.Server.Documents
             return new ReleaseMemory(keyMem, context);
         }
 
-        private ReleaseMemory GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice keySlice)
+        private ReleaseMemory GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice startSlice)
         {
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
             Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
             keyMem.Ptr[lowerKeySize] = (byte) 30; // the record separator
-            keySlice = new Slice(SliceOptions.Key, keyMem);
+            startSlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
         }
 
-        private static Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)
+        private Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)
         {
+            var isDeleted = IsAttachmentDeleted(ref tvr);
+            if (isDeleted)
+                return null;
+
             var result = new Attachment
             {
                 StorageId = tvr.Id
@@ -2939,8 +2990,7 @@ namespace Raven.Server.Documents
             var ptr = tvr.Read((int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, out size);
             result.LoweredDocumentId = new LazyStringValue(null, ptr, size, context);
 
-            ptr = tvr.Read((int)AttachmentsTable.Etag, out size);
-            result.Etag = Bits.SwapBytes(*(long*)ptr);
+            result.Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
             result.Name = TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr);
             result.LastModified = new DateTime(*(long*)tvr.Read((int) AttachmentsTable.LastModified, out size));
 
@@ -2950,6 +3000,16 @@ namespace Raven.Server.Documents
             return result;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long TableValueToEtag(int index, ref TableValueReader tvr)
+        {
+            int size;
+            var ptr = tvr.Read(index, out size);
+            var etag = Bits.SwapBytes(*(long*)ptr);
+            return etag;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static LazyStringValue TableValueToKey(JsonOperationContext context, int index, ref TableValueReader tvr)
         {
             int size;
@@ -2990,32 +3050,34 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void DeleteAttachment(DocumentsOperationContext context, Slice keySlice, Slice lowerDocumentId, string documentId, string name, long? expectedEtag)
+        private void DeleteAttachment(DocumentsOperationContext context, Slice keySlice, Slice lowerDocumentId, string documentId, string name, long? expectedEtag)
         {
+            var attachmenEtag = GenerateNextEtag();
             var updateDocumentEtag = GenerateNextEtag();
             var modifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
 
             Slice startSlice;
             using (GetAttachmentPrefix(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, out startSlice))
             {
-                TableValueReader tvr;
-                var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out tvr);
+                TableValueReader docTvr;
+                var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out docTvr);
                 if (hasDoc == false)
                 {
                     if (expectedEtag != null)
                         throw new ConcurrencyException(
                             $"Document {documentId} does not exist, but delete was called with etag {expectedEtag} to remove attachment {name}. Optimistic concurrency violation, transaction will be aborted.");
-                    
+
                     // this basically mean that we tried to delete attachment whose document doesn't exist.
                     return;
                 }
 
-                UpdateDocumentForAttachmentChange(context, documentId, name, updateDocumentEtag, modifiedTicks, tvr, lowerDocumentId, 
+                UpdateDocumentForAttachmentChange(context, documentId, name, updateDocumentEtag, modifiedTicks, docTvr, lowerDocumentId,
                     DocumentChangeTypes.DeleteAttachment);
             }
 
-            var attachment = GetAttachment(context, keySlice);
-            if (attachment == null)
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            TableValueReader tvr;
+            if (table.ReadByKey(keySlice, out tvr) == false)
             {
                 if (expectedEtag != null)
                     throw new ConcurrencyException($"Attachment {name} of document {documentId} does not exist, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
@@ -3024,18 +3086,26 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            if (expectedEtag != null && attachment.Etag != expectedEtag)
+            var etag = TableValueToEtag((int) AttachmentsTable.Etag, ref tvr);
+            if (expectedEtag != null && etag != expectedEtag)
             {
-                throw new ConcurrencyException($"Attachment {name} of document '{documentId}' has etag {attachment.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                throw new ConcurrencyException($"Attachment {name} of document '{documentId}' has etag {etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                 {
-                    ActualETag = attachment.Etag,
+                    ActualETag = etag,
                     ExpectedETag = (long) expectedEtag
                 };
             }
 
-            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            // TODO: Do not delete here, but update instead with a delete marker
-            table.Delete(attachment.StorageId);
+            var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
+            var tbv = new TableValueBuilder
+            {
+                {keySlice.Content.Ptr, keySlice.Size},
+                newEtagBigEndian,
+                {(void*) 1, 0},
+                {(void*) 1, 0},
+                modifiedTicks,
+            };
+            table.Update(tvr.Id, tbv);
 
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
             tree.DeleteStream(keySlice);

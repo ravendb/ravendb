@@ -186,7 +186,6 @@ namespace Voron.Data.BTrees
                         chunksDetails[i++] = *(ChunkDetails*)slice.Content.Ptr;
                     }
                 } while (it.MoveNext());
-
             }
             return new VoronStream(tree.Name, chunksDetails, _llt);
         }

@@ -1,9 +1,11 @@
 ﻿using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 
 namespace FastTests.Client.Attachments
 {
@@ -87,19 +89,19 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public void DeleteAttachments()
+        public async Task DeleteAttachments()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.Store(new User {Name = "Fitzchak"}, "users/1");
                     session.SaveChanges();
                 }
 
                 for (int i = 1; i <= 3; i++)
                 {
-                    using (var profileStream = new MemoryStream(Enumerable.Range(1, 3 * i).Select(x => (byte)x).ToArray()))
+                    using (var profileStream = new MemoryStream(Enumerable.Range(1, 3 * i).Select(x => (byte) x).ToArray()))
                         store.Operations.Send(new PutAttachmentOperation("users/1", "file" + i, profileStream, "image/png"));
                 }
 
@@ -129,6 +131,15 @@ namespace FastTests.Client.Attachments
                     Assert.Equal("file3", attachment.Name);
                     Assert.Equal(9, attachmentStream.Position);
                     Assert.Equal(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9}, readBuffer.Take(9));
+                }
+
+                // Delete document should delete all the attachments
+                store.Commands().Delete("users/1", null);
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (context.OpenReadTransaction())
+                {
+                    database.DocumentsStorage.AssertNoAttachmentsForDocument(context, "users/1");
                 }
             }
         }
