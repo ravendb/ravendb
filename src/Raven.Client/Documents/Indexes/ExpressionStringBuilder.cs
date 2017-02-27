@@ -2100,7 +2100,7 @@ namespace Raven.Client.Documents.Indexes
                         Out(node.Method.DeclaringType.Name);
                         Out(".Parse(");
                     }
-                    else if(node.Type != typeof(object))
+                    else if(node.Type != typeof(object) || node.Operand.NodeType == ExpressionType.Constant)
                     {
                         Out("(");
                         ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
@@ -2137,7 +2137,7 @@ namespace Raven.Client.Documents.Indexes
 
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
-                    if (node.Type != typeof(object))
+                    if (node.Type != typeof(object) || node.Operand.NodeType == ExpressionType.Constant)
                         Out(")");
                     break;
 
