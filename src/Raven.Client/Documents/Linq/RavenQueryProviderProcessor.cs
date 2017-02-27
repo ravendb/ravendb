@@ -2006,7 +2006,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (doc.TryGetMember(renamedField, out value) == false)
                     continue;
                 values[renamedField] = value;
-                if (FieldsToFetch.Contains(renamedField))
+                if (FieldsToFetch.Contains(renamedField) == false)
                 {
                     doc.Modifications.Remove(renamedField);
                 }

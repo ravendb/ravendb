@@ -1,30 +1,25 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-   public class RavenDB_3302 : RavenTestBase
+    public class RavenDB_3302 : RavenTestBase
     {
         [Fact]
         public void CanIndexAndQuery()
         {
             DateTime now = DateTime.UtcNow;
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new TicketTimerIndex().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
-                    foreach (var location in new[] {"locations-1", "locations-2"})
+                    foreach (var location in new[] { "locations-1", "locations-2" })
                     {
                         // Ticket updated right now ("Normal" timer status)
                         session.Store(new Ticket
@@ -79,7 +74,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class TicketTimerIndex : AbstractIndexCreationTask<Ticket>
+        private class TicketTimerIndex : AbstractIndexCreationTask<Ticket>
         {
             public class IndexEntry
             {
@@ -104,7 +99,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Ticket
+        private class Ticket
         {
             public string LocationId { get; set; }
             public DateTime DateUpdated { get; set; }
