@@ -46,7 +46,8 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 var fileName = Path.GetFileName(attachment.Name);
-                HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"";
+                fileName = Uri.EscapeDataString(fileName);
+                HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
                 HttpContext.Response.Headers["Content-Type"] = attachment.ContentType.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + attachment.Etag + "\"";
 

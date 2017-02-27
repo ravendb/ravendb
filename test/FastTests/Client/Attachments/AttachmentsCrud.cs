@@ -26,7 +26,7 @@ namespace FastTests.Client.Attachments
                 {
                     "profile.png",
                     "background-photo.jpg",
-                    "fileNANE_#$1^%_בעברית.txt"
+                    "fileNAME_#$1^%_בעברית.txt"
                 };
                 using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                 {
