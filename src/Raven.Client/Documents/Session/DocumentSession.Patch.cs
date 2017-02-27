@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using Lambda2Js;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Linq;
@@ -21,7 +22,53 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        private object _patchInfo;
+        private class CustomMethods : JavascriptConversionExtension
+        {
+            public string methodName;
+            public Dictionary<string, object> Parameters = new Dictionary<string, object>();
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                var nameAttribute = methodCallExpression?
+                    .Method
+                    .GetCustomAttributes(typeof(JavascriptMethodNameAttribute), false)
+                    .OfType<JavascriptMethodNameAttribute>()
+                    .FirstOrDefault();
+
+                if (nameAttribute == null)
+                    return;
+                context.PreventDefault();
+
+                methodName = nameAttribute.Name;
+                var javascriptWriter = context.GetWriter();
+                javascriptWriter.Write(".");
+                javascriptWriter.Write(methodName);
+                javascriptWriter.Write("(");
+
+                for (int i = 0; i < methodCallExpression.Arguments.Count; i++)
+                {
+                    var name = "arg_" + Parameters.Count;
+                    if (i != 0)
+                        javascriptWriter.Write(", ");
+                    javascriptWriter.Write(name);
+                    Parameters[name] = methodCallExpression.Arguments[i];
+                }
+                if (nameAttribute.PositionalArguments != null)
+                {
+                    for (int i = methodCallExpression.Arguments.Count;
+                        i < nameAttribute.PositionalArguments.Length;
+                        i++)
+                    {
+                        if (i != 0)
+                            javascriptWriter.Write(", ");
+                        context.Visitor.Visit(Expression.Constant(nameAttribute.PositionalArguments[i]));
+                    }
+                }
+
+                javascriptWriter.Write(")");
+            }
+        }
 
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
         {
@@ -35,37 +82,36 @@ namespace Raven.Client.Documents.Session
         public void Increment<T, U>(string key, Expression<Func<T, U>> path, U valToAdd)
         {
             var pathScript = path.CompileToJavascript();
-            var script = $"this.{pathScript} += val;";
 
-            _documentStore.Operations.Send(new PatchOperation(key, null, patch: new PatchRequest
-            {
-                Script = script,
-                Values = { ["val"] = valToAdd }
-            }));
+            Advanced.Defer();
 
-            _patchInfo = new { DocId = key, Script = $"\"{script}\"", Path = path, Val = valToAdd };
-        }
-
-        public void Patch<T, U>(string key, Expression<Func<T, U>> path, U value)
-        {
-            var pathScript = path.CompileToJavascript();
-            var script = $"this.{pathScript} = val;";
             _documentStore.Operations.Send(new PatchOperation(key, null, new PatchRequest
             {
-                Script = script,
-                Values = { ["val"] = value }
+                Script = $"this.{pathScript} += val;",
+                Values = { ["val"] = valToAdd }
             }));
-
-            _patchInfo = new { DocId = key, Script = $"\"{script}\"", Path = path, Val = value };
         }
 
         public void Patch<T, U>(T entity, Expression<Func<T, U>> path, U value)
         {
             var metadata = GetMetadataFor(entity);
             StringValues id;
-            metadata.TryGetValue(Raven.Client.Constants.Documents.Metadata.Id, out id);
+            metadata.TryGetValue(Constants.Documents.Metadata.Id, out id);
 
             Patch(id, path, value);
+        }
+
+        public void Patch<T, U>(string key, Expression<Func<T, U>> path, U value)
+        {
+            var pathScript = path.CompileToJavascript();
+
+            Advanced.Defer();
+
+            _documentStore.Operations.Send(new PatchOperation(key, null, new PatchRequest
+            {
+                Script = $"this.{pathScript} = val;",
+                Values = { ["val"] = value }
+            }));
         }
 
         public void Patch<T, U>(T entity, Expression<Func<T, IEnumerable<U>>> path,
@@ -81,30 +127,26 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string key, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
+            var extension = new CustomMethods();
             var pathScript = path.CompileToJavascript();
-            var adderScript = arrayAdder.CompileToJavascript();
+            var adderScript = arrayAdder.CompileToJavascript(
+                new JavascriptCompilationOptions(
+                    JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
+                    new LinqMethods(), extension));
 
-            var jsMethodNameAtt = ((MethodCallExpression)arrayAdder.Body).Method.GetCustomAttributes(typeof(JavascriptMethodNameAttribute));
-            var name = ((JavascriptMethodNameAttribute)jsMethodNameAtt.ElementAt(0)).Name;
-
-            var script = name == "concat" ? $"this.{pathScript} = this.{pathScript}{adderScript}" : $"this.{pathScript}{adderScript}";
+            var script = extension.methodName == "concat" ? $"this.{pathScript} = this.{pathScript}{adderScript}" : $"this.{pathScript}{adderScript}";
 
             object val;
             var arg = ((MethodCallExpression)arrayAdder.Body).Arguments[0];
             LinqPathProvider.GetValueFromExpressionWithoutConversion(arg, out val);
 
+            Advanced.Defer();
+
             _documentStore.Operations.Send(new PatchOperation(key, null, new PatchRequest
             {
                 Script = script,
-                Values = { { "val", val } }
+                Values = { { "arg_0", val } }
             }));
-
-            _patchInfo = new { DocId = key, Script = $"\"{script}\"", Path = path, Val = val };
-        }
-
-        public override string ToString()
-        {
-            return _patchInfo.ToString();
         }
     }
 }
