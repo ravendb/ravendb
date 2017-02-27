@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
@@ -19,7 +21,6 @@ namespace Raven.Server.Documents
             _database = database;
             _context = context;
         }
-
 
         public virtual IOperationResult ExecuteDelete(string collectionName, CollectionOperationOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
@@ -42,8 +43,8 @@ namespace Raven.Server.Documents
             long totalCount;
             using (context.OpenReadTransaction())
             {
-                lastEtag = _database.DocumentsStorage.GetLastDocumentEtag(context, collectionName);
-                _database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out totalCount);
+                lastEtag = GetLastEtagForCollection(context, collectionName);
+                totalCount = GetTotalCountForCollection(context, collectionName);
             }
             progress.Total = totalCount;
             long startEtag = 0;
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents
 
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        var documents = _database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize).ToList();
+                        var documents = GetDocuments(context, collectionName, startEtag, batchSize);
                         foreach (var document in documents)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
@@ -77,7 +78,7 @@ namespace Raven.Server.Documents
                                 break;
                             }
 
-                            startEtag = document.Etag;
+                            startEtag = document.Etag; //TODO: +1 ?
 
                             action(document.Key);
 
@@ -101,6 +102,23 @@ namespace Raven.Server.Documents
             {
                 Total = progress.Processed
             };
+        }
+
+        protected virtual List<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
+        {
+            return _database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize).ToList();
+        }
+
+        protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
+        {
+            long totalCount;
+            _database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out totalCount);
+            return totalCount;
+        }
+
+        protected virtual long GetLastEtagForCollection(DocumentsOperationContext context, string collection)
+        {
+            return _database.DocumentsStorage.GetLastDocumentEtag(context, collection);
         }
     }
 }
