@@ -205,6 +205,7 @@ namespace Raven.Server.Rachis
                         case 2: // promotable updated
                             _promotableUpdated.Reset();
                             CheckPromotables();
+
                             break;
                         case WaitHandle.WaitTimeout:
                             if (_voters.Count != 0)
@@ -510,9 +511,10 @@ namespace Raven.Server.Rachis
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
             {
-                if (Interlocked.CompareExchange(ref _topologyModification, null, null) != null)
+                var existing = Interlocked.CompareExchange(ref _topologyModification, null, null);
+                if (existing != null)
                 {
-                    task = null;
+                    task = existing;
                     return false;
                 }
 

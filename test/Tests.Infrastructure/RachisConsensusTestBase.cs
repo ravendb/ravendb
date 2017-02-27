@@ -31,7 +31,6 @@ namespace Tests.Infrastructure
                 SetupServer(i == leaderIndex);
             }
             var leader = RachisConsensuses[leaderIndex];
-            var followerUpgradedToVoterTasks = new List<Task>();
             for (var i = 0; i < nodeCount; i++)
             {
                 if (i == leaderIndex)
@@ -40,12 +39,8 @@ namespace Tests.Infrastructure
                 }
                 var follower = RachisConsensuses[i];
                 await leader.AddToClusterAsync(follower.Url);
-                followerUpgradedToVoterTasks.Add(follower.WaitForTopology(Leader.TopologyModification.Voter));
+                await follower.WaitForTopology(Leader.TopologyModification.Voter);
             }
-            var timeout = 5000*nodeCount ;
-            if (Debugger.IsAttached)
-                timeout *= 100;
-            Assert.True(Task.WhenAll(followerUpgradedToVoterTasks).Wait(timeout),$"Cluster didn't become stable after {timeout}ms");
             Assert.True(RachisConsensuses[leaderIndex].CurrentState == RachisConsensus.State.Leader,"The leader has changed while waiting for cluster to become stable");
             return leader;
         }

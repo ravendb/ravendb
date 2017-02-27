@@ -25,13 +25,11 @@ namespace SlowTests.Server.Rachis
 
             var followers = new[] { b, c, d, e };
 
-            var followersUpgraded = followers.Select(x => x.WaitForTopology(Leader.TopologyModification.Voter)).ToArray();
             foreach (var follower in followers)
             {
                 await a.AddToClusterAsync(follower.Url);
+                await follower.WaitForTopology(Leader.TopologyModification.Voter);
             }
-
-            await Task.WhenAll(followersUpgraded);
 
             var leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_ => x)).ToArray();
 
@@ -115,7 +113,9 @@ namespace SlowTests.Server.Rachis
             var cUpgraded = c.WaitForTopology(Leader.TopologyModification.Voter);
 
             await a.AddToClusterAsync(b.Url);
+            await b.WaitForTopology(Leader.TopologyModification.Voter);
             await a.AddToClusterAsync(c.Url);
+            await c.WaitForTopology(Leader.TopologyModification.Voter);
 
             await bUpgraded;
             await cUpgraded;
@@ -163,6 +163,7 @@ namespace SlowTests.Server.Rachis
             var b = SetupServer();
 
             await a.AddToClusterAsync(b.Url);
+            await b.WaitForTopology(Leader.TopologyModification.Voter);
             long lastIndex = 0;
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -192,6 +193,7 @@ namespace SlowTests.Server.Rachis
             var b = SetupServer();
 
             await a.AddToClusterAsync(b.Url);
+            await b.WaitForTopology(Leader.TopologyModification.Voter);
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {

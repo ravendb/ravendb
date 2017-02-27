@@ -16,9 +16,9 @@ namespace Tryouts
             {
 
                 var sp = Stopwatch.StartNew();
-                using (var a = new BasicCluster())
+                using (var a = new CommandsTests())
                 {
-                    a.ClusterWithLateJoiningNodeRequiringSnapshot().Wait();
+                    a.When_command_committed_CompletionTaskSource_is_notified().Wait();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

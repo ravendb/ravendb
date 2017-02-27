@@ -70,6 +70,7 @@ namespace Raven.Server.Rachis
             }
         }
     }
+
     public abstract class RachisConsensus : IDisposable
     {
         public enum State
@@ -172,7 +173,7 @@ namespace Raven.Server.Rachis
                     {
                         byte* ptr;
                         using (state.DirectAdd(CurrentTermSlice, sizeof(long), out ptr))
-                            *(long*)ptr = CurrentTerm = 0;
+                            *(long*) ptr = CurrentTerm = 0;
                     }
                     else
                         CurrentTerm = read.Reader.ReadLittleEndianInt64();
@@ -335,7 +336,7 @@ namespace Raven.Server.Rachis
         {
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
-            using (context.OpenWriteTransaction())// using write tx just for the lock here
+            using (context.OpenWriteTransaction()) // using write tx just for the lock here
             {
                 if (ReferenceEquals(_disposables[0], parentState) == false)
                     throw new ConcurrencyException(
@@ -424,7 +425,8 @@ namespace Raven.Server.Rachis
             return topologyJson;
         }
 
-        private static BlittableJsonReaderObject SetTopology(RachisConsensus engine, Transaction tx, JsonOperationContext context, ClusterTopology topology)
+        private static BlittableJsonReaderObject SetTopology(RachisConsensus engine, Transaction tx,
+            JsonOperationContext context, ClusterTopology topology)
         {
             var djv = new DynamicJsonValue
             {
@@ -442,7 +444,8 @@ namespace Raven.Server.Rachis
             return topologyJson;
         }
 
-        public static unsafe void SetTopology(RachisConsensus engine, Transaction tx, BlittableJsonReaderObject topologyJson)
+        public static unsafe void SetTopology(RachisConsensus engine, Transaction tx,
+            BlittableJsonReaderObject topologyJson)
         {
             var state = tx.CreateTree(GlobalStateSlice);
             byte* ptr;
@@ -566,7 +569,7 @@ namespace Raven.Server.Rachis
             if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out reader))
             {
                 int size;
-                lastIndex = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+                lastIndex = Bits.SwapBytes(*(long*) reader.Read(0, out size));
                 Debug.Assert(size == sizeof(long));
             }
             else
@@ -598,7 +601,7 @@ namespace Raven.Server.Rachis
 
             if (lastIndex < upto)
             {
-                upto = lastIndex;// max we can delete
+                upto = lastIndex; // max we can delete
                 entryIndex = lastIndex;
                 entryTerm = lastTerm;
             }
@@ -623,12 +626,12 @@ namespace Raven.Server.Rachis
                     break;
 
                 int size;
-                entryIndex = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+                entryIndex = Bits.SwapBytes(*(long*) reader.Read(0, out size));
                 if (entryIndex > upto)
                     break;
                 Debug.Assert(size == sizeof(long));
 
-                entryTerm = *(long*)reader.Read(1, out size);
+                entryTerm = *(long*) reader.Read(1, out size);
                 Debug.Assert(size == sizeof(long));
 
                 table.Delete(reader.Id);
@@ -637,13 +640,14 @@ namespace Raven.Server.Rachis
             byte* ptr;
             using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2, out ptr))
             {
-                var data = (long*)ptr;
+                var data = (long*) ptr;
                 data[0] = entryIndex;
                 data[1] = entryTerm;
             }
         }
 
-        public unsafe BlittableJsonReaderObject AppendToLog(TransactionOperationContext context, List<RachisEntry> entries)
+        public unsafe BlittableJsonReaderObject AppendToLog(TransactionOperationContext context,
+            List<RachisEntry> entries)
         {
             Debug.Assert(entries.Count > 0);
             Debug.Assert(context.Transaction != null);
@@ -654,7 +658,9 @@ namespace Raven.Server.Rachis
             BlittableJsonReaderObject lastTopology = null;
 
             Slice key;
-            using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long), out key))
+            using (
+                Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*) &reversedEntryIndex, sizeof(long),
+                    out key))
             {
                 var lastEntryIndex = GetLastEntryIndex(context);
                 var firstIndexInEntriesThatWeHaveNotSeen = 0;
@@ -682,7 +688,7 @@ namespace Raven.Server.Rachis
                     if (table.ReadByKey(key, out reader)) // already exists
                     {
                         int size;
-                        var term = *(long*)reader.Read(1, out size);
+                        var term = *(long*) reader.Read(1, out size);
                         Debug.Assert(size == sizeof(long));
                         if (term == entry.Term)
                             continue; // same, can skip
@@ -723,7 +729,8 @@ namespace Raven.Server.Rachis
             return lastTopology;
         }
 
-        private static void GetLastTruncated(TransactionOperationContext context, out long lastTruncatedIndex, out long lastTruncatedTerm)
+        private static void GetLastTruncated(TransactionOperationContext context, out long lastTruncatedIndex,
+            out long lastTruncatedTerm)
         {
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(LastTruncatedSlice);
@@ -739,12 +746,13 @@ namespace Raven.Server.Rachis
         }
 
 
-        public unsafe BlittableJsonReaderObject GetEntry(TransactionOperationContext context, long index, out RachisEntryFlags flags)
+        public unsafe BlittableJsonReaderObject GetEntry(TransactionOperationContext context, long index,
+            out RachisEntryFlags flags)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             var reversedIndex = Bits.SwapBytes(index);
             Slice key;
-            using (Slice.External(context.Allocator, (byte*)&reversedIndex, sizeof(long), out key))
+            using (Slice.External(context.Allocator, (byte*) &reversedIndex, sizeof(long), out key))
             {
                 TableValueReader reader;
                 if (table.ReadByKey(key, out reader) == false)
@@ -753,7 +761,7 @@ namespace Raven.Server.Rachis
                     return null;
                 }
                 int size;
-                flags = *(RachisEntryFlags*)reader.Read(3, out size);
+                flags = *(RachisEntryFlags*) reader.Read(3, out size);
                 Debug.Assert(size == sizeof(RachisEntryFlags));
                 var ptr = reader.Read(2, out size);
                 return new BlittableJsonReaderObject(ptr, size, context);
@@ -815,7 +823,7 @@ namespace Raven.Server.Rachis
             byte* ptr;
             using (state.DirectAdd(LastCommitSlice, sizeof(long) * 2, out ptr))
             {
-                var data = (long*)ptr;
+                var data = (long*) ptr;
                 data[0] = index;
                 data[1] = term;
             }
@@ -865,11 +873,11 @@ namespace Raven.Server.Rachis
             if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out reader) == false)
                 return Tuple.Create(0L, 0L);
             int size;
-            var max = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+            var max = Bits.SwapBytes(*(long*) reader.Read(0, out size));
             Debug.Assert(size == sizeof(long));
             if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out reader) == false)
                 return Tuple.Create(0L, 0L);
-            var min = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+            var min = Bits.SwapBytes(*(long*) reader.Read(0, out size));
             Debug.Assert(size == sizeof(long));
 
             return Tuple.Create(min, max);
@@ -889,7 +897,7 @@ namespace Raven.Server.Rachis
                 return lastTruncatedIndex;
             }
             int size;
-            var max = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+            var max = Bits.SwapBytes(*(long*) reader.Read(0, out size));
             Debug.Assert(size == sizeof(long));
             return max;
         }
@@ -908,7 +916,7 @@ namespace Raven.Server.Rachis
                 return lastTruncatedIndex;
             }
             int size;
-            var max = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+            var max = Bits.SwapBytes(*(long*) reader.Read(0, out size));
             Debug.Assert(size == sizeof(long));
             return max;
         }
@@ -928,7 +936,9 @@ namespace Raven.Server.Rachis
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             var reversedIndex = Bits.SwapBytes(index);
             Slice key;
-            using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedIndex, sizeof(long), out key))
+            using (
+                Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*) &reversedIndex, sizeof(long),
+                    out key))
             {
                 TableValueReader reader;
                 if (table.ReadByKey(key, out reader) == false)
@@ -944,7 +954,7 @@ namespace Raven.Server.Rachis
                     return null;
                 }
                 int size;
-                var term = *(long*)reader.Read(1, out size);
+                var term = *(long*) reader.Read(1, out size);
                 Debug.Assert(size == sizeof(long));
                 return term;
             }
@@ -981,7 +991,7 @@ namespace Raven.Server.Rachis
             byte* ptr;
             using (state.DirectAdd(CurrentTermSlice, sizeof(long), out ptr))
             {
-                *(long*)ptr = term;
+                *(long*) ptr = term;
             }
 
             votedFor = votedFor ?? String.Empty;
@@ -1055,7 +1065,7 @@ namespace Raven.Server.Rachis
                     {
                         var topology = new ClusterTopology(Guid.NewGuid().ToString(),
                             null,
-                            new string[] { self },
+                            new string[] {self},
                             new string[0],
                             new string[0]);
 
@@ -1075,24 +1085,23 @@ namespace Raven.Server.Rachis
         {
             return ModifyTopologyAsync(node, Leader.TopologyModification.Promotable);
         }
-
-
+    
         public Task RemoveFromClusterAsync(string node)
         {
             return ModifyTopologyAsync(node, Leader.TopologyModification.Remove);
         }
 
-        private Task ModifyTopologyAsync(string newNode, Leader.TopologyModification modification)
+        private async Task ModifyTopologyAsync(string newNode, Leader.TopologyModification modification)
         {
             var leader = _currentLeader;
             if (leader == null)
                 throw new InvalidOperationException("Not a leader, cannot accept commands");
 
             Task task;
-            if (leader.TryModifyTopology(newNode, modification, out task) == false)
-                throw new InvalidOperationException("Cannot run a modification on the topology when one is in progress");
+            while (leader.TryModifyTopology(newNode, modification, out task) == false)
+                await task;
 
-            return task;
+            await task;
         }
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
