@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -46,31 +47,28 @@ namespace Raven.Client.Documents.Session
                 javascriptWriter.Write("(");
 
                 var args = new List<Expression>();
-                for (var i = 0; i < methodCallExpression.Arguments.Count; i++)
+                foreach (var expr in methodCallExpression.Arguments)
                 {
-                    if (methodCallExpression.Arguments[i] is NewArrayExpression)
-                    {
-                        var exps = ((NewArrayExpression) methodCallExpression.Arguments[i]).Expressions;
-                        foreach (var exp in exps)                        
-                            args.Add(exp);                                             
-                    }                    
-                    else                   
-                        args.Add(methodCallExpression.Arguments[i]);
+                    var expression = expr as NewArrayExpression;
+                    if (expression != null)
+                        args.AddRange(expression.Expressions);
+                    else
+                        args.Add(expr);
                 }
 
-                object val;
                 for (var i = 0; i < args.Count; i++)
                 {
                     var name = "arg_" + Parameters.Count;
                     if (i != 0)
                         javascriptWriter.Write(", ");
                     javascriptWriter.Write(name);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(args[i], out val);
-                    Parameters[name] = val;
+                    object val;
+                    if (LinqPathProvider.GetValueFromExpressionWithoutConversion(args[i], out val))
+                        Parameters[name] = val;
                 }
                 if (nameAttribute.PositionalArguments != null)
                 {
-                    for (int i = methodCallExpression.Arguments.Count;
+                    for (int i = args.Count;
                         i < nameAttribute.PositionalArguments.Length;
                         i++)
                     {

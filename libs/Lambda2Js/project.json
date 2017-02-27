@@ -1,10 +1,10 @@
 {
-  "version": "1.0.1",
+  "version": "2.0.99",
   "frameworks": {
     "netstandard1.3": {
       "bin": {
-        "assembly": "netstandard1.3\\Lambda2Js.dll",
-        "pdb": "netstandard1.3\\Lambda2Js.pdb"
+        "assembly": "netstandard1.3/Lambda2Js.dll",
+        "pdb": "netstandard1.3/Lambda2Js.pdb"
       }
     }
   },
