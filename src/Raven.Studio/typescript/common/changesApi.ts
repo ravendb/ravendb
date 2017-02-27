@@ -45,7 +45,7 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto> {
     }
 
     protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "singleUseAuthToken=" + token.Token;
+        const connectionString = "singleUseAuthToken=" + token.Token + "&throttleConnection=true";
         return "/changes?" + connectionString;
     }
 
@@ -59,7 +59,7 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto> {
         const value = eventDto.Value;
 
         switch (eventType) {
-            case "DocumentChangeNotification":
+            case "DocumentChange":
                 this.fireEvents<Raven.Client.Documents.Changes.DocumentChange>(this.allDocsHandlers(), value, () => true);
 
                 this.watchedDocuments.forEach((callbacks, key) => {
@@ -70,14 +70,14 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto> {
                     this.fireEvents<Raven.Client.Documents.Changes.DocumentChange>(callbacks(), value, (event) => event.Key != null && event.Key.startsWith(key));
                 });
                 break;
-            case "IndexChangeNotification":
+            case "IndexChange":
                 this.fireEvents<Raven.Client.Documents.Changes.IndexChange>(this.allIndexesHandlers(), value, () => true);
 
                 this.watchedIndexes.forEach((callbacks, key) => {
                     this.fireEvents<Raven.Client.Documents.Changes.IndexChange>(callbacks(), value, (event) => event.Name != null && event.Name === key);
                 });
                 break;
-            case "TransformerChangeNotification":
+            case "TransformerChange":
                 this.fireEvents<Raven.Client.Documents.Changes.TransformerChange>(this.allTransformersHandlers(), value, () => true);
                 break;
             /* TODO: case "BulkInsertChangeNotification":
