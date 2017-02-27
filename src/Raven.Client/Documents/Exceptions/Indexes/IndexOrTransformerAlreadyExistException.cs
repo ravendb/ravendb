@@ -5,13 +5,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Exceptions;
 
-namespace Raven.Server.Exceptions
+namespace Raven.Client.Documents.Exceptions.Indexes
 {
     /// <summary>
     /// This exception is raised if creation of index is attempted when there is already an index with identical name
     /// </summary>
-    public class IndexOrTransformerAlreadyExistException : Exception
+    public class IndexOrTransformerAlreadyExistException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="IndexOrTransformerAlreadyExistException"/> class.

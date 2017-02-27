@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Transformers;
 using Raven.Server.Config.Settings;

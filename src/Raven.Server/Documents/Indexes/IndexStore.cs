@@ -817,6 +817,20 @@ namespace Raven.Server.Documents.Indexes
 
             lock (_indexAndTransformerLocker)
             {
+                var transformer = _documentDatabase.TransformerStore.GetTransformer(newIndexName);
+                if (transformer != null)
+                {
+                    throw new IndexOrTransformerAlreadyExistException(
+                        $"Cannot rename index to {newIndexName} because a transformer having the same name already exists");
+                }
+
+                Index _;
+                if (_indexes.TryGetByName(newIndexName, out _))
+                {
+                    throw new IndexOrTransformerAlreadyExistException(
+                        $"Cannot rename index to {newIndexName} because an index having the same name already exists");
+                }
+
                 index.Rename(newIndexName); // store new index name in 'metadata' file, actual dir rename will happen on next db load
                 _indexes.RenameIndex(index, newIndexName);
             }
