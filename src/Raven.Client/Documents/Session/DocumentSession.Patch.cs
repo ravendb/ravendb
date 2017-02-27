@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using Lambda2Js;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Linq;
@@ -21,7 +22,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        private object _patchInfo;
+        private readonly List<object> _patchInfo = new List<object>();
 
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
         {
@@ -37,13 +38,13 @@ namespace Raven.Client.Documents.Session
             var pathScript = path.CompileToJavascript();
             var script = $"this.{pathScript} += val;";
 
-            _documentStore.Operations.Send(new PatchOperation(key, null, patch: new PatchRequest
+            _documentStore.Operations.Send(new PatchOperation(key, null, new PatchRequest
             {
                 Script = script,
                 Values = { ["val"] = valToAdd }
             }));
 
-            _patchInfo = new { DocId = key, Script = $"\"{script}\"", Path = path, Val = valToAdd };
+            _patchInfo.Add(new { DocId = key, Script = $"\"{script}\"", Path = path, Val = valToAdd });
         }
 
         public void Patch<T, U>(string key, Expression<Func<T, U>> path, U value)
@@ -56,7 +57,7 @@ namespace Raven.Client.Documents.Session
                 Values = { ["val"] = value }
             }));
 
-            _patchInfo = new { DocId = key, Script = $"\"{script}\"", Path = path, Val = value };
+            _patchInfo.Add(new { DocId = key, Script = $"\"{script}\"", Path = path, Val = value });
         }
 
         public void Patch<T, U>(T entity, Expression<Func<T, U>> path, U value)
@@ -99,12 +100,15 @@ namespace Raven.Client.Documents.Session
                 Values = { { "val", val } }
             }));
 
-            _patchInfo = new { DocId = key, Script = $"\"{script}\"", Path = path, Val = val };
+            _patchInfo.Add(new { DocId = key, Script = $"\"{script}\"", Path = path, Val = val });
         }
 
         public override string ToString()
         {
-            return _patchInfo.ToString();
+            var sb = new StringBuilder();
+            foreach (var v in _patchInfo)
+                sb.Append(v);
+            return sb.ToString();
         }
     }
 }
