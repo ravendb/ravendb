@@ -9,6 +9,8 @@ import selectColumns = require("viewmodels/common/selectColumns");
 import selectCsvColumnsDialog = require("viewmodels/common/selectCsvColumns");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import messagePublisher = require("common/messagePublisher");
+import copyDocuments = require("viewmodels/database/documents/copyDocuments");
+import copyDocumentIds = require("viewmodels/database/documents/copyDocumentIds");
 
 import notificationCenter = require("common/notifications/notificationCenter");
 
@@ -21,6 +23,7 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
+import getDocumentsWithMetadataCommand = require("commands/database/documents/getDocumentsWithMetadataCommand");
 
 import eventsCollector = require("common/eventsCollector");
 
@@ -35,11 +38,15 @@ import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 
 class documents extends viewModelBase {
 
+    static readonly copyLimit = 100;
     static readonly allDocumentCollectionName = "__all_docs";
 
     isLoading = ko.observable<boolean>(false);
     inSpecificCollection: KnockoutComputed<boolean>;
     deleteEnabled: KnockoutComputed<boolean>;
+    private selectedItemsCount: KnockoutComputed<number>;
+
+    copyDisabledReason: KnockoutComputed<disabledReason>;
 
     private collectionToSelectName: string;
     private collections = ko.observableArray<collection>();
@@ -47,7 +54,8 @@ class documents extends viewModelBase {
     private gridController = ko.observable<virtualGridController<document>>();
 
     spinners = {
-        delete: ko.observable<boolean>(false)
+        delete: ko.observable<boolean>(false),
+        copy: ko.observable<boolean>(false)
     }
 
     constructor() {
@@ -61,15 +69,33 @@ class documents extends viewModelBase {
             const currentCollection = this.currentCollection();
             return currentCollection && !currentCollection.isAllDocuments;
         });
-        this.deleteEnabled = ko.pureComputed(() => {
-            const deleteInProgress = this.spinners.delete();
+        this.selectedItemsCount = ko.pureComputed(() => {
             let selectedDocsCount = 0;
             const controll = this.gridController();
             if (controll) {
                 selectedDocsCount = controll.selection().count;
             }
+            return selectedDocsCount;
+        });
+        this.deleteEnabled = ko.pureComputed(() => {
+            const deleteInProgress = this.spinners.delete();
+            const selectedDocsCount = this.selectedItemsCount();
 
             return !deleteInProgress && selectedDocsCount > 0;
+        });
+        this.copyDisabledReason = ko.pureComputed<disabledReason>(() => {
+            const count = this.selectedItemsCount();
+            if (count === 0) {
+                return { disabled: true };
+            }
+            if (count <= documents.copyLimit) {
+                return { disabled: false };
+            }
+
+            return {
+                disabled: true,
+                reason: `You can copy to up ${documents.copyLimit} documents.`
+            }
         });
     }
 
@@ -115,6 +141,8 @@ class documents extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+
+        this.setupDisableReasons();
 
         const grid = this.gridController();
 
@@ -172,13 +200,14 @@ class documents extends viewModelBase {
         if (selection.mode === "inclusive") {
             const idsToDelete = selection.included.map(x => x.getId());
             const deleteDocsDialog = new deleteDocuments(selection.included, this.activeDatabase());
-            deleteDocsDialog.deletionTask
-                .always(() => this.onDeleteCompleted());
 
             app.showBootstrapDialog(deleteDocsDialog)
                 .done((deleting: boolean) => {
                     if (deleting) {
                         this.spinners.delete(true);
+
+                        deleteDocsDialog.deletionTask
+                            .always(() => this.onDeleteCompleted());
                     }
                 });
         } else {
@@ -186,30 +215,31 @@ class documents extends viewModelBase {
             const excludedIds = selection.excluded.map(x => x.getId());
 
             const deleteCollectionDialog = new deleteCollection(this.currentCollection().name, this.activeDatabase(), selection.count, excludedIds);
-
-            deleteCollectionDialog.operationIdTask.done((operationId: operationIdDto) => {
-                notificationCenter.instance.resourceOperationsWatch.monitorOperation(operationId.OperationId)
-                    .done(() => {
-                        if (excludedIds.length === 0) {
-                            messagePublisher.reportSuccess(`Deleted collection ${this.currentCollection().name}`);
-                        } else {
-                            messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.currentCollection().name}`);
-                        }
-
-                        if (excludedIds.length === 0) {
-                            // deleted entire collection to go all documents
-                            const allDocsCollection = this.collections().find(x => x.isAllDocuments);
-                            if (this.currentCollection() !== allDocsCollection) {
-                                this.currentCollection(allDocsCollection);
-                            }
-                        }
-                    })
-                    .always(() => this.onDeleteCompleted());
-            });
+           
             app.showBootstrapDialog(deleteCollectionDialog)
                 .done((deletionStarted: boolean) => {
                     if (deletionStarted) {
                         this.spinners.delete(true);
+
+                        deleteCollectionDialog.operationIdTask.done((operationId: operationIdDto) => {
+                            notificationCenter.instance.resourceOperationsWatch.monitorOperation(operationId.OperationId)
+                                .done(() => {
+                                    if (excludedIds.length === 0) {
+                                        messagePublisher.reportSuccess(`Deleted collection ${this.currentCollection().name}`);
+                                    } else {
+                                        messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.currentCollection().name}`);
+                                    }
+
+                                    if (excludedIds.length === 0) {
+                                        // deleted entire collection to go all documents
+                                        const allDocsCollection = this.collections().find(x => x.isAllDocuments);
+                                        if (this.currentCollection() !== allDocsCollection) {
+                                            this.currentCollection(allDocsCollection);
+                                        }
+                                    }
+                                })
+                                .always(() => this.onDeleteCompleted());
+                        });
                     }
                 });
         }
@@ -220,31 +250,41 @@ class documents extends viewModelBase {
         this.gridController().reset(false);
     }
 
-    /*
+    copySelectedDocs() {
+        eventsCollector.default.reportEvent("documents", "copy");
+        const selectedItems = this.gridController().getSelectedItems();
+
+        this.spinners.copy(true);
+
+        // get fresh copy of those documents, as grid might have incomplete information due to custom columns
+        // or too long data
+        new getDocumentsWithMetadataCommand(selectedItems.map(x => x.getId()), this.activeDatabase())
+            .execute()
+            .done((results: Array<document>) => {
+                const copyDialog = new copyDocuments(results);
+                app.showBootstrapDialog(copyDialog);
+            })
+            .always(() => this.spinners.copy(false))
+    }
+
+    copySelectedDocIds() {
+        eventsCollector.default.reportEvent("documents", "copy-ids");
+
+        const selectedItems = this.gridController().getSelectedItems();
+
+        const copyDialog = new copyDocumentIds(selectedItems);
+        app.showBootstrapDialog(copyDialog);
+    }
+
+    /* TODO:
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
     selectedDocumentsText: KnockoutComputed<string>;
     contextName = ko.observable<string>('');
-
-    canCopyAllSelected: KnockoutComputed<boolean>;
 
     constructor() {
         super();
 
         this.selectedCollection.subscribe(c => this.selectedCollectionChanged(c));
-        this.canCopyAllSelected = ko.computed(() => {
-            this.showLoadingIndicator(); //triggers computing the new cached selected items
-            var numOfSelectedDocuments = this.selectedDocumentIndices().length;
-            var docsGrid = this.getDocumentsGrid();
-
-            if (!!docsGrid) {
-                var cachedItems = docsGrid.getNumberOfCachedItems();
-                return cachedItems >= numOfSelectedDocuments;
-            }
-
-            return false;
-        });
-
-     
 
         this.selectedDocumentsText = ko.computed(() => {
             if (!!this.selectedDocumentIndices()) {
@@ -341,10 +381,8 @@ class documents extends viewModelBase {
         }
     }
 
-   
-
     private updateGridAfterOperationComplete(collection: collection, operationId: number) {
-        /* TODO var getOperationStatusTask = new getOperationStatusCommand(collection.ownerDatabase, operationId);
+        var getOperationStatusTask = new getOperationStatusCommand(collection.ownerDatabase, operationId);
         getOperationStatusTask.execute()
              .done((result: bulkOperationStatusDto) => {
                 if (result.Completed) {
@@ -360,7 +398,7 @@ class documents extends viewModelBase {
                 } else {
                     setTimeout(() => this.updateGridAfterOperationComplete(collection, operationId), 500);
                 }
-            });*
+            });
     }
 
     private updateCollections(receivedCollections: Array<collection>) {
@@ -451,8 +489,6 @@ class documents extends viewModelBase {
         });
     }
 
-    
-
     refresh() {
         eventsCollector.default.reportEvent("documents", "refresh");
         this.getDocumentsGrid().refreshCollectionData();
@@ -460,22 +496,6 @@ class documents extends viewModelBase {
         selectedCollection.invalidateCache();
         this.selectNone();
         this.showCollectionChanged(false);
-    }
-
-    copySelectedDocs() {
-        eventsCollector.default.reportEvent("documents", "copy");
-        var grid = this.getDocumentsGrid();
-        if (grid) {
-            grid.copySelectedDocs();
-        }
-    }
-
-    copySelectedDocIds() {
-        eventsCollector.default.reportEvent("documents", "copy-ids");
-        var grid = this.getDocumentsGrid();
-        if (grid) {
-            grid.copySelectedDocIds();
-        }
     }
 
     private sortCollections() {
@@ -501,21 +521,6 @@ class documents extends viewModelBase {
     hideCollectionElement(element: Element) {
         if (element.nodeType === 1) {
             $(element).slideUp(1000, () => { $(element).remove(); });
-        }
-    }
-
-    generateDocCode() {
-        var grid = this.getDocumentsGrid();
-        if (grid) {
-            var selectedItem = <Document>grid.getSelectedItems(1)[0];
-
-            var metadata = (<any>selectedItem)["__metadata"];
-            var id = metadata["id"];
-            var generate = new generateClassCommand(this.activeDatabase(), id, "csharp");
-            var deffered = generate.execute();
-            deffered.done((code: any) => {
-                app.showBootstrapDialog(new showDataDialog("Generated Class", code["Code"]));
-            });
         }
     }
     */

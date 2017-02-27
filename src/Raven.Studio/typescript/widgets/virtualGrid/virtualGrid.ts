@@ -64,7 +64,8 @@ class virtualGrid<T> {
             headerVisible: v => this.settings.showHeader(v),
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
             reset: (hard: boolean = true) => this.resetItems(hard),
-            selection: this.selection 
+            selection: this.selection,
+            getSelectedItems: () => this.getSelectedItems()
         }
     }
 
@@ -536,6 +537,19 @@ class virtualGrid<T> {
                 count: selected,
                 totalCount: totalCount
             });
+        }
+    }
+
+    private getSelectedItems(): T[] {
+        if (this.inIncludeSelectionMode) {
+            return this.selection().included;
+        } else {
+            const excluded = this.selection().excluded;
+            if (_.some(this.items, x => !x)) {
+                throw new Error("Can't provide list of selected items!");
+            }
+
+            return this.items.filter(x => !_.includes(excluded, x));
         }
     }
 

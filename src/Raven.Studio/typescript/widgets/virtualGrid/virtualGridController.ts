@@ -13,6 +13,8 @@ interface virtualGridController<T> {
     reset(hard?: boolean): void;
 
     selection: KnockoutObservable<virtualGridSelection<T>>;
+
+    getSelectedItems(): T[];
 }
 
 export = virtualGridController;
