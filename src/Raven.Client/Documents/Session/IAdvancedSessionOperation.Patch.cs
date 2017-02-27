@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Session
             throw new NotSupportedException("Never called");
         }
 
-        [JavascriptMethodName("concat")]
+        [JavascriptMethodName("push")]
         public JavaScriptArray<U> Add(params U[] u)
         {
             throw new NotSupportedException("Never called");
