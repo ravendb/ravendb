@@ -43,6 +43,11 @@ namespace Voron.Impl.Scratch
 
         public PagerState PagerState { get { return _scratchPager.PagerState; } }
 
+        public long TxIdAfterWhichLatestFreePagesBecomeAvailable
+        {
+            get { return _txIdAfterWhichLatestFreePagesBecomeAvailable; }
+        }
+
         public int Number
         {
             get { return _scratchNumber; }

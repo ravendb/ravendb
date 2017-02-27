@@ -117,9 +117,10 @@ namespace Raven.Database.Server.Controllers
                     includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
                 }
 
-                var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
+                var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc, nonAuthorotativeResult) =>
                 {
                     includedEtags.AddRange(etag.ToByteArray());
+                    includedEtags.Add((byte)(nonAuthorotativeResult ? 1 : 0));
                     result.Includes.Add(includedDoc);
                 }, includes, loadedIds);
 

@@ -142,6 +142,7 @@
     <Compile Include="RavenDB-6084.cs" />
     <Compile Include="RavenDB-6238.cs" />
     <Compile Include="RavenDB-6259.cs" />
+    <Compile Include="RavenDB-6345.cs" />
     <Compile Include="RavenDB_5857.cs" />
     <Compile Include="RavenDB_5669.cs" />
     <Compile Include="NewIndexOptimizationIssue.cs" />

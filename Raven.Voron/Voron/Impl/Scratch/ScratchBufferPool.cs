@@ -37,6 +37,7 @@ namespace Voron.Impl.Scratch
 
         // Local writable state. Can perform multiple reads, but must never do multiple writes simultaneously.
         private int _currentScratchNumber = -1;
+        private DateTime lastScratchBuffersCleanup = DateTime.MinValue;
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers = new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
 
         public ScratchBufferPool(StorageEnvironment env)
@@ -92,39 +93,16 @@ namespace Voron.Impl.Scratch
 
             var current = _current;
             var currentFile = current.File;
+            var oldestActiveTransaction = tx.Environment.PossibleOldestReadTransaction;
             if (currentFile.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
-                return result;
-
-            long oldestActiveTransaction = tx.Environment.PossibleOldestReadTransaction;
-
-            if (_scratchBuffers.Count > 1)
             {
-                var scratchesToDelete = new List<int>();
-
-                // determine how many bytes of older scratches are still in use (at least when this snapshot is taken)
-                foreach (var scratch in _scratchBuffers.Values)
-                {
-                    if (scratch == current)
-                        continue;
-
-                    if (scratch.File.HasActivelyUsedBytes(oldestActiveTransaction))
-                        continue;
-
-                     scratchesToDelete.Add(scratch.Number);
-                }
-
-                // delete inactive scratches
-                foreach (var scratchNumber in scratchesToDelete)
-                {
-                    ScratchBufferItem scratchBufferToRemove;
-                    if ( _scratchBuffers.TryRemove(scratchNumber, out scratchBufferToRemove) )
-                    {
-                        scratchBufferToRemove.File.Dispose();
-                    }
-                }
+                TryDeletingInactiveScratchBuffers(current, oldestActiveTransaction, ignoreLastCleanup: false);
+                return result;
             }
 
-            var sizeAfterAllocation = GetTotalAllocatedSize(requestedSize: size * AbstractPager.PageSize);
+            TryDeletingInactiveScratchBuffers(current, oldestActiveTransaction, ignoreLastCleanup: true);
+
+            var sizeAfterAllocation = GetTotalActivelyUsedBytes(size * AbstractPager.PageSize, oldestActiveTransaction);
             if (sizeAfterAllocation >= (sizeLimit*3)/4 && oldestActiveTransaction > current.OldestTransactionWhenFlushWasForced)
             {
                 // we may get recursive flushing, so we want to avoid it
@@ -185,7 +163,7 @@ namespace Voron.Impl.Scratch
                 sp.Stop();
 
                 var createNextFile = false;
-                sizeAfterAllocation = GetTotalAllocatedSize(requestedSize: size * AbstractPager.PageSize);
+                sizeAfterAllocation = GetTotalActivelyUsedBytes(size * AbstractPager.PageSize, tx.Environment.PossibleOldestReadTransaction);
                 if (sizeAfterAllocation <= sizeLimit)
                 {
                     // some long running transactions have finished
@@ -267,13 +245,48 @@ namespace Voron.Impl.Scratch
             return result;
         }
 
-        private long GetTotalAllocatedSize(long requestedSize)
+        private void TryDeletingInactiveScratchBuffers(ScratchBufferItem current, long oldestActiveTransaction, bool ignoreLastCleanup)
+        {
+            if (_scratchBuffers.Count <= 1)
+                return;
+
+            if (ignoreLastCleanup == false && (DateTime.UtcNow - lastScratchBuffersCleanup).TotalMinutes < 10)
+                return;
+
+            var scratchesToDelete = new List<int>();
+
+            // determine how many bytes of older scratches are still in use (at least when this snapshot is taken)
+            foreach (var scratch in _scratchBuffers.Values)
+            {
+                if (scratch == current)
+                    continue;
+
+                if (scratch.File.HasActivelyUsedBytes(oldestActiveTransaction))
+                    continue;
+
+                scratchesToDelete.Add(scratch.Number);
+            }
+
+            // delete inactive scratches
+            foreach (var scratchNumber in scratchesToDelete)
+            {
+                ScratchBufferItem scratchBufferToRemove;
+                if (_scratchBuffers.TryRemove(scratchNumber, out scratchBufferToRemove))
+                {
+                    scratchBufferToRemove.File.Dispose();
+                }
+            }
+
+            lastScratchBuffersCleanup = DateTime.UtcNow;
+        }
+
+        private long GetTotalActivelyUsedBytes(long requestedSize, long oldestActiveTransaction)
         {
             var sizeAfterAllocation = requestedSize;
 
             foreach (var scratch in _scratchBuffers.Values)
             {
-                sizeAfterAllocation += scratch.File.Size;
+                sizeAfterAllocation += scratch.File.ActivelyUsedBytes(oldestActiveTransaction);
             }
 
             return sizeAfterAllocation;
@@ -319,9 +332,9 @@ namespace Voron.Impl.Scratch
 
             public ScratchBufferItem(int number, ScratchBufferFile file)
             {
-                this.Number = number;
-                this.File = file;
-                this.OldestTransactionWhenFlushWasForced = -1;
+                Number = number;
+                File = file;
+                OldestTransactionWhenFlushWasForced = -1;
             }
         }
 
@@ -352,39 +365,36 @@ namespace Voron.Impl.Scratch
             var currentFile = _current.File;
             var scratchBufferPoolInfo = new ScratchBufferPoolInfo
             {
-                OldestTransactionWhenFlushWasForced = _current.OldestTransactionWhenFlushWasForced,
+                OldestActiveTransaction = oldestActiveTransaction,
                 NumberOfScratchFiles = _scratchBuffers.Count,
                 CurrentFileSizeInMB = currentFile.Size / 1024L / 1024L,
+                PerScratchFileSizeLimitInMB = sizePerScratchLimit / 1024L / 1024L,
                 TotalScratchFileSizeLimitInMB = sizeLimit / 1024L / 1024L
             };
 
             foreach (var scratchBufferItem in _scratchBuffers.Values.OrderBy(x => x.Number))
             {
-                scratchBufferPoolInfo.ScratchFilesUsage.Add(new ScratchFileUsage
+                var current = _current;
+                var scratchFileUsage = new ScratchFileUsage
                 {
                     Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferItem.File.Number),
                     SizeInKB = scratchBufferItem.File.Size / 1024,
-                    InActiveUseInKB = scratchBufferItem.File.ActivelyUsedBytes(oldestActiveTransaction) / 1024
-                });
-            }
-
-            foreach (var scratchBufferFile in _scratchBuffers.OrderBy(x => x.Key))
-            {
-                var mostAvailableFreePages = new MostAvailableFreePagesByScratch
-                {
-                    Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferFile.Value.Number)
+                    NumberOfAllocations = scratchBufferItem.File.NumberOfAllocations,
+                    InActiveUseInKB = scratchBufferItem.File.ActivelyUsedBytes(oldestActiveTransaction) / 1024,
+                    CanBeDeleted = scratchBufferItem != current && scratchBufferItem.File.HasActivelyUsedBytes(oldestActiveTransaction) == false,
+                    TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable
                 };
 
-                foreach (var freePage in scratchBufferFile.Value.File.GetMostAvailableFreePagesBySize())
+                foreach (var freePage in scratchBufferItem.File.GetMostAvailableFreePagesBySize())
                 {
-                    mostAvailableFreePages.MostAvailableFreePages.Add(new MostAvailableFreePagesBySize
+                    scratchFileUsage.MostAvailableFreePages.Add(new MostAvailableFreePagesBySize
                     {
                         Size = freePage.Key,
                         ValidAfterTransactionId = freePage.Value
                     });
                 }
 
-                scratchBufferPoolInfo.MostAvailableFreePages.Add(mostAvailableFreePages);
+                scratchBufferPoolInfo.ScratchFilesUsage.Add(scratchFileUsage);
             }
 
             return scratchBufferPoolInfo;

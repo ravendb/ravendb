@@ -153,9 +153,10 @@ namespace Raven.Database.Queries
                     var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.ToByteArray()));
                     includedEtags.AddRange(database.Indexes.GetIndexEtag(query.IndexName, null).ToByteArray());
                     var loadedIds = new HashSet<string>(jsonDocuments.Select(x => x.Key));
-                    var addIncludesCommand = new AddIncludesCommand(database, transactionInformation, (etag, includedDoc) =>
+                    var addIncludesCommand = new AddIncludesCommand(database, transactionInformation, (etag, includedDoc, nonAuthorotativeResult) =>
                     {
                         includedEtags.AddRange(etag.ToByteArray());
+                        includedEtags.Add((byte) (nonAuthorotativeResult ? 1 : 0));
                         result.Includes.Add(includedDoc);
                     }, query.Includes ?? new string[0], loadedIds);
 

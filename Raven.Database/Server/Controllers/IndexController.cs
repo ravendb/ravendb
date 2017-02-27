@@ -658,7 +658,7 @@ namespace Raven.Database.Server.Controllers
                     .Where(x => x != null)
                 );
             var command = new AddIncludesCommand(Database, GetRequestTransaction(),
-                                                 (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+                                                 (etag, doc, _) => queryResult.Includes.Add(doc), includes, loadedIds);
             foreach (var result in queryResult.Results)
             {
                 command.Execute(result);
@@ -794,7 +794,7 @@ namespace Raven.Database.Server.Controllers
             return dynamicIndexName;
         }
 
-        static Regex oldDateTimeFormat = new Regex(@"(\:|\[|{|TO\s) \s* (\d{17})", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+        static Regex oldDateTimeFormat = new Regex(@"(\d{4}\S+-\d{2}\S+-\d{2}T\d{2}\S+:\d{2}\S+:\d{2}.\d{3})(?:\d?)*", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
         private void RewriteDateQueriesFromOldClients(IndexQuery indexQuery)
         {
@@ -808,15 +808,15 @@ namespace Raven.Database.Server.Controllers
             var builder = new StringBuilder(indexQuery.Query);
             for (int i = matches.Count - 1; i >= 0; i--) // working in reverse so as to avoid invalidating previous indexes
             {
-                var dateTimeString = matches[i].Groups[2].Value;
+                var dateTimeString = matches[i].Groups[1].Value;
 
                 DateTime time;
-                if (DateTime.TryParseExact(dateTimeString, "yyyyMMddHHmmssfff", CultureInfo.InvariantCulture, DateTimeStyles.None, out time) == false)
+                if (DateTime.TryParseExact(dateTimeString, @"yyyy\\-MM\\-ddTHH\\:mm\\:ss.fff", CultureInfo.InvariantCulture, DateTimeStyles.None, out time) == false)
                     continue;
 
-                builder.Remove(matches[i].Groups[2].Index, matches[i].Groups[2].Length);
+                builder.Remove(matches[i].Groups[0].Index, matches[i].Groups[0].Length);
                 var newDateTimeFormat = time.ToString(Default.DateTimeFormatsToWrite);
-                builder.Insert(matches[i].Groups[2].Index, newDateTimeFormat);
+                builder.Insert(matches[i].Groups[0].Index, newDateTimeFormat);
             }
             indexQuery.Query = builder.ToString();
         }
