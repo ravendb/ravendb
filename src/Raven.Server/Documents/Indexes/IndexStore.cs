@@ -477,6 +477,12 @@ namespace Raven.Server.Documents.Indexes
                 IndexDoesNotExistException.ThrowFor(name);
 
             index.Stop();
+
+            _documentDatabase.Changes.RaiseNotifications(new IndexChange
+            {
+                Name = name,
+                Type = IndexChangeTypes.IndexPaused
+            });
         }
 
         public void StopIndexing()
@@ -502,6 +508,15 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             Parallel.ForEach(indexes, index => index.Stop());
+
+            foreach (var index in indexes)
+            {
+                _documentDatabase.Changes.RaiseNotifications(new IndexChange
+                {
+                    Name = index.Name,
+                    Type = IndexChangeTypes.IndexPaused
+                });
+            }
         }
 
         public void Dispose()
