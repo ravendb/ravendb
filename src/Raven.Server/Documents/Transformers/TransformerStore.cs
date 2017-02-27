@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.Transformers
                 }
 
                 transformer.Rename(newTransformerName);
-                _transformers.RenameTransformer(transformer, newTransformerName);
+                _transformers.RenameTransformer(transformer, oldTransformerName, newTransformerName);
             }
 
             _documentDatabase.Changes.RaiseNotifications(new TransformerChange

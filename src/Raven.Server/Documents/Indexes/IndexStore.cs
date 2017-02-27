@@ -832,7 +832,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 index.Rename(newIndexName); // store new index name in 'metadata' file, actual dir rename will happen on next db load
-                _indexes.RenameIndex(index, newIndexName);
+                _indexes.RenameIndex(index, oldIndexName, newIndexName);
             }
 
             _documentDatabase.Changes.RaiseNotifications(new IndexChange
