@@ -93,18 +93,20 @@ namespace Raven.Server.Documents.Replication
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
             var conflicts = _parent._database.DocumentsStorage.GetConflictsFrom(ctx, etag + 1);
             var versions = _parent._database.BundleLoader?.VersioningStorage?.GetRevisionsAfter(ctx, etag + 1);
+            var attachments = _parent._database.DocumentsStorage.GetAttachmentsFrom(ctx, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
             using (var conflictsIt = conflicts.GetEnumerator())
             using (var versionsIt = versions?.GetEnumerator())
+            using (var attachmentsIt = attachments.GetEnumerator())
             using (var mergedInEnumerator = new MergedReplicationBatchEnumerator())
             {
-
                 mergedInEnumerator.AddEnumerator(docsIt);
                 mergedInEnumerator.AddEnumerator(tombsIt);
                 mergedInEnumerator.AddEnumerator(conflictsIt);
                 mergedInEnumerator.AddEnumerator(versionsIt);
+                mergedInEnumerator.AddEnumerator(attachmentsIt);
                 
                 while (mergedInEnumerator.MoveNext())
                 {
@@ -134,7 +136,7 @@ namespace Raven.Server.Documents.Replication
                     short lastTransactionMarker = -1;
                     foreach (var item in GetDocsConflictsAndTombstonesAfter(documentsContext, _lastEtag))
                     {
-                        if (lastTransactionMarker != item.TransactionMarker)
+                        if (lastTransactionMarker != item.TransactionMarker && item.IsAttachmnet == false)
                         // TODO: add a configuration option to disable this check
                         {
                             // we want to limit batch sizes to reasonable limits
@@ -148,6 +150,8 @@ namespace Raven.Server.Documents.Replication
 
                         if (item.Data != null)
                             size += item.Data.Size;
+                        else if (item.IsAttachmnet && item.Stream != null)
+                            size += item.Stream.Length;
 
                         AddReplicationItemToBatch(item);
 

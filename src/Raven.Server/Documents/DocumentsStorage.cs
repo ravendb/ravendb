@@ -567,6 +567,17 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<ReplicationBatchDocumentItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], etag))
+            {
+                yield return ReplicationBatchDocumentItem.From(TableValueToAttachment(context, ref result.Reader));
+            }
+        }
+
         public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, int start, int take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
@@ -2994,7 +3005,7 @@ namespace Raven.Server.Documents
 
             int size;
             var ptr = tvr.Read((int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, out size);
-            result.LoweredDocumentId = new LazyStringValue(null, ptr, size, context);
+            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
 
             result.Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
             result.Name = TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr);
