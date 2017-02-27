@@ -2193,7 +2193,7 @@ namespace Raven.Client.Indexes
                         Out(node.Method.DeclaringType.Name);
                         Out(".Parse(");
                     }
-                    else
+                    else if (node.Type != typeof(object))
                     {
                         Out("(");
                         ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
@@ -2230,7 +2230,8 @@ namespace Raven.Client.Indexes
 
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
-                    Out(")");
+                    if (node.Type != typeof(object))
+                        Out(")");
                     break;
 
                 case ExpressionType.Negate:
