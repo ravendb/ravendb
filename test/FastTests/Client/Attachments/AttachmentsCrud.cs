@@ -84,6 +84,11 @@ namespace FastTests.Client.Attachments
                     var notExistsAttachment = store.Operations.Send(new GetAttachmentOperation("users/1", "not-there", (result, stream) => stream.CopyTo(attachmentStream)));
                     Assert.Null(notExistsAttachment);
                 }
+
+                var statistics = store.Admin.Send(new GetStatisticsOperation());
+                Assert.Equal(3, statistics.CountOfAttachments);
+                Assert.Equal(1, statistics.CountOfDocuments);
+                Assert.Equal(0, statistics.CountOfIndexes);
             }
         }
 
@@ -105,6 +110,7 @@ namespace FastTests.Client.Attachments
                 }
 
                 store.Operations.Send(new DeleteAttachmentOperation("users/1", "file2"));
+                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
 
                 using (var session = store.OpenSession())
                 {
@@ -140,6 +146,8 @@ namespace FastTests.Client.Attachments
                 {
                     database.DocumentsStorage.AssertNoAttachmentsForDocument(context, "users/1");
                 }
+
+                Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
             }
         }
 

@@ -683,6 +683,10 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
 
+            writer.WritePropertyName((nameof(statistics.CountOfAttachments)));
+            writer.WriteInteger(statistics.CountOfAttachments);
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(statistics.CountOfTransformers)));
             writer.WriteInteger(statistics.CountOfTransformers);
             writer.WriteComma();

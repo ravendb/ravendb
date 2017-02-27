@@ -2874,6 +2874,12 @@ namespace Raven.Server.Documents
             }
         }
 
+        public long GetNumberOfAttachments(DocumentsOperationContext context)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+            return tree.State.NumberOfEntries;
+        }
+
         [Conditional("DEBUG")]
         public void AssertNoAttachmentsForDocument(DocumentsOperationContext context, string documentId)
         {
