@@ -33,7 +33,7 @@ namespace Raven.Tests.MailingList
                       from item in items
                       select new Result
                       {
-                          Query = new object[] {item.Age, item.Name}
+                          Query = new object[] { item.Age, item.Name }
                       };
             }
         }
@@ -48,7 +48,7 @@ namespace Raven.Tests.MailingList
                 var indexDefinition = s.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
                 Assert.Equal(@"docs.Items.Select(item => new {
     Query = new object[] {
-        ((object) item.Age),
+        item.Age,
         item.Name
     }
 })", indexDefinition.Map);
