@@ -299,7 +299,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (result.RevisionDocuments.ReadCount % 1000 == 0)
                     {
-                        result.AddInfo($"Read {result.RevisionDocuments.ReadCount} documents.");
+                        result.AddInfo($"Read {result.RevisionDocuments.ReadCount:#,#;;0} documents.");
                         _onProgress.Invoke(result.Progress);
                     }
 
@@ -331,7 +331,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (result.Documents.ReadCount % 1000 == 0)
                     {
-                        result.AddInfo($"Read {result.Documents.ReadCount} documents.");
+                        result.AddInfo($"Read {result.Documents.ReadCount:#,#;;0} documents.");
                         _onProgress.Invoke(result.Progress);
                     }
 
