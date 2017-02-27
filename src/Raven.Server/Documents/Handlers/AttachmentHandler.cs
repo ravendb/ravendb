@@ -14,7 +14,9 @@ using Raven.Client.Documents.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
+using Voron;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers
@@ -83,14 +85,17 @@ namespace Raven.Server.Documents.Handlers
                     JsonOperationContext.ManagedPinnedBuffer buffer;
                     using (context.GetManagedBuffer(out buffer))
                     {
+                        var hashingCtx = Hashing.Streamed.XXHash64.BeginProcess();
                         var requestStream = RequestBodyStream();
                         var count = await requestStream.ReadAsync(buffer.Buffer.Array, 0, buffer.Length, Database.DatabaseShutdown);
                         while (count > 0)
                         {
+                            ComputePartialHash(hashingCtx, buffer, count);
                             await file.WriteAsync(buffer.Buffer.Array, 0, count, Database.DatabaseShutdown);
                             count = await requestStream.ReadAsync(buffer.Buffer.Array, 0, buffer.Length, Database.DatabaseShutdown);
                         }
                         file.Position = 0;
+                        var hash = Hashing.Streamed.XXHash64.EndProcess(hashingCtx);
 
                         var etag = GetLongFromHeaders("If-Match");
 
@@ -101,7 +106,8 @@ namespace Raven.Server.Documents.Handlers
                             DocumentId = id,
                             Name = name,
                             Stream = file,
-                            ContentType = contentType,
+                            Hash = hash,
+                            ContentType = contentType
                         };
                         await Database.TxMerger.Enqueue(cmd);
                         cmd.ExceptionDispatchInfo?.Throw();
@@ -135,6 +141,12 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
+        }
+
+        private static unsafe void ComputePartialHash(Hashing.Streamed.XXHash64Context ctx, JsonOperationContext.ManagedPinnedBuffer buffer, int count)
+        {
+            // this is in separate method because unsafe & async don't mix
+            Hashing.Streamed.XXHash64.Process(ctx, buffer.Pointer, count);
         }
 
         [RavenAction("/databases/*/attachments", "DELETE")]
@@ -172,12 +184,13 @@ namespace Raven.Server.Documents.Handlers
             public AttachmentResult Result;
             public string ContentType;
             public Stream Stream;
+            public ulong Hash;
 
             public override void Execute(DocumentsOperationContext context)
             {
                 try
                 {
-                    Result = Database.DocumentsStorage.PutAttachment(context, DocumentId, Name, ContentType, ExpectedEtag, Stream);
+                    Result = Database.DocumentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, ExpectedEtag, Stream);
                 }
                 catch (ConcurrencyException e)
                 {

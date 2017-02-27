@@ -1204,6 +1204,7 @@ namespace Raven.Server.Documents
             {
                 table.DeleteByPrimaryKeyPrefix(startSlice, holder =>
                 {
+                    // TODO: Fix implementation because of hashing
                     var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
                     int size;
                     var ptr = holder.Reader.Read((int) AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, out size);
@@ -2677,6 +2678,7 @@ namespace Raven.Server.Documents
             string documentId, 
             string name, 
             string contentType, 
+            ulong hash, 
             long? expectedEtag, 
             Stream stream,
             long? lastModifiedTicks = null)
@@ -2753,7 +2755,9 @@ namespace Raven.Server.Documents
 
                 // Insert the stream
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                tree.AddStream(keySlice, stream);
+                /*var existingStream = tree.ReadStream(hashSlice);
+                if (existingStream == null)
+                    tree.AddStream(hashSlice, stream);*/
 
                 _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
@@ -2887,6 +2891,7 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfAttachments(DocumentsOperationContext context)
         {
+            // TODO: Fix this
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
             return tree.State.NumberOfEntries;
         }
