@@ -76,18 +76,16 @@ namespace SlowTests.Issues
                     address.ZipCode = 2;
                     await session.StoreAsync(address);
 
-                    var markerObject = await session.LoadAsync<dynamic>("marker");
-                    await session.StoreAsync(markerObject);
+                    await session.StoreAsync(new
+                    {
+                        Foo = "marker"
+                    }, "marker2").ConfigureAwait(false);
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = slave.OpenAsyncSession())
                 {
                     session.Delete("addresses/1");
-                    await session.StoreAsync(new
-                    {
-                        Foo = "slaveMarker",
-                    }, "slaveMarker").ConfigureAwait(false);
                     await session.SaveChangesAsync().ConfigureAwait(false);
                 }
 
@@ -95,8 +93,7 @@ namespace SlowTests.Issues
 
                 SetupReplication(master, slave);
 
-                Assert.True(WaitForDocument(master, "slaveMarker"));
-                Assert.True(WaitForDocument(master, "marker"));
+                Assert.True(WaitForDocument(slave, "marker2"));
 
                 var slaveServer = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(slave.DefaultDatabase);
                 DocumentsOperationContext context;
