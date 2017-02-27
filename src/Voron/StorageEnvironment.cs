@@ -149,13 +149,13 @@ namespace Voron
                     return true;
                 }
 
-                bool usingLseek;
-                result = Syscall.AllocateFileSpace(fd, 64L * 1024, filename, out usingLseek);
-                if (usingLseek)
+                bool usingWrite;
+                result = Syscall.AllocateFileSpace(fd, 64L * 1024, filename, out usingWrite);
+                if (usingWrite)
                 {
                     if (log.IsInfoEnabled)
                         log.Info(
-                            $"Failed to fallocate test file at \'{filename}\'. (rc = {result}) but had success with lseek. New file allocations will take longer time with lseek");
+                            $"Failed to fallocate test file at \'{filename}\'. (rc = {result}) but had success with pwrite. New file allocations will take longer time with pwrite");
                 }
 
                 if (result == (int)Errno.EINVAL)

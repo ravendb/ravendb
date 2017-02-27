@@ -23,12 +23,13 @@ namespace Raven.Server.Web.Studio
         {
             if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
             {
+                bool _;
                 if (_excludeIds.Count == 0)
                 {
                     // all documents w/o exclusions -> filter system documents
                     return ExecuteOperation(collectionName, options, _context, onProgress, key =>
                     {
-                        if (!CollectionName.IsSystemDocument(key.Buffer, key.Length))
+                        if (CollectionName.IsSystemDocument(key.Buffer, key.Length, out _) == false)
                         {
                             _database.DocumentsStorage.Delete(_context, key, null);
                         }
@@ -37,7 +38,7 @@ namespace Raven.Server.Web.Studio
                 // all documents w/ exluclusions -> delete only not excluded and not system
                 return ExecuteOperation(collectionName, options, _context, onProgress, key =>
                 {
-                    if (_excludeIds.Contains(key) == false && !CollectionName.IsSystemDocument(key.Buffer, key.Length))
+                    if (_excludeIds.Contains(key) == false && CollectionName.IsSystemDocument(key.Buffer, key.Length, out _) == false)
                     {
                         _database.DocumentsStorage.Delete(_context, key, null);
                     }

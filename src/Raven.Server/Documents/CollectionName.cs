@@ -101,7 +101,8 @@ namespace Raven.Server.Documents
 
         public static unsafe string GetCollectionName(Slice key, BlittableJsonReaderObject document)
         {
-            if (IsSystemDocument(key.Content.Ptr,key.Size))
+            bool _;
+            if (IsSystemDocument(key.Content.Ptr,key.Size, out _))
             {
                 return SystemCollection;
             }
@@ -109,8 +110,10 @@ namespace Raven.Server.Documents
             return GetCollectionName(document);
         }
 
-        public static unsafe bool IsSystemDocument(byte* buffer, int length)
+        public static unsafe bool IsSystemDocument(byte* buffer, int length, out bool isHiLo)
         {
+            isHiLo = false;
+
             if (length < 6)
                 return false;
 
@@ -133,12 +136,13 @@ namespace Raven.Server.Documents
                 (buffer[8] == (byte)'L' || buffer[8] == (byte)'l') &&
                 (buffer[9] == (byte)'O' || buffer[9] == (byte)'o') &&
                 buffer[10] == (byte)'/')
-                return false;
+            {
+                isHiLo = true;
+            }
 
             return true;
         }
-
-
+        
         public static string GetCollectionName(string key, BlittableJsonReaderObject document)
         {
             if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))

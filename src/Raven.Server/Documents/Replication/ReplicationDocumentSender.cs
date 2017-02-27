@@ -210,7 +210,8 @@ namespace Raven.Server.Documents.Replication
                 }
                 return;
             }
-            if (CollectionName.IsSystemDocument(item.Key.Buffer, item.Key.Size))
+            bool isHiLo;
+            if (CollectionName.IsSystemDocument(item.Key.Buffer, item.Key.Size, out isHiLo) && isHiLo == false)
             {
                 if (_log.IsInfoEnabled)
                 {
