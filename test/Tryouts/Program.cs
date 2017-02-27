@@ -12,13 +12,12 @@ namespace Tryouts
         {
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
-            for (int i = 0; i < 10; i++)
             {
 
                 var sp = Stopwatch.StartNew();
-                using (var a = new CommandsTests())
+                using (var a = new SlowTests.SlowTests.Faceted.FacetPaging())
                 {
-                    a.When_command_committed_CompletionTaskSource_is_notified().Wait();
+                    a.CanPerformFacetedPagingSearchWithPageSize_TermDesc_LuceneQuery();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

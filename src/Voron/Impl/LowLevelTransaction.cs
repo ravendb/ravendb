@@ -568,10 +568,6 @@ namespace Voron.Impl
             if (prevNumberOfPages == lowerNumberOfPages)
                 return;
 
-            _transactionPages.Remove(value);
-            _transactionPages.Add(new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer,
-                value.Size, lowerNumberOfPages));
-            _env.ScratchBufferPool.ReduceAllocation(value, lowerNumberOfPages);
             for (int i = lowerNumberOfPages; i < prevNumberOfPages; i++)
             {
                 FreePage(page.PageNumber + i);

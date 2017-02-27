@@ -117,15 +117,15 @@ namespace Voron.Util
                 if (position == null)
                     continue;
 
-                if (position.TransactionId <= lastSyncedTransactionId)
-                {
-                    valueBuffer.RemoveBefore(lastSyncedTransactionId, unusedPages);
-                    if (valueBuffer.Count != 0)
-                        continue;
+                if (position.TransactionId > lastSyncedTransactionId)
+                    continue;
 
-                    PagesBuffer _;
-                    _values.TryRemove(kvp.Key,out _);
-                }
+                valueBuffer.RemoveBefore(lastSyncedTransactionId, unusedPages);
+                if (valueBuffer.Count != 0)
+                    continue;
+
+                PagesBuffer _;
+                _values.TryRemove(kvp.Key,out _);
             }
         }
 
