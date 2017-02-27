@@ -118,7 +118,10 @@ namespace Raven.Client.Documents.Changes
 
         SideBySideReplace = 1024,
 
-        Renamed = 2048
+        Renamed = 2048,
+        IndexPaused = 4096,
+        LockModeChanged = 8192,
+        PriorityChanged = 16384
     }
 
     public enum TransformerChangeTypes

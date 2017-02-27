@@ -1110,6 +1110,12 @@ namespace Raven.Server.Documents.Indexes
 
                 Definition.Priority = priority;
                 _priorityChanged = true;
+
+                DocumentDatabase.Changes.RaiseNotifications(new IndexChange
+                {
+                    Name = Name,
+                    Type = IndexChangeTypes.PriorityChanged
+                });
             }
         }
 
@@ -1187,6 +1193,12 @@ namespace Raven.Server.Documents.Indexes
                         $"Changing lock mode for '{Name} ({IndexId})' from '{Definition.LockMode}' to '{mode}'.");
 
                 _indexStorage.WriteLock(mode);
+
+                DocumentDatabase.Changes.RaiseNotifications(new IndexChange
+                {
+                    Name = Name,
+                    Type = IndexChangeTypes.LockModeChanged
+                });
             }
         }
 
