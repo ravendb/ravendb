@@ -60,14 +60,12 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync().ConfigureAwait(false);
                 }
 
-                var marker = WaitForDocument(slave, "marker");
+                Assert.True(WaitForDocument(slave, "marker"));
 
                 using (var session = slave.OpenSession())
                 {
                     Assert.NotEmpty(session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults()).ToList());
                 }
-
-                Assert.NotNull(marker);
 
                 DeleteReplication(master, slave);
 
@@ -97,11 +95,8 @@ namespace SlowTests.Issues
 
                 SetupReplication(master, slave);
 
-                var slaveMarker = WaitForDocument(master, "slaveMarker");
-                Assert.NotNull(slaveMarker);
-
-                marker = WaitForDocument(master, "marker");
-                Assert.NotNull(marker);
+                Assert.True(WaitForDocument(master, "slaveMarker"));
+                Assert.True(WaitForDocument(master, "marker"));
 
                 var slaveServer = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(slave.DefaultDatabase);
                 DocumentsOperationContext context;

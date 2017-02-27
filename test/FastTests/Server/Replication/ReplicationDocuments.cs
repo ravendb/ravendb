@@ -61,9 +61,7 @@ namespace FastTests.Server.Replication
                 {
                     sourceCommands.Put("docs/1", null, new { Key = "Value" }, null);
 
-                    var document = WaitForDocument(destination, "docs/1");
-
-                    Assert.NotNull(document);
+                    Assert.True(WaitForDocument(destination, "docs/1"));
 
                     sourceCommands.Delete("docs/1", null);
                 }
@@ -98,9 +96,7 @@ namespace FastTests.Server.Replication
 
                     sourceCommands.Put("marker", null, new {Key = "Value"}, null);
 
-                    var marker = WaitForDocument(destination, "marker");
-
-                    Assert.NotNull(marker);
+                    Assert.True(WaitForDocument(destination, "marker"));
 
                     var conflicts = destination.Commands().GetConflictsFor("docs/1");
                     Assert.Equal(2, conflicts.Length);
@@ -129,9 +125,7 @@ namespace FastTests.Server.Replication
 
                     sourceCommands.Put("marker", null, new { Key = "Value" }, null);
 
-                    var marker = WaitForDocument(destination, "marker");
-
-                    Assert.NotNull(marker);
+                    Assert.True(WaitForDocument(destination, "marker"));
 
                     conflicts = destination.Commands().GetConflictsFor("docs/1");
                     Assert.Equal(2, conflicts.Length);

@@ -261,7 +261,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
 
-                WaitForDocument(store2, "marker");
+                Assert.True(WaitForDocument(store2, "marker"));
 
                 var collectionStatistics = await store2.Admin.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStatistics.Collections.Count);
@@ -282,7 +282,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
                 WaitForIndexing(store1);
-                WaitForDocument(store2, "marker2");
+                Assert.True(WaitForDocument(store2, "marker"));
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 using (context.OpenReadTransaction())

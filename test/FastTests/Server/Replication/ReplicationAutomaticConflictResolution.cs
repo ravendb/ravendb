@@ -366,9 +366,7 @@ return out;
                 SetReplicationConflictResolution(slave, StraightforwardConflictResolution.ResolveToLatest);
                 SetupReplication(master, slave);
 
-                var marker = WaitForDocument(slave, "marker");
-
-                Assert.NotNull(marker);
+                Assert.True(WaitForDocument(slave, "marker"));
 
                 using (var session = slave.OpenSession())
                 {
