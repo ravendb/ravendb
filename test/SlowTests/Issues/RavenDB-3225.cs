@@ -1,16 +1,16 @@
-using Raven.Tests.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Linq;
+using FastTests;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class TestingQuery : RavenTest
+    public class TestingQuery : RavenTestBase
     {
-        public class TestDataObject
+        private class TestDataObject
         {
             public string A { get; set; }
             public string B { get; set; }
@@ -18,10 +18,11 @@ namespace Raven.Tests.Issues
             public DateTimeOffset Created { get; set; }
             public TimeSpan Span { get; set; }
         }
+
         [Fact]
         public void DateTimeMultipleTermsQueryShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -36,16 +37,14 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
+                    var ids = new List<string> { "X" };
 
-                    var Ids = new List<string>() { "X" };
-
-
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<TestDataObject>().Statistics(out stats);
 
-                    query = query.Where(t => t.A.In(Ids)); //PUTTING THIS FIRST RETURNS 0 RESULTS
+                    query = query.Where(t => t.A.In(ids)); //PUTTING THIS FIRST RETURNS 0 RESULTS
                     query = query.Where(t => t.Created >= new DateTimeOffset(2001, 1, 1, 8, 1, 12, new TimeSpan()));
-                    
+
                     var sueryStr = query.ToString();
                     //WaitForUserToContinueTheTest(store);
                     WaitForIndexing(store);
@@ -55,7 +54,6 @@ namespace Raven.Tests.Issues
                     Assert.Equal(2, results.Count);
                 }
             }
-
         }
     }
 }

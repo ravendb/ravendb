@@ -1,30 +1,25 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_3136 : RavenTestBase
     {
         [Fact]
         public void AggregateByIntegerShouldReturnResultWithValuesAndCountEvenWithLambdaExpression()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SampleData_Index().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new SampleData {IntegerAge = 2, StringAge = "2"});
-                    session.Store(new SampleData {IntegerAge = 2, StringAge = "2"});
-                    session.Store(new SampleData {IntegerAge = 3, StringAge = "3"});
+                    session.Store(new SampleData { IntegerAge = 2, StringAge = "2" });
+                    session.Store(new SampleData { IntegerAge = 2, StringAge = "2" });
+                    session.Store(new SampleData { IntegerAge = 3, StringAge = "3" });
                     session.SaveChanges();
                 }
                 WaitForIndexing(store);
@@ -46,15 +41,15 @@ namespace Raven.Tests.Issues
         [Fact]
         public void AggregateByIntegerShouldReturnResultWithValuesAndCount()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SampleData_Index().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new SampleData {IntegerAge = 2, StringAge = "2"});
-                    session.Store(new SampleData {IntegerAge = 2, StringAge = "2"});
-                    session.Store(new SampleData {IntegerAge = 3, StringAge = "3"});
+                    session.Store(new SampleData { IntegerAge = 2, StringAge = "2" });
+                    session.Store(new SampleData { IntegerAge = 2, StringAge = "2" });
+                    session.Store(new SampleData { IntegerAge = 3, StringAge = "3" });
                     session.SaveChanges();
                 }
                 WaitForIndexing(store);
@@ -76,15 +71,15 @@ namespace Raven.Tests.Issues
         [Fact]
         public void AggregateByStringShouldReturnResultWithValuesAndCount()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SampleData_Index().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new SampleData {IntegerAge = 2, StringAge = "2"});
-                    session.Store(new SampleData {IntegerAge = 2, StringAge = "2"});
-                    session.Store(new SampleData {IntegerAge = 3, StringAge = "3"});
+                    session.Store(new SampleData { IntegerAge = 2, StringAge = "2" });
+                    session.Store(new SampleData { IntegerAge = 2, StringAge = "2" });
+                    session.Store(new SampleData { IntegerAge = 3, StringAge = "3" });
                     session.SaveChanges();
                 }
 
@@ -104,22 +99,22 @@ namespace Raven.Tests.Issues
                 }
             }
         }
-    }
 
-    public class SampleData
-    {
-        public string StringAge { get; set; }
-        public int IntegerAge { get; set; }
-    }
-
-    public class SampleData_Index : AbstractIndexCreationTask<SampleData>
-    {
-        public SampleData_Index()
+        private class SampleData
         {
-            Map = docs => from doc in docs select new {doc.StringAge, doc.IntegerAge};
-            Sort(x => x.IntegerAge, SortOptions.Int);
-            this.TermVector(x => x.IntegerAge, FieldTermVector.Yes);
-            this.TermVector(x => x.StringAge, FieldTermVector.Yes);
+            public string StringAge { get; set; }
+            public int IntegerAge { get; set; }
+        }
+
+        private class SampleData_Index : AbstractIndexCreationTask<SampleData>
+        {
+            public SampleData_Index()
+            {
+                Map = docs => from doc in docs select new { doc.StringAge, doc.IntegerAge };
+                Sort(x => x.IntegerAge, SortOptions.Numeric);
+                TermVector(x => x.IntegerAge, FieldTermVector.Yes);
+                TermVector(x => x.StringAge, FieldTermVector.Yes);
+            }
         }
     }
 }

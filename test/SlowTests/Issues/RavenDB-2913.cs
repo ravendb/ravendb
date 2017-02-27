@@ -1,19 +1,18 @@
 using System;
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class UpdateGetters : RavenTestBase
     {
-        [SerializableAttribute]
         public class Entity
         {
             public string Property { get; set; }
-            
-            public string Getter { get { return Property; }  }
+
+            public string Getter { get { return Property; } }
         }
 
         public class EntityIndex : AbstractIndexCreationTask<Entity>
@@ -31,7 +30,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldUpdateGetters()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new EntityIndex().Execute(store);
 
@@ -60,7 +59,7 @@ namespace Raven.Tests.Issues
                     }
                     catch (Exception)
                     {
-                        
+
                     }
                 }
             }
