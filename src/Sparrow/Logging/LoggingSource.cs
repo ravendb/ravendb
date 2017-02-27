@@ -129,15 +129,29 @@ namespace Sparrow.Logging
                 _path = path;
 
                 Directory.CreateDirectory(_path);
-                if (_loggingThread == null)
+                var copyLoggingThread = _loggingThread;
+                if (copyLoggingThread == null)
                 {
                     StartNewLoggingThread();
+                }
+                else if(copyLoggingThread.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
+                {
+                    // have to do this on a separate thread
+                    Task.Run(() =>
+                    {
+                        _keepLogging = false;
+                        _hasEntries.Set();
+
+                        copyLoggingThread.Join();
+                        StartNewLoggingThread();
+                    });
                 }
                 else
                 {
                     _keepLogging = false;
                     _hasEntries.Set();
-                    _loggingThread.Join();
+                    
+                    copyLoggingThread.Join();
                     StartNewLoggingThread();
                 }
             }
