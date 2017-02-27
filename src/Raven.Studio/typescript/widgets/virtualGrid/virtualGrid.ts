@@ -63,8 +63,9 @@ class virtualGrid<T> {
         this.controller = {
             headerVisible: v => this.settings.showHeader(v),
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
-            reset: () => this.resetItems(),
-            selection: this.selection 
+            reset: (hard: boolean = true) => this.resetItems(hard),
+            selection: this.selection,
+            getSelectedItems: () => this.getSelectedItems()
         }
     }
 
@@ -490,7 +491,7 @@ class virtualGrid<T> {
     /**
      * Clears the items from the grid and refetches the first chunk of items.
      */
-    private resetItems() {
+    private resetItems(hard: boolean) {
         if (!this.settings.fetcher) {
             throw new Error("No fetcher defined, call init() method on virtualGridController");
         }
@@ -499,9 +500,11 @@ class virtualGrid<T> {
         this.totalItemCount = null;
         this.queuedFetch = null;
         this.isLoading(false);
-        this.$viewportElement.scrollTop(0);
+        if (hard) {
+            this.$viewportElement.scrollTop(0);
+            this.columns([]);
+        }
         this.virtualRows.forEach(r => r.reset());
-        this.columns([]);
         this.inIncludeSelectionMode = true;
         this.selectionDiff = [];
 
@@ -534,6 +537,19 @@ class virtualGrid<T> {
                 count: selected,
                 totalCount: totalCount
             });
+        }
+    }
+
+    private getSelectedItems(): T[] {
+        if (this.inIncludeSelectionMode) {
+            return this.selection().included;
+        } else {
+            const excluded = this.selection().excluded;
+            if (_.some(this.items, x => !x)) {
+                throw new Error("Can't provide list of selected items!");
+            }
+
+            return this.items.filter(x => !_.includes(excluded, x));
         }
     }
 

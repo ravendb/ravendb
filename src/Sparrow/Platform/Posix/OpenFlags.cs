@@ -37,7 +37,7 @@ namespace Voron.Platform.Posix
 
         O_NOFOLLOW = 0x00020000,
         O_ASYNC = 0x00002000,
-        O_LARGEFILE = 0x00008000,
+        // O_LARGEFILE = 0x00008000,
         O_CLOEXEC = 0x00080000,
         O_PATH = 0x00200000
     }

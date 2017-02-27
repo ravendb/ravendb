@@ -1404,6 +1404,14 @@ pre {
     opacity: @modal-backdrop-opacity;
 }
 
+.has-disable-reason {
+    .btn[disabled] {
+        pointer-events: none;
+    }
+
+    cursor: not-allowed;
+}
+
 
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";

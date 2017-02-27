@@ -16,7 +16,7 @@ class deleteCollection extends dialogViewModelBase {
     }
 
     deleteCollection() {
-        const collectionName = this.isAllDocuments ? "*" : this.collectionName;
+        const collectionName = this.isAllDocuments ? "@all_docs" : this.collectionName;
 
         new deleteCollectionCommand(collectionName, this.db, this.excludedIds)
             .execute()

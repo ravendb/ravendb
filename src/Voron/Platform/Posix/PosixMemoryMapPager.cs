@@ -49,7 +49,7 @@ namespace Voron.Platform.Posix
                 _totalAllocationSize != GetFileSize())
             {
                 _totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
-                PosixHelper.AllocateFileSpace(_options, _fd, (ulong) _totalAllocationSize, file);
+                PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, file);
             }
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(file) == -1)
@@ -101,7 +101,7 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_options, _fd, (ulong) (_totalAllocationSize + allocationSize), FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName);
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(FileName) == -1)
             {
@@ -134,9 +134,9 @@ namespace Voron.Platform.Posix
         {
             var fileSize = GetFileSize();
             var mmflags = _copyOnWriteMode ? MmapFlags.MAP_PRIVATE : MmapFlags.MAP_SHARED;
-            var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (UIntPtr)fileSize,
+            var startingBaseAddressPtr = Syscall.mmap64(IntPtr.Zero, (UIntPtr)fileSize,
                                                       MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                                                      mmflags, _fd, IntPtr.Zero);
+                                                      mmflags, _fd, 0L);
 
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
             {

@@ -48,7 +48,7 @@ namespace Voron.Platform.Posix
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
             _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
-            PosixHelper.AllocateFileSpace(_options, _fd, (ulong)_totalAllocationSize, FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, FileName);
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
             SetPagerState(CreatePagerState());
@@ -84,7 +84,7 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_options, _fd, (ulong)(_totalAllocationSize + allocationSize), FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName);
 
             _totalAllocationSize += allocationSize;
 
@@ -109,9 +109,9 @@ namespace Voron.Platform.Posix
 
         private PagerState CreatePagerState()
         {
-            var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (UIntPtr)_totalAllocationSize,
+            var startingBaseAddressPtr = Syscall.mmap64(IntPtr.Zero, (UIntPtr)_totalAllocationSize,
                                                       MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                                                      MmapFlags.MAP_SHARED, _fd, IntPtr.Zero);
+                                                      MmapFlags.MAP_SHARED, _fd, 0L);
 
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
             {

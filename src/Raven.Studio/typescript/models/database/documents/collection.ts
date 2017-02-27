@@ -33,6 +33,13 @@ class collection {
 
     fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         //TODO: use doc-preview endpoint for fetching this!
+        /*
+        TODO:
+        In current commands we use total results from collection count,
+        as result it produces invalid output after deleting documents.
+        Solution is to add total results count to response, but we anyway will implement
+        doc-preview endpoint with this property, so let's leave it for now. 
+        */
         if (this.isAllDocuments) {
             return new getAllDocumentsMetadataCommand(this.db, skip, take).execute();
         } else {
