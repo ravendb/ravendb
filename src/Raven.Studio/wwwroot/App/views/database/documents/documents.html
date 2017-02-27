@@ -39,15 +39,15 @@
                     </button>
                 </div>
                 
-                <div class="btn-group btn-group-sm">
-                    <button type="button" class="btn btn-prerelease" disabled="disabled" data-toggle="button">
+                <div class="btn-group btn-group-sm has-disable-reason" data-placement="bottom" data-bind="attr: { 'data-original-title': copyDisabledReason().reason }">
+                    <button type="button" class="btn" data-bind="disable: copyDisabledReason().disabled || spinners.copy(), click: copySelectedDocs, css: { 'btn-spinner': spinners.copy() }">
                         <span class="icon-copy"></span> <span>Copy</span>
                     </button>
-                    <button type="button" class="btn btn-prerelease dropdown-toggle" disabled="disabled" data-toggle="dropdown">
+                    <button type="button" class="btn dropdown-toggle" disabled="disabled" data-toggle="dropdown" data-bind="disable: copyDisabledReason().disabled">
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a href="#">Copy IDs</a></li>
+                        <li><a href="#" data-bind="click: copySelectedDocIds">Copy IDs</a></li>
                     </ul>
                 </div>
                 

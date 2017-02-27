@@ -256,7 +256,6 @@ class viewModelBase {
             this.modelPollingStop();
         }
         this.pollingWithContinuation();
-       
     }
 
     modelPollingStop() {
@@ -294,6 +293,10 @@ class viewModelBase {
         }
 
         return deferred;
+    }
+
+    protected setupDisableReasons() {
+        $('.has-disable-reason').tooltip();
     }
 
     private beforeUnloadListener: EventListener = (e: any): any => {

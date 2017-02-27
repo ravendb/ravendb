@@ -215,3 +215,8 @@ interface subscriptionConnectionInfoDto {
     Stats: Raven.Server.Documents.SubscriptionConnectionStats;
     Options: Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions;
 }
+
+interface disabledReason {
+    disabled: boolean;
+    reason?: string;
+}
