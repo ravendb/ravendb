@@ -65,7 +65,7 @@
     "System.Net.Security": "4.3.0",
     "System.Runtime.InteropServices.RuntimeInformation": "4.3.0",
     "System.ServiceModel.Primitives": "4.3.0",
-    "Lambda2Js.Core": "1.0.0-*"
+    "Lambda2Js": "2.0.99"
   },
 
   "frameworks": {

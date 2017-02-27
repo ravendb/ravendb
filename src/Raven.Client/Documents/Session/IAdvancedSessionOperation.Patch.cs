@@ -33,25 +33,37 @@ namespace Raven.Client.Documents.Session
 
     }
 
+    public class JavascriptMethodNameAttribute : Attribute
+    {
+        public string Name { get; }
+
+        public object[] PositionalArguments { get; set; }
+
+        public JavascriptMethodNameAttribute(string name)
+        {
+            Name = name;
+        }
+    }
+
     public class JavaScriptArray<U>
     {
 
         [JavascriptMethodName("push")]
         public JavaScriptArray<U> Add(U u)
         {
-            return null;
+            throw new NotSupportedException("Never called");
         }
 
-        [JavascriptMethodName("concat")]
+        [JavascriptMethodName("push")]
         public JavaScriptArray<U> Add(params U[] u)
         {
-            return null;
+            throw new NotSupportedException("Never called");
         }
 
-        [JavascriptMethodName("splice")]
+        [JavascriptMethodName("splice", PositionalArguments = new object[] { 0, 1 })]
         public JavaScriptArray<U> RemoveAt(int index)
         {
-            return null;
+            throw new NotSupportedException("Never called");
         }
     }
 }

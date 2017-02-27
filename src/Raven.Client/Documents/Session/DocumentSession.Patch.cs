@@ -9,8 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using Lambda2Js;
 using Microsoft.Extensions.Primitives;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 
@@ -21,7 +23,66 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        private object _patchInfo;
+        private class CustomMethods : JavascriptConversionExtension
+        {
+            public Dictionary<string, object> Parameters = new Dictionary<string, object>();
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                var nameAttribute = methodCallExpression?
+                    .Method
+                    .GetCustomAttributes(typeof(JavascriptMethodNameAttribute), false)
+                    .OfType<JavascriptMethodNameAttribute>()
+                    .FirstOrDefault();
+
+                if (nameAttribute == null)
+                    return;
+                context.PreventDefault();
+
+                var javascriptWriter = context.GetWriter();
+                javascriptWriter.Write(".");
+                javascriptWriter.Write(nameAttribute.Name);
+                javascriptWriter.Write("(");
+
+                var args = new List<Expression>();
+                for (var i = 0; i < methodCallExpression.Arguments.Count; i++)
+                {
+                    if (methodCallExpression.Arguments[i] is NewArrayExpression)
+                    {
+                        var exps = ((NewArrayExpression) methodCallExpression.Arguments[i]).Expressions;
+                        foreach (var exp in exps)                        
+                            args.Add(exp);                                             
+                    }                    
+                    else                   
+                        args.Add(methodCallExpression.Arguments[i]);
+                }
+
+                object val;
+                for (var i = 0; i < args.Count; i++)
+                {
+                    var name = "arg_" + Parameters.Count;
+                    if (i != 0)
+                        javascriptWriter.Write(", ");
+                    javascriptWriter.Write(name);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(args[i], out val);
+                    Parameters[name] = val;
+                }
+                if (nameAttribute.PositionalArguments != null)
+                {
+                    for (int i = methodCallExpression.Arguments.Count;
+                        i < nameAttribute.PositionalArguments.Length;
+                        i++)
+                    {
+                        if (i != 0)
+                            javascriptWriter.Write(", ");
+                        context.Visitor.Visit(Expression.Constant(nameAttribute.PositionalArguments[i]));
+                    }
+                }
+
+                javascriptWriter.Write(")");
+            }
+        }
 
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
         {
@@ -35,37 +96,32 @@ namespace Raven.Client.Documents.Session
         public void Increment<T, U>(string key, Expression<Func<T, U>> path, U valToAdd)
         {
             var pathScript = path.CompileToJavascript();
-            var script = $"this.{pathScript} += val;";
 
-            _documentStore.Operations.Send(new PatchOperation(key, null, patch: new PatchRequest
+            Advanced.Defer(new PatchCommandData(key , null, new PatchRequest
             {
-                Script = script,
+                Script = $"this.{pathScript} += val;",
                 Values = { ["val"] = valToAdd }
-            }));
-
-            _patchInfo = new { DocId = key, Script = $"\"{script}\"", Path = path, Val = valToAdd };
-        }
-
-        public void Patch<T, U>(string key, Expression<Func<T, U>> path, U value)
-        {
-            var pathScript = path.CompileToJavascript();
-            var script = $"this.{pathScript} = val;";
-            _documentStore.Operations.Send(new PatchOperation(key, null, new PatchRequest
-            {
-                Script = script,
-                Values = { ["val"] = value }
-            }));
-
-            _patchInfo = new { DocId = key, Script = $"\"{script}\"", Path = path, Val = value };
+            }, null));
         }
 
         public void Patch<T, U>(T entity, Expression<Func<T, U>> path, U value)
         {
             var metadata = GetMetadataFor(entity);
             StringValues id;
-            metadata.TryGetValue(Raven.Client.Constants.Documents.Metadata.Id, out id);
+            metadata.TryGetValue(Constants.Documents.Metadata.Id, out id);
 
             Patch(id, path, value);
+        }
+
+        public void Patch<T, U>(string key, Expression<Func<T, U>> path, U value)
+        {
+            var pathScript = path.CompileToJavascript();
+
+            Advanced.Defer(new PatchCommandData(key, null , new PatchRequest
+            {
+                Script = $"this.{pathScript} = val;",
+                Values = { ["val"] = value }
+            }, null));
         }
 
         public void Patch<T, U>(T entity, Expression<Func<T, IEnumerable<U>>> path,
@@ -81,30 +137,20 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string key, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
+            var extension = new CustomMethods();
             var pathScript = path.CompileToJavascript();
-            var adderScript = arrayAdder.CompileToJavascript();
+            var adderScript = arrayAdder.CompileToJavascript(
+                new JavascriptCompilationOptions(
+                    JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
+                    new LinqMethods(), extension));
 
-            var jsMethodNameAtt = ((MethodCallExpression)arrayAdder.Body).Method.GetCustomAttributes(typeof(JavascriptMethodNameAttribute));
-            var name = ((JavascriptMethodNameAttribute)jsMethodNameAtt.ElementAt(0)).Name;
+            var script = $"this.{pathScript}{adderScript}";
 
-            var script = name == "concat" ? $"this.{pathScript} = this.{pathScript}{adderScript}" : $"this.{pathScript}{adderScript}";
-
-            object val;
-            var arg = ((MethodCallExpression)arrayAdder.Body).Arguments[0];
-            LinqPathProvider.GetValueFromExpressionWithoutConversion(arg, out val);
-
-            _documentStore.Operations.Send(new PatchOperation(key, null, new PatchRequest
+            Advanced.Defer(new PatchCommandData(key , null , new PatchRequest
             {
                 Script = script,
-                Values = { { "val", val } }
-            }));
-
-            _patchInfo = new { DocId = key, Script = $"\"{script}\"", Path = path, Val = val };
-        }
-
-        public override string ToString()
-        {
-            return _patchInfo.ToString();
+                Values = extension.Parameters
+            }, null));
         }
     }
 }
