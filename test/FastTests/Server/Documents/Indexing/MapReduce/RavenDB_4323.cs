@@ -266,7 +266,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 var collectionStatistics = await store2.Admin.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStatistics.Collections.Count);
                 Assert.False(collectionStatistics.Collections.ContainsKey("DailyInvoices"));
-                Assert.True(collectionStatistics.Collections.ContainsKey(CollectionName.SystemCollection));
                 Assert.True(collectionStatistics.Collections.ContainsKey("Invoices"));
                 Assert.Equal(32, collectionStatistics.CountOfDocuments);
 

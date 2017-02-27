@@ -15,9 +15,9 @@ namespace Tryouts
             {
 
                 var sp = Stopwatch.StartNew();
-                using (var a = new SlowTests.SlowTests.Faceted.FacetPaging())
+                using (var a = new FastTests.Server.Documents.Indexing.MapReduce.RavenDB_4323_Replication())
                 {
-                    a.CanPerformFacetedPagingSearchWithPageSize_TermDesc_LuceneQuery();
+                    a.ReduceOutputShouldNotBeReplicated().Wait();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

@@ -215,7 +215,7 @@ namespace Raven.Server
             var @var = Environment.GetEnvironmentVariable("COMPlus_ReadyToRunExcludeList");
             if (@var != "System.Security.Cryptography.X509Certificates")
             {
-                throw new ArgumentException("Missing environment variable COMPlus_ReadyToRunExcludeList setting, can't use SslStream on dotnet core 1.1.0");
+                throw new ArgumentException("Missing environment variable $env:COMPlus_ReadyToRunExcludeList=\"System.Security.Cryptography.X509Certificates\" setting, can't use SslStream on dotnet core 1.1.0");
             }
             var generateSelfSignedCertificate = CertificateUtils.CreateSelfSignedCertificate("RavenDB", "Hibernating Rhinos");
             return new CertificateHolder
