@@ -56,9 +56,9 @@ namespace Raven.Client.Documents.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeUriString(_documentId)}&name={Uri.EscapeUriString(_name)}";
+                url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
                 if (string.IsNullOrWhiteSpace(_contentType) == false)
-                    url += $"&contentType={Uri.EscapeUriString(_contentType)}";
+                    url += $"&contentType={Uri.EscapeDataString(_contentType)}";
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Put,

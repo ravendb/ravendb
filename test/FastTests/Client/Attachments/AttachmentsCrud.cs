@@ -26,8 +26,7 @@ namespace FastTests.Client.Attachments
                 {
                     "profile.png",
                     "background-photo.jpg",
-                    //TODO Not working with hebrew id: "fileNANE_#$1^%_בעברית.txt"
-                    "fileNANE.txt"
+                    "fileNANE_#$1^%_בעברית.txt"
                 };
                 using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                 {

@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Commands
         {
             // If index name is not supplied, then we request to get all index definitions
             // TODO iftah, should we also specify pageSize and start?
-            url = $"{node.Url}/databases/{node.Database}/indexes?" + (IndexName != null ? "name=" + Uri.EscapeUriString(IndexName) : string.Empty);
+            url = $"{node.Url}/databases/{node.Database}/indexes?" + (IndexName != null ? "name=" + Uri.EscapeDataString(IndexName) : string.Empty);
 
             var request = new HttpRequestMessage
             {

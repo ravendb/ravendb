@@ -80,9 +80,9 @@ namespace Raven.Client.Documents.Operations.Indexes
                 foreach (var indexName in _indexNames)
                 {
                     if (first)
-                        url += $"?name={Uri.EscapeUriString(indexName)}";
+                        url += $"?name={Uri.EscapeDataString(indexName)}";
                     else
-                        url += $"&name={Uri.EscapeUriString(indexName)}";
+                        url += $"&name={Uri.EscapeDataString(indexName)}";
 
                     first = false;
                 }

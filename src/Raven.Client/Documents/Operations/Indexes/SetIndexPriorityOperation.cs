@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes/set-priority?name={Uri.EscapeUriString(_indexName)}&priority={_priority}";
+                url = $"{node.Url}/databases/{node.Database}/indexes/set-priority?name={Uri.EscapeDataString(_indexName)}&priority={_priority}";
 
                 return new HttpRequestMessage
                 {
