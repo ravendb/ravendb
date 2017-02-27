@@ -144,7 +144,7 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
 
         protected virtual void CreateRequestUri(StringBuilder uri)
         {
-            uri.AppendFormat("/queries/{0}?&op=morelikethis", Uri.EscapeDataString(IndexName));
+            uri.AppendFormat("/queries/{0}?&op=morelikethis", Uri.EscapeUriString(IndexName));
 
             if (MapGroupFields.Count > 0)
                 MapGroupFields.ApplyIfNotNull(mgf => uri.AppendFormat("&mgf-{0}={1}", mgf.Key, mgf.Value));

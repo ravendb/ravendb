@@ -15,9 +15,9 @@ namespace Tryouts
             {
 
                 var sp = Stopwatch.StartNew();
-                using (var a = new FastTests.Server.Documents.Indexing.MapReduce.RavenDB_4323_Replication())
+                using (var a = new SlowTests.Core.Bundles.MoreLikeThis())
                 {
-                    a.ReduceOutputShouldNotBeReplicated().Wait();
+                    a.CanUseMoreLikeThisWithTransformer();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

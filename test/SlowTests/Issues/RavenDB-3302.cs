@@ -52,7 +52,6 @@ namespace SlowTests.Issues
                         .SelectFields<TicketTimerIndex.IndexEntry>()
                         .WaitForNonStaleResults();
 
-                    Console.WriteLine("{0} - Query: {1}", criticalTicketsForLocationQuery.ToList().Count, criticalTicketsForLocationQuery);
                     Assert.Equal(1, criticalTicketsForLocationQuery.ToList().Count);
 
                     // Find all critical tickets for locations-1 (same query as above, just wrapped in a subclause)
@@ -68,7 +67,6 @@ namespace SlowTests.Issues
                         .SelectFields<TicketTimerIndex.IndexEntry>()
                         .WaitForNonStaleResults();
 
-                    Console.WriteLine("{0} - Query: {1}", criticalTicketsForLocationUsingSubclauseQuery.ToList().Count, criticalTicketsForLocationUsingSubclauseQuery);
                     Assert.Equal(1, criticalTicketsForLocationUsingSubclauseQuery.ToList().Count);
                 }
             }
