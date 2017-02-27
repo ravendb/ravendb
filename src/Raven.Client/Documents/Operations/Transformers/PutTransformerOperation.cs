@@ -12,23 +12,19 @@ namespace Raven.Client.Documents.Operations.Transformers
 {
     public class PutTransformerOperation : IAdminOperation<PutTransformerResult>
     {
-        private readonly string _transformerName;
         private readonly TransformerDefinition _transformerDefinition;
 
-        public PutTransformerOperation(string transformerName, TransformerDefinition transformerDefinition)
+        public PutTransformerOperation(TransformerDefinition transformerDefinition)
         {
-            if (transformerName == null)
-                throw new ArgumentNullException(nameof(transformerName));
             if (transformerDefinition == null)
                 throw new ArgumentNullException(nameof(transformerDefinition));
-
-            _transformerName = transformerName;
+            
             _transformerDefinition = transformerDefinition;
         }
 
         public RavenCommand<PutTransformerResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutTransformerCommand(conventions, context, _transformerName, _transformerDefinition);
+            return new PutTransformerCommand(conventions, context, _transformerDefinition);
         }
 
         private class PutTransformerCommand : RavenCommand<PutTransformerResult>
@@ -37,19 +33,19 @@ namespace Raven.Client.Documents.Operations.Transformers
             private readonly string _transformerName;
             private readonly BlittableJsonReaderObject _transformerDefinition;
 
-            public PutTransformerCommand(DocumentConventions conventions, JsonOperationContext context, string transformerName, TransformerDefinition transformerDefinition)
+            public PutTransformerCommand(DocumentConventions conventions, JsonOperationContext context, TransformerDefinition transformerDefinition)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
-                if (transformerName == null)
-                    throw new ArgumentNullException(nameof(transformerName));
                 if (transformerDefinition == null)
                     throw new ArgumentNullException(nameof(transformerDefinition));
+                if (transformerDefinition.Name == null)
+                    throw new ArgumentNullException(nameof(transformerDefinition.Name));
 
                 _context = context;
-                _transformerName = transformerName;
+                _transformerName = transformerDefinition.Name;
                 _transformerDefinition = new EntityToBlittable(null).ConvertEntityToBlittable(transformerDefinition, conventions, _context);
             }
 

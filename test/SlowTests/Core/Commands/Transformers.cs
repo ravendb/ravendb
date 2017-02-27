@@ -16,13 +16,13 @@ namespace SlowTests.Core.Commands
             {
                 const string usersSelectNames = "users/selectName";
 
-                await store.Admin.SendAsync(new PutTransformerOperation(usersSelectNames, new TransformerDefinition
+                await store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
                 {
                     Name = usersSelectNames,
                     TransformResults = "from user in results select new { user.FirstName, user.LastName }"
                 }));
 
-                await store.Admin.SendAsync(new PutTransformerOperation(usersSelectNames, new TransformerDefinition
+                await store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
                 {
                     Name = usersSelectNames,
                     TransformResults = "from user in results select new { Name = user.Name }"

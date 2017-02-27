@@ -21,7 +21,7 @@ namespace FastTests.Server.Documents.Indexing.Debugging
                     Name = "Test"
                 };
 
-                store.Admin.Send(new PutTransformerOperation("Test", new TransformerDefinition
+                store.Admin.Send(new PutTransformerOperation(new TransformerDefinition
                 {
                     Name = "Test",
                     TransformResults = "from user in results select new { user.FirstName, user.LastName }"
@@ -45,7 +45,7 @@ namespace FastTests.Server.Documents.Indexing.Debugging
                     Name = "Test",
                 };
 
-                store.Admin.Send(new PutTransformerOperation("Test", new TransformerDefinition
+                store.Admin.Send(new PutTransformerOperation(new TransformerDefinition
                 {
                     Name = "Test",
                     TransformResults = "from user in results select new { user.FirstName, user.LastName }"

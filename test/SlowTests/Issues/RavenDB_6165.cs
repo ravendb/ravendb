@@ -86,7 +86,7 @@ namespace SlowTests.Issues
 
                 var existingTransformerName = "Users_Transformer";
 
-                documentStore.Admin.Send(new PutTransformerOperation(existingTransformerName, new TransformerDefinition
+                documentStore.Admin.Send(new PutTransformerOperation(new TransformerDefinition
                 {
                     Name = existingTransformerName,
                     TransformResults = "from user in results select new { user.FirstName, user.LastName }"

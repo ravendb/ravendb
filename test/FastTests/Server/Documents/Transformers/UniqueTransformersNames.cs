@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Indexes;
+﻿using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Documents.Transformers;
@@ -28,7 +29,7 @@ namespace FastTests.Server.Documents.Transformers
 
                 store.Admin.Send(new PutIndexesOperation(indexDefinition));
                 Assert.NotNull(store.Admin.Send(new GetIndexOperation("Test")));
-                var e = Assert.Throws<RavenException>(() => store.Admin.Send(new PutTransformerOperation("Test", transformerDefinition)));
+                var e = Assert.Throws<IndexOrTransformerAlreadyExistException>(() => store.Admin.Send(new PutTransformerOperation(transformerDefinition)));
                 Assert.Contains($"Tried to create a transformer with a name of {"Test"}, but an index under the same name exist", e.Message);
             }
         }
@@ -56,7 +57,7 @@ namespace FastTests.Server.Documents.Transformers
                 store.Admin.Send(new DeleteIndexOperation("Test"));
                 Assert.Null(store.Admin.Send(new GetIndexOperation("Test")));
 
-                store.Admin.Send(new PutTransformerOperation("Test", transformerDefinition));
+                store.Admin.Send(new PutTransformerOperation(transformerDefinition));
                 Assert.NotNull(store.Admin.Send(new GetTransformerOperation("Test")));
 
             }

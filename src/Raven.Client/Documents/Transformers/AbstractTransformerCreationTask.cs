@@ -140,7 +140,10 @@ namespace Raven.Client.Documents.Transformers
             JsonOperationContext jsonOperationContext;
             requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
-            documentStore.Admin.Send(new PutTransformerOperation(TransformerName, transformerDefinition));
+            if (transformerDefinition.Name == null)
+                transformerDefinition.Name = TransformerName;
+
+            documentStore.Admin.Send(new PutTransformerOperation(transformerDefinition));
 
             /*if (conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Transformers))
                 ReplicateTransformerIfNeeded(databaseCommands);*/
@@ -201,7 +204,10 @@ namespace Raven.Client.Documents.Transformers
             JsonOperationContext jsonOperationContext;
             requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
-            await documentStore.Admin.SendAsync(new PutTransformerOperation(TransformerName, transformerDefinition), token).ConfigureAwait(false);
+            if (transformerDefinition.Name == null)
+                transformerDefinition.Name = TransformerName;
+
+            await documentStore.Admin.SendAsync(new PutTransformerOperation(transformerDefinition), token).ConfigureAwait(false);
 
             //await ReplicateTransformerIfNeededAsync(asyncDatabaseCommands).ConfigureAwait(false);
         }
