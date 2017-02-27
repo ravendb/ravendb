@@ -63,7 +63,7 @@ namespace Voron.Platform.Posix
                 length = journalSize;
                 try
                 {
-                    PosixHelper.AllocateFileSpace(options, _fd, (ulong) journalSize,filename);
+                    PosixHelper.AllocateFileSpace(options, _fd, journalSize,filename);
                 }
                 catch (Exception)
                 {

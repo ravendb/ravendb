@@ -143,6 +143,8 @@ namespace Voron
 
         protected StorageEnvironmentOptions(string tempPath)
         {
+            SafePosixOpenFlags = SafePosixOpenFlags | DefaultPosixFlags;
+
             TempPath = tempPath;
 
             ShouldUseKeyPrefix = name => false;
@@ -608,7 +610,7 @@ namespace Voron
 
             public override void SetPosixOptions()
             {
-                PosixOpenFlags = 0;
+                PosixOpenFlags = DefaultPosixFlags;
             }
 
             public PureMemoryStorageEnvironmentOptions(string name, string tempPath) : base(tempPath)
@@ -821,6 +823,7 @@ namespace Voron
 
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
+        public OpenFlags DefaultPosixFlags = PlatformDetails.Is32Bits ? PerPlatformValues.OpenFlags.O_LARGEFILE : 0;
         public OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT;
         private readonly Logger _log;
 

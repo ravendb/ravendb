@@ -149,7 +149,15 @@ namespace Voron
                     return true;
                 }
 
-                result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr)(64L * 1024));
+                bool usingLseek;
+                result = Syscall.AllocateFileSpace(fd, 64L * 1024, filename, out usingLseek);
+                if (usingLseek)
+                {
+                    if (log.IsInfoEnabled)
+                        log.Info(
+                            $"Failed to fallocate test file at \'{filename}\'. (rc = {result}) but had success with lseek. New file allocations will take longer time with lseek");
+                }
+
                 if (result == (int)Errno.EINVAL)
                 {
                     if (log.IsInfoEnabled)
@@ -889,7 +897,7 @@ namespace Voron
 
                     case TransactionsMode.Danger:
                         {
-                            Options.PosixOpenFlags = 0;
+                            Options.PosixOpenFlags = Options.DefaultPosixFlags;
                             Options.WinOpenFlags = Win32NativeFileAttributes.None;
                             Journal.TruncateJournal();
                         }
