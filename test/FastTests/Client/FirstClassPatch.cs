@@ -59,6 +59,7 @@ namespace FastTests
                     // explicitly specify id & type
                     session.Advanced.Patch<User, int>(_docId, u => u.Numbers[0], 31);
                     session.Advanced.Patch<User, DateTime>(_docId, u => u.LastLogin, now);
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -69,6 +70,7 @@ namespace FastTests
 
                     // infer type & the id from entity
                     session.Advanced.Patch(loaded, u => u.Stuff[0].Phone, "123456");
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -98,6 +100,7 @@ namespace FastTests
                 {
                     session.Advanced.Patch<User, object>(_docId, u => u.Stuff[1],
                         new Stuff { Key = 4, Phone = "9255864406", Friend = new Friend() });
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -125,8 +128,10 @@ namespace FastTests
                             {"Utah", "Salt Lake City"},
                             {"Texas", "Austin"},
                             {"California", "Sacramento"},
-                        },
+                        }
                     });
+
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -162,6 +167,7 @@ namespace FastTests
                     //push
                     session.Advanced.Patch<User, int>(_docId, u => u.Numbers, roles => roles.Add(3));
                     session.Advanced.Patch<User, Stuff>(_docId, u => u.Stuff, roles => roles.Add(new Stuff { Key = 75 }));
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -173,6 +179,7 @@ namespace FastTests
                     //concat
                     session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(101, 102, 103));
                     session.Advanced.Patch(loaded, u => u.Stuff, roles => roles.Add(new Stuff { Key = 102 }, new Stuff { Phone = "123456" }));
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -185,6 +192,7 @@ namespace FastTests
                     Assert.Equal(loaded.Stuff[3].Phone, "123456");
 
                     session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(new[] { 201, 202, 203 }));
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -216,6 +224,7 @@ namespace FastTests
                 {
                     session.Advanced.Patch<User, int>(_docId, u => u.Numbers, roles => roles.RemoveAt(1));
                     session.Advanced.Patch<User, object>(_docId, u => u.Stuff, roles => roles.RemoveAt(0));
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -250,6 +259,7 @@ namespace FastTests
                 {
                     // explicitly specify id & type
                     session.Advanced.Increment<User, int>(_docId, u => u.Numbers[0], 1);
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -259,6 +269,7 @@ namespace FastTests
 
                     // infer type & the id from entity
                     session.Advanced.Increment(loaded, u => u.Stuff[0].Key, -3);
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
