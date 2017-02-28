@@ -280,6 +280,46 @@ namespace Sparrow.Json
             _continuationState.Push(currentState);
         }
 
+        public void WriteValue(BlittableJsonToken token, object value)
+        {
+            switch (token)
+            {
+                case BlittableJsonToken.Integer:
+                    WriteValue((long)value);
+                    break;
+                case BlittableJsonToken.Float:
+                    WriteValue((float)value);
+                    break;
+                case BlittableJsonToken.String:
+                case BlittableJsonToken.CompressedString:
+                    WriteValue(value.ToString());
+                    break;
+                case BlittableJsonToken.Boolean:
+                    WriteValue((bool)value);
+                    break;
+                case BlittableJsonToken.Null:
+                    WriteValueNull();
+                    break;
+                case BlittableJsonToken.StartObject:
+                    var obj = value as BlittableJsonReaderObject;
+                    StartWriteObject();
+                    obj.AddItemsToStream(this); 
+                    WriteObjectEnd();                
+                    break;
+                case BlittableJsonToken.EmbeddedBlittable:
+                    WriteEmbeddedBlittableDocument((BlittableJsonReaderObject)value);
+                    break;
+                case BlittableJsonToken.StartArray:
+                    var arr = value as BlittableJsonReaderArray;
+                    StartWriteArray();
+                    arr?.AddItemsToStream(this);
+                    WriteArrayEnd();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(token), token, null);
+            }
+        }
+
         public void WriteValue(bool value)
         {
             var currentState = _continuationState.Pop();

@@ -9,8 +9,8 @@ using Orders;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Documents.Session;
-
+using Raven.Client.Documents.Session;using Raven.Client.Extensions;
+using Raven.Server.Utils;
 namespace Raven.Server.Documents.Handlers
 {
     public class DocumentReplicationHandler : DatabaseRequestHandler
@@ -265,6 +265,29 @@ namespace Raven.Server.Documents.Handlers
                 context.Write(writer, data);
             }
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/studio-tasks/resolveMerge", "GET", "/databases/{databaseName:string}/studio-tasks/resolveMerge?docId={documentId:string}")]
+        public Task ResolveMearge()
+        {
+            var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
+                var advisor = new ConflictResovlerAdvisor(conflicts.Select(c=>c.Doc),context);
+                var resovled = advisor.Resolve();
+
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Document"] = resovled.Document,
+                    ["Metadata"] = resovled.Metadata
+                });
+
+                return Task.CompletedTask;
+            }
         }
     }
 }
