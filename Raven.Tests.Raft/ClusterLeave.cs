@@ -3,9 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
+using Rachis.Storage;
 using Raven.Client.Document;
 using Raven.Database.Raft.Util;
 using Xunit;
@@ -64,7 +67,30 @@ namespace Raven.Tests.Raft
             var nodeAboutToRemove = servers[nodeToRemoveIndex];
 
             var guidOfNodeToRemove = servers[nodeToRemoveIndex].Options.ClusterManager.Value.Engine.Name;
+
+            var mre = new CountdownEvent(servers.Count);
+
+            
+            foreach (var ravenDbServer in servers)
+            {
+                ravenDbServer.Options.ClusterManager.Value.Engine.TopologyChanged += (s) =>
+                {
+                    if (s.Requested.AllNodes.Count() < servers.Count)
+                    {
+                        Console.WriteLine($"{ravenDbServer.Options.ClusterManager.Value.Engine.Name} topolgy has changed to size {s.Requested.AllNodes.Count()}");
+                        mre.Signal();
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Received topology change for {ravenDbServer.Options.ClusterManager.Value.Engine.Name}, current leader is {servers.Where(x=>x.Options.ClusterManager.Value.IsLeader()).Select(x=>x.Options.ClusterManager.Value.Engine.Name).First()}");
+                        Console.WriteLine($"Prev: {s.Previous.ToString()}; Requested: {s.Requested.ToString()} ");
+                    }
+                };
+            }
+            Console.WriteLine($"Start to leave node {guidOfNodeToRemove}");
             clientUsedForSendingRequest.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/leave?name=" + guidOfNodeToRemove, new HttpMethod("GET")).ExecuteRequest();
+
+            Assert.True(mre.Wait(20*1000));
 
             // validate if removed node doesn't exist in new topology
             foreach (var server in servers)
