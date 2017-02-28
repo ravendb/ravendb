@@ -353,6 +353,9 @@ namespace Voron
 
         public void Dispose()
         {
+            if (_envDispose.IsSet)
+                return; // already disposed
+
             _cancellationTokenSource.Cancel();
             try
             {

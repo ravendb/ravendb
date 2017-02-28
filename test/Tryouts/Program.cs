@@ -17,9 +17,9 @@ namespace Tryouts
                 //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
                 //LoggingSource.Instance.EnableConsoleLogging();
                 var sp = Stopwatch.StartNew();
-                using (var a = new FastTests.Voron.Bugs.StorageEnvDisposeWithLazyTx())
+                using (var a = new SlowTests.Voron.RecoveryMultipleJournals())
                 {
-                    a.CanDisposeStorageWithLazyTx();
+                    a.CorruptingLastTransactionsInNotLastJournalShouldThrow();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

@@ -71,6 +71,8 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Micro.Benchmark", "bench\Mi
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Raven.Client", "src\Raven.Client\Raven.Client.xproj", "{76846E8B-B17A-4F9A-8173-48FB573BB825}"
 EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Lambda2Js", "libs\Lambda2Js\Lambda2Js.xproj", "{12D50BF1-CAB2-490B-8D50-D13E1318D91E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -287,6 +289,14 @@ Global
 		{76846E8B-B17A-4F9A-8173-48FB573BB825}.Release|Any CPU.Build.0 = Release|Any CPU
 		{76846E8B-B17A-4F9A-8173-48FB573BB825}.Validate|Any CPU.ActiveCfg = Release|Any CPU
 		{76846E8B-B17A-4F9A-8173-48FB573BB825}.Validate|Any CPU.Build.0 = Release|Any CPU
+		{12D50BF1-CAB2-490B-8D50-D13E1318D91E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12D50BF1-CAB2-490B-8D50-D13E1318D91E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12D50BF1-CAB2-490B-8D50-D13E1318D91E}.MemGuard|Any CPU.ActiveCfg = Debug|Any CPU
+		{12D50BF1-CAB2-490B-8D50-D13E1318D91E}.MemGuard|Any CPU.Build.0 = Debug|Any CPU
+		{12D50BF1-CAB2-490B-8D50-D13E1318D91E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12D50BF1-CAB2-490B-8D50-D13E1318D91E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12D50BF1-CAB2-490B-8D50-D13E1318D91E}.Validate|Any CPU.ActiveCfg = Debug|Any CPU
+		{12D50BF1-CAB2-490B-8D50-D13E1318D91E}.Validate|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -318,6 +328,7 @@ Global
 		{D8AB200A-6DF6-442E-85E0-9A906E0F7521} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
 		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
 		{76846E8B-B17A-4F9A-8173-48FB573BB825} = {02838C57-DE0E-465D-9FBB-248DA87BEAAE}
+		{12D50BF1-CAB2-490B-8D50-D13E1318D91E} = {FED31B7C-041C-489C-BFA9-D88815FC63D0}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57
