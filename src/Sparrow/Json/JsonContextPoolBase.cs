@@ -227,19 +227,24 @@ namespace Sparrow.Json
         {
             if (_disposed)
                 return;
-            _disposed = true;
-            _timer.Dispose();
-            foreach (var stack in _contextPool.Values)
+            lock (this)
             {
-                while (stack.Count > 0)
+                if (_disposed)
+                    return;
+                _disposed = true;
+                _timer.Dispose();
+                foreach (var stack in _contextPool.Values)
                 {
-                    var ctx = stack.Pop();
-                    if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
-                        continue;
-                    ctx.Dispose();
+                    while (stack.Count > 0)
+                    {
+                        var ctx = stack.Pop();
+                        if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
+                            continue;
+                        ctx.Dispose();
+                    }
                 }
+                _contextPool.Dispose();
             }
-            _contextPool.Dispose();
         }
     }
 }

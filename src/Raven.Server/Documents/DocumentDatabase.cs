@@ -251,116 +251,122 @@ namespace Raven.Server.Documents
             if (_databaseShutdown.IsCancellationRequested)
                 return; // double dispose?
 
-            //before we dispose of the database we take its latest info to be displayed in the studio
-            var databaseInfo = GenerateDatabaseInfo();
-            if (databaseInfo!= null)
-                DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
-
-            _databaseShutdown.Cancel();
-            // we'll wait for 1 minute to drain all the requests
-            // from the database
-
-            var sp = Stopwatch.StartNew();
-            while (sp.ElapsedMilliseconds < 60 * 1000)
+            lock (this)
             {
-                if (Interlocked.Read(ref _usages) == 0)
-                    break;
+                if (_databaseShutdown.IsCancellationRequested)
+                    return; // double dispose?
 
-                if (_waitForUsagesOnDisposal.Wait(1000))
-                    _waitForUsagesOnDisposal.Reset();
-            }
+                //before we dispose of the database we take its latest info to be displayed in the studio
+                var databaseInfo = GenerateDatabaseInfo();
+                if (databaseInfo != null)
+                    DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
+                _databaseShutdown.Cancel();
+                // we'll wait for 1 minute to drain all the requests
+                // from the database
 
-            foreach (var connection in RunningTcpConnections)
-            {
+                var sp = Stopwatch.StartNew();
+                while (sp.ElapsedMilliseconds < 60 * 1000)
+                {
+                    if (Interlocked.Read(ref _usages) == 0)
+                        break;
+
+                    if (_waitForUsagesOnDisposal.Wait(1000))
+                        _waitForUsagesOnDisposal.Reset();
+                }
+
+                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
+
+                foreach (var connection in RunningTcpConnections)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        connection.Dispose();
+                    });
+                }
+
                 exceptionAggregator.Execute(() =>
                 {
-                    connection.Dispose();
+                    TxMerger.Dispose();
                 });
-            }
 
-            exceptionAggregator.Execute(() =>
-            {
-                TxMerger.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                DocumentReplicationLoader.Dispose();
-            });
-
-            if (_indexStoreTask != null)
-            {
                 exceptionAggregator.Execute(() =>
                 {
-                    _indexStoreTask.Wait(DatabaseShutdown);
-                    _indexStoreTask = null;
+                    DocumentReplicationLoader.Dispose();
                 });
-            }
 
-            if (_transformerStoreTask != null)
-            {
+                if (_indexStoreTask != null)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        _indexStoreTask.Wait(DatabaseShutdown);
+                        _indexStoreTask = null;
+                    });
+                }
+
+                if (_transformerStoreTask != null)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        _transformerStoreTask.Wait(DatabaseShutdown);
+                        _transformerStoreTask = null;
+                    });
+                }
+
                 exceptionAggregator.Execute(() =>
                 {
-                    _transformerStoreTask.Wait(DatabaseShutdown);
-                    _transformerStoreTask = null;
+                    IndexStore?.Dispose();
+                    IndexStore = null;
                 });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    BundleLoader?.Dispose();
+                    BundleLoader = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    DocumentTombstoneCleaner?.Dispose();
+                    DocumentTombstoneCleaner = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    DocumentReplicationLoader?.Dispose();
+                    DocumentReplicationLoader = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    SqlReplicationLoader?.Dispose();
+                    SqlReplicationLoader = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    Operations?.Dispose(exceptionAggregator);
+                    Operations = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    SubscriptionStorage?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    ConfigurationStorage?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    DocumentsStorage?.Dispose();
+                    DocumentsStorage = null;
+                });
+
+                exceptionAggregator.ThrowIfNeeded();
             }
-
-            exceptionAggregator.Execute(() =>
-            {
-                IndexStore?.Dispose();
-                IndexStore = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                BundleLoader?.Dispose();
-                BundleLoader = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                DocumentTombstoneCleaner?.Dispose();
-                DocumentTombstoneCleaner = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                DocumentReplicationLoader?.Dispose();
-                DocumentReplicationLoader = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                SqlReplicationLoader?.Dispose();
-                SqlReplicationLoader = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                Operations?.Dispose(exceptionAggregator);
-                Operations = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                SubscriptionStorage?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                ConfigurationStorage?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                DocumentsStorage?.Dispose();
-                DocumentsStorage = null;
-            });
-
-            exceptionAggregator.ThrowIfNeeded();
         }
 
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";

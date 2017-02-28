@@ -579,14 +579,15 @@ namespace Sparrow.Json
                     _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);
                     mem.AllocatedMemoryData = null;
                     mem.Dispose();
-                }                
-                
+                }        
+                        
+                _arenaAllocatorForLongLivedValues = null;
+
                 // at this point, the long lived section is far too large, this is something that can happen
                 // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K 
                 // property names before this kicks in, which is a true abuse of the system. In this case, 
                 // in order to avoid unlimited growth, we'll reset the long lived section
                 allocatorForLongLivedValues.Dispose();
-                _arenaAllocatorForLongLivedValues = null;
 
                 _fieldNames.Clear();
                 CachedProperties = null; // need to release this so can be collected

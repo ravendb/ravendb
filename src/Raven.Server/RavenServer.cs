@@ -587,35 +587,41 @@ namespace Raven.Server
         {
             if (Disposed)
                 return;
-            Disposed = true;
-            Metrics?.Dispose();
-            _webHost?.Dispose();
-            if (_tcpListenerTask != null)
+            lock (this)
             {
-                if (_tcpListenerTask.IsCompleted)
+                if (Disposed)
+                    return;
+
+                Disposed = true;
+                Metrics?.Dispose();
+                _webHost?.Dispose();
+                if (_tcpListenerTask != null)
                 {
-                    CloseTcpListeners(_tcpListenerTask.Result.Listeners);
-                }
-                else
-                {
-                    if (_tcpListenerTask.Exception != null)
+                    if (_tcpListenerTask.IsCompleted)
                     {
-                        if (_tcpLogger.IsInfoEnabled)
-                            _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                        CloseTcpListeners(_tcpListenerTask.Result.Listeners);
                     }
                     else
                     {
-                        _tcpListenerTask.ContinueWith(t =>
+                        if (_tcpListenerTask.Exception != null)
                         {
-                            CloseTcpListeners(t.Result.Listeners);
-                        }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                            if (_tcpLogger.IsInfoEnabled)
+                                _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                        }
+                        else
+                        {
+                            _tcpListenerTask.ContinueWith(t =>
+                            {
+                                CloseTcpListeners(t.Result.Listeners);
+                            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                        }
                     }
                 }
-            }
 
-            ServerStore?.Dispose();
-            ServerMaintenanceTimer?.Dispose();
-            _latestVersionCheck?.Dispose();
+                ServerStore?.Dispose();
+                ServerMaintenanceTimer?.Dispose();
+                _latestVersionCheck?.Dispose();
+            }
         }
 
         private void CloseTcpListeners(List<TcpListener> listeners)
