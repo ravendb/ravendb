@@ -6,6 +6,7 @@ using System.Linq;
 using Rachis.Commands;
 using Rachis.Messages;
 using Rachis.Storage;
+using Rachis.Transport;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 
@@ -526,6 +527,38 @@ namespace Rachis.Behaviors
                     skip++;
                 }
 
+
+                var topologyChange = req.Entries.Skip(skip).LastOrDefault(x => x.IsTopologyChange == true);
+
+                if (topologyChange != null)
+                {
+                    var command = Engine.PersistentState.CommandSerializer.Deserialize(topologyChange.Data);
+                    var topologyChangeCommand = command as TopologyChangeCommand;
+                    
+                    if (topologyChangeCommand != null && topologyChangeCommand.Requested.AllNodes.Contains(Engine.Options.SelfConnection) == false)
+                    {
+                        _log.Warn("Got topology without self, disconnecting from the leader, clearing topology and moving to idle follower state");
+                        var tcc = new TopologyChangeCommand
+                        {
+                            Requested = new Topology(Guid.NewGuid(), new[] { Engine.Options.SelfConnection }, new List<NodeConnectionInfo>(), new List<NodeConnectionInfo>())
+                        };
+                        Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0L);
+                        Engine.StartTopologyChange(tcc);
+                        Engine.CommitTopologyChange(tcc);
+                        Engine.SetState(RaftEngineState.Leader);
+
+                        return new AppendEntriesResponse
+                        {
+                            Success = true,
+                            CurrentTerm = Engine.PersistentState.CurrentTerm,
+                            LastLogIndex = lastLogIndex,
+                            Message = "Leaving cluster, because received topology from the leader that didn't contain us",
+                            From = Engine.Name,
+                            ClusterTopologyId = req.ClusterTopologyId, // we send this "older" ID, so the leader won't reject us
+                        };
+                    }
+                }
+
                 if (skip != req.Entries.Length)
                 {
                     Engine.PersistentState.AppendToLog(Engine, req.Entries.Skip(skip), req.PrevLogIndex + skip);
@@ -542,7 +575,7 @@ namespace Rachis.Behaviors
                               $"Setting midpoint index to {appendEntriesResponse.MidpointIndex} with term {appendEntriesResponse.MidpointTerm}.");
                 }
 
-                var topologyChange = req.Entries.LastOrDefault(x => x.IsTopologyChange == true);
+                
 
                 // we consider the latest topology change to be in effect as soon as we see it, even before the 
                 // it is committed, see raft spec section 6:
@@ -557,10 +590,27 @@ namespace Rachis.Behaviors
                         throw new InvalidOperationException(@"Log entry that is marked with IsTopologyChange should be of type TopologyChangeCommand.
                                                             Instead, it is of type: " + command.GetType() + ". It is probably a bug!");
 
-                    _log.Info("Topology change started (TopologyChangeCommand committed to the log): {0}",
-                        topologyChangeCommand.Requested);
-                    Engine.PersistentState.SetCurrentTopology(topologyChangeCommand.Requested, topologyChange.Index);
-                    Engine.StartTopologyChange(topologyChangeCommand);
+                    
+                    if (topologyChangeCommand.Requested.AllNodes.Contains(Engine.Options.SelfConnection) == false)
+                    {
+                        _log.Warn("Got topology without self, disconnecting from the leader, clearing topology and moving to idle follower state");
+                        var tcc = new TopologyChangeCommand
+                        {
+                            Requested = new Topology(Guid.NewGuid(),new [] {Engine.Options.SelfConnection},new List<NodeConnectionInfo>(), new List<NodeConnectionInfo>())
+                        };
+                        Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0L);
+                        Engine.StartTopologyChange(tcc);
+                        Engine.CommitTopologyChange(tcc);
+                        Engine.SetState(RaftEngineState.Leader);
+                    }
+                    else
+                    {
+                        _log.Info("Topology change started (TopologyChangeCommand committed to the log): {0}",
+                            topologyChangeCommand.Requested);
+                        Engine.PersistentState.SetCurrentTopology(topologyChangeCommand.Requested, topologyChange.Index);
+                        Engine.StartTopologyChange(topologyChangeCommand);
+                    }
+                    
                 }
             }
 

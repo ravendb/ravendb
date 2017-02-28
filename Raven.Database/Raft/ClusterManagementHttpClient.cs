@@ -364,9 +364,6 @@ namespace Raven.Database.Raft
                 {
                     // remove node from cluster by excluding it from topology
                     await raftEngine.RemoveFromClusterAsync(node).ConfigureAwait(false);
-
-                    // send information to leaved node to create new single node topology
-                    await SendInitializeNewClusterForAsync(node).ConfigureAwait(false);
                     return;
                 }
             }
