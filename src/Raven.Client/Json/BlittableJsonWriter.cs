@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
 using Sparrow.Extensions;

@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Util;

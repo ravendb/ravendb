@@ -7,7 +7,6 @@ using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

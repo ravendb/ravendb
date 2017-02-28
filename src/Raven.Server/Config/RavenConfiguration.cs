@@ -9,7 +9,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
-using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 using Sparrow.Platform;

@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Raven.Server.Utils.Metrics;
 
 using Sparrow.Json.Parsing;

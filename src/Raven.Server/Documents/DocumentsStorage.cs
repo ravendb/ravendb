@@ -14,7 +14,6 @@ using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Versioning;
@@ -443,12 +442,9 @@ namespace Raven.Server.Documents
             return lastEtag;
         }
 
-        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId, int start, int take, Reference<int> nextPageStart)
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId, int start, int take)
         {
-            int docCount = 0;
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-            var originalTake = take;
-            var originalstart = start;
 
             var isStartAfter = string.IsNullOrWhiteSpace(startAfterId) == false;
 
@@ -465,7 +461,7 @@ namespace Raven.Server.Documents
                         start--;
                         continue;
                     }
-                    docCount++;
+
                     var document = TableValueToDocument(context, ref result.Reader);
                     string documentKey = document.Key;
                     if (documentKey.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
@@ -476,22 +472,11 @@ namespace Raven.Server.Documents
                         continue;
 
                     if (take-- <= 0)
-                    {
-                        if (docCount >= originalTake)
-                            nextPageStart.Value = originalstart + docCount - 1;
-                        else
-                            nextPageStart.Value = originalstart;
-
                         yield break;
-                    }
+
                     yield return document;
                 }
             }
-
-            if (docCount >= originalTake)
-                nextPageStart.Value = originalstart + docCount;
-            else
-                nextPageStart.Value = originalstart;
         }
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, int start, int take)

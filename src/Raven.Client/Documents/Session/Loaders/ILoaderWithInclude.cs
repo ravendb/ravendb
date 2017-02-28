@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session.Loaders

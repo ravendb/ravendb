@@ -1,9 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using Microsoft.Extensions.Primitives;
-using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Json

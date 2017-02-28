@@ -7,12 +7,8 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Server.Kestrel.Internal;
-using Org.BouncyCastle.Crypto;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -21,7 +17,6 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Voron.Util;
 
 namespace Raven.Server.Rachis
 {

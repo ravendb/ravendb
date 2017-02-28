@@ -18,7 +18,6 @@ using Raven.Client;
 using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;

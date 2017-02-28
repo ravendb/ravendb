@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Client.Documents.Indexes;
 
 namespace Raven.Client.Json.Converters
 {

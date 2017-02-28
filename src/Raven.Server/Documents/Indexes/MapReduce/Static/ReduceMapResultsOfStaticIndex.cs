@@ -7,7 +7,6 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using DynamicBlittableJson = Raven.Server.Documents.Indexes.Static.DynamicBlittableJson;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static

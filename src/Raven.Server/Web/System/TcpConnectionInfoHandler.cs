@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Raven.Server.Routing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

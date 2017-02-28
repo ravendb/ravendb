@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
@@ -26,7 +25,6 @@ namespace Raven.Client.Documents.Session
         /// </param>
         /// <param name="start">number of documents that should be skipped. By default: 0.</param>
         /// <param name="pageSize">maximum number of documents that will be retrieved. By default: 25.</param>
-        /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
         /// <param name="exclude">
         ///     pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched
         ///     ('?' any single character, '*' any characters)
@@ -35,7 +33,7 @@ namespace Raven.Client.Documents.Session
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
-        T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, PagingInformation pagingInformation = null, string startAfter = null);
+        T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, string startAfter = null);
 
         /// <summary>
         ///     Loads multiple entities that contain common prefix and applies specified transformer.
@@ -47,7 +45,6 @@ namespace Raven.Client.Documents.Session
         /// </param>
         /// <param name="start">number of documents that should be skipped. By default: 0.</param>
         /// <param name="pageSize">maximum number of documents that will be retrieved. By default: 25.</param>
-        /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
         /// <param name="exclude">
         ///     pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched
         ///     ('?' any single character, '*' any characters)
@@ -57,6 +54,6 @@ namespace Raven.Client.Documents.Session
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
-        Dictionary<string, TResult> LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, PagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null, string startAfter = null) where TTransformer : AbstractTransformerCreationTask, new();
+        Dictionary<string, TResult> LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null, string startAfter = null) where TTransformer : AbstractTransformerCreationTask, new();
     }
 }

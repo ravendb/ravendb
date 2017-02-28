@@ -329,7 +329,7 @@ namespace FastTests.Server.Documents
             {
                 ctx.OpenWriteTransaction();
 
-                var documents = _documentDatabase.DocumentsStorage.GetDocumentsStartingWith(ctx, "users/", null, null, null, 0, 100, new Reference<int>()).ToList();
+                var documents = _documentDatabase.DocumentsStorage.GetDocumentsStartingWith(ctx, "users/", null, null, null, 0, 100).ToList();
                 Assert.Equal(2, documents.Count);
                 string name;
 

@@ -1,5 +1,4 @@
 ﻿using System.Net.Http;
-using System.Net.Http.Headers;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Http;
 using Raven.Client.Json;

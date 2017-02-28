@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Server.Routing;
 using Sparrow.Logging;
 

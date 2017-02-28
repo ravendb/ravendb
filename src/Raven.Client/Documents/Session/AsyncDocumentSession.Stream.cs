@@ -99,23 +99,23 @@ namespace Raven.Client.Documents.Session
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, int start = 0,
-                                                                    int pageSize = Int32.MaxValue, PagingInformation pagingInformation = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
+                                                                    int pageSize = Int32.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
-            return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation, transformer: transformer, transformerParameters: transformerParameters, token: token);
+            return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, transformer: transformer, transformerParameters: transformerParameters, token: token);
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
-                                   int pageSize = Int32.MaxValue, PagingInformation pagingInformation = null, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
+                                   int pageSize = Int32.MaxValue, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
-            return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters, token: token);
+            return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters, token: token);
         }
 
         private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, string startsWith, string matches,
-            int start, int pageSize, PagingInformation pagingInformation = null, string startAfter = null, string transformer = null,
+            int start, int pageSize, string startAfter = null, string transformer = null,
             Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, startAfter, transformer,
+            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, startAfter, transformer,
                 transformerParameters);
             await RequestExecuter.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);

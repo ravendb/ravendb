@@ -10,7 +10,6 @@ using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;

@@ -16,7 +16,6 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
-using Raven.Client;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;

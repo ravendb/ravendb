@@ -5,7 +5,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;

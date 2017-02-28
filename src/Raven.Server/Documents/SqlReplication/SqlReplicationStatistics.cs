@@ -1,5 +1,4 @@
 using System;
-using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;

@@ -5,11 +5,10 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
-using Orders;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Documents.Session;using Raven.Client.Extensions;
+using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 namespace Raven.Server.Documents.Handlers
 {

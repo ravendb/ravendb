@@ -91,26 +91,26 @@ namespace Raven.Client.Documents.Session
         }
 
         public IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue,
-            PagingInformation pagingInformation = null, string transformer = null,
+             string transformer = null,
             Dictionary<string, object> transformerParameters = null)
         {
-            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation,
+            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize,
                 startAfter: null, transformer: transformer, transformerParameters: transformerParameters);
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue,
-            PagingInformation pagingInformation = null, string startAfter = null, string transformer = null,
+        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue,
+             string startAfter = null, string transformer = null,
             Dictionary<string, object> transformerParameters = null)
         {
-            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation,
+            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize,
                 startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters);
         }
 
-        private IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, string startsWith, string matches, int start, int pageSize, PagingInformation pagingInformation,
+        private IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, string startsWith, string matches, int start, int pageSize,
             string startAfter, string transformer, Dictionary<string, object> transformerParameters)
         {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, startAfter, transformer,
+            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, startAfter, transformer,
                 transformerParameters);
             RequestExecuter.Execute(command, Context);
             using (var result = streamOperation.SetResult(command.Result))

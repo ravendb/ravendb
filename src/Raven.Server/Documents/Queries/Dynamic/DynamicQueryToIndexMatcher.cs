@@ -5,8 +5,6 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries.Sorting;

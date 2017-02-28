@@ -4,7 +4,6 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Patch;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
