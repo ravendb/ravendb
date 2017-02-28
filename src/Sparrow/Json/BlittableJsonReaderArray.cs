@@ -11,7 +11,6 @@ namespace Sparrow.Json
     {
         private readonly int _count;
         private readonly byte* _metadataPtr;
-
         private readonly byte* _dataStart;
         private readonly long _currentOffsetSize;
         private FastDictionary<int, Tuple<object, BlittableJsonToken>, NumericEqualityStructComparer> _cache;
@@ -19,7 +18,7 @@ namespace Sparrow.Json
         public DynamicJsonArray Modifications;
 
         public BlittableJsonReaderObject Parent => _parent;
-
+      
         public BlittableJsonReaderArray(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
         {
             _parent = parent;
@@ -67,6 +66,15 @@ namespace Sparrow.Json
             BlittableJsonReaderObject.ConvertType(obj, out result);
             return result;
 
+        }
+
+        public void AddItemsToStream<T>(ManualBlittalbeJsonDocumentBuilder<T> writer) where T : struct, IUnmanagedWriteBuffer
+        {
+            for (var i = 0; i < _count; i++)
+            {
+                var tuple = GetValueTokenTupleByIndex(i);
+                writer.WriteValue(tuple.Item2, tuple.Item1);
+            }
         }
 
         public Tuple<object, BlittableJsonToken> GetValueTokenTupleByIndex(int index)

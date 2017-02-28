@@ -300,10 +300,20 @@ namespace Sparrow.Json
                 case BlittableJsonToken.Null:
                     WriteValueNull();
                     break;
-                // case BlittableJsonToken.StartArray:
-               // case BlittableJsonToken.StartObject:
+                case BlittableJsonToken.StartObject:
+                    var obj = value as BlittableJsonReaderObject;
+                    StartWriteObject();
+                    obj.AddItemsToStream(this); 
+                    WriteObjectEnd();                
+                    break;
                 case BlittableJsonToken.EmbeddedBlittable:
                     WriteEmbeddedBlittableDocument((BlittableJsonReaderObject)value);
+                    break;
+                case BlittableJsonToken.StartArray:
+                    var arr = value as BlittableJsonReaderArray;
+                    StartWriteArray();
+                    arr?.AddItemsToStream(this);
+                    WriteArrayEnd();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(token), token, null);

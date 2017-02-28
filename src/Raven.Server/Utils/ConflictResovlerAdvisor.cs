@@ -34,6 +34,7 @@ namespace Raven.Server.Utils
                     if (result.ContainsKey(prop.Name)) // already dealt with
                         continue;
 
+                    prop.Token = doc.ProcessTokenTypeFlags(prop.Token);
                     switch (prop.Token)
                     {
                         case BlittableJsonToken.StartObject:
@@ -44,7 +45,7 @@ namespace Raven.Server.Utils
                             break;
                         case BlittableJsonToken.StartArray:
                             var arrTuple = new KeyValuePair<string, BlittableJsonReaderArray>(prop.Name, (BlittableJsonReaderArray)prop.Value);
-                            if (TryHandleArrayValue(index, result, arrTuple) == false)
+                            if (TryHandleArrayValue(index, result, arrTuple) == false) 
                                 goto default;
                             break;
                         default:
@@ -68,14 +69,15 @@ namespace Raven.Server.Utils
                     continue;
 
                 BlittableJsonReaderObject token;
-                if (_docs[i].TryGet(prop.Key, out token))
+                if (_docs[i].TryGet(prop.Key, out token) == false)
                     return false;
                 if (token == null)
                     continue;
                 others.Add(token);
             }
 
-            result.Add(prop.Key, new ConflictResovlerAdvisor(others.ToArray(), _context, prop.Key == Constants.Documents.Metadata.Key || IsMetadataResolver));
+            result.Add(prop.Key, new ConflictResovlerAdvisor(
+                others.ToArray(), _context, prop.Key == Constants.Documents.Metadata.Key || IsMetadataResolver));
             return true;
         }
 
@@ -92,7 +94,7 @@ namespace Raven.Server.Utils
                     continue;
 
                 BlittableJsonReaderArray token;
-                if (_docs[i].TryGet(prop.Key, out token))
+                if (_docs[i].TryGet(prop.Key, out token) == false)
                     return false;
                 if (token == null)
                     continue;
@@ -100,30 +102,33 @@ namespace Raven.Server.Utils
             }
 
             var set = new HashSet<Tuple<object,BlittableJsonToken>>();
+            var lastLength = arrays[0].Length;
+            var sameSize = true;
             foreach (var arr in arrays)
             {
+                sameSize = arr.Length == lastLength;
                 for (var propIndex = 0; propIndex < arr.Length; propIndex++)
                 {
                     var tuple = arr.GetValueTokenTupleByIndex(propIndex);
                     set.Add(tuple);
                 }
             }
-            BlittableJsonReaderObject reader;
+            BlittableJsonReaderArray reader;
             using (var mergedArray = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(_context))
             {
                 mergedArray.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
-                mergedArray.StartWriteObjectDocument();
                 mergedArray.StartArrayDocument();
+                mergedArray.StartWriteArray();
                 foreach (var item in set)
                 {
                     mergedArray.WriteValue(item.Item2,item.Item1);
                 }
                 mergedArray.WriteArrayEnd();
                 mergedArray.FinalizeDocument();
-                reader = mergedArray.CreateReader();
+                reader = mergedArray.CreateArrayReader();
             }
 
-            if (reader.Equals(prop.Value))
+            if (sameSize && prop.Value.Equals(reader))
             {
                 result.Add(prop.Key, reader);
                 return true;
@@ -140,8 +145,7 @@ namespace Raven.Server.Utils
             {
                 Values = { prop }
             };
-            var type = BlittableJsonReaderBase.GetTypeFromToken(prop.Token);
-
+           
             for (var i = 0; i < _docs.Length; i++)
             {
                 if (i == index)
@@ -156,14 +160,22 @@ namespace Raven.Server.Utils
                 }
                 other.GetPropertyByIndex(propIndex, ref otherProp);
                 
-                if (otherProp.Token != prop.Token || (type != null && // if type is null there could not be a conflict
-                    (Convert.ChangeType(prop.Value, type) != Convert.ChangeType(otherProp.Value, type))))
+                if (otherProp.Token != prop.Token ||// if type is null there could not be a conflict
+                    (prop.Value?.Equals(otherProp.Value) == false)
+                    )
                 {
                     conflicted.Values.Add(otherProp);
                 }               
             }
 
-            result.Add(prop.Name, conflicted.Values.Count == 1 ? prop.Value : conflicted);
+            if (conflicted.Values.Count == 1)
+            {
+                result.Add(prop.Name, prop);
+            }
+            else
+            {
+                result.Add(prop.Name, conflicted);
+            }     
         }
 
 
@@ -174,9 +186,9 @@ namespace Raven.Server.Utils
 
         private class ArrayWithWarning
         {
-            public readonly BlittableJsonReaderObject MergedArray;
+            public readonly BlittableJsonReaderArray MergedArray;
 
-            public ArrayWithWarning(BlittableJsonReaderObject mergedArray)
+            public ArrayWithWarning(BlittableJsonReaderArray mergedArray)
             {
                 MergedArray = mergedArray;
             }
@@ -223,40 +235,24 @@ namespace Raven.Server.Utils
             {
                 writer.StartWriteArray();
                 writer.WriteValue(">>>> auto merged array start");
-                writer.WriteEmbeddedBlittableDocument(arrayWithWarning.MergedArray);
+                arrayWithWarning.MergedArray.AddItemsToStream(writer);
                 writer.WriteValue("<<<< auto merged array end");
                 writer.WriteArrayEnd();
                 return;
             }
 
-            throw new InvalidOperationException("Could not understand how to deal with: " + propertyValue);
-        }
-
-        private void WriteRawData(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, BlittableJsonReaderObject data, int indent)
-        {
-            /*var sb = new StringBuilder();
-            using (var stringReader = new StringReader(data))
+            var array = propertyValue as BlittableJsonReaderArray;
+            if (array != null)
             {
-                var first = true;
-                string line;
-                while ((line = stringReader.ReadLine()) != null)
-                {
-                    if (first == false)
-                    {
-                        sb.AppendLine();
-                        for (var i = 0; i < indent; i++)
-                        {
-                            sb.Append(writer.IndentChar, writer.Indentation);
-                        }
-                    }
-
-                    sb.Append(line);
-
-                    first = false;
-                }
+                writer.StartWriteArray();
+                array.AddItemsToStream(writer);
+                writer.WriteArrayEnd();
+                return;
             }
-            writer.WriteRawValue(sb.ToString());*/
-            writer.WriteEmbeddedBlittableDocument(data);
+
+            var obj = propertyValue as BlittableJsonReaderObject;
+
+            throw new InvalidOperationException("Could not understand how to deal with: " + propertyValue);
         }
 
         private void WriteConflictResolver(string name, ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> documentWriter, 
@@ -267,14 +263,21 @@ namespace Raven.Server.Utils
             if (resolver.IsMetadataResolver)
             {
                 if (name != "@metadata")
+                {
                     metadataWriter.WritePropertyName(name);
-
-                WriteRawData(metadataWriter, result.Document, indent);
+                    metadataWriter.StartWriteObject();
+                    result.Document.AddItemsToStream(metadataWriter);
+                    metadataWriter.WriteObjectEnd();
+                    return;
+                }                  
+                result.Document.AddItemsToStream(metadataWriter);
             }
             else
             {
                 documentWriter.WritePropertyName(name);
-                WriteRawData(documentWriter, result.Document, indent);
+                documentWriter.StartWriteObject();
+                result.Document.AddItemsToStream(documentWriter);
+                documentWriter.WriteObjectEnd();
             }
         }
 
@@ -295,7 +298,8 @@ namespace Raven.Server.Utils
                     var resolver = o.Value as ConflictResovlerAdvisor;
                     if (resolver != null)
                     {
-                        WriteConflictResolver(o.Key, documentWriter, metadataWriter, resolver, o.Key == "@metadata" ? 0 : indent + 1);
+                        WriteConflictResolver(o.Key, documentWriter, metadataWriter, resolver, 
+                            o.Key == Constants.Documents.Metadata.Key ? 0 : indent + 1);
                     }
                     else
                     {
@@ -315,6 +319,5 @@ namespace Raven.Server.Utils
                 };
             }
         }
-
     }
 }
