@@ -621,7 +621,7 @@ replicateToOrders(orderData);");
 var nameArr = this.StepName.split('.');");
 
                 Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
-                Assert.True(await task.WaitWithTimeout(TimeSpan.FromSeconds(30)));
+                Assert.True(await task.WaitWithTimeout(TimeSpan.FromSeconds(180)));
 
                 var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
                 if (sb.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList().Any(x => x.Contains(msg)) == false)
