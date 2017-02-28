@@ -4,6 +4,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Exceptions.Transformers;
+using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
@@ -52,12 +53,15 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else if (HttpContext.Request.Query.ContainsKey("startsWith"))
                 {
+                    var nextPageStart = new Reference<int>();
                     documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                         HttpContext.Request.Query["startsWith"],
                         HttpContext.Request.Query["matches"],
                         HttpContext.Request.Query["excludes"],
+                        HttpContext.Request.Query["startAfter"],
                         start,
-                        pageSize
+                        pageSize,
+                        nextPageStart
                     );
                 }
                 else // recent docs

@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Session.Operations
         private int _pageSize;
         private string _exclude;
         private PagingInformation _pagingInformation;
-        private string _skipAfter;
+        private string _startAfter;
 
         private string _transformer;
         private Dictionary<string, object> _transformerParameters;
@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Session.Operations
                 PageSize = _pageSize,
                 Exclude = _exclude,
                 PagingInformation = _pagingInformation,
-                SkipAfter = _skipAfter,
+                StartAfter = _startAfter,
 
                 Transformer = _transformer,
                 TransformerParameters = _transformerParameters
@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Session.Operations
         public void WithStartWith(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
             string exclude = null, PagingInformation pagingInformation = null,
             Action<ILoadConfiguration> configure = null,
-            string skipAfter = null)
+            string startAfter = null)
         {
             _startWith = keyPrefix;
             _matches = matches;
@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Session.Operations
             _pageSize = pageSize;
             _exclude = exclude;
             _pagingInformation = pagingInformation;
-            _skipAfter = skipAfter;
+            _startAfter = startAfter;
         }
 
         public void WithTransformer(string transformer, Dictionary<string, object> transformerParameters)

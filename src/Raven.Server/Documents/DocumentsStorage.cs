@@ -14,6 +14,7 @@ using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Versioning;
@@ -65,8 +66,6 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
      
         private Dictionary<string, CollectionName> _collectionsCache;
-
-        public int NextPage;
 
         private enum ConflictsTable
         {
@@ -444,18 +443,22 @@ namespace Raven.Server.Documents
             return lastEtag;
         }
 
-        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string prefix, string matches, string exclude, int start, int take)
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId, int start, int take, Reference<int> nextPageStart)
         {
             int docCount = 0;
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             var originalTake = take;
             var originalstart = start;
 
+            var isStartAfter = string.IsNullOrWhiteSpace(startAfterId) == false;
+
             Slice prefixSlice;
-            using (DocumentKeyWorker.GetSliceFromKey(context, prefix, out prefixSlice))
+            Slice startAfterSlice = Slices.Empty;
+            using (DocumentKeyWorker.GetSliceFromKey(context, idPrefix, out prefixSlice))
+            using (isStartAfter ? (IDisposable)DocumentKeyWorker.GetSliceFromKey(context, startAfterId, out startAfterSlice) : null)
             {
                 // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith: true))
+                foreach (var result in table.SeekByPrimaryKeyStartingWith(prefixSlice, startAfterSlice))
                 {
                     if (start > 0)
                     {
@@ -465,20 +468,19 @@ namespace Raven.Server.Documents
                     docCount++;
                     var document = TableValueToDocument(context, ref result.Reader);
                     string documentKey = document.Key;
-                    if (documentKey.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == false)
+                    if (documentKey.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
                         break;
 
-                    var keyTest = documentKey.Substring(prefix.Length);
-                    if (!WildcardMatcher.Matches(matches, keyTest) ||
-                        WildcardMatcher.MatchesExclusion(exclude, keyTest))
+                    var keyTest = documentKey.Substring(idPrefix.Length);
+                    if (WildcardMatcher.Matches(matches, keyTest) == false || WildcardMatcher.MatchesExclusion(exclude, keyTest))
                         continue;
 
                     if (take-- <= 0)
                     {
                         if (docCount >= originalTake)
-                            NextPage = (originalstart + docCount - 1);
+                            nextPageStart.Value = originalstart + docCount - 1;
                         else
-                            NextPage = (originalstart);
+                            nextPageStart.Value = originalstart;
 
                         yield break;
                     }
@@ -487,9 +489,9 @@ namespace Raven.Server.Documents
             }
 
             if (docCount >= originalTake)
-                NextPage = (originalstart + docCount);
+                nextPageStart.Value = originalstart + docCount;
             else
-                NextPage = (originalstart);
+                nextPageStart.Value = originalstart;
         }
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, int start, int take)
@@ -2881,7 +2883,7 @@ namespace Raven.Server.Documents
         private IEnumerable<LazyStringValue> GetAttachmentNamesForDocument(DocumentsOperationContext context, Slice startSlice)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            foreach (var sr in table.SeekByPrimaryKey(startSlice, true))
+            foreach (var sr in table.SeekByPrimaryKeyStartingWith(startSlice, Slices.Empty))
             {
                 if (IsAttachmentDeleted(ref sr.Reader))
                     continue;
@@ -2911,7 +2913,7 @@ namespace Raven.Server.Documents
             Slice startSlice;
             using (GetAttachmentPrefix(context, lowerDocumentId, lowerDocumentIdSize, out startSlice))
             {
-                foreach (var sr in table.SeekByPrimaryKey(startSlice, true))
+                foreach (var sr in table.SeekByPrimaryKeyStartingWith(startSlice, Slices.Empty))
                 {
                     var attachment = TableValueToAttachment(context, ref sr.Reader);
                     throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");

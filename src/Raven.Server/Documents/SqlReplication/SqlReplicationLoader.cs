@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.SqlReplication
 {
     public class SqlReplicationLoader : IDisposable
     {
-        private const int MaxSupportedSqlReplication = int.MaxValue; 
+        private const int MaxSupportedSqlReplication = int.MaxValue;
 
         private BlittableJsonReaderObject _connections;
 
@@ -60,7 +61,8 @@ namespace Raven.Server.Documents.SqlReplication
                     }
                 }
 
-                var documents = _database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix, null, null, 0, MaxSupportedSqlReplication);
+                var nextPageStart = new Reference<int>();
+                var documents = _database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix, null, null, null, 0, MaxSupportedSqlReplication, nextPageStart);
                 foreach (var document in documents)
                 {
                     var configuration = JsonDeserializationServer.SqlReplicationConfiguration(document.Data);

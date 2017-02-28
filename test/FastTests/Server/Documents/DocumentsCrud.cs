@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
@@ -328,7 +329,7 @@ namespace FastTests.Server.Documents
             {
                 ctx.OpenWriteTransaction();
 
-                var documents = _documentDatabase.DocumentsStorage.GetDocumentsStartingWith(ctx, "users/", null, null, 0, 100).ToList();
+                var documents = _documentDatabase.DocumentsStorage.GetDocumentsStartingWith(ctx, "users/", null, null, null, 0, 100, new Reference<int>()).ToList();
                 Assert.Equal(2, documents.Count);
                 string name;
 
