@@ -1304,7 +1304,6 @@ namespace Raven.Server.Documents
                 {
                     conflictRecords.Add(new GetConflictsResult.Conflict
                     {
-                        Doc = conflict.Doc,
                         Key = conflict.Key,
                         ChangeVector = conflict.ChangeVector
                     });

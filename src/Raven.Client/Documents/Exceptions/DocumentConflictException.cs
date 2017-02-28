@@ -35,7 +35,6 @@ namespace Raven.Client.Documents.Exceptions
                 {
                     [nameof(GetConflictsResult.Conflict.Key)] = conflict.Key,
                     [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
-                    [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc
                 });
             }
 
