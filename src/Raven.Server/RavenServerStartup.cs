@@ -178,10 +178,11 @@ namespace Raven.Server
                         errorString = e.ToString();
                     }
 
+#if EXCEPTION_ERROR_HUNT
                     var f = Guid.NewGuid() + ".error";
                     File.WriteAllText(f,
                         $"{context.Request.Path}{context.Request.QueryString}" + Environment.NewLine + errorString);
-
+#endif
                     djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = errorString;
 
                     MaybeAddAdditionalExceptionData(djv, e);
@@ -192,7 +193,10 @@ namespace Raven.Server
                         writer.WriteObject(json);
                     }
 
+#if EXCEPTION_ERROR_HUNT
                     File.Delete(f);
+#endif
+
                 }
             }
         }
