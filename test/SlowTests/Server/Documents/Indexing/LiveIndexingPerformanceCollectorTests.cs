@@ -80,15 +80,13 @@ namespace SlowTests.Server.Documents.Indexing
             using (var store = GetDocumentStore())
             {
                 store.Initialize();
-                new UsersByName().Execute(store);
-
                 var database = await GetDocumentDatabaseInstanceFor(store);
+
+                new UsersByName().Execute(store);
+                
                 var index = database.IndexStore.GetIndex("Users/ByName");
 
                 var collector = new LiveIndexingPerformanceCollector(database.Changes, database.DatabaseShutdown, new[] { index });
-
-                var initialIndexing = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(1));
-                Assert.True(initialIndexing.Item1);
 
                 using (var session = store.OpenSession())
                 {
