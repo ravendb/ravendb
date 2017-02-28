@@ -267,7 +267,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/studio-tasks/resolveMerge", "GET", "/databases/{databaseName:string}/studio-tasks/resolveMerge?docId={documentId:string}")]
+        [RavenAction("/databases/*/suggest-conflict-resolution", "GET", "/databases/{databaseName:string}/suggest-conflict-resolution?docId={documentId:string}")]
         public Task ResolveMearge()
         {
             var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");

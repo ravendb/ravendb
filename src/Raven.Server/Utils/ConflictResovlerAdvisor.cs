@@ -69,7 +69,7 @@ namespace Raven.Server.Utils
                     continue;
 
                 BlittableJsonReaderObject token;
-                if (_docs[i].TryGet(prop.Key, out token) == false)
+                if (_docs[i].TryGetWithoutThrowingOnError(prop.Key, out token) == false)
                     return false;
                 if (token == null)
                     continue;
@@ -94,7 +94,7 @@ namespace Raven.Server.Utils
                     continue;
 
                 BlittableJsonReaderArray token;
-                if (_docs[i].TryGet(prop.Key, out token) == false)
+                if (_docs[i].TryGetWithoutThrowingOnError(prop.Key, out token) == false)
                     return false;
                 if (token == null)
                     continue;

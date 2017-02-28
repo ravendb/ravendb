@@ -154,13 +154,14 @@ namespace Sparrow.Json
         public int Size => _size;
 
         public int Count => _propCount;
+
         public byte* BasePointer
         {
             get
             {
                 if (_parent != null)
                     InvalidAttemptToCopyNestedObject();
-                
+
                 return _mem;
             }
         }
@@ -224,6 +225,19 @@ namespace Sparrow.Json
             return TryGet(new StringSegment(name, name.Length), out obj);
         }
 
+        public bool TryGetWithoutThrowingOnError<T>(string name, out T obj)
+        {
+            try
+            {
+                return TryGet<T>(name, out obj);
+            }
+            catch
+            {
+                obj = default(T);
+                return false;
+            }   
+        }
+
         public bool TryGet<T>(StringSegment name, out T obj)
         {
             object result;
@@ -232,16 +246,7 @@ namespace Sparrow.Json
                 obj = default(T);
                 return false;
             }
-            try
-            {
-                ConvertType(result, out obj);
-            }
-            catch
-            {
-                obj = default(T);
-                return false;
-            }
-            
+            ConvertType(result, out obj);
             return true;
         }
         
