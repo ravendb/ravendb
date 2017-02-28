@@ -6,11 +6,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using Lambda2Js;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands.Batches;
