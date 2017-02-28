@@ -72,13 +72,6 @@ namespace Rachis.Behaviors
                     continue;
                 // try sending the latest updates (which include the topology removal entry)
                 SendEntriesToPeer(nodeByName);
-                // at any rate, try sending the disconnection command explicitly, to gracefully shut down the node if we can
-                Engine.Transport.Send(nodeByName, new DisconnectedFromCluster
-                {
-                    From = Engine.Name,
-                    ClusterTopologyId = Engine.CurrentTopology.TopologyId,
-                    Term = Engine.PersistentState.CurrentTerm
-                });
             }
         }
         
