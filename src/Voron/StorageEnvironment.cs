@@ -788,7 +788,8 @@ namespace Voron
                 Trees = trees,
                 FixedSizeTrees = fixedSizeTrees,
                 Tables = tables,
-                CalculateExactSizes = calculateExactSizes
+                CalculateExactSizes = calculateExactSizes,
+                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction)
             });
         }
 
