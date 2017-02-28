@@ -22,6 +22,9 @@ namespace Raven.Client.Documents.Session
 
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
         {
+            var documentQuery = (DocumentQuery<T>)query;
+            var projectionFields = documentQuery.ProjectionFields;
+
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest((IRavenQueryInspector)query);
             RequestExecuter.Execute(command, Context);
@@ -40,7 +43,7 @@ namespace Raven.Client.Documents.Session
                         continue;
                     }
 
-                    yield return CreateStreamResult<T>(ref json);
+                    yield return CreateStreamResult<T>(json, projectionFields);
                 }
             }
         }
@@ -67,7 +70,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private StreamResult<T> CreateStreamResult<T>(ref BlittableJsonReaderObject json)
+        private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json, string[] projectionFields)
         {
             var metadata = json.GetMetadata();
             var etag = metadata.GetEtag();
@@ -75,12 +78,13 @@ namespace Raven.Client.Documents.Session
 
             //TODO - Investagate why ConvertToEntity fails if we don't call ReadObject before
             json = Context.ReadObject(json, id);
-            var entity = ConvertToEntity(typeof(T), id, json);
+            var entity = QueryOperation.Deserialize<T>(id, json, metadata, projectionFields, true, this);
+
             var streamResult = new StreamResult<T>
             {
                 Etag = etag,
                 Key = id,
-                Document = (T)entity,
+                Document = entity,
                 Metadata = new MetadataAsDictionary(metadata)
             };
             return streamResult;
@@ -123,7 +127,7 @@ namespace Raven.Client.Documents.Session
                         continue;
                     }
 
-                    yield return CreateStreamResult<T>(ref json);
+                    yield return CreateStreamResult<T>(json, null);
                 }
             }
         }

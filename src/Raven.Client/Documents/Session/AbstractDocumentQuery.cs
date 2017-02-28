@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   The list of fields to project directly from the results
         /// </summary>
-        protected readonly string[] ProjectionFields;
+        protected internal readonly string[] ProjectionFields;
 
         /// <summary>
         ///   The list of fields to project directly from the index on the server
