@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -17,6 +16,7 @@ using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 
 namespace Voron.Debugging
 {
@@ -39,7 +39,7 @@ namespace Voron.Debugging
         public List<FixedSizeTree> FixedSizeTrees;
         public List<JournalFile> Journals;
         public List<Table> Tables;
-
+        public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
         public bool CalculateExactSizes { get; set; }
     }
 
