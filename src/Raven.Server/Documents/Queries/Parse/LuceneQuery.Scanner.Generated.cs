@@ -1340,7 +1340,8 @@ int NextState() {
     else
         unchecked {
             int rslt;
-            int idx = (byte)(code - NxS[state].min);
+            var unicodeSafecode = code > byte.MaxValue ? 'a' : code;
+            int idx = (byte)(unicodeSafecode - NxS[state].min);
             if ((uint)idx >= (uint)NxS[state].rng) rslt = NxS[state].dflt;
             else rslt = NxS[state].nxt[idx];
             return rslt;
