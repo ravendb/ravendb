@@ -3,7 +3,6 @@ using System.Diagnostics;
 using SlowTests.Server.Rachis;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 
 namespace Tryouts
 {

@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
-using QUT.Gppg;
 using QUT.GplexBuffers;
-using ScanBuff = QUT.GplexBuffers.ScanBuff;
+
 namespace Raven.Server.Documents.Queries.Parse
 {
     internal partial class LuceneQueryScanner
@@ -29,19 +27,11 @@ namespace Raven.Server.Documents.Queries.Parse
             RestoreBuffCtx(bStack.Pop()); return false;
         }
 
-        public class ParseException : Exception
-        {
-            public ParseException(string message) : base(message)
-            {
-                
-            }
-        }
-
         Stack<BufferContext> bStack = new Stack<BufferContext>();
         public override void yyerror(string format, params object[] args)
         {
             base.yyerror(format, args);
-            throw new ParseException(string.Format(format, args));
+            throw new Lucene.Net.QueryParsers.ParseException(string.Format(format, args));
         }
         /// <summary> Returns a String where the escape char has been
         /// removed, or kept only once if there was a double escape.

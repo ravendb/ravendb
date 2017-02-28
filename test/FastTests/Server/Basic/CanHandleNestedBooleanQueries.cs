@@ -11,7 +11,7 @@ namespace FastTests.Server.Basic
         {
             Analayzer = new RavenPerFieldAnalyzerWrapper(new LowerCaseKeywordAnalyzer()),
             DefaultOperator = QueryOperator.Or,
-            FieldName = "foo"
+            FieldName = new FieldName("foo")
         };
 
         [Fact]

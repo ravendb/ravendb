@@ -1,4 +1,4 @@
-%namespace Raven.Database.Indexing
+%namespace Raven.Server.Documents.Queries.Parse
 %partial
 %parsertype LuceneQueryParser
 %visibility internal
@@ -7,6 +7,7 @@
 %union { 
 			public string s; 
 			public FieldLuceneASTNode fn;
+                        public FieldName f;
 			public ParenthesistLuceneASTNode pn;
 			public PostfixModifiers pm;
 			public LuceneASTNodeBase nb;
@@ -22,9 +23,10 @@
 
 %token NOT OR AND INTERSECT PLUS MINUS EOF OPEN_CURLY_BRACKET CLOSE_CURLY_BRACKET OPEN_SQUARE_BRACKET CLOSE_SQUARE_BRACKET 
 %token TILDA BOOST QUOTE TO COLON OPEN_PAREN CLOSE_PAREN ALL_DOC
-%token <s> UNANALIZED_TERM METHOD UNQUOTED_TERM QUOTED_TERM QUOTED_WILDCARD_TERM FLOAT_NUMBER INT_NUMBER DOUBLE_NUMBER LONG_NUMBER DATETIME NULL PREFIX_TERM WILDCARD_TERM HEX_NUMBER
+%token <s> LONG_RANGE_TERM DOUBLE_RANGE_TERM UNANALIZED_TERM METHOD UNQUOTED_TERM QUOTED_TERM QUOTED_WILDCARD_TERM FLOAT_NUMBER INT_NUMBER DOUBLE_NUMBER LONG_NUMBER DATETIME NULL PREFIX_TERM WILDCARD_TERM HEX_NUMBER
 
-%type <s> prefix_operator methodName fieldname  fuzzy_modifier boost_modifier proximity_modifier
+%type <s> prefix_operator methodName fuzzy_modifier boost_modifier proximity_modifier
+%type <f> fieldname
 %type <o> operator
 %type <tn> term_exp term
 %type <pm> postfix_modifier
@@ -165,7 +167,15 @@ methodName: METHOD COLON{
 ;
 fieldname: UNQUOTED_TERM COLON {
 		//Console.WriteLine("Found rule fieldname -> UNQUOTED_TERM COLON");
-		$$ = $1;
+		$$ = new FieldName($1);
+	}
+    |   LONG_RANGE_TERM COLON {
+		//Console.WriteLine("Found rule fieldname -> LONG_RANGE_TERM COLON");
+		$$ = new FieldName($1,FieldName.FieldType.Long);
+	}
+    |   DOUBLE_RANGE_TERM COLON {
+		//Console.WriteLine("Found rule fieldname -> DOUBLE_RANGE_TERM COLON");
+		$$ = new FieldName($1,FieldName.FieldType.Double);
 	}
 	;
 term_exp: prefix_operator term postfix_modifier  {

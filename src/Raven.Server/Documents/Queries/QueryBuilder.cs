@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Queries
                             {
                                 Analayzer = analyzer,
                                 DefaultOperator = defaultOperator,
-                                FieldName = defaultField ?? string.Empty
+                                FieldName = new FieldName(defaultField ?? string.Empty)
                             });
                         // The parser should throw ParseException in this case.
                         if (res == null) throw new GeoAPI.IO.ParseException("Could not parse query");

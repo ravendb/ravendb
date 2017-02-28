@@ -1,26 +1,27 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Raven.Server.Documents.Queries.Parse
 {
     internal partial class LuceneQueryParser
     {
         public LuceneQueryParser() : base(null) { }
-
-        private bool _inMethod;
-		
-		public bool IsDefaultOperatorAnd { get; set; }
-		
+        private bool inMethod;
+        public bool IsDefaultOperatorAnd { get; set; }
         public bool InMethod
         {
             get
             {
-                return _inMethod;
+                return inMethod;
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
                 ((LuceneQueryScanner)Scanner).InMethod = value;
-                _inMethod = value;
+                inMethod = value;
             }
         }
         public void Parse(string s)

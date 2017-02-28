@@ -66,6 +66,14 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 {Decimal}						{ yylval.s = yytext; return (int)Token.FLOAT_NUMBER;}
 {Number}						{ yylval.s = yytext; return (int)Token.INT_NUMBER;}
 "0x"{Number}					{ yylval.s = yytext; return (int)Token.HEX_NUMBER;}
+{UnquotedTerm}"_L_Range"        {
+                                    yylval.s = DiscardEscapeChar(yytext);
+								    return (int)Token.LONG_RANGE_TERM;
+                                }
+{UnquotedTerm}"_D_Range"        {
+                                    yylval.s = DiscardEscapeChar(yytext);
+	                                return (int)Token.DOUBLE_RANGE_TERM;
+                                }
 {UnquotedTerm}					{ 													
                                     yylval.s = DiscardEscapeChar(yytext);
 								    return (int)Token.UNQUOTED_TERM;
