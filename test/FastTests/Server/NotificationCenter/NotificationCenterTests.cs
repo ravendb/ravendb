@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents.Operations;
@@ -389,7 +388,7 @@ namespace FastTests.Server.NotificationCenter
             }
         }
 
-        private class TestWebSockerWriter : IWebsocketWriter
+        protected class TestWebSockerWriter : IWebsocketWriter
         {
             public List<string> SentNotifications { get; } = new List<string>();
 

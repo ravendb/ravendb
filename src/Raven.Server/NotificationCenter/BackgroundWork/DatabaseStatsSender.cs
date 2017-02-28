@@ -1,0 +1,186 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Raven.Server.Documents;
+using Raven.Server.Documents.SqlReplication;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Logging;
+
+namespace Raven.Server.NotificationCenter.BackgroundWork
+{
+    public class DatabaseStatsSender
+    {
+        private readonly DocumentDatabase _database;
+        private readonly NotificationCenter _notificationCenter;
+        private readonly Logger _logger;
+        private readonly TimeSpan _delay = TimeSpan.FromSeconds(5);
+
+        private Stats _latest;
+
+        public DatabaseStatsSender(DocumentDatabase database, NotificationCenter notificationCenter, Logger logger)
+        {
+            _database = database;
+            _notificationCenter = notificationCenter;
+            _logger = logger;
+        }
+
+        public async Task Run()
+        {
+            while (_database.DatabaseShutdown.IsCancellationRequested == false)
+            {
+                try
+                {
+                    await Task.Delay(_delay, _database.DatabaseShutdown);
+
+                    if (_database.DatabaseShutdown.IsCancellationRequested)
+                        break;
+
+                    if (_notificationCenter.NumberOfWatchers == 0)
+                        continue;
+
+                    Stats current;
+
+                    DocumentsOperationContext context;
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var indexes = _database.IndexStore.GetIndexes().ToList();
+                        var staleIndexes = 0;
+
+                        // ReSharper disable once LoopCanBeConvertedToQuery
+                        foreach (var index in indexes)
+                        {
+                            if (index.IsStale(context))
+                                staleIndexes++;
+                        }
+
+                        current = new Stats
+                        {
+                            CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
+                            CountOfIndexes = indexes.Count,
+                            CountOfStaleIndexes = staleIndexes
+                        };
+
+                        current.Collections = _database.DocumentsStorage.GetCollections(context)
+                            .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection
+                            {
+                                Name = x.Name,
+                                Count = x.Count
+                            });
+
+                        foreach (var collection in current.Collections)
+                        {
+                            collection.Value.LastEtag = _database.DocumentsStorage.GetLastDocumentEtag(context,
+                                collection.Key);
+                        }
+                    }
+
+                    if (_latest != null && _latest.Equals(current))
+                        continue;
+
+                    var modifiedCollections = _latest == null
+                        ? current.Collections.Values.ToList()
+                        : ExtractModifiedCollections(current);
+
+                    _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
+                        current.CountOfStaleIndexes, modifiedCollections));
+
+                    _latest = current;
+                }
+                catch (OperationCanceledException)
+                {
+                    // shutdown
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Error on sending database stats notification", e);
+                }
+            }
+        }
+
+        private List<DatabaseStatsChanged.ModifiedCollection> ExtractModifiedCollections(Stats current)
+        {
+            var result = new List<DatabaseStatsChanged.ModifiedCollection>();
+
+            foreach (var collection in _latest.Collections)
+            {
+                DatabaseStatsChanged.ModifiedCollection stats;
+                if (current.Collections.TryGetValue(collection.Key, out stats) == false)
+                {
+                    // collection deleted
+
+                    result.Add(new DatabaseStatsChanged.ModifiedCollection
+                    {
+                        Name = collection.Key,
+                        Count = -1, 
+                        LastEtag = -1
+                    });
+
+                    continue;
+                }
+
+                if (collection.Value.Count != stats.Count)
+                    result.Add(current.Collections[collection.Key]);
+            }
+
+            foreach (var collection in current.Collections)
+            {
+                if (_latest.Collections.ContainsKey(collection.Key) == false)
+                {
+                    result.Add(collection.Value); // new collection
+                }
+            }
+
+            return result;
+        }
+
+        private class Stats
+        {
+            public long CountOfDocuments;
+
+            public int CountOfIndexes;
+
+            public int CountOfStaleIndexes;
+
+            public Dictionary<string, DatabaseStatsChanged.ModifiedCollection> Collections;
+
+            public bool Equals(Stats other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return CountOfDocuments == other.CountOfDocuments &&
+                       CountOfIndexes == other.CountOfIndexes &&
+                       CountOfStaleIndexes == other.CountOfStaleIndexes &&
+                       DictionaryExtensions.ContentEquals(Collections, other.Collections);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+
+                var stats = obj as Stats;
+                if (stats == null)
+                    return false;
+
+                return Equals((Stats)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = CountOfDocuments.GetHashCode();
+                    hashCode = (hashCode * 397) ^ CountOfIndexes.GetHashCode();
+                    hashCode = (hashCode * 397) ^ CountOfStaleIndexes.GetHashCode();
+                    hashCode = (hashCode * 397) ^ (Collections != null ? Collections.GetHashCode() : 0);
+                    return hashCode;
+                }
+            }
+        }
+    }
+}
