@@ -175,7 +175,9 @@ namespace Raven.Tests.Raft.Client
 
                 SetupClusterConfiguration(clusterStores);
 
-                clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force: true));
+                clusterStores.ForEach(store => 
+                    AsyncHelpers.RunSync(()=>
+                        ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force: true)));
 
                 for (int i = 0; i < clusterStores.Count; i++)
                 {
