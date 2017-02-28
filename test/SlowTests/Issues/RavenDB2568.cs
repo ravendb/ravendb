@@ -27,7 +27,6 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Defer();
                     var results = session.Advanced.LoadStartingWith<object>("users/", startAfter: "users/02");
                     Assert.Equal(3, results.Length);
                     Assert.Equal("users/03", session.Advanced.GetDocumentId(results[0]));
