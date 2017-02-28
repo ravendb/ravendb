@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Commercial;
@@ -259,7 +258,7 @@ namespace Raven.Server.ServerWide
             Slice loweredPrefix;
             using (Slice.From(ctx.Allocator, prefix.ToLowerInvariant(), out loweredPrefix))
             {
-                foreach (var result in items.SeekByPrimaryKey(loweredPrefix, startsWith: true))
+                foreach (var result in items.SeekByPrimaryKeyStartingWith(loweredPrefix, Slices.Empty))
                 {
                     if (start > 0)
                     {

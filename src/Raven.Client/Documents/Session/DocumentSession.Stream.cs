@@ -91,22 +91,22 @@ namespace Raven.Client.Documents.Session
             Dictionary<string, object> transformerParameters = null)
         {
             return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation,
-                skipAfter: null, transformer: transformer, transformerParameters: transformerParameters);
+                startAfter: null, transformer: transformer, transformerParameters: transformerParameters);
         }
 
         public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue,
-            PagingInformation pagingInformation = null, string skipAfter = null, string transformer = null,
+            PagingInformation pagingInformation = null, string startAfter = null, string transformer = null,
             Dictionary<string, object> transformerParameters = null)
         {
             return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation,
-                skipAfter: skipAfter, transformer: transformer, transformerParameters: transformerParameters);
+                startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters);
         }
 
         private IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, string startsWith, string matches, int start, int pageSize, PagingInformation pagingInformation,
-            string skipAfter, string transformer, Dictionary<string, object> transformerParameters)
+            string startAfter, string transformer, Dictionary<string, object> transformerParameters)
         {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, skipAfter, transformer,
+            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, startAfter, transformer,
                 transformerParameters);
             RequestExecuter.Execute(command, Context);
             using (var result = streamOperation.SetResult(command.Result))
