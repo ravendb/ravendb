@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
-using Raven.Server.Documents;
-using Raven.Server.NotificationCenter.Notifications.Details;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications
@@ -11,7 +11,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         {
         }
 
-        public override string Id { get; }
+        public override string Id { get; } = string.Empty;
 
         public long CountOfDocuments { get; private set; }
 
@@ -19,7 +19,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public long CountOfStaleIndexes { get; private set; }
 
-        public List<DocumentsStorage.CollectionStats> ModifiedCollections { get; private set; }
+        public List<ModifiedCollection> ModifiedCollections { get; private set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -28,12 +28,12 @@ namespace Raven.Server.NotificationCenter.Notifications
             json[nameof(CountOfDocuments)] = CountOfDocuments;
             json[nameof(CountOfIndexes)] = CountOfIndexes;
             json[nameof(CountOfStaleIndexes)] = CountOfStaleIndexes;
-            json[nameof(ModifiedCollections)] = ModifiedCollections;
+            json[nameof(ModifiedCollections)] = new DynamicJsonArray(ModifiedCollections.Select(x => x.ToJson()));
 
             return json;
         }
 
-        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, List<DocumentsStorage.CollectionStats> modifiedCollections)
+        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, List<ModifiedCollection> modifiedCollections)
         {
             return new DatabaseStatsChanged
             {
@@ -46,6 +46,58 @@ namespace Raven.Server.NotificationCenter.Notifications
                 CountOfStaleIndexes = countOfStaleIndexes,
                 ModifiedCollections = modifiedCollections
             };
+        }
+
+        public class ModifiedCollection
+        {
+            public string Name;
+
+            public long Count;
+
+            public long LastEtag;
+
+            public bool Equals(ModifiedCollection other)
+            {
+                if (ReferenceEquals(null, other))
+                    return false;
+                if (ReferenceEquals(this, other))
+                    return true;
+
+                return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) && Count == other.Count && LastEtag == other.LastEtag;
+            }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue()
+                {
+                    [nameof(Name)] = Name,
+                    [nameof(Count)] = Count,
+                    [nameof(LastEtag)] = LastEtag
+                };
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+
+                var collection = obj as ModifiedCollection;
+                if (collection == null)
+                    return false;
+
+                return Equals(collection);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = Name?.GetHashCode() ?? 0;
+                    hashCode = (hashCode * 397) ^ Count.GetHashCode();
+                    hashCode = (hashCode * 397) ^ LastEtag.GetHashCode();
+                    return hashCode;
+                }
+            }
         }
     }
 }

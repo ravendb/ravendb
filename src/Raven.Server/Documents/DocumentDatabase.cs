@@ -243,7 +243,8 @@ namespace Raven.Server.Documents
             ConfigurationStorage.Initialize(IndexStore, TransformerStore);
 
             DocumentReplicationLoader.Initialize();
-            NotificationCenter.Initialize();
+
+            NotificationCenter.Initialize(this);
         }
 
         public void Dispose()
