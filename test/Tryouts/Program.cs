@@ -17,9 +17,9 @@ namespace Tryouts
                 //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
                 //LoggingSource.Instance.EnableConsoleLogging();
                 var sp = Stopwatch.StartNew();
-                using (var a = new SlowTests.Issues.RavenDB_6259())
+                using (var a = new FastTests.Voron.Bugs.StorageEnvDisposeWithLazyTx())
                 {
-                    a.ToLatestConflictResolutionOfTumbstoneAndUpdateShouldNotReviveTubmstone_And_ShouldNotCauseInfiniteIndexingLoop().Wait();
+                    a.CanDisposeStorageWithLazyTx();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

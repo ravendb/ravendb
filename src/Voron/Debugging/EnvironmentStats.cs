@@ -17,5 +17,10 @@ namespace Voron.Debugging
     {
         public long Id;
         public TransactionFlags Flags;
+
+        public override string ToString()
+        {
+            return $"{nameof(Id)}: {Id}: {Flags}";
+        }
     }
 }

@@ -145,6 +145,8 @@ namespace Voron
         {
             SafePosixOpenFlags = SafePosixOpenFlags | DefaultPosixFlags;
 
+            DisposeWaitTime = TimeSpan.FromSeconds(15);
+
             TempPath = tempPath;
 
             ShouldUseKeyPrefix = name => false;
@@ -820,6 +822,7 @@ namespace Voron
         public OpenFlags PosixOpenFlags;
         public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
         public DateTime? NonSafeTransactionExpiration { get; set; }
+        public TimeSpan DisposeWaitTime { get; set; }
 
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;

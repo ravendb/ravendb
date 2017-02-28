@@ -883,6 +883,7 @@ namespace Voron.Impl
         internal bool FlushInProgressLockTaken;
         private ByteString _txHeaderMemory;
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
+        internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
 
         public void EnsurePagerStateReference(PagerState state)
         {

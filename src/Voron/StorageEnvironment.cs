@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 using Voron.Data;
@@ -67,6 +66,7 @@ namespace Voron
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
+        private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -379,14 +379,20 @@ namespace Voron
 
                                 Disposed = true;
                                 _journal.Applicator.WaitForSyncToCompleteOnDispose();
+                                MoveEnvironmentToDisposeState();
                             }
                         }
                         else
                         {
                             Disposed = true;
                             _journal.Applicator.WaitForSyncToCompleteOnDispose();
+                            MoveEnvironmentToDisposeState();
                         }
                     }
+                }
+                else
+                {
+                    MoveEnvironmentToDisposeState();
                 }
             }
             finally
@@ -414,6 +420,30 @@ namespace Voron
                 if (errors.Count != 0)
                     throw new AggregateException(errors);
             }
+        }
+
+        private void MoveEnvironmentToDisposeState()
+        {
+            _envDispose.Signal(); // release the owner count
+            if (_envDispose.Wait(Options.DisposeWaitTime) == false)
+            {
+                if (_envDispose.TryAddCount(1))
+                    // try restore the previous signal, if it failed, the _envDispose is signaled
+                {
+                    var activeTxs = ActiveTransactions.AllTransactions;
+                    ThrowInvalidDisposeDuringActiveTransactions(activeTxs);
+                }
+            }
+        }
+
+        private void ThrowInvalidDisposeDuringActiveTransactions(List<ActiveTransaction> activeTxs)
+        {
+            throw new TimeoutException(
+                $"Could not dispose the environment {Options.BasePath} after {Options.DisposeWaitTime} because there are running transaction.{Environment.NewLine}" +
+                $"Either you have long running transactions or hung transactions. Can\'t disposet the enviorment becasue that would invalid memory regions{Environment.NewLine}" +
+                $"that those transactions are still looking at.{Environment.NewLine}" +
+                $"There are {activeTxs.Count:#,#} transactions ({string.Join(", ", activeTxs)})"
+            );
         }
 
         public Transaction ReadTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
@@ -450,6 +480,9 @@ namespace Voron
             bool flushInProgressReadLockTaken = false;
             try
             {
+                if(_envDispose.TryAddCount(1) == false)
+                    ThrowCurrentlyDisposing();
+
                 if (flags == TransactionFlags.ReadWrite)
                 {
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
@@ -464,6 +497,8 @@ namespace Voron
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         ThrowOnTimeoutWaitingForWriteTxLock(wait);
                     }
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                     _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
                     WriteTransactionStarted();
 
@@ -504,16 +539,28 @@ namespace Voron
             }
             catch (Exception)
             {
-                if (txLockTaken)
+                try
                 {
-                    _transactionWriter.Release();
+                    if (txLockTaken)
+                    {
+                        _transactionWriter.Release();
+                    }
+                    if (flushInProgressReadLockTaken)
+                    {
+                        FlushInProgressLock.ExitReadLock();
+                    }
                 }
-                if (flushInProgressReadLockTaken)
+                finally
                 {
-                    FlushInProgressLock.ExitReadLock();
+                    _envDispose.Signal();
                 }
                 throw;
             }
+        }
+
+        private void ThrowCurrentlyDisposing()
+        {
+            throw new ObjectDisposedException("The environment " + Options.BasePath + " is currently being disposed");
         }
 
         internal void WriteTransactionStarted()
@@ -596,34 +643,41 @@ namespace Voron
         {
             if (ActiveTransactions.TryRemove(tx) == false)
                 return;
-
-            if (tx.Flags != (TransactionFlags.ReadWrite))
-                return;
-
-            if (tx.FlushedToJournal)
+            try
             {
-                var totalPages = 0;
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var page in tx.GetTransactionPages())
+                if (tx.Flags != (TransactionFlags.ReadWrite))
+                    return;
+
+                if (tx.FlushedToJournal)
                 {
-                    totalPages += page.NumberOfPages;
+                    var totalPages = 0;
+                    // ReSharper disable once LoopCanBeConvertedToQuery
+                    foreach (var page in tx.GetTransactionPages())
+                    {
+                        totalPages += page.NumberOfPages;
+                    }
+
+                    Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
+
+                    if (tx.IsLazyTransaction == false)
+                        GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                 }
 
-                Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
+                if (tx.AsyncCommit != null)
+                    return;
 
-                if (tx.IsLazyTransaction == false)
-                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                _currentTransactionHolder = null;
+                _writeTransactionRunning.Reset();
+                _transactionWriter.Release();
+
+                if (tx.FlushInProgressLockTaken)
+                    FlushInProgressLock.ExitReadLock();
             }
-
-            if (tx.AsyncCommit != null)
-                return;
-
-            _currentTransactionHolder = null;
-            _writeTransactionRunning.Reset();
-            _transactionWriter.Release();
-            
-            if (tx.FlushInProgressLockTaken)
-                FlushInProgressLock.ExitReadLock();
+            finally
+            {
+                if (tx.AlreadyAllowedDisposeWithLazyTransactionRunning == false)
+                    _envDispose.Signal();
+            }
         }
 
         public StorageReport GenerateReport(Transaction tx)
@@ -932,6 +986,13 @@ namespace Voron
         public void ResetLastWorkTime()
         {
             _lastWorkTimeTicks = DateTime.MinValue.Ticks;
+        }
+
+        internal void AllowDisposeWithLazyTransactionRunning(LowLevelTransaction tx)
+        {
+            Debug.Assert(tx.Flags == TransactionFlags.Read);
+            _envDispose.Signal();
+            tx.AlreadyAllowedDisposeWithLazyTransactionRunning = true;
         }
     }
 }
