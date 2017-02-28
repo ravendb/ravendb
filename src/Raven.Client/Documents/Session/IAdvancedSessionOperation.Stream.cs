@@ -55,13 +55,13 @@ namespace Raven.Client.Documents.Session
         /// <param name="start">number of documents that should be skipped</param>
         /// <param name="pageSize">maximum number of documents that will be retrieved</param>
         /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
-        /// <param name="skipAfter">
+        /// <param name="startAfter">
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, PagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null);
+        IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, PagingInformation pagingInformation = null, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null);
 
     }
 }

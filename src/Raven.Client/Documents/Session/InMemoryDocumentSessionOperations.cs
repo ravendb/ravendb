@@ -931,13 +931,22 @@ more responsive application.
         }
 
         /// <summary>
+        ///     Defer commands to be executed on SaveChanges()
+        /// </summary>
+        /// <param name="command">Command to be executed</param>
+        /// <param name="commands">Array of comands to be executed.</param>
+        public void Defer(ICommandData command, params ICommandData[] commands)
+        {
+            _deferedCommands.Add(command);
+            _deferedCommands.AddRange(commands);
+        }
+
+        /// <summary>
         /// Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">The commands to be executed</param>
-        public virtual void Defer(params ICommandData[] commands)
+        public void Defer(ICommandData[] commands)
         {
-            // Should we remove Defer?
-            // and Patch would send Put and Delete and Patch separatly, like { Delete: [], Put: [], Patch: []}
             _deferedCommands.AddRange(commands);
         }
 

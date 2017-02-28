@@ -207,10 +207,10 @@ namespace Raven.Client.Documents.Session
         }
 
         Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize,
-            string exclude, PagingInformation pagingInformation, string skipAfter,
+            string exclude, PagingInformation pagingInformation, string startAfter,
             CancellationToken token)
         {
-            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
+            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, startAfter);
 
             return AddLazyOperation<Dictionary<string, T>>(operation, null, token);
         }

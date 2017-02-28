@@ -61,14 +61,14 @@ namespace Raven.Client.Documents.Session
         /// <param name="start">number of documents that should be skipped</param>
         /// <param name="pageSize">maximum number of documents that will be retrieved</param>
         /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
-        /// <param name="skipAfter">
+        /// <param name="startAfter">
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
         /// <param name="token">The cancellation token.</param>
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, PagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken));
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, PagingInformation pagingInformation = null, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken));
 
     }
 }

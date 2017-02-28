@@ -268,7 +268,7 @@ namespace Voron.Data.Tables
             var ptr = DirectRead(id, out size);
             if (ptr == null)
                 return;
-            
+
             var tvr = new TableValueReader(ptr, size);
             DeleteValueFromIndex(id, ref tvr);
 
@@ -278,7 +278,7 @@ namespace Voron.Data.Tables
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
                 var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
                 _overflowPageCount -= numberOfPages;
-                
+
                 for (int i = 0; i < numberOfPages; i++)
                 {
                     _tx.LowLevelTransaction.FreePage(page.PageNumber + i);
@@ -288,7 +288,7 @@ namespace Voron.Data.Tables
             NumberOfEntries--;
 
             byte* updatePtr;
-            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats),out updatePtr))
+            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out updatePtr))
             {
                 var stats = (TableSchemaStats*)updatePtr;
 
@@ -413,7 +413,7 @@ namespace Voron.Data.Tables
             NumberOfEntries++;
 
             byte* ptr;
-            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats),out ptr))
+            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out ptr))
             {
                 var stats = (TableSchemaStats*)ptr;
 
@@ -518,7 +518,7 @@ namespace Voron.Data.Tables
             NumberOfEntries++;
 
             byte* ptr;
-            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats),out ptr))
+            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out ptr))
             {
                 var stats = (TableSchemaStats*)ptr;
 
@@ -625,11 +625,11 @@ namespace Voron.Data.Tables
 
                 ushort maxSectionSizeInPages =
                     _tx.LowLevelTransaction.Environment.Options.RunningOn32Bits
-                        ? (ushort) ((1*Constants.Size.Megabyte)/Constants.Storage.PageSize)
-                        : (ushort) ((32*Constants.Size.Megabyte)/Constants.Storage.PageSize);
+                        ? (ushort)((1 * Constants.Size.Megabyte) / Constants.Storage.PageSize)
+                        : (ushort)((32 * Constants.Size.Megabyte) / Constants.Storage.PageSize);
 
                 var newNumberOfPages = Math.Min(maxSectionSizeInPages,
-                    (ushort) (ActiveDataSmallSection.NumberOfPages * 2));
+                    (ushort)(ActiveDataSmallSection.NumberOfPages * 2));
 
                 _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name, newNumberOfPages);
                 _activeDataSmallSection.DataMoved += OnDataMoved;
@@ -690,7 +690,7 @@ namespace Voron.Data.Tables
         private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value)
         {
             var result = new TableValueHolder();
-            
+
             try
             {
                 var fstIndex = GetFixedSizeTree(tree, value, 0);
@@ -702,7 +702,7 @@ namespace Voron.Data.Tables
                     do
                     {
                         ReadById(it.CurrentKey, out result.Reader);
-                        yield return result; 
+                        yield return result;
                     } while (it.MoveNext());
                 }
             }
@@ -716,7 +716,7 @@ namespace Voron.Data.Tables
         {
             int size;
             var ptr = DirectRead(id, out size);
-            reader  = new TableValueReader(id, ptr, size);
+            reader = new TableValueReader(id, ptr, size);
         }
 
         public class SeekResult
@@ -795,16 +795,40 @@ namespace Voron.Data.Tables
             public TableValueReader Reader;
         }
 
-        public IEnumerable<TableValueHolder> SeekByPrimaryKey(Slice value, bool startsWith = false)
+        public IEnumerable<TableValueHolder> SeekByPrimaryKeyStartingWith(Slice requiredPrefix, Slice startAfter)
+        {
+            var isStartAfter = startAfter.Equals(Slices.Empty) == false;
+
+            var result = new TableValueHolder();
+            var pk = _schema.Key;
+            var tree = GetTree(pk);
+            using (var it = tree.Iterate(false))
+            {
+                it.RequiredPrefix = requiredPrefix.Clone(_tx.Allocator);
+
+                var seekValue = isStartAfter ? startAfter : requiredPrefix;
+                if (it.Seek(seekValue) == false)
+                    yield break;
+
+                if (isStartAfter && it.MoveNext() == false)
+                    yield break;
+
+                do
+                {
+                    GetTableValueReader(it, out result.Reader);
+                    yield return result;
+                }
+                while (it.MoveNext());
+            }
+        }
+
+        public IEnumerable<TableValueHolder> SeekByPrimaryKey(Slice value)
         {
             var result = new TableValueHolder();
             var pk = _schema.Key;
             var tree = GetTree(pk);
             using (var it = tree.Iterate(false))
             {
-                if (startsWith)
-                    it.RequiredPrefix = value.Clone(_tx.Allocator);
-
                 if (it.Seek(value) == false)
                     yield break;
 
@@ -889,7 +913,7 @@ namespace Voron.Data.Tables
             long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
             int size;
             var ptr = DirectRead(id, out size);
-            reader = new TableValueReader(id,ptr, size);
+            reader = new TableValueReader(id, ptr, size);
         }
 
         public long Set(TableValueBuilder builder)
@@ -1032,7 +1056,7 @@ namespace Voron.Data.Tables
                 var treeName = item.Key;
 
                 byte* ptr;
-                using (_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader),out ptr))
+                using (_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader), out ptr))
                 {
                     var header = (TreeRootHeader*)ptr;
                     tree.State.CopyTo(header);

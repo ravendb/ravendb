@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Commands
         public int PageSize;
         public string Exclude;
         public PagingInformation PagingInformation;
-        public string SkipAfter;
+        public string StartAfter;
 
         public JsonOperationContext Context;
 
@@ -55,6 +55,8 @@ namespace Raven.Client.Documents.Commands
                     pathBuilder.Append($"&matches={Matches}");
                 if (Exclude != null)
                     pathBuilder.Append($"&exclude={Exclude}");
+                if (StartAfter != null)
+                    pathBuilder.Append($"&startAfter={Uri.EscapeDataString(StartAfter)}");
                 if (nextPage)
                     pathBuilder.Append("&next-page=true");
             }
