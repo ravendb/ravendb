@@ -64,7 +64,7 @@ namespace Raven.Server.Documents
         private static readonly TableSchema AttachmentsSchema = new TableSchema();
 
         private readonly DocumentDatabase _documentDatabase;
-     
+
         private Dictionary<string, CollectionName> _collectionsCache;
 
         private enum ConflictsTable
@@ -747,7 +747,7 @@ namespace Raven.Server.Documents
                 return null;
 
             var doc = TableValueToDocument(context, ref tvr);
-            
+
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
             return doc;
@@ -942,10 +942,10 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id
             };
             int size;
-            var ptr = tvr.Read((int) DocumentsTable.LoweredKey, out size);
+            var ptr = tvr.Read((int)DocumentsTable.LoweredKey, out size);
             result.LoweredKey = new LazyStringValue(null, ptr, size, context);
 
-            result.Key = TableValueToKey(context, (int) DocumentsTable.Key, ref tvr);
+            result.Key = TableValueToKey(context, (int)DocumentsTable.Key, ref tvr);
 
             result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
 
@@ -1138,7 +1138,7 @@ namespace Raven.Server.Documents
                             $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                         {
                             ActualETag = doc.Etag,
-                            ExpectedETag = (long) expectedEtag
+                            ExpectedETag = (long)expectedEtag
                         };
                     }
 
@@ -1209,7 +1209,7 @@ namespace Raven.Server.Documents
                     // TODO: Fix implementation because of hashing
                     var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
                     int size;
-                    var ptr = holder.Reader.Read((int) AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, out size);
+                    var ptr = holder.Reader.Read((int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, out size);
                     Slice keySlice;
                     using (Slice.External(context.Allocator, ptr, size, out keySlice))
                     {
@@ -1237,10 +1237,10 @@ namespace Raven.Server.Documents
             byte* keyPtr;
             int lowerKeySize;
             int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, latestConflict.Key, 
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, latestConflict.Key,
                 out lowerKeyPtr,
                 out lowerKeySize,
-                out keyPtr, 
+                out keyPtr,
                 out keySize);
 
             //note that CreateTombstone is also deleting conflicts
@@ -1352,9 +1352,9 @@ namespace Raven.Server.Documents
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
             var documentEtagBigEndian = Bits.SwapBytes(etag);
 
-                Slice loweredKey;
-                using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
-                {
+            Slice loweredKey;
+            using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
+            {
                 if (changeVector == null)
                 {
                     changeVector = GetMergedConflictChangeVectorsAndDeleteConflicts(
@@ -1366,7 +1366,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     DeleteConflictsFor(context, loweredKey);
-            }
+                }
             }
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -1607,7 +1607,7 @@ namespace Raven.Server.Documents
                     existingDoc.IsEqualTo(incomingDoc))
             {
                 // no real conflict here, both documents have identical content
-                var mergedChangeVector= ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
+                var mergedChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
                 Put(context, key, null, incomingDoc, lastModifiedTicks, mergedChangeVector);
                 return true;
             }
@@ -1623,7 +1623,7 @@ namespace Raven.Server.Documents
                     lastModifiedTicks,
                     existingTombstone.ChangeVector,
                     existingTombstone.Collection);
-                }               
+                }
                 return true;
             }
 
@@ -1640,11 +1640,11 @@ namespace Raven.Server.Documents
                 Slice keySlice;
                 using (DocumentKeyWorker.GetSliceFromKey(ctx, conflict.LoweredKey, out keySlice))
                 {
-                    Delete(ctx, keySlice, conflict.LoweredKey, null, 
+                    Delete(ctx, keySlice, conflict.LoweredKey, null,
                         _documentDatabase.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
                     return;
-                }              
                 }
+            }
 
             // because we are resolving to a conflict, and putting a document will
             // delete all the conflicts, we have to create a copy of the document
@@ -1715,7 +1715,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-           return true; 
+            return true;
         }
 
         public bool TryResolveConflictByScriptInternal(
@@ -2011,7 +2011,7 @@ namespace Raven.Server.Documents
             var collectionName = ExtractCollectionName(context, key, document);
             var newEtag = GenerateNextEtag();
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
-            
+
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             bool knownNewKey = false;
@@ -2053,10 +2053,10 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
+                    changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
                 }
             }
-                
+
 
             // delete a tombstone if it exists, if it known that it is a new key, no need, so we can skip it
             if (knownNewKey == false)
@@ -2092,7 +2092,7 @@ namespace Raven.Server.Documents
                     {
                         flags |= DocumentFlags.Versioned;
                     }
-                               
+
                 }
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -2157,7 +2157,7 @@ namespace Raven.Server.Documents
 #if DEBUG
             if (document.DebugHash != documentDebugHash)
             {
-                throw new InvalidDataException("The incoming document " + key+ " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
+                throw new InvalidDataException("The incoming document " + key + " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
             }
 #endif
 
@@ -2660,7 +2660,7 @@ namespace Raven.Server.Documents
 
                     Slice tableNameSlice;
                     Slice.External(tx.Allocator, ptr, size, out tableNameSlice);// intentionally not disposing, will be disposed by the tx
-                   
+
                     var collectionName = new CollectionName(collection);
                     result.Add(collection, collectionName);
 
@@ -2676,12 +2676,12 @@ namespace Raven.Server.Documents
         }
 
         public AttachmentResult PutAttachment(
-            DocumentsOperationContext context, 
-            string documentId, 
-            string name, 
-            string contentType, 
-            ulong hash, 
-            long? expectedEtag, 
+            DocumentsOperationContext context,
+            string documentId,
+            string name,
+            string contentType,
+            ulong hash,
+            long? expectedEtag,
             Stream stream,
             long? lastModifiedTicks = null)
         {
@@ -2699,7 +2699,7 @@ namespace Raven.Server.Documents
             int lowerDocumentIdSize;
             byte* documentIdPtr; // not in use
             int documentIdSize; // not in use
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerDocumentId, out lowerDocumentIdSize, 
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerDocumentId, out lowerDocumentIdSize,
                 out documentIdPtr, out documentIdSize);
 
             // Update the document with an etag which is bigger than the attachmenEtag
@@ -2770,17 +2770,17 @@ namespace Raven.Server.Documents
                 Etag = attachmenEtag,
                 ContentType = contentType,
                 Name = name,
-                DocumentId = documentId, 
+                DocumentId = documentId,
             };
         }
 
         private void UpdateDocumentAfterAttachmentWrite(
-            DocumentsOperationContext context, 
-            byte* lowerDocumentId, 
-            int lowerDocumentIdSize, 
-            string documentId, 
-            string name, 
-            long newEtag, 
+            DocumentsOperationContext context,
+            byte* lowerDocumentId,
+            int lowerDocumentIdSize,
+            string documentId,
+            string name,
+            long newEtag,
             long modifiedTicks)
         {
             Slice loweredKey;
@@ -2813,17 +2813,17 @@ namespace Raven.Server.Documents
         }
 
         private void UpdateDocumentForAttachmentChange(
-            DocumentsOperationContext context, 
-            string documentId, 
-            string name, 
-            long newEtag, 
-            long modifiedTicks, 
-            TableValueReader tvr, 
-            Slice loweredKey, 
+            DocumentsOperationContext context,
+            string documentId,
+            string name,
+            long newEtag,
+            long modifiedTicks,
+            TableValueReader tvr,
+            Slice loweredKey,
             DocumentChangeTypes change)
         {
             int size;
-            var data = new BlittableJsonReaderObject(tvr.Read((int) DocumentsTable.Data, out size), size, context);
+            var data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out size), size, context);
             var collectionName = ExtractCollectionName(context, documentId, data);
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
                 collectionName.GetTableName(CollectionTableType.Documents));
@@ -2844,7 +2844,7 @@ namespace Raven.Server.Documents
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
                     var transactionMarker = context.GetTransactionMarker();
-                    var flags = *(DocumentFlags*) copyTvr.Read((int) DocumentsTable.Flags, out size) |
+                    var flags = *(DocumentFlags*)copyTvr.Read((int)DocumentsTable.Flags, out size) |
                                 DocumentFlags.HasAttachments;
                     var tbv = new TableValueBuilder
                     {
@@ -2887,7 +2887,7 @@ namespace Raven.Server.Documents
             {
                 if (IsAttachmentDeleted(ref sr.Reader))
                     continue;
-                yield return TableValueToKey(context, (int) AttachmentsTable.Name, ref sr.Reader);
+                yield return TableValueToKey(context, (int)AttachmentsTable.Name, ref sr.Reader);
             }
         }
 
@@ -2932,7 +2932,7 @@ namespace Raven.Server.Documents
         private bool IsAttachmentDeleted(ref TableValueReader reader)
         {
             int size;
-            reader.Read((int) AttachmentsTable.Name, out size);
+            reader.Read((int)AttachmentsTable.Name, out size);
             return size == 0;
         }
 
@@ -2984,7 +2984,7 @@ namespace Raven.Server.Documents
         {
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1 + lowerNameSize);
             Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize] = (byte) 30; // the record separator
+            keyMem.Ptr[lowerKeySize] = (byte)30; // the record separator
             Memory.CopyInline(keyMem.Ptr + lowerKeySize + 1, lowerName, lowerNameSize);
             keySlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
@@ -2994,7 +2994,7 @@ namespace Raven.Server.Documents
         {
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
             Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize] = (byte) 30; // the record separator
+            keyMem.Ptr[lowerKeySize] = (byte)30; // the record separator
             startSlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
         }
@@ -3016,9 +3016,9 @@ namespace Raven.Server.Documents
 
             result.Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
             result.Name = TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr);
-            result.LastModified = new DateTime(*(long*)tvr.Read((int) AttachmentsTable.LastModified, out size));
+            result.LastModified = new DateTime(*(long*)tvr.Read((int)AttachmentsTable.LastModified, out size));
 
-            ptr = tvr.Read((int) AttachmentsTable.ContentType, out size);
+            ptr = tvr.Read((int)AttachmentsTable.ContentType, out size);
             result.ContentType = new LazyStringValue(null, ptr, size, context);
 
             return result;
@@ -3110,13 +3110,13 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            var etag = TableValueToEtag((int) AttachmentsTable.Etag, ref tvr);
+            var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
             if (expectedEtag != null && etag != expectedEtag)
             {
                 throw new ConcurrencyException($"Attachment {name} of document '{documentId}' has etag {etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                 {
                     ActualETag = etag,
-                    ExpectedETag = (long) expectedEtag
+                    ExpectedETag = (long)expectedEtag
                 };
             }
 
