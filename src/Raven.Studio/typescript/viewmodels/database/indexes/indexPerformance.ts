@@ -1022,6 +1022,20 @@ class metrics extends viewModelBase {
         if (currentDatum !== element) {
             let tooltipHtml = `${element.Name}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMilliseconds)}`;
 
+            const opWithParent = element as IndexingPerformanceOperationWithParent;
+
+            if (opWithParent.Parent) {
+                const parentStats = opWithParent.Parent;
+                let countsDetails: string;
+                countsDetails = `<br/>*** Entries details ***<br/>`;
+                countsDetails += `Input Count: ${parentStats.InputCount.toLocaleString()}<br/>`;
+                countsDetails += `Output Count: ${parentStats.OutputCount.toLocaleString()}<br/>`;
+                countsDetails += `Failed Count: ${parentStats.FailedCount.toLocaleString()}<br/>`;
+                countsDetails += `Success Count: ${parentStats.SuccessCount.toLocaleString()}<br/>`;
+
+                tooltipHtml += countsDetails;
+            }
+
             if (element.CommitDetails) {   
                 let commitDetails: string;
                 commitDetails = `<br/>*** Commit details ***<br/>`;
@@ -1142,13 +1156,9 @@ class metrics extends viewModelBase {
     }
 
     private fillCache() {
-        const isoParser = d3.time.format.iso;
-
         this.data.forEach(indexStats => {
             indexStats.Performance.forEach(perfStat => {
-                const withCache = perfStat as IndexingPerformanceStatsWithCache;
-                withCache.StartedAsDate = isoParser.parse(withCache.Started);
-                withCache.CompletedAsDate = withCache.Completed ? isoParser.parse(withCache.Completed) : undefined;
+                liveIndexPerformanceWebSocketClient.fillCache(perfStat);
             });
         });
     }
@@ -1187,7 +1197,7 @@ class metrics extends viewModelBase {
             exportFileName = `indexPerf of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
         }
 
-        const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache> = ["StartedAsDate", "CompletedAsDate"];
+        const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache | keyof IndexingPerformanceOperationWithParent> = ["StartedAsDate", "CompletedAsDate", "Parent"];
         fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName, (key, value) => {
             if (_.includes(keysToIgnore, key)) {
                 return undefined;

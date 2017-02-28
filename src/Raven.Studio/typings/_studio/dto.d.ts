@@ -199,6 +199,10 @@ interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Index
     CompletedAsDate: Date; // user for caching
 }
 
+interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.Indexes.IndexingPerformanceOperation {
+    Parent: Raven.Client.Documents.Indexes.IndexingPerformanceStats;
+}
+
 interface subscriptionResponseItemDto {
     SubscriptionId: number;
     Criteria: Raven.Client.Documents.Subscriptions.SubscriptionCriteria;

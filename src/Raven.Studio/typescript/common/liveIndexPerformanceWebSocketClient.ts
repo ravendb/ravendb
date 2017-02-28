@@ -2,6 +2,7 @@
 
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
+import d3 = require("d3");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require("common/messagePublisher");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
@@ -10,7 +11,7 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
 
     private readonly onData: (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => void;
 
-    private isoParser = d3.time.format.iso;
+    private static readonly isoParser = d3.time.format.iso;
 
     private mergedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
 
@@ -79,10 +80,7 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
             });
 
             incomingIndexStats.Performance.forEach(incomingPerf => {
-
-                const withCache = incomingPerf as IndexingPerformanceStatsWithCache;
-                withCache.CompletedAsDate = incomingPerf.Completed ? this.isoParser.parse(incomingPerf.Completed) : undefined;
-                withCache.StartedAsDate = this.isoParser.parse(incomingPerf.Started)
+                liveIndexPerformanceWebSocketClient.fillCache(incomingPerf);
 
                 if (idToIndexCache.has(incomingPerf.Id)) {
                     // update 
@@ -94,6 +92,15 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
                 }
             });
         });
+    }
+
+    static fillCache(perf: Raven.Client.Documents.Indexes.IndexingPerformanceStats) {
+        const withCache = perf as IndexingPerformanceStatsWithCache;
+        withCache.CompletedAsDate = perf.Completed ? liveIndexPerformanceWebSocketClient.isoParser.parse(perf.Completed) : undefined;
+        withCache.StartedAsDate = liveIndexPerformanceWebSocketClient.isoParser.parse(perf.Started);
+
+        const detailsWithParent = perf.Details as IndexingPerformanceOperationWithParent;
+        detailsWithParent.Parent = perf;
     }
 
 }
