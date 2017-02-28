@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using Voron.Data;
 using Voron.Data.Tables;
+using Voron.Impl.Scratch;
 
 namespace Voron.Debugging
 {
@@ -24,6 +25,7 @@ namespace Voron.Debugging
         public List<TreeReport> Trees { get; set; }
         public List<TableReport> Tables { get; set; }
         public PreAllocatedBuffersReport PreAllocatedBuffers { get; set; }
+        public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
     }
 
     public class DataFileReport

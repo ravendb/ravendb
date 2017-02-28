@@ -102,7 +102,8 @@ namespace Voron.Debugging
                 Trees = trees,
                 Tables = tables,
                 Journals = journals,
-                PreAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.CalculateExactSizes)
+                PreAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.CalculateExactSizes),
+                ScratchBufferPoolInfo = input.ScratchBufferPoolInfo
             };
         }
 
