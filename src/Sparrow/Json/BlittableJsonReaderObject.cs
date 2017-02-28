@@ -74,7 +74,7 @@ namespace Sparrow.Json
             _metadataPtr = objStartOffset + mem + propCountOffset;
             // get pointer to current objects property tags metadata collection
 
-            var currentType = (BlittableJsonToken)(*(mem + size - sizeof(byte)));
+            var currentType = (BlittableJsonToken) (*(mem + size - sizeof(byte)));
             // get current type byte flags
 
             // analyze main object type and it's offset and propertyIds flags
@@ -86,13 +86,14 @@ namespace Sparrow.Json
         {
             //otherwise SetupPropertiesAccess will throw because of the memory garbage
             //(or won't throw, but this is actually worse!)
-            throw new ArgumentException("BlittableJsonReaderObject does not support objects with zero size", nameof(size));
+            throw new ArgumentException("BlittableJsonReaderObject does not support objects with zero size",
+                nameof(size));
         }
 
         private void SetupPropertiesAccess(byte* mem, int propsOffset)
         {
             _propNames = (mem + propsOffset);
-            var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
+            var propNamesOffsetFlag = (BlittableJsonToken) (*_propNames);
             switch (propNamesOffsetFlag)
             {
                 case BlittableJsonToken.OffsetSizeByte:
@@ -119,7 +120,7 @@ namespace Sparrow.Json
             _propNames = parent._propNames;
             NoCache = parent.NoCache;
 
-            var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
+            var propNamesOffsetFlag = (BlittableJsonToken) (*_propNames);
 
             if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeByte)
                 _propNamesDataOffsetSize = sizeof(byte);
@@ -141,7 +142,8 @@ namespace Sparrow.Json
 
         private static void ThrowOutOfRangeException(BlittableJsonToken token)
         {
-            throw new ArgumentOutOfRangeException($"Property names offset flag should be either byte, short of int, instead of {token}");
+            throw new ArgumentOutOfRangeException(
+                $"Property names offset flag should be either byte, short of int, instead of {token}");
         }
 
         private static void ThrowObjectDisposed()
@@ -163,7 +165,7 @@ namespace Sparrow.Json
             }
         }
 
-        public ulong DebugHash => Hashing.XXHash64.Calculate(_mem, (ulong)_size);
+        public ulong DebugHash => Hashing.XXHash64.Calculate(_mem, (ulong) _size);
 
 
         /// <summary>
@@ -195,13 +197,13 @@ namespace Sparrow.Json
 
         private LazyStringValue GetPropertyName(int propertyId)
         {
-            var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
+            var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId*_propNamesDataOffsetSize;
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
             // Get the relative "In Document" position of the property Name
             var propRelativePos = _propNames - propertyNameOffset - _mem;
 
-            var propertyName = ReadStringLazily((int)propRelativePos);
+            var propertyName = ReadStringLazily((int) propRelativePos);
             return propertyName;
         }
 
@@ -230,10 +232,19 @@ namespace Sparrow.Json
                 obj = default(T);
                 return false;
             }
-            ConvertType(result, out obj);
+            try
+            {
+                ConvertType(result, out obj);
+            }
+            catch
+            {
+                obj = default(T);
+                return false;
+            }
+            
             return true;
         }
-
+        
         internal static void ConvertType<T>(object result, out T obj)
         {
             if (result == null)
@@ -926,6 +937,18 @@ namespace Sparrow.Json
             return current;
         }
 
+        public void AddItemsToStream<T>(ManualBlittalbeJsonDocumentBuilder<T> writer)
+            where T : struct, IUnmanagedWriteBuffer
+        {
+            for (var i = 0; i < Count; i++)
+            {
+                var prop = new PropertyDetails();
+                GetPropertyByIndex(i, ref prop);
+                writer.WritePropertyName(prop.Name);
+                writer.WriteValue(ProcessTokenTypeFlags(prop.Token),prop.Value);
+            }
+        }
+
         private static void ThrowInvalidTokenType()
         {
             throw new InvalidDataException("Token type not valid");
@@ -965,7 +988,7 @@ namespace Sparrow.Json
         {
             throw new InvalidDataException("Number of properties not valid");
         }
-
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))

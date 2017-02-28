@@ -124,7 +124,6 @@ namespace Sparrow.Json
         {
             byte offset;
             var size = ReadVariableSizeInt(pos, out offset);
-
             return new BlittableJsonReaderObject(_mem + pos + offset, size, _context);
         }
 
@@ -159,26 +158,6 @@ namespace Sparrow.Json
             var result = ReadVariableSizeInt(buffer, pos, out offset);
             pos += offset;
             return result;
-        }
-
-        public static Type GetTypeFromToken(BlittableJsonToken token)
-        {
-            switch (token)
-            {
-                case BlittableJsonToken.Integer:
-                    return typeof(int);
-                case BlittableJsonToken.Float:
-                    return typeof(float);
-                case BlittableJsonToken.String:
-                case BlittableJsonToken.CompressedString:
-                    return typeof(string);
-                case BlittableJsonToken.Boolean:
-                    return typeof(bool);
-                case BlittableJsonToken.Null:
-                    return null;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(token), token, null);
-            }
         }
 
         public static int ReadVariableSizeInt(byte* buffer, int pos, out byte offset)
