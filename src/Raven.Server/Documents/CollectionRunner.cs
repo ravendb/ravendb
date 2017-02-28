@@ -78,7 +78,7 @@ namespace Raven.Server.Documents
                                 break;
                             }
 
-                            startEtag = document.Etag; //TODO: +1 ?
+                            startEtag = document.Etag + 1;
 
                             action(document.Key);
 
