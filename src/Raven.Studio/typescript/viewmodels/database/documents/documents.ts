@@ -11,6 +11,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import messagePublisher = require("common/messagePublisher");
 import copyDocuments = require("viewmodels/database/documents/copyDocuments");
 import copyDocumentIds = require("viewmodels/database/documents/copyDocumentIds");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 import notificationCenter = require("common/notifications/notificationCenter");
 
@@ -48,14 +49,12 @@ class documents extends viewModelBase {
     private selectedItemsCount: KnockoutComputed<number>;
 
     dirtyResult = ko.observable<boolean>(false);
-    dirtyCurrentCollection = ko.observable<boolean>(false);
     dataChanged: KnockoutComputed<boolean>;
+    tracker: collectionsTracker;
 
     copyDisabledReason: KnockoutComputed<disabledReason>;
 
     private collectionToSelectName: string;
-    private collections = ko.observableArray<collection>();
-    private currentCollection = ko.observable<collection>();
     private gridController = ko.observable<virtualGridController<document>>();
 
     spinners = {
@@ -71,7 +70,7 @@ class documents extends viewModelBase {
 
     private initObservables() {
         this.inSpecificCollection = ko.pureComputed(() => {
-            const currentCollection = this.currentCollection();
+            const currentCollection = this.tracker.currentCollection();
             return currentCollection && !currentCollection.isAllDocuments;
         });
         this.selectedItemsCount = ko.pureComputed(() => {
@@ -104,7 +103,7 @@ class documents extends viewModelBase {
         });
         this.dataChanged = ko.pureComputed(() => {
             const resultDirty = this.dirtyResult();
-            const collectionChanged = this.dirtyCurrentCollection();
+            const collectionChanged = this.tracker.dirtyCurrentCollection();
             return resultDirty || collectionChanged;
         });
     }
@@ -116,10 +115,13 @@ class documents extends viewModelBase {
         this.collectionToSelectName = args ? args.collection : null;
 
         const db = this.activeDatabase();
+        this.tracker = new collectionsTracker(db, () => this.gridController().resultEtag());
+
         return this.fetchCollectionsStats(db).done(results => {
             this.collectionsLoaded(results, db);
 
-            const dbStatsSubscription = changesContext.default.resourceNotifications().watchAllDatabaseStatsChanged(event => this.onDatabaseStatsChanged(event));
+            const dbStatsSubscription = changesContext.default.resourceNotifications()
+                .watchAllDatabaseStatsChanged(event => this.tracker.onDatabaseStatsChanged(event));
             this.addNotification(dbStatsSubscription);
         });
     }
@@ -129,103 +131,26 @@ class documents extends viewModelBase {
             .execute();
     }
 
-    //TODO: extract to utils as it might be used on patch page as well
-    private onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
-        const removedCollections = notification.ModifiedCollections.filter(x => x.Count === -1);
-        const changedCollections = notification.ModifiedCollections.filter(x => x.Count !== -1);
-        const totalCount = notification.CountOfDocuments;
-
-        // update all collections
-        const allDocs = this.collections().find(x => x.isAllDocuments);
-        allDocs.documentCount(totalCount);
-
-        removedCollections.forEach(c => {
-            const toRemove = this.collections().find(x => x.name.toLocaleLowerCase() === c.Name.toLocaleLowerCase());
-            this.onCollectionRemoved(toRemove);
-        });
-
-        if (this.currentCollection().isAllDocuments) {
-            if (this.gridController().resultEtag() !== notification.GlobalDocumentsEtag) {
-                this.dirtyCurrentCollection(true);
-            }
-        }
-
-        changedCollections.forEach(c => {
-            const existingCollection = this.collections().find(x => x.name.toLowerCase() == c.Name.toLocaleLowerCase());
-            if (existingCollection) {
-                this.onCollectionChanged(existingCollection, c);
-            } else {
-                this.onCollectionCreated(c);
-            }
-        });
-    }
-
-    private onCollectionRemoved(item: collection) {
-        //TODO: animate removed collection in future
-
-        if (item === this.currentCollection()) {
-            // removed current collection - go to all docs
-            messagePublisher.reportWarning(item.name + " was removed");
-            this.currentCollection(this.getAllDocumentsCollection());
-        } else if (this.currentCollection().isAllDocuments) {
-            this.dirtyCurrentCollection(true);
-        }
-
-        this.collections.remove(item);
-    }
-
-    private onCollectionChanged(item: collection, incomingData: Raven.Server.NotificationCenter.Notifications.ModifiedCollection) {
-        item.documentCount(incomingData.Count);
-
-        if (item.name === this.currentCollection().name) {
-            if (incomingData.CollectionEtag !== this.gridController().resultEtag()) {
-                this.dirtyCurrentCollection(true);
-            }
-        }
-    }
-
-    private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.ModifiedCollection) {
-        //TODO: animate incoming db in future
-
-        const newCollection = new collection(incomingItem.Name, this.activeDatabase(), incomingItem.Count);
-        const insertIndex = _.sortedIndexBy<collection>(this.collections().slice(1), newCollection, x => x.name.toLocaleLowerCase()) + 1;
-        this.collections.splice(insertIndex, 0, newCollection);
-
-        if (this.currentCollection().isAllDocuments) {
-            this.dirtyCurrentCollection(true);
-        }
-    }
-
     private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
         let collections = collectionsStats.collections;
         collections = _.sortBy(collections, x => x.name.toLocaleLowerCase());
 
         //TODO: starred
         const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
-        this.collections([allDocsCollection].concat(collections));
+        this.tracker.collections([allDocsCollection].concat(collections));
 
-        const collectionToSelect = this.collections().find(x => x.name === this.collectionToSelectName) || allDocsCollection;
-        this.currentCollection(collectionToSelect);
-    }
-
-    private getAllDocumentsCollection() {
-        return this.collections().find(x => x.isAllDocuments);
-    }
-
-    private getCollectionNames() {
-        return this.collections()
-            .filter(x => !x.isAllDocuments && !x.isSystemDocuments)
-            .map(x => x.name);
+        const collectionToSelect = this.tracker.collections().find(x => x.name === this.collectionToSelectName) || allDocsCollection;
+        this.tracker.currentCollection(collectionToSelect);
     }
 
     refresh() {
         this.gridController().reset(true);
-        this.dirtyCurrentCollection(false);
+        this.tracker.setCurrentAsNotDirty();
     }
 
     fetchDocs(skip: number, take: number): JQueryPromise<pagedResult<any>> {
         this.isLoading(true);
-        return this.currentCollection().fetchDocuments(skip, take)
+        return this.tracker.currentCollection().fetchDocuments(skip, take)
             .always(() => this.isLoading(false));
     }
 
@@ -236,12 +161,12 @@ class documents extends viewModelBase {
 
         const grid = this.gridController();
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.getCollectionNames(),
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.tracker.getCollectionNames(),
             { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true });
 
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchDocs(s, t), (w, r) => {
-            if (this.currentCollection().isAllDocuments) {
+            if (this.tracker.currentCollection().isAllDocuments) {
                 return [
                     new checkedColumn(true),
                     new hyperlinkColumn<document>(x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
@@ -256,13 +181,13 @@ class documents extends viewModelBase {
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
-        this.currentCollection.subscribe(this.onCollectionSelected, this);
+        this.tracker.currentCollection.subscribe(this.onCollectionSelected, this);
     }
 
     private onCollectionSelected(newCollection: collection) {
         this.updateUrl(appUrl.forDocuments(newCollection.name, this.activeDatabase()));
         this.gridController().reset();
-        this.dirtyCurrentCollection(false);
+        this.tracker.setCurrentAsNotDirty();
     }
 
     newDocument(docs: documents, $event: JQueryEventObject) {
@@ -276,7 +201,7 @@ class documents extends viewModelBase {
     }
 
     newDocumentInCollection(docs: documents, $event: JQueryEventObject) {
-        const url = appUrl.forNewDoc(this.activeDatabase(), this.currentCollection().name);
+        const url = appUrl.forNewDoc(this.activeDatabase(), this.tracker.currentCollection().name);
         if ($event.ctrlKey) {
             window.open(url);
         } else {
@@ -307,7 +232,7 @@ class documents extends viewModelBase {
             // exclusive
             const excludedIds = selection.excluded.map(x => x.getId());
 
-            const deleteCollectionDialog = new deleteCollection(this.currentCollection().name, this.activeDatabase(), selection.count, excludedIds);
+            const deleteCollectionDialog = new deleteCollection(this.tracker.currentCollection().name, this.activeDatabase(), selection.count, excludedIds);
            
             app.showBootstrapDialog(deleteCollectionDialog)
                 .done((deletionStarted: boolean) => {
@@ -318,16 +243,16 @@ class documents extends viewModelBase {
                             notificationCenter.instance.resourceOperationsWatch.monitorOperation(operationId.OperationId)
                                 .done(() => {
                                     if (excludedIds.length === 0) {
-                                        messagePublisher.reportSuccess(`Deleted collection ${this.currentCollection().name}`);
+                                        messagePublisher.reportSuccess(`Deleted collection ${this.tracker.currentCollection().name}`);
                                     } else {
-                                        messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.currentCollection().name}`);
+                                        messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.tracker.currentCollection().name}`);
                                     }
 
                                     if (excludedIds.length === 0) {
                                         // deleted entire collection to go all documents
-                                        const allDocsCollection = this.getAllDocumentsCollection();
-                                        if (this.currentCollection() !== allDocsCollection) {
-                                            this.currentCollection(allDocsCollection);
+                                        const allDocsCollection = this.tracker.getAllDocumentsCollection();
+                                        if (this.tracker.currentCollection() !== allDocsCollection) {
+                                            this.tracker.currentCollection(allDocsCollection);
                                         }
                                     }
                                 })
@@ -341,7 +266,7 @@ class documents extends viewModelBase {
     private onDeleteCompleted() {
         this.spinners.delete(false);
         this.gridController().reset(false);
-        this.dirtyCurrentCollection(false);
+        this.tracker.setCurrentAsNotDirty();
     }
 
     copySelectedDocs() {
