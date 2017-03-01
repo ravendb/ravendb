@@ -145,7 +145,7 @@ namespace Raven.Server.Documents
         
         public static string GetCollectionName(string key, BlittableJsonReaderObject document)
         {
-            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && key.StartsWith("Raven/HiLo/", StringComparison.OrdinalIgnoreCase) == false)
                 return SystemCollection;
 
             return GetCollectionName(document);
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents
             dynamic dynamicDocument = document;
             string key = dynamicDocument.Id;
 
-            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && key.StartsWith("Raven/HiLo/", StringComparison.OrdinalIgnoreCase) == false)
                 return SystemCollection;
 
             return GetCollectionName(document.BlittableJson);
