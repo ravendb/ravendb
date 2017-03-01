@@ -90,7 +90,7 @@ namespace Raven.Server.NotificationCenter
                     return false;
 
                 if (existing?.PostponedUntil != null && existing.PostponedUntil.Value > SystemTime.UtcNow)
-                    postponeUntil= existing.PostponedUntil;
+                    postponeUntil = existing.PostponedUntil;
 
                 using (var json = context.ReadObject(notification.ToJson(), "notification", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -135,7 +135,7 @@ namespace Raven.Server.NotificationCenter
                 return false;
             }
 
-            var lazyStringDate = (LazyStringValue) dateString;
+            var lazyStringDate = (LazyStringValue)dateString;
 
             DateTimeOffset _;
             var parsedType = LazyStringParser.TryParseDateTime(lazyStringDate.Buffer, lazyStringDate.Size, out date, out _);
@@ -185,13 +185,10 @@ namespace Raven.Server.NotificationCenter
         private IEnumerable<NotificationTableValue> ReadActionsByCreatedAtIndex(TransactionOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
-            
-            foreach (var it in table.SeekForwardFrom(_actionsSchema.Indexes[ByCreatedAt], Slices.BeforeAllKeys))
+
+            foreach (var tvr in table.SeekForwardFrom(_actionsSchema.Indexes[ByCreatedAt], Slices.BeforeAllKeys, 0))
             {
-                foreach (var holder in it.Results)
-                {
-                    yield return Read(context, ref holder.Reader);
-                }
+                yield return Read(context, ref tvr.Result.Reader);
             }
         }
 
@@ -214,23 +211,20 @@ namespace Raven.Server.NotificationCenter
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
 
-            foreach (var it in table.SeekForwardFrom(_actionsSchema.Indexes[ByPostponedUntil], Slices.BeforeAllKeys))
+            foreach (var tvr in table.SeekForwardFrom(_actionsSchema.Indexes[ByPostponedUntil], Slices.BeforeAllKeys, 0))
             {
-                foreach (var holder in it.Results)
-                {
-                    var action = Read(context, ref holder.Reader);
+                var action = Read(context, ref tvr.Result.Reader);
 
-                    if (action.PostponedUntil == null)
-                        continue;
+                if (action.PostponedUntil == null)
+                    continue;
 
-                    if (action.PostponedUntil > cutoff)
-                        break;
+                if (action.PostponedUntil > cutoff)
+                    break;
 
-                    if (action.PostponedUntil == DateTime.MaxValue)
-                        break;
+                if (action.PostponedUntil == DateTime.MaxValue)
+                    break;
 
-                    yield return action;
-                }
+                yield return action;
             }
         }
 
@@ -288,8 +282,8 @@ namespace Raven.Server.NotificationCenter
                     if (action.Json.TryGetMember(nameof(Notification.Type), out type) == false)
                         throw new InvalidOperationException($"Could not find notification type. Notification: {action}");
 
-                    var typeLsv = (LazyStringValue) type;
-                    
+                    var typeLsv = (LazyStringValue)type;
+
                     if (typeLsv.CompareTo(NotificationType.AlertRaised.ToString()) == 0)
                         count++;
                 }
@@ -301,7 +295,7 @@ namespace Raven.Server.NotificationCenter
         private NotificationTableValue Read(JsonOperationContext context, ref TableValueReader reader)
         {
             int size;
-            
+
             var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(NotificationsSchema.NotificationsTable.CreatedAtIndex, out size)));
 
             var postponeUntilTicks = *(long*)reader.Read(NotificationsSchema.NotificationsTable.PostponedUntilIndex, out size);

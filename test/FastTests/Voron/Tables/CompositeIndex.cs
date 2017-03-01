@@ -1,7 +1,5 @@
-﻿using System.Linq;
-using System.Text;
+﻿using System.Text;
 using Voron;
-using Voron.Data.Tables;
 using Xunit;
 
 namespace FastTests.Voron.Tables
@@ -22,8 +20,8 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
-                SetHelper(docs, "users/1","Users", 1L, "{'Name': 'Oren'}");
-                SetHelper(docs, "users/2","Users", 2L,  "{'Name': 'Eini'}");
+                SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
+                SetHelper(docs, "users/2", "Users", 2L, "{'Name': 'Eini'}");
 
                 tx.Commit();
             }
@@ -32,14 +30,14 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var seekResults = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users").GetEnumerator();
+                var seekResults = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users", 0).GetEnumerator();
                 Assert.True(seekResults.MoveNext());
                 var reader = seekResults.Current;
 
                 var valueReader = reader.Key.CreateReader();
                 Assert.Equal("Users", valueReader.ReadString(5));
                 Assert.Equal(1L, valueReader.ReadBigEndianInt64());
-                var handle = reader.Results.Single().Reader;
+                var handle = reader.Result.Reader;
                 int size;
                 Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
@@ -49,7 +47,7 @@ namespace FastTests.Voron.Tables
                 valueReader = reader.Key.CreateReader();
                 Assert.Equal("Users", valueReader.ReadString(5));
                 Assert.Equal(2L, valueReader.ReadBigEndianInt64());
-                handle = reader.Results.Single().Reader;
+                handle = reader.Result.Reader;
                 Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
                 Assert.False(seekResults.MoveNext());
@@ -91,7 +89,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users");
+                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users", 0);
                 Assert.Empty(reader);
             }
         }
@@ -128,13 +126,13 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
                 bool gotValues = false;
-                foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users"))
+                foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users", 0))
                 {
                     var valueReader = reader.Key.CreateReader();
                     Assert.Equal("Users", valueReader.ReadString(5));
                     Assert.Equal(2L, valueReader.ReadBigEndianInt64());
 
-                    var handle = reader.Results.Single();
+                    var handle = reader.Result;
                     int size;
                     Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Reader.Read(3, out size), size));
 

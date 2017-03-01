@@ -222,7 +222,7 @@ namespace Voron.Benchmark.Table
                     {
                         var table = tx.OpenTable(Schema, TableNameSlice);
 
-                        foreach (var reader in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                        foreach (var reader in table.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                         {
                             for (var f = 0; f < reader.Reader.Count; f++)
                             {
@@ -260,7 +260,7 @@ namespace Voron.Benchmark.Table
                     {
                         var table = tx.OpenTable(Schema, TableNameSlice);
 
-                        foreach (var reader in table.SeekByPrimaryKey(_sortedKeysPerThread[currentThreadIndex][0]))
+                        foreach (var reader in table.SeekByPrimaryKey(_sortedKeysPerThread[currentThreadIndex][0], 0))
                         {
                             for (var f = 0; f < reader.Reader.Count; f++)
                             {

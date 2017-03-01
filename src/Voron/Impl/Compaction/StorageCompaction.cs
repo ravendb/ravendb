@@ -29,7 +29,7 @@ namespace Voron.Impl.Compaction
     {
         public const string CannotCompactBecauseOfIncrementalBackup = "Cannot compact a storage that supports incremental backups. The compact operation changes internal data structures on which the incremental backup relays.";
 
-        public static void Execute(StorageEnvironmentOptions srcOptions, 
+        public static void Execute(StorageEnvironmentOptions srcOptions,
             StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions,
             Action<CompactionProgress> progressReport = null)
         {
@@ -112,7 +112,7 @@ namespace Voron.Impl.Compaction
         private static long CopyFixedSizeTrees(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
             TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount, RootObjectType type, TransactionPersistentContext context)
         {
-            
+
             var fst = txr.FixedTreeFor(rootIterator.CurrentKey.Clone(txr.Allocator), 0);
 
             Report(type, treeName, copiedTrees, totalTreesCount, 0, fst.NumberOfEntries, progressReport);
@@ -134,9 +134,9 @@ namespace Voron.Impl.Compaction
                             Slice val;
                             using (it.Value(out val))
                                 snd.Add(it.CurrentKey, val);
-                            transactionSize += fst.ValueSize + sizeof (long);
+                            transactionSize += fst.ValueSize + sizeof(long);
                             copiedEntries++;
-                        } while (transactionSize < compactedEnv.Options.MaxScratchBufferSize/2 && it.MoveNext());
+                        } while (transactionSize < compactedEnv.Options.MaxScratchBufferSize / 2 && it.MoveNext());
 
                         txw.Commit();
                     }
@@ -267,21 +267,18 @@ namespace Voron.Impl.Compaction
                             // We have a variable size index, use it
                             var index = schema.Indexes.First().Value;
 
-                            foreach (var result in inputTable.SeekForwardFrom(index, lastSlice))
+                            foreach (var tvr in inputTable.SeekForwardFrom(index, lastSlice, 0))
                             {
-                                foreach (var entry in result.Results)
-                                {
-                                    // The table will take care of reconstructing indexes automatically
-                                    outputTable.Insert(ref entry.Reader);
-                                    copiedEntries++;
-                                    transactionSize += entry.Reader.Size;
-                                }
+                                // The table will take care of reconstructing indexes automatically
+                                outputTable.Insert(ref tvr.Result.Reader);
+                                copiedEntries++;
+                                transactionSize += tvr.Result.Reader.Size;
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
-                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                                if (lastSlice.Equals(tvr.Key) == false && transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
                                 {
-                                    lastSlice = result.Key;
+                                    lastSlice = tvr.Key;
                                     break;
                                 }
                             }
@@ -291,7 +288,7 @@ namespace Voron.Impl.Compaction
                             // Use a fixed size index
                             var index = schema.FixedSizeIndexes.First().Value;
 
-                            foreach (var entry in inputTable.SeekForwardFrom(index, lastFixedIndex))
+                            foreach (var entry in inputTable.SeekForwardFrom(index, lastFixedIndex, 0))
                             {
 
                                 // The table will take care of reconstructing indexes automatically
@@ -301,7 +298,7 @@ namespace Voron.Impl.Compaction
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
-                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
                                 {
                                     lastFixedIndex = index.GetValue(ref entry.Reader);
                                     break;
@@ -312,7 +309,7 @@ namespace Voron.Impl.Compaction
                     else
                     {
                         // The table has a primary key, inserts in that order are expected to be faster
-                        foreach (var entry in inputTable.SeekByPrimaryKey(lastSlice))
+                        foreach (var entry in inputTable.SeekByPrimaryKey(lastSlice, 0))
                         {
                             // The table will take care of reconstructing indexes automatically
                             outputTable.Insert(ref entry.Reader);
@@ -321,7 +318,7 @@ namespace Voron.Impl.Compaction
 
                             // The transaction has surpassed the allowed
                             // size before a flush
-                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
                             {
                                 schema.Key.GetSlice(txr.Allocator, ref entry.Reader, out lastSlice);
                                 break;

@@ -31,42 +31,14 @@ namespace Voron.Data.Tables
         public long NumberOfEntries { get; private set; }
 
         private long _overflowPageCount;
-        private NewPageAllocator _tablePageAllocator;
-        private NewPageAllocator _globalPageAllocator;
+        private readonly NewPageAllocator _tablePageAllocator;
+        private readonly NewPageAllocator _globalPageAllocator;
 
-        public FixedSizeTree FixedSizeKey
-        {
-            get
-            {
-                if (_fstKey == null)
-                    _fstKey = GetFixedSizeTree(_tableTree, _schema.Key.Name, sizeof(long));
+        public FixedSizeTree FixedSizeKey => _fstKey ?? (_fstKey = GetFixedSizeTree(_tableTree, _schema.Key.Name, sizeof(long)));
 
-                return _fstKey;
-            }
-        }
+        public FixedSizeTree InactiveSections => _inactiveSections ?? (_inactiveSections = GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0));
 
-        public FixedSizeTree InactiveSections
-        {
-            get
-            {
-                if (_inactiveSections == null)
-                    _inactiveSections = GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0);
-
-                return _inactiveSections;
-            }
-        }
-
-
-        public FixedSizeTree ActiveCandidateSection
-        {
-            get
-            {
-                if (_activeCandidateSection == null)
-                    _activeCandidateSection = GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0);
-
-                return _activeCandidateSection;
-            }
-        }
+        public FixedSizeTree ActiveCandidateSection => _activeCandidateSection ?? (_activeCandidateSection = GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0));
 
         public ActiveRawDataSmallSection ActiveDataSmallSection
         {
@@ -719,18 +691,12 @@ namespace Voron.Data.Tables
             reader = new TableValueReader(id, ptr, size);
         }
 
-        public class SeekResult
-        {
-            public Slice Key;
-            public IEnumerable<TableValueHolder> Results;
-        }
-
-        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, string value, bool startsWith = false)
+        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, string value, int skip, bool startsWith = false)
         {
             Slice str;
             using (Slice.From(_tx.Allocator, value, ByteStringType.Immutable, out str))
             {
-                return SeekForwardFrom(index, str, startsWith);
+                return SeekForwardFrom(index, str, skip, startsWith);
             }
         }
 
@@ -766,7 +732,7 @@ namespace Voron.Data.Tables
             return fst.NumberOfEntries;
         }
 
-        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith = false)
+        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, int skip, bool startsWith = false)
         {
             var tree = GetTree(index);
             using (var it = tree.Iterate(false))
@@ -779,23 +745,25 @@ namespace Voron.Data.Tables
 
                 do
                 {
-                    yield return new SeekResult
+                    foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
                     {
-                        Key = it.CurrentKey,
-                        Results = GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator))
-                    };
+                        if (skip > 0)
+                        {
+                            skip--;
+                            continue;
+                        }
+
+                        yield return new SeekResult
+                        {
+                            Key = it.CurrentKey,
+                            Result = result
+                        };
+                    }
                 } while (it.MoveNext());
             }
         }
 
-        public class TableValueHolder
-        {
-            // we need this so we'll not have to create a new allocation
-            // of TableValueReader per value
-            public TableValueReader Reader;
-        }
-
-        public IEnumerable<TableValueHolder> SeekByPrimaryKeyStartingWith(Slice requiredPrefix, Slice startAfter)
+        public IEnumerable<TableValueHolder> SeekByPrimaryKeyStartingWith(Slice requiredPrefix, Slice startAfter, int skip)
         {
             var isStartAfter = startAfter.Equals(Slices.Empty) == false;
 
@@ -813,6 +781,9 @@ namespace Voron.Data.Tables
                 if (isStartAfter && it.MoveNext() == false)
                     yield break;
 
+                if (it.Skip(skip) == false)
+                    yield break;
+
                 do
                 {
                     GetTableValueReader(it, out result.Reader);
@@ -822,7 +793,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekByPrimaryKey(Slice value)
+        public IEnumerable<TableValueHolder> SeekByPrimaryKey(Slice value, int skip)
         {
             var result = new TableValueHolder();
             var pk = _schema.Key;
@@ -830,6 +801,9 @@ namespace Voron.Data.Tables
             using (var it = tree.Iterate(false))
             {
                 if (it.Seek(value) == false)
+                    yield break;
+
+                if (it.Skip(skip) == false)
                     yield break;
 
                 do
@@ -860,7 +834,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekForwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
+        public IEnumerable<TableValueHolder> SeekForwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key, int skip)
         {
             var result = new TableValueHolder();
             var fst = GetFixedSizeTree(index);
@@ -868,6 +842,9 @@ namespace Voron.Data.Tables
             using (var it = fst.Iterate())
             {
                 if (it.Seek(key) == false)
+                    yield break;
+
+                if (it.Skip(skip) == false)
                     yield break;
 
                 do
@@ -1144,6 +1121,19 @@ namespace Voron.Data.Tables
             report.AddPreAllocatedBuffers(_tablePageAllocator, calculateExactSizes);
 
             return report;
+        }
+
+        public struct SeekResult
+        {
+            public Slice Key;
+            public TableValueHolder Result;
+        }
+
+        public class TableValueHolder
+        {
+            // we need this so we'll not have to create a new allocation
+            // of TableValueReader per value
+            public TableValueReader Reader;
         }
     }
 }

@@ -189,27 +189,24 @@ namespace Raven.Server.Documents.Indexes
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
-                foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys))
+                foreach (var tvr in table.SeekForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, 0))
                 {
-                    foreach (var a in sr.Results)
-                    {
-                        int size;
-                        var error = new IndexingError();
+                    int size;
+                    var error = new IndexingError();
 
-                        var ptr = a.Reader.Read(0, out size);
-                        error.Timestamp = new DateTime(IPAddress.NetworkToHostOrder(*(long*)ptr), DateTimeKind.Utc);
+                    var ptr = tvr.Result.Reader.Read(0, out size);
+                    error.Timestamp = new DateTime(IPAddress.NetworkToHostOrder(*(long*)ptr), DateTimeKind.Utc);
 
-                        ptr = a.Reader.Read(1, out size);
-                        error.Document = new LazyStringValue(null, ptr, size, context);
+                    ptr = tvr.Result.Reader.Read(1, out size);
+                    error.Document = new LazyStringValue(null, ptr, size, context);
 
-                        ptr = a.Reader.Read(2, out size);
-                        error.Action = new LazyStringValue(null, ptr, size, context);
+                    ptr = tvr.Result.Reader.Read(2, out size);
+                    error.Action = new LazyStringValue(null, ptr, size, context);
 
-                        ptr = a.Reader.Read(3, out size);
-                        error.Error = new LazyStringValue(null, ptr, size, context);
+                    ptr = tvr.Result.Reader.Read(3, out size);
+                    error.Error = new LazyStringValue(null, ptr, size, context);
 
-                        errors.Add(error);
-                    }
+                    errors.Add(error);
                 }
             }
 
@@ -408,7 +405,7 @@ namespace Raven.Server.Documents.Indexes
                 var currentMaxNumberOfOutputs = statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument)?.Reader.ReadLittleEndianInt32();
 
                 byte* ptr;
-                using (statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int),out ptr))
+                using (statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int), out ptr))
                 {
                     *(int*)ptr = currentMaxNumberOfOutputs > stats.MaxNumberOfOutputsPerDocument
                         ? currentMaxNumberOfOutputs.Value

@@ -61,14 +61,14 @@ namespace SlowTests.Voron.Bugs
                     Slice.From(tx.Allocator, key, out slice);
 
                     TableValueReader tableReader;
-                    Assert.True(docs.ReadByKey(slice,out tableReader));
+                    Assert.True(docs.ReadByKey(slice, out tableReader));
 
                     int size;
                     byte* buffer = tableReader.Read(1, out size);
                     Assert.True(buffer != null);
                     Assert.Equal(100, size);
                 }
-            }        
+            }
         }
 
         [Fact]
@@ -100,10 +100,9 @@ namespace SlowTests.Voron.Bugs
                     var docs = tx.OpenTable(DocsSchema, "docs");
 
                     var ids = new List<long>();
-                    foreach (var sr in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], Slices.BeforeAllKeys))
+                    foreach (var tvr in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], Slices.BeforeAllKeys, 0))
                     {
-                        foreach (var tvr in sr.Results)
-                            ids.Add(tvr.Reader.Id);
+                        ids.Add(tvr.Result.Reader.Id);
                     }
 
                     foreach (var id in ids)
@@ -118,7 +117,7 @@ namespace SlowTests.Voron.Bugs
 
                     Slice val;
                     Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1), out val);
-                    var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], val);
+                    var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], val, 0);
                     Assert.Empty(reader);
                 }
             }

@@ -254,14 +254,8 @@ namespace Raven.Server.Documents
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
 
-                foreach (var subscriptionTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                foreach (var subscriptionTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys, start))
                 {
-                    if (start > 0)
-                    {
-                        start--;
-                        continue;
-                    }
-
                     if (take-- <= 0)
                         yield break;
 

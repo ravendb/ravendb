@@ -258,15 +258,11 @@ namespace Raven.Server.ServerWide
             Slice loweredPrefix;
             using (Slice.From(ctx.Allocator, prefix.ToLowerInvariant(), out loweredPrefix))
             {
-                foreach (var result in items.SeekByPrimaryKeyStartingWith(loweredPrefix, Slices.Empty))
+                foreach (var result in items.SeekByPrimaryKeyStartingWith(loweredPrefix, Slices.Empty, start))
                 {
-                    if (start > 0)
-                    {
-                        start--;
-                        continue;
-                    }
                     if (take-- <= 0)
                         yield break;
+
                     yield return GetCurrentItem(ctx, ref result.Reader);
                 }
             }
