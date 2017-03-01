@@ -58,7 +58,16 @@ namespace FastTests.Client.Attachments
                     var user = session.Load<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
-                    Assert.Equal(string.Join(",", names.OrderBy(x => x)), metadata[Constants.Documents.Metadata.Attachments]);
+                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                    Assert.Equal(3, attachments.Length);
+                    var orderedNames = names.OrderBy(x => x).ToArray();
+                    for (var i = 0; i < names.Length; i++)
+                    {
+                        var name = orderedNames[i];
+                        var attachment = attachments[i];
+                        Assert.Equal(name, attachment.GetString(nameof(Attachment.Name)));
+                        Assert.Contains("=", attachment.GetString(nameof(Attachment.Hash)));
+                    }
                 }
 
                 var statistics = store.Admin.Send(new GetStatisticsOperation());

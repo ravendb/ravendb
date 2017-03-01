@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
@@ -261,7 +260,7 @@ namespace SlowTests.Core.Session
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Put(companyId, null, new Company { Id = companyId }, new Dictionary<string, StringValues> { { attrKey, attrVal } });
+                    commands.Put(companyId, null, new Company { Id = companyId }, new Dictionary<string, object> { { attrKey, attrVal } });
                 }
 
                 using (var session = store.OpenSession())

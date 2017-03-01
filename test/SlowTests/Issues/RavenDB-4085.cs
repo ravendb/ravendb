@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -32,7 +31,7 @@ namespace SlowTests.Issues
                     {
                         for (var i = 0; i < 1000; i++)
                         {
-                            commands.Put("users/" + (i + 1), null, new { Name = "test #" + i }, new Dictionary<string, StringValues>
+                            commands.Put("users/" + (i + 1), null, new { Name = "test #" + i }, new Dictionary<string, object>
                             {
                                 { Constants.Documents.Metadata.Collection, "Users" }
                             });

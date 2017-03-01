@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Xunit;
 
@@ -19,7 +18,7 @@ namespace SlowTests.Server.Documents
                 {
                     await commands.PutAsync("users/1", null,
                         new { Email = "support@ravendb.net" },
-                        new Dictionary<string, StringValues>
+                        new Dictionary<string, object>
                         {
                             {"@collection", "Users"}
                         });
@@ -28,7 +27,7 @@ namespace SlowTests.Server.Documents
                     {
                         await commands.PutAsync("users/1", null,
                             new { Email = "support@hibernatingrhinos.com" },
-                            new Dictionary<string, StringValues>
+                            new Dictionary<string, object>
                             {
                                 {"@collection", "UserAddresses"}
                             });

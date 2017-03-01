@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
@@ -59,7 +58,7 @@ namespace SlowTests.Bugs
                     {
                         store.Commands().Delete("cars/1", null);
                         Thread.Sleep(31);
-                        store.Commands().Put("cars/1", null, new object(), new Dictionary<string, StringValues>());
+                        store.Commands().Put("cars/1", null, new object());
 
                     }
                 });
@@ -69,7 +68,7 @@ namespace SlowTests.Bugs
                     {
                         store.Commands().Delete("cars/2", null);
                         Thread.Sleep(17);
-                        store.Commands().Put("cars/2", null, new object(), new Dictionary<string, StringValues>());
+                        store.Commands().Put("cars/2", null, new object());
                     }
                 });
 

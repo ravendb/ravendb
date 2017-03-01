@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -21,7 +20,7 @@ namespace SlowTests.MailingList
                     commands.Put("a", null, new
                     {
                         FirstName = "Oren"
-                    }, new Dictionary<string, StringValues>
+                    }, new Dictionary<string, object>
                     {
                         {Constants.Documents.Metadata.Collection, "Users"}
                     });
@@ -29,7 +28,7 @@ namespace SlowTests.MailingList
                     commands.Put("b", null, new
                     {
                         FirstName = "Ayende"
-                    }, new Dictionary<string, StringValues>
+                    }, new Dictionary<string, object>
                     {
                         {Constants.Documents.Metadata.Collection, "users"}
                     });
@@ -54,7 +53,7 @@ namespace SlowTests.MailingList
                     commands.Put("a", null, new
                     {
                         FirstName = "Oren"
-                    }, new Dictionary<string, StringValues>
+                    }, new Dictionary<string, object>
                     {
                         {Constants.Documents.Metadata.Collection, "Users"}
                     });
@@ -62,7 +61,7 @@ namespace SlowTests.MailingList
                     commands.Put("b", null, new
                     {
                         FirstName = "Ayende"
-                    }, new Dictionary<string, StringValues>
+                    }, new Dictionary<string, object>
                     {
                         {Constants.Documents.Metadata.Collection, "users"}
                     });

@@ -265,7 +265,6 @@ namespace Sparrow.Json
             }
         }
 
-
         private void WriteRawString(byte* buffer, int size)
         {
             if (size < _bufferLen)
@@ -474,6 +473,5 @@ namespace Sparrow.Json
             _buffer[_pos++] = (byte)'\r';
             _buffer[_pos++] = (byte)'\n';
         }
-
     }
 }

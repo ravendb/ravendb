@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -527,9 +526,8 @@ namespace FastTests.Server.Replication
                     using (var s2 = store2.OpenSession())
                     {
                         var metadata = s2.Advanced.GetMetadataFor(s2.Load<User>("foo/bar"));
-                        StringValues collection;
-                        metadata.TryGetValue(Constants.Documents.Metadata.Collection, out collection);
-                        return collection[0];
+                        var collection = metadata.GetString(Constants.Documents.Metadata.Collection);
+                        return collection;
                     }
                 }, "New_Users");
 
@@ -571,9 +569,8 @@ namespace FastTests.Server.Replication
                     using (var s2 = store2.OpenSession())
                     {
                         var metadata = s2.Advanced.GetMetadataFor(s2.Load<User>("foo/bar"));
-                        StringValues collection;
-                        metadata.TryGetValue(Constants.Documents.Metadata.Collection, out collection);
-                        return collection[0];
+                        var collection = metadata.GetString(Constants.Documents.Metadata.Collection);
+                        return collection;
                     }
                 }, "New_Users");
 
@@ -621,9 +618,8 @@ namespace FastTests.Server.Replication
                     {
                         newDoc = s2.Load<New_User2>("foo/bar");
                         var metadata = s2.Advanced.GetMetadataFor(newDoc);
-                        StringValues collection;
-                        metadata.TryGetValue(Constants.Documents.Metadata.Collection, out collection);
-                        return collection[0];
+                        var collection = metadata.GetString(Constants.Documents.Metadata.Collection);
+                        return collection;
                     }
                 }, "New_User2s");
 

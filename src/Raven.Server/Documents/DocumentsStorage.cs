@@ -892,7 +892,7 @@ namespace Raven.Server.Documents
                 Slice startSlice;
                 using (GetAttachmentPrefix(context, document.LoweredKey.Buffer, document.LoweredKey.Size, out startSlice))
                 {
-                    document.Attachments = GetAttachmentNamesForDocument(context, startSlice);
+                    document.Attachments = GetAttachmentsForDocument(context, startSlice);
                 }
             }
 
@@ -2671,8 +2671,8 @@ namespace Raven.Server.Documents
 
             Slice keySlice, contentTypeSlice, hashSlice;
             using (GetAttachmentKey(context, lowerDocumentId, lowerDocumentIdSize, lowerName, lowerNameSize, out keySlice))
-            using (Slice.From(context.Allocator, contentType, out contentTypeSlice))
-            using (Slice.From(context.Allocator, hash, out hashSlice))
+            using (DocumentKeyWorker.GetStringPreserveCase(context, contentType, out contentTypeSlice))
+            using (DocumentKeyWorker.GetStringPreserveCase(context, hash, out hashSlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
@@ -2841,14 +2841,15 @@ namespace Raven.Server.Documents
             });
         }
 
-        private IEnumerable<LazyStringValue> GetAttachmentNamesForDocument(DocumentsOperationContext context, Slice startSlice)
+        private IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, Slice startSlice)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             foreach (var sr in table.SeekByPrimaryKeyStartingWith(startSlice, Slices.Empty, 0))
             {
-                if (IsAttachmentDeleted(ref sr.Reader))
+                var attachment = TableValueToAttachment(context, ref sr.Reader);
+                if (attachment == null)
                     continue;
-                yield return TableValueToKey(context, (int)AttachmentsTable.Name, ref sr.Reader);
+                yield return attachment;
             }
         }
 
@@ -2977,13 +2978,9 @@ namespace Raven.Server.Documents
 
             result.Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
             result.Name = TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr);
+            result.ContentType = TableValueToKey(context, (int)AttachmentsTable.ContentType, ref tvr);
+            result.Hash = TableValueToKey(context, (int)AttachmentsTable.Hash, ref tvr);
             result.LastModified = new DateTime(*(long*)tvr.Read((int) AttachmentsTable.LastModified, out size));
-
-            ptr = tvr.Read((int)AttachmentsTable.Hash, out size);
-            result.Hash = new LazyStringValue(null, ptr, size, context);
-
-            ptr = tvr.Read((int) AttachmentsTable.ContentType, out size);
-            result.ContentType = new LazyStringValue(null, ptr, size, context);
 
             return result;
         }

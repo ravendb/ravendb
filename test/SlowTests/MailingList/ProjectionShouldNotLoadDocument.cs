@@ -6,7 +6,6 @@
 
 using System.Collections.Generic;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
@@ -47,7 +46,7 @@ namespace SlowTests.MailingList
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Put("FOO", null, new { Name = "Ayende" }, new Dictionary<string, StringValues> { { Constants.Documents.Metadata.Collection, "Foos" } });
+                    commands.Put("FOO", null, new { Name = "Ayende" }, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Foos" } });
 
                     var result = commands.Query("dynamic", new IndexQuery(store.Conventions)
                     {

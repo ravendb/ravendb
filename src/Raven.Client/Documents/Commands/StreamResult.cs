@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
-using Microsoft.Extensions.Primitives;
 
 namespace Raven.Client.Documents.Commands
 {
@@ -26,7 +25,7 @@ namespace Raven.Client.Documents.Commands
         /// <summary>
         /// Document metadata.
         /// </summary>
-        public IDictionary<string, StringValues> Metadata { get; set; }
+        public IDictionary<string, object> Metadata { get; set; }
 
         /// <summary>
         /// Document deserialized to <c>TType</c>.

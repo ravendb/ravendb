@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -57,7 +56,7 @@ namespace SlowTests.MailingList
    'FirstName':'asdfasdfasdf'
 }");
 
-                    commands.Put("patrons/1", null, json, new Dictionary<string, StringValues>
+                    commands.Put("patrons/1", null, json, new Dictionary<string, object>
                     {
                         {Constants.Documents.Metadata.Collection, "patrons"}
                     });

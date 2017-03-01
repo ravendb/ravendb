@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Xunit;
 
 namespace SlowTests.Tests.Issues
@@ -15,7 +14,7 @@ namespace SlowTests.Tests.Issues
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Put("test", null, new { }, new Dictionary<string, StringValues> { { "Foo", (string)null } });
+                    commands.Put("test", null, new { }, new Dictionary<string, object> { { "Foo", (string)null } });
                 }
             }
         }

@@ -10,7 +10,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Lambda2Js;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
@@ -83,9 +82,7 @@ namespace Raven.Client.Documents.Session
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
         {
             var metadata = GetMetadataFor(entity);
-            StringValues id;
-            metadata.TryGetValue(Constants.Documents.Metadata.Id, out id);
-
+            var id = metadata.GetString(Constants.Documents.Metadata.Id);
             Increment(id, path, valToAdd);
         }
 
@@ -103,9 +100,7 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(T entity, Expression<Func<T, U>> path, U value)
         {
             var metadata = GetMetadataFor(entity);
-            StringValues id;
-            metadata.TryGetValue(Constants.Documents.Metadata.Id, out id);
-
+            var id = metadata.GetString(Constants.Documents.Metadata.Id);
             Patch(id, path, value);
         }
 
@@ -124,9 +119,7 @@ namespace Raven.Client.Documents.Session
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
             var metadata = GetMetadataFor(entity);
-            StringValues id;
-            metadata.TryGetValue(Constants.Documents.Metadata.Id, out id);
-
+            var id = metadata.GetString(Constants.Documents.Metadata.Id);
             Patch(id, path, arrayAdder);
         }
 
