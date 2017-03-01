@@ -678,7 +678,7 @@ namespace Raven.Server.Documents.Handlers
                 var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
                 using (var ms = new MemoryStream())
-                using (var collector = new LiveIndexingPerformanceCollector(Database.Changes, Database.DatabaseShutdown, indexes))
+                using (var collector = new LiveIndexingPerformanceCollector(Database, Database.DatabaseShutdown, indexes))
                 {
                     while (Database.DatabaseShutdown.IsCancellationRequested == false)
                     {

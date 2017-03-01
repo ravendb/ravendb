@@ -156,6 +156,14 @@ namespace Raven.Client.Documents.Changes
         }
     }
 
+    public class IndexRenameChange : IndexChange
+    {
+        /// <summary>
+        /// The old index name
+        /// </summary>
+        public string OldIndexName { get; set; }
+    }
+
     public class TransformerChange : DatabaseChange
     {
         /// <summary>
