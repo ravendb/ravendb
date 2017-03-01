@@ -346,29 +346,29 @@ namespace Raven.Server.ServerWide
             {
                 if (_shutdownNotification.IsCancellationRequested)
                     return;
-            _shutdownNotification.Cancel();
-            toDispose.Add(NotificationCenter);
-            toDispose.Add(DatabasesLandlord);
-            toDispose.Add(_env);
-            toDispose.Add(ContextPool);
+                _shutdownNotification.Cancel();
+                toDispose.Add(NotificationCenter);
+                toDispose.Add(DatabasesLandlord);
+                toDispose.Add(_env);
+                toDispose.Add(ContextPool);
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
+                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
 
-            foreach (var disposable in toDispose)
-                exceptionAggregator.Execute(() =>
-                {
-                    try
+                foreach (var disposable in toDispose)
+                    exceptionAggregator.Execute(() =>
                     {
-                        disposable?.Dispose();
-                    }
-                    catch (ObjectDisposedException)
-                    {
+                        try
+                        {
+                            disposable?.Dispose();
+                        }
+                        catch (ObjectDisposedException)
+                        {
                         //we are disposing, so don't care
                     }
-                });
+                    });
 
-            exceptionAggregator.ThrowIfNeeded();
-        }
+                exceptionAggregator.ThrowIfNeeded();
+            }
 
 
         }

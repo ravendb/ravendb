@@ -411,10 +411,6 @@ namespace Sparrow
         }
     }
 
-    /// <summary>
-    /// This class implements a two tier memory pooling support, first using thread local storage
-    /// and then stealing from other threads 
-    /// </summary>
     public struct ByteStringMemoryCache : IByteStringAllocator
     {
         //TODO: policy for reducing this when they are not needed
@@ -423,15 +419,13 @@ namespace Sparrow
 
         public static void Clean()
         {
-            if (_threadLocal == null || _threadLocal.Count == 0)
+            if (_threadLocal == null)
                 return; // nothing to do;
 
-            foreach (var segment in _threadLocal)
+            while (_threadLocal.Count > 0)
             {
-                segment.Dispose();
+                _threadLocal.Pop().Dispose();
             }
-            _threadLocal.Clear();
-
         }
 
         [ThreadStatic]
