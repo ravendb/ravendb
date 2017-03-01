@@ -68,7 +68,8 @@ class virtualGrid<T> {
             reset: (hard: boolean = true) => this.resetItems(hard),
             selection: this.selection,
             getSelectedItems: () => this.getSelectedItems(),
-            dirtyResults: this.dirtyResults
+            dirtyResults: this.dirtyResults,
+            resultEtag: () => this.previousResultsEtag()
         }
     }
 
