@@ -199,5 +199,16 @@ namespace Raven.Server.Documents
                 $"Key cannot exceed 512 bytes, but the key was {Utf8.GetByteCount(str)} bytes. The invalid key is '{str}'.",
                 nameof(str));
         }
+
+        public static IDisposable GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
+        {
+            byte* lowerKey;
+            int lowerKeySize;
+            byte* key;
+            int keySize;
+            GetLowerKeySliceAndStorageKey(context, str, out lowerKey, out lowerKeySize, out key, out keySize);
+
+            return Slice.From(context.Allocator, key, keySize, out strSlice);
+        }
     }
 }

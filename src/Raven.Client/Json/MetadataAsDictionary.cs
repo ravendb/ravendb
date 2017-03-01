@@ -1,14 +1,15 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Extensions.Primitives;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    internal class MetadataAsDictionary : IDictionary<string, StringValues>
+    internal class MetadataAsDictionary : IMetadataDictionary
     {
-        private IDictionary<string, StringValues> _metadata;
+        private IDictionary<string, object> _metadata;
         private readonly BlittableJsonReaderObject _source;
 
         public MetadataAsDictionary(BlittableJsonReaderObject metadata)
@@ -16,9 +17,14 @@ namespace Raven.Client.Json
             _source = metadata;
         }
 
+        public MetadataAsDictionary(Dictionary<string, object> metadata)
+        {
+            _metadata = metadata;
+        }
+
         public void Init()
         {
-            _metadata = new Dictionary<string, StringValues>();
+            _metadata = new Dictionary<string, object>();
             var indexes = _source.GetPropertiesByInsertionOrder();
             foreach (var index in indexes)
             {
@@ -28,22 +34,30 @@ namespace Raven.Client.Json
             }
         }
 
-        private StringValues ConvertValue(object value)
+        private object ConvertValue(object value)
         {
-            var arr = value as BlittableJsonReaderArray;
-            if (arr != null)
+            if (value is LazyStringValue || value is LazyCompressedStringValue)
+                return value.ToString();
+
+            var obj = value as BlittableJsonReaderObject;
+            if (obj != null)
+                return new MetadataAsDictionary(obj);
+
+            var array = value as BlittableJsonReaderArray;
+            if (array != null)
             {
-                var strs = new string[arr.Length];
-                for (int i = 0; i < arr.Length; i++)
+                var result = new object[array.Length];
+                for (int i = 0; i < array.Length; i++)
                 {
-                    strs[i] = arr[i]?.ToString();
+                    result[i] = ConvertValue(array[i]);
                 }
-                return new StringValues(strs);
+                return result;
             }
-            return new StringValues(value.ToString());
+
+            throw new NotImplementedException("Implement support for numbers and more");
         }
 
-        public StringValues this[string key]
+        public object this[string key]
         {
             get
             {
@@ -73,13 +87,13 @@ namespace Raven.Client.Json
 
         public ICollection<string> Keys => _metadata != null ? _metadata.Keys : _source.GetPropertyNames();
 
-        public ICollection<StringValues> Values
+        public ICollection<object> Values
         {
             get
             {
                 if (_metadata != null)
                     return _metadata.Values;
-                var values = new List<StringValues>();
+                var values = new List<object>();
                 foreach (var prop in _source.GetPropertiesByInsertionOrder())
                 {
                     var propDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -90,7 +104,7 @@ namespace Raven.Client.Json
             }
         }
 
-        public void Add(KeyValuePair<string, StringValues> item)
+        public void Add(KeyValuePair<string, object> item)
         {
             if (_metadata == null)
                 Init();
@@ -98,7 +112,7 @@ namespace Raven.Client.Json
             _metadata.Add(item.Key, item.Value);
         }
 
-        public void Add(string key, StringValues value)
+        public void Add(string key, object value)
         {
             if (_metadata == null)
                 Init();
@@ -115,7 +129,7 @@ namespace Raven.Client.Json
             _metadata.Clear();
         }
 
-        public bool Contains(KeyValuePair<string, StringValues> item)
+        public bool Contains(KeyValuePair<string, object> item)
         {
             if (_metadata != null)
                 return _metadata.Contains(item);
@@ -133,7 +147,7 @@ namespace Raven.Client.Json
             return _source.TryGetMember(key, out value);
         }
 
-        public void CopyTo(KeyValuePair<string, StringValues>[] array, int arrayIndex)
+        public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)
         {
             if (_metadata == null)
                 Init();
@@ -141,7 +155,7 @@ namespace Raven.Client.Json
             _metadata.CopyTo(array, arrayIndex);
         }
 
-        public IEnumerator<KeyValuePair<string, StringValues>> GetEnumerator()
+        public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
         {
             if (_metadata == null)
                 Init();
@@ -149,7 +163,7 @@ namespace Raven.Client.Json
             return _metadata.GetEnumerator();
         }
 
-        public bool Remove(KeyValuePair<string, StringValues> item)
+        public bool Remove(KeyValuePair<string, object> item)
         {
             if (_metadata == null)
                 Init();
@@ -165,7 +179,7 @@ namespace Raven.Client.Json
             return _metadata.Remove(key);
         }
 
-        public bool TryGetValue(string key, out StringValues value)
+        public bool TryGetValue(string key, out object value)
         {
             if (_metadata != null)
                 return _metadata.TryGetValue(key, out value);
@@ -176,8 +190,34 @@ namespace Raven.Client.Json
                 value = ConvertValue(val);
                 return true;
             }
-            value = default(StringValues);
+            value = default(object);
             return false;
+        }
+
+        public bool TryGetValue(string key, out string value)
+        {
+            object obj;
+            var result = TryGetValue(key, out obj);
+            value = (string) obj;
+            return result;
+        }
+
+        public string GetString(string key)
+        {
+            var obj = this[key];
+            return (string) obj;
+        }
+
+        public IMetadataDictionary GetObject(string key)
+        {
+            var obj = this[key];
+            return (IMetadataDictionary) obj;
+        }
+
+        public IMetadataDictionary[] GetObjects(string key)
+        {
+            var obj = (object[])this[key];
+            return obj.Cast<IMetadataDictionary>().ToArray();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

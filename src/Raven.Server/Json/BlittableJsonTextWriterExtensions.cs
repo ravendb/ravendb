@@ -1176,8 +1176,7 @@ namespace Raven.Server.Json
                 if ((document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(Constants.Documents.Metadata.Attachments);
-                    writer.WriteArray(document.Attachments);
+                    writer.WriteAttachments(document.Attachments);
                 }
             }
             if (document.Etag != 0)
@@ -1206,6 +1205,34 @@ namespace Raven.Server.Json
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }
             writer.WriteEndObject();
+        }
+
+        private static void WriteAttachments(this BlittableJsonTextWriter writer, IEnumerable<Attachment> attachments)
+        {
+            writer.WritePropertyName(Constants.Documents.Metadata.Attachments);
+
+            writer.WriteStartArray();
+
+            var first = true;
+            foreach (var attachment in attachments)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(attachment.Name));
+                writer.WriteString(attachment.Name);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(attachment.Hash));
+                writer.WriteString(attachment.Hash);
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
         }
 
         public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)

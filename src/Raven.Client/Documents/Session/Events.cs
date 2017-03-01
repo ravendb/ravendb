@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.Primitives;
 
 namespace Raven.Client.Documents.Session
 {
     public class BeforeStoreEventArgs : EventArgs
     {
-        private IDictionary<string, StringValues> _documentMetadata;
+        private IDictionary<string, object> _documentMetadata;
 
         public BeforeStoreEventArgs(InMemoryDocumentSessionOperations session, string documentId, object entity)
         {
@@ -20,12 +19,12 @@ namespace Raven.Client.Documents.Session
         public string DocumentId { get; }
         public object Entity { get; }
 
-        public IDictionary<string, StringValues> DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
+        public IDictionary<string, object> DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
     }
 
     public class AfterStoreEventArgs : EventArgs
     {
-        private IDictionary<string, StringValues> _documentMetadata;
+        private IDictionary<string, object> _documentMetadata;
 
         public AfterStoreEventArgs(InMemoryDocumentSessionOperations session, string documentId, object entity)
         {
@@ -39,12 +38,12 @@ namespace Raven.Client.Documents.Session
         public string DocumentId { get; }
         public object Entity { get; }
 
-        public IDictionary<string, StringValues> DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
+        public IDictionary<string, object> DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
     }
 
     public class BeforeDeleteEventArgs : EventArgs
     {
-        private IDictionary<string, StringValues> _documentMetadata;
+        private IDictionary<string, object> _documentMetadata;
 
         public BeforeDeleteEventArgs(InMemoryDocumentSessionOperations session, string documentId, object entity)
         {
@@ -58,7 +57,7 @@ namespace Raven.Client.Documents.Session
         public string DocumentId { get; }
         public object Entity { get; }
 
-        public IDictionary<string, StringValues> DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
+        public IDictionary<string, object> DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
     }
 
     public class BeforeQueryExecutedEventArgs : EventArgs

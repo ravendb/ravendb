@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -62,12 +61,12 @@ namespace FastTests
                 return (TEntity)_store.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), json);
             }
 
-            public PutResult Put(string id, long? etag, object data, Dictionary<string, StringValues> metadata)
+            public PutResult Put(string id, long? etag, object data, Dictionary<string, object> metadata = null)
             {
                 return AsyncHelpers.RunSync(() => PutAsync(id, etag, data, metadata));
             }
 
-            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, StringValues> metadata, CancellationToken cancellationToken = default(CancellationToken))
+            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, object> metadata, CancellationToken cancellationToken = default(CancellationToken))
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
@@ -92,7 +91,7 @@ namespace FastTests
                         if (metadataJson != null)
                         {
                             documentInfo.Metadata = metadataJson;
-                            documentInfo.MetadataInstance = metadata;
+                            documentInfo.MetadataInstance = new MetadataAsDictionary(metadata);
                         }
 
                         documentJson = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(data, documentInfo);

@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -58,7 +57,7 @@ namespace FastTests.Server.Documents.Expiration
                     var company2 = await session.LoadAsync<Company>(company.Id);
                     Assert.NotNull(company2);
                     var metadata = session.Advanced.GetMetadataFor(company2);
-                    var expirationDate = metadata[Constants.Documents.Expiration.ExpirationDate];
+                    var expirationDate = metadata.GetString(Constants.Documents.Expiration.ExpirationDate);
                     Assert.NotNull(expirationDate);
                     var dateTime = DateTime.ParseExact(expirationDate, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                     Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
@@ -91,11 +90,11 @@ namespace FastTests.Server.Documents.Expiration
                 await SetupExpiration(store);
 
                 var expiry = SystemTime.UtcNow.AddMinutes(5);
-                var metadata = new Dictionary<string, StringValues>
+                var metadata = new Dictionary<string, object>
                 {
                     [Constants.Documents.Expiration.ExpirationDate] = expiry.ToString(Default.DateTimeOffsetFormatsToWrite)
                 };
-                var metadata2 = new Dictionary<string, StringValues>
+                var metadata2 = new Dictionary<string, object>
                 {
                     [Constants.Documents.Expiration.ExpirationDate] = expiry.AddMinutes(1).ToString(Default.DateTimeOffsetFormatsToWrite)
                 };

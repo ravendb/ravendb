@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Xunit;
 
 namespace SlowTests.Bugs
@@ -12,7 +11,7 @@ namespace SlowTests.Bugs
         {
             using (var store = GetDocumentStore())
             {
-                store.Commands().Put("alphas/1", null, new { Foo =  "Bar"}, new Dictionary<string, StringValues>
+                store.Commands().Put("alphas/1", null, new { Foo =  "Bar"}, new Dictionary<string, object>
                 {
                     { "@collection", "Alphas" },
                     { "Raven-Clr-Type", "SlowTests.Bugs.Second.Alpha" }

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -81,7 +80,7 @@ select new {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
                         {
                             var json = commands.Context.ReadForMemory(stream, "blog");
-                            commands.Put("blogs/" + i, null, json, new Dictionary<string, StringValues> { { "@collection", "Blogs" } });
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
 

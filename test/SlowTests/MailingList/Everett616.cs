@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -34,7 +33,7 @@ namespace SlowTests.MailingList
   'SourceId': '00000000-0000-0000-0000-000000000000'
 }");
 
-                    commands.Put("test/1", null, json, new Dictionary<string, StringValues> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
+                    commands.Put("test/1", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
 
                     json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
@@ -52,7 +51,7 @@ namespace SlowTests.MailingList
   'SourceId': '00000000-0000-0000-0000-000000000000'
 }");
 
-                    commands.Put("test/2", null, json, new Dictionary<string, StringValues> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
+                    commands.Put("test/2", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
                 }
 
                 store.Admin.Send(new PutIndexesOperation(new[] {
@@ -98,7 +97,7 @@ namespace SlowTests.MailingList
   'SourceId': '00000000-0000-0000-0000-000000000000'
 }");
 
-                    commands.Put("test/1", null, json, new Dictionary<string, StringValues> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
+                    commands.Put("test/1", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
 
                     json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
@@ -116,7 +115,7 @@ namespace SlowTests.MailingList
   'SourceId': '00000000-0000-0000-0000-000000000000'
 }");
 
-                    commands.Put("test/2", null, json, new Dictionary<string, StringValues> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
+                    commands.Put("test/2", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
                 }
 
                 store.Admin.Send(new PutIndexesOperation(new[] {
