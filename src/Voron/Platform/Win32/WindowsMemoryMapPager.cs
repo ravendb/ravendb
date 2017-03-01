@@ -211,8 +211,8 @@ namespace Voron.Platform.Win32
 #endif
 
             _totalAllocationSize += allocationSize;
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
-
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize +
+                                                 ((_totalAllocationSize % Constants.Storage.PageSize) == 0 ? 0 : 1);
             return newPagerState;
         }
 

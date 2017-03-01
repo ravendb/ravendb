@@ -1,19 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Xunit;
-using Raven.Client.Indexes;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_1847 : RavenTest
+    public class RavenDB_1847 : RavenTestBase
     {
         [Fact]
         public void CanIndexAndQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new TestObjectIndex().Execute(store);
 
@@ -86,61 +85,61 @@ namespace Raven.Tests.Issues
 
                     var query = session.Query<TestObject>();
 
-  
-                    //good query
-                  var res1 =  query.Where(x => x.DateRangesWithNumbers.Any(dateRange =>
-                        (dateRange.From <= myFromDate && dateRange.To >= myFromDate) ||
-                        (dateRange.From <= myToDate && dateRange.To >= myToDate)))
-                        .ToList();
 
-                   //bad query
-                  var res2=  query.Where(x => x.DateRangesWithNumbers.Any(dateRange =>
-                        (myFromDate >= dateRange.From && myFromDate <= dateRange.To) ||
-                        (myToDate >= dateRange.From && myToDate <= dateRange.To)))
-                        .ToList();
-                  var areEquivalent = (res1.Count == res2.Count) && !res1.Except(res2).Any();
-                  Assert.Equal(areEquivalent,true);
-                  
+                    //good query
+                    var res1 = query.Where(x => x.DateRangesWithNumbers.Any(dateRange =>
+                         (dateRange.From <= myFromDate && dateRange.To >= myFromDate) ||
+                         (dateRange.From <= myToDate && dateRange.To >= myToDate)))
+                          .ToList();
+
+                    //bad query
+                    var res2 = query.Where(x => x.DateRangesWithNumbers.Any(dateRange =>
+                          (myFromDate >= dateRange.From && myFromDate <= dateRange.To) ||
+                          (myToDate >= dateRange.From && myToDate <= dateRange.To)))
+                          .ToList();
+                    var areEquivalent = (res1.Count == res2.Count) && !res1.Except(res2).Any();
+                    Assert.Equal(areEquivalent, true);
+
                 }
             }
         }
-    }
 
-    public class TestObjectIndex : AbstractIndexCreationTask<TestObject>
-    {
-        public TestObjectIndex()
+        private class TestObjectIndex : AbstractIndexCreationTask<TestObject>
         {
-            this.Map = testobjects => from testobject in testobjects
-                from daterangewithnumber in testobject.DateRangesWithNumbers
-                select new
-                {
-                    From = daterangewithnumber.From,
-                    To = daterangewithnumber.To,
-                    Number = daterangewithnumber.Number
-                };
-        }
-    }
-
-    public class DateRangeWithNumber
-    {
-        public DateTimeOffset From { get; set; }
-        public DateTimeOffset To { get; set; }
-
-        public int Number { get; set; }
-
-        public static bool Equals(DateRangeWithNumber date1, DateRangeWithNumber date2)
-        {
-            return date1.From.Equals(date2.From) && date1.To.Equals(date2.To) && (date1.Number == date2.Number);
-        }
-    }
-
-    public class TestObject
-    {
-        public TestObject()
-        {
-            this.DateRangesWithNumbers = new List<DateRangeWithNumber>();
+            public TestObjectIndex()
+            {
+                Map = testobjects => from testobject in testobjects
+                                     from daterangewithnumber in testobject.DateRangesWithNumbers
+                                     select new
+                                     {
+                                         From = daterangewithnumber.From,
+                                         To = daterangewithnumber.To,
+                                         Number = daterangewithnumber.Number
+                                     };
+            }
         }
 
-        public List<DateRangeWithNumber> DateRangesWithNumbers { get; set; }
+        private class DateRangeWithNumber
+        {
+            public DateTimeOffset From { get; set; }
+            public DateTimeOffset To { get; set; }
+
+            public int Number { get; set; }
+
+            public static bool Equals(DateRangeWithNumber date1, DateRangeWithNumber date2)
+            {
+                return date1.From.Equals(date2.From) && date1.To.Equals(date2.To) && (date1.Number == date2.Number);
+            }
+        }
+
+        private class TestObject
+        {
+            public TestObject()
+            {
+                DateRangesWithNumbers = new List<DateRangeWithNumber>();
+            }
+
+            public List<DateRangeWithNumber> DateRangesWithNumbers { get; set; }
+        }
     }
 }

@@ -194,7 +194,7 @@ namespace Sparrow
             {
                 public const int Alignment = 32;
 
-                public static XXHash64Context BeginProcessInline(uint seed = 0)
+                public static XXHash64Context BeginProcessInline(ulong seed = 0)
                 {
                     var context = new XXHash64Context
                     {
@@ -354,7 +354,7 @@ namespace Sparrow
                 }
 
 
-                public static XXHash64Context BeginProcess(uint seed = 0)
+                public static XXHash64Context BeginProcess(ulong seed = 0)
                 {
                     return BeginProcessInline(seed);
                 }

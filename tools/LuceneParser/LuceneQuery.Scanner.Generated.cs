@@ -1377,12 +1377,12 @@ int NextState() {
         // ==== Nested struct to support input switching in scanners ====
         // ==============================================================
 
-		struct BufferContext {
+        struct BufferContext {
             internal ScanBuff buffSv;
-			internal int chrSv;
-			internal int cColSv;
-			internal int lNumSv;
-		}
+            internal int chrSv;
+            internal int cColSv;
+            internal int lNumSv;
+        }
 
         // ==============================================================
         // ===== Private methods to save and restore buffer contexts ====
@@ -1395,14 +1395,14 @@ int NextState() {
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         BufferContext MkBuffCtx()
-		{
-			BufferContext rslt;
-			rslt.buffSv = this.buffer;
-			rslt.chrSv = this.code;
-			rslt.cColSv = this.cCol;
-			rslt.lNumSv = this.lNum;
-			return rslt;
-		}
+        {
+            BufferContext rslt;
+            rslt.buffSv = this.buffer;
+            rslt.chrSv = this.code;
+            rslt.cColSv = this.cCol;
+            rslt.lNumSv = this.lNum;
+            return rslt;
+        }
 
         /// <summary>
         /// This method restores the buffer value and allied
@@ -1410,11 +1410,11 @@ int NextState() {
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         void RestoreBuffCtx(BufferContext value)
-		{
-			this.buffer = value.buffSv;
-			this.code = value.chrSv;
-			this.cCol = value.cColSv;
-			this.lNum = value.lNumSv;
+        {
+            this.buffer = value.buffSv;
+            this.code = value.chrSv;
+            this.cCol = value.cColSv;
+            this.lNum = value.lNumSv;
         } 
         // =================== End Nested classes =======================
 
@@ -1845,7 +1845,7 @@ int NextState() {
         case 122: // Recognized '{UnquotedTerm}',	Shortest string "0x"
         case 123: // Recognized '{UnquotedTerm}',	Shortest string "0x+"
 yylval.s = DiscardEscapeChar(yytext);
-								    return (int)Token.UNQUOTED_TERM;
+                                    return (int)Token.UNQUOTED_TERM;
             break;
         case 2: // Recognized '{Whitespace}',	Shortest string "\t"
 /* skip */
@@ -1917,13 +1917,13 @@ return (int)Token.OR;
         case 82: // Recognized '{UnquotedTerm}"_L_Range"',	Shortest string "@\x01<_L_Range"
         case 96: // Recognized '{UnquotedTerm}"_L_Range"',	Shortest string "@_L_Range"
 yylval.s = DiscardEscapeChar(yytext);
-								    return (int)Token.LONG_RANGE_TERM;
+                                    return (int)Token.LONG_RANGE_TERM;
             break;
         case 44: // Recognized '{UnquotedTerm}"_D_Range"',	Shortest string "\x01_D_Range"
         case 88: // Recognized '{UnquotedTerm}"_D_Range"',	Shortest string "@\x01<_D_Range"
         case 102: // Recognized '{UnquotedTerm}"_D_Range"',	Shortest string "@_D_Range"
 yylval.s = DiscardEscapeChar(yytext);
-	                                return (int)Token.DOUBLE_RANGE_TERM;
+                                    return (int)Token.DOUBLE_RANGE_TERM;
             break;
         case 45: // Recognized '{UnanalizedTerm}',	Shortest string "[[]]"
 yylval.s = DiscardEscapeChar(yytext); return (int)Token.UNANALIZED_TERM;
@@ -2026,8 +2026,8 @@ yylval.s = yytext; return (int)Token.QUOTED_WILDCARD_TERM;
         {
             // Protect against input errors that pop too far ...
             if (scStack.Count > 0) {
-				int newSc = scStack.Pop();
-				BEGIN(newSc);
+                int newSc = scStack.Pop();
+                BEGIN(newSc);
             } // Otherwise leave stack unchanged.
         }
  #endif // STACK
