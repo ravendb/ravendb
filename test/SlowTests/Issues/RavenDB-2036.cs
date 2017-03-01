@@ -1,13 +1,14 @@
+using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Documents.Exceptions.Compilation;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2036 : RavenTest
+    public class RavenDB_2036 : RavenTestBase
     {
         public class Index__TestByName : AbstractIndexCreationTask
         {
@@ -15,10 +16,12 @@ namespace Raven.Tests.Issues
             {
                 return new IndexDefinition
                 {
-                    Map = @"from doc in docs select new { doc.Id, doc.Name, collection = doc[""@metadata""][""Raven-Entity-Name""] };",
-                    Indexes =
+                    Maps = { @"from doc in docs select new { doc.Id, doc.Name, collection = doc[""@metadata""][""@collection""] };" },
+                    Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        {"Name", FieldIndexing.Analyzed}
+                        {
+                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed }
+                        }
                     }
                 };
             }
@@ -30,10 +33,12 @@ namespace Raven.Tests.Issues
             {
                 return new IndexDefinition
                 {
-                    Map = @"from doc in docs select new { doc.Id, doc.Name, collection = doc[""@metadata""][""Raven-Entity-Name""] };",
-                    Indexes =
+                    Maps = { @"from doc in docs select new { doc.Id, doc.Name, collection = doc[""@metadata""][""@collection""] };" },
+                    Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        {"Name", FieldIndexing.Analyzed}
+                        {
+                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed }
+                        }
                     }
                 };
             }
@@ -45,10 +50,12 @@ namespace Raven.Tests.Issues
             {
                 return new IndexDefinition
                 {
-                    Map = @"from doc in docs select new { doc.Id, doc.Name, collection = doc[""@metadata""][""Raven-Entity-Name""] };",
-                    Indexes =
+                    Maps = { @"from doc in docs select new { doc.Id, doc.Name, collection = doc[""@metadata""][""@collection""] };" },
+                    Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        {"Name", FieldIndexing.Analyzed}
+                        {
+                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed }
+                        }
                     }
                 };
             }
@@ -60,10 +67,12 @@ namespace Raven.Tests.Issues
             {
                 return new IndexDefinition
                 {
-                    Map = @"from doc in docs select new { doc.Id, doc.Name, collection = doc[""@metadata""][""Raven-Entity-Name""] };",
-                    Indexes =
+                    Maps = { @"from doc in docs select new { doc.Id, doc.Name, collection = doc[""@metadata""][""@collection""] };" },
+                    Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        {"Name", FieldIndexing.Analyzed}
+                        {
+                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed }
+                        }
                     }
                 };
             }
@@ -73,9 +82,8 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CheckDynamicName()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-
                 new DynamicByNameIndex().Execute(store);
                 WaitForIndexing(store);
 
@@ -84,7 +92,7 @@ namespace Raven.Tests.Issues
 
                     var query = session
                         .Query<Tag, DynamicByNameIndex>()
-                        .Customize(c => c.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(c => c.WaitForNonStaleResults())
                         .OrderBy(n => n.Name)
                         .ToList();
 
@@ -97,20 +105,20 @@ namespace Raven.Tests.Issues
         public void DynamicUserDefinedIndexNameCreateFail()
         {
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                var ex = Assert.Throws<IndexCompilationException>(() => new Dynamic().Execute(store));
+                var ex = Assert.Throws<RavenException>(() => new Dynamic().Execute(store));
                 Assert.True(ex.Message.Contains("Index name dynamic is reserved!"));
-               
+
             }
         }
 
         [Fact]
         public void Dynamic_IndexNameCreateFail()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                var ex = Assert.Throws<IndexCompilationException>(() => new Dynamic_().Execute(store));
+                var ex = Assert.Throws<RavenException>(() => new Dynamic_().Execute(store));
                 Assert.True(ex.Message.Contains("Index names starting with dynamic_ or dynamic/ are reserved!"));
 
             }
@@ -119,21 +127,19 @@ namespace Raven.Tests.Issues
         [Fact]
         public void DynamicIndexOk()
         {
-
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
-
                     var query = session
                         .Query<Tag>()
-                        .Customize(c => c.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(c => c.WaitForNonStaleResults())
                         .OrderBy(n => n.Name)
                         .ToList();
 
-                    Assert.Equal(query.Count,0);
+                    Assert.Equal(query.Count, 0);
                 }
             }
         }
@@ -141,17 +147,16 @@ namespace Raven.Tests.Issues
         [Fact]
         public void DoubleUnderscoreIndexNameCreateFail()
         {
-
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                var ex = Assert.Throws<IndexCompilationException>(() => new Index__TestByName().Execute(store));
+                var ex = Assert.Throws<RavenException>(() => new Index__TestByName().Execute(store));
                 Assert.True(ex.Message.Contains("Index name cannot contain // (double slashes)"));
             }
         }
-    }
 
-    public class Tag
-    {
-        public string Name { get; set; }
+        private class Tag
+        {
+            public string Name { get; set; }
+        }
     }
 }
