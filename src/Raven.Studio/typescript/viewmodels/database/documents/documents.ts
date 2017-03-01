@@ -14,6 +14,8 @@ import copyDocumentIds = require("viewmodels/database/documents/copyDocumentIds"
 
 import notificationCenter = require("common/notifications/notificationCenter");
 
+import changesContext = require("common/changesContext");
+
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
@@ -30,7 +32,6 @@ import eventsCollector = require("common/eventsCollector");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-import pagedResult = require("widgets/virtualGrid/pagedResult");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
@@ -108,6 +109,9 @@ class documents extends viewModelBase {
         const db = this.activeDatabase();
         return this.fetchCollectionsStats(db).done(results => {
             this.collectionsLoaded(results, db);
+
+            const dbStatsSubscription = changesContext.default.resourceNotifications().watchAllDatabaseStatsChanged(event => this.onDatabaseStatsChanged(event));
+            this.addNotification(dbStatsSubscription);
         });
     }
 
@@ -116,8 +120,16 @@ class documents extends viewModelBase {
             .execute();
     }
 
+    private onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
+        console.log(notification);
+        //TODO:
+
+        //TODO: remember to put in right position!
+    }
+
     private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
-        const collections = collectionsStats.collections;
+        let collections = collectionsStats.collections;
+        collections = _.sortBy(collections, x => x.name.toLocaleLowerCase());
 
         //TODO: starred
         const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
@@ -276,68 +288,9 @@ class documents extends viewModelBase {
         app.showBootstrapDialog(copyDialog);
     }
 
+    //TODO: sort collections by name
+
     /* TODO:
-    currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
-    selectedDocumentsText: KnockoutComputed<string>;
-    contextName = ko.observable<string>('');
-
-    constructor() {
-        super();
-
-        this.selectedCollection.subscribe(c => this.selectedCollectionChanged(c));
-
-        this.selectedDocumentsText = ko.computed(() => {
-            if (!!this.selectedDocumentIndices()) {
-                var documentsText = "document";
-                if (this.selectedDocumentIndices().length !== 1) {
-                    documentsText += "s";
-                }
-                return documentsText;
-            }
-            return "";
-        });
-    }
-
-    attached() {
-        super.attached();
-        super.createKeyboardShortcut("F2", () => this.editSelectedDoc(), "#documentsGrid");
-
-        // Q. Why do we have to setup the grid shortcuts here, when the grid already catches these shortcuts?
-        // A. Because if the focus isn't on the grid, but on the docs page itself, we still need to catch the shortcuts.
-        var docsPageSelector = ".documents-page";
-        this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C, I",() => this.copySelectedDocIds(), docsPageSelector);
-    }
-
-    createPostboxSubscriptions(): Array<KnockoutSubscription> {
-        return [
-            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => this.reloadDocumentsData(db)),
-            ko.postbox.subscribe("SortCollections", () => this.sortCollections())
-        ];
-    }
-
-    afterClientApiConnected(): void {
-        const changesApi = this.changesContext.resourceChangesApi();
-        this.addNotification(changesApi.watchAllDocs(() => this.refreshCollections()));
-
-        //TODO: this.addNotification(changesApi.watchAllIndexes(() => this.refreshCollections()));
-        //TODO: this.addNotification(changesApi.watchBulks(() => this.refreshCollections()));
-    }
-
-    exportCsv() {
-        eventsCollector.default.reportEvent("documents", "export-csv");
-        this.exportCsvInternal();
-    }
-
-    exportCsvInternal(customColumns?: string[]) {
-        if (this.isRegularCollection()) {
-            var collection: collection = this.selectedCollection();
-            var db = this.activeDatabase();
-            var url = appUrl.forExportCollectionCsv(collection, collection.ownerDatabase, customColumns);
-            this.downloader.download(db, url);
-        }
-    }
 
     private refreshCollections(): JQueryPromise<any> {
         var deferred = $.Deferred();
@@ -352,6 +305,12 @@ class documents extends viewModelBase {
             });
 
         return deferred;
+    }
+
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [
+            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => this.reloadDocumentsData(db)),
+        ];
     }
 
     //TODO: this binding has notification leak!
@@ -379,26 +338,6 @@ class documents extends viewModelBase {
                 this.currentCollection(selected);
             });
         }
-    }
-
-    private updateGridAfterOperationComplete(collection: collection, operationId: number) {
-        var getOperationStatusTask = new getOperationStatusCommand(collection.ownerDatabase, operationId);
-        getOperationStatusTask.execute()
-             .done((result: bulkOperationStatusDto) => {
-                if (result.Completed) {
-                    var selectedCollection: collection = this.selectedCollection();
-
-                    if (selectedCollection.isAllDocuments) {
-                        var docsGrid = this.getDocumentsGrid();
-                        docsGrid.refreshCollectionData();
-                    } else {
-                        var allDocumentsPagedList = this.allDocumentsCollection().getDocuments();
-                        allDocumentsPagedList.invalidateCache();
-                    }
-                } else {
-                    setTimeout(() => this.updateGridAfterOperationComplete(collection, operationId), 500);
-                }
-            });
     }
 
     private updateCollections(receivedCollections: Array<collection>) {
@@ -453,6 +392,77 @@ class documents extends viewModelBase {
         }
     }
 
+    // Animation callbacks for the groups list
+    showCollectionElement(element: Element) {
+        if (element.nodeType === 1) {
+            $(element).hide().slideDown(500, () => {
+                $(element).highlight();
+            });
+        }
+    }
+
+    hideCollectionElement(element: Element) {
+        if (element.nodeType === 1) {
+            $(element).slideUp(1000, () => { $(element).remove(); });
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
+    selectedDocumentsText: KnockoutComputed<string>;
+    contextName = ko.observable<string>('');
+
+    constructor() {
+        super();
+
+        this.selectedDocumentsText = ko.computed(() => {
+            if (!!this.selectedDocumentIndices()) {
+                var documentsText = "document";
+                if (this.selectedDocumentIndices().length !== 1) {
+                    documentsText += "s";
+                }
+                return documentsText;
+            }
+            return "";
+        });
+    }
+
+    attached() {
+        super.attached();
+        super.createKeyboardShortcut("F2", () => this.editSelectedDoc(), "#documentsGrid");
+
+        // Q. Why do we have to setup the grid shortcuts here, when the grid already catches these shortcuts?
+        // A. Because if the focus isn't on the grid, but on the docs page itself, we still need to catch the shortcuts.
+        var docsPageSelector = ".documents-page";
+        this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C, I",() => this.copySelectedDocIds(), docsPageSelector);
+    }
+
+    exportCsv() {
+        eventsCollector.default.reportEvent("documents", "export-csv");
+        this.exportCsvInternal();
+    }
+
+    exportCsvInternal(customColumns?: string[]) {
+        if (this.isRegularCollection()) {
+            var collection: collection = this.selectedCollection();
+            var db = this.activeDatabase();
+            var url = appUrl.forExportCollectionCsv(collection, collection.ownerDatabase, customColumns);
+            this.downloader.download(db, url);
+        }
+    }
+
     selectCsvColumns() {
         eventsCollector.default.reportEvent("documents", "export-csv-custom-columns");
         var dialog = new selectCsvColumnsDialog(this.getDocumentsGrid().getColumnsNames());
@@ -498,31 +508,7 @@ class documents extends viewModelBase {
         this.showCollectionChanged(false);
     }
 
-    private sortCollections() {
-        this.collections.sort((c1: collection, c2: collection) => {
-            if (c1.isAllDocuments)
-                return -1;
-            if (c2.isAllDocuments)
-                return 1;
-            return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
-        });
-    }
-
-    // Animation callbacks for the groups list
-    showCollectionElement(element: Element) {
-        if (element.nodeType === 1) {
-            $(element).hide().slideDown(500, () => {
-                ko.postbox.publish("SortCollections");
-                $(element).highlight();
-            });
-        }
-    }
-
-    hideCollectionElement(element: Element) {
-        if (element.nodeType === 1) {
-            $(element).slideUp(1000, () => { $(element).remove(); });
-        }
-    }
+   
     */
 }
 
