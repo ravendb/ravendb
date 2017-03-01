@@ -54,20 +54,22 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Raven.Client\Documents\Queries\QueryOperator.cs">
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\..\src\Raven.Client\Documents\Queries\QueryOperator.cs">
       <Link>QueryOperator.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Server\Documents\Queries\LuceneIntegration\IRavenLuceneMethodQuery.cs">
+    <Compile Include="..\..\src\Raven.Server\Documents\Queries\LuceneIntegration\IRavenLuceneMethodQuery.cs">
       <Link>IRavenLuceneMethodQuery.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Server\Documents\Queries\LuceneIntegration\TermsMatchQuery.cs">
+    <Compile Include="..\..\src\Raven.Server\Documents\Queries\LuceneIntegration\TermsMatchQuery.cs">
       <Link>TermsMatchQuery.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Server\Documents\Queries\Parse\LuceneAST.cs">
+    <Compile Include="..\..\src\Raven.Server\Documents\Queries\Parse\LuceneAST.cs">
       <Link>LuceneAST.cs</Link>
     </Compile>
     <Compile Include="GplexBuffers.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShiftReduceParserCode.cs" />
   </ItemGroup>
   <ItemGroup>
