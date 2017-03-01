@@ -95,6 +95,7 @@ class query extends viewModelBase {
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any>>();
     requestedIndexForQuery = ko.observable<string>();
     staleResult: KnockoutComputed<boolean>;
+    dirtyResult = ko.observable<boolean>();
 
     selectedIndexLabel: KnockoutComputed<string>;
     hasEditableIndex: KnockoutComputed<boolean>;
@@ -347,6 +348,8 @@ class query extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetcher()(s, t), (w, r) => documentsProvider.findColumns(w, r));
 
+        grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
+
         this.fetcher.subscribe(() => grid.reset());
     }
 
@@ -518,6 +521,10 @@ class query extends viewModelBase {
         }
     }
 
+    refresh() {
+        this.gridController().reset(true);
+    }
+    
     editSelectedIndex() {
         eventsCollector.default.reportEvent("query", "edit-selected-index");
         this.navigate(this.editIndexUrl());

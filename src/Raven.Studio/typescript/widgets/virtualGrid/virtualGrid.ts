@@ -1,7 +1,6 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 
 import virtualRow = require("widgets/virtualGrid/virtualRow");
-import pagedResult = require("widgets/virtualGrid/pagedResult");
 import itemFetch = require("widgets/virtualGrid/itemFetch");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridConfig = require("widgets/virtualGrid/virtualGridConfig");
@@ -32,6 +31,9 @@ class virtualGrid<T> {
     private isGridVisible = false;
     private selectionDiff: number[] = [];
     private inIncludeSelectionMode: boolean = true;
+
+    private dirtyResults = ko.observable<boolean>(false);
+    private previousResultsEtag = ko.observable<string>();
 
     private selection = ko.observable<virtualGridSelection<T>>();
     private shiftSelection: shiftSelectionPreview;
@@ -65,7 +67,8 @@ class virtualGrid<T> {
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
             reset: (hard: boolean = true) => this.resetItems(hard),
             selection: this.selection,
-            getSelectedItems: () => this.getSelectedItems()
+            getSelectedItems: () => this.getSelectedItems(),
+            dirtyResults: this.dirtyResults
         }
     }
 
@@ -276,13 +279,13 @@ class virtualGrid<T> {
 
             // The previous fetch may have fetched some or all of the items we're about to fetch now.
             // So, before running the queued fetch, modify it to fetch the next chunk of unavailable items.
-            let indexOfNextUnavailableChunk = skip;
-            for (let i = skip; i < this.items.length; i++) {
-                if (!this.items[i]) {
+        let indexOfNextUnavailableChunk = skip;
+        for (let i = skip; i < this.items.length; i++) {
+            if (!this.items[i]) {
                     indexOfNextUnavailableChunk = i;
                     break;
-                }
             }
+        }
 
             this.fetchItems(indexOfNextUnavailableChunk, take);
         }
@@ -412,6 +415,8 @@ class virtualGrid<T> {
             this.syncVirtualWidth();
         }
 
+        this.updateResultEtag(results.resultEtag);
+
         // Add these results to the .items array as necessary.
         const oldTotalCount = this.items.length;
         this.items.length = results.totalResultCount;
@@ -420,7 +425,9 @@ class virtualGrid<T> {
         const endIndex = skip + results.items.length;
         for (let i = 0; i < results.items.length; i++) {
             const rowIndex = i + skip;
-            this.items[rowIndex] = results.items[i];
+            if (!this.items[rowIndex]) { // newer override existing items, to avoid issues with selected items and jumps
+                this.items[rowIndex] = results.items[i];
+            }
         }
 
         if (oldTotalCount !== results.totalResultCount) {
@@ -428,6 +435,18 @@ class virtualGrid<T> {
         }
 
         this.render();
+    }
+
+    private updateResultEtag(etag: string) {
+        if (etag != null) {
+            const previousEtag = this.previousResultsEtag();
+
+            if (previousEtag && previousEtag !== etag) {
+                this.dirtyResults(true);
+            }
+
+            this.previousResultsEtag(etag);
+        }
     }
 
     private syncHeaderShift() {
@@ -507,6 +526,9 @@ class virtualGrid<T> {
         this.virtualRows.forEach(r => r.reset());
         this.inIncludeSelectionMode = true;
         this.selectionDiff = [];
+
+        this.previousResultsEtag(undefined);
+        this.dirtyResults(false);
 
         this.refreshSelection();
 

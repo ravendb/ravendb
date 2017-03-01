@@ -84,6 +84,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NotificationUpdated));
             scripter.AddType(typeof(OperationChanged));
             scripter.AddType(typeof(ResourceChanged));
+            scripter.AddType(typeof(DatabaseStatsChanged));
             scripter.AddType(typeof(PerformanceHint));
 
             // subscriptions

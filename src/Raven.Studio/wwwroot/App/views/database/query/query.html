@@ -235,9 +235,14 @@
             </div>
         </div>
         <div class="panel flex-window-scroll">
-            <div class="has-error results-error" data-bind="visible: staleResult">
+            <div class="has-error results-error" data-bind="visible: staleResult()">
                 <div class="help-block">
                     <i class="icon-danger"></i><span>Index is stale, possibly not all results are displayed.</span>
+                </div>
+            </div>
+            <div class="has-error results-error" data-bind="visible: dirtyResult() && !staleResult()">
+                <div class="help-block">
+                    <i class="icon-danger"></i><span>Data has changed. Your results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
                 </div>
             </div>
             <div class="scroll-stretch">
