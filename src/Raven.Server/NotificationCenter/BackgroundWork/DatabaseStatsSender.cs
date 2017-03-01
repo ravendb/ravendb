@@ -6,39 +6,33 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter.BackgroundWork
 {
-    public class DatabaseStatsSender
+    public class DatabaseStatsSender : BackgroundWorkBase
     {
         private readonly DocumentDatabase _database;
         private readonly NotificationCenter _notificationCenter;
-        private readonly Logger _logger;
-        private readonly TimeSpan _delay = TimeSpan.FromSeconds(5);
 
         private Stats _latest;
 
-        public DatabaseStatsSender(DocumentDatabase database, NotificationCenter notificationCenter, Logger logger)
+        public DatabaseStatsSender(DocumentDatabase database, NotificationCenter notificationCenter)
+            : base(database.Name, database.DatabaseShutdown)
         {
             _database = database;
             _notificationCenter = notificationCenter;
-            _logger = logger;
         }
 
-        public async Task Run()
+        protected override async Task Run()
         {
-            while (_database.DatabaseShutdown.IsCancellationRequested == false)
+            while (CancellationToken.IsCancellationRequested == false)
             {
                 try
                 {
-                    await Task.Delay(_delay, _database.DatabaseShutdown);
+                    await Task.Delay(_notificationCenter.Options.DatabaseStatsThrottle, CancellationToken);
 
                     if (_database.DatabaseShutdown.IsCancellationRequested)
                         break;
-
-                    if (_notificationCenter.NumberOfWatchers == 0)
-                        continue;
 
                     Stats current;
 
@@ -91,13 +85,12 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 }
                 catch (OperationCanceledException)
                 {
-                    // shutdown
                     return;
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Error on sending database stats notification", e);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Error on sending database stats notification", e);
                 }
             }
         }
