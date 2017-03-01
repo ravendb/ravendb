@@ -54,6 +54,8 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             }
 
             _currentTask = null;
+            _cts.Dispose();
+            _cts = null;
         }
 
         protected abstract Task Run();
