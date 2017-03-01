@@ -109,7 +109,7 @@ namespace Raven.Server.Documents
 
         public DocumentsChanges Changes { get; }
 
-        public NotificationCenter.NotificationCenter NotificationCenter { get; }
+        public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
 
         public DatabaseOperations Operations { get; private set; }
 
@@ -343,6 +343,12 @@ namespace Raven.Server.Documents
             {
                 Operations?.Dispose(exceptionAggregator);
                 Operations = null;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                NotificationCenter?.Dispose();
+                NotificationCenter = null;
             });
 
             exceptionAggregator.Execute(() =>

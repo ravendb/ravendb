@@ -6,38 +6,36 @@ using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter.BackgroundWork
 {
-    public class PostponedNotificationsSender
+    public class PostponedNotificationsSender : BackgroundWorkBase
     {
         private static readonly TimeSpan Infinity = TimeSpan.FromMilliseconds(-1);
         
         private readonly NotificationsStorage _notificationsStorage;
         private readonly ConcurrentSet<NotificationCenter.ConnectedWatcher> _watchers;
-        private readonly Logger _logger;
-        private readonly AsyncManualResetEvent _event;
-        private CancellationToken _shutdown;
+        private AsyncManualResetEvent _event;
 
-        public PostponedNotificationsSender(NotificationsStorage notificationsStorage,
-            ConcurrentSet<NotificationCenter.ConnectedWatcher> watchers, Logger logger, CancellationToken shutdown)
+        public PostponedNotificationsSender(string resourceName, NotificationsStorage notificationsStorage,
+            ConcurrentSet<NotificationCenter.ConnectedWatcher> watchers, CancellationToken shutdown)
+            : base(resourceName, shutdown)
         {
             _notificationsStorage = notificationsStorage;
             _watchers = watchers;
-            _logger = logger;
-            _shutdown = shutdown;
-            _event = new AsyncManualResetEvent(_shutdown);
+            
         }
 
-        public async Task Run()
+        protected override async Task Run()
         {
-            _shutdown.Register(() =>
+            _event = new AsyncManualResetEvent(CancellationToken);
+
+            CancellationToken.Register(() =>
             {
                 _event.Set();
             });
 
-            while (_shutdown.IsCancellationRequested == false)
+            while (CancellationToken.IsCancellationRequested == false)
             {
                 try
                 {
@@ -52,7 +50,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     if (wait == Infinity || wait > TimeSpan.Zero)
                         await _event.WaitAsync(wait);
 
-                    if (_shutdown.IsCancellationRequested)
+                    if (CancellationToken.IsCancellationRequested)
                         break;
 
                     _event.Reset(true);
@@ -84,13 +82,12 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 }
                 catch (OperationCanceledException)
                 {
-                    // shutdown
                     return;
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Error on sending postponed notification", e);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Error on sending postponed notification", e);
                 }
             }
         }
@@ -104,7 +101,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             {
                 foreach (var action in actions)
                 {
-                    if (_shutdown.IsCancellationRequested)
+                    if (CancellationToken.IsCancellationRequested)
                         break;
 
                     next.Enqueue(new PostponedNotification
@@ -130,7 +127,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
         public void Set()
         {
-            _event.SetByAsyncCompletion();
+            _event?.SetByAsyncCompletion();
         }
     }
 }

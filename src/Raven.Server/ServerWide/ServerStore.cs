@@ -346,6 +346,7 @@ namespace Raven.Server.ServerWide
         {
             _shutdownNotification.Cancel();
 
+            toDispose.Add(NotificationCenter);
             toDispose.Add(DatabasesLandlord);
             toDispose.Add(_env);
             toDispose.Add(ContextPool);

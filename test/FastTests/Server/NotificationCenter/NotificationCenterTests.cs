@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -24,6 +26,8 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                database.NotificationCenter.Options.PreventFromRunningBackgroundWorkers = true;
+
                 var actions = new AsyncQueue<Notification>();
                 var writer = new TestWebSockerWriter();
 
@@ -41,6 +45,8 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                database.NotificationCenter.Options.PreventFromRunningBackgroundWorkers = true;
+
                 var alert = GetSampleAlert();
 
                 Assert.True(alert.IsPersistent);
@@ -79,6 +85,8 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                database.NotificationCenter.Options.PreventFromRunningBackgroundWorkers = true;
+
                 var alert1 = GetSampleAlert();
 
                 database.NotificationCenter.Add(alert1);
@@ -110,6 +118,8 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                database.NotificationCenter.Options.DatabaseStatsThrottle = TimeSpan.MaxValue;
+
                 var alert1 = GetSampleAlert();
                 database.NotificationCenter.Add(alert1);
 
@@ -141,6 +151,8 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                database.NotificationCenter.Options.DatabaseStatsThrottle = TimeSpan.MaxValue;
+
                 var alert = GetSampleAlert();
                 database.NotificationCenter.Add(alert);
 
@@ -183,6 +195,8 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                database.NotificationCenter.Options.DatabaseStatsThrottle = TimeSpan.MaxValue;
+
                 var alert = GetSampleAlert();
 
                 database.NotificationCenter.Add(alert);
@@ -263,7 +277,7 @@ namespace FastTests.Server.NotificationCenter
 
 
         [Fact]
-        public void Persisten_actions_are_returned_in_creation_order()
+        public void Persistent_actions_are_returned_in_creation_order()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -290,6 +304,8 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                database.NotificationCenter.Options.DatabaseStatsThrottle = TimeSpan.MaxValue;
+
                 var alert1 = GetSampleAlert(customKey: "alert-1");
                 database.NotificationCenter.Add(alert1);
 
@@ -328,6 +344,8 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                database.NotificationCenter.Options.DatabaseStatsThrottle = TimeSpan.MaxValue;
+
                 var alert = GetSampleAlert();
                 database.NotificationCenter.Add(alert);
 
@@ -370,6 +388,8 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                database.NotificationCenter.Options.DatabaseStatsThrottle = TimeSpan.MaxValue;
+
                 var alert = GetSampleAlert();
 
                 database.NotificationCenter.Add(alert);
@@ -384,6 +404,64 @@ namespace FastTests.Server.NotificationCenter
                     database.NotificationCenter.Add(alert);
 
                     Assert.Equal(0, notifications.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Should_be_notified_about_changed_database_stats()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                database.NotificationCenter.Options.DatabaseStatsThrottle = TimeSpan.FromMilliseconds(100);
+
+                var actions = new AsyncQueue<Notification>();
+                var writer = new TestWebSockerWriter();
+
+                using (database.NotificationCenter.TrackActions(actions, writer))
+                {
+                    var notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(500));
+                    Assert.True(notification.Item1);
+
+                    var databaseStatsChanged = notification.Item2 as DatabaseStatsChanged;
+
+                    Assert.NotNull(databaseStatsChanged); // initial notification
+
+                    Assert.Equal(0, databaseStatsChanged.CountOfDocuments);
+                    Assert.Equal(0, databaseStatsChanged.CountOfIndexes);
+                    Assert.Equal(0, databaseStatsChanged.CountOfStaleIndexes);
+                    Assert.Equal(0, databaseStatsChanged.ModifiedCollections.Count);
+
+                    DocumentsOperationContext context;
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                    using (var doc = context.ReadObject(new DynamicJsonValue
+                    {
+                        ["Foo"] = "Bar",
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [Constants.Documents.Metadata.Collection] = "Foos"
+                        }
+                    }, ""))
+                    {
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            database.DocumentsStorage.Put(context, "foo/bar", null, doc);
+                            tx.Commit();
+                        }
+                    }
+
+                    notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(500));
+                    Assert.True(notification.Item1);
+
+                    databaseStatsChanged = notification.Item2 as DatabaseStatsChanged;
+
+                    Assert.NotNull(databaseStatsChanged);
+
+                    Assert.Equal(1, databaseStatsChanged.CountOfDocuments);
+                    Assert.Equal(0, databaseStatsChanged.CountOfIndexes);
+                    Assert.Equal(0, databaseStatsChanged.CountOfStaleIndexes);
+                    Assert.Equal(1, databaseStatsChanged.ModifiedCollections.Count);
+                    Assert.Equal("Foos", databaseStatsChanged.ModifiedCollections[0].Name);
                 }
             }
         }

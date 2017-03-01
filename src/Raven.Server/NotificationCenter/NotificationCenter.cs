@@ -2,44 +2,63 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
-using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class NotificationCenter
+    public class NotificationCenter : IDisposable
     {
-        private readonly NotificationsStorage _notificationsStorage;
-        private readonly CancellationToken _shutdown;
         private readonly ConcurrentSet<ConnectedWatcher> _watchers = new ConcurrentSet<ConnectedWatcher>();
-        private readonly PostponedNotificationsSender _postponedNotifications;
-
-        private readonly Logger Logger;
+        private readonly List<BackgroundWorkBase> _backgroundWorkers = new List<BackgroundWorkBase>();
+        private readonly NotificationsStorage _notificationsStorage;
+        private readonly object _watchersLock = new object();
+        private readonly string _resourceName;
+        private readonly CancellationToken _shutdown;
+        private PostponedNotificationsSender _postponedNotifications;
 
         public NotificationCenter(NotificationsStorage notificationsStorage, string resourceName, CancellationToken shutdown)
         {
             _notificationsStorage = notificationsStorage;
+            _resourceName = resourceName;
             _shutdown = shutdown;
-
-            Logger = LoggingSource.Instance.GetLogger<NotificationCenter>(resourceName);
-            _postponedNotifications = new PostponedNotificationsSender(_notificationsStorage, _watchers, Logger, _shutdown);
         }
 
         public void Initialize(DocumentDatabase database = null)
         {
-            Task.Run(_postponedNotifications.Run, _shutdown);
+            if (Options.PreventFromRunningBackgroundWorkers == false)
+            {
+                _postponedNotifications = new PostponedNotificationsSender(_resourceName, _notificationsStorage,
+                    _watchers, _shutdown);
 
-            if (database != null)
-                Task.Run(new DatabaseStatsSender(database, this, Logger).Run, _shutdown);
+                _backgroundWorkers.Add(_postponedNotifications);
+                
+                if (database != null)
+                    _backgroundWorkers.Add(new DatabaseStatsSender(database, this));
+            }
         }
 
-        public int NumberOfWatchers => _watchers.Count;
+        public NotificationCenterOptions Options { get; } = new NotificationCenterOptions();
+
+        private void StartBackgroundWorkers()
+        {
+            foreach (var worker in _backgroundWorkers)
+            {
+                worker.Start();
+            }
+        }
+
+        private void StopBackgroundWorkers()
+        {
+            foreach (var worker in _backgroundWorkers)
+            {
+                worker.Stop();
+            }
+        }
 
         public IDisposable TrackActions(AsyncQueue<Notification> notificationsQueue, IWebsocketWriter webSockerWriter)
         {
@@ -49,9 +68,24 @@ namespace Raven.Server.NotificationCenter
                 Writer = webSockerWriter
             };
 
-            _watchers.TryAdd(watcher);
+            lock (_watchersLock)
+            {
+                _watchers.TryAdd(watcher);
+
+                if (_watchers.Count == 1)
+                    StartBackgroundWorkers();
+            }
             
-            return new DisposableAction(() => _watchers.TryRemove(watcher));
+            return new DisposableAction(() =>
+            {
+                lock (_watchersLock)
+                {
+                    _watchers.TryRemove(watcher);
+
+                    if (_watchers.Count == 0)
+                        StopBackgroundWorkers();
+                }
+            });
         }
 
         public void Add(Notification notification)
@@ -72,6 +106,7 @@ namespace Raven.Server.NotificationCenter
                     return;
             }
 
+            // ReSharper disable once InconsistentlySynchronizedField
             foreach (var watcher in _watchers)
             {
                 watcher.NotificationsQueue.Enqueue(notification);
@@ -125,10 +160,18 @@ namespace Raven.Server.NotificationCenter
             _notificationsStorage.ChangePostponeDate(id, until);
 
             Add(NotificationUpdated.Create(id, NotificationUpdateType.Postponed));
-
-            _postponedNotifications.Set();
+            
+            _postponedNotifications?.Set();
         }
-        
+
+        public void Dispose()
+        {
+            foreach (var worker in _backgroundWorkers)
+            {
+                worker.Dispose();
+            }
+        }
+
         public class ConnectedWatcher
         {
             public AsyncQueue<Notification> NotificationsQueue;
