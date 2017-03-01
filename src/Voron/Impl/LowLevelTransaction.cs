@@ -408,7 +408,7 @@ namespace Voron.Impl
                     Debug.Assert(p.PageNumber == pageNumber,
                         string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
 
-                    _env.ValidatePage(pageNumber, (PageHeader*)p.Pointer);
+                    _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
                 }
             }
 

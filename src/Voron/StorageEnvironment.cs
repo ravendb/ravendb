@@ -61,7 +61,7 @@ namespace Voron
             new LowLevelTransaction.WriteTransactionPool();
         internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
-        private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1,1);
+        private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
         private NativeMemory.ThreadStats _currentTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
@@ -176,9 +176,9 @@ namespace Voron
                         log.Info(
                             $"Failed to fallocate test file at \'{filename}\'. (rc = {result}). Cannot determine if O_DIRECT supported by the file system. Assuming it is");
                 }
-               
+
             }
-            finally 
+            finally
             {
                 result = Syscall.close(fd);
                 if (result != 0)
@@ -214,11 +214,11 @@ namespace Voron
                 {
                     if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
                     {
-                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)                                                   
+                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
 
-                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)                        
-                            QueueForSyncDataFile();                            
+                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
+                            QueueForSyncDataFile();
                     }
                     else
                     {
@@ -434,7 +434,7 @@ namespace Voron
             if (_envDispose.Wait(Options.DisposeWaitTime) == false)
             {
                 if (_envDispose.TryAddCount(1))
-                    // try restore the previous signal, if it failed, the _envDispose is signaled
+                // try restore the previous signal, if it failed, the _envDispose is signaled
                 {
                     var activeTxs = ActiveTransactions.AllTransactions;
                     ThrowInvalidDisposeDuringActiveTransactions(activeTxs);
@@ -481,12 +481,12 @@ namespace Voron
         internal LowLevelTransaction NewLowLevelTransaction(TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
         {
             _cancellationTokenSource.Token.ThrowIfCancellationRequested();
-            
+
             bool txLockTaken = false;
             bool flushInProgressReadLockTaken = false;
             try
             {
-                if(_envDispose.TryAddCount(1) == false)
+                if (_envDispose.TryAddCount(1) == false)
                     ThrowCurrentlyDisposing();
 
                 if (flags == TransactionFlags.ReadWrite)
@@ -497,7 +497,7 @@ namespace Voron
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
 
                     txLockTaken = _transactionWriter.Wait(wait);
-                    if (txLockTaken == false || (flushInProgressReadLockTaken == false && 
+                    if (txLockTaken == false || (flushInProgressReadLockTaken == false &&
                         FlushInProgressLock.IsWriteLockHeld == false))
                     {
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
@@ -579,7 +579,7 @@ namespace Voron
         private void ThrowOnTimeoutWaitingForWriteTxLock(TimeSpan wait)
         {
             var copy = _currentTransactionHolder;
-            if(copy == NativeMemory.ThreadAllocations.Value)
+            if (copy == NativeMemory.ThreadAllocations.Value)
             {
                 throw new InvalidOperationException("A write transaction is already opened by this thread");
             }
@@ -640,7 +640,7 @@ namespace Voron
 
                 if (tx.Committed && tx.FlushedToJournal)
                     _transactionsCounter = tx.Id;
-                
+
                 State = tx.State;
             }
         }
@@ -865,7 +865,7 @@ namespace Voron
             _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo, ExceptionDispatchInfo.Capture(exception));
         }
 
-        public unsafe void ValidatePage(long pageNumber, PageHeader* current)
+        public unsafe void ValidatePageChecksum(long pageNumber, PageHeader* current)
         {
             long old;
             var index = pageNumber / (8 * sizeof(long));
@@ -887,13 +887,14 @@ namespace Voron
         private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, long index, long old, long bitToSet)
         {
             var spinner = new SpinWait();
-            while (Interlocked.CompareExchange(ref _validPages[index], old | bitToSet, old) != old)
+            while (true)
             {
-                if ((old & bitToSet) == 0)
+                long modified = Interlocked.CompareExchange(ref _validPages[index], old | bitToSet, old);
+                if (modified == old || (modified & bitToSet) != 0)
                     break;
 
+                old = modified;
                 spinner.SpinOnce();
-                old = _validPages[index];
             }
 
             var dataLength = Constants.Storage.PageSize - (PageHeader.ChecksumOffset + sizeof(ulong));
@@ -905,8 +906,8 @@ namespace Voron
                 dataLength = current->OverflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
             }
 
-            // No need to ensureMapped here. ValidatePage is only called for pages in the datafile, 
-            // which were already handled with AcquirePagePointerWithOverflowHandling()
+            // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
+            // which we already got using AcquirePagePointerWithOverflowHandling()
 
             var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)pageNumber);
 
@@ -930,7 +931,7 @@ namespace Voron
         private unsafe void ThrowInvalidOverflowSize(long pageNumber, PageHeader* current)
         {
             throw new InvalidDataException(
-                $"Invalid overflow size for page {pageNumber}, current offset is {pageNumber* Constants.Storage.PageSize} and overflow size is {current->OverflowSize}. Page length is beyond the file length {_dataPager.TotalAllocationSize}");
+                $"Invalid overflow size for page {pageNumber}, current offset is {pageNumber * Constants.Storage.PageSize} and overflow size is {current->OverflowSize}. Page length is beyond the file length {_dataPager.TotalAllocationSize}");
         }
 
         public unsafe void AddChecksumToPageHeader(PageHeader* current)
