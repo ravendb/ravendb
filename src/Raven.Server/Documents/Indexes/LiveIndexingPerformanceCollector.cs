@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,15 +14,21 @@ namespace Raven.Server.Documents.Indexes
     public class LiveIndexingPerformanceCollector : IDisposable
     {
         private readonly DocumentsChanges _changes;
-        private readonly Dictionary<string, IndexAndPerformanceStatsList> _perIndexStats;
+        private readonly IndexStore _indexStorage;
+        private readonly ConcurrentDictionary<string, IndexAndPerformanceStatsList> _perIndexStats = 
+            new ConcurrentDictionary<string, IndexAndPerformanceStatsList>();
         private readonly CancellationToken _resourceShutdown;
         private readonly CancellationTokenSource _cts;
 
-        public LiveIndexingPerformanceCollector(DocumentsChanges changes, CancellationToken resourceShutdown, IEnumerable<Index> indexes)
+        public LiveIndexingPerformanceCollector(DocumentDatabase documentDatabase, CancellationToken resourceShutdown, IEnumerable<Index> indexes)
         {
-            _changes = changes;
+            _changes = documentDatabase.Changes;
+            _indexStorage = documentDatabase.IndexStore;
             _resourceShutdown = resourceShutdown;
-            _perIndexStats = indexes.ToDictionary(x => x.Name, x => new IndexAndPerformanceStatsList(x));
+            foreach (var index in indexes)
+            {
+                _perIndexStats.TryAdd(index.Name, new IndexAndPerformanceStatsList(index));
+            }
             _cts = new CancellationTokenSource();
 
             Task.Run(StartCollectingStats);
@@ -70,7 +77,6 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
-
         }
 
         private List<IndexPerformanceStats> PreparePerformanceStats()
@@ -108,12 +114,31 @@ namespace Raven.Server.Documents.Indexes
 
         private void OnIndexChange(IndexChange change)
         {
+            IndexAndPerformanceStatsList indexAndPerformanceStats;
+            switch (change.Type)
+            {
+                case IndexChangeTypes.IndexRemoved:
+                    _perIndexStats.TryRemove(change.Name, out indexAndPerformanceStats);
+                    return;
+                case IndexChangeTypes.Renamed:
+                    var indexRenameChange = change as IndexRenameChange;
+                    Debug.Assert(indexRenameChange != null);
+                    _perIndexStats.TryRemove(indexRenameChange.OldIndexName, out indexAndPerformanceStats);
+                    break;
+            }
+
             if (change.Type != IndexChangeTypes.BatchCompleted)
                 return;
 
-            IndexAndPerformanceStatsList indexAndPerformanceStats;
             if (_perIndexStats.TryGetValue(change.Name, out indexAndPerformanceStats) == false)
-                return;
+            {
+                var index = _indexStorage.GetIndex(change.Name);
+                if (index == null)
+                    return;
+
+                indexAndPerformanceStats = new IndexAndPerformanceStatsList(index);
+                _perIndexStats.TryAdd(change.Name, indexAndPerformanceStats);
+            }
 
             var latestStat = indexAndPerformanceStats.Index.GetLatestIndexingStat();
             if (latestStat != null)

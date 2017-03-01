@@ -850,9 +850,10 @@ namespace Raven.Server.Documents.Indexes
                 _indexes.RenameIndex(index, oldIndexName, newIndexName);
             }
 
-            _documentDatabase.Changes.RaiseNotifications(new IndexChange
+            _documentDatabase.Changes.RaiseNotifications(new IndexRenameChange
             {
-                Name = oldIndexName,
+                Name = newIndexName,
+                OldIndexName = oldIndexName,
                 Type = IndexChangeTypes.Renamed
             });
         }
