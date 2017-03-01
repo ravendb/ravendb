@@ -12,7 +12,7 @@ namespace Raven.Server.Documents
         public DateTime LastModified;
         public LazyStringValue Name;
         public LazyStringValue ContentType;
-        public ulong Hash;
+        public LazyStringValue Hash;
         public Stream Stream;
     }
 }

@@ -2633,12 +2633,12 @@ namespace Raven.Server.Documents
         }
 
         public AttachmentResult PutAttachment(
-            DocumentsOperationContext context,
-            string documentId,
-            string name,
-            string contentType,
-            ulong hash,
-            long? expectedEtag,
+            DocumentsOperationContext context, 
+            string documentId, 
+            string name, 
+            string contentType, 
+            string hash, 
+            long? expectedEtag, 
             Stream stream,
             long? lastModifiedTicks = null)
         {
@@ -2669,11 +2669,10 @@ namespace Raven.Server.Documents
             int nameSize;
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, name, out lowerName, out lowerNameSize, out namePtr, out nameSize);
 
-            Slice contentTypeSlice;
-            DocumentKeyWorker.GetSliceFromKey(context, contentType, out contentTypeSlice);
-
-            Slice keySlice;
+            Slice keySlice, contentTypeSlice, hashSlice;
             using (GetAttachmentKey(context, lowerDocumentId, lowerDocumentIdSize, lowerName, lowerNameSize, out keySlice))
+            using (Slice.From(context.Allocator, contentType, out contentTypeSlice))
+            using (Slice.From(context.Allocator, hash, out hashSlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
@@ -2683,7 +2682,7 @@ namespace Raven.Server.Documents
                     newEtagBigEndian,
                     {namePtr, nameSize},
                     {contentTypeSlice.Content.Ptr, contentTypeSlice.Size},
-                    hash,
+                    {hashSlice.Content.Ptr, hashSlice.Size},
                     modifiedTicks,
                 };
 
@@ -2713,7 +2712,7 @@ namespace Raven.Server.Documents
                     table.Insert(tbv);
                 }
 
-                PutAttachmentStream(context, hash, stream);
+                PutAttachmentStream(context, hashSlice, stream);
 
                 _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
@@ -2728,16 +2727,12 @@ namespace Raven.Server.Documents
             };
         }
 
-        private void PutAttachmentStream(DocumentsOperationContext context, ulong hash, Stream stream)
+        private void PutAttachmentStream(DocumentsOperationContext context, Slice hash, Stream stream)
         {
-            Slice hashSlice;
-            using (Slice.External(context.Allocator, (byte*)&hash, sizeof(ulong), out hashSlice))
-            {
-                var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                var existingStream = tree.ReadStream(hashSlice);
-                if (existingStream == null)
-                    tree.AddStream(hashSlice, stream);
-            }
+            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+            var existingStream = tree.ReadStream(hash);
+            if (existingStream == null)
+                tree.AddStream(hash, stream);
         }
 
         private void UpdateDocumentAfterAttachmentWrite(
@@ -2936,10 +2931,10 @@ namespace Raven.Server.Documents
             return TableValueToAttachment(context, ref tvr);
         }
 
-        private Stream GetAttachmentStream(DocumentsOperationContext context, ulong hash)
+        private Stream GetAttachmentStream(DocumentsOperationContext context, LazyStringValue hash)
         {
             Slice hashSlice;
-            using (Slice.External(context.Allocator, (byte*) &hash, sizeof(ulong), out hashSlice))
+            using (Slice.External(context.Allocator, hash.Buffer, hash.Length, out hashSlice))
             {
                 var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
                 return tree.ReadStream(hashSlice);
@@ -2982,8 +2977,10 @@ namespace Raven.Server.Documents
 
             result.Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
             result.Name = TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr);
-            result.Hash = *(ulong*)tvr.Read((int) AttachmentsTable.Hash, out size);
             result.LastModified = new DateTime(*(long*)tvr.Read((int) AttachmentsTable.LastModified, out size));
+
+            ptr = tvr.Read((int)AttachmentsTable.Hash, out size);
+            result.Hash = new LazyStringValue(null, ptr, size, context);
 
             ptr = tvr.Read((int) AttachmentsTable.ContentType, out size);
             result.ContentType = new LazyStringValue(null, ptr, size, context);
@@ -3088,22 +3085,26 @@ namespace Raven.Server.Documents
             }
 
             int size;
-            var hash = (ulong*)tvr.Read((int)AttachmentsTable.Hash, out size);
-            var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
-            var tbv = new TableValueBuilder
+            var ptr = tvr.Read((int) AttachmentsTable.Hash, out size);
+            Slice hashSlice;
+            using (Slice.From(context.Allocator, ptr, size, out hashSlice))
             {
-                {keySlice.Content.Ptr, keySlice.Size},
-                newEtagBigEndian,
-                {null, 0},
-                {null, 0},
-                {(byte*) &hash, sizeof(ulong)},
-                modifiedTicks,
-            };
-            table.Update(tvr.Id, tbv);
+                var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
+                var tbv = new TableValueBuilder
+                {
+                    {keySlice.Content.Ptr, keySlice.Size},
+                    newEtagBigEndian,
+                    {null, 0},
+                    {null, 0},
+                    {hashSlice.Content.Ptr, hashSlice.Size},
+                    modifiedTicks,
+                };
+                table.Update(tvr.Id, tbv);
 
-            // TODO: Delete stream only if not versioned
-            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-            tree.DeleteStream(keySlice);
+                // TODO: Delete stream only if not versioned
+                var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+                tree.DeleteStream(hashSlice);
+            }
         }
     }
 }
