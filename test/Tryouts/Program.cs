@@ -16,10 +16,12 @@ namespace Tryouts
                 //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
                 //LoggingSource.Instance.EnableConsoleLogging();
                 var sp = Stopwatch.StartNew();
-                using (var a = new FastTests.Client.Lazy.Async.lazyAsync())
+                using (var a = new FastTests.Issues.RavenDB_5669())
                 {
-                    a.CanExecuteAllPendingLazyOperations().Wait();
+                    a.FailingTest();
                 }
+                GC.Collect(2);
+                GC.WaitForPendingFinalizers();
                 Console.WriteLine(sp.Elapsed);
             }
         }

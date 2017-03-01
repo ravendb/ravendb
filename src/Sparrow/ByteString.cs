@@ -132,11 +132,11 @@ namespace Sparrow
                 EnsureIsNotBadPointer();
 
                 return _pointer->Ptr;
-            }            
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetUserDefinedFlags( ByteStringType flags)
+        public void SetUserDefinedFlags(ByteStringType flags)
         {
             if ((flags & ByteStringType.ByteStringMask) != 0)
                 throw new ArgumentException("The flags passed contains reserved bits.");
@@ -223,7 +223,7 @@ namespace Sparrow
         }
 
         public void CopyTo(byte[] dest)
-        { 
+        {
             Debug.Assert(HasValue);
 
             EnsureIsNotBadPointer();
@@ -341,9 +341,9 @@ namespace Sparrow
 
     public sealed unsafe class UnmanagedGlobalSegment : IDisposable
     {
-        public readonly byte* Segment;
+        public byte* Segment;
         public readonly int Size;
-        private NativeMemory.ThreadStats _thread;
+        private readonly NativeMemory.ThreadStats _thread;
 
         public UnmanagedGlobalSegment(int size)
         {
@@ -351,42 +351,26 @@ namespace Sparrow
             Segment = NativeMemory.AllocateMemory(size, out _thread);
         }
 
-        #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
-
-        void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                disposedValue = true;
-
-                if (disposing)
-                {
-
-                }
-
-                if (Segment != null)
-                {
-                    NativeMemory.Free(Segment, Size, _thread);
-                }
-            }
-        }
-
         ~UnmanagedGlobalSegment()
-        {            
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(false);
+        {
+            Dispose();
         }
 
-        // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
-            GC.SuppressFinalize(this);
+            if (Segment == null)
+                return;
 
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);            
+            lock (this)
+            {
+                if (Segment == null)
+                    return;
+                NativeMemory.Free(Segment, Size, _thread);
+                Segment = null;
+                GC.SuppressFinalize(this);
+            }
         }
-        #endregion
+        
     }
 
     public interface IByteStringAllocator
@@ -459,8 +443,11 @@ namespace Sparrow
             return new UnmanagedGlobalSegment(size);
         }
 
-        public void Free(UnmanagedGlobalSegment memory)
+        public unsafe void Free(UnmanagedGlobalSegment memory)
         {
+            if(memory.Segment == null)
+                ThrowInvalidMemorySegment();
+
             if (_minSize > memory.Size)
             {
                 memory.Dispose();
@@ -469,6 +456,11 @@ namespace Sparrow
 
             var local = GetThreadLocalCollection();
             local.Push(memory);
+        }
+
+        private static void ThrowInvalidMemorySegment()
+        {
+            throw new InvalidOperationException("Attempt to return a memory segment that has already been disposed");
         }
     }
 
@@ -479,7 +471,7 @@ namespace Sparrow
         public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes;
         public const int MinReusableBlockSizeInBytes = 8;
 
-        public ByteStringContext(int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base (allocationBlockSize)
+        public ByteStringContext(int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base(allocationBlockSize)
         { }
 
     }
@@ -512,7 +504,7 @@ namespace Sparrow
         }
 
         private const int LogMinBlockSize = 16;
-        
+
         /// <summary>
         /// This list keeps all the segments already instantiated in order to release them after context finalization. 
         /// </summary>
@@ -528,8 +520,8 @@ namespace Sparrow
         private readonly List<SegmentInformation> _internalReadyToUseMemorySegments;
         private readonly int[] _internalReusableStringPoolCount;
         private readonly Stack<IntPtr>[] _internalReusableStringPool;
-        private SegmentInformation _internalCurrent;        
-        
+        private SegmentInformation _internalCurrent;
+
 
         private const int ExternalFastPoolSize = 16;
         private int _externalAlignedSize = 0;
@@ -547,7 +539,7 @@ namespace Sparrow
             this._allocationBlockSize = allocationBlockSize;
 
             this._wholeSegments = new List<SegmentInformation>();
-            this._internalReadyToUseMemorySegments = new List<SegmentInformation>();            
+            this._internalReadyToUseMemorySegments = new List<SegmentInformation>();
 
             this._internalReusableStringPool = new Stack<IntPtr>[LogMinBlockSize];
             this._internalReusableStringPoolCount = new int[LogMinBlockSize];
@@ -756,7 +748,8 @@ namespace Sparrow
             }
         }
 
-        [ThreadStatic] public static char[] ToLowerTempBuffer;
+        [ThreadStatic]
+        public static char[] ToLowerTempBuffer;
 
         /// <summary>
         /// Mutate the string to lower case
@@ -802,7 +795,7 @@ namespace Sparrow
             var basePtr = (ByteStringStorage*)ptr;
             basePtr->Flags = type;
             basePtr->Length = length;
-            basePtr->Ptr = (byte*)ptr + sizeof(ByteStringStorage);                        
+            basePtr->Ptr = (byte*)ptr + sizeof(ByteStringStorage);
             basePtr->Size = size;
 
             // We are registering the storage for validation here. Not the ByteString itself
@@ -834,7 +827,7 @@ namespace Sparrow
             Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
 
             value._pointer->Flags = ByteStringType.Disposed;
-            
+
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
 
@@ -917,6 +910,8 @@ namespace Sparrow
         private SegmentInformation AllocateSegment(int size)
         {
             var memorySegment = Allocator.Allocate(size);
+            if(memorySegment.Segment == null)
+                ThrowInvalidMemorySegmentOnAllocation();
 
             _totalAllocated += memorySegment.Size;
 
@@ -927,6 +922,11 @@ namespace Sparrow
             _wholeSegments.Add(segment);
 
             return segment;
+        }
+
+        private static void ThrowInvalidMemorySegmentOnAllocation()
+        {
+            throw new InvalidOperationException("Allocate gave us a segment that was already disposed.");
         }
 
 
@@ -1159,7 +1159,7 @@ namespace Sparrow
                 {
                     if (_str.IsExternal)
                         _parent.ReleaseExternal(ref _str);
-                    else 
+                    else
                         _parent.Release(ref _str);
                 }
                 _parent = null;
@@ -1312,10 +1312,11 @@ namespace Sparrow
 
 #endif
 
-        private bool _disposed; 
+        private bool _disposed;
 
         ~ByteStringContext()
         {
+            _isFinalizerThread = true;
             Dispose();
         }
 
@@ -1346,6 +1347,8 @@ namespace Sparrow
             _internalReadyToUseMemorySegments.Clear();
         }
 
+        [ThreadStatic] private static bool _isFinalizerThread;
+
         private void ReleaseSegment(SegmentInformation segment)
         {
             if (!segment.CanDispose)
@@ -1354,7 +1357,8 @@ namespace Sparrow
             _totalAllocated -= segment.Size;
 
             // Check if we can release this memory segment back to the pool.
-            if (segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes)
+            if (_isFinalizerThread || 
+                segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes)
             {
                 segment.Memory.Dispose();
             }

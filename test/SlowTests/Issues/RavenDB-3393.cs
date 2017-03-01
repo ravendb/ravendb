@@ -16,7 +16,7 @@ namespace SlowTests.Issues
             {
                 store.Initialize();
 
-                var dbName = $"Db-{Guid.NewGuid()}";
+                var dbName = $"get_statistics_for_database_command-{Guid.NewGuid()}";
                 store
                     .Admin
                     .Server

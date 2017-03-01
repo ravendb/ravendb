@@ -142,13 +142,14 @@ namespace FastTests.Voron
 
         public virtual void Dispose()
         {
-            if (_storageEnvironment != null)
-                _storageEnvironment.Dispose();
+            _storageEnvironment?.Dispose();
             _options.Dispose();
+            _allocator.Dispose();
             DeleteDirectory(DataDir);
 
             _storageEnvironment = null;
             _options = null;
+            _allocator = null;
             GC.Collect(GC.MaxGeneration);
             GC.WaitForPendingFinalizers();
         }
