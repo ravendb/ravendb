@@ -383,28 +383,20 @@ namespace Raven.Server.Documents
             Debug.Assert(table != null);
 
             var list = new List<ChangeVectorEntry[]>();
-            while (true)
+            var storageIdsToDelete = new List<long>();
+
+            foreach (var tvr in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName], name, 0, true))
             {
-                bool deleted = false;
-                // deleting a value might cause other ids to change, so we can't just pass the list
-                // of ids to be deleted, because they wouldn't remain stable during the deletions
-                foreach (var tvr in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName], name, 0, true))
-                {
-                    deleted = true;
-                    list.Add(ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr.Result.Reader, (int)MetadataFields.ChangeVector));
+                list.Add(ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr.Result.Reader, (int)MetadataFields.ChangeVector));
 
-                    //Ids might change due to delete
-                    table.Delete(tvr.Result.Reader.Id);
-                    break;
-                }
-
-                if (deleted == false)
-                {
-                    return list;
-                }
+                storageIdsToDelete.Add(tvr.Result.Reader.Id);
             }
-        }
 
+            foreach (var storageId in storageIdsToDelete)
+                table.Delete(storageId);
+
+            return list;
+        }
 
         public IEnumerable<IndexConflictEntry> GetConflictsFor(Transaction tx, TransactionOperationContext context, string name, int start, int take)
         {

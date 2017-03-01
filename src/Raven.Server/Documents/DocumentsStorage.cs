@@ -449,12 +449,11 @@ namespace Raven.Server.Documents
             var isStartAfter = string.IsNullOrWhiteSpace(startAfterId) == false;
 
             Slice prefixSlice;
-            Slice startAfterSlice = Slices.Empty;
+            var startAfterSlice = Slices.Empty;
             using (DocumentKeyWorker.GetSliceFromKey(context, idPrefix, out prefixSlice))
             using (isStartAfter ? (IDisposable)DocumentKeyWorker.GetSliceFromKey(context, startAfterId, out startAfterSlice) : null)
             {
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var result in table.SeekByPrimaryKeyStartingWith(prefixSlice, startAfterSlice, start))
+                foreach (var result in table.SeekByPrimaryKeyStartingWith(prefixSlice, startAfterSlice, 0))
                 {
                     var document = TableValueToDocument(context, ref result.Reader);
                     string documentKey = document.Key;
@@ -464,6 +463,12 @@ namespace Raven.Server.Documents
                     var keyTest = documentKey.Substring(idPrefix.Length);
                     if (WildcardMatcher.Matches(matches, keyTest) == false || WildcardMatcher.MatchesExclusion(exclude, keyTest))
                         continue;
+
+                    if (start > 0)
+                    {
+                        start--;
+                        continue;
+                    }
 
                     if (take-- <= 0)
                         yield break;
@@ -1379,31 +1384,25 @@ namespace Raven.Server.Documents
                 return list;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var conflictsTableStorageIdsToDelete = new List<long>();
 
-            bool deleted = true;
-            while (deleted)
+            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
             {
-                deleted = false;
-                // deleting a value might cause other ids to change, so we can't just pass the list
-                // of ids to be deleted, because they wouldn't remain stable during the deletions
-                foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
+                int size;
+                var etag = *(long*)tvr.Result.Reader.Read((int)ConflictsTable.Etag, out size);
+                var cve = tvr.Result.Reader.Read((int)ConflictsTable.ChangeVector, out size);
+                var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
+                fixed (ChangeVectorEntry* pVector = vector)
                 {
-                    deleted = true;
-
-                    int size;
-                    var etag = *(long*)tvr.Result.Reader.Read((int)ConflictsTable.Etag, out size);
-                    var cve = tvr.Result.Reader.Read((int)ConflictsTable.ChangeVector, out size);
-                    var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
-                    fixed (ChangeVectorEntry* pVector = vector)
-                    {
-                        Memory.Copy((byte*)pVector, cve, size);
-                    }
-                    list.Add(vector);
-                    conflictsTable.Delete(tvr.Result.Reader.Id);
-                    EnsureLastEtagIsPersisted(context, etag);
-                    break;
+                    Memory.Copy((byte*)pVector, cve, size);
                 }
+                list.Add(vector);
+                conflictsTableStorageIdsToDelete.Add(tvr.Result.Reader.Id);
+                EnsureLastEtagIsPersisted(context, etag);
             }
+
+            foreach (var storageId in conflictsTableStorageIdsToDelete)
+                conflictsTable.Delete(storageId);
 
             // once this value has been set, we can't set it to false
             // an older transaction may be running and seeing it is false it
