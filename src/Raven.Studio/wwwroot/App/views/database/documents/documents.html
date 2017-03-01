@@ -178,12 +178,12 @@
         </div>
 
         <div class="documents-select" data-bind="with: selectedCollection, visible: showCollectionChanged">
-            <!-- ko if: isAllDocuments --
+            !-- ko if: isAllDocuments --
             Documents count was modified,
-            <!-- /ko -->
-            <!-- ko ifnot: isAllDocuments --
+            !-- /ko --
+            !-- ko ifnot: isAllDocuments --
             '<span data-bind="text: name"></span>' collection count was modified,
-            <!-- /ko --
+            !-- /ko --
             press <span class="select-link" data-bind="click: $root.refresh.bind($root)">here</span> to refresh.
         </div>
 

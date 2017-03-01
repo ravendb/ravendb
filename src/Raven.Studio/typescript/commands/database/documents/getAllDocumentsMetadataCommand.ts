@@ -3,6 +3,11 @@ import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 import endpoints = require("endpoints");
 
+type docsAndEtag = {
+    docs: document[],
+    etag: string
+}
+
 class getAllDocumentsMetadataCommand extends commandBase {
 
     constructor(private ownerDatabase: database, private skip: number, private take: number) {
@@ -20,20 +25,24 @@ class getAllDocumentsMetadataCommand extends commandBase {
         const doneTask = $.Deferred<pagedResult<document>>();
 
         $.when<any>(docsTask, totalResultsTask)
-            .done(([docsResult]: [document[]], [resultsCount]: [number]) => doneTask.resolve({ items: docsResult, totalResultCount: resultsCount }))
+            .done(([result]: [docsAndEtag], [resultsCount]: [number]) => {
+                doneTask.resolve({ items: result.docs, totalResultCount: resultsCount, resultEtag: result.etag })
+            })
             .fail(xhr => doneTask.reject(xhr));
 
         return doneTask;
     }
 
-    private fetchDocs(): JQueryPromise<document[]> {
+    private fetchDocs(): JQueryPromise<docsAndEtag> {
         const args = {
             start: this.skip,
             pageSize: this.take,
             'metadata-only': true
         };
 
-        const docSelector = (docs: resultsDto<documentDto>) => docs.Results.map(d => new document(d));
+        const docSelector = (docs: resultsDto<documentDto>, xhr: JQueryXHR) => {
+            return { docs: docs.Results.map(d => new document(d)), etag: this.extractEtag(xhr) } as docsAndEtag;
+        };
         const url = endpoints.databases.document.docs;
 
         return this.query(url, args, this.ownerDatabase, docSelector);

@@ -129,6 +129,7 @@ class documents extends viewModelBase {
             .execute();
     }
 
+    //TODO: extract to utils as it might be used on patch page as well
     private onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
         const removedCollections = notification.ModifiedCollections.filter(x => x.Count === -1);
         const changedCollections = notification.ModifiedCollections.filter(x => x.Count !== -1);
@@ -142,6 +143,12 @@ class documents extends viewModelBase {
             const toRemove = this.collections().find(x => x.name.toLocaleLowerCase() === c.Name.toLocaleLowerCase());
             this.onCollectionRemoved(toRemove);
         });
+
+        if (this.currentCollection().isAllDocuments) {
+            if (this.gridController().resultEtag() !== notification.GlobalDocumentsEtag) {
+                this.dirtyCurrentCollection(true);
+            }
+        }
 
         changedCollections.forEach(c => {
             const existingCollection = this.collections().find(x => x.name.toLowerCase() == c.Name.toLocaleLowerCase());
@@ -160,6 +167,8 @@ class documents extends viewModelBase {
             // removed current collection - go to all docs
             messagePublisher.reportWarning(item.name + " was removed");
             this.currentCollection(this.getAllDocumentsCollection());
+        } else if (this.currentCollection().isAllDocuments) {
+            this.dirtyCurrentCollection(true);
         }
 
         this.collections.remove(item);
@@ -167,8 +176,11 @@ class documents extends viewModelBase {
 
     private onCollectionChanged(item: collection, incomingData: Raven.Server.NotificationCenter.Notifications.ModifiedCollection) {
         item.documentCount(incomingData.Count);
-        if (this.currentCollection().isAllDocuments || item.name === this.currentCollection().name) {
-            this.dirtyCurrentCollection(true);
+
+        if (item.name === this.currentCollection().name) {
+            if (incomingData.CollectionEtag !== this.gridController().resultEtag()) {
+                this.dirtyCurrentCollection(true);
+            }
         }
     }
 
@@ -178,6 +190,10 @@ class documents extends viewModelBase {
         const newCollection = new collection(incomingItem.Name, this.activeDatabase(), incomingItem.Count);
         const insertIndex = _.sortedIndexBy<collection>(this.collections().slice(1), newCollection, x => x.name.toLocaleLowerCase()) + 1;
         this.collections.splice(insertIndex, 0, newCollection);
+
+        if (this.currentCollection().isAllDocuments) {
+            this.dirtyCurrentCollection(true);
+        }
     }
 
     private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
