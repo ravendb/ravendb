@@ -11,7 +11,7 @@ namespace FastTests.Client.Attachments
 {
     public class AttachmentsCrud : RavenTestBase
     {
-        [Fact(Skip = "Work in progres")]
+        [Fact]
         public void PutAttachments()
         {
             using (var store = GetDocumentStore())
@@ -38,11 +38,11 @@ namespace FastTests.Client.Attachments
                 }
                 using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
                 {
-                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "image/jpeg"));
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
                     Assert.Equal(4, result.Etag);
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
-                    Assert.Equal("image/jpeg", result.ContentType);
+                    Assert.Equal("ImGgE/jPeG", result.ContentType);
                 }
                 using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
                 {
@@ -61,6 +61,11 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(string.Join(",", names.OrderBy(x => x)), metadata[Constants.Documents.Metadata.Attachments]);
                 }
 
+                var statistics = store.Admin.Send(new GetStatisticsOperation());
+                Assert.Equal(3, statistics.CountOfAttachments);
+                Assert.Equal(1, statistics.CountOfDocuments);
+                Assert.Equal(0, statistics.CountOfIndexes);
+
                 var readBuffer = new byte[8];
                 for (var i = 0; i < names.Length; i++)
                 {
@@ -72,11 +77,20 @@ namespace FastTests.Client.Attachments
                         Assert.Equal(name, attachment.Name);
                         Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                         if (i == 0)
+                        {
                             Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
+                            Assert.Equal("image/png", attachment.ContentType);
+                        }
                         else if (i == 1)
+                        {
                             Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
+                            Assert.Equal("ImGgE/jPeG", attachment.ContentType);
+                        }
                         else if (i == 2)
+                        {
                             Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
+                            Assert.Null(attachment.ContentType);
+                        }
                     }
                 }
                 using (var attachmentStream = new MemoryStream(readBuffer))
@@ -84,15 +98,10 @@ namespace FastTests.Client.Attachments
                     var notExistsAttachment = store.Operations.Send(new GetAttachmentOperation("users/1", "not-there", (result, stream) => stream.CopyTo(attachmentStream)));
                     Assert.Null(notExistsAttachment);
                 }
-
-                var statistics = store.Admin.Send(new GetStatisticsOperation());
-                Assert.Equal(3, statistics.CountOfAttachments);
-                Assert.Equal(1, statistics.CountOfDocuments);
-                Assert.Equal(0, statistics.CountOfIndexes);
             }
         }
 
-        [Fact(Skip = "Work in progres")]
+        [Fact]
         public async Task DeleteAttachments()
         {
             using (var store = GetDocumentStore())

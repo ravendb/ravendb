@@ -6,8 +6,10 @@
 
 using System;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Net;
 using System.Runtime.ExceptionServices;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
@@ -78,24 +80,29 @@ namespace Raven.Server.Documents.Handlers
                 var contentType = GetStringQueryString("contentType", false) ?? "";
 
                 AttachmentResult result;
+
                 var tempPath = Path.Combine(Database.DocumentsStorage.Environment.Options.DataPager.Options.TempPath, $"attachment.{Guid.NewGuid():N}.put");
                 using (var file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan))
                 {
                     JsonOperationContext.ManagedPinnedBuffer buffer;
                     using (context.GetManagedBuffer(out buffer))
                     {
-                        var hashingCtx = Hashing.Streamed.XXHash64.BeginProcess();
                         var requestStream = RequestBodyStream();
-                        var count = await requestStream.ReadAsync(buffer.Buffer.Array, 0, buffer.Length, Database.DatabaseShutdown);
+                        var count = await requestStream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count, Database.DatabaseShutdown);
                         while (count > 0)
                         {
-                            ComputePartialHash(hashingCtx, buffer, count);
-                            await file.WriteAsync(buffer.Buffer.Array, 0, count, Database.DatabaseShutdown);
-                            count = await requestStream.ReadAsync(buffer.Buffer.Array, 0, buffer.Length, Database.DatabaseShutdown);
+                            await file.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, count, Database.DatabaseShutdown);
+                            count = await requestStream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count, Database.DatabaseShutdown);
                         }
                         file.Position = 0;
-                        var hash = Hashing.Streamed.XXHash64.EndProcess(hashingCtx);
 
+                        string hash;
+                        using (var sha256 = SHA256.Create())
+                        {
+                            hash = Convert.ToBase64String(sha256.ComputeHash(file));
+                        }
+                        file.Position = 0;
+                        
                         var etag = GetLongFromHeaders("If-Match");
 
                         var cmd = new MergedPutAttachmentCommand
@@ -142,12 +149,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static unsafe void ComputePartialHash(Hashing.Streamed.XXHash64Context ctx, JsonOperationContext.ManagedPinnedBuffer buffer, int count)
-        {
-            // this is in separate method because unsafe & async don't mix
-            Hashing.Streamed.XXHash64.Process(ctx, buffer.Pointer, count);
-        }
-
         [RavenAction("/databases/*/attachments", "DELETE")]
         public async Task Delete()
         {
@@ -183,7 +184,7 @@ namespace Raven.Server.Documents.Handlers
             public AttachmentResult Result;
             public string ContentType;
             public Stream Stream;
-            public ulong Hash;
+            public string Hash;
 
             public override void Execute(DocumentsOperationContext context)
             {
