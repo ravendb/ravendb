@@ -121,10 +121,52 @@ class documents extends viewModelBase {
     }
 
     private onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
-        console.log(notification);
-        //TODO:
+        const removedCollections = notification.ModifiedCollections.filter(x => x.Count === -1);
+        const changedCollections = notification.ModifiedCollections.filter(x => x.Count !== -1);
+        const totalCount = notification.CountOfDocuments;
 
-        //TODO: remember to put in right position!
+        // update all collections
+        const allDocs = this.collections().find(x => x.isAllDocuments);
+        allDocs.documentCount(totalCount);
+
+        removedCollections.forEach(c => {
+            const toRemove = this.collections().find(x => x.name.toLocaleLowerCase() === c.Name.toLocaleLowerCase());
+            this.onCollectionRemoved(toRemove);
+        });
+
+        changedCollections.forEach(c => {
+            const existingCollection = this.collections().find(x => x.name.toLowerCase() == c.Name.toLocaleLowerCase());
+            if (existingCollection) {
+                this.onCollectionCountChanged(existingCollection, c.Count);
+            } else {
+                this.onCollectionCreated(c);
+            }
+        });
+    }
+
+    private onCollectionRemoved(item: collection) {
+        //TODO: animate removed collection in future
+
+        if (item === this.currentCollection()) {
+            // removed current collection - go to all docs
+            messagePublisher.reportWarning(item.name + " was removed");
+            this.currentCollection(this.getAllDocumentsCollection());
+        }
+
+        this.collections.remove(item);
+    }
+
+    private onCollectionCountChanged(item: collection, newCount: number) {
+        item.documentCount(newCount);
+        //TODO: if current collection display info that we may have outdated data
+    }
+
+    private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.ModifiedCollection) {
+        //TODO: animate incoming db in future
+
+        const newCollection = new collection(incomingItem.Name, this.activeDatabase(), incomingItem.Count);
+        const insertIndex = _.sortedIndexBy<collection>(this.collections().slice(1), newCollection, x => x.name.toLocaleLowerCase()) + 1;
+        this.collections.splice(insertIndex, 0, newCollection);
     }
 
     private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
@@ -137,6 +179,10 @@ class documents extends viewModelBase {
 
         const collectionToSelect = this.collections().find(x => x.name === this.collectionToSelectName) || allDocsCollection;
         this.currentCollection(collectionToSelect);
+    }
+
+    private getAllDocumentsCollection() {
+        return this.collections().find(x => x.isAllDocuments);
     }
 
     private getCollectionNames() {
@@ -244,7 +290,7 @@ class documents extends viewModelBase {
 
                                     if (excludedIds.length === 0) {
                                         // deleted entire collection to go all documents
-                                        const allDocsCollection = this.collections().find(x => x.isAllDocuments);
+                                        const allDocsCollection = this.getAllDocumentsCollection();
                                         if (this.currentCollection() !== allDocsCollection) {
                                             this.currentCollection(allDocsCollection);
                                         }
