@@ -391,7 +391,8 @@ namespace Raven.Bundles.Replication.Tasks
                 var destinationForReplication = destinations.Where(
                     dest =>
                     {
-                        if (runningBecauseOfDataModifications == false) return true;
+                        if (runningBecauseOfDataModifications == false)
+                            return true;
                         return IsNotFailing(dest, currentReplicationAttempts);
                     }).ToList();
 
@@ -485,14 +486,9 @@ namespace Raven.Bundles.Replication.Tasks
                             if (t.Result == null)
                                 return;
 
-                            docDb.TransactionalStorage.Batch(actions =>
-                            {
-                                var shouldRunAgain = t.Result.LastReplicatedDocumentEtag != Etag.InvalidEtag &&
-                                                        actions.Staleness.GetMostRecentDocumentEtag() != t.Result.LastReplicatedDocumentEtag;
-                                // only wake replciation if there is a change since we are done
-                                if (shouldRunAgain)
-                                    docDb.WorkContext.ReplicationResetEvent.Set();
-                            });                            
+                            // only wake replciation if there is a change since we are done
+                            RunReplicaitonAgainIfNeeded(dest, t.Result, docDb);
+
                         });
                 }
 
@@ -544,6 +540,47 @@ namespace Raven.Bundles.Replication.Tasks
 
                 return Task.WhenAny(startedTasks.ToArray()).AssertNotFailed();
             }
+        }
+        
+        private void RunReplicaitonAgainIfNeeded(ReplicationStrategy dest, LastReplicatedEtags tResult, DocumentDatabase docDb)
+        {
+            docDb.TransactionalStorage.Batch(actions =>
+            {
+                if (tResult.LastReplicatedDocumentEtag != Etag.InvalidEtag &&
+                    actions.Staleness.GetMostRecentDocumentEtag() != tResult.LastReplicatedDocumentEtag == false)
+                {
+                    return;
+                }
+
+                DestinationStats destStats = null;
+                // We want to reduce the amount of immediately recurring replication in case of ongoing state of replication failure
+                if (DestinationStats.TryGetValue(dest.ConnectionStringOptions.Url, out destStats))
+                {
+                    var destStatsFailureCount = destStats.FailureCount;
+                    if (destStatsFailureCount <2)
+                    {
+                        docDb.WorkContext.ReplicationResetEvent.Set();
+                        return;
+                    }
+                    if (destStatsFailureCount < 20 && destStatsFailureCount%2 ==0)
+                    {
+                        docDb.WorkContext.ReplicationResetEvent.Set();
+                        return;
+                    }
+                    if (destStatsFailureCount < 100 && destStatsFailureCount % 5 == 0)
+                    {
+                        docDb.WorkContext.ReplicationResetEvent.Set();
+                        return;
+                    }
+                    if (destStatsFailureCount < 1000 && destStatsFailureCount % 20 == 0)
+                    {
+                        docDb.WorkContext.ReplicationResetEvent.Set();
+                        return;
+                    }
+
+                }
+
+            });
         }
 
         private void ClearCachedLastEtagForRemovedServers(ReplicationStrategy[] destinations)
@@ -703,34 +740,37 @@ namespace Raven.Bundles.Replication.Tasks
                 }
         }
 
+        
+
         private bool IsNotFailing(ReplicationStrategy dest, int currentReplicationAttempts)
         {
             var jsonDocument = docDb.Documents.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(dest.ConnectionStringOptions.Url), null);
             if (jsonDocument == null)
                 return true;
             var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
+
             if (failureInformation.FailureCount > 1000)
             {
                 var shouldReplicateTo = currentReplicationAttempts % 10 == 0;
                 if (log.IsDebugEnabled)
-                    log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
-                        dest, failureInformation.FailureCount, shouldReplicateTo == false);
+                    log.Debug("Source = {3}; Failure count for {0} is {1}, skipping replication: {2}",
+                        dest, failureInformation.FailureCount, shouldReplicateTo == false, docDb.Name + "@" + docDb.ServerUrl);
                 return shouldReplicateTo;
             }
             if (failureInformation.FailureCount > 100)
             {
                 var shouldReplicateTo = currentReplicationAttempts % 5 == 0;
                 if (log.IsDebugEnabled)
-                    log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
-                        dest, failureInformation.FailureCount, shouldReplicateTo == false);
+                    log.Debug("Source = {3}; Failure count for {0} is {1}, skipping replication: {2}",
+                        dest, failureInformation.FailureCount, shouldReplicateTo == false, docDb.Name + "@" + docDb.ServerUrl);
                 return shouldReplicateTo;
             }
             if (failureInformation.FailureCount > 10)
             {
                 var shouldReplicateTo = currentReplicationAttempts % 2 == 0;
                 if (log.IsDebugEnabled)
-                    log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
-                        dest, failureInformation.FailureCount, shouldReplicateTo == false);
+                    log.Debug("Source = {3}; Failure count for {0} is {1}, skipping replication: {2}",
+                        dest, failureInformation.FailureCount, shouldReplicateTo == false, docDb.Name + "@" + docDb.ServerUrl);
                 return shouldReplicateTo;
             }
             return true;
@@ -1120,8 +1160,10 @@ namespace Raven.Bundles.Replication.Tasks
                 }
             }
             failureInformation.FailureCount = failureCount;
+            
             docDb.Documents.Put(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
-                      RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
+                RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
+            
         }
 
         private void RecordLastEtagChecked(string url, Etag lastEtagChecked)
