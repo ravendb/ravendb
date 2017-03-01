@@ -120,14 +120,16 @@ namespace Raven.Server.Smuggler.Documents
 
             private unsafe LazyStringValue CreateLazyStringValueFromParserState(JsonParserState state)
             {
-                var maxSizeOfEscapePos = state.EscapePositions.Count * 5 // max size of var int
-                                         + JsonParserState.VariableSizeIntSize(state.EscapePositions.Count);
+                int escapePositionsCount = state.EscapePositions.Count;
+
+                var maxSizeOfEscapePos = escapePositionsCount * 5 // max size of var int
+                                         + JsonParserState.VariableSizeIntSize(escapePositionsCount);
 
                 var mem = _ctx.GetMemory(maxSizeOfEscapePos + state.StringSize);
                 _allocations.Add(mem);
                 Memory.Copy(mem.Address, state.StringBuffer, state.StringSize);
                 var lazyStringValueFromParserState = new LazyStringValue(null, mem.Address, state.StringSize, _ctx);
-                if (state.EscapePositions.Count > 0)
+                if (escapePositionsCount > 0)
                 {
                     lazyStringValueFromParserState.EscapePositions = state.EscapePositions.ToArray();
                 }

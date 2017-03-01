@@ -12,8 +12,8 @@ namespace Sparrow.Json
     public class BlittableJsonDocumentBuilder : IDisposable
     {
         protected readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
-
         protected readonly JsonOperationContext _context;
+
         private UsageMode _mode;
         private readonly IJsonParser _reader;
         private readonly IBlittableDocumentModifier _modifier;
@@ -62,6 +62,7 @@ namespace Sparrow.Json
         public void Renew(string debugTag, UsageMode mode)
         {
             Reset();
+
             _debugTag = debugTag;
             _mode = mode;
             _writer.ResetAndRenew();
@@ -388,7 +389,7 @@ namespace Sparrow.Json
         public struct PropertyTag
         {
             public int Position;
-			public CachedProperties.PropertyName Property;
+            public CachedProperties.PropertyName Property;
             public byte Type;
 
             public PropertyTag(byte type, CachedProperties.PropertyName property, int position)
@@ -397,8 +398,8 @@ namespace Sparrow.Json
                 this.Property = property;
                 this.Position = position;
             }
-			
-			public override string ToString()
+            
+            public override string ToString()
             {
                 return $"{nameof(Position)}: {Position}, {nameof(Property)}: {Property.Comparer} {Property.PropertyId}, {nameof(Type)}: {(BlittableJsonToken)Type}";
             }

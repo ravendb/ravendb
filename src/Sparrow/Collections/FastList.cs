@@ -114,6 +114,17 @@ namespace Sparrow.Collections
             AddUnlikely(item, (int)_size + 1);
         }
 
+        public void CopyTo(FastList<int> dest)
+        {
+            int size = (int)this._size;
+            if (dest.Capacity < size)
+                dest.Capacity = size;
+
+            dest._size = (uint)size;
+            Array.Copy( this._items, dest._items, size);
+            dest._version++;
+        }
+
         private void AddUnlikely(T item, int size)
         {
             EnsureCapacity(size);
@@ -362,6 +373,25 @@ namespace Sparrow.Collections
         public void Sort(IComparer<T> comparer)
         {
             Array.Sort<T>(_items, 0, (int)_size, comparer);
+        }
+
+
+        public struct ResetBehavior : IResetSupport<FastList<T>>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Reset(FastList<T> value)
+            {
+                value.Clear();
+            }
+        }
+
+        public struct WeakResetBehavior : IResetSupport<FastList<T>>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Reset(FastList<T> value)
+            {
+                value.WeakClear();
+            }
         }
     }
 }

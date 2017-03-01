@@ -14,7 +14,7 @@ using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
 {
-    public class BlittableWriter<TWriter> : IDisposable
+    public sealed class BlittableWriter<TWriter> : IDisposable
         where TWriter : struct, IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
@@ -399,12 +399,12 @@ namespace Sparrow.Json
         }
 
         [ThreadStatic]
-        private static List<int> _intBuffer;
+        private static FastList<int> _intBuffer;
 
         public unsafe int WriteValue(string str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
         {
             if (_intBuffer == null)
-                _intBuffer = new List<int>();
+                _intBuffer = new FastList<int>();
 
             var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(str);
             int size = Encoding.UTF8.GetMaxByteCount(str.Length)

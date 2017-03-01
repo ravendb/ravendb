@@ -49,12 +49,13 @@ namespace Sparrow.Json.Parsing
         public static int FindEscapePositionsMaxSize(string str)
         {
             var count = 0;
+            var escapeCharsAsBytes = EscapeCharsAsBytes;
 
             for (int i = 0; i < str.Length; i++)
             {
-                for (int j = 0; j < EscapeCharsAsBytes.Length; j++)
+                for (int j = 0; j < escapeCharsAsBytes.Length; j++)
                 {
-                    if (str[i] == EscapeCharsAsBytes[j])
+                    if (str[i] == escapeCharsAsBytes[j])
                     {
                         count++;
                         break;
@@ -69,35 +70,9 @@ namespace Sparrow.Json.Parsing
             return (count + 1) * 5; 
         }
 
-
         public void FindEscapePositionsIn(byte* str, int len, int previousComputedMaxSize)
         {
             FindEscapePositionsIn(EscapePositions, str, len, previousComputedMaxSize);
-        }
-
-        public static void FindEscapePositionsIn(List<int> buffer, byte* str, int len, int previousComputedMaxSize)
-        {
-            buffer.Clear();
-            if (previousComputedMaxSize == 5)
-            {
-                // if the value is 5, then we got no escape positions, see: FindEscapePositionsMaxSize
-                // and we don't have to do any work
-                return;
-            }
-
-            var lastEscape = 0;
-            for (int i = 0; i < len; i++)
-            {
-                for (int j = 0; j < EscapeCharsAsBytes.Length; j++)
-                {
-                    if (str[i] == EscapeCharsAsBytes[j])
-                    {
-                        buffer.Add(i - lastEscape);
-                        lastEscape = i + 1;
-                        break;
-                    }
-                }
-            }
         }
 
         public static void FindEscapePositionsIn(FastList<int> buffer, byte* str, int len, int previousComputedMaxSize)
@@ -110,11 +85,13 @@ namespace Sparrow.Json.Parsing
                 return;
             }
             var lastEscape = 0;
+            var escapeCharsAsBytes = EscapeCharsAsBytes;
+
             for (int i = 0; i < len; i++)
             {
-                for (int j = 0; j < EscapeCharsAsBytes.Length; j++)
+                for (int j = 0; j < escapeCharsAsBytes.Length; j++)
                 {
-                    if (str[i] == EscapeCharsAsBytes[j])
+                    if (str[i] == escapeCharsAsBytes[j])
                     {
                         buffer.Add(i - lastEscape);
                         lastEscape = i + 1;

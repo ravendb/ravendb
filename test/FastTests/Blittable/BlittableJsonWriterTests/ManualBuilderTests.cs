@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -788,7 +789,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     {
                         var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(lsvString);
                         var lsv = new LazyStringValue(null,b,lsvStringBytes.Length,context);
-                        var escapePositions = new List<int>();
+                        var escapePositions = new FastList<int>();
                         JsonParserState.FindEscapePositionsIn(escapePositions, b, lsvStringBytes.Length, escapePositionsMaxSize);
                         lsv.EscapePositions = escapePositions.ToArray();
 
