@@ -96,7 +96,7 @@ namespace Voron
 
         public event Action OnLogsApplied;
 
-        private readonly long[] _validPages = null;
+        private readonly long[] _validPages;
 
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
@@ -107,7 +107,13 @@ namespace Voron
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
-                _validPages = new long[_dataPager.NumberOfAllocatedPages / (8 * sizeof(long))];
+
+                Debug.Assert(_dataPager.NumberOfAllocatedPages != 0);
+
+                var remainingBits = _dataPager.NumberOfAllocatedPages % (8 * sizeof(long));
+
+                _validPages = new long[_dataPager.NumberOfAllocatedPages / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
+                _validPages[_validPages.Length - 1] |= unchecked (((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
                 var isNew = _headerAccessor.Initialize();
