@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
-import pagedResultSet = require("common/pagedResultSet");
 import querySort = require("models/database/query/querySort");
 import endpoints = require("endpoints");
 import queryCriteria = require("models/database/query/queryCriteria");
@@ -11,8 +10,10 @@ class queryIndexCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet<document>> {
-        const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>>) => new pagedResultSet(results.Results.map(d => new document(d)), results.TotalResults, results);
+    execute(): JQueryPromise<pagedResult<document>> {
+        //TODO: put ETAG as well in pagedResult
+        const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>>) =>
+            ({ items: results.Results.map(d => new document(d)), totalResultCount: results.TotalResults, additionalResultInfo: results }) as pagedResult<document>
         return this.query(this.getUrl(), null, this.db, selector)
             .fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
     }

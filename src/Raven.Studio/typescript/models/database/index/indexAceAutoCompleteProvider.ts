@@ -3,7 +3,6 @@ import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import indexDefinition = require("models/database/index/indexDefinition");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
-import pagedResultSet = require("common/pagedResultSet");
 import collectionsStats = require("models/database/documents/collectionsStats");
 
 class indexAceAutoCompleteProvider {
@@ -102,7 +101,7 @@ class indexAceAutoCompleteProvider {
                 if (matchingAliasKeyValue.aliasValuePrefix.toLowerCase() === "docs") {
                     new collection(matchingAliasKeyValue.aliasValueSuffix, this.activeDatabase)
                         .fetchDocuments(0, 1)
-                        .done((result: pagedResultSet<any>) => {
+                        .done((result: pagedResult<any>) => {
                             if (!!result && result.items.length > 0) {
                                 const documentPattern: document = new document(result.items[0]);
                                 deferred.resolve(documentPattern.getDocumentPropertyNames());

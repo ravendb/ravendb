@@ -7,7 +7,6 @@ import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand"
 import getFilesystemRevisionsCommand = require("commands/filesystem/getFilesystemRevisionsCommand");
 import createFolderInFilesystem = require("viewmodels/filesystem/files/createFolderInFilesystem");
 import treeBindingHandler = require("common/bindingHelpers/treeBindingHandler");
-import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
 import file = require("models/filesystem/file");
 import folder = require("models/filesystem/folder");
@@ -272,7 +271,7 @@ class filesystemFiles extends viewModelBase {
 
     /* TODO
     createPagedList(directory: string): pagedList {
-        var fetcher: fetcherDto<any>;
+        var fetcher: fetcherDto<any>; //TODO: fetcher was removed
         if (directory === filesystemFiles.revisionsFolderId) {
             fetcher = (skip: number, take: number) => this.fetchRevisions(skip, take);
         } else {
@@ -283,12 +282,12 @@ class filesystemFiles extends viewModelBase {
         return list;
     }*/
 
-    fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
+    fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResult<any>> {
         var task = new getFilesystemFilesCommand(this.activeFilesystem(), directory, skip, take).execute();
         return task;
     }
 
-    fetchRevisions(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
+    fetchRevisions(skip: number, take: number): JQueryPromise<pagedResult<any>> {
         var task = new getFilesystemRevisionsCommand(this.activeFilesystem(), skip, take).execute();
         return task;
     }
@@ -503,7 +502,7 @@ class filesystemFiles extends viewModelBase {
 
             new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
                 .execute()
-                .done((results: pagedResultSet<any>) => {
+                .done((results: pagedResult<any>) => {
                 if (results.totalResultCount === 0) {
                     app.showBootstrapMessage("There are no files matching your query.", "Nothing to do");
                 } else {

@@ -1,4 +1,3 @@
-import pagedResultSet = require("common/pagedResultSet");
 import filesystem = require("models/filesystem/filesystem");
 
 class filesystemCollection{
@@ -26,7 +25,7 @@ class filesystemCollection{
         return this.itemsList;
     }*/
 
-    fetchItems(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
+    fetchItems(skip: number, take: number): JQueryPromise<pagedResult<any>> {
         throw new Error('This method is abstract');
     }
 

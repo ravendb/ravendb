@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import pagedResultSet = require("common/pagedResultSet");
 import document = require("models/database/documents/document");
 import endpoints = require("endpoints");
 
@@ -10,17 +9,18 @@ class getAllDocumentsMetadataCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet<document>> {
+    execute(): JQueryPromise<pagedResult<document>> {
         // Getting all documents requires a 2 step process:
         // 1. Fetch /collections/stats to get the total doc count.
         // 2. Fetch /docs to get the actual documents.
 
+        //TODO: fill result etag
         const docsTask = this.fetchDocs();
         const totalResultsTask = this.fetchTotalResultCount();
-        const doneTask = $.Deferred<pagedResultSet<document>>();
+        const doneTask = $.Deferred<pagedResult<document>>();
 
         $.when<any>(docsTask, totalResultsTask)
-            .done(([docsResult]: [document[]], [resultsCount]: [number]) => doneTask.resolve(new pagedResultSet(docsResult, resultsCount)))
+            .done(([docsResult]: [document[]], [resultsCount]: [number]) => doneTask.resolve({ items: docsResult, totalResultCount: resultsCount }))
             .fail(xhr => doneTask.reject(xhr));
 
         return doneTask;

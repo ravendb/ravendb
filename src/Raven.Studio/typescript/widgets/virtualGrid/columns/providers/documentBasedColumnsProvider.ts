@@ -1,6 +1,5 @@
 ﻿/// <reference path="../../../../../typings/tsd.d.ts"/>
 
-import pagedResult = require("widgets/virtualGrid/pagedResult");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");

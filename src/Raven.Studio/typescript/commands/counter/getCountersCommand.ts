@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import counterSummary = require("models/counter/counterSummary");
 import counterStorage = require("models/counter/counterStorage");
-import pagedResultSet = require("common/pagedResultSet");
 
 class getCountersCommand extends commandBase {
 
@@ -15,7 +14,7 @@ class getCountersCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet<any>> {
+    execute(): JQueryPromise<pagedResult<any>> {
         var args = {
             skip: this.skip,
             take: this.take,
@@ -26,7 +25,7 @@ class getCountersCommand extends commandBase {
         var doneTask = $.Deferred();
         var selector = (dtos: counterSummaryDto[]) => dtos.map(d => new counterSummary(d, this.group == null));
         var task = this.query(url, args, this.cs, selector);
-        task.done((summaries: counterSummary[]) => doneTask.resolve(new pagedResultSet(summaries, summaries.length)));
+        task.done((summaries: counterSummary[]) => doneTask.resolve({ items: summaries, totalResultCount: summaries.length } as pagedResult<counterSummary>));
         task.fail(xhr => doneTask.reject(xhr));
         return doneTask;
     }

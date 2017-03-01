@@ -3,7 +3,6 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
-import pagedResultSet = require("common/pagedResultSet");
 import searchInFolderClause = require("viewmodels/filesystem/files/searchInFolderClause");
 import searchSingleInputClause = require("viewmodels/filesystem/files/searchSingleInputClause");
 import searchFileSizeRangeClause = require("viewmodels/filesystem/files/searchFileSizeRangeClause");
@@ -63,7 +62,7 @@ class search extends viewModelBase {
         return new pagedList(fetcher);
     }*/
 
-    fetchFiles(query: string, skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
+    fetchFiles(query: string, skip: number, take: number): JQueryPromise<pagedResult<any>> {
         var task = new searchByQueryCommand(this.activeFilesystem(), query, skip, take).execute();
         return task;
     }
@@ -151,7 +150,7 @@ class search extends viewModelBase {
         this.search();
         this.allFilesPagedItems()
             .fetch(0, 1)
-            .done((results: pagedResultSet<any>) => {
+            .done((results: pagedResult<any>) => {
                 if (results.totalResultCount === 0) {
                     app.showBootstrapMessage("There are no files matching your query.", "Nothing to do");
                 } else {
