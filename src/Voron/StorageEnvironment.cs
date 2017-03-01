@@ -96,6 +96,8 @@ namespace Voron
 
         public event Action OnLogsApplied;
 
+        private readonly long[] _validPages = null;
+
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
             try
@@ -105,6 +107,7 @@ namespace Voron
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
+                _validPages = new long[_dataPager.NumberOfAllocatedPages / (8 * sizeof(long))];
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
                 var isNew = _headerAccessor.Initialize();
@@ -860,6 +863,88 @@ namespace Voron
                 return;
 
             _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo, ExceptionDispatchInfo.Capture(exception));
+        }
+
+        public unsafe void ValidatePage(long pageNumber, PageHeader* current)
+        {
+            long old;
+            var index = pageNumber / (8 * sizeof(long));
+            var bitIndex = (int)(pageNumber % (8 * sizeof(long)));
+            var bitToSet = 1L << bitIndex;
+
+            // If the page is beyong the initiall size of the file we don't validate it. 
+            // We assume that it is valid since we wrote it in this run.
+            if (index >= _validPages.Length)
+                return;
+
+            old = _validPages[index];
+            if ((old & bitToSet) != 0)
+                return;
+
+            UnlikelyValidatePage(pageNumber, current, index, old, bitToSet);
+        }
+
+        private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, long index, long old, long bitToSet)
+        {
+            var spinner = new SpinWait();
+            while (Interlocked.CompareExchange(ref _validPages[index], old | bitToSet, old) != old)
+            {
+                if ((old & bitToSet) == 0)
+                    break;
+
+                spinner.SpinOnce();
+                old = _validPages[index];
+            }
+
+            var dataLength = Constants.Storage.PageSize - (PageHeader.ChecksumOffset + sizeof(ulong));
+            if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+            {
+                if (pageNumber + _dataPager.GetNumberOfOverflowPages(current->OverflowSize) > _dataPager.NumberOfAllocatedPages)
+                    ThrowInvalidOverflowSize(pageNumber, current);
+
+                dataLength = current->OverflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
+            }
+
+            // No need to ensureMapped here. ValidatePage is only called for pages in the datafile, 
+            // which were already handled with AcquirePagePointerWithOverflowHandling()
+
+            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)pageNumber);
+
+            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current, PageHeader.ChecksumOffset);
+            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
+
+            ulong checksum = Hashing.Streamed.XXHash64.EndProcess(ctx);
+
+            if (checksum == current->Checksum)
+                return;
+
+            ThrowInvalidChecksum(pageNumber, current, checksum);
+        }
+
+        private unsafe void ThrowInvalidChecksum(long pageNumber, PageHeader* current, ulong checksum)
+        {
+            throw new InvalidDataException(
+                $"Invalid checksum for page {pageNumber}, data file {_options.DataPager} might be corrupted, expected hash to be {current->Checksum} but was {checksum}");
+        }
+
+        private unsafe void ThrowInvalidOverflowSize(long pageNumber, PageHeader* current)
+        {
+            throw new InvalidDataException(
+                $"Invalid overflow size for page {pageNumber}, current offset is {pageNumber* Constants.Storage.PageSize} and overflow size is {current->OverflowSize}. Page length is beyond the file length {_dataPager.TotalAllocationSize}");
+        }
+
+        public unsafe void AddChecksumToPageHeader(PageHeader* current)
+        {
+            var dataLength = Constants.Storage.PageSize - (PageHeader.ChecksumOffset + sizeof(ulong));
+            if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+                dataLength = current->OverflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
+
+            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)current->PageNumber);
+
+            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current, PageHeader.ChecksumOffset);
+            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
+
+            current->Checksum = Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
 
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
