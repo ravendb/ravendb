@@ -2,22 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDb1962 : RavenTest
+    public class RavenDb1962 : RavenTestBase
     {
         private const int Cntr = 5;
 
         [Fact]
         public async Task CanExecuteLazyLoadsInAsyncSession()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -38,11 +38,11 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task CanExecuteLazyLoadsInAsyncSession_CheckSingleCall()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                   await StoreDataAsync(store, session);
+                    await StoreDataAsync(store, session);
                 }
                 using (var session = store.OpenAsyncSession())
                 {
@@ -50,18 +50,18 @@ namespace Raven.Tests.Issues
                     LazyLoadAsync(store, session);
 
                     var requestTimes = await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
-                    Assert.Equal(1, session.Advanced.NumberOfRequests); 
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
                     Assert.NotNull(requestTimes.TotalClientDuration);
                     Assert.NotNull(requestTimes.TotalServerDuration);
                     Assert.Equal(Cntr, requestTimes.DurationBreakdown.Count);
                 }
-                }
+            }
         }
 
         [Fact]
         public async Task CanExecuteLazyQueriesInAsyncSession()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -92,16 +92,16 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public async Task StoreDataAsync(DocumentStore store, IAsyncDocumentSession session)
+        private async Task StoreDataAsync(DocumentStore store, IAsyncDocumentSession session)
         {
             for (var i = 1; i <= Cntr; i++)
-           {
-                await session.StoreAsync(new User {Name = "Test User #" + i}, "users/" + i);
-           }
+            {
+                await session.StoreAsync(new User { Name = "Test User #" + i }, "users/" + i);
+            }
             await session.SaveChangesAsync();
         }
 
-        public List<Lazy<Task<User>>> LazyLoadAsync(DocumentStore store, IAsyncDocumentSession session)
+        private List<Lazy<Task<User>>> LazyLoadAsync(DocumentStore store, IAsyncDocumentSession session)
         {
             var listTasks = new List<Lazy<Task<User>>>();
             for (var i = 1; i <= Cntr; i++)
@@ -109,8 +109,8 @@ namespace Raven.Tests.Issues
                 var userFetchTask = session.Advanced.Lazily.LoadAsync<User>("users/" + i);
 
                 listTasks.Add(userFetchTask);
-             }
+            }
             return listTasks;
-       }
+        }
     }
 }

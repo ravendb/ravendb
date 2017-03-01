@@ -3,34 +3,34 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB1519 : RavenTest
+    public class RavenDB1519 : RavenTestBase
     {
-        public class Appointment
+        private class Appointment
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
         }
 
-        public class Message
+        private class Message
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
         }
 
-        public class Attachment
+        private class Attachment
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Source { get; set; }
         }
 
-        public class Attachments_Unused : AbstractIndexCreationTask<Attachment>
+        private class Attachments_Unused : AbstractIndexCreationTask<Attachment>
         {
             public Attachments_Unused()
             {
@@ -43,33 +43,33 @@ namespace Raven.Tests.Issues
         [Fact]
         public void IndexCompilationErr()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Attachments_Unused().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
-                    var appointment = new Appointment { Id = Guid.NewGuid() };
-                    var message = new Message { Id = Guid.NewGuid() };
+                    var appointment = new Appointment { Id = Guid.NewGuid().ToString() };
+                    var message = new Message { Id = Guid.NewGuid().ToString() };
 
                     session.Store(appointment);
                     session.Store(message);
 
                     var appointmentAttachment = new Attachment
                     {
-                        Id = Guid.NewGuid(),
+                        Id = Guid.NewGuid().ToString(),
                         Source = session.Advanced.GetDocumentId(appointment)
                     };
 
                     var messageAttachment = new Attachment
                     {
-                        Id = Guid.NewGuid(),
+                        Id = Guid.NewGuid().ToString(),
                         Source = session.Advanced.GetDocumentId(message)
                     };
 
                     var unusedAttachment = new Attachment
                     {
-                        Id = Guid.NewGuid(),
+                        Id = Guid.NewGuid().ToString(),
                         Source = null
                     };
 
@@ -87,7 +87,7 @@ namespace Raven.Tests.Issues
                 {
                     Assert.NotEmpty(session.Query<Attachment, Attachments_Unused>().ToList());
                 }
-                   
+
             }
         }
     }
