@@ -7,8 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Lambda2Js;
-using Newtonsoft.Json;
 
 namespace Raven.Client.Documents.Session
 {

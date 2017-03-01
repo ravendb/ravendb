@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Text;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 

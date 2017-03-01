@@ -1,25 +1,12 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using Jint;
 using Jint.Native;
-using Jint.Parser;
-using Jint.Parser.Ast;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Raven.Client;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
-using Sparrow.Logging;
-using Voron.Data.Tables;
-using Voron.Exceptions;
-using TypeExtensions = System.Reflection.TypeExtensions;
 
 namespace Raven.Server.Documents.Patch
 {

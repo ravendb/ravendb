@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -29,7 +28,6 @@ namespace Raven.Client.Documents.Commands
         public int Start;
         public int PageSize;
         public string Exclude;
-        public PagingInformation PagingInformation;
         public string StartAfter;
 
         public JsonOperationContext Context;
@@ -43,13 +41,7 @@ namespace Raven.Client.Documents.Commands
 
             if (StartWith != null)
             {
-                var actualStart = Start;
-
-                var nextPage = PagingInformation != null && PagingInformation.IsForPreviousPage(Start, PageSize);
-                if (nextPage)
-                    actualStart = PagingInformation.NextPageStart;
-
-                pathBuilder.Append($"startsWith={Uri.EscapeDataString(StartWith)}&start={actualStart.ToInvariantString()}&pageSize={PageSize.ToInvariantString()}");
+                pathBuilder.Append($"startsWith={Uri.EscapeDataString(StartWith)}&start={Start.ToInvariantString()}&pageSize={PageSize.ToInvariantString()}");
 
                 if (Matches != null)
                     pathBuilder.Append($"&matches={Matches}");
@@ -57,8 +49,6 @@ namespace Raven.Client.Documents.Commands
                     pathBuilder.Append($"&exclude={Exclude}");
                 if (StartAfter != null)
                     pathBuilder.Append($"&startAfter={Uri.EscapeDataString(StartAfter)}");
-                if (nextPage)
-                    pathBuilder.Append("&next-page=true");
             }
 
             if (Includes != null)

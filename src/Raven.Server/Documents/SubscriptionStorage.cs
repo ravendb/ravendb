@@ -4,13 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -256,14 +254,8 @@ namespace Raven.Server.Documents
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
 
-                foreach (var subscriptionTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                foreach (var subscriptionTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys, start))
                 {
-                    if (start > 0)
-                    {
-                        start--;
-                        continue;
-                    }
-
                     if (take-- <= 0)
                         yield break;
 

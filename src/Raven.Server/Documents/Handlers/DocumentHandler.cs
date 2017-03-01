@@ -16,7 +16,6 @@ using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
@@ -124,7 +123,6 @@ namespace Raven.Server.Documents.Handlers
             var etag = GetLongQueryString("etag", false);
             var start = GetStart();
             var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
-            Reference<int> nextPageStart = null;
 
             IEnumerable<Document> documents;
             if (etag != null)
@@ -133,16 +131,13 @@ namespace Raven.Server.Documents.Handlers
             }
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {
-                nextPageStart = new Reference<int>();
                 documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                      HttpContext.Request.Query["startsWith"],
                      HttpContext.Request.Query["matches"],
                      HttpContext.Request.Query["exclude"],
                      HttpContext.Request.Query["startAfter"],
                      start,
-                     pageSize,
-                     nextPageStart
-                 );
+                     pageSize);
             }
             else // recent docs
             {
@@ -166,13 +161,6 @@ namespace Raven.Server.Documents.Handlers
                 else
                 {
                     writer.WriteDocuments(context, documents, metadataOnly);
-                }
-
-                if (nextPageStart != null)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName("NextPageStart");
-                    writer.WriteInteger(nextPageStart.Value);
                 }
 
                 writer.WriteEndObject();

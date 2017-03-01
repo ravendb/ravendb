@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Transformers;
 using Raven.Server.Config.Settings;
-using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Logging;

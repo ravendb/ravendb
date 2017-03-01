@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;

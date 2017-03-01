@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;

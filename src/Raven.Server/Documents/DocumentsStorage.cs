@@ -14,7 +14,6 @@ using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Versioning;
@@ -443,29 +442,19 @@ namespace Raven.Server.Documents
             return lastEtag;
         }
 
-        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId, int start, int take, Reference<int> nextPageStart)
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId, int start, int take)
         {
-            int docCount = 0;
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-            var originalTake = take;
-            var originalstart = start;
 
             var isStartAfter = string.IsNullOrWhiteSpace(startAfterId) == false;
 
             Slice prefixSlice;
-            Slice startAfterSlice = Slices.Empty;
+            var startAfterSlice = Slices.Empty;
             using (DocumentKeyWorker.GetSliceFromKey(context, idPrefix, out prefixSlice))
             using (isStartAfter ? (IDisposable)DocumentKeyWorker.GetSliceFromKey(context, startAfterId, out startAfterSlice) : null)
             {
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var result in table.SeekByPrimaryKeyStartingWith(prefixSlice, startAfterSlice))
+                foreach (var result in table.SeekByPrimaryKeyStartingWith(prefixSlice, startAfterSlice, 0))
                 {
-                    if (start > 0)
-                    {
-                        start--;
-                        continue;
-                    }
-                    docCount++;
                     var document = TableValueToDocument(context, ref result.Reader);
                     string documentKey = document.Key;
                     if (documentKey.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
@@ -475,23 +464,18 @@ namespace Raven.Server.Documents
                     if (WildcardMatcher.Matches(matches, keyTest) == false || WildcardMatcher.MatchesExclusion(exclude, keyTest))
                         continue;
 
-                    if (take-- <= 0)
+                    if (start > 0)
                     {
-                        if (docCount >= originalTake)
-                            nextPageStart.Value = originalstart + docCount - 1;
-                        else
-                            nextPageStart.Value = originalstart;
-
-                        yield break;
+                        start--;
+                        continue;
                     }
+
+                    if (take-- <= 0)
+                        yield break;
+
                     yield return document;
                 }
             }
-
-            if (docCount >= originalTake)
-                nextPageStart.Value = originalstart + docCount;
-            else
-                nextPageStart.Value = originalstart;
         }
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, int start, int take)
@@ -542,13 +526,8 @@ namespace Raven.Server.Documents
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, start))
             {
-                if (start > 0)
-                {
-                    start--;
-                    continue;
-                }
                 if (take-- <= 0)
                 {
                     yield break;
@@ -563,7 +542,7 @@ namespace Raven.Server.Documents
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, 0))
             {
                 yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref result.Reader));
             }
@@ -574,7 +553,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], etag))
+            foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], etag, 0))
             {
                 yield return ReplicationBatchDocumentItem.From(TableValueToAttachment(context, ref result.Reader));
             }
@@ -617,13 +596,8 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], etag))
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
             {
-                if (start > 0)
-                {
-                    start--;
-                    continue;
-                }
                 if (take-- <= 0)
                     yield break;
                 yield return TableValueToDocument(context, ref result.Reader);
@@ -635,10 +609,9 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
             var list = new List<DocumentConflict>();
             LazyStringValue firstKey = null;
-            foreach (var tvrs in table.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], lastKey))
+            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], lastKey, 0))
             {
-                var tvr = tvrs.Results.Single();
-                var conflict = TableValueToConflictDocument(context, ref tvr.Reader);
+                var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
                 if (lastKey.Size == conflict.LoweredKey.Length &&
                     Memory.Compare(lastKey.Content.Ptr, conflict.LoweredKey.Buffer, lastKey.Size) == 0)
                 {
@@ -664,7 +637,7 @@ namespace Raven.Server.Documents
         public IEnumerable<ReplicationBatchDocumentItem> GetConflictsFrom(DocumentsOperationContext context, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
-            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag))
+            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, 0))
             {
                 yield return ReplicationBatchDocumentItem.From(TableValueToConflictDocument(context, ref tvr.Reader));
             }
@@ -776,7 +749,7 @@ namespace Raven.Server.Documents
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (
-                var _ in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag))
+                var _ in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
                 if (maxAllowed-- < 0)
                     return true;
@@ -793,14 +766,8 @@ namespace Raven.Server.Documents
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag))
+            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, start))
             {
-                if (start > 0)
-                {
-                    start--;
-                    continue;
-                }
-
                 if (take-- <= 0)
                     yield break;
 
@@ -815,7 +782,7 @@ namespace Raven.Server.Documents
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag))
+            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
                 yield return ReplicationBatchDocumentItem.From(TableValueToTombstone(context, ref result.Reader));
             }
@@ -839,13 +806,8 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag))
+            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
             {
-                if (start > 0)
-                {
-                    start--;
-                    continue;
-                }
                 if (take-- <= 0)
                     yield break;
 
@@ -1422,36 +1384,25 @@ namespace Raven.Server.Documents
                 return list;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var conflictsTableStorageIdsToDelete = new List<long>();
 
-            bool deleted = true;
-            while (deleted)
+            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
             {
-                deleted = false;
-                // deleting a value might cause other ids to change, so we can't just pass the list
-                // of ids to be deleted, because they wouldn't remain stable during the deletions
-                foreach (var result in conflictsTable.SeekForwardFrom(
-                    ConflictsSchema.Indexes[KeyAndChangeVectorSlice],
-                    loweredKey, true))
+                int size;
+                var etag = *(long*)tvr.Result.Reader.Read((int)ConflictsTable.Etag, out size);
+                var cve = tvr.Result.Reader.Read((int)ConflictsTable.ChangeVector, out size);
+                var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
+                fixed (ChangeVectorEntry* pVector = vector)
                 {
-                    foreach (var tvr in result.Results)
-                    {
-                        deleted = true;
-
-                        int size;
-                        var etag = *(long*)tvr.Reader.Read((int)ConflictsTable.Etag, out size);
-                        var cve = tvr.Reader.Read((int)ConflictsTable.ChangeVector, out size);
-                        var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
-                        fixed (ChangeVectorEntry* pVector = vector)
-                        {
-                            Memory.Copy((byte*)pVector, cve, size);
-                        }
-                        list.Add(vector);
-                        conflictsTable.Delete(tvr.Reader.Id);
-                        EnsureLastEtagIsPersisted(context, etag);
-                        break;
-                    }
+                    Memory.Copy((byte*)pVector, cve, size);
                 }
+                list.Add(vector);
+                conflictsTableStorageIdsToDelete.Add(tvr.Result.Reader.Id);
+                EnsureLastEtagIsPersisted(context, etag);
             }
+
+            foreach (var storageId in conflictsTableStorageIdsToDelete)
+                conflictsTable.Delete(storageId);
 
             // once this value has been set, we can't set it to false
             // an older transaction may be running and seeing it is false it
@@ -1513,36 +1464,31 @@ namespace Raven.Server.Documents
             Slice loweredKeySlice;
             using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKeySlice))
             {
-                foreach (var result in conflictsTable.SeekForwardFrom(
-                    ConflictsSchema.Indexes[KeyAndChangeVectorSlice],
-                    loweredKeySlice, true))
+                foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKeySlice, 0, true))
                 {
-                    foreach (var r in result.Results)
+                    int conflictKeySize;
+                    var conflictKey = tvr.Result.Reader.Read((int)ConflictsTable.LoweredKey, out conflictKeySize);
+
+                    if (conflictKeySize != lowerSize)
+                        break;
+
+                    var compare = Memory.Compare(lowerKey, conflictKey, lowerSize);
+                    if (compare != 0)
+                        break;
+
+                    var currentChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr.Result.Reader, (int)ConflictsTable.ChangeVector);
+                    if (currentChangeVector.SequenceEqual(changeVector))
                     {
-                        int conflictKeySize;
-                        var conflictKey = r.Reader.Read((int)ConflictsTable.LoweredKey, out conflictKeySize);
-
-                        if (conflictKeySize != lowerSize)
-                            break;
-
-                        var compare = Memory.Compare(lowerKey, conflictKey, lowerSize);
-                        if (compare != 0)
-                            break;
-
-                        var currentChangeVector = GetChangeVectorEntriesFromTableValueReader(ref r.Reader, (int)ConflictsTable.ChangeVector);
-                        if (currentChangeVector.SequenceEqual(changeVector))
+                        int size;
+                        var dataPtr = tvr.Result.Reader.Read((int)ConflictsTable.Data, out size);
+                        return new DocumentConflict
                         {
-                            int size;
-                            var dataPtr = r.Reader.Read((int)ConflictsTable.Data, out size);
-                            return new DocumentConflict
-                            {
-                                ChangeVector = currentChangeVector,
-                                Key = new LazyStringValue(key, r.Reader.Read((int)ConflictsTable.OriginalKey, out size), size, context),
-                                StorageId = r.Reader.Id,
-                                //size == 0 --> this is a tombstone conflict
-                                Doc = (size == 0) ? null : new BlittableJsonReaderObject(dataPtr, size, context)
-                            };
-                        }
+                            ChangeVector = currentChangeVector,
+                            Key = new LazyStringValue(key, tvr.Result.Reader.Read((int)ConflictsTable.OriginalKey, out size), size, context),
+                            StorageId = tvr.Result.Reader.Id,
+                            //size == 0 --> this is a tombstone conflict
+                            Doc = (size == 0) ? null : new BlittableJsonReaderObject(dataPtr, size, context)
+                        };
                     }
                 }
             }
@@ -1570,24 +1516,19 @@ namespace Raven.Server.Documents
         {
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
             var items = new List<DocumentConflict>();
-            foreach (var result in conflictsTable.SeekForwardFrom(
-                ConflictsSchema.Indexes[KeyAndChangeVectorSlice],
-                loweredKey, true))
+            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
             {
-                foreach (var tvr in result.Results)
-                {
-                    int conflictKeySize;
-                    var conflictKey = tvr.Reader.Read((int)ConflictsTable.LoweredKey, out conflictKeySize);
+                int conflictKeySize;
+                var conflictKey = tvr.Result.Reader.Read((int)ConflictsTable.LoweredKey, out conflictKeySize);
 
-                    if (conflictKeySize != loweredKey.Size)
-                        break;
+                if (conflictKeySize != loweredKey.Size)
+                    break;
 
-                    var compare = Memory.Compare(loweredKey.Content.Ptr, conflictKey, loweredKey.Size);
-                    if (compare != 0)
-                        break;
+                var compare = Memory.Compare(loweredKey.Content.Ptr, conflictKey, loweredKey.Size);
+                if (compare != 0)
+                    break;
 
-                    items.Add(TableValueToConflictDocument(context, ref tvr.Reader));
-                }
+                items.Add(TableValueToConflictDocument(context, ref tvr.Result.Reader));
             }
 
             return items;
@@ -2651,7 +2592,7 @@ namespace Raven.Server.Documents
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
                     int size;
                     var ptr = tvr.Reader.Read(0, out size);
@@ -2882,7 +2823,7 @@ namespace Raven.Server.Documents
         private IEnumerable<LazyStringValue> GetAttachmentNamesForDocument(DocumentsOperationContext context, Slice startSlice)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            foreach (var sr in table.SeekByPrimaryKeyStartingWith(startSlice, Slices.Empty))
+            foreach (var sr in table.SeekByPrimaryKeyStartingWith(startSlice, Slices.Empty, 0))
             {
                 if (IsAttachmentDeleted(ref sr.Reader))
                     continue;
@@ -2912,7 +2853,7 @@ namespace Raven.Server.Documents
             Slice startSlice;
             using (GetAttachmentPrefix(context, lowerDocumentId, lowerDocumentIdSize, out startSlice))
             {
-                foreach (var sr in table.SeekByPrimaryKeyStartingWith(startSlice, Slices.Empty))
+                foreach (var sr in table.SeekByPrimaryKeyStartingWith(startSlice, Slices.Empty, 0))
                 {
                     var attachment = TableValueToAttachment(context, ref sr.Reader);
                     throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.BackgroundWork;
@@ -20,7 +21,7 @@ namespace Raven.Server.NotificationCenter
         private readonly string _resourceName;
         private readonly CancellationToken _shutdown;
         private PostponedNotificationsSender _postponedNotifications;
-
+        
         public NotificationCenter(NotificationsStorage notificationsStorage, string resourceName, CancellationToken shutdown)
         {
             _notificationsStorage = notificationsStorage;
@@ -39,7 +40,7 @@ namespace Raven.Server.NotificationCenter
                 
                 if (database != null)
                     _backgroundWorkers.Add(new DatabaseStatsSender(database, this));
-            }
+        }
         }
 
         public NotificationCenterOptions Options { get; } = new NotificationCenterOptions();
@@ -70,12 +71,12 @@ namespace Raven.Server.NotificationCenter
 
             lock (_watchersLock)
             {
-                _watchers.TryAdd(watcher);
-
+            _watchers.TryAdd(watcher);
+            
                 if (_watchers.Count == 1)
                     StartBackgroundWorkers();
-            }
-            
+        }
+
             return new DisposableAction(() =>
             {
                 lock (_watchersLock)
@@ -160,7 +161,7 @@ namespace Raven.Server.NotificationCenter
             _notificationsStorage.ChangePostponeDate(id, until);
 
             Add(NotificationUpdated.Create(id, NotificationUpdateType.Postponed));
-            
+
             _postponedNotifications?.Set();
         }
 
@@ -169,11 +170,11 @@ namespace Raven.Server.NotificationCenter
             foreach (var worker in _backgroundWorkers)
             {
                 worker.Dispose();
-            }
-        }
+                                }
+                            }
 
         public class ConnectedWatcher
-        {
+                {
             public AsyncQueue<Notification> NotificationsQueue;
 
             public IWebsocketWriter Writer;

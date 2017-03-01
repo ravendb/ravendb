@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Sparrow;

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Raven.Server.Rachis
+﻿namespace Raven.Server.Rachis
 {
     public class ClusterTopology
     {

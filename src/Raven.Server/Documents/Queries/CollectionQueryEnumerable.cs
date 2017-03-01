@@ -8,7 +8,6 @@ using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Voron;
 
 namespace Raven.Server.Documents.Queries

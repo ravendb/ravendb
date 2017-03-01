@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Session.Operations
             return new StreamCommand(path, string.IsNullOrWhiteSpace(indexQuery.Transformer) == false);
         }
 
-        public StreamCommand CreateRequest(long? fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, PagingInformation pagingInformation = null, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
+        public StreamCommand CreateRequest(long? fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
         {
             if (fromEtag != null && startsWith != null)
                 throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -88,20 +88,11 @@ namespace Raven.Client.Documents.Session.Operations
                 }
             }
 
-            var actualStart = start;
-
-            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
-            if (nextPage)
-                actualStart = pagingInformation.NextPageStart;
-
-            if (actualStart != 0)
-                sb.Append("start=").Append(actualStart).Append("&");
+            if (start != 0)
+                sb.Append("start=").Append(start).Append("&");
 
             if (pageSize != int.MaxValue)
                 sb.Append("pageSize=").Append(pageSize).Append("&");
-
-            if (nextPage)
-                sb.Append("next-page=true").Append("&");
 
             return new StreamCommand(sb.ToString(), string.IsNullOrWhiteSpace(transformer) == false);
         }

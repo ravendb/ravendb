@@ -5,7 +5,6 @@ using System.Linq;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Transformers
 {

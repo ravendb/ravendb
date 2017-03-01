@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 

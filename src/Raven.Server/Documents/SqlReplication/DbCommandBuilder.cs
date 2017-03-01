@@ -1,5 +1,3 @@
-using System;
-
 namespace Raven.Server.Documents.SqlReplication
 {
     public class DbCommandBuilder

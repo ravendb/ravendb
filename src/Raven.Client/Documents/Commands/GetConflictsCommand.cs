@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
+﻿using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;

@@ -19,7 +19,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.AspNetCore.WebUtilities;
-using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Exceptions.PeriodicExport;
 

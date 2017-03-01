@@ -116,7 +116,7 @@ namespace Raven.Server.Rachis
                                         using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out key))
                                         {
                                             long totalSize = 0;
-                                            foreach (var value in table.SeekByPrimaryKey(key))
+                                            foreach (var value in table.SeekByPrimaryKey(key, 0))
                                             {
                                                 var entry = BuildRachisEntryToSend(context, value);
                                                 entries.Add(entry);
@@ -131,7 +131,7 @@ namespace Raven.Server.Rachis
                                                 LeaderCommit = _engine.GetLastCommitIndex(context),
                                                 Term = _engine.CurrentTerm,
                                                 TruncateLogBefore = _leader.LowestIndexInEntireCluster,
-                                                PrevLogTerm = _engine.GetTermFor(context,_followerMatchIndex) ?? 0,
+                                                PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
                                                 PrevLogIndex = _followerMatchIndex
                                             };
                                         }
@@ -225,7 +225,7 @@ namespace Raven.Server.Rachis
                         LastIncludedTerm = _engine.GetTermForKnownExisting(context, earliestIndexEtry),
                         Topology = _engine.GetTopologyRaw(context),
                     });
-             
+
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
                     {
                         binaryWriter.Write(-1);
@@ -247,7 +247,7 @@ namespace Raven.Server.Rachis
                         LastIncludedTerm = term,
                         Topology = _engine.GetTopologyRaw(context),
                     });
-                   
+
                     WriteSnapshotToFile(context, new BufferedStream(stream));
 
                     UpdateLastMatchFromFollower(_followerMatchIndex);
@@ -337,11 +337,11 @@ namespace Raven.Server.Rachis
                                 var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
                                 var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
                                 var schema = TableSchema.ReadFrom(txr.Allocator, schemaPtr, schemaSize);
-                               
+
                                 // Load table into structure 
                                 var inputTable = txr.OpenTable(schema, currentTreeKey);
                                 binaryWriter.Write(inputTable.NumberOfEntries);
-                                foreach (var holder in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                                foreach (var holder in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                                 {
                                     MaybeNotifyLeaderThatWeAreSillAlive(count++, sp);
                                     binaryWriter.Write(holder.Reader.Size);
@@ -487,7 +487,7 @@ namespace Raven.Server.Rachis
                     }
 
                     if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Rejected)
-                        throw new InvalidOperationException("Failed to get acceptable status from " + _url +" because " + llr.Message);
+                        throw new InvalidOperationException("Failed to get acceptable status from " + _url + " because " + llr.Message);
 
                     UpdateLastMatchFromFollower(0);
 

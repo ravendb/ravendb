@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Transformers;

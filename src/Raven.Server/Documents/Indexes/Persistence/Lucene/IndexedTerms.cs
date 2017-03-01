@@ -11,7 +11,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

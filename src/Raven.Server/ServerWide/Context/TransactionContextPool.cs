@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Threading;
 using Sparrow.Json;
 using Voron;
@@ -45,7 +44,7 @@ namespace Raven.Server.ServerWide.Context
                     // work on that outside of its thread, so let not allocate a lot of memory for that. We just need enough
                     // there process simple stuff like IsStale, etc, so let us start small
                     initialSize = _mostlyThreadDedicatedWork.Value ? 
-						16*1024*1024 : // the initial budget is 32 MB, so let us now blow through that all at once
+                        16*1024*1024 : // the initial budget is 32 MB, so let us now blow through that all at once
                         32*1024;
                 }
             }

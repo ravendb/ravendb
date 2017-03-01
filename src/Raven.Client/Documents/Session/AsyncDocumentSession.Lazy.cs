@@ -11,7 +11,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
@@ -207,10 +206,10 @@ namespace Raven.Client.Documents.Session
         }
 
         Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize,
-            string exclude, PagingInformation pagingInformation, string startAfter,
+            string exclude, string startAfter,
             CancellationToken token)
         {
-            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, startAfter);
+            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, startAfter);
 
             return AddLazyOperation<Dictionary<string, T>>(operation, null, token);
         }

@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +13,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Compilation;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Routing;

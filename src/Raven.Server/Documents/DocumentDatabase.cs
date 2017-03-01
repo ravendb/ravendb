@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;

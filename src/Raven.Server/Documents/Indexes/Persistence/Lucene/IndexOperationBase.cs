@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 
 using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;

@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
@@ -28,7 +27,6 @@ namespace Raven.Client.Documents.Session
         /// </param>
         /// <param name="start">number of documents that should be skipped. By default: 0.</param>
         /// <param name="pageSize">maximum number of documents that will be retrieved. By default: 25.</param>
-        /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
         /// <param name="exclude">
         ///     pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched
         ///     ('?' any single character, '*' any characters)
@@ -38,7 +36,7 @@ namespace Raven.Client.Documents.Session
         ///     null)
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, PagingInformation pagingInformation = null, string startAfter = null, CancellationToken token = default(CancellationToken));
+        Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, string startAfter = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Loads multiple entities that contain common prefix and applies specified transformer.
@@ -50,7 +48,6 @@ namespace Raven.Client.Documents.Session
         /// </param>
         /// <param name="start">number of documents that should be skipped. By default: 0.</param>
         /// <param name="pageSize">maximum number of documents that will be retrieved. By default: 25.</param>
-        /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
         /// <param name="exclude">
         ///     pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched
         ///     ('?' any single character, '*' any characters)
@@ -61,7 +58,7 @@ namespace Raven.Client.Documents.Session
         ///     null)
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Task<Dictionary<string, TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, PagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null, string startAfter = null, CancellationToken token = default(CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new();
+        Task<Dictionary<string, TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null, string startAfter = null, CancellationToken token = default(CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new();
 
     }
 }

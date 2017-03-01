@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Transformers;

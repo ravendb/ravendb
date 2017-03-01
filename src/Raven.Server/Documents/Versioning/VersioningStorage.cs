@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Versioning
                 Count = 3,
                 Name = KeyAndChangeVectorSlice
             });
-            
+
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)Columns.Etag,
@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public bool PutFromDocument(DocumentsOperationContext context, CollectionName collectionName, string key, 
+        public bool PutFromDocument(DocumentsOperationContext context, CollectionName collectionName, string key,
             BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector = null)
         {
             var enableVersioning = false;
@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Versioning
                     mutatedMetadata.Remove(Constants.Documents.Versioning.EnableVersioning);
                 }
             }
-            
+
             var configuration = GetVersioningConfiguration(collectionName);
             if (enableVersioning == false && configuration.Active == false)
                 return false;
@@ -191,8 +191,8 @@ namespace Raven.Server.Documents.Versioning
             return true;
         }
 
-        
-        public void PutDirect(DocumentsOperationContext context, string key,  BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector)
+
+        public void PutDirect(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
             PutInternal(context, key, document, table, changeVector);
@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Versioning
         private void PutInternal(DocumentsOperationContext context, string key, BlittableJsonReaderObject document
             , Table table, ChangeVectorEntry[] changeVector)
         {
-            
+
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
             byte* lowerKey;
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Versioning
                     {data.BasePointer, data.Size}
                 };
                 table.Insert(tbv);
-            }         
+            }
         }
 
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long? maxRevisions, long revisionsCount)
@@ -264,7 +264,7 @@ namespace Raven.Server.Documents.Versioning
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
         }
 
-        private  long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
+        private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
             long numberOfRevisionsToDelete)
         {
             long maxEtagDeleted = 0;
@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Versioning
                 deleted =>
                 {
                     int size;
-                    var etag = Bits.SwapBytes(*(long*) deleted.Reader.Read(2, out size));
+                    var etag = Bits.SwapBytes(*(long*)deleted.Reader.Read(2, out size));
                     maxEtagDeleted = Math.Max(maxEtagDeleted, etag);
                 });
             _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
@@ -329,25 +329,13 @@ namespace Raven.Server.Documents.Versioning
             using (DocumentKeyWorker.GetSliceFromKey(context, key, out prefixSlice))
             {
                 // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (
-                    var sr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, startsWith: true)
-                )
+                foreach (var tvr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, start, startsWith: true))
                 {
-                    foreach (var tvr in sr.Results)
-                    {
-                        if (start > 0)
-                        {
-                            start--;
-                            continue;
-                        }
-                        if (take-- <= 0)
-                            yield break;
-
-                        var document = TableValueToDocument(context, ref tvr.Reader);
-                        yield return document;
-                    }
-                    if (take <= 0)
+                    if (take-- <= 0)
                         yield break;
+
+                    var document = TableValueToDocument(context, ref tvr.Result.Reader);
+                    yield return document;
                 }
             }
         }
@@ -356,7 +344,7 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
 
-            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag))
+            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag, 0))
             {
                 var document = TableValueToDocument(context, ref tvr.Reader);
                 yield return document;
@@ -370,13 +358,13 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
 
-            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag))
+            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag, 0))
             {
                 yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref tvr.Reader));
             }
         }
 
-        private bool CheckIfVersionExists(DocumentsOperationContext context,string key, ChangeVectorEntry[] changeVector)
+        private bool CheckIfVersionExists(DocumentsOperationContext context, string key, ChangeVectorEntry[] changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
             if (table.NumberOfEntries == 0)
@@ -385,7 +373,7 @@ namespace Raven.Server.Documents.Versioning
             }
             var keyBytes = Encoding.UTF8.GetBytes(key);
             var keyLen = keyBytes.Length;
-            var size = keyLen + 1 + sizeof(ChangeVectorEntry)*changeVector.Length;
+            var size = keyLen + 1 + sizeof(ChangeVectorEntry) * changeVector.Length;
             var buffer = context.GetMemory(size);
             try
             {
@@ -401,22 +389,19 @@ namespace Raven.Server.Documents.Versioning
                 Slice slice;
                 using (Slice.From(context.Allocator, buffer.Address, size, out slice))
                 {
-                    foreach (var tvr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndChangeVectorSlice], slice))
+                    foreach (var tvr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndChangeVectorSlice], slice, 0))
                     {
-                        foreach (var tableValueHolder in tvr.Results)
+                        var entry = TableValueToDocument(context, ref tvr.Result.Reader);
+                        if (entry.ChangeVector.SequenceEqual(changeVector))
                         {
-                            var entry = TableValueToDocument(context, ref tableValueHolder.Reader);
-                            if (entry.ChangeVector.SequenceEqual(changeVector))
-                            {
-                                return true;
-                            }
+                            return true;
                         }
                     }
                 }
             }
             finally
             {
-                 context.ReturnMemory(buffer);   
+                context.ReturnMemory(buffer);
             }
             return false;
         }
@@ -439,12 +424,12 @@ namespace Raven.Server.Documents.Versioning
 
 
             int changeVectorSize = sizeof(ChangeVectorEntry);
-            ptr = tvr.Read((int) Columns.ChangeVector, out size);
-            int changeVecotorCount = size/changeVectorSize;
+            ptr = tvr.Read((int)Columns.ChangeVector, out size);
+            int changeVecotorCount = size / changeVectorSize;
             result.ChangeVector = new ChangeVectorEntry[changeVecotorCount];
             for (var i = 0; i < changeVecotorCount; i++)
             {
-                result.ChangeVector[i] = ((ChangeVectorEntry*) ptr)[i];
+                result.ChangeVector[i] = ((ChangeVectorEntry*)ptr)[i];
             }
 
             result.Flags = DocumentFlags.FromVersionStorage;

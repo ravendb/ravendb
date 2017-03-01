@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Voron;
 using Voron.Data;
-using Voron.Data.BTrees;
 using Voron.Data.Tables;
 
 namespace Raven.Server.Rachis
