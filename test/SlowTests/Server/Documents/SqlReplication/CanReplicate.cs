@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
@@ -612,16 +613,28 @@ replicateToOrders(orderData);");
                    while (client.State == WebSocketState.Open)
                    {
                        var value = await ReadFromWebSocket(buffer, client);
-                       sb.AppendLine(value);
+                       lock (sb)
+                       {
+                           sb.AppendLine(value);
+                       }
                        if (value.Contains("skipping document: orders/1"))
                            return;
+
                    }
                }));
                 await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
 
                 Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
-                Assert.True(await task.WaitWithTimeout(TimeSpan.FromSeconds(180)));
+                var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(10));
+                if (condition == false)
+                {
+                    lock (sb)
+                    {
+                        Console.WriteLine(sb.ToString());
+                    }
+                }
+                Assert.True(condition);
 
                 var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
                 if (sb.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList().Any(x => x.Contains(msg)) == false)
