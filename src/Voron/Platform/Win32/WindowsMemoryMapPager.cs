@@ -129,8 +129,8 @@ namespace Voron.Platform.Win32
                 _totalAllocationSize = fileLength;
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize/Constants.Storage.PageSize +
-                                     ((_totalAllocationSize%Constants.Storage.PageSize) == 0 ? 0 : 1);
+            NumberOfAllocatedPages = _totalAllocationSize/Constants.Storage.PageSize;
+
             SetPagerState(CreatePagerState());
         }
 
@@ -211,8 +211,7 @@ namespace Voron.Platform.Win32
 #endif
 
             _totalAllocationSize += allocationSize;
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize +
-                                                 ((_totalAllocationSize % Constants.Storage.PageSize) == 0 ? 0 : 1);
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
             return newPagerState;
         }
 
