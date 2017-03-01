@@ -16,8 +16,9 @@ class getDocumentsFromCollectionCommand extends commandBase {
             pageSize: this.take
         };
 
-        const resultsSelector = (dto: resultsDto<any>) =>
-            ({ items: dto.Results.map(x => new document(x)), totalResultCount: this.collection.documentCount() }) as pagedResult<document>;
+        const resultsSelector = (dto: resultsDto<any>, xhr: JQueryXHR) => {
+            return { items: dto.Results.map(x => new document(x)), totalResultCount: this.collection.documentCount(), resultEtag: this.extractEtag(xhr) } as pagedResult<document>;
+        };
         const url = endpoints.databases.collections.collectionsDocs;
 
         return this.query(url, args, this.collection.database, resultsSelector);

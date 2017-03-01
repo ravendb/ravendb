@@ -56,7 +56,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                             CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
                             CountOfIndexes = indexes.Count,
                             CountOfStaleIndexes = staleIndexes,
-                            LastDocumentEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction)
+                            LastEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
                         };
 
                         current.Collections = _database.DocumentsStorage.GetCollections(context)
@@ -71,7 +71,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                         : ExtractModifiedCollections(current);
 
                     _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
-                        current.CountOfStaleIndexes, DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction), modifiedCollections));
+                        current.CountOfStaleIndexes, current.LastEtag, modifiedCollections));
 
                     _latest = current;
                 }
@@ -122,11 +122,11 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         {
             public long CountOfDocuments;
 
+            public long LastEtag;
+
             public int CountOfIndexes;
 
             public int CountOfStaleIndexes;
-
-            public long LastDocumentEtag;
 
             public Dictionary<string, DatabaseStatsChanged.ModifiedCollection> Collections;
 
@@ -136,7 +136,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 if (ReferenceEquals(this, other)) return true;
                 return CountOfDocuments == other.CountOfDocuments &&
                        CountOfIndexes == other.CountOfIndexes &&
-                       LastDocumentEtag == other.LastDocumentEtag &&
+                       LastEtag == other.LastEtag &&
                        CountOfStaleIndexes == other.CountOfStaleIndexes &&
                        DictionaryExtensions.ContentEquals(Collections, other.Collections);
             }
@@ -159,7 +159,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 {
                     var hashCode = CountOfDocuments.GetHashCode();
                     hashCode = (hashCode * 397) ^ CountOfIndexes.GetHashCode();
-                    hashCode = (hashCode * 397) ^ LastDocumentEtag.GetHashCode();
+                    hashCode = (hashCode * 397) ^ LastEtag.GetHashCode();
                     hashCode = (hashCode * 397) ^ CountOfStaleIndexes.GetHashCode();
                     hashCode = (hashCode * 397) ^ (Collections != null ? Collections.GetHashCode() : 0);
                     return hashCode;

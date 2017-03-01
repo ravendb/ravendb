@@ -22,7 +22,9 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public long CountOfStaleIndexes { get; private set; }
 
-        public long AllDocumentsEtag { get; private set; }
+        public string GlobalDocumentsEtag { get; private set; }
+
+        public long LastEtag { get; private set; }
 
         public List<ModifiedCollection> ModifiedCollections { get; private set; }
 
@@ -33,13 +35,14 @@ namespace Raven.Server.NotificationCenter.Notifications
             json[nameof(CountOfDocuments)] = CountOfDocuments;
             json[nameof(CountOfIndexes)] = CountOfIndexes;
             json[nameof(CountOfStaleIndexes)] = CountOfStaleIndexes;
-            json[nameof(AllDocumentsEtag)] = AllDocumentsEtag;
+            json[nameof(LastEtag)] = LastEtag;
+            json[nameof(GlobalDocumentsEtag)] = GlobalDocumentsEtag;
             json[nameof(ModifiedCollections)] = new DynamicJsonArray(ModifiedCollections.Select(x => x.ToJson()));
 
             return json;
         }
 
-        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, long allDocumentsEtag, List<ModifiedCollection> modifiedCollections)
+        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, long lastEtag, List<ModifiedCollection> modifiedCollections)
         {
             return new DatabaseStatsChanged
             {
@@ -48,14 +51,15 @@ namespace Raven.Server.NotificationCenter.Notifications
                 Message = null,
                 Severity = NotificationSeverity.Info,
                 CountOfDocuments = countOfDocs,
-                AllDocumentsEtag = ComputeEtag(allDocumentsEtag, countOfDocs),
+                LastEtag = lastEtag,
+                GlobalDocumentsEtag = ComputeEtag(lastEtag, countOfDocs).ToString(), // use string here as javascript may round longs
                 CountOfIndexes = countOfIndexes,
                 CountOfStaleIndexes = countOfStaleIndexes,
                 ModifiedCollections = modifiedCollections,
             };
         }
 
-        private static unsafe long ComputeEtag(long etag, long numberOfDocuments)
+        public static unsafe long ComputeEtag(long etag, long numberOfDocuments)
         {
             var buffer = stackalloc long[2];
             buffer[0] = etag;
@@ -71,14 +75,14 @@ namespace Raven.Server.NotificationCenter.Notifications
 
             public readonly long LastDocumentEtag;
 
-            public readonly long CollectionEtag;
+            public readonly string CollectionEtag; // use string as javascript can round longs
 
             public ModifiedCollection(string name, long count, long lastDocumentEtag)
             {
                 Name = name;
                 Count = count;
                 LastDocumentEtag = lastDocumentEtag;
-                CollectionEtag = ComputeEtag(lastDocumentEtag, count);
+                CollectionEtag = ComputeEtag(lastDocumentEtag, count).ToString();
             }
 
             public bool Equals(ModifiedCollection other)
