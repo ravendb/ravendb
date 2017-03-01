@@ -167,12 +167,6 @@ namespace Raven.Tests.Raft.Client
                     store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader;
                 });
 
-                foreach (var documentStore in clusterStores)
-                {
-                    // set lower timeout to reduce test time
-                    documentStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(5);
-                }
-
                 SetupClusterConfiguration(clusterStores);
 
                 clusterStores.ForEach(store => 
@@ -194,6 +188,8 @@ namespace Raven.Tests.Raft.Client
                 servers
                     .First(x => x.Options.ClusterManager.Value.IsLeader())
                     .Dispose();
+
+
 
                 for (int i = 0; i < clusterStores.Count; i++)
                 {
