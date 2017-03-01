@@ -6,7 +6,7 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  TAL-PC
-//  DateTime: 2/28/2017 11:20:49 AM
+//  DateTime: 2/28/2017 4:49:30 PM
 //  UserName: Tal
 //  GPLEX input file <LuceneQuery.Language.analyzer.lex - 2/28/2017 10:56:38 AM>
 //  GPLEX frame file <embedded resource>
@@ -27,16 +27,20 @@
 
 using System;
 using System.IO;
-using System.Reflection;
+using System.Text;
+using System.Globalization;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Diagnostics.CodeAnalysis;
 
+using QUT.GplexBuffers;
+
 namespace Raven.Server.Documents.Queries.Parse
-{
+{   
     /// <summary>
     /// Summary Canonical example of GPLEX automaton
     /// </summary>
-
+    
 #if STANDALONE
     //
     // These are the dummy declarations for stand-alone GPLEX applications
@@ -80,7 +84,7 @@ namespace Raven.Server.Documents.Queries.Parse
     }
 
 #endif // STANDALONE
-
+    
     // If the compiler can't find the scanner base class maybe you
     // need to run GPPG with the /gplex option, or GPLEX with /noparser
 #if BABEL
@@ -101,7 +105,7 @@ namespace Raven.Server.Documents.Queries.Parse
                    currentStart = startState[value]; }
         }
 #else  // BABEL
-    internal sealed partial class LuceneQueryScanner : ScanBase
+     internal sealed partial class LuceneQueryScanner : ScanBase
     {
         private ScanBuff buffer;
         int currentScOrd;  // start condition ordinal

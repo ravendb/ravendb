@@ -10,7 +10,7 @@ namespace Raven.Server.Config.Categories
         [LegacyConfigurationEntry("Raven/MaxClauseCount")]
         public int MaxClauseCount { get; set; }
 
-        [DefaultValue(false)] //Defaults to use our own implementation of the Lucene query parser
+        [DefaultValue(true)] //Defaults to use our own implementation of the Lucene query parser
         [ConfigurationEntry("Raven/Query/UseLuceneASTParser")]
         [LegacyConfigurationEntry("Raven/UseLuceneASTParser")]
         public bool UseLuceneASTParser

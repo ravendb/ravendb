@@ -4,19 +4,22 @@
 
 // GPPG version 1.5.2
 // Machine:  TAL-PC
-// DateTime: 2/28/2017 11:20:49 AM
+// DateTime: 2/28/2017 4:49:30 PM
 // UserName: Tal
-// Input file <LuceneQuery.Language.grammar.y - 2/28/2017 11:20:44 AM>
+// Input file <LuceneQuery.Language.grammar.y - 2/28/2017 4:29:38 PM>
 
 // options: no-lines gplex
 
+using System;
 using System.Collections.Generic;
 using System.CodeDom.Compiler;
 using System.Globalization;
+using System.Text;
+using QUT.Gppg;
 
 namespace Raven.Server.Documents.Queries.Parse
 {
-    internal enum Token {error=2,EOF=3,NOT=4,OR=5,AND=6,
+internal enum Token {error=2,EOF=3,NOT=4,OR=5,AND=6,
     INTERSECT=7,PLUS=8,MINUS=9,OPEN_CURLY_BRACKET=10,CLOSE_CURLY_BRACKET=11,OPEN_SQUARE_BRACKET=12,
     CLOSE_SQUARE_BRACKET=13,TILDA=14,BOOST=15,QUOTE=16,TO=17,COLON=18,
     OPEN_PAREN=19,CLOSE_PAREN=20,ALL_DOC=21,LONG_RANGE_TERM=22,DOUBLE_RANGE_TERM=23,UNANALIZED_TERM=24,
@@ -28,7 +31,7 @@ internal partial struct ValueType
 { 
 			public string s; 
 			public FieldLuceneASTNode fn;
-            public FieldName f;
+                        public FieldName f;
 			public ParenthesistLuceneASTNode pn;
 			public PostfixModifiers pm;
 			public LuceneASTNodeBase nb;
@@ -61,9 +64,9 @@ internal class ScanObj {
 [GeneratedCodeAttribute( "Gardens Point Parser Generator", "1.5.2")]
 internal partial class LuceneQueryParser: ShiftReduceParser<ValueType, LexLocation>
 {
-  // Verbatim content from LuceneQuery.Language.grammar.y - 2/28/2017 11:20:44 AM
+  // Verbatim content from LuceneQuery.Language.grammar.y - 2/28/2017 4:29:38 PM
 	public LuceneASTNodeBase LuceneAST {get; set;}
-  // End verbatim content from LuceneQuery.Language.grammar.y - 2/28/2017 11:20:44 AM
+  // End verbatim content from LuceneQuery.Language.grammar.y - 2/28/2017 4:29:38 PM
 
 #pragma warning disable 649
   private static Dictionary<int, string> aliases;
