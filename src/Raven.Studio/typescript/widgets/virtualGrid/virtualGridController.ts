@@ -16,6 +16,8 @@ interface virtualGridController<T> {
     getSelectedItems(): T[];
 
     dirtyResults: KnockoutObservable<boolean>;
+
+    resultEtag: () => string;
 }
 
 export = virtualGridController;

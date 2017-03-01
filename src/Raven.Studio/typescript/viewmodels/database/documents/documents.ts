@@ -47,6 +47,10 @@ class documents extends viewModelBase {
     deleteEnabled: KnockoutComputed<boolean>;
     private selectedItemsCount: KnockoutComputed<number>;
 
+    dirtyResult = ko.observable<boolean>(false);
+    dirtyCurrentCollection = ko.observable<boolean>(false);
+    dataChanged: KnockoutComputed<boolean>;
+
     copyDisabledReason: KnockoutComputed<disabledReason>;
 
     private collectionToSelectName: string;
@@ -98,6 +102,11 @@ class documents extends viewModelBase {
                 reason: `You can copy to up ${documents.copyLimit} documents.`
             }
         });
+        this.dataChanged = ko.pureComputed(() => {
+            const resultDirty = this.dirtyResult();
+            const collectionChanged = this.dirtyCurrentCollection();
+            return resultDirty || collectionChanged;
+        });
     }
 
     activate(args: any) {
@@ -137,7 +146,7 @@ class documents extends viewModelBase {
         changedCollections.forEach(c => {
             const existingCollection = this.collections().find(x => x.name.toLowerCase() == c.Name.toLocaleLowerCase());
             if (existingCollection) {
-                this.onCollectionCountChanged(existingCollection, c.Count);
+                this.onCollectionChanged(existingCollection, c);
             } else {
                 this.onCollectionCreated(c);
             }
@@ -156,9 +165,11 @@ class documents extends viewModelBase {
         this.collections.remove(item);
     }
 
-    private onCollectionCountChanged(item: collection, newCount: number) {
-        item.documentCount(newCount);
-        //TODO: if current collection display info that we may have outdated data
+    private onCollectionChanged(item: collection, incomingData: Raven.Server.NotificationCenter.Notifications.ModifiedCollection) {
+        item.documentCount(incomingData.Count);
+        if (this.currentCollection().isAllDocuments || item.name === this.currentCollection().name) {
+            this.dirtyCurrentCollection(true);
+        }
     }
 
     private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.ModifiedCollection) {
@@ -189,6 +200,11 @@ class documents extends viewModelBase {
         return this.collections()
             .filter(x => !x.isAllDocuments && !x.isSystemDocuments)
             .map(x => x.name);
+    }
+
+    refresh() {
+        this.gridController().reset(true);
+        this.dirtyCurrentCollection(false);
     }
 
     fetchDocs(skip: number, take: number): JQueryPromise<pagedResult<any>> {
@@ -222,12 +238,15 @@ class documents extends viewModelBase {
             }
         });
 
-        this.currentCollection.subscribe(this.onCollectionChanged, this);
+        grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
+
+        this.currentCollection.subscribe(this.onCollectionSelected, this);
     }
 
-    private onCollectionChanged(newCollection: collection) {
+    private onCollectionSelected(newCollection: collection) {
         this.updateUrl(appUrl.forDocuments(newCollection.name, this.activeDatabase()));
         this.gridController().reset();
+        this.dirtyCurrentCollection(false);
     }
 
     newDocument(docs: documents, $event: JQueryEventObject) {
@@ -306,6 +325,7 @@ class documents extends viewModelBase {
     private onDeleteCompleted() {
         this.spinners.delete(false);
         this.gridController().reset(false);
+        this.dirtyCurrentCollection(false);
     }
 
     copySelectedDocs() {

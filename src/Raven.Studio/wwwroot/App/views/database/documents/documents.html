@@ -63,10 +63,17 @@
             </div>
         </div>
         <div class="flex-window-scroll">
-            <virtual-grid class="resizable" params="controller: gridController"></virtual-grid>
+            <div class="has-error results-error" data-bind="visible: dataChanged()">
+                <div class="help-block">
+                    <i class="icon-danger"></i><span>Data has changed. Your results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+                </div>
+            </div>
+            <div class="scroll-stretch">
+                <div class="panel-body">
+                    <virtual-grid class="resizable" params="controller: gridController"></virtual-grid>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
 
 <!--<div id="documents-pane" class="documents-page no-outline row" tabindex="0" data-bind="enableResize: true">
 
