@@ -53,7 +53,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                var query = store.DatabaseCommands.Query("Users/ByName", new IndexQuery { Query = "Name:* -First" });
+                var query = store.DatabaseCommands.Query("Users/ByName", new IndexQuery { Query = "Name:* AND -Name:First" });
                 Assert.Equal(query.TotalResults, 1);
             }
         }
@@ -76,7 +76,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                var query = store.DatabaseCommands.Query("Users/ByName", new IndexQuery { Query = "Name:* NOT Second" });
+                var query = store.DatabaseCommands.Query("Users/ByName", new IndexQuery { Query = "Name:* AND NOT Name:Second" });
                 Assert.Equal(query.TotalResults, 1);
             }
         }
