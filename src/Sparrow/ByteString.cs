@@ -1216,7 +1216,7 @@ namespace Sparrow
             ByteStringType type,
             out ByteString str)
         {
-            Debug.Assert(valuePtr != null, $"{nameof(valuePtr)} cant be null.");
+            Debug.Assert(valuePtr != null || size == 0, $"{nameof(valuePtr)} cant be null if the size is not zero");
             Debug.Assert(size >= 0, $"{nameof(size)} cannot be negative.");
 
             str = AllocateExternal(valuePtr, size, type | ByteStringType.External); // We are allocating external, so we will force it (even if we are checking for it in debug).
