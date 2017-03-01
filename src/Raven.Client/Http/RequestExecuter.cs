@@ -84,47 +84,71 @@ namespace Raven.Client.Http
 
         private async Task UpdateTopology()
         {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            if (_disposed)
+                return;
+            bool lookTaken = false;
+            Monitor.TryEnter(this,0, ref lookTaken);
+            try
             {
-                var node = _topology.LeaderNode;
-
-                var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
-
-                if (_firstTimeTryLoadFromTopologyCache)
-                {
-                    _firstTimeTryLoadFromTopologyCache = false;
-
-                    var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
-                    if (cachedTopology != null && cachedTopology.Etag > 0)
-                    {
-                        _topology = cachedTopology;
-                        // we have cached topology, but we need to verify it is up to date, we'll check in 
-                        // 1 second, and let the rest of the system start
-                        _updateTopologyTimer.Change(TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
-                        return;
-                    }
-                }
-
-                var command = new GetTopologyCommand();
+                if (_disposed)
+                    return;
+                JsonOperationContext context;
+                var operationContext = ContextPool.AllocateOperationContext(out context);
                 try
                 {
-                    await ExecuteAsync(new ChoosenNode { Node = node }, context, command);
-                    if (_topology.Etag != command.Result.Etag)
+
+                    lookTaken = false;
+                    Monitor.Exit(this); // don't lock now, we aren't using any more shared resources that require protection
+
+                    var node = _topology.LeaderNode;
+
+                    var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
+
+                    if (_firstTimeTryLoadFromTopologyCache)
                     {
-                        _topology = command.Result;
-                        TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, context);
+                        _firstTimeTryLoadFromTopologyCache = false;
+
+                        var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
+                        if (cachedTopology != null && cachedTopology.Etag > 0)
+                        {
+                            _topology = cachedTopology;
+                            // we have cached topology, but we need to verify it is up to date, we'll check in 
+                            // 1 second, and let the rest of the system start
+                            _updateTopologyTimer.Change(TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
+                            return;
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Failed to update topology", ex);
+
+                    var command = new GetTopologyCommand();
+                    try
+                    {
+                        await ExecuteAsync(new ChoosenNode { Node = node }, context, command);
+                        if (_topology.Etag != command.Result.Etag)
+                        {
+                            _topology = command.Result;
+                            TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, context);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Failed to update topology", ex);
+                    }
+                    finally
+                    {
+                        if(_disposed == false)
+                            _updateTopologyTimer.Change(TimeSpan.FromMinutes(5), Timeout.InfiniteTimeSpan);
+                    }
                 }
                 finally
                 {
-                    _updateTopologyTimer.Change(TimeSpan.FromMinutes(5), Timeout.InfiniteTimeSpan);
+                    operationContext?.Dispose();
                 }
+            }
+            finally
+            {
+                if(lookTaken)
+                    Monitor.Exit(this);
             }
         }
 
@@ -499,6 +523,7 @@ namespace Raven.Client.Http
         }
 
         private readonly object _updateFailingNodeStatusLock = new object();
+        private bool _disposed;
 
         protected virtual void UpdateFailingNodesStatusCallback(object _)
         {
@@ -576,13 +601,22 @@ namespace Raven.Client.Http
 
         public void Dispose()
         {
-            Cache.Dispose();
-            _authenticator.Dispose();
-            ContextPool.Dispose();
-            _updateCurrentTokenTimer?.Dispose();
-            _updateFailingNodesStatus?.Dispose();
-            // shared instance, cannot dispose!
-            //_httpClient.Dispose();
+            if (_disposed)
+                return;
+            lock (this)
+            {
+                if (_disposed)
+                    return;
+                _disposed = true;
+                Cache.Dispose();
+                _authenticator.Dispose();
+                ContextPool.Dispose();
+                _updateCurrentTokenTimer?.Dispose();
+                _updateFailingNodesStatus?.Dispose();
+                _updateTopologyTimer?.Dispose();
+                // shared instance, cannot dispose!
+                //_httpClient.Dispose();
+            }
         }
 
         private static HttpClient CreateClient(TimeSpan timeout)
