@@ -31,7 +31,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-4916")]
+        [Fact]
         public void QueryLuceneMinusOperator()
         {
             using (var store = GetDocumentStore())
@@ -61,7 +61,7 @@ namespace FastTests.Issues
                 JsonOperationContext context;
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))
                 {
-                    var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery(store.Conventions) { Query = "Name:* -First" });
+                    var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery(store.Conventions) { Query = "Name:* AND -Name:First" });
 
                     requestExecuter.Execute(command, context);
 
@@ -71,7 +71,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-4916")]
+        [Fact]
         public void QueryLuceneNotOperator()
         {
             using (var store = GetDocumentStore())
@@ -101,7 +101,7 @@ namespace FastTests.Issues
                 JsonOperationContext context;
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))
                 {
-                    var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery(store.Conventions) { Query = "Name:* NOT Second" });
+                    var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery(store.Conventions) { Query = "Name:* AND NOT Name:Second" });
 
                     requestExecuter.Execute(command, context);
 
