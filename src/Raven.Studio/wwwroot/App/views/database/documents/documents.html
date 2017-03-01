@@ -3,12 +3,12 @@
         <div class="flex-window-head">
             <div class="btn-group">
                 <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
-                    <span data-bind="text: currentCollection().name"></span>
+                    <span data-bind="text: tracker.currentCollection().name"></span>
                     <span class="caret"></span>
                 </button>
-                <ul class="dropdown-menu" data-bind="foreach: collections">
+                <ul class="dropdown-menu" data-bind="foreach: tracker.collections">
                     <li>
-                        <a href="#" data-bind="click: _.partial($root.currentCollection, $data)">
+                        <a href="#" data-bind="click: _.partial($root.tracker.currentCollection, $data)">
                             <span data-bind="text: name + ' (' + documentCount().toLocaleString() + ')'"></span>
                         </a>
                     </li>
