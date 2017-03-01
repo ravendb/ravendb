@@ -1,5 +1,4 @@
 import timeSeries = require("models/timeSeries/timeSeries");
-import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");
 import getKeysCommand = require("commands/timeSeries/getKeysCommand");
 
@@ -47,7 +46,7 @@ class timeSeriesType {
         return list;
     }*/
 
-    private fetchKeys(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
+    private fetchKeys(skip: number, take: number): JQueryPromise<pagedResult<any>> {
         return new getKeysCommand(this.ownerTimeSeries, skip, take, this.name, this.keysCount()).execute();
     }
 

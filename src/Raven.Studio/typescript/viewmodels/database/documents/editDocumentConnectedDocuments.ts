@@ -10,8 +10,6 @@ import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDo
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 
 import appUrl = require("common/appUrl");
-import pagedResultSet = require("common/pagedResultSet");
-import pagedResult = require("widgets/virtualGrid/pagedResult");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
@@ -101,7 +99,7 @@ class connectedDocuments {
         }
 
         // Fetch collection size.
-        // Why? Because calling collection.fetchDocuments returns a pagedResultSet with .totalResultCount = 0. :-(
+        // Why? Because calling collection.fetchDocuments returns a pagedResult with .totalResultCount = 0. :-(
         const collectionName = doc.getCollection();
         const collectionSizeTask = new getCollectionsStatsCommand(this.db())
             .execute()
@@ -110,14 +108,14 @@ class connectedDocuments {
         // Fetch the chunk of documents.        
         const newCollection = new collection(collectionName, this.db());
         const fetchDocsTask = newCollection.fetchDocuments(skip, take)
-            .then((result: pagedResultSet<any>) => {
+            .then((result: pagedResult<any>) => {
                 // Convert the items from document to connectedDocument.
                 result.items = result.items.map(doc => this.documentToConnectedDoc(doc));
                 return result;
             });
 
         return $.when<any>(collectionSizeTask, fetchDocsTask)
-            .then((collectionSize: number, docsResult: pagedResultSet<connectedDocument>) => {
+            .then((collectionSize: number, docsResult: pagedResult<connectedDocument>) => {
                 docsResult.totalResultCount = collectionSize;
                 return docsResult;
             });

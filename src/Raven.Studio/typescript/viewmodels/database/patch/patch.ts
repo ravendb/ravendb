@@ -18,7 +18,6 @@ import executePatchCommand = require("commands/database/patch/executePatchComman
 import evalByQueryCommand = require("commands/database/patch/evalByQueryCommand");
 import evalByCollectionCommand = require("commands/database/patch/evalByCollectionCommand");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import pagedResultSet = require("common/pagedResultSet");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
 import recentPatchesStorage = require("common/storage/recentPatchesStorage");
@@ -30,7 +29,6 @@ import genUtils = require("common/generalUtils");
 import queryCriteria = require("models/database/query/queryCriteria");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
-import pagedResult = require("widgets/virtualGrid/pagedResult");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
 type indexInfo = {
@@ -789,7 +787,7 @@ class patch extends viewModelBase {
                 var collectionName = indexName.substring(8);
                 new collection(collectionName, this.activeDatabase())
                     .fetchDocuments(0, 1)
-                    .done((result: pagedResultSet<any>) => {
+                    .done((result: pagedResult<any>) => {
                         if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
                             var dynamicIndexPattern: document = new document(result.items[0]);
                             if (!!dynamicIndexPattern) {

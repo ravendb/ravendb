@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import pagedResultSet = require("common/pagedResultSet");
 import facet = require("models/database/query/facet");
 import document = require("models/database/documents/document");
 
@@ -18,12 +17,12 @@ class queryFacetsCommand extends commandBase {
 
     public argsUrl: string;
 
-    execute(): JQueryPromise<pagedResultSet<any>> {
+    execute(): JQueryPromise<pagedResult<any>> {
         var url = "/facets/" + this.indexName + this.argsUrl;//TODO: use endpoints
 
         // Querying facets returns a facetResultSetDto. We need to massage that
-        // data into something that can be displayed in the grid: the pagedResultSet.
-        var finishedTask = $.Deferred<pagedResultSet<any>>(); 
+        // data into something that can be displayed in the grid: the pagedResult.
+        var finishedTask = $.Deferred<pagedResult<any>>(); 
         this.query(url, null, this.db)
             .fail((response: JQueryXHR) => {
                 this.reportError("Unable to run query.", response.responseText, response.statusText);
@@ -36,7 +35,7 @@ class queryFacetsCommand extends commandBase {
         return finishedTask;
     }
 
-    private parseResults(resultSet: facetResultSetDto): pagedResultSet<any> {
+    private parseResults(resultSet: facetResultSetDto): pagedResult<any> {
         var items: dictionary<any>[] = [];
         var totalItemCount = 0;
 
@@ -83,7 +82,11 @@ class queryFacetsCommand extends commandBase {
             propIndex++;
         }
 
-        return new pagedResultSet(items, totalItemCount, resultSet.Duration);
+        return {
+            items: items,
+            totalResultCount: totalItemCount,
+            additionalResultInfo: resultSet.Duration
+        };
     }
 }
 

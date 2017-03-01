@@ -5,7 +5,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import pagedResultSet = require("common/pagedResultSet");
 import messagePublisher = require("common/messagePublisher");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats"); 
@@ -32,7 +31,6 @@ import queryTransformerParameter = require("models/database/query/queryTransform
 
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-import pagedResult = require("widgets/virtualGrid/pagedResult");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 
 type indexItem = {
@@ -480,7 +478,7 @@ class query extends viewModelBase {
                     .always(() => {
                         this.isLoading(false);
                     })
-                    .done((queryResults: pagedResultSet<any>) => {
+                    .done((queryResults: pagedResult<any>) => {
                         this.queryStats(queryResults.additionalResultInfo);
                         //TODO: this.indexSuggestions([]);
                         /* TODO
@@ -800,7 +798,7 @@ class query extends viewModelBase {
         var queryResult = this.runQuery();
         queryResult
             .fetch(0, 1)
-            .done((results: pagedResultSet<any>) => {
+            .done((results: pagedResult<any>) => {
                 if (results.totalResultCount === 0) {
                     app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
                 } else {

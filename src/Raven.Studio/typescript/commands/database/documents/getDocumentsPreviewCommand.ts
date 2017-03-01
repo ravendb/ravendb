@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import collectionInfo = require("models/database/documents/collectionInfo");
-import pagedResultSet = require("common/pagedResultSet");
 import database = require("models/resources/database");
 
 class getDocumentsPreviewCommand extends commandBase {
@@ -9,7 +8,7 @@ class getDocumentsPreviewCommand extends commandBase {
         super();
     }
     /*TODO: 
-    execute(): JQueryPromise<pagedResultSet<any>> {
+    execute(): JQueryPromise<pagedResult<any>> {
         var args = {
             collection: this.collectionName,
             start: this.skip,
@@ -20,7 +19,7 @@ class getDocumentsPreviewCommand extends commandBase {
         var resultsSelector = (dto: documentPreviewDto) => {
             var collection = new collectionInfo(null);
             var items = collection.results;
-            return new pagedResultSet(items, collection.totalResults);
+            return new pagedResult(items, collection.totalResults);
         };
         var url = "/doc-preview";//TODO: use endpoints
         return this.query(url, args, this.database, resultsSelector);

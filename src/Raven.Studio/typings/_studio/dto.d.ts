@@ -22,6 +22,12 @@ interface resultsDto<T> {
     Results: T[];
 }
 
+
+interface documentDto extends metadataAwareDto {
+    [key: string]: any;
+}
+
+
 interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
@@ -223,4 +229,11 @@ interface subscriptionConnectionInfoDto {
 interface disabledReason {
     disabled: boolean;
     reason?: string;
+}
+
+interface pagedResult<T> {
+    items: T[];
+    totalResultCount: number;
+    resultEtag?: string;
+    additionalResultInfo?: any; 
 }

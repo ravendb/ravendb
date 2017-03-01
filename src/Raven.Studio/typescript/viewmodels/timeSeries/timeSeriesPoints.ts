@@ -12,7 +12,6 @@ import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
 import deleteKey = require("viewmodels/timeSeries/deleteKey");
 import pointChange = require("models/timeSeries/pointChange");
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
-import pagedResultSet = require("common/pagedResultSet");
 import getPointsCommand = require("commands/timeSeries/getPointsCommand");
 
 class timeSeriesPoints extends viewModelBase {
@@ -136,10 +135,11 @@ class timeSeriesPoints extends viewModelBase {
         return list;
     }*/
 
-    private fetchPoints(skip: number, take: number, start: string, end: string): JQueryPromise<pagedResultSet<timeSeriesPoint>> {
-        var doneTask = $.Deferred<pagedResultSet<timeSeriesPoint>>();
+    private fetchPoints(skip: number, take: number, start: string, end: string): JQueryPromise<pagedResult<timeSeriesPoint>> {
+        var doneTask = $.Deferred<pagedResult<timeSeriesPoint>>();
         new getPointsCommand(this.activeTimeSeries(), skip, take, this.type(), this.fields(), this.key(), start, end).execute()
-            .done((points: timeSeriesPoint[]) => doneTask.resolve(new pagedResultSet(points, this.isFiltered() ? this.pointsList().itemCount() + points.length : this.pointsCount())))
+            .done((points: timeSeriesPoint[]) => doneTask.resolve(
+                { items: points, totalResultCount: this.isFiltered() ? this.pointsList().itemCount() + points.length : this.pointsCount() }))
             .fail(xhr => doneTask.reject(xhr));
         return doneTask;
     }

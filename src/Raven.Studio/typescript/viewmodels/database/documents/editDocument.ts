@@ -11,7 +11,6 @@ import getDocumentsFromCollectionCommand = require("commands/database/documents/
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
-import pagedResultSet = require("common/pagedResultSet");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import genUtils = require("common/generalUtils");
@@ -301,7 +300,7 @@ class editDocument extends viewModelBase {
             this.userSpecifiedId(this.defaultNameForNewDocument(collectionForNewDocument));
             new getDocumentsFromCollectionCommand(new collection(collectionForNewDocument, this.activeDatabase()), 0, 3)
                 .execute()
-                .done((documents: pagedResultSet<document>) => {
+                .done((documents: pagedResult<document>) => {
                     const schemaDoc = documentHelpers.findSchema(documents.items);
                     this.document(schemaDoc); 
                     documentTask.resolve(schemaDoc);
