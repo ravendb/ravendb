@@ -15,6 +15,7 @@ using Raven.Database.Server.Security;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Xunit;
 
@@ -38,11 +39,20 @@ namespace Raven.Tests.Raft
 
             NodeConnectionInfo secondConnectionInfo;
             CreateServerWithOAuth(8078, "Marcin/cba", out secondConnectionInfo);
+
+            var mre = new AsyncManualResetEvent();
+            leader.Options.ClusterManager.Value.Engine.TopologyChanged += command =>
+            {
+                mre.Set();
+            };
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
+            Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
             //If we don't wait here we can cause two topology changes to happen at the same time and fail.
+
             WaitForClusterToBecomeNonStale(2);
             NodeConnectionInfo thirdConnectionInfo;
             CreateServerWithOAuth(8077, "User3/pass", out thirdConnectionInfo);
+            await mre.WaitAsync();
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
 
             Assert.True(servers[0].Options.ClusterManager.Value.IsLeader());
@@ -120,6 +130,7 @@ namespace Raven.Tests.Raft
             WaitForClusterToBecomeNonStale(2);
             NodeConnectionInfo thirdConnectionInfo;
             CreateServerWithOAuth(8077, "User3/pass", out thirdConnectionInfo);
+            Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
 
             WaitForClusterToBecomeNonStale(3);

@@ -77,17 +77,12 @@ namespace Raven.Tests.Raft
                 {
                     if (s.Requested.AllNodes.Count() < servers.Count)
                     {
-                        Console.WriteLine($"{ravenDbServer.Options.ClusterManager.Value.Engine.Name} topolgy has changed to size {s.Requested.AllNodes.Count()}");
                         mre.Signal();
                     }
-                    else
-                    {
-                        Console.WriteLine($"Received topology change for {ravenDbServer.Options.ClusterManager.Value.Engine.Name}, current leader is {servers.Where(x=>x.Options.ClusterManager.Value.IsLeader()).Select(x=>x.Options.ClusterManager.Value.Engine.Name).First()}");
-                        Console.WriteLine($"Prev: {s.Previous.ToString()}; Requested: {s.Requested.ToString()} ");
-                    }
+                    
                 };
             }
-            Console.WriteLine($"Start to leave node {guidOfNodeToRemove}");
+            
             clientUsedForSendingRequest.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/leave?name=" + guidOfNodeToRemove, new HttpMethod("GET")).ExecuteRequest();
 
             Assert.True(mre.Wait(20*1000));
