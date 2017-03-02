@@ -53,7 +53,7 @@ namespace Raven.Database.Raft.Storage.Handlers
             }
             catch (OperationVetoedException e)
             {
-                log.ErrorException("Was not able to update resorce do to veto", e);
+                log.ErrorException("Was not able to update resorce due to veto", e);
             }
         }
     }
