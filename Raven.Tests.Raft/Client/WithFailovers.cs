@@ -10,6 +10,7 @@ using Rachis;
 using Raven.Abstractions;
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Database.Config;
@@ -52,12 +53,13 @@ namespace Raven.Tests.Raft.Client
                 foreach (var documentStore in clusterStores)
                 {
                     // set lower timeout to reduce test time
-                    documentStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(5);
+                    documentStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(15);
                 }
 
                 SetupClusterConfiguration(clusterStores);
 
-                clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force:true));
+                clusterStores.ForEach(store => 
+                    AsyncHelpers.RunSync(()=>((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force:true)));
 
                 for (int i = 0; i < clusterStores.Count; i++)
                 {
