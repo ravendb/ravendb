@@ -15,9 +15,10 @@ namespace Raven.Database.Extensions
     {
         public static List<string> GetSemicolonSeparatedValues(this string self)
         {
-            return self.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(x => x.Trim())
-            .ToList();
+            return self.Split(new[] {';', ','}, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .OrderBy(x => x)
+                .ToList();
         }
 
         public static string NormalizeLineEnding(this string script)

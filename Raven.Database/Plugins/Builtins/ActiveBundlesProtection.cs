@@ -61,7 +61,7 @@ namespace Raven.Database.Plugins.Builtins
                     "If you really need to override it you have to specify {\"" + Constants.AllowBundlesChange +
                     "\": true} in metadata of a database document every time when you send it." + Environment.NewLine +
                     "Current: " + string.Join("; ", currentBundles) + Environment.NewLine +
-                    "New: " + string.Join("; '", newBundles));
+                    "New: " + string.Join("; ", newBundles));
             }
             
             return VetoResult.Allowed;
