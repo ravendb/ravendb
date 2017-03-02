@@ -72,12 +72,17 @@ namespace SlowTests.Server.Rachis
             DisconnectFromNode(leader);
             using (leader.ContextPool.AllocateOperationContext(out context))
             {
-                var aggregateException = Assert.Throws<AggregateException>( ()=> leader.PutAsync(context.ReadObject(new DynamicJsonValue
+                var e = Assert.Throws<AggregateException>(() =>
                 {
-                    ["Name"] = "test",
-                    ["Value"] = commandCount
-                }, "test")).Wait(leader.ElectionTimeoutMs*2));
-                Assert.IsType<TaskCanceledException>(aggregateException.InnerException);
+                    var task = leader.PutAsync(context.ReadObject(new DynamicJsonValue
+                    {
+                        ["Name"] = "test",
+                        ["Value"] = commandCount
+                    }, "test"));
+                    task.Wait(leader.ElectionTimeoutMs * 5);
+                }).InnerException;
+
+                Assert.True(e is NotLeadingException || e is TimeoutException);
             }
         }
     }

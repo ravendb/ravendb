@@ -473,9 +473,20 @@ namespace Raven.Server.Rachis
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 _newEntriesArrived.TrySetCanceled();
+                var lastStateChangeReason = _engine.LastStateChangeReason;
+                TimeoutException te = null;
+                if (string.IsNullOrEmpty(lastStateChangeReason) == false)
+                    te = new TimeoutException(lastStateChangeReason);
                 foreach (var entry in _entries)
                 {
-                    entry.Value.Item2.TrySetCanceled();
+                    if (te == null)
+                    {
+                        entry.Value.Item2.TrySetCanceled();
+                    }
+                    else
+                    {
+                        entry.Value.Item2.TrySetException(te);
+                    }
                 }
             });
 

@@ -365,7 +365,7 @@ namespace Raven.Server.Rachis
         {
             var leader = _currentLeader;
             if (leader == null)
-                throw new InvalidOperationException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
+                throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
             return leader.PutAsync(cmd);
         }
@@ -1111,7 +1111,7 @@ namespace Raven.Server.Rachis
         {
             var leader = _currentLeader;
             if (leader == null)
-                throw new InvalidOperationException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
+                throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
             Task task;
             while (leader.TryModifyTopology(newNode, modification, out task) == false)
@@ -1125,5 +1125,20 @@ namespace Raven.Server.Rachis
         public abstract void Apply(TransactionOperationContext context, long uptoInclusive);
 
         public abstract void SnapshotInstalled(TransactionOperationContext context);
+    }
+
+    public class NotLeadingException : Exception
+    {
+        public NotLeadingException()
+        {
+        }
+
+        public NotLeadingException(string message) : base(message)
+        {
+        }
+
+        public NotLeadingException(string message, Exception inner) : base(message, inner)
+        {
+        }
     }
 }
