@@ -144,6 +144,7 @@ class documents extends viewModelBase {
     }
 
     refresh() {
+        eventsCollector.default.reportEvent("documents", "refresh");
         this.gridController().reset(true);
         this.tracker.setCurrentAsNotDirty();
     }
@@ -295,24 +296,7 @@ class documents extends viewModelBase {
         app.showBootstrapDialog(copyDialog);
     }
 
-    //TODO: sort collections by name
-
     /* TODO:
-
-    private refreshCollections(): JQueryPromise<any> {
-        var deferred = $.Deferred();
-        var db = this.activeDatabase();
-
-        this.fetchCollectionsStats(db)
-            .done(results => {
-                this.documentsCount(results.numberOfDocuments());
-                this.updateCollections(results.collections);
-                this.refreshCollectionsData();
-                deferred.resolve();
-            });
-
-        return deferred;
-    }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
@@ -346,84 +330,6 @@ class documents extends viewModelBase {
             });
         }
     }
-
-    private updateCollections(receivedCollections: Array<collection>) {
-        var deletedCollections: collection[] = [];
-
-        this.collections().forEach((col: collection) => {
-            if (!receivedCollections.find((receivedCol: collection) => col.name === receivedCol.name) && col.name !== "System Documents" && col.name !== "All Documents") {
-                deletedCollections.push(col);
-            }
-        });
-
-        this.collections.removeAll(deletedCollections);
-
-        //update collections, including collection count
-        receivedCollections.forEach((receivedCol: collection) => {
-            var foundCollection = this.collections().find((col: collection) => col.name === receivedCol.name);
-            if (!foundCollection) {
-                this.collections.push(receivedCol);
-            } else {
-                var oldCount = foundCollection.documentCount();
-                var newCount = receivedCol.documentCount();
-                var selectedCollection = this.selectedCollection();
-                if (oldCount !== newCount) {
-                    if (selectedCollection.name === receivedCol.name || selectedCollection.isAllDocuments) {
-                        this.showCollectionChanged(true);
-                    }
-                }
-
-                foundCollection.documentCount(receivedCol.documentCount());
-            }
-        });
-
-        //if the collection is deleted, go to the all documents collection
-        var currentCollection: collection = this.collections().find(c => c.name === this.selectedCollection().name);
-        if (!currentCollection || currentCollection.documentCount() === 0) {
-            this.selectCollection(this.allDocumentsCollection());
-        }
-    }
-
-    private refreshCollectionsData() {
-        this.collections().forEach((collection: collection) => {
-            var pagedList = collection.getDocuments();
-            pagedList.invalidateCache();
-        });
-    }
-
-    private reloadDocumentsData(db: database) {
-        if (db.name === this.activeDatabase().name) {
-            this.refreshCollections().done(() => {
-                this.refreshCollectionsData();
-            });
-        }
-    }
-
-    // Animation callbacks for the groups list
-    showCollectionElement(element: Element) {
-        if (element.nodeType === 1) {
-            $(element).hide().slideDown(500, () => {
-                $(element).highlight();
-            });
-        }
-    }
-
-    hideCollectionElement(element: Element) {
-        if (element.nodeType === 1) {
-            $(element).slideUp(1000, () => { $(element).remove(); });
-        }
-    }
-
-
-
-
-
-
-
-
-
-
-
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
     selectedDocumentsText: KnockoutComputed<string>;
@@ -506,16 +412,6 @@ class documents extends viewModelBase {
         });
     }
 
-    refresh() {
-        eventsCollector.default.reportEvent("documents", "refresh");
-        this.getDocumentsGrid().refreshCollectionData();
-        var selectedCollection = this.selectedCollection();
-        selectedCollection.invalidateCache();
-        this.selectNone();
-        this.showCollectionChanged(false);
-    }
-
-   
     */
 }
 
