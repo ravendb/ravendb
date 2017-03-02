@@ -154,6 +154,7 @@ namespace Raven.Client.Documents.Indexes
                 string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + convention.GetCollectionName(typeof(TDocument));
                 var indexDefinition = new IndexDefinition
                 {
+                    Name = _indexName,
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
                     LockMode = LockMode,
                     OutputReduceToCollection = OutputReduceToCollection

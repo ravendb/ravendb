@@ -3,23 +3,23 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Linq;
-using Raven.Client.Document;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Util;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class CustomEntityName : RavenTest
+    public class CustomEntityName : RavenTestBase
     {
         [Fact]
         public void CanCustomizeEntityName()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
-                store.Conventions.FindTypeTagName = ReflectionUtil.GetFullNameWithoutVersionInformation;
+                store.Conventions.FindCollectionName = ReflectionUtil.GetFullNameWithoutVersionInformation;
 
                 using(var session = store.OpenSession())
                 {
@@ -30,11 +30,11 @@ namespace Raven.Tests.Bugs
                 using (var session = store.OpenSession())
                 {
                     var typeName = ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(Foo));
+
                     var all = session
                         .Advanced
-                        .DocumentQuery<Foo>("Raven/DocumentsByEntityName")
-                        .Where("Tag:[[" + typeName + "]]")
-                        .WaitForNonStaleResultsAsOfNow(TimeSpan.MaxValue)
+                        .DocumentQuery<Foo>("dynamic/" + typeName)
+                        .WaitForNonStaleResults(TimeSpan.FromMilliseconds(1000))
                         .ToList();
 
                     Assert.Equal(1, all.Count);

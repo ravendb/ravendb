@@ -2,20 +2,17 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
-using System.Runtime.Serialization;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class CustomDynamicObject : RavenTest
+    public class CustomDynamicObject : RavenTestBase
     {
         [Fact]
         public void CanReadFromDB()
         {
-            using(var s = NewDocumentStore())
+            using(var s = GetDocumentStore())
             {
                 using(var session = s.OpenSession())
                 {
@@ -35,13 +32,13 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        public class Customer : DynamicObject, IDictionary<string,string>
+        public class Customer : DynamicObject, IDictionary<string, object>
         {
-            readonly Dictionary<string,string> inner = new Dictionary<string, string>();
+            readonly Dictionary<string,object> inner = new Dictionary<string, object>();
 
             public override bool TryGetMember(GetMemberBinder binder, out object result)
             {
-                string value;
+                object value;
                 if(inner.TryGetValue(binder.Name,out value))
                 {
                     result = value;
@@ -50,7 +47,7 @@ namespace Raven.Tests.Bugs
                 return base.TryGetMember(binder, out result);
             }
 
-            public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
+            public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
             {
                 return inner.GetEnumerator();
             }
@@ -60,7 +57,7 @@ namespace Raven.Tests.Bugs
                 return GetEnumerator();
             }
 
-            public void Add(KeyValuePair<string, string> item)
+            public void Add(KeyValuePair<string, object> item)
             {
                 inner.Add(item.Key, item.Value);
             }
@@ -70,17 +67,17 @@ namespace Raven.Tests.Bugs
                 inner.Clear();
             }
 
-            public bool Contains(KeyValuePair<string, string> item)
+            public bool Contains(KeyValuePair<string, object> item)
             {
                 throw new NotImplementedException();
             }
 
-            public void CopyTo(KeyValuePair<string, string>[] array, int arrayIndex)
+            public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)
             {
                 throw new NotImplementedException();
             }
 
-            public bool Remove(KeyValuePair<string, string> item)
+            public bool Remove(KeyValuePair<string, object> item)
             {
                 throw new NotImplementedException();
             }
@@ -100,7 +97,7 @@ namespace Raven.Tests.Bugs
                 return inner.ContainsKey(key);
             }
 
-            public void Add(string key, string value)
+            public void Add(string key, object value)
             {
                 inner.Add(key,value);
             }
@@ -110,12 +107,12 @@ namespace Raven.Tests.Bugs
                 return inner.Remove(key);
             }
 
-            public bool TryGetValue(string key, out string value)
+            public bool TryGetValue(string key, out object value)
             {
                 return inner.TryGetValue(key, out value);
             }
 
-            public string this[string key]
+            public object this[string key]
             {
                 get { return inner[key]; }
                 set { inner[key] = value; }
@@ -126,7 +123,7 @@ namespace Raven.Tests.Bugs
                 get { return inner.Keys; }
             }
 
-            public ICollection<string> Values
+            public ICollection<object> Values
             {
                 get { return inner.Values; }
             }
