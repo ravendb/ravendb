@@ -884,6 +884,7 @@ namespace Raven.Server.Documents
         private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var document = ParseDocument(context, ref tvr);
+            DebugDisposeReaderAfterTransction(context.Transaction, document.Data);
 
             if ((document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
@@ -895,6 +896,18 @@ namespace Raven.Server.Documents
             }
 
             return document;
+        }
+
+        [Conditional("DEBUG")]
+        private static void DebugDisposeReaderAfterTransction(DocumentsTransaction tx, BlittableJsonReaderObject reader)
+        {
+            if (reader == null)
+                return;
+            Debug.Assert(tx != null);
+            // this method is called to ensure that after the transaction is completed, all the readers are disposed
+            // so we won't have read-after-tx use scenario, which can in rare case corrupt memory. This is a debug
+            // helper that is used across the board, but it is meant to assert stuff during debug only
+            tx.InnerTransaction.LowLevelTransaction.OnDispose += state => reader.Dispose();
         }
 
         public static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
@@ -924,7 +937,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        private static DocumentConflict TableValueToConflictDocument(JsonOperationContext context, ref TableValueReader tvr)
+        private static DocumentConflict TableValueToConflictDocument(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var result = new DocumentConflict
             {
@@ -940,6 +953,7 @@ namespace Raven.Server.Documents
             {
                 //otherwise this is a tombstone conflict and should be treated as such
                 result.Doc = new BlittableJsonReaderObject(read, size, context);
+                DebugDisposeReaderAfterTransction(context.Transaction, result.Doc);
             }
 
             result.Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr);
@@ -1481,13 +1495,15 @@ namespace Raven.Server.Documents
                     {
                         int size;
                         var dataPtr = tvr.Result.Reader.Read((int)ConflictsTable.Data, out size);
+                        var doc = (size == 0) ? null : new BlittableJsonReaderObject(dataPtr, size, context);
+                        DebugDisposeReaderAfterTransction(context.Transaction, doc);
                         return new DocumentConflict
                         {
                             ChangeVector = currentChangeVector,
                             Key = new LazyStringValue(key, tvr.Result.Reader.Read((int)ConflictsTable.OriginalKey, out size), size, context),
                             StorageId = tvr.Result.Reader.Id,
                             //size == 0 --> this is a tombstone conflict
-                            Doc = (size == 0) ? null : new BlittableJsonReaderObject(dataPtr, size, context)
+                            Doc = doc
                         };
                     }
                 }
