@@ -617,7 +617,8 @@ replicateToOrders(orderData);");
                        {
                            sb.AppendLine(value);
                        }
-                       if (value.Contains("skipping document: orders/1"))
+                       const string expectedValue = "skipping document: orders/1";
+                       if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
                            return;
 
                    }
@@ -629,16 +630,11 @@ var nameArr = this.StepName.split('.');");
                 var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(10));
                 if (condition == false)
                 {
-                    lock (sb)
-                    {
-                        Console.WriteLine(sb.ToString());
-                    }
+                    var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
+                    var tempFileName = Path.GetTempFileName();
+                    File.WriteAllText(tempFileName, sb.ToString());
+                    throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
                 }
-                Assert.True(condition);
-
-                var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
-                if (sb.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList().Any(x => x.Contains(msg)) == false)
-                    throw new InvalidOperationException("Got bad message. Full log is: \r\n" + sb);
             }
         }
 
