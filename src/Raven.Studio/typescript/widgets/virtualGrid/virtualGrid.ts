@@ -226,14 +226,8 @@ class virtualGrid<T> {
             this.queuedFetch = { skip: skip, take: take };
         } else {
             this.isLoading(true);
-            const safeSkip = skip;
-            let safeTake = take;
-            if (this.totalItemCount != null && skip > this.totalItemCount) {
-                skip = this.totalItemCount;
-            }
-            if (this.totalItemCount != null && (skip + take) > this.totalItemCount) {
-                safeTake = this.totalItemCount - skip;
-            }
+
+            const [safeSkip, safeTake] = this.makeSkipAndTakeSafe(skip, take);
 
             if (safeTake > 0) {
                 this.settings.fetcher(safeSkip, safeTake)
@@ -246,6 +240,39 @@ class virtualGrid<T> {
                     });
             }
         }
+    }
+
+    private makeSkipAndTakeSafe(skip: number, take: number): [number, number] {
+        if (this.totalItemCount == null) {
+            return [skip, take];
+        }
+
+        if (skip > this.totalItemCount) {
+            return [0, 0]; // nothing to fetch
+        }
+
+        if (skip + take > this.totalItemCount) {
+            take = this.totalItemCount - skip;
+        }
+
+        // now first first and last missing item in range:
+        // [skip, skip + take]
+        let firstMissingIdx = null as number;
+
+        for (let i = skip; i < skip + take; i++) {
+            if (!this.items[i]) {
+                firstMissingIdx = i;
+                break;
+            }
+        }
+
+        if (_.isNull(firstMissingIdx)) {
+            return [0, 0]; // nothing to take
+        }
+
+        const existingItemsDiff = firstMissingIdx - skip;
+
+        return [skip + existingItemsDiff, take - existingItemsDiff];
     }
 
     private checkForUpdatedGridHeight(): number {
@@ -278,17 +305,7 @@ class virtualGrid<T> {
             const { skip, take } = this.queuedFetch;
             this.queuedFetch = null;
 
-            // The previous fetch may have fetched some or all of the items we're about to fetch now.
-            // So, before running the queued fetch, modify it to fetch the next chunk of unavailable items.
-        let indexOfNextUnavailableChunk = skip;
-        for (let i = skip; i < this.items.length; i++) {
-            if (!this.items[i]) {
-                    indexOfNextUnavailableChunk = i;
-                    break;
-            }
-        }
-
-            this.fetchItems(indexOfNextUnavailableChunk, take);
+            this.fetchItems(skip, take);
         }
     }
 
