@@ -1,20 +1,18 @@
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Xunit;
-using Raven.Client.Linq;
-using Xunit.Extensions;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class CanAggregateOnDecimal : RavenTest
+    public class CanAggregateOnDecimal : RavenTestBase
     {
-        public class DecimalAggregation_Map : AbstractIndexCreationTask<Bank, BankTotal>
+        public class DecimalAggregationMap : AbstractIndexCreationTask<Bank, BankTotal>
         {
-            public DecimalAggregation_Map()
+            public DecimalAggregationMap()
             {
                 Map = banks => from bank in banks
                                select new { Total = bank.Accounts.Sum(x => x.Amount) };
@@ -22,9 +20,9 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        public class DecimalAggregation_Reduce : AbstractIndexCreationTask<Bank, BankTotal>
+        public class DecimalAggregationReduce : AbstractIndexCreationTask<Bank, BankTotal>
         {
-            public DecimalAggregation_Reduce()
+            public DecimalAggregationReduce()
             {
                 Map = banks => from bank in banks
                                select new { Total = bank.Accounts.Sum(x => x.Amount) };
@@ -52,9 +50,9 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void MapOnly()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
-                new DecimalAggregation_Map().Execute(store);
+                new DecimalAggregationMap().Execute(store);
                 using(var session = store.OpenSession())
                 {
                     session.Store(new Bank
@@ -68,10 +66,11 @@ namespace Raven.Tests.Bugs
                     session.SaveChanges();
                 }
                 WaitForIndexing(store);
-                Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                var stats = store.Admin.Send(new GetStatisticsOperation());
+                Assert.False(stats.Indexes.Any(i => i.State == IndexState.Error));
                 using (var session = store.OpenSession())
                 {
-                    var bankTotal = session.Query<BankTotal, DecimalAggregation_Map>()
+                    var bankTotal = session.Query<BankTotal, DecimalAggregationMap>()
                         .Customize(x=>x.WaitForNonStaleResults())
                         .ProjectFromIndexFieldsInto<BankTotal>()
                         .Single();
@@ -81,13 +80,12 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void Reduce(string storageName)
+        [Fact]
+        public void Reduce()
         {
-            using (var store = NewDocumentStore(requestedStorage:storageName))
+            using (var store = GetDocumentStore())
             {
-                new DecimalAggregation_Reduce().Execute(store);
+                new DecimalAggregationReduce().Execute(store);
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 5; i++)
@@ -104,14 +102,13 @@ namespace Raven.Tests.Bugs
                     session.SaveChanges();
                 }
                 WaitForIndexing(store);
-                var stats = store.DatabaseCommands.GetStatistics();
-                Assert.Empty(stats.Errors);
+                var stats = store.Admin.Send(new GetStatisticsOperation());
+                Assert.False(stats.Indexes.Any(i => i.State == IndexState.Error));
 
                 using (var session = store.OpenSession())
                 {
-                    var bankTotal = session.Query<BankTotal, DecimalAggregation_Reduce>()
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Single();
+                    var bankTotal = session.Query<BankTotal, DecimalAggregationReduce>()
+                        .Customize(x => x.WaitForNonStaleResults()).Single();
 
                     Assert.Equal(1607.060m, bankTotal.Total);
                 }
