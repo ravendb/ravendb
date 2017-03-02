@@ -262,6 +262,7 @@ namespace Raven.Server.Documents
                     DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
 
                 _databaseShutdown.Cancel();
+
                 // we'll wait for 1 minute to drain all the requests
                 // from the database
 
@@ -288,11 +289,6 @@ namespace Raven.Server.Documents
                 exceptionAggregator.Execute(() =>
                 {
                     TxMerger.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    DocumentReplicationLoader.Dispose();
                 });
 
                 if (_indexStoreTask != null)
@@ -369,6 +365,11 @@ namespace Raven.Server.Documents
                 {
                     DocumentsStorage?.Dispose();
                     DocumentsStorage = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    _databaseShutdown.Dispose();
                 });
 
                 exceptionAggregator.ThrowIfNeeded();

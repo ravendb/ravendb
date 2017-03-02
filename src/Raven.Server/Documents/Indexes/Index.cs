@@ -527,6 +527,12 @@ namespace Raven.Server.Documents.Indexes
                     _contextPool = null;
                 });
 
+                exceptionAggregator.Execute(() =>
+                {
+                    _cancellationTokenSource?.Dispose();
+                    _cancellationTokenSource = null;
+                });
+
                 exceptionAggregator.ThrowIfNeeded();
             }
             finally

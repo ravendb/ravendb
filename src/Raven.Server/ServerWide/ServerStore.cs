@@ -28,7 +28,7 @@ namespace Raven.Server.ServerWide
     /// </summary>
     public unsafe class ServerStore : IDisposable
     {
-        private CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
+        private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
 
         public CancellationToken ServerShutdown => _shutdownNotification.Token;
 
@@ -366,6 +366,8 @@ namespace Raven.Server.ServerWide
                         //we are disposing, so don't care
                     }
                     });
+
+                exceptionAggregator.Execute(() => _shutdownNotification.Dispose());
 
                 exceptionAggregator.ThrowIfNeeded();
             }

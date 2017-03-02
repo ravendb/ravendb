@@ -138,8 +138,8 @@ namespace Raven.Server.TrafficWatch
         public void Dispose()
         {
             _jsonContextPool.Dispose();
-
             _websocket.Dispose();
+            _cancellationTokenSource.Dispose();
         }
     }
 }
