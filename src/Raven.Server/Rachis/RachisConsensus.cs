@@ -37,7 +37,7 @@ namespace Raven.Server.Rachis
 
         public override void Dispose()
         {
-            SetNewState(State.Follower, new NullDisposable(), -1);
+            SetNewState(State.Follower, new NullDisposable(), -1, "Disposing Rachis");
             StateMachine?.Dispose();
             base.Dispose();
         }
@@ -79,6 +79,7 @@ namespace Raven.Server.Rachis
 
         public State CurrentState { get; private set; }
         public TimeoutEvent Timeout { get; private set; }
+        public string LastStateChangeReason => _lastStateChangeReason;
 
         private readonly StorageEnvironmentOptions _options;
         private readonly string _url;
@@ -139,6 +140,7 @@ namespace Raven.Server.Rachis
         private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>();
         private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>();
         private int? _seed;
+        private string _lastStateChangeReason;
 
         protected RachisConsensus(StorageEnvironmentOptions options, string url, int? seed = null)
         {
@@ -205,10 +207,10 @@ namespace Raven.Server.Rachis
 
                         tx.Commit();
                     }
-                    SwitchToLeaderState(electionTerm);
+                    SwitchToLeaderState(electionTerm, "I'm the only one in the cluster, so I'm the leader");
                 }
                 else
-                    Timeout.Start(SwitchToCandidateState);
+                    Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
             catch (Exception)
             {
@@ -277,7 +279,7 @@ namespace Raven.Server.Rachis
             AnyChange
         }
 
-        public void SetNewState(State state, IDisposable disposable, long expectedTerm)
+        public void SetNewState(State state, IDisposable disposable, long expectedTerm, string stateChangedReason)
         {
             List<IDisposable> toDispose;
 
@@ -290,6 +292,7 @@ namespace Raven.Server.Rachis
                         $"Attempted to switch state to {state} on expected term {expectedTerm} but the real term is {CurrentTerm}");
 
                 _currentLeader = null;
+                _lastStateChangeReason = stateChangedReason;
                 toDispose = new List<IDisposable>(_disposables);
 
                 _disposables.Clear();
@@ -297,7 +300,7 @@ namespace Raven.Server.Rachis
                 if (disposable != null)
                     _disposables.Add(disposable);
                 else // if we are back to null state, wait to become candidate if no one talks to us
-                    Timeout.Start(SwitchToCandidateState);
+                    Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
 
             UpdateState(state);
@@ -340,14 +343,14 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void SwitchToLeaderState(long electionTerm)
+        public void SwitchToLeaderState(long electionTerm, string reason)
         {
             if (Log.IsInfoEnabled)
             {
                 Log.Info("Switching to leader state");
             }
             var leader = new Leader(this);
-            SetNewState(State.LeaderElect, leader, electionTerm);
+            SetNewState(State.LeaderElect, leader, electionTerm, reason);
             _currentLeader = leader;
             leader.Start();
         }
@@ -356,12 +359,17 @@ namespace Raven.Server.Rachis
         {
             var leader = _currentLeader;
             if (leader == null)
-                throw new InvalidOperationException("Not a leader, cannot accept commands");
+                throw new InvalidOperationException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
             return leader.PutAsync(cmd);
         }
 
-        public void SwitchToCandidateState()
+        public void SwitchToCandidateStateOnTimeout()
+        {
+            SwitchToCandidateState("Election timeout");
+        }
+
+        public void SwitchToCandidateState(string reason)
         {
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -384,7 +392,7 @@ namespace Raven.Server.Rachis
                 Log.Info("Switching to candidate state");
             }
             var candidate = new Candidate(this);
-            SetNewState(State.Candidate, candidate, CurrentTerm);
+            SetNewState(State.Candidate, candidate, CurrentTerm, reason);
             candidate.Start();
         }
 
@@ -1090,7 +1098,7 @@ namespace Raven.Server.Rachis
         {
             var leader = _currentLeader;
             if (leader == null)
-                throw new InvalidOperationException("Not a leader, cannot accept commands");
+                throw new InvalidOperationException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
             Task task;
             while (leader.TryModifyTopology(newNode, modification, out task) == false)

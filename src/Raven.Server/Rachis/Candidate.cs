@@ -104,7 +104,7 @@ namespace Raven.Server.Rachis
                         if (realElectionsCount >= majority)
                         {
                             Running = false;
-                            _engine.SwitchToLeaderState(ElectionTerm);
+                            _engine.SwitchToLeaderState(ElectionTerm, $"Was elected by {majority} to leadership");
                             break;
                         }
                         if (RunRealElectionAtTerm != ElectionTerm &&

@@ -159,7 +159,8 @@ namespace Raven.Server.Rachis
                         }
                         else
                         {
-                            _engine.SetNewState(RachisConsensus.State.Follower, this, rv.Term);
+                            _engine.SetNewState(RachisConsensus.State.Follower, this, rv.Term,
+                                $"I\'ve given my vote to {_connection.Source} in term {rv.Term} and therefor became follower");
 
                             _connection.Send(context, new RequestVoteResponse
                             {

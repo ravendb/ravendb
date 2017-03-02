@@ -476,7 +476,8 @@ namespace Raven.Server.Rachis
                     if (llr.CurrentTerm > engineCurrentTerm)
                     {
                         // we need to abort the current leadership
-                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm);
+                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm,
+                            "Found election term " + llr.CurrentTerm + " that is higher than ours " + engineCurrentTerm);
                         _engine.FoundAboutHigherTerm(llr.CurrentTerm);
                         return null;
                     }

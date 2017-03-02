@@ -424,8 +424,9 @@ namespace Raven.Server.Rachis
 
             // if leader / candidate, this remove them from play and revert to follower mode
             var engineCurrentTerm = _engine.CurrentTerm;
-            _engine.SetNewState(RachisConsensus.State.Follower, this, engineCurrentTerm);
-            _engine.Timeout.Start(_engine.SwitchToCandidateState);
+            _engine.SetNewState(RachisConsensus.State.Follower, this, engineCurrentTerm,
+                $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
+            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
 
             _thread = new Thread(Run)
             {
@@ -439,7 +440,7 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                _engine.Timeout.Start(_engine.SwitchToCandidateState);
+                _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
 
                 using (this)
                 {

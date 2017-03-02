@@ -126,7 +126,8 @@ namespace Raven.Server.Rachis
                                         if (rvr.Term > currentElectionTerm)
                                         {
                                             // we need to abort the current elections
-                                            _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm);
+                                            _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, 
+                                                "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm);
                                             _engine.FoundAboutHigherTerm(rvr.Term);
                                             return;
                                         }
@@ -158,7 +159,8 @@ namespace Raven.Server.Rachis
                                     if (rvr.Term > currentElectionTerm)
                                     {
                                         // we need to abort the current elections
-                                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm);
+                                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm,
+                                                "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm);
                                         _engine.FoundAboutHigherTerm(rvr.Term);
                                         return;
                                     }

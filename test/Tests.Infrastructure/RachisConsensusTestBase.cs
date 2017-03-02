@@ -41,7 +41,10 @@ namespace Tests.Infrastructure
                 await leader.AddToClusterAsync(follower.Url);
                 await follower.WaitForTopology(Leader.TopologyModification.Voter);
             }
-            Assert.True(RachisConsensuses[leaderIndex].CurrentState == RachisConsensus.State.Leader,"The leader has changed while waiting for cluster to become stable");
+            var currentState = RachisConsensuses[leaderIndex].CurrentState;
+            Assert.True(currentState == RachisConsensus.State.Leader ||
+                        currentState == RachisConsensus.State.LeaderElect,
+                "The leader has changed while waiting for cluster to become stable. " + leader.LastStateChangeReason);
             return leader;
         }
 
