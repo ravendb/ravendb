@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Indexes
 
             var journalPath = documentDatabase.Configuration.Indexing.JournalsStoragePath?.Combine(name);
 
-            var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath?.FullPath, journalPath?.FullPath);
+            var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath?.FullPath, journalPath?.FullPath, documentDatabase.IoChanges);
             try
             {
                 options.SchemaVersion = 1;
@@ -288,8 +288,8 @@ namespace Raven.Server.Documents.Indexes
                 var journalPath = configuration.JournalsStoragePath?.Combine(name);
 
                 var options = configuration.RunInMemory
-                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath)
-                    : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath);
+                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath, documentDatabase.IoChanges)
+                    : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath, documentDatabase.IoChanges);
 
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
@@ -2171,7 +2171,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var environmentOptions =
                         (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
-                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath);
+                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath, null, null, DocumentDatabase.IoChanges);
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                     var wasRunning = _indexingThread != null;
@@ -2180,7 +2180,7 @@ namespace Raven.Server.Documents.Indexes
 
                     compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(IndexId, Name) + "_Compact");
 
-                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath.FullPath))
+                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges))
                     {
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 

@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -22,68 +24,98 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var environments = new List<IOMetricsEnvironment>();
-                var result = new IOMetricsResponse
-                {
-                    Environments = environments
-                };
-
-                foreach (var storageEnvironment in Database.GetAllStoragesEnvironment())
-                {
-                    environments.Add(GetIoMetrics(storageEnvironment.Environment));
-                }
-
+                var result = GetIoMetricsResponse(Database);
                 context.Write(writer, result.ToJson());
             }
             return Task.CompletedTask;
         }
-
-        private IOMetricsEnvironment GetIoMetrics(StorageEnvironment storageEnvironment)
+       
+        [RavenAction("/databases/*/debug/io-metrics/live", "GET", SkipUsagesCount = true)]
+        public async Task IoMetricsLive()
         {
-            var files = new List<IOMetricsFileStats>();
+            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
+                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
+
+                using (var ms = new MemoryStream())
+                using (var collector = new LiveIOStatsCollector(Database))
+                {
+                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
+                            break;
+
+                        // Check queue for new data from server
+                        var tuple = await collector.MetricsQueue.TryDequeueAsync(TimeSpan.FromSeconds(4));
+                        if (tuple.Item1 == false)
+                        {
+                            // No new info, Send heart beat
+                            await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                            continue;
+                        }
+
+                        // New info, Send data 
+                        ms.SetLength(0);
+                        JsonOperationContext context;
+                        
+                        using (ContextPool.AllocateOperationContext(out context))
+                        using (var writer = new BlittableJsonTextWriter(context, ms))
+                        {
+                            context.Write(writer, tuple.Item2.ToJson());
+                        }
+                        
+                        ArraySegment<byte> bytes;
+                        ms.TryGetBuffer(out bytes);
+                        await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                    }
+                }
+            }
+        }
+
+        public static IOMetricsResponse GetIoMetricsResponse(DocumentDatabase documentDatabase)
+        {
+            var result = new IOMetricsResponse();
+
+            foreach (var storageEnvironment in documentDatabase.GetAllStoragesEnvironment())
+            {
+                result.Environments.Add(GetIoMetrics(storageEnvironment.Environment));
+            }
+
+            return result;
+        }
+
+        public static IOMetricsEnvironment GetIoMetrics(StorageEnvironment storageEnvironment)
+        {
             var ioMetrics = new IOMetricsEnvironment
             {
-                Path = storageEnvironment.Options.BasePath,
-                Files = files
+                Path = storageEnvironment.Options.BasePath
             };
 
             foreach (var fileMetric in storageEnvironment.Options.IoMetrics.Files)
             {
-                files.Add(GetFileMetrics(fileMetric));
+                ioMetrics.Files.Add(GetFileMetrics(fileMetric));
             }
 
             return ioMetrics;
         }
        
-        private IOMetricsFileStats GetFileMetrics(IoMetrics.FileIoMetrics fileMetric)
+        private static IOMetricsFileStats GetFileMetrics(IoMetrics.FileIoMetrics fileMetric)
         {
-            var recent = new List<IOMetricsRecentStats>();
-            var history = new List<IOMetricsHistoryStats>();
             var fileMetrics = new IOMetricsFileStats
             {
                 File = Path.GetFileName(fileMetric.FileName),
                 Status = fileMetric.Closed ? FileStatus.Closed : FileStatus.InUse,
-                Recent = recent,
-                History = history
             };
 
             foreach (var recentMetric in fileMetric.GetRecentMetrics())
             {
-                recent.Add(new IOMetricsRecentStats
-                {
-                    Start = recentMetric.Start.GetDefaultRavenFormat(),
-                    Size = recentMetric.Size,
-                    HumanSize = Sizes.Humane(recentMetric.Size),
-                    FileSize = recentMetric.FileSize,
-                    HumanFileSize = Sizes.Humane(recentMetric.FileSize),
-                    Duration = Math.Round(recentMetric.Duration.TotalMilliseconds, 2),
-                    Type = recentMetric.Type
-                });
+                fileMetrics.Recent.Add(GetIoMetricsRecentStats(recentMetric));
             }
 
             foreach (var historyMetric in fileMetric.GetSummaryMetrics())
             {
-                history.Add(new IOMetricsHistoryStats
+                fileMetrics.History.Add(new IOMetricsHistoryStats
                 {
                     Start = historyMetric.TotalTimeStart.GetDefaultRavenFormat(),
                     End = historyMetric.TotalTimeEnd.GetDefaultRavenFormat(),
@@ -100,6 +132,20 @@ namespace Raven.Server.Documents.Handlers
             }
             
             return fileMetrics;
+        }
+
+        public static IOMetricsRecentStats GetIoMetricsRecentStats(IoMeterBuffer.MeterItem recentMetric)
+        {
+            return new IOMetricsRecentStats
+            {
+                Start = recentMetric.Start.GetDefaultRavenFormat(),
+                Size = recentMetric.Size,
+                HumanSize = Sizes.Humane(recentMetric.Size),
+                FileSize = recentMetric.FileSize,
+                HumanFileSize = Sizes.Humane(recentMetric.FileSize),
+                Duration = Math.Round(recentMetric.Duration.TotalMilliseconds, 2),
+                Type = recentMetric.Type
+            };
         }
     }
 
@@ -169,6 +215,12 @@ namespace Raven.Server.Documents.Handlers
 
     public class IOMetricsFileStats
     {
+        public IOMetricsFileStats()
+        {
+            Recent = new List<IOMetricsRecentStats>();
+            History = new List<IOMetricsHistoryStats>();
+        }
+
         public string File { get; set; }
         public FileStatus Status { get; set; }
         public List<IOMetricsRecentStats> Recent { get; set; }
@@ -188,6 +240,11 @@ namespace Raven.Server.Documents.Handlers
 
     public class IOMetricsEnvironment
     {
+        public IOMetricsEnvironment()
+        {
+            Files = new List<IOMetricsFileStats>();
+        }
+
         public string Path { get; set; }
         public List<IOMetricsFileStats> Files { get; set; }
 
@@ -203,6 +260,11 @@ namespace Raven.Server.Documents.Handlers
 
     public class IOMetricsResponse
     {
+        public IOMetricsResponse()
+        {
+            Environments = new List<IOMetricsEnvironment>();
+        }
+
         public List<IOMetricsEnvironment> Environments { get; set; }
 
         public DynamicJsonValue ToJson()

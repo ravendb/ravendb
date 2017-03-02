@@ -44,7 +44,6 @@ namespace Raven.Server.ServerWide
         private static readonly Slice EtagIndexName;
 
         public readonly RavenConfiguration Configuration;
-        public readonly IoMetrics IoMetrics;
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly NotificationCenter.NotificationCenter NotificationCenter;
 
@@ -83,7 +82,6 @@ namespace Raven.Server.ServerWide
             var resourceName = "ServerStore";
 
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            IoMetrics = new IoMetrics(8, 8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<ServerStore>(resourceName);
             DatabasesLandlord = new DatabasesLandlord(this);
