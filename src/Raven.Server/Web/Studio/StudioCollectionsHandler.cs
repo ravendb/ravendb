@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
 {
-    public class CollectionsHandler : DatabaseRequestHandler
+    public class StudioCollectionsHandler : DatabaseRequestHandler
     {
 
         [RavenAction("/databases/*/studio/collections/docs", "DELETE")]

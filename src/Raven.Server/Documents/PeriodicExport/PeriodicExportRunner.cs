@@ -511,6 +511,7 @@ namespace Raven.Server.Documents.PeriodicExport
         public void Dispose()
         {
             _cancellationToken.Cancel();
+            _cancellationToken.Dispose();
             _incrementalExportTimer?.Dispose();
             _fullExportTimer?.Dispose();
             var task = _runningTask;

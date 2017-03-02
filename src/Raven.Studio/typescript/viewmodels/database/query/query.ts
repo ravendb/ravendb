@@ -5,7 +5,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import pagedResultSet = require("common/pagedResultSet");
 import messagePublisher = require("common/messagePublisher");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats"); 
@@ -32,7 +31,6 @@ import queryTransformerParameter = require("models/database/query/queryTransform
 
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-import pagedResult = require("widgets/virtualGrid/pagedResult");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 
 type indexItem = {
@@ -97,6 +95,7 @@ class query extends viewModelBase {
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any>>();
     requestedIndexForQuery = ko.observable<string>();
     staleResult: KnockoutComputed<boolean>;
+    dirtyResult = ko.observable<boolean>();
 
     selectedIndexLabel: KnockoutComputed<string>;
     hasEditableIndex: KnockoutComputed<boolean>;
@@ -349,6 +348,8 @@ class query extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetcher()(s, t), (w, r) => documentsProvider.findColumns(w, r));
 
+        grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
+
         this.fetcher.subscribe(() => grid.reset());
     }
 
@@ -480,7 +481,7 @@ class query extends viewModelBase {
                     .always(() => {
                         this.isLoading(false);
                     })
-                    .done((queryResults: pagedResultSet<any>) => {
+                    .done((queryResults: pagedResult<any>) => {
                         this.queryStats(queryResults.additionalResultInfo);
                         //TODO: this.indexSuggestions([]);
                         /* TODO
@@ -520,6 +521,10 @@ class query extends viewModelBase {
         }
     }
 
+    refresh() {
+        this.gridController().reset(true);
+    }
+    
     editSelectedIndex() {
         eventsCollector.default.reportEvent("query", "edit-selected-index");
         this.navigate(this.editIndexUrl());
@@ -800,7 +805,7 @@ class query extends viewModelBase {
         var queryResult = this.runQuery();
         queryResult
             .fetch(0, 1)
-            .done((results: pagedResultSet<any>) => {
+            .done((results: pagedResult<any>) => {
                 if (results.totalResultCount === 0) {
                     app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
                 } else {

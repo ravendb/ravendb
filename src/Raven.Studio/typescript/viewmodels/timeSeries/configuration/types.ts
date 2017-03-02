@@ -7,7 +7,6 @@ import putTypeCommand = require("commands/timeSeries/putTypeCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import editTypeDialog = require("viewmodels/timeSeries/editTypeDialog");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
-import pagedResultSet = require("common/pagedResultSet");
 import getTypesCommand = require("commands/timeSeries/getTypesCommand");
 import typeChange = require("models/timeSeries/typeChange");
 
@@ -58,11 +57,14 @@ class types extends viewModelBase {
         return list;
     }*/
 
-    private fetchTypes(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
-        var deffered = $.Deferred();
+    private fetchTypes(skip: number, take: number): JQueryPromise<pagedResult<any>> {
+        var deffered = $.Deferred<pagedResult<any>>();
         new getTypesCommand(this.activeTimeSeries()).execute()
             .done((types: timeSeriesType[]) => {
-                deffered.resolve(new pagedResultSet(types, 1024));
+                deffered.resolve({
+                    items: types,
+                    totalResultCount: 1024
+                });
             });
         return deffered;
     }

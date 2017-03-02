@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Server.Documents;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.NotificationCenter.Notifications;
@@ -54,21 +55,12 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                         {
                             CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
                             CountOfIndexes = indexes.Count,
-                            CountOfStaleIndexes = staleIndexes
+                            CountOfStaleIndexes = staleIndexes,
+                            LastEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
                         };
 
                         current.Collections = _database.DocumentsStorage.GetCollections(context)
-                            .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection
-                            {
-                                Name = x.Name,
-                                Count = x.Count
-                            });
-
-                        foreach (var collection in current.Collections)
-                        {
-                            collection.Value.LastEtag = _database.DocumentsStorage.GetLastDocumentEtag(context,
-                                collection.Key);
-                        }
+                            .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentEtag(context, x.Name)));
                     }
 
                     if (_latest != null && _latest.Equals(current))
@@ -79,7 +71,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                         : ExtractModifiedCollections(current);
 
                     _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
-                        current.CountOfStaleIndexes, modifiedCollections));
+                        current.CountOfStaleIndexes, current.LastEtag, modifiedCollections));
 
                     _latest = current;
                 }
@@ -106,12 +98,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 {
                     // collection deleted
 
-                    result.Add(new DatabaseStatsChanged.ModifiedCollection
-                    {
-                        Name = collection.Key,
-                        Count = -1, 
-                        LastEtag = -1
-                    });
+                    result.Add(new DatabaseStatsChanged.ModifiedCollection(collection.Key, -1, -1));
 
                     continue;
                 }
@@ -135,6 +122,8 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         {
             public long CountOfDocuments;
 
+            public long LastEtag;
+
             public int CountOfIndexes;
 
             public int CountOfStaleIndexes;
@@ -147,6 +136,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 if (ReferenceEquals(this, other)) return true;
                 return CountOfDocuments == other.CountOfDocuments &&
                        CountOfIndexes == other.CountOfIndexes &&
+                       LastEtag == other.LastEtag &&
                        CountOfStaleIndexes == other.CountOfStaleIndexes &&
                        DictionaryExtensions.ContentEquals(Collections, other.Collections);
             }
@@ -169,6 +159,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 {
                     var hashCode = CountOfDocuments.GetHashCode();
                     hashCode = (hashCode * 397) ^ CountOfIndexes.GetHashCode();
+                    hashCode = (hashCode * 397) ^ LastEtag.GetHashCode();
                     hashCode = (hashCode * 397) ^ CountOfStaleIndexes.GetHashCode();
                     hashCode = (hashCode * 397) ^ (Collections != null ? Collections.GetHashCode() : 0);
                     return hashCode;

@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import pagedResultSet = require("common/pagedResultSet");
 import file = require("models/filesystem/file");
 import searchResults = require("models/filesystem/searchResults");
 
@@ -10,13 +9,14 @@ class searchByQueryCommand  extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet<any>> {
+    execute(): JQueryPromise<pagedResult<file>> {
 
         var filesTask = this.fetchFiles();
 
-        var doneTask = $.Deferred();
+        var doneTask = $.Deferred<pagedResult<file>>();
 
-        filesTask.done((results: searchResults) => doneTask.resolve(new pagedResultSet(results.Files.map(d => new file(d, false)), results.FileCount)));
+        filesTask.done((results: searchResults) =>
+            doneTask.resolve({ items: results.Files.map(d => new file(d, false)), totalResultCount: results.FileCount }));
         filesTask.fail(xhr => doneTask.reject(xhr));
 
         return doneTask;

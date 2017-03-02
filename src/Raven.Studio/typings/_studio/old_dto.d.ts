@@ -3,10 +3,6 @@
 interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>> {
 }
 
-interface documentDto extends metadataAwareDto {
-    [key:string]: any;
-}
-
 interface conflictsInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<conflictDto>> {
 }
 
@@ -1184,15 +1180,4 @@ interface filteredOutIndexStatDto {
 interface generatedCodeDto {
     Document: string;
     Code: string;
-}
-
-
-interface fetcherDto<T> {
-    (skip: number, take: number): JQueryPromise<PagedResultSet<T>>;
-}
-
-interface PagedResultSet<T> {
-    items: Array<T>;
-    totalResultCount: number;
-    additionalResultInfo?: any;
 }

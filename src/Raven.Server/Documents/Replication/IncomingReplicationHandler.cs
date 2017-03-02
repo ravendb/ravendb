@@ -1207,6 +1207,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             _incomingThread = null;
+            _cts.Dispose();
         }
 
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);

@@ -1,6 +1,5 @@
 import counterStorage = require("models/counter/counterStorage");
 import getCountersCommand = require("commands/counter/getCountersCommand");
-import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");
 
 class counterGroup {
@@ -59,7 +58,7 @@ class counterGroup {
         return list;
     }*/
 
-    private fetchCounters(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
+    private fetchCounters(skip: number, take: number): JQueryPromise<pagedResult<any>> {
         var group = this.isAllGroupsGroup ? null : this.name;
         return new getCountersCommand(this.ownerCounterStorage, skip, take, group).execute();
     }

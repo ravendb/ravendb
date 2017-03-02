@@ -5,7 +5,6 @@ import getIndexDefinitionCommand = require("commands/database/index/getIndexDefi
 import facet = require("models/database/query/facet");
 import queryFacetsCommand = require("commands/database/query/queryFacetsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import pagedResultSet = require("common/pagedResultSet");
 import eventsCollector = require("common/eventsCollector");
 
 class reporting extends viewModelBase {
@@ -200,7 +199,7 @@ class reporting extends viewModelBase {
             var command = new queryFacetsCommand(selectedIndex, filterQuery, skip, take, groupedFacets, db, this.isCacheDisable());
             ko.postbox.publish("SetRawJSONUrl", appUrl.forReportingRawData(this.activeDatabase(), this.selectedIndexName()) + command.argsUrl);
             return command.execute()
-                .done((resultSet: pagedResultSet<any>) => this.queryDuration(resultSet.additionalResultInfo));
+                .done((resultSet: pagedResult<any>) => this.queryDuration(resultSet.additionalResultInfo));
         };
         //TODO: this.reportResults(new pagedList(resultsFetcher));
     }

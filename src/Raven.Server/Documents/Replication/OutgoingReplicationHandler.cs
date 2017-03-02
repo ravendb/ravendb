@@ -657,6 +657,8 @@ namespace Raven.Server.Documents.Replication
             {
                 _sendingThread?.Join();
             }
+
+            _cts.Dispose();
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);

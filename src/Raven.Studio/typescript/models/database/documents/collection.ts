@@ -1,8 +1,8 @@
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
 import getAllDocumentsMetadataCommand = require("commands/database/documents/getAllDocumentsMetadataCommand");
-import pagedResultSet = require("common/pagedResultSet");
 import database = require("models/resources/database");
 import cssGenerator = require("common/cssGenerator");
+import document = require("models/database/documents/document");
 
 class collection {
     static readonly allDocumentsCollectionName = "All Documents";
@@ -31,7 +31,7 @@ class collection {
         return this.db;
     }
 
-    fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
+    fetchDocuments(skip: number, take: number): JQueryPromise<pagedResult<document>> {
         //TODO: use doc-preview endpoint for fetching this!
         /*
         TODO:

@@ -3,12 +3,12 @@
         <div class="flex-window-head">
             <div class="btn-group">
                 <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
-                    <span data-bind="text: currentCollection().name"></span>
+                    <span data-bind="text: tracker.currentCollection().name"></span>
                     <span class="caret"></span>
                 </button>
-                <ul class="dropdown-menu" data-bind="foreach: collections">
+                <ul class="dropdown-menu" data-bind="foreach: tracker.collections">
                     <li>
-                        <a href="#" data-bind="click: _.partial($root.currentCollection, $data)">
+                        <a href="#" data-bind="click: _.partial($root.tracker.currentCollection, $data)">
                             <span data-bind="text: name + ' (' + documentCount().toLocaleString() + ')'"></span>
                         </a>
                     </li>
@@ -63,10 +63,17 @@
             </div>
         </div>
         <div class="flex-window-scroll">
-            <virtual-grid class="resizable" params="controller: gridController"></virtual-grid>
+            <div class="has-error results-error" data-bind="visible: dataChanged()">
+                <div class="help-block">
+                    <i class="icon-danger"></i><span>Data has changed. Your results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+                </div>
+            </div>
+            <div class="scroll-stretch">
+                <div class="panel-body">
+                    <virtual-grid class="resizable" params="controller: gridController"></virtual-grid>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
 
 <!--<div id="documents-pane" class="documents-page no-outline row" tabindex="0" data-bind="enableResize: true">
 
@@ -171,12 +178,12 @@
         </div>
 
         <div class="documents-select" data-bind="with: selectedCollection, visible: showCollectionChanged">
-            <!-- ko if: isAllDocuments --
+            !-- ko if: isAllDocuments --
             Documents count was modified,
-            <!-- /ko -->
-            <!-- ko ifnot: isAllDocuments --
+            !-- /ko --
+            !-- ko ifnot: isAllDocuments --
             '<span data-bind="text: name"></span>' collection count was modified,
-            <!-- /ko --
+            !-- /ko --
             press <span class="select-link" data-bind="click: $root.refresh.bind($root)">here</span> to refresh.
         </div>
 

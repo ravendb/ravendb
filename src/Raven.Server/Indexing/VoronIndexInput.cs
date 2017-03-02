@@ -98,6 +98,7 @@ namespace Raven.Server.Indexing
                 return;
 
             _cts.Cancel();
+            _cts.Dispose();
         }
 
         public override long Length()

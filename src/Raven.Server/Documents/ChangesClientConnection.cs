@@ -23,7 +23,9 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
         private readonly AsyncQueue<ChangeValue> _sendQueue = new AsyncQueue<ChangeValue>();
 
-        private readonly CancellationTokenSource _disposeToken = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private readonly CancellationToken _disposeToken;
+
         private readonly DateTime _startedAt;
 
         private readonly ConcurrentSet<string> _matchingIndexes =
@@ -60,6 +62,7 @@ namespace Raven.Server.Documents
             _webSocket = webSocket;
             _documentDatabase = documentDatabase;
             _startedAt = SystemTime.UtcNow;
+            _disposeToken = _cts.Token;
         }
 
         public long Id = Interlocked.Increment(ref _counter);
@@ -379,7 +382,7 @@ namespace Raven.Server.Documents
 
                         ArraySegment<byte> bytes;
                         ms.TryGetBuffer(out bytes);
-                        await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken.Token);
+                        await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken);
                     }
                 }
             }
@@ -420,12 +423,13 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             Interlocked.Exchange(ref _isDisposed, 1);
-            _disposeToken.Cancel();
+            _cts.Cancel();
             _sendQueue.Enqueue(new ChangeValue
             {
                 AllowSkip = false,
                 ValueToSend = null
             });
+            _cts.Dispose();
         }
 
         public void Confirm(int commandId)
