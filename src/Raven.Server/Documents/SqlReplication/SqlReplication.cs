@@ -414,6 +414,9 @@ namespace Raven.Server.Documents.SqlReplication
 
         public virtual void Dispose()
         {
+            if (_disposed)
+                return;
+
             _disposed = true;
 
             _cancellationTokenSource.Cancel();
@@ -421,6 +424,8 @@ namespace Raven.Server.Documents.SqlReplication
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(SqlReplication)} '{ReplicationUniqueName}'");
 
             exceptionAggregator.Execute(() => _replicationThread?.Join());
+
+            exceptionAggregator.Execute(() => _cancellationTokenSource.Dispose());
 
             exceptionAggregator.ThrowIfNeeded();
         }

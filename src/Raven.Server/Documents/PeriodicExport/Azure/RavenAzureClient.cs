@@ -121,36 +121,31 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             //List of block ids; the blocks will be committed in the order in this list
             var blockIds = new List<string>();
 
-            var cts = new CancellationTokenSource();
-            var tasks = new Task[threads];
-            var fillQueueTask = CreateFillQueueTask(stream, blockIds, queue, cts);
-            tasks[0] = fillQueueTask;
+            using (var cts = new CancellationTokenSource())
+            {
+                var tasks = new Task[threads];
+                var fillQueueTask = CreateFillQueueTask(stream, blockIds, queue, cts);
+                tasks[0] = fillQueueTask;
 
-            var baseUrl = _azureServerUrl + "/" + key;
-            for (var i = 1; i < threads; i++)
-            {
-                var baseUrlForUpload = baseUrl + "?comp=block&blockid=";
-                var task = CreateUploadTask(queue, baseUrlForUpload, cts);
-                tasks[i] = task;
-            }
-
-            try
-            {
-                //wait for all tasks to complete
-                await Task.WhenAll(tasks);
-
-                //put block list
-                await PutBlockList(baseUrl, blockIds, metadata);
-            }
-            catch (Exception)
-            {
-                GetExceptionsFromTasks(tasks);
-            }
-            finally
-            {
-                //dispose the cancellation token
-                using (cts)
+                var baseUrl = _azureServerUrl + "/" + key;
+                for (var i = 1; i < threads; i++)
                 {
+                    var baseUrlForUpload = baseUrl + "?comp=block&blockid=";
+                    var task = CreateUploadTask(queue, baseUrlForUpload, cts);
+                    tasks[i] = task;
+                }
+
+                try
+                {
+                    //wait for all tasks to complete
+                    await Task.WhenAll(tasks);
+
+                    //put block list
+                    await PutBlockList(baseUrl, blockIds, metadata);
+                }
+                catch (Exception)
+                {
+                    GetExceptionsFromTasks(tasks);
                 }
             }
         }

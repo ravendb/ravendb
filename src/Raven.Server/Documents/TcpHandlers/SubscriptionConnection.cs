@@ -545,6 +545,8 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 // ignored
             }
+
+            CancellationTokenSource.Dispose();
         }
     }
 }

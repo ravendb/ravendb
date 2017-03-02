@@ -879,6 +879,7 @@ namespace Raven.Server.Documents.Replication
             var ea = new ExceptionAggregator("Failed during dispose of document replication loader");
 
             _cts.Cancel();
+            _cts.Dispose();
 
             ea.Execute(_reconnectAttemptTimer.Dispose);
 
