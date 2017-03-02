@@ -224,8 +224,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_readingMetadataObject == false)
                     {
-                        if (state.StringSize == 9 && state.StringBuffer[0] == (byte) '@' &&
-                            *(long*) (state.StringBuffer + 1) == 7022344802737087853)
+                        if (state.StringSize == 9 && state.StringBuffer[0] == (byte)'@' &&
+                            *(long*)(state.StringBuffer + 1) == 7022344802737087853)
                         {
                             _readingMetadataObject = true;
                         }
@@ -235,7 +235,7 @@ namespace Raven.Server.Smuggler.Documents
                     switch (state.StringSize)
                     {
                         case 3:// @id
-                            if (state.StringBuffer[0] == (byte)'@' && 
+                            if (state.StringBuffer[0] == (byte)'@' &&
                                 *(short*)(state.StringBuffer + 1) == 25705)
                             {
                                 if (reader.Read() == false)
@@ -243,13 +243,13 @@ namespace Raven.Server.Smuggler.Documents
                                     _state = State.ReadingId;
                                     return false;
                                 }
-                                if(state.CurrentTokenType!=JsonParserToken.String)
+                                if (state.CurrentTokenType != JsonParserToken.String)
                                     ThrowInvalidIdType(state);
                                 Id = CreateLazyStringValueFromParserState(state);
                             }
                             break;
                         case 5:// @etag
-                            if (state.StringBuffer[0] == (byte)'@' && 
+                            if (state.StringBuffer[0] == (byte)'@' &&
                                 *(int*)(state.StringBuffer + 1) == 1734440037)
                             {
                                 if (reader.Read() == false)
@@ -257,14 +257,14 @@ namespace Raven.Server.Smuggler.Documents
                                     _state = State.IgnorePropertyEtag;
                                     return false;
                                 }
-                                if (state.CurrentTokenType != JsonParserToken.String && 
+                                if (state.CurrentTokenType != JsonParserToken.String &&
                                     state.CurrentTokenType != JsonParserToken.Integer)
                                     ThrowInvalidEtagType(state);
                             }
                             break;
                         case 13: //Last-Modified
                             if (*(long*)state.StringBuffer == 7237087983830262092 &&
-                              *(int*)(state.StringBuffer + sizeof(long)) == 1701406313 && 
+                              *(int*)(state.StringBuffer + sizeof(long)) == 1701406313 &&
                               state.StringBuffer[12] == (byte)'d')
                             {
                                 if (reader.Read() == false)
@@ -324,8 +324,8 @@ namespace Raven.Server.Smuggler.Documents
 
                             var value = *(long*)(state.StringBuffer + sizeof(long) + sizeof(long));
                             var lastByte = state.StringBuffer[24];
-                            if (value == 8028074745928232302 && lastByte == (byte) 'n' ||
-                                value == 8245937481775066478 && lastByte == (byte) 'y')
+                            if (value == 8028074745928232302 && lastByte == (byte)'n' ||
+                                value == 8245937481775066478 && lastByte == (byte)'y')
                             {
                                 var isReplicationHistory = lastByte == (byte)'y';
                                 if (reader.Read() == false)
@@ -437,7 +437,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 Id = null;
                 _depth = 0;
-                _state=State.None;
+                _state = State.None;
                 _readingMetadataObject = false;
                 _ctx = ctx;
 
@@ -446,7 +446,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<Document> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
-           return ReadDocuments(actions);
+            return ReadDocuments(actions);
         }
 
         public IEnumerable<Document> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit)
@@ -600,25 +600,38 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
                 ThrowInvalidJson();
 
-            while (true)
+            var context = _context;
+            var builder = CreateBuilder(_context, null);
+            try
             {
-                if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                    ThrowInvalidJson();
-
-                if (_state.CurrentTokenType == JsonParserToken.EndArray)
-                    break;
-
-                var context = actions == null ? _context : actions.GetContextForNewDocument();
-                using (
-                    var builder = new BlittableJsonDocumentBuilder(context,
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state))
+                while (true)
                 {
+                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                        ThrowInvalidJson();
 
+                    if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                        break;
+                    if (actions != null)
+                    {
+                        var oldContext = _context;
+                        context = actions.GetContextForNewDocument();
+                        if (_context != oldContext)
+                        {
+                            builder.Dispose();
+                            builder = CreateBuilder(context, null);
+                        }
+                    }
+                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk); ;
                     ReadObject(builder);
 
-                    yield return builder.CreateReader();
+                    var reader = builder.CreateReader();
+                    builder.Reset();
+                    yield return reader;
                 }
-
+            }
+            finally
+            {
+                builder.Dispose();
             }
         }
 
@@ -630,34 +643,54 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
                 ThrowInvalidJson();
 
+            var context = _context;
             var modifier = new BlittableMetadataModifier();
-            while (true)
+            var builder = CreateBuilder(context, modifier);
+            try
             {
-                if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                    ThrowInvalidJson();
-
-                if (_state.CurrentTokenType == JsonParserToken.EndArray)
-                    break;
-
-                var context = actions == null ? _context : actions.GetContextForNewDocument();
-                modifier.Reset(context);
-                using (
-                    var builder = new BlittableJsonDocumentBuilder(context,
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state,
-                        modifier: modifier))
+                while (true)
                 {
+                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                        ThrowInvalidJson();
+
+                    if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                        break;
+
+                    if (actions != null)
+                    {
+                        var oldContext = context;
+                        context = actions.GetContextForNewDocument();
+                        if (oldContext != context)
+                        {
+                            builder.Dispose();
+                            builder = CreateBuilder(context, modifier);
+                        }
+                    }
+                    modifier.Reset(context);
+                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     ReadObject(builder);
 
                     var blittableJsonReaderObject = builder.CreateReader();
+                    builder.Reset();
                     yield return new Document
                     {
                         Data = blittableJsonReaderObject,
                         Key = modifier.Id,
                     };
+                }
+            }
+            finally
+            {
+                builder.Dispose();
+            }
         }
 
-            }
+        private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)
+        {
+            return new BlittableJsonDocumentBuilder(context,
+                BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state,
+                modifier: modifier);
         }
 
         private static DatabaseItemType GetType(string type)
