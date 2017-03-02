@@ -210,25 +210,25 @@ namespace Voron.Debugging
                 long totalNumberOfAllocatedPages = 0;
                 do
                 {
-                    long length;
-                    int version;
+                    var info = *tree.GetStreamInfo(it.CurrentKey, writeable: false);
 
-                    FixedSizeTree detailsTree;
-                    tree.GetStreamLengthAndVersion(it.CurrentKey, out length, out version, out detailsTree);
-                    
-                    long numberOfAllocatedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(length);
+                    long numberOfAllocatedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(info.TotalSize + info.TagSize + Tree.StreamInfo.SizeOf);
 
-                    if (detailsTree.Type == RootObjectType.FixedSizeTree) // only if large fst, embedded already counted in parent
-                        numberOfAllocatedPages += detailsTree.PageCount;
+                    var chunksTree = tree.GetStreamChunksTree(it.CurrentKey);
+
+                    if (chunksTree.Type == RootObjectType.FixedSizeTree) // only if large fst, embedded already counted in parent
+                        numberOfAllocatedPages += chunksTree.PageCount;
+
+                    var name = info.TagSize == 0 ? it.CurrentKey.ToString() : tree.GetStreamTag(it.CurrentKey);
 
                     streams.Add(new StreamDetails
                     {
-                        Name = it.CurrentKey.ToString(),
-                        Length = length,
-                        Version = version,
+                        Name = name,
+                        Length = info.TotalSize,
+                        Version = info.Version,
                         NumberOfAllocatedPages = numberOfAllocatedPages,
                         AllocatedSpaceInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
-                        DetailsTree = GetReport(detailsTree, false),
+                        ChunksTree = GetReport(chunksTree, false),
                     });
 
                     totalNumberOfAllocatedPages += numberOfAllocatedPages;

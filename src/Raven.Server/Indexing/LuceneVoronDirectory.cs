@@ -56,13 +56,10 @@ namespace Raven.Server.Indexing
             Slice str;
             using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
             {
-                long length;
-                int version;
-                FixedSizeTree _;
-                filesTree.GetStreamLengthAndVersion(str, out length, out version, out _);
-                if (length == -1)
+                var info = filesTree.GetStreamInfo(str, writeable: false);
+                if (info == null)
                     throw new FileNotFoundException(name);
-                return version;
+                return info->Version;
             }
         }
 
@@ -87,13 +84,10 @@ namespace Raven.Server.Indexing
             Slice str;
             using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
             {
-                long length;
-                int version;
-                FixedSizeTree _;
-                filesTree.GetStreamLengthAndVersion(str, out length, out version, out _);
-                if(length == -1)
+                var info = filesTree.GetStreamInfo(str, writeable: false);
+                if (info == null)
                     throw new FileNotFoundException(name);
-                return length;
+                return info->TotalSize;
             }
         }
 

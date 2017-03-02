@@ -102,6 +102,6 @@ namespace Voron.Debugging
 
         public long AllocatedSpaceInBytes { get; set; }
 
-        public TreeReport DetailsTree { get; set; }
+        public TreeReport ChunksTree { get; set; }
     }
 }
