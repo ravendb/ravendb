@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Commands
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
 
-            if (_indexQuery.WaitForNonStaleResultsTimeout.HasValue)
+            if (_indexQuery.WaitForNonStaleResultsTimeout.HasValue && _indexQuery.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
                 Timeout = _indexQuery.WaitForNonStaleResultsTimeout.Value.Add(TimeSpan.FromSeconds(10)); // giving the server an opportunity to finish the response
         }
 

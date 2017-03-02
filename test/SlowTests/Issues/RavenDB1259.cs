@@ -1,13 +1,11 @@
 using System;
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using FastTests;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     /// <summary>
     /// If Transformer can not find entity then should return null rather than NullReference
@@ -17,7 +15,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Should_throw_invalid_operation_exception_when_production_area_does_not_exist_and_using_transformer()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductionAreaTransformer().Execute(store);
 
@@ -32,7 +30,7 @@ namespace Raven.Tests.Issues
                     var service = new ProducerService(session);
 
                     // Act
-                    const string badProductionAreaId = "ProductionAreas-999";                    
+                    const string badProductionAreaId = "ProductionAreas-999";
 
                     // Assert
                     Assert.Throws<InvalidOperationException>(() => service.GetProductionAreaWithTransformer(badProductionAreaId));
@@ -44,7 +42,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Should_throw_invalid_operation_exception_when_production_area_does_not_exist_and_not_using_transformer()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductionAreaTransformer().Execute(store);
 
@@ -70,7 +68,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Should_return_production_area()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductionAreaTransformer().Execute(store);
 
@@ -88,12 +86,12 @@ namespace Raven.Tests.Issues
                     var dto = service.GetProductionAreaWithTransformer(productionAreaId);
 
                     // Assert
-                    Assert.NotNull(dto);                   
+                    Assert.NotNull(dto);
                 }
             }
         }
 
-        public class ProducerService
+        private class ProducerService
         {
             private readonly IDocumentSession _session;
 
@@ -131,19 +129,19 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class ProductionArea
+        private class ProductionArea
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class ProductionAreaDto
+        private class ProductionAreaDto
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class ProductionAreaTransformer : AbstractTransformerCreationTask<ProductionArea>
+        private class ProductionAreaTransformer : AbstractTransformerCreationTask<ProductionArea>
         {
             public ProductionAreaTransformer()
             {

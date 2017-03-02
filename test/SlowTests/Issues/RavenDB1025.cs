@@ -3,19 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
-using Raven.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
-
-using Xunit;
 using System.Linq;
+using FastTests;
+using Newtonsoft.Json;
+using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB1025 : RavenTest
+    public class RavenDB1025 : RavenTestBase
     {
-        public class MyClass
+        private class MyClass
         {
             public int Index { get; set; }
             [JsonProperty(PropertyName = "S")]
@@ -25,7 +24,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanSaveAndProject()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -36,14 +35,14 @@ namespace Raven.Tests.Issues
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<MyClass>()
-                      .Customize(x=>x.WaitForNonStaleResults())
+                      .Customize(x => x.WaitForNonStaleResults())
                       .Select(x => new MyClass
                       {
                           Index = x.Index,
-                          Statistics= x.Statistics,
+                          Statistics = x.Statistics,
                       }).Single();
 
-                      Assert.NotNull(results.Statistics);
+                    Assert.NotNull(results.Statistics);
                 }
 
             }
