@@ -24,14 +24,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             _numberOfReduceFields = numberOfReduceFields;
             _buffersPool = buffersPool;
+
             if (numberOfReduceFields == 1)
             {
                 _mode = Mode.SingleValue;
             }
             else
             {
+                // numberOfReduceFields could be zero when we have 'group bankTotal by 1'
                 _mode = Mode.MultipleValues;
-                _buffer = _buffersPool.Allocate(16);
                 _bufferPos = 0;
             }
         }
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         return _singleValueHash;
                     case Mode.MultipleValues:
                         if (_buffer == null)
-                            return 0;
+                            return 0; // this can happen if we have _no_ values (group by "constant")
                         return Hashing.XXHash64.CalculateInline(_buffer.Address, (ulong)_bufferPos);
                     default:
                         ThrowUnknownReduceValueMode();
