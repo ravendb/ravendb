@@ -3,22 +3,20 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
-using System.Linq;
-
-using Raven.Tests.Common;
-
+using FastTests;
+using FastTests.Server.Documents.Queries;
 using Xunit;
-using Raven.Client.Document;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class CanDetectChanges : RavenTest
+    public class CanDetectChanges : RavenTestBase
     {
         [Fact]
         public void CanDetectChangesOnNewItem()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -36,7 +34,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanDetectChangesOnExistingItem()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -65,7 +63,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanDetectChangesOnExistingItemFromQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -96,7 +94,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void WillNotCreateNewDocuments()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -115,7 +113,7 @@ namespace Raven.Tests.Bugs
                 {
                     for (int i = 0; i < 15; i++)
                     {
-                        session.Advanced.DocumentQuery<ProjectingDates.Registration>().WaitForNonStaleResults().ToArray();
+                        session.Advanced.DocumentQuery<ProjectingDates.Registration>().WaitForNonStaleResults();
 
                         session.SaveChanges();
                     }
@@ -123,7 +121,8 @@ namespace Raven.Tests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Equal(2, session.Advanced.DocumentQuery<ProjectingDates.Registration>().WaitForNonStaleResults().ToList().Count());
+                    session.Advanced.DocumentQuery<ProjectingDates.Registration>().WaitForNonStaleResults();
+                    Assert.Equal(2, session.Advanced.DocumentQuery<ProjectingDates.Registration>().CountLazily().Value);
                 }
             }
         }
@@ -131,12 +130,12 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanDetectChangesOnExistingItem_ByteArray()
         {
-            using (var server = GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 var id = string.Empty;
                 using (var session = store.OpenSession())
                 {
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
                     var doc = new ByteArraySample
                     {
                         Bytes = Guid.NewGuid().ToByteArray(),
@@ -145,10 +144,8 @@ namespace Raven.Tests.Bugs
                     session.SaveChanges();
                     id = doc.Id;
                 }
-
-                WaitForAllRequestsToComplete(server);
-                server.Server.ResetNumberOfRequests();
-
+                
+                Server.Metrics.Reset();
                 using (var session = store.OpenSession())
                 {
                     var sample = session.Load<ByteArraySample>(id);

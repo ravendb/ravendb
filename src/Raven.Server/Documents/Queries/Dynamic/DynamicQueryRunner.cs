@@ -78,18 +78,19 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (index == null)
             {
                 var result = new DocumentQueryResult();
-                _context.OpenReadTransaction();
-
-                FillCountOfResultsAndIndexEtag(result, collection);
-
-                if (existingResultEtag.HasValue)
+                using (_context.OpenReadTransaction())
                 {
-                    if (result.ResultEtag == existingResultEtag)
-                        return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
+                    FillCountOfResultsAndIndexEtag(result, collection);
+
+                    if (existingResultEtag.HasValue)
+                    {
+                        if (result.ResultEtag == existingResultEtag)
+                            return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
+                    }
+
+                    ExecuteCollectionQuery(result, query, collection);
                 }
 
-
-                ExecuteCollectionQuery(result, query, collection);
                 return new CompletedTask<DocumentQueryResult>(result);
             }
 

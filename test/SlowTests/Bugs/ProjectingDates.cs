@@ -3,32 +3,32 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Database.Indexing;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class ProjectingDates : RavenTest
+    public class ProjectingDates : RavenTestBase
     {
         [Fact]
         public void CanSaveCachedVery()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("Regs",
-                                                new IndexDefinitionBuilder<Registration, Registration>
-                                                {
-                                                    Map = regs => from reg in regs
-                                                                  select new { reg.RegisteredAt },
-                                                    Stores = { { x => x.RegisteredAt, FieldStorage.Yes } }
-                                                });
-
+                var index = new IndexDefinitionBuilder<Registration, Registration>("Regs")
+                {
+                    Map = regs => from reg in regs
+                        select new {reg.RegisteredAt},
+                    Stores = {{x => x.RegisteredAt, FieldStorage.Yes}}
+                }.ToIndexDefinition(new DocumentConventions());
+                store.Admin.Send(new PutIndexesOperation( index ));
+               
                 using(var session = store.OpenSession())
                 {
                     session.Store(new Registration

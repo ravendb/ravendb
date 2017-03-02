@@ -1,47 +1,29 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using System.Reflection;
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class CreateIndexesRemotely :RavenTest
+    public class CreateIndexesRemotely :RavenTestBase
     {
-        protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
-        {
-        }
-
         [Fact]
         public void CanDoSo_DirectUrl()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = GetDocumentStore())
             {
-                var container = new CompositionContainer(new TypeCatalog(typeof(Posts_ByMonthPublished_Count), typeof(Tags_Count)));
-                IndexCreation.CreateIndexes(container, store);
+                var assembly = new AssemblyName(typeof(CreateIndexesRemotely).GetTypeInfo().Assembly.FullName);
+                IndexCreation.CreateIndexes(Assembly.Load(assembly), store, 
+                    new [] { typeof(PostsByMonthPublishedCount), typeof(TagsCount) });              
             }
         }
-
-        [Fact]
-        public void CanDoSo_ConnectionString()
+        
+        public class PostsByMonthPublishedCount : AbstractIndexCreationTask<Post, PostCountByMonth>
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { ConnectionStringName = "Server" }.Initialize())
-            {
-                var container = new CompositionContainer(new TypeCatalog(typeof(Posts_ByMonthPublished_Count), typeof(Tags_Count)));
-                IndexCreation.CreateIndexes(container, store);
-            }
-        }
-
-
-        public class Posts_ByMonthPublished_Count : AbstractIndexCreationTask<Post, PostCountByMonth>
-        {
-            public Posts_ByMonthPublished_Count()
+            public PostsByMonthPublishedCount()
             {
                 Map = posts => from post in posts
                                select new { post.PublishAt.Year, post.PublishAt.Month, Count = 1 };
@@ -52,9 +34,9 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        public class Tags_Count : AbstractIndexCreationTask<Post, TagCount>
+        public class TagsCount : AbstractIndexCreationTask<Post, TagCount>
         {
-            public Tags_Count()
+            public TagsCount()
             {
                 Map = posts => from post in posts
                                from tag in post.Tags
