@@ -27,11 +27,9 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         private readonly InMemoryDocumentSessionOperations _sessionOperations;
 
-        private readonly PagingInformation _pagingInformation;
+        private readonly string _startAfter;
 
-        private readonly string _skipAfter;
-
-        public LazyStartsWithOperation(string keyPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations, PagingInformation pagingInformation, string skipAfter)
+        public LazyStartsWithOperation(string keyPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations, string startAfter)
         {
             _keyPrefix = keyPrefix;
             _matches = matches;
@@ -39,31 +37,23 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _start = start;
             _pageSize = pageSize;
             _sessionOperations = sessionOperations;
-            _pagingInformation = pagingInformation;
-            _skipAfter = skipAfter;
+            _startAfter = startAfter;
         }
 
         public GetRequest CreateRequest()
         {
-            var actualStart = _start;
-
-            var nextPage = _pagingInformation != null && _pagingInformation.IsForPreviousPage(_start, _pageSize);
-            if (nextPage)
-                actualStart = _pagingInformation.NextPageStart;
-
             return new GetRequest
             {
                 Url = "/docs",
                 Query = "?" +
                     string.Format(
-                        "startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&next-page={5}&skipAfter={6}",
+                        "startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&startAfter={5}",
                         Uri.EscapeDataString(_keyPrefix),
-                        actualStart,
+                        _start,
                         _pageSize,
                         Uri.EscapeDataString(_matches ?? ""),
                         Uri.EscapeDataString(_exclude ?? ""),
-                        nextPage ? "true" : "false",
-                        _skipAfter)
+                        _startAfter)
             };
         }
 
@@ -76,8 +66,6 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         public void HandleResponse(GetResponse response)
         {
             var getDocumentResult = JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result);
-
-            _pagingInformation?.Fill(_start, _pageSize, getDocumentResult.NextPageStart);
 
             var finalResults = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
             foreach (BlittableJsonReaderObject document in getDocumentResult.Results)

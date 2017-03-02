@@ -1398,9 +1398,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 fieldType = typeof(string);
             }
 
-            if (QueryGenerator.Conventions.UsesRangeType(fieldType))
-                fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
-            _documentQuery.AddOrder(fieldName, descending, fieldType);
+            fieldName = FieldUtil.ApplyRangeSuffixIfNecessary(fieldName, fieldType);
+            _documentQuery.AddOrder(fieldName, descending);
         }
 
         private bool _insideSelect;
@@ -1837,9 +1836,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
                 return Constants.Documents.Indexing.Fields.DocumentIdFieldName;
             }
-            if (_documentQuery.DocumentConventions.UsesRangeType(value) && !expression.Path.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                return expression.Path + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
-            return expression.Path;
+
+            return FieldUtil.ApplyRangeSuffixIfNecessary(expression.Path, value);
         }
 
         /// <summary>
@@ -2008,7 +2006,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (doc.TryGetMember(renamedField, out value) == false)
                     continue;
                 values[renamedField] = value;
-                if (FieldsToFetch.Contains(renamedField))
+                if (FieldsToFetch.Contains(renamedField) == false)
                 {
                     doc.Modifications.Remove(renamedField);
                 }

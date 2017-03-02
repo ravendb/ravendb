@@ -6,7 +6,9 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Sparrow.Json;
@@ -76,8 +78,15 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Defer commands to be executed on SaveChanges()
         /// </summary>
+        /// <param name="command">Command to be executed</param>
         /// <param name="commands">Array of comands to be executed.</param>
-        void Defer(params ICommandData[] commands);
+        void Defer(ICommandData command, params ICommandData[] commands);
+
+        /// <summary>
+        ///     Defer commands to be executed on SaveChanges()
+        /// </summary>
+        /// <param name="commands">Array of comands to be executed.</param>
+        void Defer(ICommandData[] commands);
 
         /// <summary>
         ///     Evicts the specified entity from the session.
@@ -116,7 +125,16 @@ namespace Raven.Client.Documents.Session
         ///     and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        IDictionary<string, string> GetMetadataFor<T>(T instance);
+        IDictionary<string, StringValues> GetMetadataFor<T>(T instance);
+
+
+        /// <summary>
+        ///     Gets change vector for the specified entity.
+        ///     If the entity is transient, it will load the metadata from the store
+        ///     and associate the current state of the entity with the metadata from the server.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        ChangeVectorEntry[] GetChangeVectorFor<T>(T instance);
 
         /// <summary>
         ///     Determines whether the specified entity has changed.

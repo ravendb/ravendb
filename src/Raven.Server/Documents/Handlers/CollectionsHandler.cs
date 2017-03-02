@@ -8,6 +8,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Documents.Operations;
+using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -46,11 +47,31 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
+
+                long collectionCount;
+                //TODO: remove one we implement doc-preview endpoint - RavenDB-6466
+                {
+                    var collectionName = GetStringQueryString("name");
+                    var lastCollectionEtag = Database.DocumentsStorage.GetLastDocumentEtag(context, collectionName);
+                    
+                    collectionCount = Database.DocumentsStorage.GetCollection(collectionName, context).Count;
+                    var actualEtag = DatabaseStatsChanged.ComputeEtag(lastCollectionEtag, collectionCount);
+
+                    HttpContext.Response.Headers["ETag"] = "\"" + actualEtag + "\"";
+                }
+
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize));
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
+
+                    { //TODO: delete me - once doc-preview will be finished - RavenDB-6466
+                        writer.WritePropertyName("totalResultCount"); 
+                        writer.WriteInteger(collectionCount);
+                        writer.WriteComma();
+                    }
+                    
                     writer.WritePropertyName("Results");
                     writer.WriteDocuments(context, documents, metadataOnly: false);
                     writer.WriteEndObject();

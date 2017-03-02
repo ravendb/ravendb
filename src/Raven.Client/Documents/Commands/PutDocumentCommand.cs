@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Commands
                     Context.Write(stream, Document);
                 }),
             };
-
+            AddEtagIfNotNull(Etag, request);
             return request;
         }
 

@@ -8,7 +8,7 @@ class deleteDocuments extends dialogViewModelBase {
 
     private documents = ko.observableArray<documentBase>();
     private deletionStarted = false;
-    deletionTask = $.Deferred(); // Gives consumers a way to know when the async delete operation completes.
+    deletionTask = $.Deferred<void>();
 
     constructor(documents: Array<documentBase>, private db: database) {
         super(null);
@@ -21,19 +21,19 @@ class deleteDocuments extends dialogViewModelBase {
     }
 
     deleteDocs() {
-        var deletedDocIds = this.documents().map(i => i.getId());
-        var deleteCommand = new deleteDocumentsCommand(deletedDocIds, this.db);
-        var deleteCommandTask = deleteCommand.execute();
+        const deletedDocIds = this.documents().map(i => i.getId());
 
-        deleteCommandTask.done(() => this.deletionTask.resolve(this.documents()));
-        deleteCommandTask.fail(response => this.deletionTask.reject(response));
+        new deleteDocumentsCommand(deletedDocIds, this.db)
+            .execute()
+            .done(() => this.deletionTask.resolve())
+            .fail(response => this.deletionTask.reject(response));
 
         this.deletionStarted = true;
-        dialog.close(this);
+        dialog.close(this, true);
     }
 
     cancel() {
-        dialog.close(this);
+        dialog.close(this, false);
     }
 
     deactivate(args: any) {

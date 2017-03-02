@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
-using Raven.Client.Http;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Client.Util;

@@ -46,7 +46,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void IndexOnAbstractParentIndexesChildClasses()
         {
             using (var store = GetDocumentStore())

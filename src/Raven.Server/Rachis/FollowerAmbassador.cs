@@ -27,6 +27,8 @@ namespace Raven.Server.Rachis
 
         private long _followerMatchIndex;
         private long _lastReplyFromFollower;
+        private long _lastSendToFollower;
+        private string _lastSentMsg;
         private Thread _thread;
         private RemoteConnection _connection;
 
@@ -35,6 +37,14 @@ namespace Raven.Server.Rachis
         public long FollowerMatchIndex => Interlocked.Read(ref _followerMatchIndex);
 
         public DateTime LastReplyFromFollower => new DateTime(Interlocked.Read(ref _lastReplyFromFollower));
+        public DateTime LastSendToFollower => new DateTime(Interlocked.Read(ref _lastSendToFollower));
+        public string LastSendMsg => _lastSentMsg;
+
+        private void UpdateLastSend(string msg)
+        {
+            Interlocked.Exchange(ref _lastSendToFollower, DateTime.UtcNow.Ticks);
+            Interlocked.Exchange(ref _lastSentMsg, msg);
+        }
 
         private void UpdateLastMatchFromFollower(long newVal)
         {
@@ -88,7 +98,7 @@ namespace Raven.Server.Rachis
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        _connection = new RemoteConnection(_url,stream);
+                        _connection = new RemoteConnection(_url, _engine.Url, stream);
                         using (_connection)
                         {
                             _engine.AppendStateDisposable(_leader, _connection);
@@ -109,18 +119,14 @@ namespace Raven.Server.Rachis
                                     AppendEntries appendEntries;
                                     using (context.OpenReadTransaction())
                                     {
-                                        var table = context.Transaction.InnerTransaction.OpenTable(
-                                            RachisConsensus.LogsTable,
-                                            RachisConsensus.EntriesSlice);
+                                        var table = context.Transaction.InnerTransaction.OpenTable(RachisConsensus.LogsTable, RachisConsensus.EntriesSlice);
 
                                         var reveredNextIndex = Bits.SwapBytes(_followerMatchIndex + 1);
                                         Slice key;
-                                        using (
-                                            Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long),
-                                                out key))
+                                        using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out key))
                                         {
                                             long totalSize = 0;
-                                            foreach (var value in table.SeekByPrimaryKey(key))
+                                            foreach (var value in table.SeekByPrimaryKey(key, 0))
                                             {
                                                 var entry = BuildRachisEntryToSend(context, value);
                                                 entries.Add(entry);
@@ -135,14 +141,18 @@ namespace Raven.Server.Rachis
                                                 LeaderCommit = _engine.GetLastCommitIndex(context),
                                                 Term = _engine.CurrentTerm,
                                                 TruncateLogBefore = _leader.LowestIndexInEntireCluster,
-                                                PrevLogTerm = _engine.GetTermFor(context,_followerMatchIndex) ?? 0,
+                                                PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
                                                 PrevLogIndex = _followerMatchIndex
                                             };
                                         }
                                     }
 
                                     // out of the tx, we can do network calls
-
+                                    UpdateLastSend(
+                                        entries.Count > 0
+                                            ? "Append Entries"
+                                            : "Heartbeat"
+                                    );
                                     _connection.Send(context, appendEntries, entries);
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
 
@@ -223,15 +233,17 @@ namespace Raven.Server.Rachis
                 if (_followerMatchIndex >= earliestIndexEtry)
                 {
                     // we don't need a snapshot, so just send updated topology
+                    UpdateLastSend("Send empty snapshot");
                     _connection.Send(context, new InstallSnapshot
                     {
-                        LastIncludedIndex = 0,
-                        LastIncludedTerm = 0,
+                        LastIncludedIndex = earliestIndexEtry,
+                        LastIncludedTerm = _engine.GetTermForKnownExisting(context, earliestIndexEtry),
                         Topology = _engine.GetTopologyRaw(context),
                     });
+
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
                     {
-                        binaryWriter.Write((int) RootObjectType.None);
+                        binaryWriter.Write(-1);
                     }
                 }
                 else
@@ -243,7 +255,7 @@ namespace Raven.Server.Rachis
                     // we make sure that we routinely update LastReplyFromFollower here
                     // so we'll not leave the leader thinking we abandoned it
                     UpdateLastMatchFromFollower(_followerMatchIndex);
-
+                    UpdateLastSend("Send full snapshot");
                     _connection.Send(context, new InstallSnapshot
                     {
                         LastIncludedIndex = index,
@@ -340,11 +352,11 @@ namespace Raven.Server.Rachis
                                 var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
                                 var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
                                 var schema = TableSchema.ReadFrom(txr.Allocator, schemaPtr, schemaSize);
-                               
+
                                 // Load table into structure 
                                 var inputTable = txr.OpenTable(schema, currentTreeKey);
                                 binaryWriter.Write(inputTable.NumberOfEntries);
-                                foreach (var holder in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                                foreach (var holder in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                                 {
                                     MaybeNotifyLeaderThatWeAreSillAlive(count++, sp);
                                     binaryWriter.Write(holder.Reader.Size);
@@ -442,25 +454,25 @@ namespace Raven.Server.Rachis
 
         private long? InitialNegotiationWithFollower()
         {
+            UpdateLastMatchFromFollower(0);
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             {
                 ClusterTopology clusterTopology;
-                AppendEntries appendEntries;
+                LogLengthNegotiation lln;
+                var engineCurrentTerm = _engine.CurrentTerm;
                 using (context.OpenReadTransaction())
                 {
                     clusterTopology = _engine.GetTopology(context);
                     var lastIndexEntry = _engine.GetLastEntryIndex(context);
-                    appendEntries = new AppendEntries
+                    lln = new LogLengthNegotiation
                     {
-                        EntriesCount = 0,
-                        Term = _engine.CurrentTerm,
-                        LeaderCommit = _engine.GetLastCommitIndex(context),
+                        Term = engineCurrentTerm,
                         PrevLogIndex = lastIndexEntry,
                         PrevLogTerm = _engine.GetTermForKnownExisting(context, lastIndexEntry),
                     };
                 }
-
+                UpdateLastSend("Hello");
                 _connection.Send(context, new RachisHello
                 {
                     TopologyId = clusterTopology.TopologyId,
@@ -468,65 +480,66 @@ namespace Raven.Server.Rachis
                     DebugSourceIdentifier = _engine.GetDebugInformation()
                 });
 
+                UpdateLastSend("Negotiation");
+                _connection.Send(context, lln);
 
-                _connection.Send(context, appendEntries);
-
-                var aer = _connection.Read<AppendEntriesResponse>(context);
+                var llr = _connection.Read<LogLengthNegotiationResponse>(context);
 
                 // need to negotiate
                 do
                 {
-                    if (aer.CurrentTerm > _engine.CurrentTerm)
+                    if (llr.CurrentTerm > engineCurrentTerm)
                     {
                         // we need to abort the current leadership
-                        _engine.SetNewState(RachisConsensus.State.Follower, null);
-                        _engine.FoundAboutHigherTerm(aer.CurrentTerm);
+                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm,
+                            "Found election term " + llr.CurrentTerm + " that is higher than ours " + engineCurrentTerm);
+                        _engine.FoundAboutHigherTerm(llr.CurrentTerm);
                         return null;
                     }
 
-                    if (aer.Success)
+                    if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Acceptable)
                     {
-                        return aer.LastLogIndex;
+                        return llr.LastLogIndex;
                     }
 
-                    if (aer.Negotiation == null)
-                        throw new InvalidOperationException("BUG: We didn't get a success on first AppendEntries to peer " +
-                                                            _url + ", the term match but there is no negotiation");
+                    if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Rejected)
+                        throw new InvalidOperationException("Failed to get acceptable status from " + _url + " because " + llr.Message);
+
+                    UpdateLastMatchFromFollower(0);
 
                     using (context.OpenReadTransaction())
                     {
-                        if (aer.Negotiation.MidpointTerm ==
-                            _engine.GetTermForKnownExisting(context, aer.Negotiation.MidpointIndex))// we know that we have longer / equal log tot the follower
+                        if (llr.MidpointTerm ==
+                            _engine.GetTermForKnownExisting(context, llr.MidpointIndex))// we know that we have longer / equal log tot the follower
                         {
-                            aer.Negotiation.MinIndex = aer.Negotiation.MidpointIndex + 1;
+                            llr.MinIndex = llr.MidpointIndex + 1;
                         }
                         else
                         {
-                            aer.Negotiation.MaxIndex = aer.Negotiation.MidpointIndex - 1;
+                            llr.MaxIndex = llr.MidpointIndex - 1;
                         }
-                        var midIndex = (aer.Negotiation.MinIndex + aer.Negotiation.MaxIndex) / 2;
-                        appendEntries = new AppendEntries
+                        var midIndex = (llr.MinIndex + llr.MaxIndex) / 2;
+                        lln = new LogLengthNegotiation
                         {
-                            EntriesCount = 0,
-                            Term = _engine.CurrentTerm,
-                            LeaderCommit = _engine.GetLastCommitIndex(context),
+                            Term = engineCurrentTerm,
                             PrevLogIndex = midIndex,
                             PrevLogTerm = _engine.GetTermForKnownExisting(context, midIndex),
                         };
                     }
-                    _connection.Send(context, appendEntries);
-                    aer = _connection.Read<AppendEntriesResponse>(context);
-                } while (aer.Success == false);
-
-                return aer.LastLogIndex;
+                    UpdateLastSend("Negotiation 2");
+                    _connection.Send(context, lln);
+                    llr = _connection.Read<LogLengthNegotiationResponse>(context);
+                } while (true);
             }
         }
 
         public void Start()
         {
+            UpdateLastMatchFromFollower(0);
             _thread = new Thread(Run)
             {
-                Name = "Follower Ambasaddor for " + _url,
+                Name =
+                    $"Follower Ambassador for {(new Uri(_engine.Url).Fragment ?? _engine.Url)} > {(new Uri(_url).Fragment ?? _url)} in term {_engine.CurrentTerm}",
                 IsBackground = true
             };
             _thread.Start();

@@ -9,5 +9,6 @@
         NotificationUpdated,
         RecentError, // used in studio
         PerformanceHint,
+        DatabaseStatsChanged
     }
 }

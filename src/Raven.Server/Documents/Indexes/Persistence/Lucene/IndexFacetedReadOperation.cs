@@ -198,12 +198,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private static unsafe uint CalculateQueryFieldsHash(FacetQuery query, JsonOperationContext context)
         {
             uint hash = 0;
-           
+
             foreach (var field in query.FieldsToFetch)
             {
                 fixed (char* p = field)
                 {
-                    hash = Hashing.XXHash32.Calculate((byte*) p, sizeof(char)*field.Length, hash);
+                    hash = Hashing.XXHash32.Calculate((byte*)p, sizeof(char) * field.Length, hash);
                 }
             }
 
@@ -305,42 +305,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 case SortOptions.StringVal:
                 //case SortOptions.Custom: // TODO arek
                 case SortOptions.None:
-                    throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", FacetedQueryHelper.TryTrimRangeSuffix(facet.AggregationField)));
-                case SortOptions.NumericLong:
-                    var longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, facet.AggregationField);
-                    for (int index = 0; index < docsInQuery.Count; index++)
+                    throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", FieldUtil.RemoveRangeSuffixIfNecessary(facet.AggregationField)));
+                case SortOptions.Numeric:
+                    var name = facet.AggregationField;
+                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(name);
+                    if (rangeType == RangeType.None)
                     {
-                        var doc = docsInQuery.Array[index];
-
-                        var currentVal = longs[doc - docBase];
-                        if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
-                        {
-                            value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
-                        }
-
-                        if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
-                        {
-                            value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
-                        }
-
-                        if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
-                        {
-                            value.Sum = currentVal + (value.Sum ?? 0d);
-                        }
-
-                        if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
-                        {
-                            value.Average = currentVal + (value.Average ?? 0d);
-                        }
+                        name = FieldUtil.ApplyRangeSuffixIfNecessary(facet.AggregationField, RangeType.Double);
+                        rangeType = RangeType.Double;
                     }
-                    break;
-                case SortOptions.NumericDouble:
-                    var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, facet.AggregationField);
+
+                    long[] longs = null;
+                    double[] doubles = null;
+                    switch (rangeType)
+                    {
+                        case RangeType.Long:
+                            longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, name);
+                            break;
+                        case RangeType.Double:
+                            doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name);
+                            break;
+                    }
+
                     for (int index = 0; index < docsInQuery.Count; index++)
                     {
                         var doc = docsInQuery.Array[index];
 
-                        var currentVal = doubles[doc - docBase];
+                        var currentVal = rangeType == RangeType.Long ? longs[doc - docBase] : doubles[doc - docBase];
                         if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
                         {
                             value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
@@ -467,7 +458,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             foreach (var facet in facets)
             {
-                if (FacetedQueryHelper.IsAggregationNumerical(facet.Aggregation) && FacetedQueryHelper.IsAggregationTypeNumerical(facet.AggregationType) && FacetedQueryHelper.GetSortOptionsForFacet(facet.AggregationField, _fields) == SortOptions.None)
+                if (FacetedQueryHelper.IsAggregationNumerical(facet.Aggregation) && FacetedQueryHelper.GetRangeTypeForAggregationType(facet.AggregationType) != RangeType.None && FacetedQueryHelper.GetSortOptionsForFacet(facet.AggregationField, _fields) == SortOptions.None)
                     throw new InvalidOperationException(string.Format("Index '{0}' does not have sorting enabled for a numerical field '{1}'.", _indexName, facet.AggregationField));
             }
         }

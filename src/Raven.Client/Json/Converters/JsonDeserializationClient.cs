@@ -22,9 +22,15 @@ namespace Raven.Client.Json.Converters
 {
     internal class JsonDeserializationClient : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, GetConflictsResult.Conflict> DocumentConflict = GenerateJsonDeserializationRoutine<GetConflictsResult.Conflict>();
+
+        public static readonly Func<BlittableJsonReaderObject, GetConflictsResult> GetConflictsResult = GenerateJsonDeserializationRoutine<GetConflictsResult>();
+
         public static readonly Func<BlittableJsonReaderObject, GetDocumentResult> GetDocumentResult = GenerateJsonDeserializationRoutine<GetDocumentResult>();
 
         public static readonly Func<BlittableJsonReaderObject, PutResult> PutResult = GenerateJsonDeserializationRoutine<PutResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, AttachmentResult> AttachmentResult = GenerateJsonDeserializationRoutine<AttachmentResult>();
 
         public static readonly Func<BlittableJsonReaderObject, QueryResult> QueryResult = GenerateJsonDeserializationRoutine<QueryResult>();
 

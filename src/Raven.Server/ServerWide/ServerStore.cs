@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Commercial;
@@ -29,7 +28,7 @@ namespace Raven.Server.ServerWide
     /// </summary>
     public unsafe class ServerStore : IDisposable
     {
-        private CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
+        private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
 
         public CancellationToken ServerShutdown => _shutdownNotification.Token;
 
@@ -40,7 +39,7 @@ namespace Raven.Server.ServerWide
         private readonly NotificationsStorage _notificationsStorage;
 
         private static readonly TableSchema _itemsSchema;
-        
+
         private readonly IList<IDisposable> toDispose = new List<IDisposable>();
         private static readonly Slice EtagIndexName;
 
@@ -84,7 +83,7 @@ namespace Raven.Server.ServerWide
             var resourceName = "ServerStore";
 
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            IoMetrics = new IoMetrics(8,8); // TODO:: increase this to 256,256 ?
+            IoMetrics = new IoMetrics(8, 8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<ServerStore>(resourceName);
             DatabasesLandlord = new DatabasesLandlord(this);
@@ -131,7 +130,7 @@ namespace Raven.Server.ServerWide
 
                 catch (Exception e)
                 {
-                    throw new DatabaseLoadFailureException("Failed to load system database "+ Environment.NewLine + $"At {options.BasePath}" , e);
+                    throw new DatabaseLoadFailureException("Failed to load system database " + Environment.NewLine + $"At {options.BasePath}", e);
                 }
 
                 using (var tx = _env.WriteTransaction())
@@ -150,8 +149,7 @@ namespace Raven.Server.ServerWide
                         _lastEtag = 0;
                     else
                     {
-                        int size;
-                        _lastEtag = Bits.SwapBytes(*(long*) reader.Reader.Read(3, out size));
+                        _lastEtag = DocumentsStorage.TableValueToEtag(3, ref reader.Reader);
                     }
                 }
             }
@@ -197,7 +195,7 @@ namespace Raven.Server.ServerWide
                     return null;
             }
             int size;
-            etag = Bits.SwapBytes(*(long*) reader.Read(3, out size));
+            etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
             var ptr = reader.Read(2, out size);
             return new BlittableJsonReaderObject(ptr, size, ctx);
         }
@@ -219,7 +217,7 @@ namespace Raven.Server.ServerWide
             return new BlittableJsonReaderObject(ptr, size, ctx);
         }
 
-        public Tuple<BlittableJsonReaderObject,long> ReadWithEtag(TransactionOperationContext ctx, string id)
+        public Tuple<BlittableJsonReaderObject, long> ReadWithEtag(TransactionOperationContext ctx, string id)
         {
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
 
@@ -232,7 +230,7 @@ namespace Raven.Server.ServerWide
             }
             int size;
             var ptr = reader.Read(2, out size);
-            return Tuple.Create(new BlittableJsonReaderObject(ptr, size, ctx),Bits.SwapBytes(*(long*)reader.Read(3,out size)));
+            return Tuple.Create(new BlittableJsonReaderObject(ptr, size, ctx), Bits.SwapBytes(*(long*)reader.Read(3, out size)));
         }
 
         public void Delete(TransactionOperationContext ctx, string id)
@@ -260,15 +258,11 @@ namespace Raven.Server.ServerWide
             Slice loweredPrefix;
             using (Slice.From(ctx.Allocator, prefix.ToLowerInvariant(), out loweredPrefix))
             {
-                foreach (var result in items.SeekByPrimaryKey(loweredPrefix, startsWith: true))
+                foreach (var result in items.SeekByPrimaryKeyStartingWith(loweredPrefix, Slices.Empty, start))
                 {
-                    if (start > 0)
-                    {
-                        start--;
-                        continue;
-                    }
                     if (take-- <= 0)
                         yield break;
+
                     yield return GetCurrentItem(ctx, ref result.Reader);
                 }
             }
@@ -281,7 +275,7 @@ namespace Raven.Server.ServerWide
             {
                 Data = new BlittableJsonReaderObject(reader.Read(2, out size), size, ctx),
                 Key = Encoding.UTF8.GetString(reader.Read(1, out size), size),
-                Etag = Bits.SwapBytes(*(long*)reader.Read(3,out size))
+                Etag = Bits.SwapBytes(*(long*)reader.Read(3, out size))
             };
         }
 
@@ -298,17 +292,17 @@ namespace Raven.Server.ServerWide
                 var itemTable = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
 
                 TableValueReader oldValue;
-                if (itemTable.ReadByKey(loweredId,out oldValue) ==false)
+                if (itemTable.ReadByKey(loweredId, out oldValue) == false)
                 {
                     if (expectedEtag != null && expectedEtag != 0)
                     {
                         throw new ConcurrencyException(
                             $"Server store item {id} does not exists, but Write was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                         {
-                            ExpectedETag = (long) expectedEtag
+                            ExpectedETag = (long)expectedEtag
                         };
                     }
-                  
+
                     itemTable.Insert(new TableValueBuilder
                     {
                         loweredId,
@@ -319,7 +313,7 @@ namespace Raven.Server.ServerWide
                 }
                 else
                 {
-                    int size;                    
+                    int size;
                     var oldEtag = Bits.SwapBytes(*(long*)oldValue.Read(3, out size));
                     if (expectedEtag != null && oldEtag != expectedEtag)
                         throw new ConcurrencyException(
@@ -329,7 +323,7 @@ namespace Raven.Server.ServerWide
                             ExpectedETag = (long)expectedEtag
                         };
 
-                    itemTable.Update(oldValue.Id,new TableValueBuilder
+                    itemTable.Update(oldValue.Id, new TableValueBuilder
                     {
                         loweredId,
                         idAsSlice,
@@ -342,32 +336,43 @@ namespace Raven.Server.ServerWide
             return newEtag;
         }
 
-        
+
 
         public void Dispose()
         {
-            _shutdownNotification.Cancel();
+            if (_shutdownNotification.IsCancellationRequested)
+                return;
+            lock (this)
+            {
+                if (_shutdownNotification.IsCancellationRequested)
+                    return;
+                _shutdownNotification.Cancel();
+                toDispose.Add(NotificationCenter);
+                toDispose.Add(DatabasesLandlord);
+                toDispose.Add(_env);
+                toDispose.Add(ContextPool);
 
-            toDispose.Add(DatabasesLandlord);
-            toDispose.Add(_env);
-            toDispose.Add(ContextPool);
+                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
-
-            foreach (var disposable in toDispose)
-                exceptionAggregator.Execute(() =>
-                {
-                    try
+                foreach (var disposable in toDispose)
+                    exceptionAggregator.Execute(() =>
                     {
-                        disposable?.Dispose();
-                    }
-                    catch (ObjectDisposedException)
-                    {
+                        try
+                        {
+                            disposable?.Dispose();
+                        }
+                        catch (ObjectDisposedException)
+                        {
                         //we are disposing, so don't care
                     }
-                });
+                    });
 
-            exceptionAggregator.ThrowIfNeeded();
+                exceptionAggregator.Execute(() => _shutdownNotification.Dispose());
+
+                exceptionAggregator.ThrowIfNeeded();
+            }
+
+
         }
 
         public void IdleOperations(object state)
@@ -383,8 +388,8 @@ namespace Raven.Server.ServerWide
 
                         var database = db.Value.Result;
 
-                        if (DatabaseNeedsToRunIdleOperations(database))                        
-                            database.RunIdleOperations();                        
+                        if (DatabaseNeedsToRunIdleOperations(database))
+                            database.RunIdleOperations();
                     }
 
                     catch (Exception e)
@@ -429,7 +434,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database) 
+        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database)
         {
             var now = DateTime.UtcNow;
 

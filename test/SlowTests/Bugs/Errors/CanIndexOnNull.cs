@@ -32,7 +32,7 @@ namespace SlowTests.Bugs.Errors
                 {
                     s.Advanced.DocumentQuery<dynamic>("test")
                         .WaitForNonStaleResults()
-                        .WhereGreaterThan("Wheels_Range", 4)
+                        .WhereGreaterThan("Wheels_L_Range", 4)
                         .ToArray();
 
                 }

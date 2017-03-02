@@ -346,29 +346,12 @@ namespace Raven.Client.Documents.Indexes
                     continue;
 
                 var fieldType = field.PropertyType;
-                if (fieldType == typeof(int))
+                switch (DocumentConventions.GetRangeType(fieldType))
                 {
-                    options.Sort = SortOptions.NumericDefault;
-                }
-                else if (fieldType == typeof(long))
-                {
-                    options.Sort = SortOptions.NumericDefault;
-                }
-                else if (fieldType == typeof(short))
-                {
-                    options.Sort = SortOptions.NumericDefault;
-                }
-                else if (fieldType == typeof(decimal))
-                {
-                    options.Sort = SortOptions.NumericDefault;
-                }
-                else if (fieldType == typeof(double))
-                {
-                    options.Sort = SortOptions.NumericDefault;
-                }
-                else if (fieldType == typeof(float))
-                {
-                    options.Sort = SortOptions.NumericDefault;
+                    case RangeType.Double:
+                    case RangeType.Long:
+                        options.Sort = SortOptions.Numeric;
+                        break;
                 }
             }
 

@@ -700,6 +700,7 @@ class metrics extends viewModelBase {
     private drawXaxisTimeLabels(context: CanvasRenderingContext2D, ticks: Date[], timePaddingLeft: number, timePaddingTop: number) {
         try {
             context.save();
+            context.beginPath();
 
             context.textAlign = "left";
             context.textBaseline = "top";
@@ -788,6 +789,7 @@ class metrics extends viewModelBase {
 
             context.save();
             try {
+                context.beginPath();
                 context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
                 context.clip();
 
@@ -807,6 +809,7 @@ class metrics extends viewModelBase {
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
         context.save();
 
+        context.beginPath();
         context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
         context.clip();
 
@@ -815,6 +818,7 @@ class metrics extends viewModelBase {
 
             const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
 
+            context.beginPath();
             context.fillStyle = metrics.colors.trackBackground;
             context.fillRect(0, yStart, this.totalWidth, isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight);
         });
@@ -1018,6 +1022,20 @@ class metrics extends viewModelBase {
         if (currentDatum !== element) {
             let tooltipHtml = `${element.Name}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMilliseconds)}`;
 
+            const opWithParent = element as IndexingPerformanceOperationWithParent;
+
+            if (opWithParent.Parent) {
+                const parentStats = opWithParent.Parent;
+                let countsDetails: string;
+                countsDetails = `<br/>*** Entries details ***<br/>`;
+                countsDetails += `Input Count: ${parentStats.InputCount.toLocaleString()}<br/>`;
+                countsDetails += `Output Count: ${parentStats.OutputCount.toLocaleString()}<br/>`;
+                countsDetails += `Failed Count: ${parentStats.FailedCount.toLocaleString()}<br/>`;
+                countsDetails += `Success Count: ${parentStats.SuccessCount.toLocaleString()}<br/>`;
+
+                tooltipHtml += countsDetails;
+            }
+
             if (element.CommitDetails) {   
                 let commitDetails: string;
                 commitDetails = `<br/>*** Commit details ***<br/>`;
@@ -1138,13 +1156,9 @@ class metrics extends viewModelBase {
     }
 
     private fillCache() {
-        const isoParser = d3.time.format.iso;
-
         this.data.forEach(indexStats => {
             indexStats.Performance.forEach(perfStat => {
-                const withCache = perfStat as IndexingPerformanceStatsWithCache;
-                withCache.StartedAsDate = isoParser.parse(withCache.Started);
-                withCache.CompletedAsDate = withCache.Completed ? isoParser.parse(withCache.Completed) : undefined;
+                liveIndexPerformanceWebSocketClient.fillCache(perfStat);
             });
         });
     }
@@ -1183,7 +1197,7 @@ class metrics extends viewModelBase {
             exportFileName = `indexPerf of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
         }
 
-        const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache> = ["StartedAsDate", "CompletedAsDate"];
+        const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache | keyof IndexingPerformanceOperationWithParent> = ["StartedAsDate", "CompletedAsDate", "Parent"];
         fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName, (key, value) => {
             if (_.includes(keysToIgnore, key)) {
                 return undefined;

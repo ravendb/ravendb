@@ -25,7 +25,7 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
-        private Dictionary<string, Table> _tables;
+        private Dictionary<Slice, Table> _tables;
 
         private Dictionary<Slice, Tree> _trees;
 
@@ -119,33 +119,35 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Table OpenTable(TableSchema schema, string name, bool throwIfDoesNotExist = true)
+        public Table OpenTable(TableSchema schema, string name)
         {
-            if (_tables == null)
-                _tables = new Dictionary<string, Table>(StringComparer.Ordinal);
-
-            Table openTable;
-            if (_tables.TryGetValue(name, out openTable))
-                return openTable;
-
             Slice nameSlice;
-            Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice);
-            // intentionally not disposing the name here, it is valid for the lifetime of the table
-            openTable = OpenTable(schema, nameSlice, throwIfDoesNotExist);
-
-            _tables.Add(name, openTable);
-
-            return openTable;
+            using (Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice))
+            {
+                return OpenTable(schema, nameSlice);
+            }
         }
 
-        public Table OpenTable(TableSchema schema, Slice name, bool throwIfDoesNotExist = true)
+        public Table OpenTable(TableSchema schema, Slice name)
         {
-            var tableTree = ReadTree(name, RootObjectType.Table);
+            if(_tables == null)
+                _tables = new Dictionary<Slice, Table>(SliceComparer.Instance);
+
+            Table value;
+            if (_tables.TryGetValue(name, out value))
+                return value;
+
+            var clonedName = name.Clone(Allocator);
+
+            var tableTree = ReadTree(clonedName, RootObjectType.Table);
 
             if (tableTree == null)
                 return null;
 
-            return new Table(schema, name, this, tableTree);
+
+            value = new Table(schema, clonedName, this, tableTree);
+            _tables[clonedName] = value;
+            return value;
         }
 
         internal void PrepareForCommit()
@@ -158,8 +160,9 @@ namespace Voron.Impl
                     var key = multiValueTree.Key.Item2;
                     var childTree = multiValueTree.Value;
 
-                    using (var add = parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef))
-                        childTree.State.CopyTo((TreeRootHeader*)add.Ptr);
+                    byte* ptr;
+                    using (parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out ptr))
+                        childTree.State.CopyTo((TreeRootHeader*)ptr);
                 }
             }
 
@@ -171,8 +174,9 @@ namespace Voron.Impl
                 var treeState = tree.State;
                 if (treeState.IsModified)
                 {
-                    using (var add = _lowLevelTransaction.RootObjects.DirectAdd(tree.Name, sizeof(TreeRootHeader)))
-                        treeState.CopyTo((TreeRootHeader*)add.Ptr);
+                    byte* ptr;
+                    using (_lowLevelTransaction.RootObjects.DirectAdd(tree.Name, sizeof(TreeRootHeader),out ptr))
+                        treeState.CopyTo((TreeRootHeader*)ptr);
                 }
             }
 
@@ -308,8 +312,9 @@ namespace Voron.Impl
 
             _lowLevelTransaction.RootObjects.Delete(fromName);
 
-            using (var add = _lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader)))
-                fromTree.State.CopyTo((TreeRootHeader*)add.Ptr);
+            byte* ptr;
+            using (_lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader), out ptr))
+                fromTree.State.CopyTo((TreeRootHeader*) ptr);
 
             fromTree.Rename(toName);
             fromTree.State.IsModified = true;
@@ -342,8 +347,9 @@ namespace Voron.Impl
             tree = Tree.Create(_lowLevelTransaction, this, name, flags, pageLocator: pageLocator);
             tree.State.RootObjectType = type;
 
-            using (var space = _lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader)))
-                tree.State.CopyTo((TreeRootHeader*)space.Ptr);
+            byte* ptr;
+            using (_lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader),out ptr))
+                tree.State.CopyTo((TreeRootHeader*)ptr);
 
             tree.State.IsModified = true;
             AddTree(name, tree);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,12 +8,15 @@ using System.Threading;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Server.Documents.Replication;
 using Sparrow.Json;
 using Xunit;
 
@@ -33,11 +37,12 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected Dictionary<string, object> GetReplicationStats(DocumentStore store)
+        protected ReplicationStatistics GetReplicationStats(DocumentStore store)
         {
             using (var commands = store.Commands())
-            {
-                var command = new GetReplicationStatsCommand();
+            using (var session = store.OpenSession())
+            {                
+                var command = new GetReplicationStatsCommand((DocumentSession)session);
 
                 commands.RequestExecuter.Execute(command, commands.Context);
 
@@ -201,7 +206,7 @@ namespace FastTests.Server.Replication
                         if (doc != null)
                             return true;
                     }
-                    catch (ConflictException)
+                    catch (DocumentConflictException)
                     {
                         // expected that we might get conflict, ignore and wait
                     }
@@ -607,9 +612,15 @@ namespace FastTests.Server.Replication
             }
         }
 
-        private class GetReplicationStatsCommand : RavenCommand<Dictionary<string, object>>
+        private class GetReplicationStatsCommand : RavenCommand<ReplicationStatistics>
         {
+            private readonly InMemoryDocumentSessionOperations _session;
             public override bool IsReadRequest => true;
+
+            public GetReplicationStatsCommand(InMemoryDocumentSessionOperations session)
+            {
+                _session = session;
+            }
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/replication/stats";
@@ -624,106 +635,8 @@ namespace FastTests.Server.Replication
             {
                 if (response == null)
                     ThrowInvalidResponse();
-
-                BlittableJsonReaderObject liveStats;
-                if (response.TryGet("LiveStats", out liveStats) == false)
-                    ThrowInvalidResponse();
-
-                DateTime sampledAt;
-                long conflictsCount;
-                string conflictResolverStatus;
-                BlittableJsonReaderObject outgoingHeartbeats;
-                BlittableJsonReaderObject incomingHeartbeats;
-                var outgoingLastHeartbeat = new Dictionary<string, long>();
-                var incomingLastHeartbeat = new Dictionary<string, long>();
-
-                var liveStatsList = new List<object>();
-                if (liveStats.TryGet("SampledAt", out sampledAt) &&
-                    liveStats.TryGet("OutgoingHeartbeats", out outgoingHeartbeats) &&
-                    liveStats.TryGet("IncomingHeartbeats", out incomingHeartbeats) &&
-                    liveStats.TryGet("ConflictResolverStatus", out conflictResolverStatus) &&
-                    liveStats.TryGet("ConflictsCount", out conflictsCount))
-                {
-
-                    for (var i = 0; i < outgoingHeartbeats.Count; i++)
-                    {
-                        var prop = new BlittableJsonReaderObject.PropertyDetails();
-                        outgoingHeartbeats.GetPropertyByIndex(i, ref prop);
-                        outgoingLastHeartbeat[prop.Name] = (long)prop.Value;
-                    }
-                    for (var i = 0; i < incomingHeartbeats.Count; i++)
-                    {
-                        var prop = new BlittableJsonReaderObject.PropertyDetails();
-                        incomingHeartbeats.GetPropertyByIndex(i, ref prop);
-                        incomingLastHeartbeat[prop.Name] = (long)prop.Value;
-                    }
-                    liveStatsList.Add(sampledAt);
-                    liveStatsList.Add(outgoingLastHeartbeat);
-                    liveStatsList.Add(incomingLastHeartbeat);
-                    liveStatsList.Add(conflictResolverStatus);
-                    liveStatsList.Add(conflictsCount);
-                }
-                else
-                    ThrowInvalidResponse();
-
-
-                var incoming = new List<Dictionary<string, object>>();
-                BlittableJsonReaderArray incomingStats;
-                if (response.TryGet("IncomingStats", out incomingStats) == false)
-                    ThrowInvalidResponse();
-
-                var outgoing = new List<Dictionary<string, object>>();
-                BlittableJsonReaderArray outgoingStats;
-                if (response.TryGet("OutgoingStats", out outgoingStats) == false)
-                    ThrowInvalidResponse();
-
-                var resolver = new List<Dictionary<string, object>>();
-                BlittableJsonReaderArray resovlerStats;
-                if (response.TryGet("ResovlerStats", out resovlerStats) == false)
-                    ThrowInvalidResponse();
-
-                foreach (BlittableJsonReaderObject incomingStat in incomingStats)
-                {
-                    var entry = new Dictionary<string, object>();
-                    for (var i = 0; i < incomingStat.Count; i++)
-                    {
-                        var prop = new BlittableJsonReaderObject.PropertyDetails();
-                        incomingStat.GetPropertyByIndex(i, ref prop);
-                        entry[prop.Name] = prop.Value;
-                    }
-                    incoming.Add(entry);
-                }
-
-                foreach (BlittableJsonReaderObject outgoingStat in outgoingStats)
-                {
-                    var entry = new Dictionary<string, object>();
-                    for (var i = 0; i < outgoingStat.Count; i++)
-                    {
-                        var prop = new BlittableJsonReaderObject.PropertyDetails();
-                        outgoingStat.GetPropertyByIndex(i, ref prop);
-                        entry[prop.Name] = prop.Value;
-                    }
-                    outgoing.Add(entry);
-                }
-
-                foreach (BlittableJsonReaderObject resovlerStat in resovlerStats)
-                {
-                    var entry = new Dictionary<string, object>();
-                    for (var i = 0; i < resovlerStat.Count; i++)
-                    {
-                        var prop = new BlittableJsonReaderObject.PropertyDetails();
-                        resovlerStat.GetPropertyByIndex(i, ref prop);
-                        entry[prop.Name] = prop.Value;
-                    }
-                    resolver.Add(entry);
-                }
-                Result = new Dictionary<string, object>
-                {
-                    {"LiveStat", liveStatsList } ,
-                    {"IncomingStats", incoming},
-                    {"OutgoingStats",outgoing},
-                    {"ResolverStats",resolver}
-                };
+                
+                Result = (ReplicationStatistics)_session.Conventions.DeserializeEntityFromBlittable(typeof(ReplicationStatistics),response);
             }
         }
 

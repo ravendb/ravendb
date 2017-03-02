@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/docs?id={Uri.EscapeUriString(_id)}";
+                url = $"{node.Url}/databases/{node.Database}/docs?id={Uri.EscapeDataString(_id)}";
                 if (_skipPatchIfEtagMismatch)
                     url += "&skipPatchIfEtagMismatch=true";
                 if (_returnDebugInformation)
@@ -102,10 +102,7 @@ namespace Raven.Client.Documents.Operations
                         _context.Write(stream, _patch);
                     })
                 };
-
-                if (_etag.HasValue)
-                    request.Headers.TryAddWithoutValidation("If-Match", _etag.ToString());
-
+                AddEtagIfNotNull(_etag, request);
                 return request;
             }
 

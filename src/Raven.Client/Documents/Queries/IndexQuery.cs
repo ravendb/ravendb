@@ -496,10 +496,4 @@ namespace Raven.Client.Documents.Queries
     {
         int PageSize { set; get; }
     }
-
-    public enum QueryOperator
-    {
-        Or,
-        And
-    }
 }

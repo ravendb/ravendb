@@ -208,7 +208,8 @@ namespace Voron.Impl.Scratch
             PageFromScratchBuffer value;
             if (_allocatedPages.TryGetValue(page, out value) == false)
             {
-                throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
+                ThrowInvalidFreeOfUnusedPage(page);
+                return; // never called
             }
 
             _allocatedPagesCount -= value.NumberOfPages;
@@ -249,6 +250,11 @@ namespace Voron.Impl.Scratch
             }
         }
 
+        private static void ThrowInvalidFreeOfUnusedPage(long page)
+        {
+            throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
+        }
+
         public int CopyPage(I4KbBatchWrites destI4KbBatchWrites, long p, PagerState pagerState)
         {
             return _scratchPager.CopyPage(destI4KbBatchWrites, p, pagerState);
@@ -281,10 +287,7 @@ namespace Voron.Impl.Scratch
             {
                 var list = _freePagesBySize[size].Last;
 
-                if (list == null)
-                    return -1;
-
-                var value = list.Value;
+                var value = list?.Value;
                 if (value == null)
                     return -1;
 
@@ -300,8 +303,7 @@ namespace Voron.Impl.Scratch
         public void BreakLargeAllocationToSeparatePages(PageFromScratchBuffer value)
         {
             if (_allocatedPages.Remove(value.PositionInScratchBuffer) == false)
-                throw new InvalidOperationException("Attempt to break up a page that wasn't currently allocated: " +
-                                                    value.PositionInScratchBuffer);
+                InvalidAttemptToBreakupPageThatWasntAllocated(value);
 
             _allocatedPages.Add(value.PositionInScratchBuffer,
                        new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer, value.Size, 1));
@@ -313,18 +315,10 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        public void ReduceAllocation(PageFromScratchBuffer value, int lowerNumberOfPages)
+        private static void InvalidAttemptToBreakupPageThatWasntAllocated(PageFromScratchBuffer value)
         {
-            if (_allocatedPages.Remove(value.PositionInScratchBuffer) == false)
-                throw new InvalidOperationException("Attempt to split a page that wasn't currently allocated: " +
-                                                    value.PositionInScratchBuffer);
-
-            if(value.NumberOfPages < lowerNumberOfPages)
-                throw new InvalidOperationException("Attempt to split a page to a size that is bigger or equal its size" +
-                                                    value.PositionInScratchBuffer);
-
-            _allocatedPages.Add(value.PositionInScratchBuffer,
-                       new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer, value.Size, lowerNumberOfPages));
+            throw new InvalidOperationException("Attempt to break up a page that wasn't currently allocated: " +
+                                                value.PositionInScratchBuffer);
         }
 
         public void EnsureMapped(LowLevelTransaction tx, long p, int numberOfPages)

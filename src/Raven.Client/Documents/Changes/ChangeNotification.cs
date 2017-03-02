@@ -17,6 +17,14 @@ namespace Raven.Client.Documents.Changes
         public Guid OperationId { get; set; }
     }
 
+    public class AttachmentChange : DocumentChange
+    {
+        /// <summary>
+        /// The attachment name.
+        /// </summary>
+        public string Name { get; set; }
+    }
+
     public class DocumentChange : DatabaseChange
     {
         private string _key;
@@ -86,7 +94,9 @@ namespace Raven.Client.Documents.Changes
         BulkInsertError = 16,
         DeleteOnTombstoneReplication = 32,
         Conflict = 64,
-        Common = Put | Delete
+        Common = Put | Delete,
+        PutAttachment = 128,
+        DeleteAttachment = 256,
     }
 
     [Flags]
@@ -106,7 +116,12 @@ namespace Raven.Client.Documents.Changes
 
         IndexMarkedAsErrored = 512,
 
-        SideBySideReplace = 1024
+        SideBySideReplace = 1024,
+
+        Renamed = 2048,
+        IndexPaused = 4096,
+        LockModeChanged = 8192,
+        PriorityChanged = 16384
     }
 
     public enum TransformerChangeTypes
@@ -114,7 +129,8 @@ namespace Raven.Client.Documents.Changes
         None = 0,
 
         TransformerAdded = 1,
-        TransformerRemoved = 2
+        TransformerRemoved = 2,
+        TransformerRenamed = 4
     }
 
     public class IndexChange : DatabaseChange
@@ -138,6 +154,14 @@ namespace Raven.Client.Documents.Changes
         {
             return string.Format("{0} on {1}", Type, Name);
         }
+    }
+
+    public class IndexRenameChange : IndexChange
+    {
+        /// <summary>
+        /// The old index name
+        /// </summary>
+        public string OldIndexName { get; set; }
     }
 
     public class TransformerChange : DatabaseChange

@@ -1,13 +1,15 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
-using Raven.Server.Extensions;
-
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Session;
+using Raven.Server.Utils;
 namespace Raven.Server.Documents.Handlers
 {
     public class DocumentReplicationHandler : DatabaseRequestHandler
@@ -62,15 +64,15 @@ namespace Raven.Server.Documents.Handlers
                 {
                     array.Add(new DynamicJsonValue
                     {
-                        ["Key"] = conflict.Key,
-                        ["ChangeVector"] = conflict.ChangeVector.ToJson(),
-                        ["Doc"] = conflict.Doc
+                        [nameof(GetConflictsResult.Conflict.Key)] = conflict.Key,
+                        [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
+                        [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc
                     });
                 }
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Results"] = array
+                    [nameof(GetConflictsResult.Results)] = array
                 });
 
                 return Task.CompletedTask;
@@ -85,32 +87,10 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var incomingStats = new DynamicJsonArray();
-                var outgoingStats = new DynamicJsonArray();
-                var resovlerStats = new DynamicJsonArray();
-
-                foreach (var e in stats.IncomingStats)
-                {
-                    incomingStats.Add(e.ToJson());
-                }
-
-                foreach (var e in stats.OutgoingStats)
-                {
-                    outgoingStats.Add(e.ToJson());
-                }
-
-                foreach (var e in stats.ResolverStats)
-                {
-                    resovlerStats.Add(e.ToJson());
-                }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["LiveStats"] = stats.LiveStats(),
-                    ["IncomingStats"] = incomingStats,
-                    ["OutgoingStats"] = outgoingStats,
-                    ["ResovlerStats"] = resovlerStats
-                });
+                stats.Update();
+                var entityToBlittable = new EntityToBlittable(null);
+                var json = entityToBlittable.ConvertEntityToBlittable(stats, new DocumentConventions(), context);
+                context.Write(writer, json);             
             }
             return Task.CompletedTask;
         }
@@ -284,6 +264,29 @@ namespace Raven.Server.Documents.Handlers
                 context.Write(writer, data);
             }
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/studio-tasks/suggest-conflict-resolution", "GET", "/databases/{databaseName:string}/studio-tasks/suggest-conflict-resolution?docId={documentId:string}")]
+        public Task SuggestConflictResolution()
+        {
+            var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
+                var advisor = new ConflictResovlerAdvisor(conflicts.Select(c=>c.Doc),context);
+                var resovled = advisor.Resolve();
+
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Document"] = resovled.Document,
+                    ["Metadata"] = resovled.Metadata
+                });
+
+                return Task.CompletedTask;
+            }
         }
     }
 }

@@ -11,7 +11,6 @@ import getDocumentsFromCollectionCommand = require("commands/database/documents/
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
-import pagedResultSet = require("common/pagedResultSet");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import genUtils = require("common/generalUtils");
@@ -120,6 +119,8 @@ class editDocument extends viewModelBase {
         // preload json newline friendly mode to avoid issues with document save
         (ace as any).config.loadModule("ace/mode/json_newline_friendly");
 
+        this.connectedDocuments.compositionComplete();
+
         this.focusOnEditor();
     }
 
@@ -131,7 +132,7 @@ class editDocument extends viewModelBase {
             })
             .fail(() => {
                 messagePublisher.reportError(`Could not find ${id} document`);
-                canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
+                canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.activeDatabase()) });
             });
         return canActivateResult;
     }
@@ -223,7 +224,7 @@ class editDocument extends viewModelBase {
         this.metadata.subscribe((meta: documentMetadata) => {
             if (meta && meta.id) {
                 this.userSpecifiedId(meta.id);
-                this.entityName(document.getEntityNameFromId(meta.id));
+                this.entityName(document.getCollectionFromId(meta.id));
             }
         });
         this.editedDocId = ko.pureComputed(() => this.metadata() ? this.metadata().id : "");
@@ -299,7 +300,7 @@ class editDocument extends viewModelBase {
             this.userSpecifiedId(this.defaultNameForNewDocument(collectionForNewDocument));
             new getDocumentsFromCollectionCommand(new collection(collectionForNewDocument, this.activeDatabase()), 0, 3)
                 .execute()
-                .done((documents: pagedResultSet<document>) => {
+                .done((documents: pagedResult<document>) => {
                     const schemaDoc = documentHelpers.findSchema(documents.items);
                     this.document(schemaDoc); 
                     documentTask.resolve(schemaDoc);
@@ -476,7 +477,7 @@ class editDocument extends viewModelBase {
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
         target['@etag'] = 0;
-        target['@collection'] = target['@collection'] || document.getEntityNameFromId(id);
+        target['@collection'] = target['@collection'] || document.getCollectionFromId(id);
         target['@id'] = id;
     }
 

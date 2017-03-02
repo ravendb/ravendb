@@ -76,7 +76,7 @@ class patchDocument extends document {
 
     resetMetadata() {
         this.__metadata = new documentMetadata();
-        this.__metadata.ravenEntityName = 'PatchDocuments';
+        this.__metadata.collection = 'PatchDocuments';
     }
 
     clone() {

@@ -56,6 +56,7 @@ namespace Voron.Impl.Journal
             // scratch file to the data file before the lazy transaction buffers have
             // actually been flushed to the journal file
             _readTransaction = tx.Environment.NewLowLevelTransaction(_transactionPersistentContext, TransactionFlags.Read);
+            tx.Environment.AllowDisposeWithLazyTransactionRunning(_readTransaction);
         }
 
         public void WriteBufferToFile(JournalFile journalFile, LowLevelTransaction tx)

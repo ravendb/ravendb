@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Indexes;
@@ -15,7 +14,6 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Indexing;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -144,7 +142,7 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
 
-            Thread.Sleep(2000);//TODO: implement me and remove this sleep!
+            Database.IndexStore.RenameIndex(name, newName);
 
             return NoContent();
         }
@@ -353,8 +351,6 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             var newIndexId = Database.IndexStore.ResetIndex(name);
-
-            NoContentStatus();
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -682,7 +678,7 @@ namespace Raven.Server.Documents.Handlers
                 var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
                 using (var ms = new MemoryStream())
-                using (var collector = new LiveIndexingPerformanceCollector(Database.Changes, Database.DatabaseShutdown, indexes))
+                using (var collector = new LiveIndexingPerformanceCollector(Database, Database.DatabaseShutdown, indexes))
                 {
                     while (Database.DatabaseShutdown.IsCancellationRequested == false)
                     {

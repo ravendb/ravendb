@@ -113,14 +113,6 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryCustomization AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false);
 
         /// <summary>
-        ///     Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
-        ///		<param name="fieldName">Name of the field.</param>
-        ///		<param name="descending">if set to <c>true</c> [descending].</param>
-        ///		<param name="fieldType">the type of the field to be sorted.</param>
-        /// </summary>
-        IDocumentQueryCustomization AddOrder(string fieldName, bool descending, Type fieldType);
-
-        /// <summary>
         ///		Order the search results in alphanumeric order
         ///		<param name="fieldName">The order by field name.</param>
         ///		<param name="descending">Should be ordered by descending.</param>

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
@@ -623,7 +624,7 @@ namespace FastTests.Server.Replication
                 userByNameIndex.Execute(store);
 
                 var usernameToUpperTransformer = new UsernameToUpperTransformer("FooBar");
-                Assert.Throws<RavenException>(() => usernameToUpperTransformer.Execute(store));
+                Assert.Throws<IndexOrTransformerAlreadyExistException>(() => usernameToUpperTransformer.Execute(store));
             }
         }
 
@@ -636,7 +637,7 @@ namespace FastTests.Server.Replication
                 usernameToUpperTransformer.Execute(store);
 
                 var userByNameIndex = new UserByNameIndex("FooBar");
-                Assert.Throws<RavenException>(() => userByNameIndex.Execute(store));
+                Assert.Throws<IndexOrTransformerAlreadyExistException>(() => userByNameIndex.Execute(store));
             }
         }
 

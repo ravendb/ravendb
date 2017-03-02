@@ -13,6 +13,7 @@ using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -259,7 +260,7 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                var token = _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey, _destination.ApiKey, documentsContext).Result;
+                var token = AsyncHelpers.RunSync(() => _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey, _destination.Url, documentsContext));
                 //send initial connection information
                 documentsContext.Write(writer, new DynamicJsonValue
                 {
@@ -656,6 +657,8 @@ namespace Raven.Server.Documents.Replication
             {
                 _sendingThread?.Join();
             }
+
+            _cts.Dispose();
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);

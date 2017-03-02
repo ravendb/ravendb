@@ -113,26 +113,32 @@ namespace Sparrow.Json
         {
             if (_disposed)
                 return;
-            var now = DateTime.UtcNow;
-            foreach (var threadPool in _contextPool.Values)
+            lock (this)
             {
-                foreach (var ctx in threadPool)
+                if (_disposed)
+                    return;
+
+                var now = DateTime.UtcNow;
+                foreach (var threadPool in _contextPool.Values)
                 {
-                    // note that this is a racy call, need to be careful here
-                    if (ctx == null)
-                        continue;
+                    foreach (var ctx in threadPool)
+                    {
+                        // note that this is a racy call, need to be careful here
+                        if (ctx == null)
+                            continue;
 
-                    var timeInPool = now - ctx.InPoolSince;
-                    if (timeInPool < TimeSpan.FromMinutes(1))
-                        continue;
+                        var timeInPool = now - ctx.InPoolSince;
+                        if (timeInPool < TimeSpan.FromMinutes(1))
+                            continue;
 
-                    // it is too old, we can dispose it, but need to protect from races
-                    // if the owner thread will just pick it up
+                        // it is too old, we can dispose it, but need to protect from races
+                        // if the owner thread will just pick it up
 
-                    if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
-                        continue;
+                        if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
+                            continue;
 
-                    ctx.Dispose();
+                        ctx.Dispose();
+                    }
                 }
             }
         }
@@ -227,19 +233,24 @@ namespace Sparrow.Json
         {
             if (_disposed)
                 return;
-            _disposed = true;
-            _timer.Dispose();
-            foreach (var stack in _contextPool.Values)
+            lock (this)
             {
-                while (stack.Count > 0)
+                if (_disposed)
+                    return;
+                _disposed = true;
+                _timer.Dispose();
+                foreach (var stack in _contextPool.Values)
                 {
-                    var ctx = stack.Pop();
-                    if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
-                        continue;
-                    ctx.Dispose();
+                    while (stack.Count > 0)
+                    {
+                        var ctx = stack.Pop();
+                        if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
+                            continue;
+                        ctx.Dispose();
+                    }
                 }
+                _contextPool.Dispose();
             }
-            _contextPool.Dispose();
         }
     }
 }

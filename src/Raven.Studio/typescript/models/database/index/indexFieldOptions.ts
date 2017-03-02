@@ -18,13 +18,7 @@ class indexFieldOptions {
             value: "None"
         }, {
             label: "Numeric",
-            value: "NumericDefault"
-        }, {
-            label: "Double",
-            value: "NumericDouble"
-        }, {
-            label: "Long",
-            value: "NumericLong"
+            value: "Numeric"
         }, {
             label: "String", 
             value: "String"

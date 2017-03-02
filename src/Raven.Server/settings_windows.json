@@ -1,5 +1,6 @@
 ﻿{
   "Raven/ServerUrl": "http://0.0.0.0:8080",
   "Raven/DataDir": "APPDRIVE:/Deployment",
+  "Raven/AllowEverybodyToAccessTheServerAsAdmin": false,
   "Raven/RunInMemory": false
 }

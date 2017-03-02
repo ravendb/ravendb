@@ -14,6 +14,7 @@ namespace Raven.Server.Rachis
         private readonly string _apiKey;
         public string Status;
         private Thread _thread;
+        private Stream _conenctToPeer;
         public long TrialElectionWonAtTerm { get; set; }
         public long ReadlElectionWonAtTerm { get; set; }
 
@@ -31,7 +32,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(Run)
             {
-                Name = "Candidate Ambasaddor for " + _url,
+                Name = "Candidate Ambasaddor for " + (new Uri(_engine.Url).Fragment ?? _engine.Url) + " > " + (new Uri(_url).Fragment ?? _url),
                 IsBackground = true
             };
             _thread.Start();
@@ -39,9 +40,14 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-            //TODO: shutdown notification of some kind?
+            _conenctToPeer?.Dispose();
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
+            {
+                while (_thread.Join(16) == false)
+                {
+                    _conenctToPeer?.Dispose();
+                }
+            }
         }
 
         /// <summary>
@@ -54,12 +60,14 @@ namespace Raven.Server.Rachis
             {
                 while (_candidate.Running)
                 {
-                    Stream stream = null;
+                    _conenctToPeer = null;
                     try
                     {
                         try
                         {
-                            stream = _engine.ConenctToPeer(_url, _apiKey);
+                            _conenctToPeer = _engine.ConenctToPeer(_url, _apiKey);
+                            if (_candidate.Running == false)
+                                break; 
                         }
                         catch (Exception e)
                         {
@@ -73,7 +81,7 @@ namespace Raven.Server.Rachis
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        using (var connection = new RemoteConnection(_url, stream))
+                        using (var connection = new RemoteConnection(_url, _engine.Url, _conenctToPeer))
                         {
                             _engine.AppendStateDisposable(_candidate, connection);
                             while (_candidate.Running)
@@ -99,13 +107,15 @@ namespace Raven.Server.Rachis
                                     });
 
                                     RequestVoteResponse rvr;
-                                    var currentTerm = _candidate.ElectionTerm;
-                                    if (_candidate.IsForcedElection == false)
+                                    var currentElectionTerm = _candidate.ElectionTerm;
+                                    var engineCurrentTerm = _engine.CurrentTerm;
+                                    if (_candidate.IsForcedElection == false || 
+                                        _candidate.RunRealElectionAtTerm != currentElectionTerm)
                                     {
                                         connection.Send(context, new RequestVote
                                         {
-                                            Source = _url,
-                                            Term = currentTerm,
+                                            Source = _engine.Url,
+                                            Term = currentElectionTerm,
                                             IsForcedElection = false,
                                             IsTrialElection = true,
                                             LastLogIndex = lastLogIndex,
@@ -113,14 +123,15 @@ namespace Raven.Server.Rachis
                                         });
 
                                         rvr = connection.Read<RequestVoteResponse>(context);
-                                        if (rvr.Term > _engine.CurrentTerm)
+                                        if (rvr.Term > currentElectionTerm)
                                         {
                                             // we need to abort the current elections
-                                            _engine.SetNewState(RachisConsensus.State.Follower, null);
+                                            _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, 
+                                                "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm);
                                             _engine.FoundAboutHigherTerm(rvr.Term);
                                             return;
                                         }
-
+                                        NotInTopology = rvr.NotInTopology;
                                         if (rvr.VoteGranted == false)
                                         {
                                             // we go a negative response here, so we can't proceed
@@ -130,17 +141,14 @@ namespace Raven.Server.Rachis
                                             continue;
                                         }
                                         TrialElectionWonAtTerm = rvr.Term;
+
+                                        _candidate.WaitForChangeInState();
                                     }
-
-                                    _candidate.WaitForChangeInState();
-
-                                    if (_candidate.RunRealElectionAtTerm == currentTerm)
-                                        continue;
 
                                     connection.Send(context, new RequestVote
                                     {
-                                        Source = _url,
-                                        Term = currentTerm,
+                                        Source = _engine.Url,
+                                        Term = currentElectionTerm,
                                         IsForcedElection = _candidate.IsForcedElection,
                                         IsTrialElection = false,
                                         LastLogIndex = lastLogIndex,
@@ -148,14 +156,15 @@ namespace Raven.Server.Rachis
                                     });
 
                                     rvr = connection.Read<RequestVoteResponse>(context);
-                                    if (rvr.Term > _engine.CurrentTerm)
+                                    if (rvr.Term > currentElectionTerm)
                                     {
                                         // we need to abort the current elections
-                                        _engine.SetNewState(RachisConsensus.State.Follower, null);
+                                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm,
+                                                "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm);
                                         _engine.FoundAboutHigherTerm(rvr.Term);
                                         return;
                                     }
-
+                                    NotInTopology = rvr.NotInTopology;
                                     if (rvr.VoteGranted == false)
                                     {
                                         // we go a negative response here, so we can't proceed
@@ -181,7 +190,7 @@ namespace Raven.Server.Rachis
                     }
                     finally
                     {
-                        stream?.Dispose();
+                        _conenctToPeer?.Dispose();
                         Status = "Disconnected";
                     }
                 }
@@ -208,5 +217,7 @@ namespace Raven.Server.Rachis
                 }
             }
         }
+
+        public bool NotInTopology { get; private set; }
     }
 }

@@ -80,7 +80,7 @@ class globalConfigSqlReplication extends viewModelBase {
 
     attachReservedMetaProperties(id: string, target: documentMetadata) {
         target.etag = 0;
-        target.ravenEntityName = target.ravenEntityName || document.getEntityNameFromId(id);
+        target.collection = target.collection || document.getCollectionFromId(id);
         target.id = id;
     }
 

@@ -15,14 +15,15 @@ namespace Raven.Server.Config.Categories
         [LegacyConfigurationEntry("Raven/UseLuceneASTParser")]
         public bool UseLuceneASTParser
         {
-            get { return useLuceneASTParser; }
+            get
+            {
+                return Documents.Queries.QueryBuilder.UseLuceneASTParser;
+            }
+
             set
             {
-                useLuceneASTParser = value;
                 Documents.Queries.QueryBuilder.UseLuceneASTParser = value;
             }
         }
-
-        private bool useLuceneASTParser = true;
     }
 }

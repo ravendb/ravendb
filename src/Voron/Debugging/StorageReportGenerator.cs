@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -17,6 +16,7 @@ using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 
 namespace Voron.Debugging
 {
@@ -39,7 +39,7 @@ namespace Voron.Debugging
         public List<FixedSizeTree> FixedSizeTrees;
         public List<JournalFile> Journals;
         public List<Table> Tables;
-
+        public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
         public bool CalculateExactSizes { get; set; }
     }
 
@@ -102,7 +102,8 @@ namespace Voron.Debugging
                 Trees = trees,
                 Tables = tables,
                 Journals = journals,
-                PreAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.CalculateExactSizes)
+                PreAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.CalculateExactSizes),
+                ScratchBufferPoolInfo = input.ScratchBufferPoolInfo
             };
         }
 
@@ -123,7 +124,7 @@ namespace Voron.Debugging
             return journals.Select(journal => new JournalReport
             {
                 Number = journal.Number,
-                AllocatedSpaceInBytes = PagesToBytes(journal.JournalWriter.NumberOfAllocated4Kb)
+                AllocatedSpaceInBytes = journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte
             }).ToList();
         }
 
@@ -138,7 +139,7 @@ namespace Voron.Debugging
 
             var treeReport = new TreeReport
             {
-                Type = RootObjectType.FixedSizeTree,
+                Type = fst.Type ?? RootObjectType.FixedSizeTree,
                 Name = fst.Name.ToString(),
                 BranchPages = -1,
                 Depth = fst.Depth,
@@ -164,10 +165,15 @@ namespace Voron.Debugging
             }
 
             MultiValuesReport multiValues = null;
+            StreamsReport streams = null;
 
             if (tree.State.Flags == TreeFlags.MultiValueTrees)
             {
                 multiValues = CreateMultiValuesReport(tree);
+            }
+            else if (tree.State.Flags == (TreeFlags.FixedSizeTrees | TreeFlags.Streams))
+            {
+                streams = CreateStreamsReport(tree);
             }
 
             var density = pageDensities?.Average() ?? -1;
@@ -183,12 +189,60 @@ namespace Voron.Debugging
                 OverflowPages = tree.State.OverflowPages,
                 PageCount = tree.State.PageCount,
                 Density = density,
-                AllocatedSpaceInBytes = tree.State.PageCount * Constants.Storage.PageSize,
+                AllocatedSpaceInBytes = tree.State.PageCount * Constants.Storage.PageSize + (streams?.AllocatedSpaceInBytes ?? 0),
                 UsedSpaceInBytes = calculateExactSizes ? (long)(tree.State.PageCount * Constants.Storage.PageSize * density) : -1,
-                MultiValues = multiValues
+                MultiValues = multiValues,
+                Streams = streams
             };
 
             return treeReport;
+        }
+
+        private static StreamsReport CreateStreamsReport(Tree tree)
+        {
+            var streams = new List<StreamDetails>();
+
+            using (var it = tree.Iterate(false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    return new StreamsReport();
+
+                long totalNumberOfAllocatedPages = 0;
+                do
+                {
+                    long length;
+                    int version;
+
+                    FixedSizeTree detailsTree;
+                    tree.GetStreamLengthAndVersion(it.CurrentKey, out length, out version, out detailsTree);
+                    
+                    long numberOfAllocatedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(length);
+
+                    if (detailsTree.Type == RootObjectType.FixedSizeTree) // only if large fst, embedded already counted in parent
+                        numberOfAllocatedPages += detailsTree.PageCount;
+
+                    streams.Add(new StreamDetails
+                    {
+                        Name = it.CurrentKey.ToString(),
+                        Length = length,
+                        Version = version,
+                        NumberOfAllocatedPages = numberOfAllocatedPages,
+                        AllocatedSpaceInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
+                        DetailsTree = GetReport(detailsTree, false),
+                    });
+
+                    totalNumberOfAllocatedPages += numberOfAllocatedPages;
+
+                } while (it.MoveNext());
+                
+                return new StreamsReport
+                {
+                    Streams = streams,
+                    NumberOfStreams = tree.State.NumberOfEntries,
+                    TotalNumberOfAllocatedPages = totalNumberOfAllocatedPages,
+                    AllocatedSpaceInBytes = totalNumberOfAllocatedPages * Constants.Storage.PageSize
+                };
+            }
         }
 
         private static MultiValuesReport CreateMultiValuesReport(Tree tree)
@@ -244,15 +298,16 @@ namespace Voron.Debugging
 
         public static PreAllocatedBuffersReport GetReport(NewPageAllocator preAllocatedBuffers, bool calculateExactSizes)
         {
-            var numberOfPreAllocatedPages = preAllocatedBuffers.GetNumberOfPreAllocatedFreePages();
+            var buffersReport = preAllocatedBuffers.GetNumberOfPreAllocatedFreePages();
             var allocationTreeReport = GetReport(preAllocatedBuffers.GetAllocationStorageFst(), calculateExactSizes);
 
             return new PreAllocatedBuffersReport
             {
-                AllocatedSpaceInBytes = (numberOfPreAllocatedPages + allocationTreeReport.PageCount) * Constants.Storage.PageSize,
-                PreAllocatedBuffersSpaceInBytes = numberOfPreAllocatedPages * Constants.Storage.PageSize,
-                NumberOfPreAllocatedPages = numberOfPreAllocatedPages,
+                AllocatedSpaceInBytes = (buffersReport.NumberOfFreePages + allocationTreeReport.PageCount) * Constants.Storage.PageSize,
+                PreAllocatedBuffersSpaceInBytes = buffersReport.NumberOfFreePages * Constants.Storage.PageSize,
+                NumberOfPreAllocatedPages = buffersReport.NumberOfFreePages,
                 AllocationTree = allocationTreeReport,
+                OriginallyAllocatedSpaceInBytes = (buffersReport.NumberOfOriginallyAllocatedPages + allocationTreeReport.PageCount) * Constants.Storage.PageSize
             };
         }
 

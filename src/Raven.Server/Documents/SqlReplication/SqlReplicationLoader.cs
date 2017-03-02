@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.SqlReplication
 {
     public class SqlReplicationLoader : IDisposable
     {
-        private const int MaxSupportedSqlReplication = int.MaxValue; 
+        private const int MaxSupportedSqlReplication = int.MaxValue;
 
         private BlittableJsonReaderObject _connections;
 
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.SqlReplication
                     }
                 }
 
-                var documents = _database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix, null, null, 0, MaxSupportedSqlReplication);
+                var documents = _database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix, null, null, null, 0, MaxSupportedSqlReplication);
                 foreach (var document in documents)
                 {
                     var configuration = JsonDeserializationServer.SqlReplicationConfiguration(document.Data);

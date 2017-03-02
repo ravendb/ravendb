@@ -39,7 +39,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/api-keys?name=" + Uri.EscapeUriString(_name);
+                url = $"{node.Url}/admin/api-keys?name=" + Uri.EscapeDataString(_name);
 
                 var request = new HttpRequestMessage
                 {

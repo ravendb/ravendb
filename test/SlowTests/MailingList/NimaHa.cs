@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -33,7 +34,7 @@ namespace SlowTests.MailingList
                 const string house3 = @"{
                                 }";
 
-                var metadata = new Dictionary<string, string>
+                var metadata = new Dictionary<string, StringValues>
                 {
                     {Constants.Documents.Metadata.Collection, "Houses" }
                 };

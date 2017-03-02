@@ -1,8 +1,6 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import changeSubscription = require("common/changeSubscription");
-import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import timeSeries = require("models/timeSeries/timeSeries");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
@@ -14,7 +12,6 @@ import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
 import deleteKey = require("viewmodels/timeSeries/deleteKey");
 import pointChange = require("models/timeSeries/pointChange");
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
-import pagedResultSet = require("common/pagedResultSet");
 import getPointsCommand = require("commands/timeSeries/getPointsCommand");
 
 class timeSeriesPoints extends viewModelBase {
@@ -33,7 +30,7 @@ class timeSeriesPoints extends viewModelBase {
     duration = ko.observable<string>();
     durationType = ko.observable<string>();
 
-    pointsList = ko.observable<pagedList>();
+    pointsList = ko.observable<any>(); //TODO:
     selectedPointsIndices = ko.observableArray<number>();
     selectedPointsText: KnockoutComputed<string>;
     hasPoints: KnockoutComputed<boolean>;
@@ -121,13 +118,14 @@ class timeSeriesPoints extends viewModelBase {
                 this.maxPoint(result.MaxPoint);
                 this.endPointFilter(result.MaxPoint);
                 if (!this.pointsList()) {
-                    this.pointsList(this.createPointsPagedList());
+                    //TODO: this.pointsList(this.createPointsPagedList());
                 }
                 timeSeriesPoints.isInitialized(true);
             });
         }
     }
 
+    /* TODO
     private createPointsPagedList(): pagedList {
         var fetcher = (skip: number, take: number) => this.fetchPoints(skip, take,
             this.isFiltered() ? this.startPointFilter() : null,
@@ -135,12 +133,13 @@ class timeSeriesPoints extends viewModelBase {
         var list = new pagedList(fetcher);
         list.collectionName = this.key();
         return list;
-    }
+    }*/
 
-    private fetchPoints(skip: number, take: number, start: string, end: string): JQueryPromise<pagedResultSet<timeSeriesPoint>> {
-        var doneTask = $.Deferred<pagedResultSet<timeSeriesPoint>>();
+    private fetchPoints(skip: number, take: number, start: string, end: string): JQueryPromise<pagedResult<timeSeriesPoint>> {
+        var doneTask = $.Deferred<pagedResult<timeSeriesPoint>>();
         new getPointsCommand(this.activeTimeSeries(), skip, take, this.type(), this.fields(), this.key(), start, end).execute()
-            .done((points: timeSeriesPoint[]) => doneTask.resolve(new pagedResultSet(points, this.isFiltered() ? this.pointsList().itemCount() + points.length : this.pointsCount())))
+            .done((points: timeSeriesPoint[]) => doneTask.resolve(
+                { items: points, totalResultCount: this.isFiltered() ? this.pointsList().itemCount() + points.length : this.pointsCount() }))
             .fail(xhr => doneTask.reject(xhr));
         return doneTask;
     }
@@ -273,7 +272,7 @@ class timeSeriesPoints extends viewModelBase {
         }
     }
 
-    private getPointsGrid(): virtualTable {
+    private getPointsGrid() {
         var gridContents = $(timeSeriesPoints.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

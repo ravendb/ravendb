@@ -59,7 +59,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     MapReduceOperation = FieldMapReduceOperation.Count,
-                    SortOption = SortOptions.NumericDefault
+                    SortOption = SortOptions.Numeric
                 },
             },
             new[]
@@ -92,7 +92,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 },
                 SortedFields = new[]
                 {
-                    new SortedField("Count_Range"),
+                    new SortedField("Count_L_Range"),
                     new SortedField("Location"),
                 }
             });
@@ -429,7 +429,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create("LineItems", new IndexQueryServerSide
             {
                 Query = "Price:70",
-                SortedFields = new[] { new SortedField("Price_Range") },
+                SortedFields = new[] { new SortedField("Price_L_Range") },
             });
 
             var result = _sut.Match(dynamicQuery);

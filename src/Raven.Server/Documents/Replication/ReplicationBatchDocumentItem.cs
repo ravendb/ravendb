@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Replication.Messages;
+﻿using System.IO;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Replication
@@ -22,7 +23,6 @@ namespace Raven.Server.Documents.Replication
         public DocumentFlags Flags;
         public short TransactionMarker;
         public long LastModifiedTicks;
-
 
         public static ReplicationBatchDocumentItem From(Document doc)
         {
@@ -65,5 +65,24 @@ namespace Raven.Server.Documents.Replication
                 TransactionMarker = -1// not relevant
             };
         }
+
+        public static ReplicationBatchDocumentItem From(Attachment attachment)
+        {
+            return new ReplicationBatchDocumentItem
+            {
+                IsAttachmnet = true,
+                Key = attachment.LoweredKey,
+                Etag = attachment.Etag,
+                Name = attachment.Name,
+                ContentType = attachment.ContentType,
+                Stream = attachment.Stream,
+                LastModifiedTicks = attachment.LastModified.Ticks,
+            };
+        }
+
+        public bool IsAttachmnet { get; set; }
+        public LazyStringValue Name { get; set; }
+        public LazyStringValue ContentType { get; set; }
+        public Stream Stream { get; set; }
     }
 }

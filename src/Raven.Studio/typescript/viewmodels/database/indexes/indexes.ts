@@ -46,6 +46,8 @@ class indexes extends viewModelBase {
 
     resetsInProgress = new Set<string>();
 
+    throttledRefresh: Function;
+
     constructor() {
         super();
         this.initObservables();
@@ -58,6 +60,8 @@ class indexes extends viewModelBase {
             "unlockSelectedIndexes", "lockSelectedIndexes", "lockSideBySideSelectedIndexes", "lockErrorSelectedIndexes",
             "deleteSelectedIndexes", "startIndexing", "stopIndexing", "resumeIndexing", "pauseUntilRestart", "toggleSelectAll"
         );
+
+        this.throttledRefresh = _.throttle(() => setTimeout(() => this.fetchIndexes(), 2000), 5000); // refresh not othen then 5 seconds, but delay refresh by 2 seconds
     }
 
     private getAllIndexes(): index[] {
@@ -220,9 +224,7 @@ class indexes extends viewModelBase {
                 this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
             }
         } else {
-            setTimeout(() => {
-                this.fetchIndexes();
-            }, 5000);
+            this.throttledRefresh();
         }
     }
 

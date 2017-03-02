@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/docs?id={Uri.EscapeUriString(_id)}";
+            url = $"{node.Url}/databases/{node.Database}/docs?id={Uri.EscapeDataString(_id)}";
 
             var request = new HttpRequestMessage
             {

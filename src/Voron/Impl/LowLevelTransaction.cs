@@ -407,6 +407,8 @@ namespace Voron.Impl
                         pagerRef.Pager = DataPager;
                     Debug.Assert(p.PageNumber == pageNumber,
                         string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
+
+                    _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
                 }
             }
 
@@ -568,10 +570,6 @@ namespace Voron.Impl
             if (prevNumberOfPages == lowerNumberOfPages)
                 return;
 
-            _transactionPages.Remove(value);
-            _transactionPages.Add(new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer,
-                value.Size, lowerNumberOfPages));
-            _env.ScratchBufferPool.ReduceAllocation(value, lowerNumberOfPages);
             for (int i = lowerNumberOfPages; i < prevNumberOfPages; i++)
             {
                 FreePage(page.PageNumber + i);
@@ -887,6 +885,7 @@ namespace Voron.Impl
         internal bool FlushInProgressLockTaken;
         private ByteString _txHeaderMemory;
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
+        internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
 
         public void EnsurePagerStateReference(PagerState state)
         {

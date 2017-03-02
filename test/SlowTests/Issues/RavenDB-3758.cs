@@ -23,9 +23,9 @@ namespace SlowTests.Issues
                       from order in orders
                       select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region };
 
-                Sort(x => x.Total, SortOptions.NumericDouble);
-                Sort(x => x.Quantity, SortOptions.NumericLong);
-                Sort(x => x.Region, SortOptions.NumericLong);
+                Sort(x => x.Total, SortOptions.Numeric);
+                Sort(x => x.Quantity, SortOptions.Numeric);
+                Sort(x => x.Region, SortOptions.Numeric);
             }
         }
 
@@ -42,9 +42,9 @@ namespace SlowTests.Issues
                       from order in orders
                       select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At };
 
-                Sort(x => x.Total, SortOptions.NumericDouble);
-                Sort(x => x.Quantity, SortOptions.NumericLong);
-                Sort(x => x.Region, SortOptions.NumericLong);
+                Sort(x => x.Total, SortOptions.Numeric);
+                Sort(x => x.Quantity, SortOptions.Numeric);
+                Sort(x => x.Region, SortOptions.Numeric);
             }
         }
 
@@ -61,10 +61,10 @@ namespace SlowTests.Issues
                       from order in orders
                       select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At, order.Tax };
 
-                Sort(x => x.Total, SortOptions.NumericDouble);
-                Sort(x => x.Quantity, SortOptions.NumericLong);
-                Sort(x => x.Region, SortOptions.NumericLong);
-                Sort(x => x.Tax, SortOptions.NumericDouble);
+                Sort(x => x.Total, SortOptions.Numeric);
+                Sort(x => x.Quantity, SortOptions.Numeric);
+                Sort(x => x.Region, SortOptions.Numeric);
+                Sort(x => x.Tax, SortOptions.Numeric);
             }
         }
 

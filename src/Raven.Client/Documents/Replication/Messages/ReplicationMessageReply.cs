@@ -35,6 +35,17 @@ namespace Raven.Client.Documents.Replication.Messages
         public int? ResolverVersion { get; set; }
     }
 
+    public static class ChangeVectorExtensions
+    {
+        public static DynamicJsonArray ToJson(this ChangeVectorEntry[] self)
+        {
+            var results = new DynamicJsonArray();
+            foreach (var entry in self)
+                results.Add(entry.ToJson());
+            return results;
+        }
+    }
+
     public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>
     {
         public Guid DbId;

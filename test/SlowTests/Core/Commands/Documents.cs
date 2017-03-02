@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -63,7 +64,7 @@ namespace SlowTests.Core.Commands
                             Address1 = "To be removed.",
                             Address2 = "Address2"
                         },
-                        new Dictionary<string, string>
+                        new Dictionary<string, StringValues>
                         {
                             {"SomeMetadataKey", "SomeMetadataValue"}
                         });
@@ -110,7 +111,7 @@ namespace SlowTests.Core.Commands
 
                 using (var commands = store.Commands())
                 {
-                    await commands.PutAsync("items/1", null, new { Name = "testname" }, new Dictionary<string, string>
+                    await commands.PutAsync("items/1", null, new { Name = "testname" }, new Dictionary<string, StringValues>
                     {
                         {Constants.Documents.Metadata.Collection, "Items"}
                     });

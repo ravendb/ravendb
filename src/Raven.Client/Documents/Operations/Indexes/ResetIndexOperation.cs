@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes?name={Uri.EscapeUriString(_indexName)}";
+                url = $"{node.Url}/databases/{node.Database}/indexes?name={Uri.EscapeDataString(_indexName)}";
 
                 return new HttpRequestMessage
                 {

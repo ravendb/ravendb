@@ -275,7 +275,7 @@ class editSqlReplication extends viewModelBase {
         this.editedReplication().script(this.script());
 
         if (this.initialReplicationId !== currentDocumentId) {
-            delete this.editedReplication().__metadata.etag();
+            this.editedReplication().__metadata.etag(undefined);
             delete this.editedReplication().__metadata.lastModified;
         }
 
@@ -305,7 +305,7 @@ class editSqlReplication extends viewModelBase {
 
     attachReservedMetaProperties(id: string, target: documentMetadata) {
         //TODO: target.etag = '';
-        target.ravenEntityName = !target.ravenEntityName ? document.getEntityNameFromId(id) : target.ravenEntityName;
+        target.collection = target.collection || document.getCollectionFromId(id);
         target.id = id;
     }
 

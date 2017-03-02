@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using FastTests.Voron.FixedSize;
 using Xunit;
 
 namespace FastTests.Voron.Streams
@@ -15,9 +16,10 @@ namespace FastTests.Voron.Streams
         [InlineData(16897)]
         [InlineData(31911)]
         [InlineData(91911)]
+        [InlineDataWithRandomSeed]
         public void CanWriteAndRead(int size)
         {
-            var buffer = new byte[size];
+            var buffer = new byte[size % 100000];
             new Random().NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
@@ -46,9 +48,10 @@ namespace FastTests.Voron.Streams
         [InlineData(16897)]
         [InlineData(31911)]
         [InlineData(91911)]
+        [InlineDataWithRandomSeed]
         public void CanCopyTo(int size)
         {
-            var buffer = new byte[size];
+            var buffer = new byte[size % 100000];
             new Random().NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
@@ -74,10 +77,21 @@ namespace FastTests.Voron.Streams
                 Assert.Equal(buffer, memoryStream.ToArray());
             }
         }
-        [Fact]
-        public void CanUpdate()
+
+        [Theory]
+        [InlineData(50)]
+        [InlineData(129)]
+        [InlineData(2095)]
+        [InlineData(4096)]
+        [InlineData(12004)]
+        [InlineData(15911)]
+        [InlineData(16897)]
+        [InlineData(31911)]
+        [InlineData(91911)]
+        [InlineDataWithRandomSeed]
+        public void CanUpdate(int size)
         {
-            var buffer = new byte[50];
+            var buffer = new byte[size % 100000];
             new Random().NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
@@ -105,10 +119,20 @@ namespace FastTests.Voron.Streams
             }
         }
 
-        [Fact]
-        public void CanDelete()
+        [Theory]
+        [InlineData(50)]
+        [InlineData(129)]
+        [InlineData(2095)]
+        [InlineData(4096)]
+        [InlineData(12004)]
+        [InlineData(15911)]
+        [InlineData(16897)]
+        [InlineData(31911)]
+        [InlineData(91911)]
+        [InlineDataWithRandomSeed]
+        public void CanDelete(int size)
         {
-            var buffer = new byte[50];
+            var buffer = new byte[size % 100000];
             new Random().NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {

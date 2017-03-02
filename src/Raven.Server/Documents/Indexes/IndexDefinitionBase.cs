@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -178,24 +177,21 @@ namespace Raven.Server.Documents.Indexes
 
         public bool ContainsField(string field)
         {
-            if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
+            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 
             return MapFields.ContainsKey(field);
         }
 
         public IndexField GetField(string field)
         {
-            if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
+            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 
             return MapFields[field];
         }
 
         public bool TryGetField(string field, out IndexField value)
         {
-            if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
+            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 
             return MapFields.TryGetValue(field, out value);
         }
@@ -256,10 +252,21 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
+        public static string GetIndexNameSafeForFileSystem(int id, string name)
+        {
+            foreach (var invalidPathChar in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(invalidPathChar, '_');
+            }
+            if (name.Length < 64)
+                return $"{id:0000}-{name}";
+            return $"{id:0000}-{name.Substring(0, 64)}";
+        }
+
         protected static string ReadName(BlittableJsonReaderObject reader)
         {
             string name;
-            if (reader.TryGet(nameof(Name), out name) == false || string.IsNullOrWhiteSpace(name))
+            if (reader.TryGet(nameof(Name), out name) == false || String.IsNullOrWhiteSpace(name))
                 throw new InvalidOperationException("No persisted name");
 
             return name;

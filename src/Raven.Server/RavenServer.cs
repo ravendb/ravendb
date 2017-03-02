@@ -16,9 +16,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -215,7 +213,7 @@ namespace Raven.Server
             var @var = Environment.GetEnvironmentVariable("COMPlus_ReadyToRunExcludeList");
             if (@var != "System.Security.Cryptography.X509Certificates")
             {
-                throw new ArgumentException("Missing environment variable COMPlus_ReadyToRunExcludeList setting, can't use SslStream on dotnet core 1.1.0");
+                throw new ArgumentException("Missing environment variable $env:COMPlus_ReadyToRunExcludeList=\"System.Security.Cryptography.X509Certificates\" setting, can't use SslStream on dotnet core 1.1.0");
             }
             var generateSelfSignedCertificate = CertificateUtils.CreateSelfSignedCertificate("RavenDB", "Hibernating Rhinos");
             return new CertificateHolder
@@ -587,35 +585,41 @@ namespace Raven.Server
         {
             if (Disposed)
                 return;
-            Disposed = true;
-            Metrics?.Dispose();
-            _webHost?.Dispose();
-            if (_tcpListenerTask != null)
+            lock (this)
             {
-                if (_tcpListenerTask.IsCompleted)
+                if (Disposed)
+                    return;
+
+                Disposed = true;
+                Metrics?.Dispose();
+                _webHost?.Dispose();
+                if (_tcpListenerTask != null)
                 {
-                    CloseTcpListeners(_tcpListenerTask.Result.Listeners);
-                }
-                else
-                {
-                    if (_tcpListenerTask.Exception != null)
+                    if (_tcpListenerTask.IsCompleted)
                     {
-                        if (_tcpLogger.IsInfoEnabled)
-                            _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                        CloseTcpListeners(_tcpListenerTask.Result.Listeners);
                     }
                     else
                     {
-                        _tcpListenerTask.ContinueWith(t =>
+                        if (_tcpListenerTask.Exception != null)
                         {
-                            CloseTcpListeners(t.Result.Listeners);
-                        }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                            if (_tcpLogger.IsInfoEnabled)
+                                _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                        }
+                        else
+                        {
+                            _tcpListenerTask.ContinueWith(t =>
+                            {
+                                CloseTcpListeners(t.Result.Listeners);
+                            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                        }
                     }
                 }
-            }
 
-            ServerStore?.Dispose();
-            ServerMaintenanceTimer?.Dispose();
-            _latestVersionCheck?.Dispose();
+                ServerStore?.Dispose();
+                ServerMaintenanceTimer?.Dispose();
+                _latestVersionCheck?.Dispose();
+            }
         }
 
         private void CloseTcpListeners(List<TcpListener> listeners)

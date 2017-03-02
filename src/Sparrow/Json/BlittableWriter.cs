@@ -159,7 +159,7 @@ namespace Sparrow.Json
                 var sortedProperty = properties[i];
 
                 WriteNumber(objectMetadataStart - sortedProperty.Position, positionSize);
-                WriteNumber(sortedProperty.PropertyId, propertyIdSize);
+                WriteNumber(sortedProperty.Property.PropertyId, propertyIdSize);
                 _unmanagedWriteBuffer.WriteByte(sortedProperty.Type);
                 _position += positionSize + propertyIdSize + sizeof(byte);
             }

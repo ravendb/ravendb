@@ -124,7 +124,6 @@ namespace Sparrow.Json
         {
             byte offset;
             var size = ReadVariableSizeInt(pos, out offset);
-
             return new BlittableJsonReaderObject(_mem + pos + offset, size, _context);
         }
 

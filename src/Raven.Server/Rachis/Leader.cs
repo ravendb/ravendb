@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
@@ -23,8 +24,8 @@ namespace Raven.Server.Rachis
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>();
 
-        private readonly ConcurrentDictionary<long, TaskCompletionSource<object>> _entries =
-            new ConcurrentDictionary<long, TaskCompletionSource<object>>();
+        private readonly ConcurrentDictionary<long, Tuple<long, TaskCompletionSource<long>>> _entries =
+            new ConcurrentDictionary<long, Tuple<long, TaskCompletionSource<long>>>();
 
         private int _hasNewTopology;
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
@@ -75,7 +76,8 @@ namespace Raven.Server.Rachis
 
             _thread = new Thread(Run)
             {
-                Name = "Consensus Leader - " + _engine.Url,
+                Name =
+                    $"Consensus Leader - {(new Uri(_engine.Url).Fragment ?? _engine.Url)} in term {_engine.CurrentTerm}",
                 IsBackground = true
             };
             _thread.Start();
@@ -189,7 +191,7 @@ namespace Raven.Server.Rachis
                     {
                         case 0: // new entry
                             _newEntry.Reset();
-                            // release any waiting ambasaddors to send immediately
+                            // release any waiting ambassadors to send immediately
                             var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
                             ThreadPool.QueueUserWorkItem(o => ((TaskCompletionSource<object>)o).TrySetResult(null), old);
                             if (_voters.Count == 0)
@@ -202,10 +204,9 @@ namespace Raven.Server.Rachis
                         case 2: // promotable updated
                             _promotableUpdated.Reset();
                             CheckPromotables();
+
                             break;
                         case WaitHandle.WaitTimeout:
-                            if (_voters.Count != 0)
-                                VoteOfNoConfidence();
                             break;
                         case 3: // shutdown requested
                             return;
@@ -233,7 +234,7 @@ namespace Raven.Server.Rachis
                 }
                 try
                 {
-                    _engine.SwitchToCandidateState();
+                    _engine.SwitchToCandidateState("An error occured during leadership - " + e);
                 }
                 catch (Exception e2)
                 {
@@ -247,10 +248,28 @@ namespace Raven.Server.Rachis
 
         private void VoteOfNoConfidence()
         {
-            Console.WriteLine("Nobody is talking to me?!");
-            //TODO: List all the voters and their times
-            throw new TimeoutException("Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
-                                       "Assuming that I'm not the leader and stepping down");
+            if (TimeoutEvent.Disable)
+                return;
+
+            var sb = new StringBuilder();
+            var now = DateTime.UtcNow;
+            foreach (var ambassador in _voters)
+            {
+                var followerAmbassador = ambassador.Value;
+                var sinceLastReply = (long)(now - followerAmbassador.LastReplyFromFollower).TotalMilliseconds;
+                var sinceLastSend = (long) (now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
+                var lastMsg = followerAmbassador.LastSendMsg;
+                sb.AppendLine(
+                    $"{followerAmbassador.Url}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status}");
+            }
+
+            throw new TimeoutException(
+                "Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
+                Environment.NewLine +
+                "Assuming that I'm not the leader and stepping down." + 
+                Environment.NewLine +
+                sb
+                );
         }
 
         private long _lastCommit;
@@ -270,7 +289,8 @@ namespace Raven.Server.Rachis
 
             var maxIndexOnQuorum = GetMaxIndexOnQuorum(VotersMajority);
 
-            if (_lastCommit == maxIndexOnQuorum)
+            if (_lastCommit == maxIndexOnQuorum ||
+                maxIndexOnQuorum == 0)
                 return; // nothing to do here
 
             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -283,6 +303,8 @@ namespace Raven.Server.Rachis
 
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < _engine.CurrentTerm)
                     return;// can't commit until at least one entry from our term has been published
+
+                _engine.TakeOffice();
 
                 _lastCommit = maxIndexOnQuorum;
 
@@ -298,10 +320,14 @@ namespace Raven.Server.Rachis
                 if (kvp.Key > _lastCommit)
                     continue;
 
-                TaskCompletionSource<object> value;
+                Tuple<long, TaskCompletionSource<long>> value;
                 if (_entries.TryRemove(kvp.Key, out value))
                 {
-                    ThreadPool.QueueUserWorkItem(o => ((TaskCompletionSource<object>)o).TrySetResult(null), value);
+                    ThreadPool.QueueUserWorkItem(o =>
+                    {
+                        var tuple = (Tuple<long, TaskCompletionSource<long>>)o;
+                        tuple.Item2.TrySetResult(tuple.Item1);
+                    }, value);
                 }
             }
             if (_entries.Count != 0)
@@ -395,7 +421,7 @@ namespace Raven.Server.Rachis
                 if (votesSoFar >= minSize)
                     return _nodesPerIndex.Keys[i];
             }
-            return -1;
+            return 0;
         }
 
         private void CheckPromotables()
@@ -422,9 +448,8 @@ namespace Raven.Server.Rachis
 
         }
 
-        public Task PutAsync(BlittableJsonReaderObject cmd)
+        public Task<long> PutAsync(BlittableJsonReaderObject cmd)
         {
-            TaskCompletionSource<object> tcs;
             long index;
 
             TransactionOperationContext context;
@@ -434,7 +459,8 @@ namespace Raven.Server.Rachis
                 index = _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
             }
-            _entries[index] = tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<long>();
+            _entries[index] = Tuple.Create(index, tcs);
 
             _newEntry.Set();
             return tcs.Task;
@@ -449,9 +475,13 @@ namespace Raven.Server.Rachis
                 _newEntriesArrived.TrySetCanceled();
                 foreach (var entry in _entries)
                 {
-                    entry.Value.TrySetCanceled();
+                    entry.Value.Item2.TrySetCanceled();
                 }
             });
+
+            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                _thread.Join();
+
             var ae = new ExceptionAggregator("Could not properly dispose Leader");
             foreach (var ambasaddor in _nonVoters)
             {
@@ -466,9 +496,7 @@ namespace Raven.Server.Rachis
             {
                 ae.Execute(ambasaddor.Value.Dispose);
             }
-            //TODO: shutdown notification of some kind?
-            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
+        
 
             _newEntry.Dispose();
             _voterResponded.Dispose();
@@ -496,9 +524,10 @@ namespace Raven.Server.Rachis
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
             {
-                if (_topologyModification != null)
+                var existing = Interlocked.CompareExchange(ref _topologyModification, null, null);
+                if (existing != null)
                 {
-                    task = null;
+                    task = existing;
                     return false;
                 }
 
@@ -508,30 +537,30 @@ namespace Raven.Server.Rachis
                 {
                     case TopologyModification.Voter:
                         clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Concat(new[] { node }).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).ToArray()
+                            clusterTopology.Voters.Concat(new[] { node }).OrderBy(x=>x).ToArray(),
+                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
                         );
                         break;
                     case TopologyModification.Promotable:
                         clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).ToArray(),
-                            clusterTopology.Promotables.Concat(new[] { node }).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).ToArray()
+                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.Promotables.Concat(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
                         );
                         break;
                     case TopologyModification.NonVoter:
                         clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).ToArray(),
-                            clusterTopology.NonVotingMembers.Concat(new[] { node }).ToArray()
+                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.NonVotingMembers.Concat(new[] { node }).OrderBy(x => x).ToArray()
                         );
                         break;
                     case TopologyModification.Remove:
                         clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).ToArray()
+                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
+                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
                         );
                         break;
                     default:
@@ -541,12 +570,12 @@ namespace Raven.Server.Rachis
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
-                TaskCompletionSource<object> tcs;
-                _entries[index] = tcs = new TaskCompletionSource<object>();
+                var tcs = new TaskCompletionSource<long>();
+                _entries[index] =Tuple.Create(index, tcs);
                 _topologyModification = task = tcs.Task.ContinueWith(_ =>
-               {
-                   _topologyModification = null;
-               });
+                {
+                    Interlocked.Exchange(ref _topologyModification, null);
+                });
                 context.Transaction.Commit();
             }
             Interlocked.Exchange(ref _hasNewTopology, 1);

@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   The list of fields to project directly from the results
         /// </summary>
-        protected readonly string[] ProjectionFields;
+        protected internal readonly string[] ProjectionFields;
 
         /// <summary>
         ///   The list of fields to project directly from the index on the server
@@ -854,17 +854,6 @@ namespace Raven.Client.Documents.Session
         /// <param name = "descending">if set to <c>true</c> [descending].</param>
         public void AddOrder(string fieldName, bool descending)
         {
-            AddOrder(fieldName, descending, null);
-        }
-
-        /// <summary>
-        ///   Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
-        /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        /// <param name = "fieldType">the type of the field to be sorted.</param>
-        public void AddOrder(string fieldName, bool descending, Type fieldType)
-        {
             fieldName = EnsureValidFieldName(new WhereParams
             {
                 FieldName = fieldName
@@ -1133,26 +1122,13 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 if (IsDynamicMapReduce)
                 {
-                    DynamicMapReduceField renamedField;
+                    string name;
+                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(whereParams.FieldName, out name);
 
-                    if (whereParams.FieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                    {
-                        var name = whereParams.FieldName.Substring(0, whereParams.FieldName.Length - 6);
+                    var renamedField = DynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == name);
 
-                        renamedField = DynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == name);
-
-                        if (renamedField != null)
-                        {
-                            return whereParams.FieldName = renamedField.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
-                        }
-                    }
-                    else
-                    {
-                        renamedField = DynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == whereParams.FieldName);
-
-                        if (renamedField != null)
-                            return whereParams.FieldName = renamedField.Name;
-                    }
+                    if (renamedField != null)
+                        return whereParams.FieldName = FieldUtil.ApplyRangeSuffixIfNecessary(renamedField.Name, rangeType);
                 }
 
                 return whereParams.FieldName;
@@ -1163,7 +1139,6 @@ If you really want to do in memory filtering on the data returned from the query
                 var identityProperty = TheSession.Conventions.GetIdentityProperty(rootType);
                 if (identityProperty != null && identityProperty.Name == whereParams.FieldName)
                 {
-                    whereParams.FieldTypeForIdentifier = rootType;
                     return whereParams.FieldName = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
                 }
             }
@@ -1258,7 +1233,6 @@ If you really want to do in memory filtering on the data returned from the query
                     AllowWildcards = true,
                     IsAnalyzed = true,
                     FieldName = whereParams.FieldName,
-                    FieldTypeForIdentifier = whereParams.FieldTypeForIdentifier,
                     Value = value
                 };
                 QueryText.Append(TransformToEqualValue(nestedWhereParams).Replace(",", "`,`"));
@@ -1355,10 +1329,9 @@ If you really want to do in memory filtering on the data returned from the query
             if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 return fieldName;
 
-            var val = (start ?? end);
-            if (_conventions.UsesRangeType(val) && !fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
-            return fieldName;
+            var val = start ?? end;
+
+            return FieldUtil.ApplyRangeSuffixIfNecessary(fieldName, val);
         }
 
         /// <summary>
@@ -2090,12 +2063,6 @@ If you really want to do in memory filtering on the data returned from the query
             return this;
         }
 
-        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder(string fieldName, bool descending, Type fieldType)
-        {
-            AddOrder(fieldName, descending, fieldType);
-            return this;
-        }
-
         IDocumentQueryCustomization IDocumentQueryCustomization.AlphaNumericOrdering(string fieldName, bool descending)
         {
             AlphaNumericOrdering(fieldName, descending);
@@ -2163,9 +2130,8 @@ If you really want to do in memory filtering on the data returned from the query
         {
             var memberQueryPath = GetMemberQueryPath(expression);
             var memberExpression = _linqPathProvider.GetMemberExpression(expression);
-            if (DocumentConventions.UsesRangeType(memberExpression.Type))
-                return memberQueryPath + Constants.Documents.Indexing.Fields.RangeFieldSuffix;
-            return memberQueryPath;
+
+            return FieldUtil.ApplyRangeSuffixIfNecessary(memberQueryPath, memberExpression.Type);
         }
 
         public string GetMemberQueryPath(Expression expression)

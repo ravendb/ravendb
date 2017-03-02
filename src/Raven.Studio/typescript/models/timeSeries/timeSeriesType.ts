@@ -1,12 +1,10 @@
 import timeSeries = require("models/timeSeries/timeSeries");
-import pagedList = require("common/pagedList");
-import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");
 import getKeysCommand = require("commands/timeSeries/getKeysCommand");
 
-class timeSeriesType implements ICollectionBase {
+class timeSeriesType {
     colorClass = "";
-    private timeSeriesList: pagedList;
+    private timeSeriesList: any; //TODO: use type
     private static typeColorMaps: resourceStyleMap[] = [];
     keysCount = ko.observable<number>(0);
     timeSeriesCountWithThousandsSeparator = ko.computed(() => this.keysCount().toLocaleString());
@@ -26,7 +24,7 @@ class timeSeriesType implements ICollectionBase {
 
     getKeys() {
         if (!this.timeSeriesList) {
-            this.timeSeriesList = this.createPagedList();
+            //TODO: this.timeSeriesList = this.createPagedList();
         }
 
         return this.timeSeriesList;
@@ -40,18 +38,19 @@ class timeSeriesType implements ICollectionBase {
         return cssGenerator.getCssClass(type, timeSeriesType.typeColorMaps, ts);
     }
 
+    /* TODO
     private createPagedList(): pagedList {
         var fetcher = (skip: number, take: number) => this.fetchKeys(skip, take);
         var list = new pagedList(fetcher);
         list.collectionName = this.name;
         return list;
-    }
+    }*/
 
-    private fetchKeys(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
+    private fetchKeys(skip: number, take: number): JQueryPromise<pagedResult<any>> {
         return new getKeysCommand(this.ownerTimeSeries, skip, take, this.name, this.keysCount()).execute();
     }
 
-    getEntityName() {
+    getCollection() {
         return this.getId();
     }
 

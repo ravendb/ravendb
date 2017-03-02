@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -41,7 +42,7 @@ namespace SlowTests.Bugs
                     }                    
                 };
 
-                store.Commands().Put("ayende", null, myObject, new Dictionary<string, string>());
+                store.Commands().Put("ayende", null, myObject, new Dictionary<string, StringValues>());
 
                 var fieldOptions = new IndexFieldOptions {Storage = FieldStorage.Yes};
 

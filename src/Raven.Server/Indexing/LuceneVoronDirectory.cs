@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using Lucene.Net.Store;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Voron;
-using Voron.Data;
 using Voron.Impl;
-using Sparrow;
+using Voron.Data.Fixed;
 
 namespace Raven.Server.Indexing
 {
@@ -60,7 +58,8 @@ namespace Raven.Server.Indexing
             {
                 long length;
                 int version;
-                filesTree.GetStreamLengthAndVersion(str, out length, out version);
+                FixedSizeTree _;
+                filesTree.GetStreamLengthAndVersion(str, out length, out version, out _);
                 if (length == -1)
                     throw new FileNotFoundException(name);
                 return version;
@@ -90,7 +89,8 @@ namespace Raven.Server.Indexing
             {
                 long length;
                 int version;
-                filesTree.GetStreamLengthAndVersion(str, out length, out version);
+                FixedSizeTree _;
+                filesTree.GetStreamLengthAndVersion(str, out length, out version, out _);
                 if(length == -1)
                     throw new FileNotFoundException(name);
                 return length;
@@ -100,13 +100,11 @@ namespace Raven.Server.Indexing
         public override void DeleteFile(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            var readResult = filesTree.Read(name);
+            var readResult = filesTree.ReadStream(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            Slice str;
-            using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
-                filesTree.Delete(str);
+            filesTree.DeleteStream(name);
         }
 
         public override IndexInput OpenInput(string name)

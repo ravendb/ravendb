@@ -152,13 +152,7 @@ namespace Raven.Client.Documents.Queries.Facets
             if (mode == FacetMode.Ranges)
             {
                 var type = GetExpressionType(other.Name);
-                if (type == typeof(int) ||
-                    type == typeof(long) ||
-                    type == typeof(double) ||
-                    type == typeof(short) ||
-                    type == typeof(float) ||
-                    type == typeof(decimal))
-                    name += Constants.Documents.Indexing.Fields.RangeFieldSuffix;
+                name = FieldUtil.ApplyRangeSuffixIfNecessary(name, type);
             }
 
             return new Facet

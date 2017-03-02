@@ -4,8 +4,6 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import appUrl = require("common/appUrl");
 import dataExplorationRequest = require("models/database/query/dataExplorationRequest");
 import dataExplorationCommand = require("commands/database/query/dataExplorationCommand");
-import pagedResultSet = require("common/pagedResultSet");
-import pagedList = require("common/pagedList");
 import document = require("models/database/documents/document");
 import messagePublisher = require("common/messagePublisher");
 import collectionsStats = require("models/database/documents/collectionsStats");
@@ -18,7 +16,7 @@ class exploration extends viewModelBase {
     collections = ko.observableArray<string>([]);
     isBusy = ko.observable<boolean>(false);
     explorationRequest = dataExplorationRequest.empty();
-    queryResults = ko.observable<pagedList>();
+    queryResults = ko.observable<any>(); //TODO: use type
     isLoading = ko.observable<boolean>(false);
     dataLoadingXhr = ko.observable<any>();
 
@@ -69,13 +67,14 @@ class exploration extends viewModelBase {
                 // TODO if (results.Error) {
                     //TODO:messagePublisher.reportError("Unable to execute query", results.Error);
                 //TODO: } else {
-                    var mainSelector = new pagedResultSet(results.Results.map(d => new document(d)), results.Results.length, results);
+                /* TODO
+                    var mainSelector = new pagedResult(results.Results.map(d => new document(d)), results.Results.length, results);
                     var resultsFetcher = (skip: number, take: number) => {
-                        var slicedResult = new pagedResultSet(mainSelector.items.slice(skip, Math.min(skip + take, mainSelector.totalResultCount)), mainSelector.totalResultCount);
+                        var slicedResult = new pagedResult(mainSelector.items.slice(skip, Math.min(skip + take, mainSelector.totalResultCount)), mainSelector.totalResultCount);
                         return $.Deferred().resolve(slicedResult).promise();
-                    };
-                    var resultsList = new pagedList(resultsFetcher);
-                    this.queryResults(resultsList);
+                    };*/
+                    /* TODO var resultsList = new pagedList(resultsFetcher);
+                    this.queryResults(resultsList); */
                 //TODO: }
             })
             .always(() => {

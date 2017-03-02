@@ -24,12 +24,19 @@ namespace Raven.Client.Http
 
         public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;
 
+        public TimeSpan? Timeout { get; protected set; }
+
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
         public abstract void SetResponse(BlittableJsonReaderObject response, bool fromCache);
 
         public virtual void SetResponse(BlittableJsonReaderArray response, bool fromCache)
         {
             throw new NotSupportedException($"When {nameof(ResponseType)} is set to Array then please override this method to handle the response.");
+        }
+
+        public virtual void SetResponse(Stream stream, string contentType, long etag, bool fromCache)
+        {
+            throw new NotSupportedException($"When {nameof(ResponseType)} is set to Stream then please override this method to handle the response.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -62,16 +69,25 @@ namespace Raven.Client.Http
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
                     var json = await context.ReadForMemoryAsync(stream, "response/object");
-
                     CacheResponse(cache, url, response, json);
-
                     SetResponse(json, fromCache: false);
-
                     return;
                 }
 
-                var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
-                SetResponse(array.Item1, fromCache: false);
+                if (ResponseType == RavenCommandResponseType.Array)
+                {
+                    var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
+                    // TODO: Either cache also arrays or the better way is to remove all array respones by converting them to objects.
+                    SetResponse(array.Item1, fromCache: false);
+                    return;
+                }
+
+                var contentType = response.Content.Headers.ContentType?.ToString();
+                // ReSharper disable once PossibleInvalidOperationException
+                var etag = response.GetEtagHeader().Value;
+                // We do not cache the stream response.
+                var uncompressedStream = await RequestExecuter.ReadAsStreamUncompressedAsync(response);
+                SetResponse(uncompressedStream, contentType, etag, fromCache: false);
             }
         }
 
@@ -88,11 +104,28 @@ namespace Raven.Client.Http
         {
             throw new InvalidDataException("Response is invalid.");
         }
+
+        protected void AddEtagIfNotNull(long? etag, HttpRequestMessage request)
+        {
+#if DEBUG
+            if (IsReadRequest)
+            {
+                if (ResponseType != RavenCommandResponseType.Stream)
+                    throw new InvalidOperationException("No need to add the etag for Get requests as the request executer will add it.");
+
+                throw new InvalidOperationException("Stream responses are not cached so not etag should be used.");
+            }
+#endif
+
+            if (etag.HasValue)
+                request.Headers.TryAddWithoutValidation("If-Match", $"\"{etag.Value}\"");
+        }
     }
 
     public enum RavenCommandResponseType
     {
         Object,
-        Array
+        Array,
+        Stream
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
+using Raven.Client.Json.Converters;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -10,35 +12,36 @@ namespace Raven.Client.Documents.Exceptions
     {
         public string DocId { get; private set; }
 
-        public IReadOnlyList<ChangeVectorEntry[]> Conflicts { get; }
+        public List<GetConflictsResult.Conflict> Conflicts { get; }
 
-        private DocumentConflictException(string message, string docId, List<ChangeVectorEntry[]> conflicts)
+        private DocumentConflictException(string message, string docId, List<GetConflictsResult.Conflict> conflicts)
             : base(message)
         {
             DocId = docId;
             Conflicts = conflicts;
         }
 
-        public DocumentConflictException(string docId, List<ChangeVectorEntry[]> conflicts)
+        public DocumentConflictException(string docId, List<GetConflictsResult.Conflict> conflicts)
             : this($"Conflict detected on '{docId}', conflict must be resolved before the document will be accessible.", docId, conflicts)
         {
         }
 
-        public DynamicJsonArray GetConflicts()
+        public DynamicJsonValue GetConflicts()
         {
-            var result = new DynamicJsonArray();
-            foreach (var entries in Conflicts)
+            var array = new DynamicJsonArray();
+            foreach (var conflict in Conflicts)
             {
-                var array = new DynamicJsonArray();
-                foreach (var conflict in entries)
+                array.Add(new DynamicJsonValue
                 {
-                    array.Add(conflict.ToJson());
-                }
-
-                result.Add(array);
+                    [nameof(GetConflictsResult.Conflict.Key)] = conflict.Key,
+                    [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
+                });
             }
 
-            return result;
+            return new DynamicJsonValue
+            {
+                [nameof(GetConflictsResult.Results)] = array
+            }; 
         }
 
         public static DocumentConflictException From(string message)
@@ -54,25 +57,16 @@ namespace Raven.Client.Documents.Exceptions
             string docId;
             json.TryGet(nameof(DocId), out docId);
 
-            var conflicts = new List<ChangeVectorEntry[]>();
+            var conflicts = new List<GetConflictsResult.Conflict>();
+            BlittableJsonReaderObject conflictsObject;
             BlittableJsonReaderArray conflictsArray;
-            if (json.TryGet(nameof(Conflicts), out conflictsArray))
+            if (json.TryGet(nameof(Conflicts), out conflictsObject) &&
+                conflictsObject.TryGet("Results",out conflictsArray))
             {
-                foreach (BlittableJsonReaderArray changeVectorsArray in conflictsArray)
+                foreach (BlittableJsonReaderObject conflictObj in conflictsArray)
                 {
-                    var changeVectors = new ChangeVectorEntry[changeVectorsArray.Length];
-                    for (int i = 0; i < changeVectorsArray.Length; i++)
-                    {
-                        var changeVectorJson = (BlittableJsonReaderObject)changeVectorsArray[i];
-                        var changeVector = new ChangeVectorEntry();
-
-                        changeVectorJson.TryGet(nameof(ChangeVectorEntry.DbId), out changeVector.DbId);
-                        changeVectorJson.TryGet(nameof(ChangeVectorEntry.Etag), out changeVector.Etag);
-
-                        changeVectors[i] = changeVector;
-                    }
-
-                    conflicts.Add(changeVectors);
+                    var conflict = JsonDeserializationClient.DocumentConflict(conflictObj);
+                    conflicts.Add(conflict);
                 }
             }
 

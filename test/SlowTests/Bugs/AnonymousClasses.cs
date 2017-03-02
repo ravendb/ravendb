@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Xunit;
 
 namespace SlowTests.Bugs
@@ -42,10 +43,8 @@ namespace SlowTests.Bugs
 
                     var metadata = s.Advanced.GetMetadataFor(entity);
 
-                    string name;
-                    metadata.TryGetValue("@collection", out name);
-
-                    Assert.Null(name);
+                    
+                    Assert.False(metadata.ContainsKey("@collection"));
                 }
             }
         }

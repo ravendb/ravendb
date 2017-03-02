@@ -5,13 +5,16 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
@@ -59,12 +62,12 @@ namespace FastTests
                 return (TEntity)_store.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), json);
             }
 
-            public PutResult Put(string id, long? etag, object data, Dictionary<string, string> metadata)
+            public PutResult Put(string id, long? etag, object data, Dictionary<string, StringValues> metadata)
             {
                 return AsyncHelpers.RunSync(() => PutAsync(id, etag, data, metadata));
             }
 
-            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, string> metadata, CancellationToken cancellationToken = default(CancellationToken))
+            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, StringValues> metadata, CancellationToken cancellationToken = default(CancellationToken))
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
@@ -152,6 +155,14 @@ namespace FastTests
                 await RequestExecuter.ExecuteAsync(command, Context);
 
                 return command.Result;
+            }          
+
+            public GetConflictsResult.Conflict[] GetConflictsFor(string id)
+            {
+                var getConflictsCommand = new GetConflictsCommand(id);
+                RequestExecuter.Execute(getConflictsCommand, Context);
+
+                return getConflictsCommand.Result.Results;
             }
 
             public DynamicBlittableJson Get(string id, bool metadataOnly = false)
@@ -228,7 +239,7 @@ namespace FastTests
 
             public async Task BatchAsync(List<ICommandData> commands)
             {
-                var command = new BatchCommand(Context, commands);
+                var command = new BatchCommand(_store.Conventions, Context, commands);
 
                 await RequestExecuter.ExecuteAsync(command, Context);
             }
@@ -239,6 +250,12 @@ namespace FastTests
                 return AsyncHelpers.RunSync(() => RawGetJsonAsync<TResult>(url));
             }
 
+            public TResult RawDeleteJson<TResult>(string url, object payload)
+                where TResult : BlittableJsonReaderBase
+            {
+                return AsyncHelpers.RunSync(() => RawDeleteJsonAsync<TResult>(url, payload));
+            }
+
             public async Task<TResult> RawGetJsonAsync<TResult>(string url) 
                 where TResult : BlittableJsonReaderBase
             {
@@ -247,6 +264,21 @@ namespace FastTests
                 await RequestExecuter.ExecuteAsync(command, Context);
 
                 return command.Result;
+            }
+
+            public async Task<TResult> RawDeleteJsonAsync<TResult>(string url, object payload)
+              where TResult : BlittableJsonReaderBase
+            {
+                using (var session = _store.OpenSession())
+                {
+                    var payloadJson = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
+
+                    var command = new JsonCommandWithPayload<TResult>(url, Context, HttpMethod.Delete, payloadJson);
+
+                    await RequestExecuter.ExecuteAsync(command, Context);
+
+                    return command.Result;
+                }
             }
 
             public void Dispose()
@@ -282,6 +314,60 @@ namespace FastTests
                     var request = new HttpRequestMessage
                     {
                         Method = HttpMethod.Get
+                    };
+
+                    return request;
+                }
+
+                public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+                {
+                    Result = (TResult)(object)response;
+                }
+
+                public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
+                {
+                    Result = (TResult)(object)response;
+                }
+            }
+
+            private class JsonCommandWithPayload<TResult> : RavenCommand<TResult>
+               where TResult : BlittableJsonReaderBase
+            {
+                private readonly string _url;
+                private readonly HttpMethod _method;
+                private readonly JsonOperationContext _context;
+                private readonly BlittableJsonReaderObject _payload;
+
+                public JsonCommandWithPayload(string url, JsonOperationContext context, HttpMethod method, BlittableJsonReaderObject payload)
+                {
+                    if (url == null)
+                        throw new ArgumentNullException(nameof(url));
+
+                    if (url.StartsWith("/") == false)
+                        url += $"/{url}";
+
+                    _url = url;
+                    _context = context;
+                    _method = method;
+                    _payload = payload;
+
+                    if (typeof(TResult) == typeof(BlittableJsonReaderArray))
+                        ResponseType = RavenCommandResponseType.Array;
+                }
+
+                public override bool IsReadRequest => false;
+
+                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}{_url}";
+
+                    var request = new HttpRequestMessage
+                    {
+                        Method = _method,
+                        Content = new BlittableJsonContent(stream =>
+                        {
+                            _context.Write(stream, _payload);
+                        })
                     };
 
                     return request;

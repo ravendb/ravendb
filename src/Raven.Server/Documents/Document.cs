@@ -26,6 +26,7 @@ namespace Raven.Server.Documents
         public DateTime LastModified;
         public DocumentFlags Flags;
         public short TransactionMarker;
+        public IEnumerable<LazyStringValue> Attachments;
 
         public unsafe ulong DataHash
         {
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents
 
             mutatedMetadata[Constants.Documents.Metadata.Etag] = Etag;
             mutatedMetadata[Constants.Documents.Metadata.Id] = Key;
-
+            //mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
             if (indexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = indexScore;
 

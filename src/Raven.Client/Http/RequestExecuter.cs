@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,11 +24,9 @@ namespace Raven.Client.Http
 
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
 
-        private static readonly Lazy<HttpClient> GlobalHttpClient = new Lazy<HttpClient>(() =>
-        {
-            var httpMessageHandler = new HttpClientHandler();
-            return new HttpClient(httpMessageHandler);
-        });
+        private static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
+
+        private static readonly Lazy<HttpClient> GlobalHttpClient = new Lazy<HttpClient>(() => CreateClient(GlobalHttpClientTimeout));
 
         private readonly string _apiKey;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecuter>("Client");
@@ -46,8 +43,6 @@ namespace Raven.Client.Http
         public readonly AsyncLocal<AggresiveCacheOptions> AggressiveCaching = new AsyncLocal<AggresiveCacheOptions>();
 
         public readonly HttpCache Cache = new HttpCache();
-
-        private readonly HttpClient _httpClient = GlobalHttpClient.Value;
 
         private Topology _topology;
         private readonly Timer _updateTopologyTimer;
@@ -89,47 +84,71 @@ namespace Raven.Client.Http
 
         private async Task UpdateTopology()
         {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            if (_disposed)
+                return;
+            bool lookTaken = false;
+            Monitor.TryEnter(this,0, ref lookTaken);
+            try
             {
-                var node = _topology.LeaderNode;
-
-                var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
-
-                if (_firstTimeTryLoadFromTopologyCache)
-                {
-                    _firstTimeTryLoadFromTopologyCache = false;
-
-                    var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
-                    if (cachedTopology != null && cachedTopology.Etag > 0)
-                    {
-                        _topology = cachedTopology;
-                        // we have cached topology, but we need to verify it is up to date, we'll check in 
-                        // 1 second, and let the rest of the system start
-                        _updateTopologyTimer.Change(TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
-                        return;
-                    }
-                }
-
-                var command = new GetTopologyCommand();
+                if (_disposed)
+                    return;
+                JsonOperationContext context;
+                var operationContext = ContextPool.AllocateOperationContext(out context);
                 try
                 {
-                    await ExecuteAsync(new ChoosenNode { Node = node }, context, command);
-                    if (_topology.Etag != command.Result.Etag)
+
+                    lookTaken = false;
+                    Monitor.Exit(this); // don't lock now, we aren't using any more shared resources that require protection
+
+                    var node = _topology.LeaderNode;
+
+                    var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
+
+                    if (_firstTimeTryLoadFromTopologyCache)
                     {
-                        _topology = command.Result;
-                        TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, context);
+                        _firstTimeTryLoadFromTopologyCache = false;
+
+                        var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
+                        if (cachedTopology != null && cachedTopology.Etag > 0)
+                        {
+                            _topology = cachedTopology;
+                            // we have cached topology, but we need to verify it is up to date, we'll check in 
+                            // 1 second, and let the rest of the system start
+                            _updateTopologyTimer.Change(TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
+                            return;
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Failed to update topology", ex);
+
+                    var command = new GetTopologyCommand();
+                    try
+                    {
+                        await ExecuteAsync(new ChoosenNode { Node = node }, context, command);
+                        if (_topology.Etag != command.Result.Etag)
+                        {
+                            _topology = command.Result;
+                            TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, context);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Failed to update topology", ex);
+                    }
+                    finally
+                    {
+                        if(_disposed == false)
+                            _updateTopologyTimer.Change(TimeSpan.FromMinutes(5), Timeout.InfiniteTimeSpan);
+                    }
                 }
                 finally
                 {
-                    _updateTopologyTimer.Change(TimeSpan.FromMinutes(5), Timeout.InfiniteTimeSpan);
+                    operationContext?.Dispose();
                 }
+            }
+            finally
+            {
+                if(lookTaken)
+                    Monitor.Exit(this);
             }
         }
 
@@ -164,14 +183,27 @@ namespace Raven.Client.Http
                         return;
                     }
 
-                    request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue("\"" + cachedEtag + "\""));
+                    request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedEtag}\"");
                 }
 
                 var sp = Stopwatch.StartNew();
                 HttpResponseMessage response;
                 try
                 {
-                    response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
+                    var client = GetHttpClientForCommand(command);
+                    if (command.Timeout.HasValue)
+                    {
+                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
+                        {
+                            cts.CancelAfter(command.Timeout.Value);
+                            response = await client.SendAsync(request, cts.Token).ConfigureAwait(false);
+                        }
+                    }
+                    else
+                    {
+                        response = await GetHttpClientForCommand(command).SendAsync(request, token).ConfigureAwait(false);
+                    }
+
                     sp.Stop();
                 }
                 catch (HttpRequestException e) // server down, network down
@@ -213,7 +245,7 @@ namespace Raven.Client.Http
 
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out long cachedEtag, out BlittableJsonReaderObject cachedValue)
         {
-            if (command.IsReadRequest)
+            if (command.IsReadRequest && command.ResponseType != RavenCommandResponseType.Stream)
             {
                 if (request.Method != HttpMethod.Get)
                     url = request.Method + "-" + url;
@@ -249,8 +281,10 @@ namespace Raven.Client.Http
                 case HttpStatusCode.NotFound:
                     if (command.ResponseType == RavenCommandResponseType.Object)
                         command.SetResponse((BlittableJsonReaderObject)null, fromCache: false);
-                    else
+                    else if (command.ResponseType == RavenCommandResponseType.Array)
                         command.SetResponse((BlittableJsonReaderArray)null, fromCache: false);
+                    else
+                        command.SetResponse(null, null, 0, fromCache: false);
                     return true;
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:
@@ -489,6 +523,7 @@ namespace Raven.Client.Http
         }
 
         private readonly object _updateFailingNodeStatusLock = new object();
+        private bool _disposed;
 
         protected virtual void UpdateFailingNodesStatusCallback(object _)
         {
@@ -537,7 +572,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private async Task TestIfNodeAlive(ServerNode node)
+        private static async Task TestIfNodeAlive(ServerNode node)
         {
             var command = new GetTopologyCommand();
             string url;
@@ -546,7 +581,7 @@ namespace Raven.Client.Http
             var sp = Stopwatch.StartNew();
             try
             {
-                var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+                var response = await GlobalHttpClient.Value.SendAsync(request).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
                     node.IsFailed = false;
@@ -566,15 +601,41 @@ namespace Raven.Client.Http
 
         public void Dispose()
         {
-            Cache.Dispose();
-            _authenticator.Dispose();
-            ContextPool.Dispose();
-            _updateCurrentTokenTimer?.Dispose();
-            _updateFailingNodesStatus?.Dispose();
-            // shared instance, cannot dispose!
-            //_httpClient.Dispose();
+            if (_disposed)
+                return;
+            lock (this)
+            {
+                if (_disposed)
+                    return;
+                _disposed = true;
+                Cache.Dispose();
+                _authenticator.Dispose();
+                ContextPool.Dispose();
+                _updateCurrentTokenTimer?.Dispose();
+                _updateFailingNodesStatus?.Dispose();
+                _updateTopologyTimer?.Dispose();
+                // shared instance, cannot dispose!
+                //_httpClient.Dispose();
+            }
         }
 
+        private static HttpClient CreateClient(TimeSpan timeout)
+        {
+            var httpMessageHandler = new HttpClientHandler();
+            return new HttpClient(httpMessageHandler)
+            {
+                Timeout = timeout
+            };
+        }
+
+        private static HttpClient GetHttpClientForCommand<T>(RavenCommand<T> command)
+        {
+            var timeout = command.Timeout;
+            if (timeout.HasValue && timeout > GlobalHttpClientTimeout)
+                throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
+
+            return GlobalHttpClient.Value;
+        }
 
         private class ShortTermSingleUseRequestExecuter : RequestExecuter
         {

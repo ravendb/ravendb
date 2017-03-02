@@ -6,20 +6,21 @@
 
 using System;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Client.Documents.Indexes
 {
     /// <summary>
     /// Helper function for numeric to indexed string and vice versa
     /// </summary>
-    internal class NumberUtil
+    internal static class NumberUtil
     {
         /// <summary>
         /// Translate a number to an indexable string
         /// </summary>
         public static string NumberToString(long number)
         {
-            return "Lx" + number.ToString("G", CultureInfo.InvariantCulture);
+            return number.ToString("G", CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -27,43 +28,47 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public static string NumberToString(double number)
         {
-            return "Dx" + number.ToString("G", CultureInfo.InvariantCulture);
+            return number.ToString("G", CultureInfo.InvariantCulture);
         }
 
         /// <summary>
-        /// Translate an indexable string to a number
+        /// Translate an indexable string to a nullable long
         /// </summary>
-        public static object StringToNumber(string number)
+        public static long? StringToLong(string number)
         {
             if (number == null)
                 return null;
 
-            if ("NULL".Equals(number, StringComparison.OrdinalIgnoreCase) ||
-                "*".Equals(number, StringComparison.OrdinalIgnoreCase))
+            if (IsNull(number))
                 return null;
-            if (number.Length <= 2)
-                throw new ArgumentException("String must be greater than 2 characters");
-            var num = number.Substring(2);
-            var prefix = number.Substring(0, 2);
-            switch (prefix)
-            {
-                case "0x":
-                    switch (num.Length)
-                    {
-                        case 8:
-                            return (long)int.Parse(num, NumberStyles.HexNumber);
-                        case 16:
-                            return long.Parse(num, NumberStyles.HexNumber);
-                    }
-                    break;
-                case "Lx":
-                    return long.Parse(num, CultureInfo.InvariantCulture);
-                case "Dx":
-                    return double.Parse(num, CultureInfo.InvariantCulture);
-            }
 
-            throw new ArgumentException(string.Format("Could not understand how to parse: '{0}'", number));
+            if (number.Length == 0)
+                throw new ArgumentException("String must be greater than 0 characters");
 
+            return long.Parse(number, CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// Translate an indexable string to a nullable double
+        /// </summary>
+        public static double? StringToDouble(string number)
+        {
+            if (number == null)
+                return null;
+
+            if (IsNull(number))
+                return null;
+
+            if (number.Length == 0)
+                throw new ArgumentException("String must be greater than 0 characters");
+
+            return double.Parse(number, CultureInfo.InvariantCulture);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsNull(string value)
+        {
+            return "NULL".Equals(value, StringComparison.OrdinalIgnoreCase) || "*".Equals(value, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

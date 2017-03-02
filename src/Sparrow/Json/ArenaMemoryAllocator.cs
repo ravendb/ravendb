@@ -263,23 +263,28 @@ namespace Sparrow.Json
         {
             if (_isDisposed)
                 return;
-            _isDisposed = true;
-
-            if (_olderBuffers != null)
+            lock (this)
             {
-                foreach (var unusedBuffer in _olderBuffers)
+                if (_isDisposed)
+                    return;
+                _isDisposed = true;
+
+                if (_olderBuffers != null)
                 {
-                    NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2, unusedBuffer.Item3);
+                    foreach (var unusedBuffer in _olderBuffers)
+                    {
+                        NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2, unusedBuffer.Item3);
+                    }
+                    _olderBuffers = null;
                 }
-                _olderBuffers = null;
-            }
-            if (_ptrStart != null)
-            {
-                NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
-                _ptrStart = null;
-            }
+                if (_ptrStart != null)
+                {
+                    NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+                    _ptrStart = null;
+                }
 
-            GC.SuppressFinalize(this);
+                GC.SuppressFinalize(this);
+            }
         }
 
         public void Return(AllocatedMemoryData allocation)

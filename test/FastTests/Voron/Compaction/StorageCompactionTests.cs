@@ -33,50 +33,6 @@ namespace FastTests.Voron.Compaction
                 StorageTest.DeleteDirectory(compactedData);
         }
 
-        [Fact]
-        public void ShouldOccupyLessSpace()
-        {
-            var r = new Random();
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
-            {
-                using (var tx = env.WriteTransaction())
-                {
-                    var tree = tx.CreateTree(  "records");
-
-                    for (int i = 0; i < 100; i++)
-                    {
-                        var bytes = new byte[r.Next(10, 2*1024*1024)];
-                        r.NextBytes(bytes);
-
-                        tree.Add("record/" + i, bytes);
-                    }
-
-                    tx.Commit();
-                }
-
-                using (var tx = env.WriteTransaction())
-                {
-                    var tree = tx.CreateTree( "records");
-
-                    for (int i = 0; i < 50; i++)
-                    {
-                        tree.Delete("record/" + r.Next(0, 100));
-                    }
-
-                    tx.Commit();
-                }
-            }
-
-            var oldSize = GetDirSize(new DirectoryInfo(DataDir));
-
-            var compactedData = Path.Combine(DataDir, "Compacted");
-            StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
-                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(compactedData));
-
-            var newSize = GetDirSize(new DirectoryInfo(compactedData));
-
-            Assert.True(newSize < oldSize, string.Format("Old size: {0:#,#;;0} MB, new size {1:#,#;;0} MB", oldSize / 1024 / 1024, newSize / 1024 / 1024));
-        }
 
         [Theory]
         [InlineDataWithRandomSeed(250)]

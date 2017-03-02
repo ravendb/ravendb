@@ -92,9 +92,10 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
         this.getResults(false);
     }
 
+    /* TODO
     getDocCssClass(doc: documentMetadataDto) {
         return collection.getCollectionCssClass((<any>doc)['@metadata']['@collection'], this.db);
-    }
+    }*/
 
     keyPressedOnDocumentAutocomplete(doc: documentMetadataDto, event: JQueryKeyEventObject) {
         if (event.keyCode == 13 && !!doc) {

@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import file = require("models/filesystem/file");
 import filesystem = require("models/filesystem/filesystem");
-import pagedResultSet = require("common/pagedResultSet");
 
 class getFilesystemRevisionsCommand extends commandBase {
 
@@ -9,9 +8,9 @@ class getFilesystemRevisionsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet<filesystemFileHeaderDto>> {
+    execute(): JQueryPromise<pagedResult<file>> {
         var filesTask = this.fetchFiles();
-        var doneTask = $.Deferred();
+        var doneTask = $.Deferred<pagedResult<file>>();
 
         filesTask.done((results: filesystemFileHeaderDto[]) => {
             var wrappedResult = {
@@ -23,7 +22,7 @@ class getFilesystemRevisionsCommand extends commandBase {
 
             var files = wrappedResult.Files.map(d => new file(d, false));
             var totalCount = wrappedResult.FileCount;
-            doneTask.resolve(new pagedResultSet(files, totalCount));
+            doneTask.resolve({ items: files, totalResultCount: totalCount });
         });
         filesTask.fail(xhr => doneTask.reject(xhr));
 

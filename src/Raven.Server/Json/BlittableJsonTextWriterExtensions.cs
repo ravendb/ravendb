@@ -24,15 +24,27 @@ namespace Raven.Server.Json
 {
     internal static class BlittableJsonTextWriterExtensions
     {
-        public static void WriteChangeVector(this BlittableJsonTextWriter writer, JsonOperationContext context,
-            ChangeVectorEntry[] changeVector)
+        public static void WriteChangeVector(this BlittableJsonTextWriter writer, ChangeVectorEntry[] changeVector)
         {
+            if (changeVector == null)
+            {
+                writer.WriteStartArray();
+                writer.WriteEndArray();
+                return;
+            }
+
             writer.WriteStartArray();
+            var first = true;
+
             for (int i = 0; i < changeVector.Length; i++)
             {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
                 var entry = changeVector[i];
-                writer.WriteChangeVectorEntry(context, entry);
-                writer.WriteComma();
+                writer.WriteChangeVectorEntry(entry);
             }
             writer.WriteEndArray();
         }
@@ -58,7 +70,7 @@ namespace Raven.Server.Json
             });
         }
 
-        public static void WriteChangeVectorEntry(this BlittableJsonTextWriter writer, JsonOperationContext context, ChangeVectorEntry entry)
+        public static void WriteChangeVectorEntry(this BlittableJsonTextWriter writer, ChangeVectorEntry entry)
         {
             writer.WriteStartObject();
 
@@ -671,6 +683,10 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
 
+            writer.WritePropertyName((nameof(statistics.CountOfAttachments)));
+            writer.WriteInteger(statistics.CountOfAttachments);
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(statistics.CountOfTransformers)));
             writer.WriteInteger(statistics.CountOfTransformers);
             writer.WriteComma();
@@ -1142,54 +1158,50 @@ namespace Raven.Server.Json
                     writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
             }
+
+            if (first == false)
+            {
+                writer.WriteComma();
+            }
+            writer.WritePropertyName(Constants.Documents.Metadata.ChangeVector);
+            writer.WriteChangeVector(document.ChangeVector);
+            first = false;
+
             if (document.Flags != DocumentFlags.None)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
+                writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Flags);
                 writer.WriteString(document.Flags.ToString());
+
+                if ((document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(Constants.Documents.Metadata.Attachments);
+                    writer.WriteArray(document.Attachments);
+                }
             }
             if (document.Etag != 0)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
+                writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Etag);
                 writer.WriteInteger(document.Etag);
             }
             if (document.Key != null)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
+                writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Id);
                 writer.WriteString(document.Key);
 
             }
             if (document.IndexScore != null)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
+                writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.IndexScore);
                 writer.WriteDouble(document.IndexScore.Value);
             }
             if (document.LastModified != DateTime.MinValue)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
+                writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.LastModified);
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }
@@ -1404,5 +1416,21 @@ namespace Raven.Server.Json
 
             writer.WriteEndArray();
         }
+
+        public static void WriteArray(this BlittableJsonTextWriter writer, IEnumerable<LazyStringValue> items)
+        {
+            writer.WriteStartArray();
+            var first = true;
+            foreach (var item in items)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteString(item);
+            }
+            writer.WriteEndArray();
+        }
+
     }
 }

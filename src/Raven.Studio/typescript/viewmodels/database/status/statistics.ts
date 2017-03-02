@@ -49,7 +49,7 @@ class statistics extends viewModelBase {
     afterClientApiConnected(): void {
         const changesApi = this.changesContext.resourceChangesApi();
         this.addNotification(changesApi.watchAllDocs(e => this.refreshStatsObservable(new Date().getTime())));
-        //TODO: this.addNotification(changesApi.watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime())))
+        this.addNotification(changesApi.watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime())))
     }
 
     processStatsResults(dbStats: Raven.Client.Documents.Operations.DatabaseStatistics, indexesStats: Raven.Client.Documents.Indexes.IndexStats[]) {

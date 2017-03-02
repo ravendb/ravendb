@@ -3,10 +3,6 @@
 interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>> {
 }
 
-interface documentDto extends metadataAwareDto {
-    [key:string]: any;
-}
-
 interface conflictsInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<conflictDto>> {
 }
 
@@ -519,10 +515,6 @@ interface documentBase extends dictionary<any> {
     getDocumentPropertyNames(): Array<string>;
 }
 
-interface ICollectionBase {
-    colorClass: string;
-}
-
 interface customColumnParamsDto {
     Header?: string;
     Binding: string;
@@ -781,10 +773,6 @@ interface counterStorageDto extends tenantDto {
 }
 
 interface timeSeriesDto extends tenantDto {
-}
-
-interface customFunctionsDto {
-    Functions: string;
 }
 
 interface suggestionsDto {
@@ -1192,15 +1180,4 @@ interface filteredOutIndexStatDto {
 interface generatedCodeDto {
     Document: string;
     Code: string;
-}
-
-
-interface fetcherDto<T> {
-    (skip: number, take: number): JQueryPromise<PagedResultSet<T>>;
-}
-
-interface PagedResultSet<T> {
-    items: Array<T>;
-    totalResultCount: number;
-    additionalResultInfo?: any;
 }

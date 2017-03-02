@@ -22,6 +22,9 @@ namespace Raven.Client.Documents.Commands
 
             _context = context;
             _query = query;
+
+            if (_query.WaitForNonStaleResultsTimeout.HasValue && _query.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
+                Timeout = _query.WaitForNonStaleResultsTimeout.Value.Add(TimeSpan.FromSeconds(10)); // giving the server an opportunity to finish the response
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

@@ -48,12 +48,7 @@
             </div>
             <div class="flex-window-scroll">
                 <div class="panel-body objects-list-container">
-                    <virtual-grid params="fetcher: fetchCurrentTabDocs.bind($data), 
-                                  showColumns: false, 
-                                  showRowSelectionCheckbox: false, 
-                                  columns: columns,
-                                  resetItems: currentTab">
-                    </virtual-grid>
+                    <virtual-grid params="controller: gridController"></virtual-grid>
                 </div>
             </div>
         </div>

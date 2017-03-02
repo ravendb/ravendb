@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Transformers;
 
@@ -200,12 +199,12 @@ namespace Raven.Client.Documents.Session
         }
 
         public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null,
-           PagingInformation pagingInformation = null, string skipAfter = null)
+            string startAfter = null)
         {
             IncrementRequestCount();
 
             var loadStartingWithOperation = new LoadStartingWithOperation(this);
-            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, pagingInformation, skipAfter: skipAfter);
+            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, startAfter: startAfter);
 
             var command = loadStartingWithOperation.CreateRequest();
             if (command != null)
@@ -218,8 +217,8 @@ namespace Raven.Client.Documents.Session
         }
 
         public Dictionary<string, TResult> LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
-            int pageSize = 25, string exclude = null, PagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null,
-            string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
+            int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
+            string startAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
             IncrementRequestCount();
             var transformer = new TTransformer().TransformerName;
@@ -228,7 +227,7 @@ namespace Raven.Client.Documents.Session
             configure?.Invoke(configuration);
 
             var loadStartingWithOperation = new LoadStartingWithOperation(this);
-            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, pagingInformation, configure, skipAfter);
+            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, configure, startAfter);
             loadStartingWithOperation.WithTransformer(transformer, configuration.TransformerParameters);
 
 

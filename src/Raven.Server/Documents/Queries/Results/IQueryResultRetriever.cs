@@ -1,6 +1,4 @@
-﻿using Lucene.Net.Search;
-
-namespace Raven.Server.Documents.Queries.Results
+﻿namespace Raven.Server.Documents.Queries.Results
 {
     public interface IQueryResultRetriever
     {

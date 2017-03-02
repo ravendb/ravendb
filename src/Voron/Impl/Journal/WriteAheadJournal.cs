@@ -1126,6 +1126,8 @@ namespace Voron.Impl.Journal
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointerWithOverflowHandling(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
 
+                _env.AddChecksumToPageHeader((PageHeader*)scratchPage);
+
                 pagesInfo[pageSequencialNumber].PageNumber = ((PageHeader*)scratchPage)->PageNumber;
 
                 *(long*)write = ((PageHeader*)scratchPage)->PageNumber;

@@ -16,6 +16,8 @@ namespace Voron.Data.Tables
         private int _elementSize = 1;
         public int Size => _size + _elementSize * _values.Count + JsonParserState.VariableSizeIntSize(_values.Count);
 
+        public int Count => _values.Count;
+
         public int SizeOf(int index)
         {
             return _values[index].Size;

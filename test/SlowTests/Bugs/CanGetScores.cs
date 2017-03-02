@@ -80,7 +80,7 @@ namespace SlowTests.Bugs
                     Assert.Equal (3, users.Count);
 
                     var sorted = (from u in users
-                                    let score = s.Advanced.GetMetadataFor (u)["@index-score"]
+                                    let score = float.Parse(s.Advanced.GetMetadataFor(u)["@index-score"])
                                     orderby score descending, u.Name
                                   select new { score, u.Name }).ToList ();
 
@@ -127,7 +127,7 @@ namespace SlowTests.Bugs
                     Assert.Equal (3, users.Count);
 
                     var sorted = (from u in users
-                                  let score = s.Advanced.GetMetadataFor (u)["@index-score"]
+                                  let score = float.Parse(s.Advanced.GetMetadataFor(u)["@index-score"])
                                   orderby score descending, u.Name descending
                                   select new { score, u.Name }).ToList ();
 

@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.LowMemoryNotification;
-using Sparrow.Logging;
 
 namespace Raven.Server.Config.Categories
 {

@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Raven.Server.Utils.Metrics;
 
 using Sparrow.Json.Parsing;
@@ -25,8 +24,8 @@ namespace Raven.Server.Utils
         public MeterMetric MapReduceReducedPerSecond { get; private set; }
         public MeterMetric SqlReplicationBatchSizeMeter { get; private set; }
 
-        public MeterMetric FilePutsPerSecond { get; private set; }
-        public MeterMetric FileBytesPutsPerSecond { get; private set; }
+        public MeterMetric AttachmentPutsPerSecond { get; private set; }
+        public MeterMetric AttachmentBytesPutsPerSecond { get; private set; }
 
         public long ConcurrentRequestsCount;
 
@@ -44,8 +43,8 @@ namespace Raven.Server.Utils
             MapReduceMappedPerSecond?.Dispose();
             MapReduceReducedPerSecond?.Dispose();
             SqlReplicationBatchSizeMeter?.Dispose();
-            FilePutsPerSecond?.Dispose();
-            FileBytesPutsPerSecond?.Dispose();
+            AttachmentPutsPerSecond?.Dispose();
+            AttachmentBytesPutsPerSecond?.Dispose();
         }
 
         public void Reset()
@@ -63,8 +62,8 @@ namespace Raven.Server.Utils
             MapReduceMappedPerSecond = new MeterMetric();
             MapReduceReducedPerSecond = new MeterMetric();
             SqlReplicationBatchSizeMeter = new MeterMetric();
-            FilePutsPerSecond = new MeterMetric();
-            FileBytesPutsPerSecond = new MeterMetric();
+            AttachmentPutsPerSecond = new MeterMetric();
+            AttachmentBytesPutsPerSecond = new MeterMetric();
         }
     }
 
@@ -83,8 +82,8 @@ namespace Raven.Server.Utils
                 ["MapReduceReducedPerSecond"] = self.MapReduceReducedPerSecond.CreateMeterData(),
                 ["ConcurrentRequestsCount"] = self.ConcurrentRequestsCount,
 
-                ["FilePutsPerSecond"] = self.FilePutsPerSecond.CreateMeterData(),
-                ["FileBytesPutsPerSecond"] = self.FileBytesPutsPerSecond.CreateMeterData(),
+                ["AttachmentPutsPerSecond"] = self.AttachmentPutsPerSecond.CreateMeterData(),
+                ["AttachmentBytesPutsPerSecond"] = self.AttachmentBytesPutsPerSecond.CreateMeterData(),
                 
             };
             return metricsStatsJsonValue;

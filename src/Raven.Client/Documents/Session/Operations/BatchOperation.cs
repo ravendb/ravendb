@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session.Operations
             _entities = result.Entities;
             _deferredCommandsCount = result.DeferredCommandsCount;
 
-            return new BatchCommand(_session.Context, result.Commands, result.Options);
+            return new BatchCommand(_session.Conventions, _session.Context, result.Commands, result.Options);
         }
 
         public void SetResult(BlittableArrayResult result)

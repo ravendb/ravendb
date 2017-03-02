@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Operations.Transformers
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/transformers?name={Uri.EscapeUriString(_transformerName)}";
+                url = $"{node.Url}/databases/{node.Database}/transformers?name={Uri.EscapeDataString(_transformerName)}";
 
                 return new HttpRequestMessage
                 {

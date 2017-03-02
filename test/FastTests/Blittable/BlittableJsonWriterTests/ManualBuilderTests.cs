@@ -667,44 +667,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
-        public void BigAmountOfPreperties(int propertiesAmount)
-        {
-            using (var context = new JsonOperationContext(1024, 1024 * 4))
-            {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
-                {
-                    builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
-
-                    builder.StartWriteObjectDocument();
-                    builder.StartWriteObject();
-                    
-                    for (int i = 0; i < propertiesAmount; i++)
-                    {
-                        builder.WritePropertyName("Age"+i);
-                        builder.WriteValue(i);
-                    }
-                    
-                    builder.WriteObjectEnd();
-                    builder.FinalizeDocument();
-
-                    using (var reader = builder.CreateReader())
-                    {
-                        Assert.Equal(propertiesAmount, reader.Count);
-                        for (var i = 0; i < propertiesAmount; i++)
-                        {
-                            var val = reader["Age" + i];
-                            Assert.Equal(i, int.Parse(val.ToString(), CultureInfo.InvariantCulture));
-                        }
-                    }
-                }
-            }
-        }
-
-
-        [Theory]
-        [InlineData(byte.MaxValue)]
-        [InlineData(short.MaxValue)]
-        [InlineData(short.MaxValue + 1)]
         public void BigDepthTest(int propertiesAmount)
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))

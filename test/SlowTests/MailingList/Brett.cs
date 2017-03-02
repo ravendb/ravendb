@@ -6,9 +6,7 @@
 
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -17,7 +15,7 @@ namespace SlowTests.MailingList
 {
     public class Brett : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void TestMultiMap()
         {
             Guid accountId = Guid.NewGuid();

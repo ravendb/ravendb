@@ -56,9 +56,9 @@ namespace Raven.Server.Documents.Handlers
                         HttpContext.Request.Query["startsWith"],
                         HttpContext.Request.Query["matches"],
                         HttpContext.Request.Query["excludes"],
+                        HttpContext.Request.Query["startAfter"],
                         start,
-                        pageSize
-                    );
+                        pageSize);
                 }
                 else // recent docs
                 {

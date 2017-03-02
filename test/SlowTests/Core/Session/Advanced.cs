@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
@@ -199,7 +200,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact(Skip = "Missing feature: Optimistic concurrency")]
+        [Fact]
         public void CanUseOptmisticConcurrency()
         {
             const string entityId = "users/1";
@@ -226,7 +227,7 @@ namespace SlowTests.Core.Session
                     user.Name = "Name";
                     session.Store(user);
                     var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
-                    Assert.Equal("PUT attempted on document '" + entityId + "' using a non current etag", e.Message);
+                    Assert.Equal($"Document {entityId} has etag 2, but Put was called with etag 1. Optimistic concurrency violation, transaction will be aborted.", e.Message);
                 }
             }
         }
@@ -260,7 +261,7 @@ namespace SlowTests.Core.Session
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Put(companyId, null, new Company { Id = companyId }, new Dictionary<string, string> { { attrKey, attrVal } });
+                    commands.Put(companyId, null, new Company { Id = companyId }, new Dictionary<string, StringValues> { { attrKey, attrVal } });
                 }
 
                 using (var session = store.OpenSession())

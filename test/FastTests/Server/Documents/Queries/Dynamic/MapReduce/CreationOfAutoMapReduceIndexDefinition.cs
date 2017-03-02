@@ -157,7 +157,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 },
                 SortedFields = new[]
                 {
-                    new SortedField("Count_Range"),
+                    new SortedField("Count_L_Range"),
                 }
             });
 
@@ -186,7 +186,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 },
                 SortedFields = new[]
                 {
-                    new SortedField("Age_Range"),
+                    new SortedField("Age_L_Range"),
                 }
             });
 
@@ -200,8 +200,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.True(definition.ContainsField("Age"));
             Assert.True(definition.GroupByFields.ContainsKey("Location"));
 
-            Assert.Equal(SortOptions.NumericDefault, definition.GetField("Count").SortOption);
-            Assert.Equal(SortOptions.NumericDefault, definition.GetField("Age").SortOption);
+            Assert.Equal(SortOptions.Numeric, definition.GetField("Count").SortOption);
+            Assert.Equal(SortOptions.Numeric, definition.GetField("Age").SortOption);
 
             Assert.Equal("Auto/Users/ByAgeAndCountSortByAgeCountReducedByLocation", definition.Name);
         }

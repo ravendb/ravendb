@@ -1,8 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -10,7 +10,6 @@ namespace FastTests.Server.Replication
 {
     public class ReplicationOfConflicts : ReplicationBasicTests
     {
-
         [Fact]
         public void ReplicateAConflictThenResolveIt()
         {
@@ -50,6 +49,73 @@ namespace FastTests.Server.Replication
 
             Assert.Empty(GetConflicts(store1, "foo/bar"));
             Assert.Empty(GetConflicts(store2, "foo/bar"));
+        }  
+
+        [Fact]
+        public void CanManuallyResolveConflict_with_tombstone()
+        {
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
+            {
+                SetupReplication(master, slave);
+
+                using (var session = master.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var updated = WaitForDocument(slave, "users/1");
+                Assert.True(updated);
+
+                using (var session = slave.OpenSession())
+                {
+                    session.Delete("users/1");
+                    session.SaveChanges();
+                }
+                using (var session = master.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Karmeli"
+                    }, "users/1");
+
+                    session.Store(new User()
+                    {
+                        Name = "Karmeli-2"
+                    }, "final-marker");
+
+                    session.SaveChanges();
+                }
+
+                var updated2 = WaitForDocument(slave, "final-marker");
+                Assert.True(updated2);
+
+                using (var session = slave.OpenSession())
+                {
+                    try
+                    {
+                        session.Load<User>("users/1");                        
+                    }
+                    catch (DocumentConflictException e)
+                    {
+                        Assert.NotEmpty(e.Conflicts);
+                        Assert.Equal(2, e.Conflicts.Count);
+
+                        slave.Commands().Delete("users/1",null);//resolve conflict to the one with tombstone
+                    }
+                }
+
+                using (var session = slave.OpenSession())
+                {
+                    //after resolving the conflict, should not throw
+                    var doc = session.Load<User>("users/1");
+                    Assert.Null(doc);
+                }
+            }
         }
 
         [Fact]

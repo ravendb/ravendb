@@ -47,6 +47,7 @@ namespace Voron.Impl.Paging
 
     public unsafe class Windows32BitsMemoryMapPager : AbstractPager
     {
+        private readonly Win32NativeFileAttributes _fileAttributes;
         private readonly ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>> _globalMapping = new ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>>(NumericEqualityComparer.Instance);
         private long _totalMapped;
         private int _concurrentTransactions;
@@ -84,6 +85,7 @@ namespace Voron.Impl.Paging
             if (Options.CopyOnWriteMode)
                 ThrowNotSupportedOption(file);
 
+            _fileAttributes = fileAttributes;
             _handle = CreateFile(file, access,
                 Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
                 Win32NativeFileCreationDisposition.OpenAlways,
@@ -124,8 +126,7 @@ namespace Voron.Impl.Paging
                 _totalAllocationSize = fileLength;
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize/Constants.Storage.PageSize +
-                                     ((_totalAllocationSize%Constants.Storage.PageSize) == 0 ? 0 : 1);
+            NumberOfAllocatedPages = _totalAllocationSize/Constants.Storage.PageSize;
             SetPagerState(CreatePagerState());
         }
 
@@ -508,13 +509,26 @@ namespace Voron.Impl.Paging
             }
         }
 
-        public override void Sync(long _)
+        public override void Sync(long totalUnsynced)
         {
-            if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
+            if (Disposed)
+                ThrowAlreadyDisposedException();
+
+            if ((_fileAttributes & Win32NativeFileAttributes.Temporary) == Win32NativeFileAttributes.Temporary ||
+                (_fileAttributes & Win32NativeFileAttributes.DeleteOnClose) == Win32NativeFileAttributes.DeleteOnClose)
+                return;
+
+            using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
             {
-                var lastWin32Error = Marshal.GetLastWin32Error();
-                throw new Win32Exception($"Unable to flush file buffers on {FileName}",
-                    new Win32Exception(lastWin32Error));
+                metric.IncrementSize(totalUnsynced);
+                metric.IncrementFileSize(_totalAllocationSize);
+
+                if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
+                {
+                    var lastWin32Error = Marshal.GetLastWin32Error();
+                    throw new Win32Exception($"Unable to flush file buffers on {FileName}",
+                        new Win32Exception(lastWin32Error));
+                }
             }
         }
 

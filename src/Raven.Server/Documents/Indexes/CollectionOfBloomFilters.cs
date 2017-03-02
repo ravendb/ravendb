@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Server.ServerWide.Context;
@@ -10,8 +11,17 @@ using Voron.Data.BTrees;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class CollectionOfBloomFilters
+    public class CollectionOfBloomFilters : IDisposable
     {
+        private static readonly Slice Count64Slice;
+        private static readonly Slice Count32Slice;
+
+        static CollectionOfBloomFilters()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "Count64", ByteStringType.Immutable, out Count64Slice);
+            Slice.From(StorageEnvironment.LabelsContext, "Count32", ByteStringType.Immutable, out Count32Slice);
+        }
+
         public enum Mode
         {
             X64,
@@ -44,39 +54,47 @@ namespace Raven.Server.Documents.Indexes
 
         public BloomFilter this[int index] => _filters[index];
 
-        public static unsafe CollectionOfBloomFilters Load(Mode mode, TransactionOperationContext indexContext)
+        public static CollectionOfBloomFilters Load(Mode mode, TransactionOperationContext indexContext)
         {
-            var tree = indexContext.Transaction.InnerTransaction.CreateTree("IndexedDocs");
+            var tree = indexContext.Transaction.InnerTransaction.CreateTree("BloomFilters");
+            var count = GetCount(tree, ref mode);
             var collection = new CollectionOfBloomFilters(mode, tree, indexContext);
-            using (var it = tree.Iterate(prefetch: false))
+
+            for (var i = 0; i < count; i++)
             {
-                if (it.Seek(Slices.BeforeAllKeys))
+                BloomFilter filter = null;
+                switch (mode)
                 {
-                    do
-                    {
-                        var reader = it.CreateReaderForCurrent();
-
-                        BloomFilter filter;
-                        switch (reader.Length)
-                        {
-                            case BloomFilter32.PtrSize:
-                                filter = new BloomFilter32(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader.Base, tree, writeable: false);
-                                break;
-                            case BloomFilter64.PtrSize:
-                                filter = new BloomFilter64(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader.Base, tree, writeable: false);
-                                break;
-                            default:
-                                throw new InvalidOperationException($"Unsupported bloom filter size ({reader.Length}) for '{it.CurrentKey}' filter.");
-                        }
-
-                        collection.AddFilter(filter);
-                    } while (it.MoveNext());
+                    case Mode.X64:
+                        filter = new BloomFilter64(i, tree, writeable: false, allocator: indexContext.Allocator);
+                        break;
+                    case Mode.X86:
+                        filter = new BloomFilter32(i, tree, writeable: false, allocator: indexContext.Allocator);
+                        break;
                 }
+
+                collection.AddFilter(filter);
             }
 
             collection.Initialize();
 
             return collection;
+        }
+
+        private static long GetCount(Tree tree, ref Mode mode)
+        {
+            var read = tree.Read(mode == Mode.X64 ? Count64Slice : Count32Slice);
+            if (read != null)
+                return read.Reader.ReadLittleEndianInt64();
+
+            read = tree.Read(mode == Mode.X64 ? Count32Slice : Count64Slice);
+            if (read != null)
+            {
+                mode = mode == Mode.X64 ? Mode.X86 : Mode.X64;
+                return read.Reader.ReadLittleEndianInt64();
+            }
+
+            return 0;
         }
 
         private void Initialize()
@@ -90,30 +108,22 @@ namespace Raven.Server.Documents.Indexes
             AddFilter(CreateNewFilter(0, _mode));
         }
 
-        internal unsafe BloomFilter CreateNewFilter(int number, Mode mode)
+        internal BloomFilter CreateNewFilter(int number, Mode mode)
         {
-            Slice key;
-            Slice.From(_context.Allocator, number.ToString("D9"), out key);
-
-            // we can safely pass raw pointers here and dispose DirectAdd scopes immediately because 
-            // filters' content will be written to overflows
-
             if (mode == Mode.X64)
             {
+                _tree.Increment(Count64Slice, 1);
+
                 Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter64.PtrSize));
 
-                using (var ptr64 = _tree.DirectAdd(key, BloomFilter64.PtrSize))
-                {
-                    return new BloomFilter64(key, ptr64.Ptr, _tree, writeable: true);
-                }     
+                return new BloomFilter64(number, _tree, writeable: true, allocator: _context.Allocator);
             }
+
+            _tree.Increment(Count32Slice, 1);
 
             Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter32.PtrSize));
 
-            using (var ptr32 = _tree.DirectAdd(key, BloomFilter32.PtrSize))
-            {
-                return new BloomFilter32(key, ptr32.Ptr, _tree, writeable: true);
-            }
+            return new BloomFilter32(number, _tree, writeable: true, allocator: _context.Allocator);
         }
 
         internal void AddFilter(BloomFilter filter)
@@ -182,47 +192,56 @@ namespace Raven.Server.Documents.Indexes
             AddFilter(CreateNewFilter(_filters.Length, _mode));
         }
 
-        public unsafe class BloomFilter32 : BloomFilter
+        public void Dispose()
+        {
+            if (_filters == null || _filters.Length == 0)
+                return;
+
+            foreach (var filter in _filters)
+                filter.Dispose();
+        }
+
+        public class BloomFilter32 : BloomFilter
         {
             public const int PtrSize = 32 * 1024;
             public const int MaxCapacity = 25000;
 
-            private const ulong M = (PtrSize - CountSize) * BitVector.BitsPerByte;
+            private const ulong M = PtrSize * BitVector.BitsPerByte;
 
-            public BloomFilter32(Slice key, byte* ptr, Tree tree, bool writeable)
-                : base(key, ptr, tree, writeable, M, PtrSize, MaxCapacity)
+            public BloomFilter32(int key, Tree tree, bool writeable, ByteStringContext allocator)
+                : base(key, tree, writeable, M, PtrSize, MaxCapacity, allocator)
             {
             }
         }
 
-        public unsafe class BloomFilter64 : BloomFilter
+        public class BloomFilter64 : BloomFilter
         {
             public const int PtrSize = 16 * 1024 * 1024;
             public const int MaxCapacity = 10000000;
 
-            private const ulong M = (PtrSize - CountSize) * BitVector.BitsPerByte;
+            private const ulong M = PtrSize * BitVector.BitsPerByte;
 
-            public BloomFilter64(Slice key, byte* ptr, Tree tree, bool writeable)
-                : base(key, ptr, tree, writeable, M, PtrSize, MaxCapacity)
+            public BloomFilter64(int key, Tree tree, bool writeable, ByteStringContext allocator)
+                : base(key, tree, writeable, M, PtrSize, MaxCapacity, allocator)
             {
             }
         }
 
-        public abstract unsafe class BloomFilter
+        public abstract unsafe class BloomFilter : IDisposable
         {
-            public const int CountSize = sizeof(int);
-
             private const long K = 10;
 
-            private readonly Slice _key;
-            private readonly byte* _basePtr;
+            private readonly int _key;
+            private readonly Slice _keySlice;
             private readonly Tree _tree;
             private readonly ulong _m;
             private readonly int _ptrSize;
-            private byte* _dataPtr;
-            private int* _countPtr;
+            private readonly uint _partitionCount;
+            private readonly Dictionary<ulong, Partition> _partitions = new Dictionary<ulong, Partition>();
+            private readonly ByteStringContext _allocator;
+            private readonly long _initialCount;
 
-            public int Count { get; private set; }
+            public long Count { get; private set; }
 
             public bool ReadOnly { get; private set; }
 
@@ -230,17 +249,28 @@ namespace Raven.Server.Documents.Indexes
 
             public readonly int Capacity;
 
-            protected BloomFilter(Slice key, byte* basePtr, Tree tree, bool writeable, ulong m, int ptrSize, int capacity)
+            protected BloomFilter(int key, Tree tree, bool writeable, ulong m, int ptrSize, int capacity, ByteStringContext allocator)
             {
                 _key = key;
-                _basePtr = basePtr;
                 _tree = tree;
                 _m = m;
                 _ptrSize = ptrSize;
+                _partitionCount = (uint)Math.Ceiling(_ptrSize / (double)Partition.PartitionSize);
                 Capacity = capacity;
+                _allocator = allocator;
                 Writeable = writeable;
 
-                Initialize(basePtr);
+                Slice.From(_allocator, $"{_key:D5}", out _keySlice);
+                Count = _initialCount = ReadCount();
+            }
+
+            private long ReadCount()
+            {
+                var read = _tree.Read(_keySlice);
+                if (read == null)
+                    return 0;
+
+                return read.Reader.ReadLittleEndianInt64();
             }
 
             public bool Add(LazyStringValue key)
@@ -259,20 +289,22 @@ namespace Raven.Server.Documents.Indexes
                     var ptrPosition = finalHash / BitVector.BitsPerByte;
                     var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
 
-                    var bitValue = GetBit(_dataPtr, ptrPosition, bitPosition);
+                    ulong partitionPtrPosition;
+                    var partition = GetPartition(ptrPosition, out partitionPtrPosition);
+                    var bitValue = GetBit(partition, partitionPtrPosition, bitPosition);
                     if (bitValue)
                         continue;
 
-                    if (Writeable == false)
-                        MakeWriteable();
+                    if (partition.Writeable == false)
+                        MakeWriteable(partition);
 
-                    SetBitToTrue(_dataPtr, ptrPosition, bitPosition);
+                    SetBitToTrue(partition, partitionPtrPosition, bitPosition);
                     newItem = true;
                 }
 
                 if (newItem)
                 {
-                    *_countPtr = ++Count;
+                    Count++;
                     return true;
                 }
 
@@ -291,7 +323,9 @@ namespace Raven.Server.Documents.Indexes
                     var ptrPosition = finalHash / BitVector.BitsPerByte;
                     var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
 
-                    var bitValue = GetBit(_dataPtr, ptrPosition, bitPosition);
+                    ulong partitionPtrPosition;
+                    var partition = GetPartition(ptrPosition, out partitionPtrPosition);
+                    var bitValue = GetBit(partition, partitionPtrPosition, bitPosition);
                     if (bitValue == false)
                         return false;
                 }
@@ -304,9 +338,44 @@ namespace Raven.Server.Documents.Indexes
                 ReadOnly = true;
             }
 
-            private void MakeWriteable()
+            private Partition GetPartition(ulong ptrPosition, out ulong partitionPtrPosition)
             {
-                if (Writeable)
+                var partitionNumber = ptrPosition % _partitionCount;
+                partitionPtrPosition = ptrPosition % Partition.PartitionSize;
+
+                return GetPartitionByNumber(partitionNumber);
+            }
+
+            private Partition GetPartitionByNumber(ulong number)
+            {
+                Partition partition;
+                if (_partitions.TryGetValue(number, out partition))
+                    return partition;
+
+                Slice partitionKey;
+                Slice.From(_allocator, $"{_key:D5}/{number:D4}", out partitionKey);
+
+                var read = _tree.Read(partitionKey);
+                if (read != null)
+                {
+                    return _partitions[number] = new Partition
+                    {
+                        Writeable = false,
+                        Ptr = read.Reader.Base,
+                        Key = partitionKey
+                    };
+                }
+
+                return _partitions[number] = new Partition
+                {
+                    IsEmpty = true,
+                    Key = partitionKey
+                };
+            }
+
+            private void MakeWriteable(Partition partition)
+            {
+                if (partition.Writeable)
                     return;
 
                 // we can safely pass the raw pointer here and dispose DirectAdd scope immediately because 
@@ -314,20 +383,18 @@ namespace Raven.Server.Documents.Indexes
 
                 Debug.Assert(_tree.ShouldGoToOverflowPage(_ptrSize));
 
-                using (var add = _tree.DirectAdd(_key, _ptrSize))
+                byte* ptr;
+                using (_tree.DirectAdd(partition.Key, Partition.PartitionSize, out ptr))
                 {
-                    UnmanagedMemory.Copy(add.Ptr, _basePtr, _ptrSize);
-                    Initialize(add.Ptr);
+                    if (partition.IsEmpty == false)
+                        UnmanagedMemory.Copy(ptr, partition.Ptr, Partition.PartitionSize);
+
+                    partition.Writeable = true;
+                    partition.IsEmpty = false;
+                    partition.Ptr = ptr;
                 }
 
                 Writeable = true;
-            }
-
-            private void Initialize(byte* ptr)
-            {
-                _countPtr = (int*)ptr;
-                _dataPtr = ptr + CountSize;
-                Count = *_countPtr;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -343,15 +410,41 @@ namespace Raven.Server.Documents.Indexes
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static bool GetBit(byte* ptr, ulong ptrPosition, int bitPosition)
+            private static bool GetBit(Partition partition, ulong ptrPosition, int bitPosition)
             {
-                return (ptr[ptrPosition] & (1 << bitPosition)) != 0;
+                if (partition.IsEmpty)
+                    return false;
+
+                return (partition.Ptr[ptrPosition] & (1 << bitPosition)) != 0;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static void SetBitToTrue(byte* ptr, ulong ptrPosition, int bitPosition)
+            private static void SetBitToTrue(Partition partition, ulong ptrPosition, int bitPosition)
             {
-                ptr[ptrPosition] |= (byte)(1 << bitPosition);
+                Debug.Assert(partition.IsEmpty == false);
+
+                partition.Ptr[ptrPosition] |= (byte)(1 << bitPosition);
+            }
+
+            public void Dispose()
+            {
+                if (Count == _initialCount)
+                    return;
+
+                _tree.Increment(_keySlice, Count - _initialCount);
+            }
+
+            private class Partition
+            {
+                public const int PartitionSize = 64 * 1024;
+
+                public Slice Key;
+
+                public byte* Ptr;
+
+                public bool Writeable;
+
+                public bool IsEmpty;
             }
         }
     }

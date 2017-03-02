@@ -12,11 +12,13 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Session;
 using Raven.Client.Documents.Identity;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -182,8 +184,11 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="T"></typeparam>
         /// <param name="instance">The instance.</param>
         /// <returns></returns>
-        public IDictionary<string, string> GetMetadataFor<T>(T instance)
+        public IDictionary<string, StringValues> GetMetadataFor<T>(T instance)
         {
+            if(instance == null)
+                throw new ArgumentNullException(nameof(instance));
+
             var documentInfo = GetDocumentInfo(instance);
 
             if (documentInfo.MetadataInstance != null)
@@ -193,6 +198,19 @@ namespace Raven.Client.Documents.Session
             var metadata = new MetadataAsDictionary(metadataAsBlittable);
             documentInfo.MetadataInstance = metadata;
             return metadata;
+        }
+
+        public ChangeVectorEntry[] GetChangeVectorFor<T>(T instance)
+        {
+            if(instance == null)
+                throw new ArgumentNullException(nameof(instance));
+
+            var documentInfo = GetDocumentInfo(instance);
+            BlittableJsonReaderArray changeVectorJson;
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out changeVectorJson))
+                return changeVectorJson.ToVector();
+
+            return new ChangeVectorEntry[0];
         }
 
         private DocumentInfo GetDocumentInfo<T>(T instance)
@@ -913,13 +931,22 @@ more responsive application.
         }
 
         /// <summary>
+        ///     Defer commands to be executed on SaveChanges()
+        /// </summary>
+        /// <param name="command">Command to be executed</param>
+        /// <param name="commands">Array of comands to be executed.</param>
+        public void Defer(ICommandData command, params ICommandData[] commands)
+        {
+            _deferedCommands.Add(command);
+            _deferedCommands.AddRange(commands);
+        }
+
+        /// <summary>
         /// Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">The commands to be executed</param>
-        public virtual void Defer(params ICommandData[] commands)
+        public void Defer(ICommandData[] commands)
         {
-            // Should we remove Defer?
-            // and Patch would send Put and Delete and Patch separatly, like { Delete: [], Put: [], Patch: []}
             _deferedCommands.AddRange(commands);
         }
 
@@ -1258,11 +1285,12 @@ more responsive application.
 
         public BlittableJsonReaderObject Document { get; set; }
 
-        public IDictionary<string, string> MetadataInstance { get; set; }
+        public IDictionary<string, StringValues> MetadataInstance { get; set; }
 
         public object Entity { get; set; }
 
         public bool IsNewDocument { get; set; }
+
         public string Collection { get; set; }
 
         public static DocumentInfo GetNewDocumentInfo(BlittableJsonReaderObject document)

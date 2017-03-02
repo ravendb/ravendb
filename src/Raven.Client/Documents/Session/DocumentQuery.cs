@@ -6,7 +6,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Spatial;
@@ -240,18 +239,6 @@ namespace Raven.Client.Documents.Session
         public IDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending)
         {
             AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
-            return this;
-        }
-
-        /// <summary>
-        /// Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
-        /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="descending">if set to <c>true</c> [descending].</param>
-        /// <param name="fieldType">the type of the field to be sorted.</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AddOrder(string fieldName, bool descending, Type fieldType)
-        {
-            AddOrder(fieldName, descending, fieldType);
             return this;
         }
 

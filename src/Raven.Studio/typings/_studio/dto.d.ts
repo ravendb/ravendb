@@ -1,5 +1,9 @@
 /// <reference path="../tsd.d.ts"/>
 
+interface disposable {
+    dispose(): void;
+}
+
 interface dictionary<TValue> {
     [key: string]: TValue;
 }
@@ -17,6 +21,12 @@ interface queryResultDto<T> {
 interface resultsDto<T> {
     Results: T[];
 }
+
+
+interface documentDto extends metadataAwareDto {
+    [key: string]: any;
+}
+
 
 interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
@@ -195,6 +205,10 @@ interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Index
     CompletedAsDate: Date; // user for caching
 }
 
+interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.Indexes.IndexingPerformanceOperation {
+    Parent: Raven.Client.Documents.Indexes.IndexingPerformanceStats;
+}
+
 interface subscriptionResponseItemDto {
     SubscriptionId: number;
     Criteria: Raven.Client.Documents.Subscriptions.SubscriptionCriteria;
@@ -210,4 +224,16 @@ interface subscriptionConnectionInfoDto {
     ConnectionException: string;
     Stats: Raven.Server.Documents.SubscriptionConnectionStats;
     Options: Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions;
+}
+
+interface disabledReason {
+    disabled: boolean;
+    reason?: string;
+}
+
+interface pagedResult<T> {
+    items: T[];
+    totalResultCount: number;
+    resultEtag?: string;
+    additionalResultInfo?: any; 
 }

@@ -737,7 +737,7 @@ this.Value = another.Value;
                     }));
                 });
 
-                Assert.Contains("Document Items/1 does not exists, but Put was called with etag 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
+                Assert.Contains("Document Items/1 does not exist, but Put was called with etag 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
 

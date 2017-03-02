@@ -34,7 +34,9 @@
                 <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }"><i class="icon-edit"></i><span>Edit index</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: termsUrl }" title="Navigate to index terms"><i class="icon-indexing"></i><span>Index terms</span></a>
-                <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span></a>
+                <span class="has-disable-reason" data-placement="bottom" data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
+                    <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span></a>
+                </span>
                 <div class="pull-right-sm">
                     <div class="dropdown dropdown-right">
                         <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-bind="enable: recentQueries().length">
@@ -233,20 +235,19 @@
             </div>
         </div>
         <div class="panel flex-window-scroll">
-            <div class="has-error results-error" data-bind="visible: staleResult">
+            <div class="has-error results-error" data-bind="visible: staleResult()">
                 <div class="help-block">
                     <i class="icon-danger"></i><span>Index is stale, possibly not all results are displayed.</span>
                 </div>
             </div>
+            <div class="has-error results-error" data-bind="visible: dirtyResult() && !staleResult()">
+                <div class="help-block">
+                    <i class="icon-danger"></i><span>Data has changed. Your results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+                </div>
+            </div>
             <div class="scroll-stretch">
                 <div class="panel-body">
-                    <!-- TODO:
-                customColumns: currentColumnsParams,
-                isIndexMapReduce: isIndexMapReduce,
-                selectedIndices: selectedResultIndices
-                -->
-                    <div id="queryResultsGrid"
-                         data-bind="widget: { kind: 'virtualTable', itemsSource: queryResults, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', collections: collections, contextMenuOptions: ['copyitems', 'CopyIDs' , 'Delete', 'ViewItem' ], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
+                    <virtual-grid class="resizable" params="controller: gridController"></virtual-grid>
                 </div>
             </div>
         </div>
@@ -464,6 +465,12 @@
                         <div class="panel-body" data-bind="visible: isLoading">
                             <span>Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
                         </div>
+                customColumns: currentColumnsParams,
+                isIndexMapReduce: isIndexMapReduce,
+                selectedIndices: selectedResultIndices
+                --
+                    <div id="queryResultsGrid"
+                         data-bind="widget: { kind: 'virtualTable', itemsSource: queryResults, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', collections: collections, contextMenuOptions: ['copyitems', 'CopyIDs' , 'Delete'], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
                         <div class="panel-body">
                             <div class="suggestion-box" data-bind="visible: $root.showSuggestions, foreach: $root.indexSuggestions">
                                 <div>Did you mean <a data-bind="text: Suggestion, click: $root.applySuggestion.bind($root, $data)" href="#"></a> for the field <i data-bind="text: FieldName"></i>?</div>

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Xunit;
@@ -35,14 +33,8 @@ namespace FastTests.Client
                 
                 using (var session = store.OpenSession())
                 {
-                    var pagingInformation = new PagingInformation();
-                    var len = session.Advanced.LoadStartingWith<FooBar>("FooBars/", null, 0, 1000, null, pagingInformation: pagingInformation);
+                    var len = session.Advanced.LoadStartingWith<FooBar>("FooBars/", null, 0, 1000, null);
                     Assert.Equal(1000, len.Length);
-
-                    Assert.Equal(1000, pagingInformation.PageSize);
-                    Assert.Equal(0, pagingInformation.Start);
-                    Assert.Equal(1000, pagingInformation.NextPageStart);
-
                 }
             }
         }

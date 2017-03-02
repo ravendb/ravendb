@@ -27,7 +27,6 @@ class settings extends viewModelBase {
         var sqlReplicationsConnectionsRoute = { route: 'databases/settings/sqlReplicationConnectionStringsManagement', moduleId: 'viewmodels/database/settings/sqlReplicationConnectionStringsManagement', title: 'SQL Replication Connection Strings', nav: true, hash: appUrl.forCurrentDatabase().sqlReplicationsConnections};
         var versioningRoute = { route: 'databases/settings/versioning', moduleId: 'viewmodels/database/settings/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentDatabase().versioning };
         var periodicExportRoute = { route: 'databases/settings/periodicExport', moduleId: 'viewmodels/database/settings/periodicExport', title: 'Periodic Export', nav: true, hash: appUrl.forCurrentDatabase().periodicExport };
-        var customFunctionsEditorRoute = { route: 'databases/settings/customFunctionsEditor', moduleId: 'viewmodels/database/settings/customFunctionsEditor', title: 'Custom Functions', nav: true, hash: appUrl.forCurrentDatabase().customFunctionsEditor };
         var databaseStudioConfig = { route: 'databases/settings/databaseStudioConfig', moduleId: 'viewmodels/databaseStudioConfig', title: 'Studio Config', nav: true, hash: appUrl.forCurrentDatabase().databaseStudioConfig };
 
         this.router = durandalRouter.createChildRouter()
@@ -41,7 +40,6 @@ class settings extends viewModelBase {
                 editsqlReplicationsRoute,
                 versioningRoute,
                 periodicExportRoute,
-                customFunctionsEditorRoute,
                 databaseStudioConfig
             ])
             .buildNavigationModel();

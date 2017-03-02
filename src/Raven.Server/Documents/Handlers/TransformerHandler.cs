@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Transformers;
@@ -104,7 +103,7 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
 
-            Thread.Sleep(2000);//TODO: implement me and remove this sleep!
+            Database.TransformerStore.Rename(name, newName);
 
             return NoContent();
         }

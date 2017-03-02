@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -90,11 +91,11 @@ namespace FastTests.Server.Documents.Expiration
                 await SetupExpiration(store);
 
                 var expiry = SystemTime.UtcNow.AddMinutes(5);
-                var metadata = new Dictionary<string, string>
+                var metadata = new Dictionary<string, StringValues>
                 {
                     [Constants.Documents.Expiration.ExpirationDate] = expiry.ToString(Default.DateTimeOffsetFormatsToWrite)
                 };
-                var metadata2 = new Dictionary<string, string>
+                var metadata2 = new Dictionary<string, StringValues>
                 {
                     [Constants.Documents.Expiration.ExpirationDate] = expiry.AddMinutes(1).ToString(Default.DateTimeOffsetFormatsToWrite)
                 };

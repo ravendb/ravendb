@@ -46,15 +46,15 @@ namespace Sparrow.Json
             };
 
             var fakeFieldName = _context.GetLazyStringForFieldWithCaching("_");
-            var propIndex = _context.CachedProperties.GetPropertyId(fakeFieldName);
-            currentState.CurrentPropertyId = propIndex;
-            currentState.MaxPropertyId = propIndex;
+            var prop = _context.CachedProperties.GetProperty(fakeFieldName);
+            currentState.CurrentProperty = prop;
+            currentState.MaxPropertyId = prop.PropertyId;
             currentState.FirstWrite = _writer.Position;
             currentState.Properties = new List<PropertyTag>
                         {
                             new PropertyTag
                             {
-                                PropertyId = propIndex
+                                Property = prop
                             }
                         };
 
@@ -77,9 +77,9 @@ namespace Sparrow.Json
             }
 
 
-            int newPropertyId = _context.CachedProperties.GetPropertyId(property);
-            currentState.CurrentPropertyId = newPropertyId;
-            currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentPropertyId);
+            var newPropertyId = _context.CachedProperties.GetProperty(property);
+            currentState.CurrentProperty = newPropertyId;
+            currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
             currentState.State = ContinuationState.ReadPropertyValue;
             _continuationState.Push(currentState);
         }
@@ -132,7 +132,7 @@ namespace Sparrow.Json
                                 {
                                     Position = _writeToken.ValuePos,
                                     Type = (byte)_writeToken.WrittenToken,
-                                    PropertyId = outerState.CurrentPropertyId
+                                    Property = outerState.CurrentProperty
                                 });
                             }
 
@@ -166,7 +166,7 @@ namespace Sparrow.Json
                         {
                             Position = _writeToken.ValuePos,
                             Type = (byte)_writeToken.WrittenToken,
-                            PropertyId = currentState.CurrentPropertyId
+                            Property = currentState.CurrentProperty
                         });
                         if (currentState.FirstWrite == -1)
                             currentState.FirstWrite = start;
@@ -230,7 +230,7 @@ namespace Sparrow.Json
                             {
                                 Position = _writeToken.ValuePos,
                                 Type = (byte)_writeToken.WrittenToken,
-                                PropertyId = outerState.CurrentPropertyId
+                                Property = outerState.CurrentProperty
                             });
                             outerState.State = ContinuationState.ReadPropertyName;
                         }
@@ -278,6 +278,46 @@ namespace Sparrow.Json
 
             currentState = FinishWritingScalarValue(currentState);
             _continuationState.Push(currentState);
+        }
+
+        public void WriteValue(BlittableJsonToken token, object value)
+        {
+            switch (token)
+            {
+                case BlittableJsonToken.Integer:
+                    WriteValue((long)value);
+                    break;
+                case BlittableJsonToken.Float:
+                    WriteValue((float)value);
+                    break;
+                case BlittableJsonToken.String:
+                case BlittableJsonToken.CompressedString:
+                    WriteValue(value.ToString());
+                    break;
+                case BlittableJsonToken.Boolean:
+                    WriteValue((bool)value);
+                    break;
+                case BlittableJsonToken.Null:
+                    WriteValueNull();
+                    break;
+                case BlittableJsonToken.StartObject:
+                    var obj = value as BlittableJsonReaderObject;
+                    StartWriteObject();
+                    obj.AddItemsToStream(this); 
+                    WriteObjectEnd();                
+                    break;
+                case BlittableJsonToken.EmbeddedBlittable:
+                    WriteEmbeddedBlittableDocument((BlittableJsonReaderObject)value);
+                    break;
+                case BlittableJsonToken.StartArray:
+                    var arr = value as BlittableJsonReaderArray;
+                    StartWriteArray();
+                    arr?.AddItemsToStream(this);
+                    WriteArrayEnd();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(token), token, null);
+            }
         }
 
         public void WriteValue(bool value)
@@ -432,7 +472,7 @@ namespace Sparrow.Json
                     {
                         Position = _writeToken.ValuePos,
                         Type = (byte)_writeToken.WrittenToken,
-                        PropertyId = currentState.CurrentPropertyId
+                        Property = currentState.CurrentProperty
                     });
 
                     currentState.State = ContinuationState.ReadPropertyName;

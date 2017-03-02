@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
 import conflictItem = require("models/filesystem/conflictItem");
-import pagedResultSet = require("common/pagedResultSet");
 
 class getFilesConflictsCommand extends commandBase {
 
@@ -9,20 +8,19 @@ class getFilesConflictsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet<conflictItem>> {
+    execute(): JQueryPromise<pagedResult<conflictItem>> {
         var args = {
             start: this.skip,
             pageSize: this.take
         }
         var url = "/synchronization/Conflicts";
 
-        var conflictsTask = $.Deferred();
+        var conflictsTask = $.Deferred<pagedResult<conflictItem>>();
         this.query<filesystemListPageDto<filesystemConflictItemDto>>(url, args, this.fs).
             fail(response => conflictsTask.reject(response)).
             done((conflicts: filesystemListPageDto<filesystemConflictItemDto>) => {
                 var items = conflicts.Items.map(x => conflictItem.fromConflictItemDto(x));
-                var resultsSet = new pagedResultSet(items, conflicts.TotalCount);
-                conflictsTask.resolve(resultsSet);
+                conflictsTask.resolve({ items: items, totalResultCount: conflicts.TotalCount });
             });
 
         return conflictsTask;

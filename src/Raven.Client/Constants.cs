@@ -98,11 +98,15 @@ namespace Raven.Client
 
                 public const string Flags = "@flags";
 
+                public const string Attachments = "@attachments";
+
                 public const string IndexScore = "@index-score";
 
                 public const string LastModified = "@last-modified";
 
                 public const string RavenClrType = "Raven-Clr-Type";
+
+                public const string ChangeVector = "@change-vector";
 
                 public const string HasValue = "HasValue";
             }
@@ -146,7 +150,11 @@ namespace Raven.Client
 
                     public const string IndexFieldScoreName = "__field_score";
 
-                    public const string RangeFieldSuffix = "_Range";
+                    internal const string RangeFieldSuffix = "_Range";
+
+                    public const string RangeFieldSuffixLong = "_L" + RangeFieldSuffix;
+
+                    public const string RangeFieldSuffixDouble = "_D" + RangeFieldSuffix;
 
                     public const string IgnoredDynamicField = "__ignored";
 

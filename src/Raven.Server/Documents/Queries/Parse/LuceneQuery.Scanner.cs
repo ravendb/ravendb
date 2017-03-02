@@ -25,6 +25,7 @@ namespace Raven.Server.Documents.Queries.Parse
             if (bStack.Count == 0) return true;
             RestoreBuffCtx(bStack.Pop()); return false;
         }
+
         Stack<BufferContext> bStack = new Stack<BufferContext>();
         public override void yyerror(string format, params object[] args)
         {

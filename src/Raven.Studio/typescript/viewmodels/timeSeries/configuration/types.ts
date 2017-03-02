@@ -1,22 +1,19 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import changeSubscription = require("common/changeSubscription");
-import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import timeSeries = require("models/timeSeries/timeSeries");
 import putTypeCommand = require("commands/timeSeries/putTypeCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import editTypeDialog = require("viewmodels/timeSeries/editTypeDialog");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
-import pagedResultSet = require("common/pagedResultSet");
 import getTypesCommand = require("commands/timeSeries/getTypesCommand");
 import typeChange = require("models/timeSeries/typeChange");
 
 class types extends viewModelBase {
 
     viewType = viewType.TimeSeries;
-    typesList = ko.observable<pagedList>();
+    typesList = ko.observable<any>(); //TODO: use type
     hasTypes: KnockoutComputed<boolean>;
     selectedTypesIndices = ko.observableArray<number>();
     hasAnyTypesSelected: KnockoutComputed<boolean>;
@@ -50,20 +47,24 @@ class types extends viewModelBase {
     activate(args: any) {
         super.activate(args);
 
-        this.typesList(this.createTypesPagedList());
+        //TODO: this.typesList(this.createTypesPagedList());
     }
 
+    /* TODO
     private createTypesPagedList(): pagedList {
         var fetcher = (skip: number, take: number) => this.fetchTypes(skip, take);
         var list = new pagedList(fetcher);
         return list;
-    }
+    }*/
 
-    private fetchTypes(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
-        var deffered = $.Deferred();
+    private fetchTypes(skip: number, take: number): JQueryPromise<pagedResult<any>> {
+        var deffered = $.Deferred<pagedResult<any>>();
         new getTypesCommand(this.activeTimeSeries()).execute()
             .done((types: timeSeriesType[]) => {
-                deffered.resolve(new pagedResultSet(types, 1024));
+                deffered.resolve({
+                    items: types,
+                    totalResultCount: 1024
+                });
             });
         return deffered;
     }
@@ -145,7 +146,7 @@ class types extends viewModelBase {
         }
     }
 
-    private getTypesGrid(): virtualTable {
+    private getTypesGrid() {
         var gridContents = $(types.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

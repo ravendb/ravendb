@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -546,6 +545,8 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 // ignored
             }
+
+            CancellationTokenSource.Dispose();
         }
     }
 }

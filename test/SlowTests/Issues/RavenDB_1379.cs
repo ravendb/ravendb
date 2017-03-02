@@ -1,7 +1,5 @@
 ﻿using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -107,18 +105,12 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var pagingInformation = new PagingInformation();
-
                 using (var session = documentStore.OpenSession())
                 {
                     var fetchedDocuments = session.Advanced.Lazily
-                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 0, 4, string.Empty, pagingInformation: pagingInformation)
+                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 0, 4, string.Empty)
                         .Value
                         .ToList();
-
-                    Assert.Equal(4, pagingInformation.PageSize);
-                    Assert.Equal(0, pagingInformation.Start);
-                    Assert.Equal(4, pagingInformation.NextPageStart);
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
@@ -132,13 +124,9 @@ namespace SlowTests.Issues
                 using (var session = documentStore.OpenSession())
                 {
                     var fetchedDocuments = session.Advanced.Lazily
-                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 4, 4, string.Empty, pagingInformation: pagingInformation)
+                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 4, 4, string.Empty)
                         .Value
                         .ToList();
-
-                    Assert.Equal(4, pagingInformation.PageSize);
-                    Assert.Equal(4, pagingInformation.Start);
-                    Assert.Equal(8, pagingInformation.NextPageStart);
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
@@ -152,13 +140,9 @@ namespace SlowTests.Issues
                 using (var session = documentStore.OpenSession())
                 {
                     var fetchedDocuments = session.Advanced.Lazily
-                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 8, 4, string.Empty, pagingInformation: pagingInformation)
+                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 8, 4, string.Empty)
                         .Value
                         .ToList();
-
-                    Assert.Equal(4, pagingInformation.PageSize);
-                    Assert.Equal(8, pagingInformation.Start);
-                    Assert.Equal(8, pagingInformation.NextPageStart);
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
@@ -192,18 +176,12 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var pagingInformation = new PagingInformation();
-
                 using (var session = documentStore.OpenSession())
                 {
                     var fetchedDocuments = session.Advanced.Lazily
-                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 0, 2, pagingInformation: pagingInformation, exclude: "1*")
+                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 0, 2, exclude: "1*")
                         .Value
                         .ToList();
-
-                    Assert.Equal(0, pagingInformation.Start);
-                    Assert.Equal(2, pagingInformation.PageSize);
-                    Assert.Equal(6, pagingInformation.NextPageStart);
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
@@ -215,13 +193,9 @@ namespace SlowTests.Issues
                 using (var session = documentStore.OpenSession())
                 {
                     var fetchedDocuments = session.Advanced.Lazily
-                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 2, 2, pagingInformation: pagingInformation, exclude: "1*")
+                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 2, 2, exclude: "1*")
                         .Value
                         .ToList();
-
-                    Assert.Equal(2, pagingInformation.Start);
-                    Assert.Equal(2, pagingInformation.PageSize);
-                    Assert.Equal(8, pagingInformation.NextPageStart);
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
@@ -233,13 +207,9 @@ namespace SlowTests.Issues
                 using (var session = documentStore.OpenSession())
                 {
                     var fetchedDocuments = session.Advanced.Lazily
-                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 4, 2, pagingInformation: pagingInformation, exclude: "1*")
+                        .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 4, 2, exclude: "1*")
                         .Value
                         .ToList();
-
-                    Assert.Equal(4, pagingInformation.Start);
-                    Assert.Equal(2, pagingInformation.PageSize);
-                    Assert.Equal(8, pagingInformation.NextPageStart);
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
@@ -274,18 +244,12 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var pagingInformation = new PagingInformation();
-
                 using (var session = documentStore.OpenSession())
                 {
                     var fetchedDocuments = session.Advanced.Lazily
-                        .LoadStartingWith<SomeEntity>("FooBar", "1*", 0, 2, pagingInformation: pagingInformation)
+                        .LoadStartingWith<SomeEntity>("FooBar", "1*", 0, 2)
                         .Value
                         .ToList();
-
-                    Assert.Equal(0, pagingInformation.Start);
-                    Assert.Equal(2, pagingInformation.PageSize);
-                    Assert.Equal(2, pagingInformation.NextPageStart);
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
@@ -297,13 +261,9 @@ namespace SlowTests.Issues
                 using (var session = documentStore.OpenSession())
                 {
                     var fetchedDocuments = session.Advanced.Lazily
-                        .LoadStartingWith<SomeEntity>("FooBar", "1*", 2, 1, pagingInformation: pagingInformation)
+                        .LoadStartingWith<SomeEntity>("FooBar", "1*", 2, 1)
                         .Value
                         .ToList();
-
-                    Assert.Equal(2, pagingInformation.Start);
-                    Assert.Equal(1, pagingInformation.PageSize);
-                    Assert.Equal(3, pagingInformation.NextPageStart);
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 
@@ -314,13 +274,9 @@ namespace SlowTests.Issues
                 using (var session = documentStore.OpenSession())
                 {
                     var fetchedDocuments = session.Advanced.Lazily
-                        .LoadStartingWith<SomeEntity>("FooBar", "1*", 3, 10, pagingInformation: pagingInformation)
+                        .LoadStartingWith<SomeEntity>("FooBar", "1*", 3, 10)
                         .Value
                         .ToList();
-
-                    Assert.Equal(3, pagingInformation.Start);
-                    Assert.Equal(10, pagingInformation.PageSize);
-                    Assert.Equal(3, pagingInformation.NextPageStart);
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Value.Id).ToList();
 

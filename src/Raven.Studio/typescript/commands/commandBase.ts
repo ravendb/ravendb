@@ -29,12 +29,12 @@ class commandBase {
         return longWait ? 60000 : 9000;
     }
 
-    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
+    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
         const ajax = this.ajax(relativeUrl, args, "GET", resource, options, timeToAlert);
         if (resultsSelector) {
             var task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
-                var transformedResults = resultsSelector(results);
+                var transformedResults = resultsSelector(results, xhr);
                 task.resolve(transformedResults, status, xhr);
             });
             ajax.fail((request, status, error) => {
@@ -45,8 +45,8 @@ class commandBase {
             return ajax;
         }
     }
-    
-    protected head<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
+
+    protected head<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any, xhr: JQueryXHR) => T): JQueryPromise<T> {
         var ajax = this.ajax(relativeUrl, args, "HEAD", resource);
         if (resultsSelector) {
             var task = $.Deferred();
@@ -61,7 +61,7 @@ class commandBase {
                             (<any>headersObject)[keyValue[0]] = keyValue[1];
                         }
                     }
-                    var transformedResults = resultsSelector(headersObject);
+                    var transformedResults = resultsSelector(headersObject, xhr);
                     task.resolve(transformedResults);
                 }
             });
@@ -183,6 +183,19 @@ class commandBase {
         });
 
         return ajaxTask.promise();
+    }
+
+    protected extractEtag(xhr: JQueryXHR) {
+        let etag = xhr.getResponseHeader("ETag");
+
+        if (etag.startsWith('"')) {
+            etag = etag.substr(1);
+        }
+
+        if (etag.endsWith('"')) {
+            etag = etag.substr(0, etag.length - 1);
+        }
+        return etag;
     }
 
     private retryOriginalRequest(task: JQueryDeferred<any>, orignalArguments: IArguments) {

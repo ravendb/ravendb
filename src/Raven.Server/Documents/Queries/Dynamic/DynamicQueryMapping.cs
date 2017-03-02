@@ -134,14 +134,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             field = SortFieldHelper.ExtractName(field);
                         }
 
-                        if (InvariantCompare.IsSuffix(field, Constants.Documents.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
-                            field = field.Substring(0, field.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length);
+                        field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 
                         fields.Add(Tuple.Create(SimpleQueryParser.TranslateField(field), field));
                     }
                 }
 
-                dynamicMapFields = fields.Select(x => new DynamicQueryMappingItem(x.Item1.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) ? x.Item1.Substring(0, x.Item1.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length) : x.Item1, FieldMapReduceOperation.None));
+                dynamicMapFields = fields.Select(x => new DynamicQueryMappingItem(FieldUtil.RemoveRangeSuffixIfNecessary(x.Item1), FieldMapReduceOperation.None));
 
                 numericFields = fields.Where(x => x.Item1.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix)).Select(x => x.Item1).Distinct().ToArray();
             }
@@ -186,8 +185,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     sortInfo.Add(new DynamicSortInfo
                     {
-                        Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length),
-                        FieldType = SortOptions.NumericDefault
+                        Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffixLong.Length),
+                        FieldType = SortOptions.Numeric
                     });
                 }
             }
@@ -204,22 +203,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (InvariantCompare.IsPrefix(key, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
                         continue;
 
-                    if (InvariantCompare.IsSuffix(key, Constants.Documents.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
+                    string name;
+                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(key, out name);
+
+                    sortInfo.Add(new DynamicSortInfo
                     {
-                        sortInfo.Add(new DynamicSortInfo
-                        {
-                            Name = key.Substring(0, key.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length),
-                            FieldType = SortOptions.NumericDefault
-                        });
-                    }
-                    else
-                    {
-                        sortInfo.Add(new DynamicSortInfo
-                        {
-                            Name = key,
-                            FieldType = SortOptions.String
-                        });
-                    }
+                        Name = name,
+                        FieldType = rangeType == RangeType.None ? SortOptions.String : SortOptions.Numeric
+                    });
                 }
             }
 

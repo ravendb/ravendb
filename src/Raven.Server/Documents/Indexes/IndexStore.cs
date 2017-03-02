@@ -19,7 +19,6 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils;
@@ -404,7 +403,7 @@ namespace Raven.Server.Documents.Indexes
                 if (index.Configuration.RunInMemory)
                     return;
 
-                var name = index.GetIndexNameSafeForFileSystem();
+                var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.IndexId, index.Name);
 
                 var indexPath = index.Configuration.StoragePath.Combine(name);
 
@@ -477,6 +476,12 @@ namespace Raven.Server.Documents.Indexes
                 IndexDoesNotExistException.ThrowFor(name);
 
             index.Stop();
+
+            _documentDatabase.Changes.RaiseNotifications(new IndexChange
+            {
+                Name = name,
+                Type = IndexChangeTypes.IndexPaused
+            });
         }
 
         public void StopIndexing()
@@ -502,6 +507,15 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             Parallel.ForEach(indexes, index => index.Stop());
+
+            foreach (var index in indexes)
+            {
+                _documentDatabase.Changes.RaiseNotifications(new IndexChange
+                {
+                    Name = index.Name,
+                    Type = IndexChangeTypes.IndexPaused
+                });
+            }
         }
 
         public void Dispose()
@@ -570,7 +584,24 @@ namespace Raven.Server.Documents.Indexes
                 if (IndexDefinitionBase.TryReadIdFromDirectory(indexDirectory, out indexId, out indexName) == false)
                     continue;
 
-                indexes[indexId] = Tuple.Create(indexDirectory.FullName, indexName);
+                var nameFromMetadata = IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory.FullName);
+                string desiredIndexDirName;
+
+                if (nameFromMetadata != null && 
+                    indexDirectory.Name != 
+                    (desiredIndexDirName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexId, nameFromMetadata)))
+                {
+                    var newPath = new PathSetting(indexDirectory.FullName)
+                        .Combine("..")
+                        .Combine(desiredIndexDirName)
+                        .FullPath;
+
+                    IOExtensions.MoveDirectory(indexDirectory.FullName, newPath);
+
+                    indexes[indexId] = Tuple.Create(newPath, indexName);
+                }
+                else
+                    indexes[indexId] = Tuple.Create(indexDirectory.FullName, indexName);
             }
 
             foreach (var indexDirectory in indexes)
@@ -790,6 +821,40 @@ namespace Raven.Server.Documents.Indexes
                 if (lockTaken)
                     Monitor.Exit(_indexAndTransformerLocker);
             }
+        }
+
+        public void RenameIndex(string oldIndexName, string newIndexName)
+        {
+            Index index;
+            if (_indexes.TryGetByName(oldIndexName, out index) == false)
+                throw new InvalidOperationException($"Index {oldIndexName} does not exist");
+
+            lock (_indexAndTransformerLocker)
+            {
+                var transformer = _documentDatabase.TransformerStore.GetTransformer(newIndexName);
+                if (transformer != null)
+                {
+                    throw new IndexOrTransformerAlreadyExistException(
+                        $"Cannot rename index to {newIndexName} because a transformer having the same name already exists");
+                }
+
+                Index _;
+                if (_indexes.TryGetByName(newIndexName, out _))
+                {
+                    throw new IndexOrTransformerAlreadyExistException(
+                        $"Cannot rename index to {newIndexName} because an index having the same name already exists");
+                }
+
+                index.Rename(newIndexName); // store new index name in 'metadata' file, actual dir rename will happen on next db load
+                _indexes.RenameIndex(index, oldIndexName, newIndexName);
+            }
+
+            _documentDatabase.Changes.RaiseNotifications(new IndexRenameChange
+            {
+                Name = newIndexName,
+                OldIndexName = oldIndexName,
+                Type = IndexChangeTypes.Renamed
+            });
         }
     }
 }

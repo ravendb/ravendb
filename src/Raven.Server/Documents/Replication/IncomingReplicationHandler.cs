@@ -16,7 +16,6 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
-using Raven.Client;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
@@ -1208,6 +1207,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             _incomingThread = null;
+            _cts.Dispose();
         }
 
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);

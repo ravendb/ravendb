@@ -491,7 +491,7 @@ namespace SlowTests.Tests.Linq
 
                     //This is the lucene query we want to mimic
                     var luceneResult = s.Advanced.DocumentQuery<OrderItem>("ByLineCost")
-                            .Where("Cost_Range:{Dx1 TO NULL}")
+                            .Where("Cost_D_Range:{1 TO NULL}")
                             .SelectFields<SomeDataProjection>("Cost")
                             .ToArray();
 
@@ -602,7 +602,7 @@ namespace SlowTests.Tests.Linq
             documentSession.SaveChanges();
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        [Fact]
         public void Can_Use_In_Array_In_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -733,7 +733,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        [Fact]
         public void Can_Use_In_IEnumerable_In_Where_Clause_with_negation()
         {
             using (var store = GetDocumentStore())
@@ -763,7 +763,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        [Fact]
         public void Can_Use_In_Params_In_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -791,7 +791,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        [Fact]
         public void Can_Use_In_IEnumerable_In_Where_Clause()
         {
             using (var store = GetDocumentStore())

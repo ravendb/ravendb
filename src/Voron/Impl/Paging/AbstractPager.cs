@@ -238,12 +238,23 @@ namespace Voron.Impl.Paging
             // because users tend to be sensitive to a lot of "wasted" space. 
             // We also consider the fact that small increases in small files would probably result in cheaper costs, and as
             // the file size increases, we will reserve more & more from the OS.
-            // This also plays avoids "I added 300 records and the file size is 64MB" problems that occur when we are too
+            // This also avoids "I added 300 records and the file size is 64MB" problems that occur when we are too
             // eager to reserve space
             var actualIncrease = Math.Min(_increaseSize, current / 2);
 
             // we then want to get the next power of two number, to get pretty file size
-            return current + Bits.NextPowerOf2(actualIncrease);
+            var totalSize = current + actualIncrease;
+            if (totalSize < 512 * 1024 * 1024L)
+                return Bits.NextPowerOf2(totalSize);
+
+            // if it is over  0.5 GB, then we grow at 1 GB intervals
+
+            var remainder = totalSize%Constants.Size.Gigabyte;
+            if (remainder == 0)
+                return totalSize;
+
+            // above 0.5GB we need to round to then next GB number
+            return totalSize + Constants.Size.Gigabyte - remainder;
         }
 
 

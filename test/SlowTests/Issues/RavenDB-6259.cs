@@ -60,14 +60,12 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync().ConfigureAwait(false);
                 }
 
-                var marker = WaitForDocument(slave, "marker");
+                Assert.True(WaitForDocument(slave, "marker"));
 
                 using (var session = slave.OpenSession())
                 {
                     Assert.NotEmpty(session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults()).ToList());
                 }
-
-                Assert.NotNull(marker);
 
                 DeleteReplication(master, slave);
 
@@ -78,18 +76,16 @@ namespace SlowTests.Issues
                     address.ZipCode = 2;
                     await session.StoreAsync(address);
 
-                    var markerObject = await session.LoadAsync<dynamic>("marker");
-                    await session.StoreAsync(markerObject);
+                    await session.StoreAsync(new
+                    {
+                        Foo = "marker"
+                    }, "marker2").ConfigureAwait(false);
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = slave.OpenAsyncSession())
                 {
                     session.Delete("addresses/1");
-                    await session.StoreAsync(new
-                    {
-                        Foo = "slaveMarker",
-                    }, "slaveMarker").ConfigureAwait(false);
                     await session.SaveChangesAsync().ConfigureAwait(false);
                 }
 
@@ -97,11 +93,7 @@ namespace SlowTests.Issues
 
                 SetupReplication(master, slave);
 
-                var slaveMarker = WaitForDocument(master, "slaveMarker");
-                Assert.NotNull(slaveMarker);
-
-                marker = WaitForDocument(master, "marker");
-                Assert.NotNull(marker);
+                Assert.True(WaitForDocument(slave, "marker2"));
 
                 var slaveServer = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(slave.DefaultDatabase);
                 DocumentsOperationContext context;

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -34,9 +35,9 @@ namespace SlowTests.Core.Commands
 
                 using (var commands = store.Commands())
                 {
-                    commands.Put("contacts/1", null, contact1, new Dictionary<string, string> { { "@collection", "Contacts" } });
-                    commands.Put("contacts/2", null, contact2, new Dictionary<string, string> { { "@collection", "Contacts" } });
-                    commands.Put("contacts/3", null, contact3, new Dictionary<string, string> { { "@collection", "Contacts" } });
+                    commands.Put("contacts/1", null, contact1, new Dictionary<string, StringValues> { { "@collection", "Contacts" } });
+                    commands.Put("contacts/2", null, contact2, new Dictionary<string, StringValues> { { "@collection", "Contacts" } });
+                    commands.Put("contacts/3", null, contact3, new Dictionary<string, StringValues> { { "@collection", "Contacts" } });
 
                     store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                     {
@@ -120,7 +121,7 @@ namespace SlowTests.Core.Commands
                 {
                     for (int i = 0; i < 30; i++)
                     {
-                        commands.Put("users/" + i, null, new User { Name = "Name" + i }, new Dictionary<string, string> { { "@collection", "Users" } });
+                        commands.Put("users/" + i, null, new User { Name = "Name" + i }, new Dictionary<string, StringValues> { { "@collection", "Users" } });
                     }
                 }
 
@@ -162,7 +163,7 @@ namespace SlowTests.Core.Commands
                                 Cost = i * 100D,
                                 Megapixels = i * 1D
                             },
-                            new Dictionary<string, string> { { "@collection", "Cameras" } });
+                            new Dictionary<string, StringValues> { { "@collection", "Cameras" } });
                     }
 
 
@@ -176,27 +177,27 @@ namespace SlowTests.Core.Commands
                         },
                         new Facet
                         {
-                            Name = "Cost_Range",
+                            Name = "Cost_D_Range",
                             Mode = FacetMode.Ranges,
                             Ranges =
                             {
-                                "[NULL TO Dx200.0]",
-                                "[Dx300.0 TO Dx400.0]",
-                                "[Dx500.0 TO Dx600.0]",
-                                "[Dx700.0 TO Dx800.0]",
-                                "[Dx900.0 TO NULL]"
+                                "[NULL TO 200.0]",
+                                "[300.0 TO 400.0]",
+                                "[500.0 TO 600.0]",
+                                "[700.0 TO 800.0]",
+                                "[900.0 TO NULL]"
                             }
                         },
                         new Facet
                         {
-                            Name = "Megapixels_Range",
+                            Name = "Megapixels_D_Range",
                             Mode = FacetMode.Ranges,
                             Ranges =
                             {
-                                "[NULL TO Dx3.0]",
-                                "[Dx4.0 TO Dx7.0]",
-                                "[Dx8.0 TO Dx10.0]",
-                                "[Dx11.0 TO NULL]"
+                                "[NULL TO 3.0]",
+                                "[4.0 TO 7.0]",
+                                "[8.0 TO 10.0]",
+                                "[11.0 TO NULL]"
                             }
                         }
                     };
@@ -223,27 +224,27 @@ namespace SlowTests.Core.Commands
                         Assert.Equal("manufacturer2", facetResults.Results["Manufacturer"].Values[1].Range);
                         Assert.Equal(5, facetResults.Results["Manufacturer"].Values[1].Hits);
 
-                        Assert.Equal(5, facetResults.Results["Cost_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx200.0]", facetResults.Results["Cost_Range"].Values[0].Range);
-                        Assert.Equal(3, facetResults.Results["Cost_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx300.0 TO Dx400.0]", facetResults.Results["Cost_Range"].Values[1].Range);
-                        Assert.Equal(2, facetResults.Results["Cost_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx500.0 TO Dx600.0]", facetResults.Results["Cost_Range"].Values[2].Range);
-                        Assert.Equal(2, facetResults.Results["Cost_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx700.0 TO Dx800.0]", facetResults.Results["Cost_Range"].Values[3].Range);
-                        Assert.Equal(2, facetResults.Results["Cost_Range"].Values[3].Hits);
-                        Assert.Equal("[Dx900.0 TO NULL]", facetResults.Results["Cost_Range"].Values[4].Range);
-                        Assert.Equal(1, facetResults.Results["Cost_Range"].Values[4].Hits);
+                        Assert.Equal(5, facetResults.Results["Cost_D_Range"].Values.Count);
+                        Assert.Equal("[NULL TO 200.0]", facetResults.Results["Cost_D_Range"].Values[0].Range);
+                        Assert.Equal(3, facetResults.Results["Cost_D_Range"].Values[0].Hits);
+                        Assert.Equal("[300.0 TO 400.0]", facetResults.Results["Cost_D_Range"].Values[1].Range);
+                        Assert.Equal(2, facetResults.Results["Cost_D_Range"].Values[1].Hits);
+                        Assert.Equal("[500.0 TO 600.0]", facetResults.Results["Cost_D_Range"].Values[2].Range);
+                        Assert.Equal(2, facetResults.Results["Cost_D_Range"].Values[2].Hits);
+                        Assert.Equal("[700.0 TO 800.0]", facetResults.Results["Cost_D_Range"].Values[3].Range);
+                        Assert.Equal(2, facetResults.Results["Cost_D_Range"].Values[3].Hits);
+                        Assert.Equal("[900.0 TO NULL]", facetResults.Results["Cost_D_Range"].Values[4].Range);
+                        Assert.Equal(1, facetResults.Results["Cost_D_Range"].Values[4].Hits);
 
-                        Assert.Equal(4, facetResults.Results["Megapixels_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx3.0]", facetResults.Results["Megapixels_Range"].Values[0].Range);
-                        Assert.Equal(4, facetResults.Results["Megapixels_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx4.0 TO Dx7.0]", facetResults.Results["Megapixels_Range"].Values[1].Range);
-                        Assert.Equal(4, facetResults.Results["Megapixels_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx8.0 TO Dx10.0]", facetResults.Results["Megapixels_Range"].Values[2].Range);
-                        Assert.Equal(2, facetResults.Results["Megapixels_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx11.0 TO NULL]", facetResults.Results["Megapixels_Range"].Values[3].Range);
-                        Assert.Equal(0, facetResults.Results["Megapixels_Range"].Values[3].Hits);
+                        Assert.Equal(4, facetResults.Results["Megapixels_D_Range"].Values.Count);
+                        Assert.Equal("[NULL TO 3.0]", facetResults.Results["Megapixels_D_Range"].Values[0].Range);
+                        Assert.Equal(4, facetResults.Results["Megapixels_D_Range"].Values[0].Hits);
+                        Assert.Equal("[4.0 TO 7.0]", facetResults.Results["Megapixels_D_Range"].Values[1].Range);
+                        Assert.Equal(4, facetResults.Results["Megapixels_D_Range"].Values[1].Hits);
+                        Assert.Equal("[8.0 TO 10.0]", facetResults.Results["Megapixels_D_Range"].Values[2].Range);
+                        Assert.Equal(2, facetResults.Results["Megapixels_D_Range"].Values[2].Hits);
+                        Assert.Equal("[11.0 TO NULL]", facetResults.Results["Megapixels_D_Range"].Values[3].Range);
+                        Assert.Equal(0, facetResults.Results["Megapixels_D_Range"].Values[3].Hits);
                     }
 
                     using (var session = store.OpenSession())
@@ -268,27 +269,27 @@ namespace SlowTests.Core.Commands
                         Assert.Equal("manufacturer2", multiFacetResults[0].Results["Manufacturer"].Values[1].Range);
                         Assert.Equal(1, multiFacetResults[0].Results["Manufacturer"].Values[1].Hits);
 
-                        Assert.Equal(5, multiFacetResults[0].Results["Cost_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx200.0]", multiFacetResults[0].Results["Cost_Range"].Values[0].Range);
-                        Assert.Equal(2, multiFacetResults[0].Results["Cost_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx300.0 TO Dx400.0]", multiFacetResults[0].Results["Cost_Range"].Values[1].Range);
-                        Assert.Equal(0, multiFacetResults[0].Results["Cost_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx500.0 TO Dx600.0]", multiFacetResults[0].Results["Cost_Range"].Values[2].Range);
-                        Assert.Equal(0, multiFacetResults[0].Results["Cost_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx700.0 TO Dx800.0]", multiFacetResults[0].Results["Cost_Range"].Values[3].Range);
-                        Assert.Equal(0, multiFacetResults[0].Results["Cost_Range"].Values[3].Hits);
-                        Assert.Equal("[Dx900.0 TO NULL]", multiFacetResults[0].Results["Cost_Range"].Values[4].Range);
-                        Assert.Equal(0, multiFacetResults[0].Results["Cost_Range"].Values[4].Hits);
+                        Assert.Equal(5, multiFacetResults[0].Results["Cost_D_Range"].Values.Count);
+                        Assert.Equal("[NULL TO 200.0]", multiFacetResults[0].Results["Cost_D_Range"].Values[0].Range);
+                        Assert.Equal(2, multiFacetResults[0].Results["Cost_D_Range"].Values[0].Hits);
+                        Assert.Equal("[300.0 TO 400.0]", multiFacetResults[0].Results["Cost_D_Range"].Values[1].Range);
+                        Assert.Equal(0, multiFacetResults[0].Results["Cost_D_Range"].Values[1].Hits);
+                        Assert.Equal("[500.0 TO 600.0]", multiFacetResults[0].Results["Cost_D_Range"].Values[2].Range);
+                        Assert.Equal(0, multiFacetResults[0].Results["Cost_D_Range"].Values[2].Hits);
+                        Assert.Equal("[700.0 TO 800.0]", multiFacetResults[0].Results["Cost_D_Range"].Values[3].Range);
+                        Assert.Equal(0, multiFacetResults[0].Results["Cost_D_Range"].Values[3].Hits);
+                        Assert.Equal("[900.0 TO NULL]", multiFacetResults[0].Results["Cost_D_Range"].Values[4].Range);
+                        Assert.Equal(0, multiFacetResults[0].Results["Cost_D_Range"].Values[4].Hits);
 
-                        Assert.Equal(4, multiFacetResults[0].Results["Megapixels_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx3.0]", multiFacetResults[0].Results["Megapixels_Range"].Values[0].Range);
-                        Assert.Equal(2, multiFacetResults[0].Results["Megapixels_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx4.0 TO Dx7.0]", multiFacetResults[0].Results["Megapixels_Range"].Values[1].Range);
-                        Assert.Equal(0, multiFacetResults[0].Results["Megapixels_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx8.0 TO Dx10.0]", multiFacetResults[0].Results["Megapixels_Range"].Values[2].Range);
-                        Assert.Equal(0, multiFacetResults[0].Results["Megapixels_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx11.0 TO NULL]", multiFacetResults[0].Results["Megapixels_Range"].Values[3].Range);
-                        Assert.Equal(0, multiFacetResults[0].Results["Megapixels_Range"].Values[3].Hits);
+                        Assert.Equal(4, multiFacetResults[0].Results["Megapixels_D_Range"].Values.Count);
+                        Assert.Equal("[NULL TO 3.0]", multiFacetResults[0].Results["Megapixels_D_Range"].Values[0].Range);
+                        Assert.Equal(2, multiFacetResults[0].Results["Megapixels_D_Range"].Values[0].Hits);
+                        Assert.Equal("[4.0 TO 7.0]", multiFacetResults[0].Results["Megapixels_D_Range"].Values[1].Range);
+                        Assert.Equal(0, multiFacetResults[0].Results["Megapixels_D_Range"].Values[1].Hits);
+                        Assert.Equal("[8.0 TO 10.0]", multiFacetResults[0].Results["Megapixels_D_Range"].Values[2].Range);
+                        Assert.Equal(0, multiFacetResults[0].Results["Megapixels_D_Range"].Values[2].Hits);
+                        Assert.Equal("[11.0 TO NULL]", multiFacetResults[0].Results["Megapixels_D_Range"].Values[3].Range);
+                        Assert.Equal(0, multiFacetResults[0].Results["Megapixels_D_Range"].Values[3].Hits);
 
 
                         Assert.Equal(3, multiFacetResults[1].Results.Count);
@@ -299,27 +300,27 @@ namespace SlowTests.Core.Commands
                         Assert.Equal("manufacturer2", multiFacetResults[1].Results["Manufacturer"].Values[1].Range);
                         Assert.Equal(1, multiFacetResults[1].Results["Manufacturer"].Values[1].Hits);
 
-                        Assert.Equal(5, multiFacetResults[1].Results["Cost_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx200.0]", multiFacetResults[1].Results["Cost_Range"].Values[0].Range);
-                        Assert.Equal(3, multiFacetResults[1].Results["Cost_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx300.0 TO Dx400.0]", multiFacetResults[1].Results["Cost_Range"].Values[1].Range);
-                        Assert.Equal(0, multiFacetResults[1].Results["Cost_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx500.0 TO Dx600.0]", multiFacetResults[1].Results["Cost_Range"].Values[2].Range);
-                        Assert.Equal(0, multiFacetResults[1].Results["Cost_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx700.0 TO Dx800.0]", multiFacetResults[1].Results["Cost_Range"].Values[3].Range);
-                        Assert.Equal(0, multiFacetResults[1].Results["Cost_Range"].Values[3].Hits);
-                        Assert.Equal("[Dx900.0 TO NULL]", multiFacetResults[1].Results["Cost_Range"].Values[4].Range);
-                        Assert.Equal(0, multiFacetResults[1].Results["Cost_Range"].Values[4].Hits);
+                        Assert.Equal(5, multiFacetResults[1].Results["Cost_D_Range"].Values.Count);
+                        Assert.Equal("[NULL TO 200.0]", multiFacetResults[1].Results["Cost_D_Range"].Values[0].Range);
+                        Assert.Equal(3, multiFacetResults[1].Results["Cost_D_Range"].Values[0].Hits);
+                        Assert.Equal("[300.0 TO 400.0]", multiFacetResults[1].Results["Cost_D_Range"].Values[1].Range);
+                        Assert.Equal(0, multiFacetResults[1].Results["Cost_D_Range"].Values[1].Hits);
+                        Assert.Equal("[500.0 TO 600.0]", multiFacetResults[1].Results["Cost_D_Range"].Values[2].Range);
+                        Assert.Equal(0, multiFacetResults[1].Results["Cost_D_Range"].Values[2].Hits);
+                        Assert.Equal("[700.0 TO 800.0]", multiFacetResults[1].Results["Cost_D_Range"].Values[3].Range);
+                        Assert.Equal(0, multiFacetResults[1].Results["Cost_D_Range"].Values[3].Hits);
+                        Assert.Equal("[900.0 TO NULL]", multiFacetResults[1].Results["Cost_D_Range"].Values[4].Range);
+                        Assert.Equal(0, multiFacetResults[1].Results["Cost_D_Range"].Values[4].Hits);
 
-                        Assert.Equal(4, multiFacetResults[1].Results["Megapixels_Range"].Values.Count);
-                        Assert.Equal("[NULL TO Dx3.0]", multiFacetResults[1].Results["Megapixels_Range"].Values[0].Range);
-                        Assert.Equal(3, multiFacetResults[1].Results["Megapixels_Range"].Values[0].Hits);
-                        Assert.Equal("[Dx4.0 TO Dx7.0]", multiFacetResults[1].Results["Megapixels_Range"].Values[1].Range);
-                        Assert.Equal(0, multiFacetResults[1].Results["Megapixels_Range"].Values[1].Hits);
-                        Assert.Equal("[Dx8.0 TO Dx10.0]", multiFacetResults[1].Results["Megapixels_Range"].Values[2].Range);
-                        Assert.Equal(0, multiFacetResults[1].Results["Megapixels_Range"].Values[2].Hits);
-                        Assert.Equal("[Dx11.0 TO NULL]", multiFacetResults[1].Results["Megapixels_Range"].Values[3].Range);
-                        Assert.Equal(0, multiFacetResults[1].Results["Megapixels_Range"].Values[3].Hits);
+                        Assert.Equal(4, multiFacetResults[1].Results["Megapixels_D_Range"].Values.Count);
+                        Assert.Equal("[NULL TO 3.0]", multiFacetResults[1].Results["Megapixels_D_Range"].Values[0].Range);
+                        Assert.Equal(3, multiFacetResults[1].Results["Megapixels_D_Range"].Values[0].Hits);
+                        Assert.Equal("[4.0 TO 7.0]", multiFacetResults[1].Results["Megapixels_D_Range"].Values[1].Range);
+                        Assert.Equal(0, multiFacetResults[1].Results["Megapixels_D_Range"].Values[1].Hits);
+                        Assert.Equal("[8.0 TO 10.0]", multiFacetResults[1].Results["Megapixels_D_Range"].Values[2].Range);
+                        Assert.Equal(0, multiFacetResults[1].Results["Megapixels_D_Range"].Values[2].Hits);
+                        Assert.Equal("[11.0 TO NULL]", multiFacetResults[1].Results["Megapixels_D_Range"].Values[3].Range);
+                        Assert.Equal(0, multiFacetResults[1].Results["Megapixels_D_Range"].Values[3].Hits);
                     }
                 }
             }
@@ -335,10 +336,10 @@ namespace SlowTests.Core.Commands
 
                 using (var commands = store.Commands())
                 {
-                    commands.Put("users/1", null, new User { Name = "John Smith" }, new Dictionary<string, string> { { "@collection", "Users" } });
-                    commands.Put("users/2", null, new User { Name = "Jack Johnson" }, new Dictionary<string, string> { { "@collection", "Users" } });
-                    commands.Put("users/3", null, new User { Name = "Robery Jones" }, new Dictionary<string, string> { { "@collection", "Users" } });
-                    commands.Put("users/4", null, new User { Name = "David Jones" }, new Dictionary<string, string> { { "@collection", "Users" } });
+                    commands.Put("users/1", null, new User { Name = "John Smith" }, new Dictionary<string, StringValues> { { "@collection", "Users" } });
+                    commands.Put("users/2", null, new User { Name = "Jack Johnson" }, new Dictionary<string, StringValues> { { "@collection", "Users" } });
+                    commands.Put("users/3", null, new User { Name = "Robery Jones" }, new Dictionary<string, StringValues> { { "@collection", "Users" } });
+                    commands.Put("users/4", null, new User { Name = "David Jones" }, new Dictionary<string, StringValues> { { "@collection", "Users" } });
                 }
 
                 WaitForIndexing(store);

@@ -1,4 +1,3 @@
-import pagedList = require("common/pagedList");
 import timeSeries = require("models/timeSeries/timeSeries");
 
 class timeSeriesKey implements documentBase {
@@ -14,7 +13,7 @@ class timeSeriesKey implements documentBase {
         this.Points = dto.PointsCount;
     }
 
-    getEntityName() {
+    getCollection() {
         return this.getId();
     }
 

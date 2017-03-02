@@ -55,5 +55,12 @@ namespace Raven.Server.Documents.Transformers
         }
 
         public int Count => _transformersById.Count;
+
+        public void RenameTransformer(Transformer transformer, string oldName, string newName)
+        {
+            _transformersByName.AddOrUpdate(newName, transformer, (key, oldValue) => transformer);
+            Transformer _;
+            _transformersByName.TryRemove(oldName, out _);
+        }
     }
 }

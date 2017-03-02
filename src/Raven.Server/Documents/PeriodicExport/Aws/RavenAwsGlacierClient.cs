@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Exceptions.PeriodicExport;
 

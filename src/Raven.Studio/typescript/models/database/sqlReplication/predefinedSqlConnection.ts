@@ -3,14 +3,17 @@ import database = require("models/resources/database");
 import testSqlConnectionCommand = require("commands/database/sqlReplication/testSqlConnectionCommand");
 
 class predefinedSqlConnection {
+
+    public CONNECTION_STATE_STAND_BY = "stand-by";
+    public CONNECTION_STATE_CONNECTING = "connecting";
+    public CONNECTION_STATE_CONNECTED = "connected";
+
     name = ko.observable<string>();
     factoryName = ko.observable<string>();
     connectionString = ko.observable<string>();
     connectionTestState = ko.observable<string>(this.CONNECTION_STATE_STAND_BY);
 
-    public CONNECTION_STATE_STAND_BY = "stand-by";
-    public CONNECTION_STATE_CONNECTING = "connecting";
-    public CONNECTION_STATE_CONNECTED = "connected";
+    
 
     constructor(name: string, dto: Raven.Server.Documents.SqlReplication.PredefinedSqlConnection) {
         this.name(name);

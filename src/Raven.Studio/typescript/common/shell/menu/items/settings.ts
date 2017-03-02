@@ -79,15 +79,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-periodic-export',
             dynamicHash: appUrls.periodicExport
         }),
-        /* TODO
-        new leafMenuItem({
-            route: 'databases/settings/customFunctionsEditor',
-            moduleId: 'viewmodels/database/settings/customFunctionsEditor',
-            title: 'Custom Functions',
-            nav: true,
-            css: 'icon-custom-functions',
-            dynamicHash: appUrls.customFunctionsEditor
-        }),*/
         /*TODO
         new leafMenuItem({
             route: 'databases/settings/databaseStudioConfig',

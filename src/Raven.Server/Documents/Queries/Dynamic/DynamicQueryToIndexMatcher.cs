@@ -5,8 +5,6 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries.Sorting;
@@ -172,8 +170,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     sortFieldName = SortFieldHelper.ExtractName(sortFieldName);
                 }
 
-                if (sortFieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
-                    sortFieldName = sortFieldName.Substring(0, sortFieldName.Length - Constants.Documents.Indexing.Fields.RangeFieldSuffix.Length);
+                sortFieldName = FieldUtil.RemoveRangeSuffixIfNecessary(sortFieldName);
 
                 IndexField indexField = null;
                 // if the field is not in the output, then we can't sort on it. 

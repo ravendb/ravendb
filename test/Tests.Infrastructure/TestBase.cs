@@ -72,24 +72,34 @@ namespace FastTests
                     {
                         Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
                         var globalServer = GetNewServer();
-                        AssemblyLoadContext.Default.Unloading += context =>
-                        {
-                            globalServer.Dispose();
-
-                            GC.Collect(2);
-                            GC.WaitForPendingFinalizers();
-
-                            var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
-
-                            RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
-
-                            exceptionAggregator.ThrowIfNeeded();
-                        };
+                        AssemblyLoadContext.Default.Unloading += UnloadServer;
                         _globalServer = globalServer;
                     }
                     _localServer = _globalServer;
                 }
                 return _globalServer;
+            }
+        }
+
+        private void UnloadServer(AssemblyLoadContext obj)
+        {
+            lock (ServerLocker)
+            {
+                var copyGlobalServer = _globalServer;
+                _globalServer = null;
+                if (copyGlobalServer == null)
+                    return;
+                copyGlobalServer.Dispose();
+
+
+                GC.Collect(2);
+                GC.WaitForPendingFinalizers();
+
+                var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
+
+                RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
+
+                exceptionAggregator.ThrowIfNeeded();
             }
         }
 

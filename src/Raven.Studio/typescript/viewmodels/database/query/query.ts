@@ -5,8 +5,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import pagedList = require("common/pagedList");
-import pagedResultSet = require("common/pagedResultSet");
 import messagePublisher = require("common/messagePublisher");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats"); 
@@ -17,24 +15,23 @@ import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
-import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
 import document = require("models/database/documents/document");
-import customColumnParams = require("models/database/documents/customColumnParams");
-import customColumns = require("models/database/documents/customColumns");
 import selectColumns = require("viewmodels/common/selectColumns");
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
-import customFunctions = require("models/database/documents/customFunctions");
 import transformerType = require("models/database/index/transformer");
 import getIndexSuggestionsCommand = require("commands/database/index/getIndexSuggestionsCommand");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import queryCriteria = require("models/database/query/queryCriteria");
 import queryTransformerParameter = require("models/database/query/queryTransformerParameter");
+
+import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 
 type indexItem = {
     name: string;
@@ -45,7 +42,9 @@ type filterType = "in" | "string" | "range";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
-type rangeSearchType = "Numeric Double" | "Numeric Int" | "Numeric Long" | "Alphabetical" | "Datetime";
+type rangeSearchType = "Numeric Double" | "Numeric Long" | "Alphabetical" | "Datetime";
+
+type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
 
 class query extends viewModelBase {
 
@@ -54,8 +53,10 @@ class query extends viewModelBase {
     static readonly $body = $("body");
 
     static readonly SearchTypes: stringSearchType[] = ["Starts With", "Ends With", "Contains", "Exact"];
-    static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Int", "Numeric Long", "Alphabetical", "Datetime"];
+    static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Long", "Alphabetical", "Datetime"];
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
+
+    private gridController = ko.observable<virtualGridController<any>>();
 
     recentQueries = ko.observableArray<storedQueryDto>();
     allTransformers = ko.observableArray<Raven.Client.Documents.Transformers.TransformerDefinition>();
@@ -90,10 +91,11 @@ class query extends viewModelBase {
     uiTransformer = ko.observable<string>(); // represents UI value, which might not be yet applied to criteria 
     uiTransformerParameters = ko.observableArray<queryTransformerParameter>(); // represents UI value, which might not be yet applied to criteria 
 
-    queryResults = ko.observable<pagedList>();
+    fetcher = ko.observable<fetcherType>();
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any>>();
     requestedIndexForQuery = ko.observable<string>();
     staleResult: KnockoutComputed<boolean>;
+    dirtyResult = ko.observable<boolean>();
 
     selectedIndexLabel: KnockoutComputed<string>;
     hasEditableIndex: KnockoutComputed<boolean>;
@@ -128,7 +130,6 @@ class query extends viewModelBase {
     contextName = ko.observable<string>();
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
-    currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
 
     indexSuggestions = ko.observableArray<indexSuggestion>([]);
     showSuggestions: KnockoutComputed<boolean>;
@@ -333,6 +334,25 @@ class query extends viewModelBase {
         this.registerDisposableHandler($(window), "storage", () => this.loadRecentQueries());
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+
+        this.setupDisableReasons();
+
+        const grid = this.gridController();
+
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.collections().map(x => x.name), {
+            enableInlinePreview: true
+        });
+
+        grid.headerVisible(true);
+        grid.init((s, t) => this.fetcher()(s, t), (w, r) => documentsProvider.findColumns(w, r));
+
+        grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
+
+        this.fetcher.subscribe(() => grid.reset());
+    }
+
     private loadRecentQueries() {
         recentQueriesStorage.getRecentQueriesWithIndexNameCheck(this.activeDatabase())
             .done(queries => this.recentQueries(queries));
@@ -434,7 +454,7 @@ class query extends viewModelBase {
         return sortPart + (sortPart && transformerPart ? " and " : "") + transformerPart;
     }
 
-    runQuery(): pagedList {
+    runQuery() {
         eventsCollector.default.reportEvent("query", "run");
         this.queryTextHasFocus(false);
         this.closeAddFilter();
@@ -461,7 +481,7 @@ class query extends viewModelBase {
                     .always(() => {
                         this.isLoading(false);
                     })
-                    .done((queryResults: pagedResultSet<any>) => {
+                    .done((queryResults: pagedResult<any>) => {
                         this.queryStats(queryResults.additionalResultInfo);
                         //TODO: this.indexSuggestions([]);
                         /* TODO
@@ -495,16 +515,16 @@ class query extends viewModelBase {
                         }
                     });
             };
-            const resultsList = new pagedList(resultsFetcher);
-            this.queryResults(resultsList);
+
+            this.fetcher(resultsFetcher);
             this.recordQueryRun(this.criteria());
-
-            return resultsList;
         }
-
-        return null;
     }
 
+    refresh() {
+        this.gridController().reset(true);
+    }
+    
     editSelectedIndex() {
         eventsCollector.default.reportEvent("query", "edit-selected-index");
         this.navigate(this.editIndexUrl());
@@ -552,20 +572,6 @@ class query extends viewModelBase {
         eventsCollector.default.reportEvent("query", "show-stats");
         const viewModel = new queryStatsDialog(this.queryStats(), this.requestedIndexForQuery());
         app.showBootstrapDialog(viewModel);
-    }
-
-    //TODO: deprecated?
-    createPostboxSubscriptions(): Array<KnockoutSubscription> {
-        return [
-            ko.postbox.subscribe("ViewItem", (itemNumber: number) => {
-                this.queryResults().getNthItem(itemNumber)
-                    .done((item: document) => {
-                        const dto = item.toDto(true);
-
-                        app.showBootstrapDialog(new showDataDialog(item.getId(), JSON.stringify(dto, null, 2)));
-                    });
-            })
-        ];
     }
 
     private recordQueryRun(criteria: queryCriteria) {
@@ -743,12 +749,9 @@ class query extends viewModelBase {
             newQueryPart += " AND ";
         }
 
-        const fromPrefix = filter.rangeFrom() ? this.getRangePrefix(filter.rangeSearchType()) : "";
-        const toPrefix = filter.rangeTo() ? this.getRangePrefix(filter.rangeSearchType()) : "";
+        const rangePrefix = this.getRangePrefix(filter.rangeSearchType());
 
-        const rangePrefix = filter.rangeSearchType().startsWith("Numeric") ? "_Range" : "";
-
-        newQueryPart += filter.searchField() + rangePrefix + ":[" + fromPrefix + from + " TO " + toPrefix + to + "]";
+        newQueryPart += filter.searchField() + rangePrefix + ":[" + from + " TO " + to + "]";
 
         this.criteria().queryText(this.criteria().queryText() + newQueryPart);
 
@@ -756,11 +759,9 @@ class query extends viewModelBase {
 
     private getRangePrefix(type: rangeSearchType): string {
         if (type === "Numeric Double") {
-            return "Dx";
+            return "_D_Range";
         } else if (type === "Numeric Long") {
-            return "Lx";
-        } else if (type === "Numeric Int") {
-            return "Ix";
+            return "_L_Range";
         }
         return "";
     }
@@ -804,7 +805,7 @@ class query extends viewModelBase {
         var queryResult = this.runQuery();
         queryResult
             .fetch(0, 1)
-            .done((results: pagedResultSet<any>) => {
+            .done((results: pagedResult<any>) => {
                 if (results.totalResultCount === 0) {
                     app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
                 } else {
@@ -818,15 +819,6 @@ class query extends viewModelBase {
         app
             .showBootstrapDialog(viewModel)
             .done(() => this.runQuery());
-    }
-
-    private getQueryGrid(): virtualTable {
-        var gridContents = $(query.queryGridSelector).children()[0];
-        if (gridContents) {
-            return ko.dataFor(gridContents);
-        }
-
-        return null;
     }
 
     extractQueryFields(): Array<queryFieldInfo> {
@@ -888,7 +880,6 @@ class query extends viewModelBase {
 
         var selectColumnsViewModel: selectColumns = new selectColumns(
             this.currentColumnsParams().clone(),
-            this.currentCustomFunctions().clone(),
             this.contextName(),
             this.activeDatabase(),
             this.getQueryGrid().getColumnsNames());
@@ -899,18 +890,6 @@ class query extends viewModelBase {
 
             this.runQuery();
         });
-    }
-
-     private fetchCustomFunctions(db: database): JQueryPromise<any> {
-        var deferred = $.Deferred();
-
-        var customFunctionsCommand = new getEffectiveCustomFunctionsCommand(db).execute();
-        customFunctionsCommand.done((cf: configurationDocumentDto<customFunctionsDto>) => {
-            this.currentCustomFunctions(new customFunctions(cf.MergedDocument));
-        })
-            .always(() => deferred.resolve());
-
-        return deferred;
     }
 
      onIndexChanged(newIndexName: string) {

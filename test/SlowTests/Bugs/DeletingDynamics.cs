@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Xunit;
 
 namespace SlowTests.Bugs
@@ -11,8 +12,8 @@ namespace SlowTests.Bugs
         {
             using (var store = GetDocumentStore())
             {
-                store.Commands().Put("users/1", null, new object(), new Dictionary<string, string>());
-                store.Commands().Put("users/2", null, new object(), new Dictionary<string, string>());
+                store.Commands().Put("users/1", null, new object(), new Dictionary<string, StringValues>());
+                store.Commands().Put("users/2", null, new object(), new Dictionary<string, StringValues>());
 
                 using (var session = store.OpenSession())
                 {

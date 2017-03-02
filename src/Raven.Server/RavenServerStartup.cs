@@ -13,7 +13,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Compilation;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Routing;
@@ -155,13 +154,13 @@ namespace Raven.Server
                 var response = context.Response;
 
                 MaybeSetExceptionStatusCode(response, e);
-
+            
                 JsonOperationContext ctx;
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                 {
                     var djv = new DynamicJsonValue
                     {
-                        [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{context.Request.Path}?{context.Request.QueryString}",
+                        [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{context.Request.Path}{context.Request.QueryString}",
                         [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
                         [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message
                     };
@@ -177,6 +176,11 @@ namespace Raven.Server
                         errorString = e.ToString();
                     }
 
+#if EXCEPTION_ERROR_HUNT
+                    var f = Guid.NewGuid() + ".error";
+                    File.WriteAllText(f,
+                        $"{context.Request.Path}{context.Request.QueryString}" + Environment.NewLine + errorString);
+#endif
                     djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = errorString;
 
                     MaybeAddAdditionalExceptionData(djv, e);
@@ -186,6 +190,11 @@ namespace Raven.Server
                         var json = ctx.ReadObject(djv, "exception");
                         writer.WriteObject(json);
                     }
+
+#if EXCEPTION_ERROR_HUNT
+                    File.Delete(f);
+#endif
+
                 }
             }
         }
@@ -213,7 +222,6 @@ namespace Raven.Server
             {
                 djv[nameof(DocumentConflictException.DocId)] = documentConflictException.DocId;
                 djv[nameof(DocumentConflictException.Conflicts)] = documentConflictException.GetConflicts();
-                return;
             }
         }
 

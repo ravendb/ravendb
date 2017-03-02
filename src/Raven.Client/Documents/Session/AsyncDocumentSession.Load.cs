@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Transformers;
 
@@ -173,9 +172,9 @@ namespace Raven.Client.Documents.Session
 
         public async Task<Dictionary<string, TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix,
             string matches = null, int start = 0,
-            int pageSize = 25, string exclude = null, PagingInformation pagingInformation = null,
+            int pageSize = 25, string exclude = null,
             Action<ILoadConfiguration> configure = null,
-            string skipAfter = null, CancellationToken token = new CancellationToken())
+            string startAfter = null, CancellationToken token = new CancellationToken())
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             IncrementRequestCount();
@@ -185,7 +184,7 @@ namespace Raven.Client.Documents.Session
             configure?.Invoke(configuration);
 
             var loadStartingWithOperation = new LoadStartingWithOperation(this);
-            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, pagingInformation, configure, skipAfter);
+            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, configure, startAfter);
             loadStartingWithOperation.WithTransformer(transformer, configuration.TransformerParameters);
 
 
@@ -199,13 +198,13 @@ namespace Raven.Client.Documents.Session
         }
 
         public async Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0,
-            int pageSize = 25, string exclude = null, PagingInformation pagingInformation = null,
-            string skipAfter = null, CancellationToken token = default(CancellationToken))
+            int pageSize = 25, string exclude = null,
+            string startAfter = null, CancellationToken token = default(CancellationToken))
         {
             IncrementRequestCount();
 
             var loadStartingWithOperation = new LoadStartingWithOperation(this);
-            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, pagingInformation, skipAfter: skipAfter);
+            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, startAfter: startAfter);
 
             var command = loadStartingWithOperation.CreateRequest();
             if (command != null)

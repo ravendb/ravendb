@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using Jint;
 using Jint.Native;
 using Raven.Server.Documents.Patch;

@@ -49,6 +49,13 @@ namespace Raven.Server.Documents.Indexes
             _indexesById.TryRemove(oldIndex.IndexId, out oldIndex);
         }
 
+        public void RenameIndex(Index index, string oldName, string newName)
+        {
+            _indexesByName.AddOrUpdate(newName, index, (key, oldValue) => index);
+            Index _;
+            _indexesByName.TryRemove(oldName, out _);
+        }
+
         public bool TryGetById(int id, out Index index)
         {
             return _indexesById.TryGetValue(id, out index);

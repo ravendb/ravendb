@@ -19,26 +19,16 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         String = 3,
 
-        /// <summary>Sort using term values as encoded Doubles.  Sort values are Double and
+        /// <summary>Sort using term values as encoded Doubles and Longs.  Sort values are Double or Longs and
         /// lower values are at the front. 
         /// </summary>
-        NumericDouble = 7,
-
-        /// <summary>Sort using term values as encoded Longs.  Sort values are Long and
-        /// lower values are at the front. 
-        /// </summary>
-        NumericLong = 6,
+        Numeric = 7,
 
         /// <summary>Sort using term values as Strings, but comparing by
         /// value (using String.compareTo) for all comparisons.
         /// This is typically slower than {@link #STRING}, which
         /// uses ordinals to do the sorting. 
         /// </summary>
-        StringVal = 11,
-
-        /// <summary>
-        /// Sort using term values as numbers according to types of blittable format (long / double)
-        /// </summary>
-        NumericDefault = 128
+        StringVal = 11
     }
 }

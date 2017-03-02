@@ -7,7 +7,6 @@ import updateFileMetadataCommand = require("commands/filesystem/updateFileMetada
 import viewModelBase = require("viewmodels/viewModelBase");
 import file = require("models/filesystem/file");
 import fileMetadata = require("models/filesystem/fileMetadata");
-import deleteItems = require("viewmodels/common/deleteItems");
 import fileRenameDialog = require("viewmodels/filesystem/files/fileRenameDialog");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import eventsCollector = require("common/eventsCollector");
@@ -124,12 +123,13 @@ class filesystemEditFile extends viewModelBase {
 
         var file = this.file();
         if (file) {
+            /* TODO
             var viewModel = new deleteItems([file], this.activeFilesystem());
             viewModel.deletionTask.done(() => {
                 var filesUrl = appUrl.forFilesystemFiles(this.activeFilesystem());
                 router.navigate(filesUrl);
             });
-            app.showBootstrapDialog(viewModel, filesystemEditFile.editFileSelector);
+            app.showBootstrapDialog(viewModel, filesystemEditFile.editFileSelector);*/
         }
 
         this.dirtyFlag().reset(); // Resync Changes

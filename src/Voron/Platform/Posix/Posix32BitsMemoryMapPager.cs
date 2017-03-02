@@ -48,7 +48,7 @@ namespace Voron.Platform.Posix
 
             PosixHelper.EnsurePathExists(FileName);
 
-            _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT,
+            _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | PerPlatformValues.OpenFlags.O_LARGEFILE,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
             {
@@ -66,7 +66,7 @@ namespace Voron.Platform.Posix
                 _totalAllocationSize != GetFileSize())
             {
                 _totalAllocationSize = NearestSizeToAllocationGranularity(_totalAllocationSize);
-                PosixHelper.AllocateFileSpace(_options, _fd, (ulong)_totalAllocationSize, file);
+                PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, file);
             }
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(file) == -1)
@@ -75,8 +75,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err, "sync dir for " + file);
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize +
-                                   ((_totalAllocationSize % Constants.Storage.PageSize) == 0 ? 0 : 1);
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
             SetPagerState(new PagerState(this)
             {
@@ -137,9 +136,9 @@ namespace Voron.Platform.Posix
             var offset = allocationStartPosition * Constants.Storage.PageSize;
             var mmflags = _copyOnWriteMode ? MmapFlags.MAP_PRIVATE : MmapFlags.MAP_SHARED;
 
-            var result = Syscall.mmap(IntPtr.Zero, (UIntPtr)sizeToMap,
+            var result = Syscall.mmap64(IntPtr.Zero, (UIntPtr)sizeToMap,
                                                       MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                                                      mmflags, _fd, new IntPtr(offset));
+                                                      mmflags, _fd, offset);
             try
             {
                 if (result.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
@@ -164,8 +163,8 @@ namespace Voron.Platform.Posix
                     result = new IntPtr(-1);
                     sizeToMap =NearestSizeToAllocationGranularity((numberOfPages + distanceFromStart)*
                                                            Constants.Storage.PageSize);
-                    result = Syscall.mmap(IntPtr.Zero, (UIntPtr) sizeToMap, MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                        mmflags, _fd, new IntPtr(offset));
+                    result = Syscall.mmap64(IntPtr.Zero, (UIntPtr) sizeToMap, MmapProts.PROT_READ | MmapProts.PROT_WRITE,
+                        mmflags, _fd, offset);
 
                     if (result.ToInt64() == -1)
                     {
@@ -243,9 +242,9 @@ namespace Voron.Platform.Posix
                 }
                 var mmflags = _copyOnWriteMode ? MmapFlags.MAP_PRIVATE : MmapFlags.MAP_SHARED;
 
-                var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (UIntPtr) size,
+                var startingBaseAddressPtr = Syscall.mmap64(IntPtr.Zero, (UIntPtr) size,
                     MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                    mmflags, _fd, new IntPtr(offset));
+                    mmflags, _fd, offset);
 
                 if (startingBaseAddressPtr.ToInt64() == -1)
                     //system didn't succeed in mapping the address where we wanted
@@ -458,26 +457,16 @@ namespace Voron.Platform.Posix
 
         public override void Sync(long totalUnsynced)
         {
-            var currentState = GetPagerStateAndAddRefAtomically();
-            try
+            using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
             {
-                using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
+                metric.IncrementSize(totalUnsynced);
+                metric.IncrementFileSize(_totalAllocationSize);
+
+                if (Syscall.fsync(_fd) == -1)
                 {
-                    foreach (var alloc in currentState.AllocationInfos)
-                    {
-                        metric.IncrementSize(alloc.Size);
-                        var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (UIntPtr)alloc.Size, MsyncFlags.MS_SYNC);
-                        if (result == -1)
-                        {
-                            var err = Marshal.GetLastWin32Error();
-                            PosixHelper.ThrowLastError(err, "msync on " + FileName);
-                        }
-                    }
+                    var err = Marshal.GetLastWin32Error();
+                    PosixHelper.ThrowLastError(err, "fsync " + FileName);
                 }
-            }
-            finally
-            {
-                currentState.Release();
             }
         }
 
@@ -495,7 +484,7 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_options, _fd, (ulong)(_totalAllocationSize + allocationSize), FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName);
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(FileName) == -1)
             {

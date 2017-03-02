@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -231,7 +232,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         }
     }
 
-    public class RavenDB_4323_Replication : ReplicationTestsBase
+    public class RavenDB_4323_Replication : ReplicationTestsBase, IDocumentTombstoneAware
     {
         [Fact]
         public async Task ReduceOutputShouldNotBeReplicated()
@@ -260,16 +261,18 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
 
-                WaitForDocument(store2, "marker");
+                Assert.True(WaitForDocument(store2, "marker"));
 
                 var collectionStatistics = await store2.Admin.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStatistics.Collections.Count);
                 Assert.False(collectionStatistics.Collections.ContainsKey("DailyInvoices"));
-                Assert.True(collectionStatistics.Collections.ContainsKey(CollectionName.SystemCollection));
                 Assert.True(collectionStatistics.Collections.ContainsKey("Invoices"));
                 Assert.Equal(32, collectionStatistics.CountOfDocuments);
 
-
+                var database = await GetDocumentDatabaseInstanceFor(store1);
+                var database2 = await GetDocumentDatabaseInstanceFor(store2);
+                database.DocumentTombstoneCleaner.Subscribe(this);
+                database2.DocumentTombstoneCleaner.Subscribe(this);
                 // Check that we do not replicate tombstones of aritifical documents
 
                 await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"));
@@ -279,9 +282,8 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
                 WaitForIndexing(store1);
-                WaitForDocument(store2, "marker2");
+                Assert.True(WaitForDocument(store2, "marker2"));
 
-                var database = await GetDocumentDatabaseInstanceFor(store1);
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 using (context.OpenReadTransaction())
                 {
@@ -289,7 +291,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     Assert.Equal(9, dailyInvoicesTombstones.Count);
                 }
 
-                var database2 = await GetDocumentDatabaseInstanceFor(store2);
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database2))
                 using (var tx = context.OpenReadTransaction())
                 {
@@ -305,6 +306,14 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         protected override void ModifyReplicationDestination(ReplicationDestination replicationDestination)
         {
             replicationDestination.SkipIndexReplication = true;
+        }
+
+        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        {
+            return new Dictionary<string, long>
+            {
+                ["DailyInvoices"] = 0
+            };
         }
     }
 }

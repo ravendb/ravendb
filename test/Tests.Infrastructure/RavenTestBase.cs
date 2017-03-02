@@ -141,7 +141,7 @@ namespace FastTests
                 var indexes = databaseStatistics.Indexes
                     .Where(x => x.State != IndexState.Disabled);
 
-                if (indexes.All(x => x.IsStale == false))
+                if (indexes.All(x => x.IsStale == false && x.Name.StartsWith("ReplacementOf/") == false))
                     return;
 
                 if (databaseStatistics.Indexes.Any(x => x.State == IndexState.Error))
@@ -265,7 +265,7 @@ namespace FastTests
 
             documentInfo.Document = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
 
-            var putCommand = new PutDocumentCommand()
+            var putCommand = new PutDocumentCommand
             {
                 Id = id,
                 Etag = documentInfo.ETag,

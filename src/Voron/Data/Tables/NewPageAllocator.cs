@@ -66,11 +66,12 @@ namespace Voron.Data.Tables
             var initialPageNumber = allocatePage.PageNumber;
 
             bool isNew;
-            using (var add = fst.DirectAdd(initialPageNumber, out isNew))
+            byte* ptr;
+            using (fst.DirectAdd(initialPageNumber, out isNew,out ptr))
             {
                 if (isNew == false)
                     ThrowInvalidExistingBuffer();
-                Memory.Set(add.Ptr, 0, BitmapSize); // mark all pages as free 
+                Memory.Set(ptr, 0, BitmapSize); // mark all pages as free 
             }
             return allocatePage;
         }
@@ -161,24 +162,26 @@ namespace Voron.Data.Tables
         private unsafe void SetValue(FixedSizeTree fst, long pageNumber, int positionInBitmap)
         {
             bool isNew;
-            using (var add = fst.DirectAdd(pageNumber, out isNew))
+            byte* ptr;
+            using (fst.DirectAdd(pageNumber, out isNew, out ptr))
             {
                 if (isNew)
                     ThrowInvalidNewBuffer();
 
-                add.Ptr[positionInBitmap / 8] |= (byte) (1 << (positionInBitmap % 8));
+                ptr[positionInBitmap / 8] |= (byte) (1 << (positionInBitmap % 8));
             }
         }
 
         private unsafe void UnsetValue(FixedSizeTree fst, long pageNumber, int positionInBitmap)
         {
             bool isNew;
-            using (var add = fst.DirectAdd(pageNumber, out isNew))
+            byte* ptr;
+            using (fst.DirectAdd(pageNumber, out isNew, out ptr))
             {
                 if (isNew)
                     ThrowInvalidNewBuffer();
 
-                add.Ptr[positionInBitmap / 8] &= (byte) ~(1 << (positionInBitmap % 8));
+                ptr[positionInBitmap / 8] &= (byte) ~(1 << (positionInBitmap % 8));
             }
         }
 
@@ -221,14 +224,14 @@ namespace Voron.Data.Tables
             }
         }
 
-        public unsafe int GetNumberOfPreAllocatedFreePages()
+        public unsafe Report GetNumberOfPreAllocatedFreePages()
         {
             var fst = _parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
 
             if (fst.NumberOfEntries == 0)
-                return 0;
+                return new Report();
 
-            var count = 0;
+            var free = 0;
 
             using (var it = fst.Iterate())
             {
@@ -242,13 +245,17 @@ namespace Voron.Data.Tables
                     {
                         if (GetBitInBuffer(i, slice.Content.Ptr) == false)
                         {
-                            count++;
+                            free++;
                         }
                     }
                 }
             }
 
-            return count;
+            return new Report
+            {
+                NumberOfOriginallyAllocatedPages = fst.NumberOfEntries * NumberOfPagesInSection,
+                NumberOfFreePages = free
+            };
         }
 
         internal FixedSizeTree GetAllocationStorageFst()
@@ -289,6 +296,13 @@ namespace Voron.Data.Tables
 
                 llt.Environment.Options.DataPager.MaybePrefetchMemory(list);
             }
+        }
+
+        public class Report
+        {
+            public long NumberOfFreePages { get; set; }
+
+            public long NumberOfOriginallyAllocatedPages { get; set; }
         }
     }
 }

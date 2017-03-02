@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
+using System.Linq;
 using System.Threading;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Voron;
 using Voron.Data;
-using Voron.Data.BTrees;
 using Voron.Data.Tables;
 
 namespace Raven.Server.Rachis
@@ -17,7 +16,6 @@ namespace Raven.Server.Rachis
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
         private Thread _thread;
-        public string DebugCurrentLeader { get; private set; }
 
         public Follower(RachisConsensus engine, RemoteConnection remoteConnection)
         {
@@ -37,13 +35,13 @@ namespace Raven.Server.Rachis
                 using (_engine.ContextPool.AllocateOperationContext(out context))
                 {
                     var appendEntries = _connection.Read<AppendEntries>(context);
-                    _engine.Timeout.Defer();
+                    _engine.Timeout.Defer(_connection.Source);
                     if (appendEntries.EntriesCount != 0)
                     {
                         for (int i = 0; i < appendEntries.EntriesCount; i++)
                         {
                             entries.Add(_connection.ReadRachisEntry(context));
-                            _engine.Timeout.Defer();
+                            _engine.Timeout.Defer(_connection.Source);
                         }
                     }
 
@@ -54,6 +52,7 @@ namespace Raven.Server.Rachis
                         lastTruncate != appendEntries.TruncateLogBefore ||
                         entries.Count != 0)
                     {
+                        bool removedFromTopology = false;
                         // we start the tx after we finished reading from the network
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -63,8 +62,23 @@ namespace Raven.Server.Rachis
                                 {
                                     if (lastTopology != null)
                                     {
-                                        RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction,
-                                            lastTopology);
+                                        if (_engine.Log.IsInfoEnabled)
+                                        {
+                                            _engine.Log.Info($"Topology changed to {lastTopology}");
+                                        }
+
+                                        var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(lastTopology);
+                                        if (topology.Voters.Contains(_engine.Url) ||
+                                            topology.Promotables.Contains(_engine.Url) ||
+                                            topology.NonVotingMembers.Contains(_engine.Url))
+                                        {
+                                            RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction,
+                                                lastTopology);
+                                        }
+                                        else
+                                        {
+                                            removedFromTopology = true;
+                                        }
                                     }
                                 }
                             }
@@ -78,7 +92,7 @@ namespace Raven.Server.Rachis
 
                             var lastAppliedIndex = _engine.GetLastCommitIndex(context);
 
-                            if (lastEntryIndexToCommit != lastAppliedIndex)
+                            if (lastEntryIndexToCommit > lastAppliedIndex)
                             {
                                 _engine.Apply(context, lastEntryIndexToCommit);
                             }
@@ -89,6 +103,17 @@ namespace Raven.Server.Rachis
 
                             tx.Commit();
                         }
+
+                        if (removedFromTopology)
+                        {
+                            if (_engine.Log.IsInfoEnabled)
+                            {
+                                _engine.Log.Info($"Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
+                            }
+                            _engine.SetNewState(RachisConsensus.State.Passive, null, appendEntries.Term,
+                                               "I was kicked out of the cluster and moved to passive mode");
+                            return;
+                        }
                     }
 
                     _connection.Send(context, new AppendEntriesResponse
@@ -98,87 +123,99 @@ namespace Raven.Server.Rachis
                         Success = true
                     });
 
-                    _engine.Timeout.Defer();
+                    _engine.Timeout.Defer(_connection.Source);
 
                 }
             }
         }
 
-        private AppendEntries CheckIfValidAppendEntries()
+        private LogLengthNegotiation CheckIfValidLeader()
         {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             {
-                var fstAppendEntries = _connection.Read<AppendEntries>(context);
+                var logLength = _connection.Read<LogLengthNegotiation>(context);
 
-                if (fstAppendEntries.Term < _engine.CurrentTerm)
+                if (logLength.Term < _engine.CurrentTerm)
                 {
-                    _connection.Send(context, new AppendEntriesResponse
+                    _connection.Send(context, new LogLengthNegotiationResponse
                     {
-                        Success = false,
-                        Message =
-                            $"The incoming term {fstAppendEntries.Term} is smaller than current term {_engine.CurrentTerm} and is therefor rejected",
+                        Status = LogLengthNegotiationResponse.ResponseStatus.Rejected,
+                        Message = $"The incoming term {logLength.Term} is smaller than current term {_engine.CurrentTerm} and is therefor rejected",
                         CurrentTerm = _engine.CurrentTerm
                     });
                     _connection.Dispose();
                     return null;
                 }
 
-                _engine.Timeout.Defer();
-                return fstAppendEntries;
+                _engine.Timeout.Defer(_connection.Source);
+                return logLength;
             }
         }
 
-        private void NegotiateWithLeader(TransactionOperationContext context, AppendEntries fstAppendEntries)
+        private void NegotiateWithLeader(TransactionOperationContext context, LogLengthNegotiation negotiation)
         {
             // only the leader can send append entries, so if we accepted it, it's the leader
-            DebugCurrentLeader = _connection.DebugSource;
 
-            if (fstAppendEntries.Term > _engine.CurrentTerm)
+            if (negotiation.Term > _engine.CurrentTerm)
             {
-                _engine.FoundAboutHigherTerm(fstAppendEntries.Term);
+                _engine.FoundAboutHigherTerm(negotiation.Term);
             }
 
             long prevTerm;
             using (context.OpenReadTransaction())
             {
-                prevTerm = _engine.GetTermFor(context,fstAppendEntries.PrevLogIndex) ?? 0;
+                prevTerm = _engine.GetTermFor(context, negotiation.PrevLogIndex) ?? 0;
             }
-            if (prevTerm != fstAppendEntries.PrevLogTerm)
+            if (prevTerm != negotiation.PrevLogTerm)
             {
                 // we now have a mismatch with the log position, and need to negotiate it with 
                 // the leader
-                NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, fstAppendEntries);
+                NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, negotiation);
             }
             else
             {
                 // this (or the negotiation above) completes the negotiation process
-                _connection.Send(context, new AppendEntriesResponse
+                _connection.Send(context, new LogLengthNegotiationResponse
                 {
-                    Success = true,
-                    Message = $"Found a log index / term match at {fstAppendEntries.PrevLogIndex} with term {prevTerm}",
+                    Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                    Message = $"Found a log index / term match at {negotiation.PrevLogIndex} with term {prevTerm}",
                     CurrentTerm = _engine.CurrentTerm,
-                    LastLogIndex = fstAppendEntries.PrevLogIndex
+                    LastLogIndex = negotiation.PrevLogIndex
                 });
             }
 
+            _engine.Timeout.Defer(_connection.Source);
+
             // at this point, the leader will send us a snapshot message
-            // in most cases, it is an empty snaphsot, then start regular append entries
+            // in most cases, it is an empty snapshot, then start regular append entries
             // the reason we send this is to simplify the # of states in the protocol
 
             var snapshot = _connection.ReadInstallSnapshot(context);
 
             using (context.OpenWriteTransaction())
             {
-                InstallSnapshot(context, snapshot);
-                
-                _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
-                _engine.TruncateLogBefore(context, snapshot.LastIncludedIndex);
+                if (InstallSnapshot(context))
+                {
+                    _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
+                    _engine.TruncateLogBefore(context, snapshot.LastIncludedIndex);
+                }
+                else
+                {
+                    var lastEntryIndex = _engine.GetLastEntryIndex(context);
+                    if (lastEntryIndex < snapshot.LastIncludedIndex)
+                    {
+                        throw new InvalidOperationException($"The snapshot installation had failed because the last included index {snapshot.LastIncludedIndex} in term {snapshot.LastIncludedTerm} doesn't match the last entry {lastEntryIndex}");
+                    }
+                }
 
                 // snapshot always has the latest topology
                 if (snapshot.Topology == null)
                     throw new InvalidOperationException("Expected to get topology on snapshot");
-                RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, snapshot.Topology);
+                using (var topology = context.ReadObject(snapshot.Topology, "topology"))
+                {
+                    RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, topology);
+                }
 
                 context.Transaction.Commit();
             }
@@ -195,36 +232,34 @@ namespace Raven.Server.Rachis
                 _engine.SnapshotInstalled(context);
             }
 
-            _engine.Timeout.Defer();
+            _engine.Timeout.Defer(_connection.Source);
         }
 
-        private unsafe void InstallSnapshot(TransactionOperationContext context, InstallSnapshot snapshot)
+        private unsafe bool InstallSnapshot(TransactionOperationContext context)
         {
             var txw = context.Transaction.InnerTransaction;
             var sp = Stopwatch.StartNew();
             var reader = _connection.CreateReader();
             while (true)
             {
-                var type = (RootObjectType)reader.ReadInt32();
-                if (type == RootObjectType.None)
-                    break;
+                var type = reader.ReadInt32();
+                if (type == -1)
+                    return false;
 
                 int size;
-                Slice key;
                 long entries;
-                switch (type)
+                switch ((RootObjectType)type)
                 {
+                    case RootObjectType.None:
+                        return true;
                     case RootObjectType.VariableSizeTree:
 
                         size = reader.ReadInt32();
                         reader.ReadExactly(size);
-                        Tree tree;
-
-                        using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
-                        {
-                            txw.DeleteTree(key);
-                            tree = txw.CreateTree(key);
-                        }
+                        Slice treeName;// will be freed on context close
+                        Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out treeName);
+                        txw.DeleteTree(treeName);
+                        var tree = txw.CreateTree(treeName);
 
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
@@ -233,16 +268,20 @@ namespace Raven.Server.Rachis
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
-                            using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
+                            Slice valKey;
+                            using (
+                                Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
+                                    out valKey))
                             {
                                 size = reader.ReadInt32();
                                 reader.ReadExactly(size);
 
-                                using (var add = tree.DirectAdd(key, size))
+                                byte* ptr;
+                                using (tree.DirectAdd(valKey, size, out ptr))
                                 {
                                     fixed (byte* pBuffer = reader.Buffer)
                                     {
-                                        Memory.Copy(add.Ptr, pBuffer, size);
+                                        Memory.Copy(ptr, pBuffer, size);
                                     }
                                 }
                             }
@@ -254,22 +293,21 @@ namespace Raven.Server.Rachis
 
                         size = reader.ReadInt32();
                         reader.ReadExactly(size);
-                        Table table;
-                        using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out key))
-                        {
-                            var tableTree = txw.ReadTree(key, RootObjectType.Table);
+                        Slice tableName;// will be freed on context close
+                        Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
+                            out tableName);
+                        var tableTree = txw.ReadTree(tableName, RootObjectType.Table);
 
-                            // Get the table schema
-                            var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
-                            var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
-                            if (schemaPtr == null)
-                                throw new InvalidOperationException(
-                                    "When trying to install snapshot, found missing table " + key);
+                        // Get the table schema
+                        var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                        var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+                        if (schemaPtr == null)
+                            throw new InvalidOperationException(
+                                "When trying to install snapshot, found missing table " + tableName);
 
-                            var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
+                        var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
 
-                            table = txw.OpenTable(schema, key);
-                        }
+                        var table = txw.OpenTable(schema, tableName);
 
                         // delete the table
                         TableValueReader tvr;
@@ -295,7 +333,6 @@ namespace Raven.Server.Rachis
                                 table.Insert(ref tvr);
                             }
                         }
-
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
@@ -322,12 +359,8 @@ namespace Raven.Server.Rachis
         }
 
         private void NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context,
-            RemoteConnection connection, AppendEntries aer)
+            RemoteConnection connection, LogLengthNegotiation negotiation)
         {
-            if (aer.EntriesCount != 0)
-                // if leader sent entries, we can't negotiate, so it invalid state, shouldn't happen
-                throw new InvalidOperationException(
-                    "BUG: Need to negotiate with the leader, but it sent entries, so can't negotiate");
             long minIndex;
             long maxIndex;
             long midpointTerm;
@@ -338,9 +371,9 @@ namespace Raven.Server.Rachis
 
                 if (minIndex == 0) // no entries at all
                 {
-                    connection.Send(context, new AppendEntriesResponse
+                    connection.Send(context, new LogLengthNegotiationResponse
                     {
-                        Success = true,
+                        Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                         Message = "No entries at all here, give me everything from the start",
                         CurrentTerm = _engine.CurrentTerm,
                         LastLogIndex = 0
@@ -351,7 +384,7 @@ namespace Raven.Server.Rachis
 
                 maxIndex = Math.Min(
                     _engine.GetLastEntryIndex(context), // max
-                    aer.PrevLogIndex
+                    negotiation.PrevLogIndex
                 );
 
                 midpointIndex = (maxIndex + minIndex) / 2;
@@ -362,27 +395,27 @@ namespace Raven.Server.Rachis
 
             while (minIndex < maxIndex)
             {
-                _engine.Timeout.Defer();
+                _engine.Timeout.Defer(_connection.Source);
 
                 // TODO: cancellation
                 //_cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                connection.Send(context, new AppendEntriesResponse
+                connection.Send(context, new LogLengthNegotiationResponse
                 {
-                    Success = true,
+                    Status = LogLengthNegotiationResponse.ResponseStatus.Negotiation,
                     Message =
                         $"Term/Index mismatch from leader, need to figure out at what point the logs match, range: {maxIndex} - {minIndex} | {midpointIndex} in term {midpointTerm}",
                     CurrentTerm = _engine.CurrentTerm,
-                    Negotiation = new Negotiation
-                    {
-                        MaxIndex = maxIndex,
-                        MinIndex = minIndex,
-                        MidpointIndex = midpointIndex,
-                        MidpointTerm = midpointTerm
-                    }
+                    MaxIndex = maxIndex,
+                    MinIndex = minIndex,
+                    MidpointIndex = midpointIndex,
+                    MidpointTerm = midpointTerm
                 });
 
-                var response = connection.Read<AppendEntries>(context);
+                var response = connection.Read<LogLengthNegotiation>(context);
+
+                _engine.Timeout.Defer(_connection.Source);
+
                 using (context.OpenReadTransaction())
                 {
                     if (_engine.GetTermFor(context, response.PrevLogIndex) == response.PrevLogTerm)
@@ -399,9 +432,9 @@ namespace Raven.Server.Rachis
                     midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
 
-            connection.Send(context, new AppendEntriesResponse
+            connection.Send(context, new LogLengthNegotiationResponse()
             {
-                Success = true,
+                Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                 Message = $"Found a log index / term match at {midpointIndex} with term {midpointTerm}",
                 CurrentTerm = _engine.CurrentTerm,
                 LastLogIndex = midpointIndex
@@ -410,55 +443,76 @@ namespace Raven.Server.Rachis
 
         public void TryAcceptConnection()
         {
-            var validAppendEntries = CheckIfValidAppendEntries();
-            if (validAppendEntries == null)
+            var negotiation = CheckIfValidLeader();
+            if (negotiation == null)
             {
                 _connection.Dispose();
                 return; // did not accept connection
             }
 
             // if leader / candidate, this remove them from play and revert to follower mode
-            _engine.SetNewState(RachisConsensus.State.Follower, this);
-            _engine.Timeout.Start(_engine.SwitchToCandidateState);
+            var engineCurrentTerm = _engine.CurrentTerm;
+            _engine.SetNewState(RachisConsensus.State.Follower, this, engineCurrentTerm,
+                $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
+            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
 
             _thread = new Thread(Run)
             {
-                Name = "Follower thread from " + _connection.DebugSource,
+                Name = $"Follower thread from {_connection} in term {negotiation.Term}",
                 IsBackground = true
             };
-            _thread.Start(validAppendEntries);
+            _thread.Start(negotiation);
         }
 
         private void Run(object obj)
         {
             try
             {
+                _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
+
                 using (this)
                 {
-                    TransactionOperationContext context;
-                    using (_engine.ContextPool.AllocateOperationContext(out context))
+                    try
                     {
-                        NegotiateWithLeader(context, (AppendEntries)obj);
-                    }
+                        TransactionOperationContext context;
+                        using (_engine.ContextPool.AllocateOperationContext(out context))
+                        {
+                            NegotiateWithLeader(context, (LogLengthNegotiation)obj);
+                        }
 
-                    FollowerSteadyState();
+                        FollowerSteadyState();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                    catch (AggregateException ae)
+                        when (
+                            ae.InnerException is OperationCanceledException ||
+                            ae.InnerException is ObjectDisposedException)
+                    {
+                    }
+                    catch (Exception e)
+                    {
+                        TransactionOperationContext context;
+                        using (_engine.ContextPool.AllocateOperationContext(out context))
+                        {
+                            _connection.Send(context, e);
+                        }
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info("Failed to talk to leader: " + _engine.Url, e);
+                        }
+                    }
                 }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (AggregateException ae)
-                when (ae.InnerException is OperationCanceledException || ae.InnerException is ObjectDisposedException)
-            {
             }
             catch (Exception e)
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to leader: " + _engine.Url, e);
+                    _engine.Log.Info("Failed to dispose follower when talking leader: " + _engine.Url, e);
                 }
             }
         }

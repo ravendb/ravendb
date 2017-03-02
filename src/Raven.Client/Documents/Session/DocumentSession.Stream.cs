@@ -22,6 +22,9 @@ namespace Raven.Client.Documents.Session
 
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
         {
+            var documentQuery = (DocumentQuery<T>)query;
+            var projectionFields = documentQuery.ProjectionFields;
+
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest((IRavenQueryInspector)query);
             RequestExecuter.Execute(command, Context);
@@ -40,7 +43,7 @@ namespace Raven.Client.Documents.Session
                         continue;
                     }
 
-                    yield return CreateStreamResult<T>(ref json);
+                    yield return CreateStreamResult<T>(json, projectionFields);
                 }
             }
         }
@@ -67,7 +70,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private StreamResult<T> CreateStreamResult<T>(ref BlittableJsonReaderObject json)
+        private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json, string[] projectionFields)
         {
             var metadata = json.GetMetadata();
             var etag = metadata.GetEtag();
@@ -75,38 +78,39 @@ namespace Raven.Client.Documents.Session
 
             //TODO - Investagate why ConvertToEntity fails if we don't call ReadObject before
             json = Context.ReadObject(json, id);
-            var entity = ConvertToEntity(typeof(T), id, json);
+            var entity = QueryOperation.Deserialize<T>(id, json, metadata, projectionFields, true, this);
+
             var streamResult = new StreamResult<T>
             {
                 Etag = etag,
                 Key = id,
-                Document = (T)entity,
+                Document = entity,
                 Metadata = new MetadataAsDictionary(metadata)
             };
             return streamResult;
         }
 
         public IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue,
-            PagingInformation pagingInformation = null, string transformer = null,
+             string transformer = null,
             Dictionary<string, object> transformerParameters = null)
         {
-            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation,
-                skipAfter: null, transformer: transformer, transformerParameters: transformerParameters);
+            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize,
+                startAfter: null, transformer: transformer, transformerParameters: transformerParameters);
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue,
-            PagingInformation pagingInformation = null, string skipAfter = null, string transformer = null,
+        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue,
+             string startAfter = null, string transformer = null,
             Dictionary<string, object> transformerParameters = null)
         {
-            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation,
-                skipAfter: skipAfter, transformer: transformer, transformerParameters: transformerParameters);
+            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize,
+                startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters);
         }
 
-        private IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, string startsWith, string matches, int start, int pageSize, PagingInformation pagingInformation,
-            string skipAfter, string transformer, Dictionary<string, object> transformerParameters)
+        private IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, string startsWith, string matches, int start, int pageSize,
+            string startAfter, string transformer, Dictionary<string, object> transformerParameters)
         {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, skipAfter, transformer,
+            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, startAfter, transformer,
                 transformerParameters);
             RequestExecuter.Execute(command, Context);
             using (var result = streamOperation.SetResult(command.Result))
@@ -123,7 +127,7 @@ namespace Raven.Client.Documents.Session
                         continue;
                     }
 
-                    yield return CreateStreamResult<T>(ref json);
+                    yield return CreateStreamResult<T>(json, null);
                 }
             }
         }

@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Json;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
@@ -47,7 +50,7 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
-        public DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
             var json = new DynamicJsonValue
             {
@@ -55,15 +58,7 @@ namespace Raven.Client.Documents.Operations
             };
 
             if (Values != null)
-            {
-                var values = new DynamicJsonValue();
-                foreach (var kvp in Values)
-                {
-                    values[kvp.Key] = kvp.Value;
-                }
-
-                json[nameof(Values)] = values;
-            }
+                json[nameof(Values)] = TypeConverter.ToBlittableSupportedType(Values, conventions, context);
 
             return json;
         }

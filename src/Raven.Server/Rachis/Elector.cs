@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using Raven.Server.ServerWide.Context;
 
@@ -38,7 +39,8 @@ namespace Raven.Server.Rachis
                             return;
                         }
 
-                        if (_engine.CurrentState == RachisConsensus.State.Leader)
+                        if (_engine.CurrentState == RachisConsensus.State.Leader ||
+                            _engine.CurrentState == RachisConsensus.State.LeaderElect)
                         {
                             _connection.Send(context, new RequestVoteResponse
                             {
@@ -53,12 +55,32 @@ namespace Raven.Server.Rachis
                         long lastIndex;
                         long lastTerm;
                         string whoGotMyVoteIn;
+                        ClusterTopology clusterTopology;
 
                         using (context.OpenReadTransaction())
                         {
                             lastIndex = _engine.GetLastEntryIndex(context);
                             lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
                             whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+
+                            clusterTopology = _engine.GetTopology(context) ;
+                        }
+
+                        if (clusterTopology.Voters.Contains(rv.Source) == false &&
+                            clusterTopology.Promotables.Contains(rv.Source) == false &&
+                            clusterTopology.NonVotingMembers.Contains(rv.Source) == false)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                // we only report to the node asking for our vote if we are the leader, this gives
+                                // the oust node a authorotative confirmation that they were removed from the cluster
+                                NotInTopology = _engine.CurrentState == RachisConsensus.State.Leader,
+                                Message = $"Node {rv.Source} is not in my topology, cannot vote for it"
+                            });
+                            _connection.Dispose();
+                            return;
                         }
 
                         if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
@@ -97,21 +119,21 @@ namespace Raven.Server.Rachis
                             return;
                         }
 
-                        if (rv.IsForcedElection == false &&
-                            _engine.Timeout.TimeSinceLastDeferral() < _engine.ElectionTimeoutMs / 2)
-                        {
-                            _connection.Send(context, new RequestVoteResponse
-                            {
-                                Term = _engine.CurrentTerm,
-                                VoteGranted = false,
-                                Message = "My leader is keeping me up to date, so I don't want to vote for you"
-                            });
-                            _connection.Dispose();
-                            return;
-                        }
-
                         if (rv.IsTrialElection)
                         {
+                            string currentLeader;
+                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeoutMs / 2,out currentLeader) == false)
+                            {
+                                _connection.Send(context, new RequestVoteResponse
+                                {
+                                    Term = _engine.CurrentTerm,
+                                    VoteGranted = false,
+                                    Message = $"My leader {currentLeader} is keeping me up to date, so I don't want to vote for you"
+                                });
+                                _connection.Dispose();
+                                return;
+                            }
+
                             _connection.Send(context, new RequestVoteResponse
                             {
                                 Term = rv.Term,
@@ -122,7 +144,9 @@ namespace Raven.Server.Rachis
                             {
                                 _thread = new Thread(HandleVoteRequest)
                                 {
-                                    Name = "Elector thread for " + rv.Source,
+                                    Name =
+                                        "Elector thread for " +
+                                        (new Uri(rv.Source).Fragment ?? rv.Source) + " > " + (new Uri(_engine.Url).Fragment ?? _engine.Url),
                                     IsBackground = true
                                 };
                                 _thread.Start();
@@ -156,8 +180,8 @@ namespace Raven.Server.Rachis
                         }
                         else
                         {
-                            _engine.SetNewState(RachisConsensus.State.Follower, this);
-                            _engine.Timeout.Start(_engine.SwitchToCandidateState);
+                            _engine.SetNewState(RachisConsensus.State.Follower, this, rv.Term,
+                                $"I\'ve given my vote to {_connection.Source} in term {rv.Term} and therefor became follower");
 
                             _connection.Send(context, new RequestVoteResponse
                             {

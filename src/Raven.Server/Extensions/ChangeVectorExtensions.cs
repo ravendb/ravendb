@@ -4,24 +4,33 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client.Documents.Replication.Messages;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Extensions
 {
     public static class ChangeVectorExtensions
-    {
+    {              
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Dictionary<Guid, long> ToDictionary(this ChangeVectorEntry[] changeVector)
         {
             return changeVector.ToDictionary(x => x.DbId, x => x.Etag);
         }
 
-        public static DynamicJsonArray ToJson(this ChangeVectorEntry[] self)
+        public static bool EqualTo(this ChangeVectorEntry[] self, ChangeVectorEntry[] other)
         {
-            var results = new DynamicJsonArray();
-            foreach (var entry in self)
-                results.Add(entry.ToJson());
-            return results;
+            if (self.Length != other.Length)
+                return false;
+
+            for (int i = 0; i < self.Length; i++)
+            {
+                var otherEntry = other.FirstOrDefault(x => x.DbId == self[i].DbId);
+                if (otherEntry.DbId == Guid.Empty) //not fount relevant entry
+                    return false;
+
+                if (self[i].Etag != otherEntry.Etag)
+                    return false;
+            }
+
+            return true;
         }
 
         public static bool GreaterThan(this ChangeVectorEntry[] self, Dictionary<Guid, long> other)

@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
+using System.Diagnostics;
+using Sparrow.Binary;
 
 namespace Sparrow.Json
 {
@@ -18,12 +21,19 @@ namespace Sparrow.Json
     public class CachedProperties : IComparer<BlittableJsonDocumentBuilder.PropertyTag>
     {
         private readonly JsonOperationContext _context;
+        private int _propertyNameCounter;
 
-        private class PropertyName :IComparable<PropertyName>
+        public sealed class PropertyName :IComparable<PropertyName>
         {
             public LazyStringValue Comparer;
             public int GlobalSortOrder;
             public int PropertyId;
+            public readonly int HashCode;
+
+            public PropertyName(int hash)
+            {
+                HashCode = hash;
+            }
 
             public int CompareTo(PropertyName other)
             {
@@ -34,8 +44,46 @@ namespace Sparrow.Json
             {
                 return $"Value: {Comparer}, GlobalSortOrder: {GlobalSortOrder}, PropertyId: {PropertyId}";
             }
+
+            private bool Equals(PropertyName other)
+            {
+                return HashCode == other.HashCode;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                var a = obj as PropertyName;
+                return a != null && Equals(a);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode;
+            }
         }
 
+        private class PropertyPosition
+        {
+            public PropertyName Property;
+            public int SortedPosition;
+            public BlittableJsonDocumentBuilder.PropertyTag Tmp;
+        }
+
+        private class CachedSort
+        {
+            public readonly List<PropertyPosition> Sorting = new List<PropertyPosition>();
+            public int FinalCount;
+
+            public override string ToString()
+            {
+                return string.Join(", ", Sorting.Select(x => x.Property.Comparer));
+            }
+        }
+
+        private const int CachedSortsSize = 512;
+        private readonly CachedSort[] _cachedSorts = new CachedSort[CachedSortsSize]; // size is fixed and used in GetPropertiesHashedIndex
         private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
         private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
         private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(LazyStringValueComparer.Instance);
@@ -48,14 +96,14 @@ namespace Sparrow.Json
             _context = context;
         }
 
-        public int GetPropertyId(LazyStringValue propName)
+        public PropertyName GetProperty(LazyStringValue propName)
         {
             PropertyName prop;
             if (_propertyNameToId.TryGetValue(propName, out prop) == false)
             {
                 var propIndex = _docPropNames.Count;
                 propName = _context.GetLazyStringForFieldWithCaching(propName);
-                prop = new PropertyName
+                prop = new PropertyName(_propertyNameCounter++)
                 {
                     Comparer = propName,
                     GlobalSortOrder = -1,
@@ -80,7 +128,7 @@ namespace Sparrow.Json
                 }
                 PropertiesDiscovered++;
             }
-            return prop.PropertyId;
+            return prop;
         }
 
         private PropertyName SwapPropertyIds(PropertyName prop)
@@ -90,7 +138,7 @@ namespace Sparrow.Json
             // in different order. 
             // we'll assume the later and move the property around, this is safe to 
             // do because we ignore the properties showing up after the PropertiesDiscovered
-
+            
             var old = _docPropNames[PropertiesDiscovered];
             _docPropNames[PropertiesDiscovered] = _docPropNames[prop.PropertyId];
             old.PropertyId = _docPropNames[PropertiesDiscovered].PropertyId;
@@ -102,18 +150,88 @@ namespace Sparrow.Json
 
         public void Sort(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
         {
+            var index = GetPropertiesHashedIndex(properties);
+
             // Sort object properties metadata by property names
             if (_propertiesNeedSorting)
             {
-                int index = 0;
-                foreach (var o in _propertiesSortOrder)
+                UpdatePropertiesSortOrder();
+            }
+            var cachedSort = _cachedSorts[index];
+
+            if (cachedSort?.Sorting.Count != properties.Count)
+            {
+                UnlikelySortProperties(properties);
+                return;
+            }
+            
+            // we are frequently going to see documents with ids in the same order
+            // so we can take advantage of that by remember the previous sort, we 
+            // check if the values are the same, and if so, save the sort
+
+            for (int i = 0; i < properties.Count; i++)
+            {
+                if (cachedSort.Sorting[i].Property == properties[i].Property)
                 {
-                    o.Key.GlobalSortOrder = index++;
+                    cachedSort.Sorting[i].Tmp = properties[i];
                 }
-                _propertiesNeedSorting = false;
+                else
+                {
+                    UnlikelySortProperties(properties);
+                    return;
+                }
             }
 
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (int i = 0; i < cachedSort.Sorting.Count; i++)
+            {
+                properties[cachedSort.Sorting[i].SortedPosition] = cachedSort.Sorting[i].Tmp;
+            }
+
+            if (properties.Count != cachedSort.FinalCount)
+            {
+                properties.RemoveRange(cachedSort.FinalCount, properties.Count - cachedSort.FinalCount);
+            }
+
+            
+        }
+
+        private int GetPropertiesHashedIndex(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
+        {
+            int hash = 0;
+            for (int i = 0; i < properties.Count; i++)
+            {
+                hash = (hash*397) ^ properties[i].Property.HashCode;
+            }
+
+            Debug.Assert(_cachedSorts.Length == CachedSortsSize &&
+                         Bits.NextPowerOf2(CachedSortsSize) == CachedSortsSize); 
+
+            hash &= (CachedSortsSize-1); // % CachedSortsSize 
+            return hash;
+        }
+
+        private void UnlikelySortProperties(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
+        {
             _hasDuplicates = false;
+
+            var index = GetPropertiesHashedIndex(properties);
+
+            if (_cachedSorts[index] == null)
+                _cachedSorts[index] = new CachedSort();
+
+            _cachedSorts[index].Sorting.Clear();
+
+            for (int i = 0; i < properties.Count; i++)
+            {
+                _cachedSorts[index].Sorting.Add(new PropertyPosition
+                {
+                    Property = properties[i].Property,
+                    SortedPosition = -1
+                });
+            }
+
+            _cachedSorts[index].FinalCount = properties.Count;
             properties.Sort(this);
 
             // The item comparison method has a side effect, which can modify the _hasDuplicates field.
@@ -121,23 +239,59 @@ namespace Sparrow.Json
             if (_hasDuplicates)
             {
                 // leave just the latest
-                for (int i = 0; i < properties.Count-1; i++)
+                for (int i = 0; i < properties.Count - 1; i++)
                 {
-                    if (properties[i].PropertyId == properties[i + 1].PropertyId)
+                    if (properties[i].Property == properties[i + 1].Property)
                     {
+                        _cachedSorts[index].FinalCount--;
+                        _cachedSorts[index].Sorting[i + 1] = new PropertyPosition
+                        {
+                            Property = properties[i + 1].Property,
+                            // set it to the previous value, so it'll just overwrite
+                            // this saves us a check and more complex code
+                            SortedPosition = i 
+                        };
+
                         properties.RemoveAt(i + 1);
+
                         i--;
                     }
                 }
             }
+            
 
+            for (int i = 0; i < _cachedSorts[index].Sorting.Count; i++)
+            {
+                var propPos = _cachedSorts[index].Sorting[i];
+                propPos.SortedPosition = -1;
+                for (int j = 0; j < properties.Count; j++)
+                {
+                    if (properties[j].Property == propPos.Property)
+                    {
+                        propPos.SortedPosition = j;
+                        break;
+                    }
+                    
+                }
+            }
+
+        }
+
+        private void UpdatePropertiesSortOrder()
+        {
+            int index = 0;
+            foreach (var o in _propertiesSortOrder)
+            {
+                o.Key.GlobalSortOrder = index++;
+            }
+            _propertiesNeedSorting = false;
         }
 
         private bool _hasDuplicates;
 
         int IComparer<BlittableJsonDocumentBuilder.PropertyTag>.Compare(BlittableJsonDocumentBuilder.PropertyTag x, BlittableJsonDocumentBuilder.PropertyTag y)
         {
-            var compare = _docPropNames[x.PropertyId].GlobalSortOrder - _docPropNames[y.PropertyId].GlobalSortOrder;
+            var compare = x.Property.GlobalSortOrder - y.Property.GlobalSortOrder;
             if (compare == 0)
             {
                 _hasDuplicates = true;

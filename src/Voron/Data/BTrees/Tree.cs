@@ -17,6 +17,12 @@ namespace Voron.Data.BTrees
 {
     public unsafe partial class Tree : IDisposable
     {
+        private int _directAddUsage;
+
+#if VALIDATE_DIRECT_ADD_STACKTRACE
+        private string _allocationStacktrace;
+#endif
+
         private readonly TreeMutableState _state;
         private readonly bool _isPageLocatorOwned;
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
@@ -37,8 +43,6 @@ namespace Voron.Data.BTrees
 
         public LowLevelTransaction Llt => _llt;
 
-        private readonly DirectAddScope _addScope;
-
         private Tree(LowLevelTransaction llt, Transaction tx, long root, Slice name, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
             _llt = llt;
@@ -53,8 +57,6 @@ namespace Voron.Data.BTrees
             {
                 RootPageNumber = root
             };
-
-            _addScope = new DirectAddScope(this);
         }
 
         public Tree(LowLevelTransaction llt, Transaction tx, Slice name, TreeMutableState state)
@@ -67,8 +69,6 @@ namespace Voron.Data.BTrees
             _pageLocator = llt.PersistentContext.AllocatePageLocator(llt);
             _state = new TreeMutableState(llt);
             _state = state;
-
-            _addScope = new DirectAddScope(this);
         }
 
         public bool IsLeafCompressionSupported
@@ -97,7 +97,7 @@ namespace Voron.Data.BTrees
         }
 
         public static Tree Create(LowLevelTransaction llt, Transaction tx, Slice name, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree,
-             NewPageAllocator newPageAllocator = null, 
+             NewPageAllocator newPageAllocator = null,
              PageLocator pageLocator = null)
         {
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
@@ -106,7 +106,7 @@ namespace Voron.Data.BTrees
             var newPage = newPageAllocator?.AllocateSinglePage(0) ?? llt.AllocatePage(1);
 
             TreePage newRootPage = PrepareTreePage(TreePageFlags.Leaf, 1, newPage);
-            
+
             var tree = new Tree(llt, tx, newRootPage.PageNumber, name, newPageAllocator, pageLocator)
             {
                 _state =
@@ -145,8 +145,9 @@ namespace Voron.Data.BTrees
                 currentValue = *(long*)read.Reader.Base;
 
             var value = currentValue + delta;
-            using (var add = DirectAdd(key, sizeof(long)))
-                *(long*)add.Ptr = value;
+            byte* ptr;
+            using (DirectAdd(key, sizeof(long), out ptr))
+                *(long*)ptr = value;
 
             return value;
         }
@@ -166,8 +167,9 @@ namespace Voron.Data.BTrees
 
             State.IsModified = true;
 
-            using (var add = DirectAdd(key, sizeof(long)))
-                *(long*)add.Ptr = value;
+            byte* ptr;
+            using (DirectAdd(key, sizeof(long), out ptr))
+                *(long*)ptr = value;
 
             return true;
         }
@@ -180,8 +182,9 @@ namespace Voron.Data.BTrees
 
             var length = (int)value.Length;
 
-            using (var add = DirectAdd(key, length))
-                CopyStreamToPointer(_llt, value, add.Ptr);
+            byte* ptr;
+            using (DirectAdd(key, length, out ptr))
+                CopyStreamToPointer(_llt, value, ptr);
         }
 
         private static void ValidateValueLength(Stream value)
@@ -210,13 +213,14 @@ namespace Voron.Data.BTrees
             Debug.Assert(value != null);
 
             State.IsModified = true;
-            using (var add = DirectAdd(key, value.Length))
+            byte* ptr;
+            using (DirectAdd(key, value.Length, out ptr))
             {
                 fixed (byte* src = value)
                 {
-                    Memory.Copy(add.Ptr, src, value.Length);
+                    Memory.Copy(ptr, src, value.Length);
                 }
-            }  
+            }
         }
 
         public void Add(Slice key, Slice value)
@@ -225,8 +229,9 @@ namespace Voron.Data.BTrees
                 ThrowNullReferenceException();
 
             State.IsModified = true;
-            using (var add = DirectAdd(key, value.Size))
-                value.CopyTo(add.Ptr);
+            byte* ptr;
+            using (DirectAdd(key, value.Size, out ptr))
+                value.CopyTo(ptr);
         }
 
         private static void CopyStreamToPointer(LowLevelTransaction tx, Stream value, byte* pos)
@@ -258,7 +263,12 @@ namespace Voron.Data.BTrees
             return size + (size & 1);
         }
 
-        public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data)
+        public DirectAddScope DirectAdd(Slice key, int len, out byte* ptr)
+        {
+            return DirectAdd(key, len, TreeNodeFlags.Data, out ptr);
+        }
+
+        public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType, out byte* ptr)
         {
             Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 
@@ -279,7 +289,7 @@ namespace Voron.Data.BTrees
             var foundPage = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
 
             var page = ModifyPage(foundPage);
-            
+
             bool? shouldGoToOverflowPage = null;
             if (page.LastMatch == 0) // this is an update operation
             {
@@ -299,13 +309,19 @@ namespace Voron.Data.BTrees
                 {
                     // optimization for Data and MultiValuePageRef - try to overwrite existing node space
                     if (TryOverwriteDataOrMultiValuePageRefNode(node, len, nodeType, out pos))
-                        return _addScope.Open(pos);
+                    {
+                        ptr = pos;
+                        return new DirectAddScope(this);
+                    }
                 }
                 else
                 {
                     // optimization for PageRef - try to overwrite existing overflows
                     if (TryOverwriteOverflowPages(node, len, out pos))
-                        return _addScope.Open(pos);
+                    {
+                        ptr = pos;
+                        return new DirectAddScope(this);
+                    }
                 }
 
                 RemoveLeafNode(page);
@@ -314,7 +330,7 @@ namespace Voron.Data.BTrees
             {
                 State.NumberOfEntries++;
             }
-            
+
             var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
             byte* overFlowPos = null;
             var pageNumber = -1L;
@@ -340,7 +356,8 @@ namespace Voron.Data.BTrees
 
                     DebugValidateTree(State.RootPageNumber);
 
-                    return _addScope.Open(overFlowPos == null ? dataPos : overFlowPos);
+                    ptr = overFlowPos == null ? dataPos : overFlowPos;
+                    return new DirectAddScope(this);
                 }
 
                 // existing values compressed and put at the end of the page, let's insert from Upper position
@@ -366,7 +383,45 @@ namespace Voron.Data.BTrees
 
             page.DebugValidate(this, State.RootPageNumber);
 
-            return _addScope.Open(overFlowPos == null ? dataPos : overFlowPos);
+            ptr = overFlowPos == null ? dataPos : overFlowPos;
+            return new DirectAddScope(this);
+        }
+
+        public struct DirectAddScope : IDisposable
+        {
+            private readonly Tree _parent;
+
+            public DirectAddScope(Tree parent)
+            {
+                _parent = parent;
+                if (_parent._directAddUsage++ != 0)
+                {
+                    ThrowScopeAlreadyOpen();
+                }
+
+#if VALIDATE_DIRECT_ADD_STACKTRACE
+                _parent._allocationStacktrace = Environment.StackTrace;
+#endif
+            }
+
+            public void Dispose()
+            {
+                _parent._directAddUsage--;
+            }
+
+
+            private void ThrowScopeAlreadyOpen()
+            {
+                var message = $"Write operation already requested on a tree name: {_parent}. " +
+                              $"{nameof(Tree.DirectAdd)} method cannot be called recursively while the scope is already opened.";
+
+#if VALIDATE_DIRECT_ADD_STACKTRACE
+                message += Environment.NewLine + _parent._allocationStacktrace;
+#endif
+
+                throw new InvalidOperationException(message);
+            }
+
         }
 
         private static void ThrowUnknownNodeTypeAddOperation(TreeNodeFlags nodeType)
@@ -861,7 +916,7 @@ namespace Voron.Data.BTrees
             }
             return c;
         }
-        
+
         internal TreePage NewPage(TreePageFlags flags, long nearbyPage)
         {
             var newPage = _newPageAllocator?.AllocateSinglePage(nearbyPage) ?? _llt.AllocatePage(1);
@@ -891,6 +946,9 @@ namespace Voron.Data.BTrees
 
         internal void FreePage(TreePage p)
         {
+#if VALIDATE
+            p.Freed = true;
+#endif
             PageFreed?.Invoke(p.PageNumber, p.Flags);
 
             if (p.IsOverflow)
@@ -1023,7 +1081,7 @@ namespace Voron.Data.BTrees
                         decompressed.Search(_llt, key);
                         Debug.Assert(decompressed.LastMatch == 0);
                     }
-#endif                 
+#endif
                 }
 
                 using (var cursor = cursorConstructor(key))
@@ -1183,7 +1241,7 @@ namespace Voron.Data.BTrees
             pos = null;
             return false;
         }
-        
+
         public Slice LastKeyOrDefault()
         {
             using (var it = Iterate(false))

@@ -1,7 +1,5 @@
 ﻿using System.Globalization;
 using System.Runtime.CompilerServices;
-using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Util;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers

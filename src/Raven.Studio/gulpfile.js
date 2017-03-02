@@ -184,8 +184,7 @@ gulp.task('z_release:package', function () {
 
 gulp.task('z_release:durandal', function () {
     var extraModules = [
-        'transitions/fadeIn',
-        'widgets/virtualTable/viewmodel'
+        'transitions/fadeIn'
     ];
 
     var aceFileNames = fs.readdirSync(PATHS.aceDir)

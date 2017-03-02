@@ -50,7 +50,7 @@ namespace SlowTests.MailingList
                 var indexDefinition = s.Admin.Send(new GetIndexOperation("Index"));
                 Assert.Equal(@"docs.Items.Select(item => new {
     Query = new object[] {
-        ((object) item.Age),
+        item.Age,
         item.Name
     }
 })".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());

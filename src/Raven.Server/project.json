@@ -48,7 +48,6 @@
     "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.1.0",
     "Microsoft.Extensions.Configuration.Json": "1.1.0",
     "Microsoft.NETCore.App": "1.1.0",
-    "Npgsql": "3.2.0",
     "Sparrow": "4.0.0-*",
     "Raven.Client": "4.0.0-*",
     "System.ComponentModel": "4.3.0",
@@ -58,7 +57,8 @@
     "System.Security.Cryptography.Csp": "4.3.0",
     "System.Threading.Tasks.Parallel": "4.3.0",
     "Voron": "4.0.0-*",
-    "Portable.BouncyCastle": "1.8.1.2"
+    "Portable.BouncyCastle": "1.8.1.2",
+    "Npgsql": "3.2.1"
   },
 
   "commands": {
