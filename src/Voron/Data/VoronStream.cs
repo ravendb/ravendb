@@ -95,6 +95,9 @@ namespace Voron.Data
                     return -1;
 
                 _index++;
+
+                if (_chunksDetails[_index].ChunkSize == 0)
+                    return -1;
             }
 
             var pagerRef = new LowLevelTransaction.PagerRef();
@@ -118,6 +121,9 @@ namespace Voron.Data
 
                 pos = _positions[_index];
                 len = _chunksDetails[_index].ChunkSize;
+
+                if (len == 0)
+                    return 0;
             }
 
             if (count > len - pos)
