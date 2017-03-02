@@ -257,7 +257,8 @@ namespace Raven.Tests.Raft
             servers.ForEach(server => Assert.True(SpinWait.SpinUntil(() =>
             {
                 var topology = server.Options.ClusterManager.Value.Engine.CurrentTopology;
-                return topology.AllVotingNodes.Count() == numberOfNodes;
+                var count = topology.AllVotingNodes.Count();
+                return count == numberOfNodes;
             }, TimeSpan.FromSeconds(15*numberOfNodes)), $"Node didn't become unstale in time, {server}"));
         }
 

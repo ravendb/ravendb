@@ -534,10 +534,10 @@ namespace Rachis.Behaviors
                 {
                     var command = Engine.PersistentState.CommandSerializer.Deserialize(topologyChange.Data);
                     var topologyChangeCommand = command as TopologyChangeCommand;
-                    
-                    if (topologyChangeCommand != null && topologyChangeCommand.Requested.AllNodes.Contains(Engine.Options.SelfConnection) == false)
+
+                    if (topologyChangeCommand != null && topologyChangeCommand.Requested.AllNodes.Select(x=>x.Name).Contains(Engine.Options.SelfConnection.Name) == false)
                     {
-                        _log.Warn("Got topology without self, disconnecting from the leader, clearing topology and moving to idle follower state");
+                        _log.Warn("Got topology without self, disconnecting from the leader, clearing topology and moving to leader state");
                         var tcc = new TopologyChangeCommand
                         {
                             Requested = new Topology(Guid.NewGuid(), new[] { Engine.Options.SelfConnection }, new List<NodeConnectionInfo>(), new List<NodeConnectionInfo>())
@@ -575,8 +575,8 @@ namespace Rachis.Behaviors
                               $"Setting midpoint index to {appendEntriesResponse.MidpointIndex} with term {appendEntriesResponse.MidpointTerm}.");
                 }
 
-                
 
+                
                 // we consider the latest topology change to be in effect as soon as we see it, even before the 
                 // it is committed, see raft spec section 6:
                 //		a server always uses the latest con?guration in its log, 
@@ -589,28 +589,11 @@ namespace Rachis.Behaviors
                         //if this is true --> it is a serious issue and should be fixed immediately!
                         throw new InvalidOperationException(@"Log entry that is marked with IsTopologyChange should be of type TopologyChangeCommand.
                                                             Instead, it is of type: " + command.GetType() + ". It is probably a bug!");
-
                     
-                    if (topologyChangeCommand.Requested.AllNodes.Contains(Engine.Options.SelfConnection) == false)
-                    {
-                        _log.Warn("Got topology without self, disconnecting from the leader, clearing topology and moving to idle follower state");
-                        var tcc = new TopologyChangeCommand
-                        {
-                            Requested = new Topology(Guid.NewGuid(),new [] {Engine.Options.SelfConnection},new List<NodeConnectionInfo>(), new List<NodeConnectionInfo>())
-                        };
-                        Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0L);
-                        Engine.StartTopologyChange(tcc);
-                        Engine.CommitTopologyChange(tcc);
-                        Engine.SetState(RaftEngineState.Leader);
-                    }
-                    else
-                    {
-                        _log.Info("Topology change started (TopologyChangeCommand committed to the log): {0}",
-                            topologyChangeCommand.Requested);
-                        Engine.PersistentState.SetCurrentTopology(topologyChangeCommand.Requested, topologyChange.Index);
-                        Engine.StartTopologyChange(topologyChangeCommand);
-                    }
-                    
+                    _log.Info("Topology change started (TopologyChangeCommand committed to the log): {0}",
+                        topologyChangeCommand.Requested);
+                    Engine.PersistentState.SetCurrentTopology(topologyChangeCommand.Requested, topologyChange.Index);
+                    Engine.StartTopologyChange(topologyChangeCommand);
                 }
             }
 
