@@ -408,7 +408,7 @@ namespace FastTests.Server.NotificationCenter
             }
         }
 
-        [Fact(Skip = "It's hanging on TC")]
+        [Fact]
         public async Task Should_be_notified_about_changed_database_stats()
         {
             using (var database = CreateDocumentDatabase())

@@ -42,7 +42,8 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             try
             {
-                _currentTask.Wait();
+                if (_currentTask.Status == TaskStatus.Running)
+                    _currentTask.Wait();
             }
             catch (AggregateException e)
             {
