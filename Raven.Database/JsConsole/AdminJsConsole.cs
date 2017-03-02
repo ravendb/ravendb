@@ -65,8 +65,8 @@ namespace Raven.Database.JsConsole
                 cfg.AllowDebuggerStatement();
 #else
                 cfg.AllowDebuggerStatement(false);
-#endif
-                cfg.AllowClr(typeof(DocumentDatabase).Assembly, typeof(RavenJObject).Assembly);
+#endif                
+                cfg.AllowClr(AppDomain.CurrentDomain.GetAssemblies());
                 cfg.LimitRecursion(1024);
                 cfg.MaxStatements(int.MaxValue);
             });
