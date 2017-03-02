@@ -6,7 +6,9 @@
 using System;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Raft.Commands;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Tenancy;
@@ -17,6 +19,8 @@ namespace Raven.Database.Raft.Storage.Handlers
 {
     public class DatabaseUpdateCommandHandler : CommandHandler<DatabaseUpdateCommand>
     {
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
+
         public DatabaseUpdateCommandHandler(DocumentDatabase database, DatabasesLandlord landlord)
             : base(database, landlord)
         {
@@ -33,14 +37,24 @@ namespace Raven.Database.Raft.Storage.Handlers
             {
                 var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
                 if (document.IsClusterDatabase() == false)
-                    throw new InvalidOperationException(string.Format("Local database '{0}' is not cluster-wide.", DatabaseHelper.GetDatabaseName(command.Document.Id)));
+                {
+                    log.Error(string.Format("Local database '{0}' is not cluster-wide.", DatabaseHelper.GetDatabaseName(command.Document.Id)));
+                    return;
+                }
             }
 
             Landlord.Protect(command.Document);
             var json = RavenJObject.FromObject(command.Document);
             json.Remove("Id");
 
-            Database.Documents.Put(key, null, json, new RavenJObject(), null);
+            try
+            {
+                Database.Documents.Put(key, null, json, new RavenJObject(), null);
+            }
+            catch (OperationVetoedException e)
+            {
+                log.ErrorException("Was not able to update resorce do to veto", e);
+            }
         }
     }
 }
