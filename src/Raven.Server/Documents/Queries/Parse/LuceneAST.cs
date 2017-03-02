@@ -462,7 +462,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
 
 
         /// <summary>
-        /// For numeric values { NUll TO <number> } should be [ <min value> TO <number>} but not for string values.
+        /// For numeric values { NUll TO <number/> } should be [ <min-value/> TO <number/>} but not for string values.
         /// </summary>
         private void OverideInclusiveForKnownNumericRange()
         {

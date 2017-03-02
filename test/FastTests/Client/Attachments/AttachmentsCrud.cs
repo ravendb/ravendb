@@ -11,7 +11,7 @@ namespace FastTests.Client.Attachments
 {
     public class AttachmentsCrud : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "WIP")]
         public void PutAttachments()
         {
             using (var store = GetDocumentStore())
@@ -110,7 +110,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task DeleteAttachments()
         {
             using (var store = GetDocumentStore())

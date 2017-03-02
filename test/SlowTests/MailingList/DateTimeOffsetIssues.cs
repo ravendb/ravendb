@@ -1,6 +1,5 @@
 using System;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Xunit;
 
@@ -51,8 +50,7 @@ namespace SlowTests.MailingList
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
 
-                    StringValues offset;
-                    Assert.True(metadata.TryGetValue("DateTime-ToCheck", out offset));
+                    string offset = metadata.GetString("DateTime-ToCheck");
                     var result = DateTimeOffset.Parse(offset); // No exception is thrown here
                     Assert.IsType<DateTimeOffset>(result);
                     Assert.Equal(expectedDateTime, result);
@@ -73,10 +71,8 @@ namespace SlowTests.MailingList
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
 
-                    StringValues offset;
-                    Assert.True(metadata.TryGetValue("DateTime-ToCheck", out offset));
+                    string offset = metadata.GetString("DateTime-ToCheck");
                     var result = DateTimeOffset.Parse(offset); // An exception should not be thrown here, after changing the entity
-
                     Assert.Equal(expectedDateTime, result);
                 }
             }
@@ -118,8 +114,7 @@ namespace SlowTests.MailingList
                 {
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
-                    StringValues offset;
-                    Assert.True(metadata.TryGetValue("DateTime-ToCheck", out offset));
+                    string offset = metadata.GetString("DateTime-ToCheck");
                     var result = DateTime.Parse(offset); // No exception is thrown here
                     Assert.IsType<DateTime>(result);
                     Assert.Equal(expectedDateTime, result);
@@ -140,10 +135,8 @@ namespace SlowTests.MailingList
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
 
-                    StringValues offset;
-                    Assert.True(metadata.TryGetValue("DateTime-ToCheck", out offset));
+                    string offset = metadata.GetString("DateTime-ToCheck");
                     var result = DateTime.Parse(offset); // An exception should not be thrown here, after changing the entity
-
                     Assert.Equal(expectedDateTime, result);
                 }
             }

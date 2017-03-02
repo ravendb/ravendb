@@ -109,8 +109,8 @@ namespace SlowTests.MailingList
                         session.Advanced.DocumentQuery<Book, BooksSearch>().Where("Text: wire each time").WaitForNonStaleResultsAsOfNow().
                             ToList();
                     var scores = from result in results
-                                 select session.Advanced.GetMetadataFor(result)[Constants.Documents.Metadata.IndexScore];
-                    Assert.False(string.IsNullOrWhiteSpace(scores.First()));
+                                 select session.Advanced.GetMetadataFor(result).GetNumber(Constants.Documents.Metadata.IndexScore);
+                    Assert.Equal(0, scores.Single());
                 }
             }
         }

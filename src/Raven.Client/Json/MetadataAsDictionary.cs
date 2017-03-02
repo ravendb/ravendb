@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
@@ -36,8 +37,21 @@ namespace Raven.Client.Json
 
         private object ConvertValue(object value)
         {
+            if (value == null)
+                return null;
+
             if (value is LazyStringValue || value is LazyCompressedStringValue)
                 return value.ToString();
+
+            if (value is long)
+                return (long)value;
+
+            if (value is bool)
+                return (bool)value;
+
+            var doubleValue = value as LazyDoubleValue;
+            if (doubleValue != null)
+                return (double)doubleValue;
 
             var obj = value as BlittableJsonReaderObject;
             if (obj != null)
@@ -206,6 +220,24 @@ namespace Raven.Client.Json
         {
             var obj = this[key];
             return (string) obj;
+        }
+
+        public long GetNumber(string key)
+        {
+            var obj = this[key];
+            return (long)obj;
+        }
+
+        public bool GetBoolean(string key)
+        {
+            var obj = this[key];
+            return (bool) obj;
+        }
+
+        public double GetDouble(string key)
+        {
+            var obj = this[key];
+            return (double) obj;
         }
 
         public IMetadataDictionary GetObject(string key)

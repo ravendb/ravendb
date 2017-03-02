@@ -1,6 +1,5 @@
 using System.Dynamic;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
@@ -22,8 +21,7 @@ namespace SlowTests.Bugs.Queries
                     session.Store(expando);
 
                     var metadata = session.Advanced.GetMetadataFor((ExpandoObject)expando);
-
-                    metadata[PropertyName] = JToken.FromObject(true).ToString();
+                    metadata[PropertyName] = true;
 
                     session.SaveChanges();
                 }
@@ -33,12 +31,8 @@ namespace SlowTests.Bugs.Queries
                     var loaded = session.Load<ExpandoObject>((string)expando.Id);
 
                     var metadata = session.Advanced.GetMetadataFor(loaded);
-
-                    StringValues token;
-
-                    Assert.True(metadata.TryGetValue(PropertyName , out token));
-                    Assert.NotNull(token[0]);
-
+                    var token = metadata.GetBoolean(PropertyName);
+                    Assert.True(token);
                 }
             }
         }
