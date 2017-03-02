@@ -1,43 +1,47 @@
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB934 : RavenTest
+    public class RavenDB934 : RavenTestBase
     {
-        public class User
+        private class User
         {
         }
 
         [Fact]
         public void LowLevelExportsByDoc()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    for (int i = 0; i < 1500; i++)
+                    for (var i = 0; i < 1500; i++)
                     {
                         session.Store(new User());
                     }
                     session.SaveChanges();
                 }
 
-                int count = 0;
-                using(var streamDocs = store.DatabaseCommands.StreamDocs())
-                while (streamDocs.MoveNext())
+                using (var session = store.OpenSession())
                 {
-                    count++;
+                    var count = 0;
+                    using (var streamDocs = session.Advanced.Stream<object>(fromEtag: 0))
+                    {
+                        while (streamDocs.MoveNext())
+                        {
+                            count++;
+                        }
+                        Assert.Equal(1501, count); // also include the hi lo doc
+                    }
                 }
-                Assert.Equal(1501, count); // also include the hi lo doc
             }
         }
 
         [Fact]
         public void LowLevelExportsByDocPrefixRemote()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -48,22 +52,25 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                int count = 0;
-                using (var streamDocs = store.DatabaseCommands.StreamDocs(startsWith: "users/"))
+                using (var session = store.OpenSession())
                 {
-                    while (streamDocs.MoveNext())
+                    var count = 0;
+                    using (var streamDocs = session.Advanced.Stream<object>(startsWith: "users/"))
                     {
-                        count++;
+                        while (streamDocs.MoveNext())
+                        {
+                            count++;
+                        }
+                        Assert.Equal(1500, count);
                     }
                 }
-                Assert.Equal(1500, count);
             }
         }
 
         [Fact]
         public void HighLevelExportsByDocPrefixRemote()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

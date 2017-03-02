@@ -3,28 +3,42 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
-using Xunit;
 using System.Linq;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB921 : RavenTest
+    public class RavenDB921 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public bool Active { get; set; }
+        }
+
+        private class Users_ByActive : AbstractIndexCreationTask<User>
+        {
+            public Users_ByActive()
+            {
+                Map = users => from u in users
+                               select new
+                               {
+                                   u.Active
+                               };
+            }
         }
 
         [Fact]
         public void LowLevelRemoteStream()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
+                new Users_ByActive().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 1500; i++)
@@ -35,31 +49,30 @@ namespace Raven.Tests.Issues
                 }
 
                 WaitForIndexing(store);
-                
-                QueryHeaderInformation queryHeaders;
-                var enumerator = store.DatabaseCommands.StreamQuery(new RavenDocumentsByEntityName().IndexName, new IndexQuery
-                {
-                    Query = "",
-                    SortedFields = new[]{new SortedField(Constants.DocumentIdFieldName), }
-                }, out queryHeaders);
 
-                Assert.Equal(1500, queryHeaders.TotalResults);
-
-                int count = 0;
-                while (enumerator.MoveNext())
+                using (var session = store.OpenSession())
                 {
-                    count++;
+                    var enumerator = session.Advanced
+                        .Stream(session.Query<User, Users_ByActive>().Customize(x => x.AddOrder(Constants.Documents.Indexing.Fields.DocumentIdFieldName)));
+
+                    var count = 0;
+                    while (enumerator.MoveNext())
+                    {
+                        count++;
+                    }
+
+                    Assert.Equal(1500, count);
                 }
-
-                Assert.Equal(1500, count);
             }
         }
 
         [Fact]
         public void HighLevelRemoteStream()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
+                new Users_ByActive().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 1500; i++)
@@ -73,8 +86,9 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var enumerator = session.Advanced.Stream(session.Query<User>(new RavenDocumentsByEntityName().IndexName));
-                    int count = 0;
+                    var enumerator = session.Advanced.Stream(session.Query<User, Users_ByActive>());
+
+                    var count = 0;
                     while (enumerator.MoveNext())
                     {
                         Assert.IsType<User>(enumerator.Current.Document);
@@ -89,13 +103,14 @@ namespace Raven.Tests.Issues
         [Fact]
         public void HighLevelLocalStreamWithFilter()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("Users/ByActive",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from u in docs.Users select new { u.Active}"
-                                                });
+                store.Admin.Send(new PutIndexesOperation(
+                    new IndexDefinition
+                    {
+                        Name = "Users/ByActive",
+                        Maps = { "from u in docs.Users select new { u.Active}" }
+                    }));
 
                 using (var session = store.OpenSession())
                 {
@@ -131,8 +146,10 @@ namespace Raven.Tests.Issues
         [Fact]
         public void LowLevelEmbeddedStream()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
+                new Users_ByActive().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 1500; i++)
@@ -144,22 +161,19 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                QueryHeaderInformation queryHeaders;
-                var enumerator = store.DatabaseCommands.StreamQuery(new RavenDocumentsByEntityName().IndexName, new IndexQuery
+                using (var session = store.OpenSession())
                 {
-                    Query = "",
-                    SortedFields = new[] { new SortedField(Constants.DocumentIdFieldName), }
-                }, out queryHeaders);
+                    var enumerator = session.Advanced
+                        .Stream(session.Query<User, Users_ByActive>().Customize(x => x.AddOrder(Constants.Documents.Indexing.Fields.DocumentIdFieldName)));
 
-                Assert.Equal(1500, queryHeaders.TotalResults);
+                    var count = 0;
+                    while (enumerator.MoveNext())
+                    {
+                        count++;
+                    }
 
-                int count = 0;
-                while (enumerator.MoveNext())
-                {
-                    count++;
+                    Assert.Equal(1500, count);
                 }
-
-                Assert.Equal(1500, count);
             }
         }
     }

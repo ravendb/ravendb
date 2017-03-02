@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var transformerName = GetStringQueryString("transformer", required: false);
             var start = GetStart();
-            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize(int.MaxValue);
 
             Transformer transformer = null;
             if (string.IsNullOrEmpty(transformerName) == false)
