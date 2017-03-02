@@ -27,6 +27,8 @@ namespace Raven.Server.Rachis
 
         private long _followerMatchIndex;
         private long _lastReplyFromFollower;
+        private long _lastSendToFollower;
+        private string _lastSentMsg;
         private Thread _thread;
         private RemoteConnection _connection;
 
@@ -35,6 +37,14 @@ namespace Raven.Server.Rachis
         public long FollowerMatchIndex => Interlocked.Read(ref _followerMatchIndex);
 
         public DateTime LastReplyFromFollower => new DateTime(Interlocked.Read(ref _lastReplyFromFollower));
+        public DateTime LastSendToFollower => new DateTime(Interlocked.Read(ref _lastSendToFollower));
+        public string LastSendMsg => _lastSentMsg;
+
+        private void UpdateLastSend(string msg)
+        {
+            Interlocked.Exchange(ref _lastSendToFollower, DateTime.UtcNow.Ticks);
+            Interlocked.Exchange(ref _lastSentMsg, msg);
+        }
 
         private void UpdateLastMatchFromFollower(long newVal)
         {
@@ -138,7 +148,11 @@ namespace Raven.Server.Rachis
                                     }
 
                                     // out of the tx, we can do network calls
-
+                                    UpdateLastSend(
+                                        entries.Count > 0
+                                            ? "Append Entries"
+                                            : "Heartbeat"
+                                    );
                                     _connection.Send(context, appendEntries, entries);
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
 
@@ -219,6 +233,7 @@ namespace Raven.Server.Rachis
                 if (_followerMatchIndex >= earliestIndexEtry)
                 {
                     // we don't need a snapshot, so just send updated topology
+                    UpdateLastSend("Send empty snapshot");
                     _connection.Send(context, new InstallSnapshot
                     {
                         LastIncludedIndex = earliestIndexEtry,
@@ -240,7 +255,7 @@ namespace Raven.Server.Rachis
                     // we make sure that we routinely update LastReplyFromFollower here
                     // so we'll not leave the leader thinking we abandoned it
                     UpdateLastMatchFromFollower(_followerMatchIndex);
-
+                    UpdateLastSend("Send full snapshot");
                     _connection.Send(context, new InstallSnapshot
                     {
                         LastIncludedIndex = index,
@@ -457,7 +472,7 @@ namespace Raven.Server.Rachis
                         PrevLogTerm = _engine.GetTermForKnownExisting(context, lastIndexEntry),
                     };
                 }
-
+                UpdateLastSend("Hello");
                 _connection.Send(context, new RachisHello
                 {
                     TopologyId = clusterTopology.TopologyId,
@@ -465,7 +480,7 @@ namespace Raven.Server.Rachis
                     DebugSourceIdentifier = _engine.GetDebugInformation()
                 });
 
-
+                UpdateLastSend("Negotiation");
                 _connection.Send(context, lln);
 
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
@@ -511,6 +526,7 @@ namespace Raven.Server.Rachis
                             PrevLogTerm = _engine.GetTermForKnownExisting(context, midIndex),
                         };
                     }
+                    UpdateLastSend("Negotiation 2");
                     _connection.Send(context, lln);
                     llr = _connection.Read<LogLengthNegotiationResponse>(context);
                 } while (true);

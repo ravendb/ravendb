@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
@@ -206,8 +207,6 @@ namespace Raven.Server.Rachis
 
                             break;
                         case WaitHandle.WaitTimeout:
-                            if (_voters.Count != 0)
-                                VoteOfNoConfidence();
                             break;
                         case 3: // shutdown requested
                             return;
@@ -252,9 +251,25 @@ namespace Raven.Server.Rachis
             if (TimeoutEvent.Disable)
                 return;
 
-            //TODO: List all the voters and their times
-            throw new TimeoutException("Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
-                                       "Assuming that I'm not the leader and stepping down");
+            var sb = new StringBuilder();
+            var now = DateTime.UtcNow;
+            foreach (var ambassador in _voters)
+            {
+                var followerAmbassador = ambassador.Value;
+                var sinceLastReply = (long)(now - followerAmbassador.LastReplyFromFollower).TotalMilliseconds;
+                var sinceLastSend = (long) (now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
+                var lastMsg = followerAmbassador.LastSendMsg;
+                sb.AppendLine(
+                    $"{followerAmbassador.Url}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status}");
+            }
+
+            throw new TimeoutException(
+                "Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
+                Environment.NewLine +
+                "Assuming that I'm not the leader and stepping down." + 
+                Environment.NewLine +
+                sb
+                );
         }
 
         private long _lastCommit;
