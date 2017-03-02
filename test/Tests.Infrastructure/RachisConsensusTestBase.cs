@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Lucene.Net.Support;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -55,6 +56,42 @@ namespace Tests.Infrastructure
                     x =>
                         x.CurrentState != RachisConsensus.State.Leader &&
                         x.CurrentState != RachisConsensus.State.LeaderElect);
+        }
+
+        protected IEnumerable<RachisConsensus<CountingStateMachine>> GetFollowers()
+        {
+            return RachisConsensuses.Where(
+                     x => x.CurrentState != RachisConsensus.State.Leader &&
+                     x.CurrentState != RachisConsensus.State.LeaderElect);
+        }
+
+
+        protected void DisconnectFromNode(RachisConsensus<CountingStateMachine> node)
+        {
+            foreach (var follower in RachisConsensuses.Where(x=>x.Url != node.Url))
+            {
+                Disconnect(follower.Url, node.Url);
+            }
+        }
+        
+        protected void ReconnectToNode(RachisConsensus<CountingStateMachine> node)
+        {
+            foreach (var follower in RachisConsensuses.Where(x => x.Url != node.Url))
+            {
+                Reconnect(follower.Url, node.Url);
+            }
+        }
+
+        protected RachisConsensus<CountingStateMachine> WaitForAnyToBecomeLeader(IEnumerable<RachisConsensus<CountingStateMachine>> nodes)
+        {
+            var waitingTasks = new List<Task>();
+
+            foreach (var ndoe in nodes)
+            {
+                waitingTasks.Add(ndoe.WaitForState(RachisConsensus.State.Leader));
+            }
+            Assert.True(Task.WhenAny(waitingTasks).Wait(3000 * nodes.Count()), "Waited too long for a node to become a leader but no leader was elected.");
+            return nodes.FirstOrDefault(x => x.CurrentState == RachisConsensus.State.Leader);
         }
 
         protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false)
@@ -125,6 +162,18 @@ namespace Tests.Infrastructure
                         }
                     }
                 }
+            }
+        }
+
+        protected void Reconnect(string to, string from)
+        {
+            lock (this)
+            {
+                ConcurrentSet<string> rejectionList;
+                if(_rejectionList.TryGetValue(to, out rejectionList) == false)
+                    return;
+
+                rejectionList.TryRemove(from);
             }
         }
 
