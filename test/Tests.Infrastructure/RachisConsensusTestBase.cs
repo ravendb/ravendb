@@ -20,6 +20,7 @@ using Xunit;
 
 namespace Tests.Infrastructure
 {
+    [Trait("Category", "Rachis")]
     public class RachisConsensusTestBase : IDisposable
     {
         protected bool PredictableSeeds;

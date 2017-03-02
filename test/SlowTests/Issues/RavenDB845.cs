@@ -37,7 +37,7 @@ namespace SlowTests.Issues
             {
                 var foo = session.Load<Foo>("foos/1");
                 var metadata = session.Advanced.GetMetadataFor(foo);
-                firstDate = DateTime.Parse(metadata[Constants.Documents.Metadata.LastModified]);
+                firstDate = DateTime.Parse(metadata.GetString(Constants.Documents.Metadata.LastModified));
             }
 
             var database = await GetDocumentDatabaseInstanceFor(store);
@@ -54,7 +54,7 @@ namespace SlowTests.Issues
             {
                 var foo = session.Load<Foo>("foos/1");
                 var metadata = session.Advanced.GetMetadataFor(foo);
-                secondDate = DateTime.Parse(metadata[Constants.Documents.Metadata.LastModified]);
+                secondDate = DateTime.Parse(metadata.GetString(Constants.Documents.Metadata.LastModified));
             }
 
             Assert.NotEqual(secondDate, firstDate);
