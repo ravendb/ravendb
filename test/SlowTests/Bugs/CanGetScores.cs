@@ -1,5 +1,6 @@
 using FastTests;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -80,15 +81,15 @@ namespace SlowTests.Bugs
                     Assert.Equal (3, users.Count);
 
                     var sorted = (from u in users
-                                    let score = float.Parse(s.Advanced.GetMetadataFor(u)["@index-score"])
-                                    orderby score descending, u.Name
-                                  select new { score, u.Name }).ToList ();
+                        let score = s.Advanced.GetMetadataFor(u).GetDouble(Constants.Documents.Metadata.IndexScore)
+                        orderby score descending, u.Name
+                        select new {score, u.Name}).ToList();
 
                     for (var i = 0; i < users.Count; i++)
                     {
-                        Assert.Equal (sorted[i].Name, users[i].Name);
-                        var score = s.Advanced.GetMetadataFor (users[i])["@index-score"];
-                        Assert.NotNull (score);
+                        Assert.Equal(sorted[i].Name, users[i].Name);
+                        var score = s.Advanced.GetMetadataFor(users[i]).GetDouble(Constants.Documents.Metadata.IndexScore);
+                        Assert.True(score > 0.1);
                     }
                 }
             }
@@ -127,9 +128,9 @@ namespace SlowTests.Bugs
                     Assert.Equal (3, users.Count);
 
                     var sorted = (from u in users
-                                  let score = float.Parse(s.Advanced.GetMetadataFor(u)["@index-score"])
-                                  orderby score descending, u.Name descending
-                                  select new { score, u.Name }).ToList ();
+                        let score = float.Parse(s.Advanced.GetMetadataFor(u).GetString(Constants.Documents.Metadata.IndexScore))
+                        orderby score descending, u.Name descending
+                        select new {score, u.Name}).ToList();
 
                     for (var i = 0; i < users.Count; i++)
                     {

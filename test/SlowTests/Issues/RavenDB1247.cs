@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put(TEST_DOCUMENT_ID, null, newDocument,
-                        new Dictionary<string, StringValues>
+                        new Dictionary<string, object>
                         {
                             {Constants.Documents.Metadata.Collection, "FooDocumentWithoutIdProperties"}
                         });
@@ -80,7 +80,7 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put(TEST_DOCUMENT_ID, null, newDocument,
-                        new Dictionary<string, StringValues>
+                        new Dictionary<string, object>
                         {
                             {Constants.Documents.Metadata.Collection, "FooDocumentWithIdProperty"}
                         });

@@ -41,7 +41,31 @@ namespace Raven.Client.Json
                 foreach (var prop in _documentInfo.Metadata.Modifications.Properties)
                 {
                     _manualBlittalbeJsonDocumentBuilder.WritePropertyName(prop.Item1);
-                    _manualBlittalbeJsonDocumentBuilder.WriteValue(prop.Item2.ToString());
+                    var value = prop.Item2;
+
+                    if (value == null)
+                    {
+                        _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
+                        continue;
+                    }
+
+                    var strValue = value as string;
+                    if (strValue != null)
+                        _manualBlittalbeJsonDocumentBuilder.WriteValue(strValue);
+                    else if (value is long)
+                        _manualBlittalbeJsonDocumentBuilder.WriteValue((long)value);
+                    else if (value is double)
+                        _manualBlittalbeJsonDocumentBuilder.WriteValue((double)value);
+                    else if (value is decimal)
+                        _manualBlittalbeJsonDocumentBuilder.WriteValue((decimal)value);
+                    else if (value is float)
+                        _manualBlittalbeJsonDocumentBuilder.WriteValue((float)value);
+                    else if (value is bool)
+                        _manualBlittalbeJsonDocumentBuilder.WriteValue((bool)value);
+                    else if (value is LazyDoubleValue)
+                        _manualBlittalbeJsonDocumentBuilder.WriteValue((LazyDoubleValue) value);
+                    else
+                        throw new NotSupportedException($"The value type {value.GetType().FullName} of key {prop.Item1} is not supported in the metadata");
                 }
 
                 if (_documentInfo.Collection != null)
