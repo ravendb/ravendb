@@ -278,30 +278,13 @@ namespace Raven.Bundles.Replication.Tasks
                             log.ErrorException("Failed to perform replication", e);
                         }
                     }
-
-                    do
-                    {
-                        sw.Restart();
-                        runningBecauseOfDataModifications = context.WaitForWork(timeToWait, ref workCounter, name);
-                        sw.Stop();
-
-                        //note: the two if's can obviously be combined, 
-                        //but in separated form they reflect the logic better
-                        if (docDb.WorkContext.CancellationToken.IsCancellationRequested)
-                            break;
-
-                        if (runningBecauseOfDataModifications &&
-                            (HasDocumentOrTombstoneEtagChanged() || HasAttachmentEtagChanged()))
-                            break;
-
-                        timeToWait = timeToWait - TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds);
-
-                    } while (timeToWait.TotalMilliseconds > 0 &&
-                             docDb.WorkContext.CancellationToken.IsCancellationRequested == false);
+                    
+                    runningBecauseOfDataModifications = docDb.WorkContext.ReplicationResetEvent.Wait(timeToWait);
+                    docDb.WorkContext.ReplicationResetEvent.Reset();
 
                     timeToWait = runningBecauseOfDataModifications
-                        ? TimeSpan.FromSeconds(30)
-                        : TimeSpan.FromMinutes(5);
+                    ? TimeSpan.FromSeconds(30)
+                    : TimeSpan.FromMinutes(5);
                 }
 
                 IsRunning = false;
@@ -485,9 +468,15 @@ namespace Raven.Bundles.Replication.Tasks
 
                             if (t.Result == null)
                                 return;
-
-                            // only wake replciation if there is a change since we are done
-                            RunReplicaitonAgainIfNeeded(dest, t.Result, docDb);
+                            docDb.TransactionalStorage.Batch(actions =>
+                            {
+                                var shouldRunAgain = t.Result.LastReplicatedDocumentEtag != Etag.InvalidEtag &&
+                                        actions.Staleness.GetMostRecentDocumentEtag() != t.Result.LastReplicatedDocumentEtag == false;
+                                if (shouldRunAgain)
+                                {
+                                    docDb.WorkContext.ReplicationResetEvent.Set();
+                                }
+                            });
 
                         });
                 }
@@ -544,43 +533,7 @@ namespace Raven.Bundles.Replication.Tasks
         
         private void RunReplicaitonAgainIfNeeded(ReplicationStrategy dest, LastReplicatedEtags tResult, DocumentDatabase docDb)
         {
-            docDb.TransactionalStorage.Batch(actions =>
-            {
-                if (tResult.LastReplicatedDocumentEtag != Etag.InvalidEtag &&
-                    actions.Staleness.GetMostRecentDocumentEtag() != tResult.LastReplicatedDocumentEtag == false)
-                {
-                    return;
-                }
-
-                DestinationStats destStats = null;
-                // We want to reduce the amount of immediately recurring replication in case of ongoing state of replication failure
-                if (DestinationStats.TryGetValue(dest.ConnectionStringOptions.Url, out destStats))
-                {
-                    var destStatsFailureCount = destStats.FailureCount;
-                    if (destStatsFailureCount <2)
-                    {
-                        docDb.WorkContext.ReplicationResetEvent.Set();
-                        return;
-                    }
-                    if (destStatsFailureCount < 20 && destStatsFailureCount%2 ==0)
-                    {
-                        docDb.WorkContext.ReplicationResetEvent.Set();
-                        return;
-                    }
-                    if (destStatsFailureCount < 100 && destStatsFailureCount % 5 == 0)
-                    {
-                        docDb.WorkContext.ReplicationResetEvent.Set();
-                        return;
-                    }
-                    if (destStatsFailureCount < 1000 && destStatsFailureCount % 20 == 0)
-                    {
-                        docDb.WorkContext.ReplicationResetEvent.Set();
-                        return;
-                    }
-
-                }
-
-            });
+            
         }
 
         private void ClearCachedLastEtagForRemovedServers(ReplicationStrategy[] destinations)
@@ -800,6 +753,17 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 if (docDb.Disposed)
                     return false;
+
+
+                DestinationStats destStats = null;
+
+                // We want to reduce the amount of immediately recurring replication in case of ongoing state of replication failure
+                if (DestinationStats.TryGetValue(destination.ConnectionStringOptions.Url, out destStats))
+                {
+                    var cooldownBetweenFailures = TimeSpan.FromSeconds(1);
+                    if (SystemTime.UtcNow - destStats.LastFailureTimestamp < cooldownBetweenFailures)
+                        return false;
+                }
 
                 using (docDb.DisableAllTriggersForCurrentThread())
                 using (var stats = new ReplicationStatisticsRecorder(destination, destinationStats))
