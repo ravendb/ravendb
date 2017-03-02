@@ -8,7 +8,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_4997 : ReplicationTestsBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }

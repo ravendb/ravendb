@@ -3,22 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Json.Linq;
-using Raven.Tests.Common;
 
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_1279 : RavenTest
+    public class RavenDB_1279 : RavenTestBase
     {
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
             public string CompanyId { get; set; }
         }
 
-        public class Company
+        private class Company
         {
             public string Name { get; set; }
         }
@@ -26,15 +25,19 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanLoadWithoutClrType()
         {
-            using (var store = NewRemoteDocumentStore(true))
+            using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("companies/1", null, new RavenJObject{{"Name","HR"}}, new RavenJObject());
+                using (var commands = store.Commands())
+                {
+                    commands.Put("companies/1", null, new { Name = "HR" }, null);
+                }
+
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order{CompanyId = "companies/1"});
+                    session.Store(new Order { CompanyId = "companies/1" });
                     session.SaveChanges();
                 }
-               
+
                 using (var sesion = store.OpenSession())
                 {
                     var company = sesion.Load<Company>("companies/1");
@@ -45,17 +48,19 @@ namespace Raven.Tests.Issues
 
         [Fact]
         public void CanIncludeWithoutClrType()
-        {          
-
-            using (var store = NewRemoteDocumentStore(true))
+        {
+            using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("companies/1", null, new RavenJObject { { "Name", "HR" } }, new RavenJObject());
-                using (var session = store.OpenSession())
+                using (var commands = store.Commands())
                 {
-                    session.Store(new Order{CompanyId = "companies/1"});
-                    session.SaveChanges();
+                    commands.Put("companies/1", null, new { Name = "HR" }, null);
                 }
 
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { CompanyId = "companies/1" });
+                    session.SaveChanges();
+                }
 
                 using (var sesion = store.OpenSession())
                 {

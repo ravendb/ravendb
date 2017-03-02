@@ -3,65 +3,43 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
-using Xunit;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB937 : RavenTest
+    public class RavenDB937 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public bool Active { get; set; }
         }
 
-        [Fact]
-        public void LowLevelRemoteStreamAsync()
+        private class Users_ByActive : AbstractIndexCreationTask<User>
         {
-            using (var store = NewRemoteDocumentStore())
+            public Users_ByActive()
             {
-                using (var session = store.OpenSession())
-                {
-                    for (int i = 0; i < 1500; i++)
-                    {
-                        session.Store(new User());
-                    }
-                    session.SaveChanges();
-                }
-
-                WaitForIndexing(store);
-                
-                var queryHeaderInfo = new Reference<QueryHeaderInformation>();
-                var enumerator =
-                    store.AsyncDatabaseCommands.StreamQueryAsync(new RavenDocumentsByEntityName().IndexName, new IndexQuery
-                    {
-                        Query = "",
-                        SortedFields = new[] {new SortedField(Constants.DocumentIdFieldName),}
-                    }, queryHeaderInfo).Result;
-
-                Assert.Equal(1500, queryHeaderInfo.Value.TotalResults);
-
-                int count = 0;
-                while (enumerator.MoveNextAsync().Result)
-                {
-                    count++;
-                }
-
-                Assert.Equal(1500, count);
+                Map = users => from u in users
+                               select new
+                               {
+                                   u.Active
+                               };
             }
         }
 
         [Fact]
-        public void HighLevelRemoteStreamAsync()
+        public async Task LowLevelRemoteStreamAsync()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
+                new Users_ByActive().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 1500; i++)
@@ -75,9 +53,43 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var enumerator = session.Advanced.StreamAsync(session.Query<User>(new RavenDocumentsByEntityName().IndexName)).Result;
+                    var enumerator = await session.Advanced
+                        .StreamAsync(session.Query<User, Users_ByActive>().Customize(x => x.AddOrder(Constants.Documents.Indexing.Fields.DocumentIdFieldName)));
+
+                    var count = 0;
+                    while (await enumerator.MoveNextAsync())
+                    {
+                        count++;
+                    }
+
+                    Assert.Equal(1500, count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task HighLevelRemoteStreamAsync()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Users_ByActive().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 1500; i++)
+                    {
+                        session.Store(new User());
+                    }
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var enumerator = await session.Advanced.StreamAsync(session.Query<User>(new Users_ByActive().IndexName));
                     int count = 0;
-                    while (enumerator.MoveNextAsync().Result)
+                    while (await enumerator.MoveNextAsync())
                     {
                         Assert.IsType<User>(enumerator.Current.Document);
                         count++;
@@ -89,15 +101,15 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void HighLevelLocalStreamWithFilterAsync()
+        public async Task HighLevelLocalStreamWithFilterAsync()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("Users/ByActive",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from u in docs.Users select new { u.Active}"
-                                                });
+                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Name = "Users/ByActive",
+                    Maps = { "from u in docs.Users select new { u.Active}" }
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -117,9 +129,9 @@ namespace Raven.Tests.Issues
                 {
                     var query = session.Query<User>("Users/ByActive")
                                        .Where(x => x.Active);
-                    var enumerator = session.Advanced.StreamAsync(query).Result;
+                    var enumerator = await session.Advanced.StreamAsync(query);
                     int count = 0;
-                    while (enumerator.MoveNextAsync().Result)
+                    while (await enumerator.MoveNextAsync())
                     {
                         Assert.IsType<User>(enumerator.Current.Document);
                         count++;
@@ -131,10 +143,12 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void LowLevelEmbeddedStreamAsync()
+        public async Task LowLevelEmbeddedStreamAsync()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
+                new Users_ByActive().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 1500; i++)
@@ -146,22 +160,19 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                var queryHeaderInfo = new Reference<QueryHeaderInformation>();
-                var enumerator = store.AsyncDatabaseCommands.StreamQueryAsync(new RavenDocumentsByEntityName().IndexName, new IndexQuery
+                using (var session = store.OpenAsyncSession())
                 {
-                    Query = "",
-                    SortedFields = new[] { new SortedField(Constants.DocumentIdFieldName), }
-                }, queryHeaderInfo).Result;
+                    var enumerator = await session.Advanced
+                        .StreamAsync(session.Query<User, Users_ByActive>().Customize(x => x.AddOrder(Constants.Documents.Indexing.Fields.DocumentIdFieldName)));
 
-                Assert.Equal(1500, queryHeaderInfo.Value.TotalResults);
+                    var count = 0;
+                    while (await enumerator.MoveNextAsync())
+                    {
+                        count++;
+                    }
 
-                int count = 0;
-                while (enumerator.MoveNextAsync().Result)
-                {
-                    count++;
+                    Assert.Equal(1500, count);
                 }
-
-                Assert.Equal(1500, count);
             }
         }
     }

@@ -10,11 +10,13 @@ namespace Raven.Server.Documents.Indexes
         private readonly Stopwatch _queryDuration;
         private readonly TimeSpan _waitTimeout;
         private readonly Index _index;
+        private readonly bool _isMaxTimeout;
 
         public AsyncWaitForIndexing(Stopwatch queryDuration, TimeSpan waitTimeout, Index index)
         {
             _queryDuration = queryDuration;
             _waitTimeout = waitTimeout;
+            _isMaxTimeout = waitTimeout == TimeSpan.MaxValue;
             _index = index;
         }
 
@@ -25,6 +27,9 @@ namespace Raven.Server.Documents.Indexes
             if (_index._disposed)
                 Index.ThrowObjectDisposed();
 
+            if (_isMaxTimeout)
+                return indexingBatchCompleted.WaitAsync();
+
             var remainingTime = _waitTimeout - _queryDuration.Elapsed;
 
             if (remainingTime <= TimeSpan.Zero)
@@ -33,8 +38,7 @@ namespace Raven.Server.Documents.Indexes
                 return Task.CompletedTask;
             }
 
-            var waitForIndexingAsync = indexingBatchCompleted.WaitAsync(remainingTime);
-            return waitForIndexingAsync;
+            return indexingBatchCompleted.WaitAsync(remainingTime);
         }
     }
 }

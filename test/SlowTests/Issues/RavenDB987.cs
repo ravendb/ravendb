@@ -3,24 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB987 : RavenTest
+    public class RavenDB987 : RavenTestBase
     {
-        public sealed class Categories_InUse_ByCity : AbstractIndexCreationTask<Restaurant, Categories_InUse_ByCity.Result>
+        private sealed class Categories_InUse_ByCity : AbstractIndexCreationTask<Restaurant, Categories_InUse_ByCity.Result>
         {
             public Categories_InUse_ByCity()
             {
                 Map = restaurants => from r in restaurants
-                                     from c in r.Categories.Union(new[] {r.MainCategory})
+                                     from c in r.Categories.Union(new[] { r.MainCategory })
                                      let categ = LoadDocument<Category>(c)
                                      select new
                                      {
@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
                                         r.CityName,
                                     };
 
-                Sort(r => r.Index, SortOptions.Int);
+                Sort(r => r.Index, SortOptions.Numeric);
             }
 
             public sealed class Result
@@ -70,7 +70,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Category
+        private class Category
         {
             public string Name { get; set; }
             public string Icon { get; set; }
@@ -79,7 +79,7 @@ namespace Raven.Tests.Issues
             public string Id { get; set; }
         }
 
-        public class Restaurant
+        private class Restaurant
         {
             public string Id { get; set; }
             public string MainCategory { get; set; }
@@ -88,15 +88,10 @@ namespace Raven.Tests.Issues
             public string CityName { get; set; }
         }
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
-        {
-            configuration.MaxNumberOfParallelProcessingTasks = 1;
-        }
-
         [Fact]
         public void ShouldGetAppropriateResults()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Categories_InUse_ByCity().Execute(store);
 
@@ -134,7 +129,8 @@ namespace Raven.Tests.Issues
                            .ToList();
 
                     Assert.Equal(6, results.Count);
-                    Assert.Empty(store.SystemDatabase.Statistics.Errors);
+
+                    TestHelper.AssertNoIndexErrors(store);
                 }
             }
         }

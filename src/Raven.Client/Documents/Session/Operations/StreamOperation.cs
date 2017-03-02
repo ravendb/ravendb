@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -97,28 +96,6 @@ namespace Raven.Client.Documents.Session.Operations
             return new StreamCommand(sb.ToString(), string.IsNullOrWhiteSpace(transformer) == false);
         }
 
-        private static void ReadNextToken(Stream stream, UnmanagedJsonParser parser, JsonOperationContext.ManagedPinnedBuffer buffer)
-        {
-            while (parser.Read() == false)
-            {
-                var read = stream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
-                if (read == 0)
-                    throw new EndOfStreamException("The stream ended unexpectedly");
-                parser.SetBuffer(buffer, 0, read);
-            }
-        }
-
-        private static async Task ReadNextTokenAsync(Stream stream, UnmanagedJsonParser parser, JsonOperationContext.ManagedPinnedBuffer buffer)
-        {
-            while (parser.Read() == false)
-            {
-                var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count).ConfigureAwait(false);
-                if (read == 0)
-                    throw new EndOfStreamException("The stream ended unexpectedly");
-                parser.SetBuffer(buffer, 0, read);
-            }
-        }
-
         public IEnumerator<BlittableJsonReaderObject> SetResult(StreamResult response)
         {
             var state = new JsonParserState();
@@ -128,61 +105,24 @@ namespace Raven.Client.Documents.Session.Operations
             using (var parser = new UnmanagedJsonParser(_session.Context, state, "stream contents"))
             using (_session.Context.GetManagedBuffer(out buffer))
             {
-                ReadNextToken(response.Stream, parser, buffer);
+                if (UnmanagedJsonParserHelper.Read(response.Stream, parser, state, buffer) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
 
                 if (state.CurrentTokenType != JsonParserToken.StartObject)
-                {
-                    throw new InvalidOperationException("Expected stream to start, but got " +
-                                                        state.CurrentTokenType);
-                }
-                ReadNextToken(response.Stream, parser, buffer);
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
 
-                if (state.CurrentTokenType != JsonParserToken.String)
-                {
-                    throw new InvalidOperationException("Expected stream intial property, but got " +
-                                                        state.CurrentTokenType);
-                }
+                var property = UnmanagedJsonParserHelper.ReadString(_session.Context, response.Stream, parser, state, buffer);
+                if (string.Equals(property, "Results") == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
 
-                // TODO: Need to handle initial properties here from QueryHeaderInformation
+                foreach (var result in UnmanagedJsonParserHelper.ReadArrayToMemory(_session.Context, response.Stream, parser, state, buffer))
+                    yield return result;
 
-                var propery = GetPropertyName(state);
-                if (propery.Equals("Results") == false)
-                {
-                    throw new InvalidOperationException("Expected stream property 'Results' but got " + propery);
-                }
-
-                ReadNextToken(response.Stream, parser, buffer);
-
-                if (state.CurrentTokenType != JsonParserToken.StartArray)
-                {
-                    throw new InvalidOperationException("Expected stream intial property, but got " +
-                                                        state.CurrentTokenType);
-                }
-                ReadNextToken(response.Stream, parser, buffer);
-                while (state.CurrentTokenType != JsonParserToken.EndArray)
-                {
-                    _session.Context.CachedProperties.NewDocument();
-                    var builder = new BlittableJsonDocumentBuilder(_session.Context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "ImportObject", parser, state);
-                    builder.ReadNestedObject();
-                    while (builder.Read() == false)
-                    {
-                        var read = response.Stream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
-                        if (read == 0)
-                            throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        parser.SetBuffer(buffer, 0, read);
-                    }
-                    builder.FinalizeDocument();
-                    ReadNextToken(response.Stream, parser, buffer);
-                    yield return builder.CreateReader();
-                }
-
-                ReadNextToken(response.Stream, parser, buffer);
+                if (UnmanagedJsonParserHelper.Read(response.Stream, parser, state, buffer) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
 
                 if (state.CurrentTokenType != JsonParserToken.EndObject)
-                {
-                    throw new InvalidOperationException("Expected stream closing token, but got " +
-                                                        state.CurrentTokenType);
-                }
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
             }
         }
 
@@ -191,114 +131,84 @@ namespace Raven.Client.Documents.Session.Operations
             return new YieldStreamResults(_session, response);
         }
 
-        private unsafe LazyStringValue GetPropertyName(JsonParserState state)
-        {
-            return new LazyStringValue(null, state.StringBuffer, state.StringSize, _session.Context);
-        }
-
         private class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>
         {
-            private bool _complete;
-
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult stream)
             {
                 _response = stream;
                 _session = session;
             }
+
             private readonly StreamResult _response;
             private readonly InMemoryDocumentSessionOperations _session;
+            private JsonParserState _state;
+            private UnmanagedJsonParser _parser;
+            private JsonOperationContext.ManagedPinnedBuffer _buffer;
+            private bool _initialized;
+            private JsonOperationContext.ReturnBuffer _returnBuffer;
+
             public void Dispose()
             {
                 _response.Response.Dispose();
                 _response.Stream.Dispose();
+                _parser.Dispose();
+                _returnBuffer.Dispose();
             }
 
             public async Task<bool> MoveNextAsync()
             {
-                if (_complete)
-                    return false;
-                var state = new JsonParserState();
-                JsonOperationContext.ManagedPinnedBuffer buffer;
+                if (_initialized == false)
+                    await InitializeAsync().ConfigureAwait(false);
 
-                using (var parser = new UnmanagedJsonParser(_session.Context, state, "stream contents"))
-                using (_session.Context.GetManagedBuffer(out buffer))
+                if (await UnmanagedJsonParserHelper.ReadAsync(_response.Stream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+
+                if (_state.CurrentTokenType == JsonParserToken.EndArray)
                 {
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
+                    if (await UnmanagedJsonParserHelper.ReadAsync(_response.Stream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson();
 
-                    if (state.CurrentTokenType != JsonParserToken.StartObject)
-                    {
-                        throw new InvalidOperationException("Expected stream to start, but got " +
-                                                            state.CurrentTokenType);
-                    }
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
+                    if (_state.CurrentTokenType != JsonParserToken.EndObject)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson();
 
-                    if (state.CurrentTokenType != JsonParserToken.String)
-                    {
-                        throw new InvalidOperationException("Expected stream intial property, but got " +
-                                                            state.CurrentTokenType);
-                    }
+                    return false;
+                }
 
-                    // TODO: Need to handle initial properties here from QueryHeaderInformation
+                using (var builder = new BlittableJsonDocumentBuilder(_session.Context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state))
+                {
+                    await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _response.Stream, _parser, _buffer).ConfigureAwait(false);
 
-                    var propery = GetPropertyName(state);
-                    if (propery.Equals("Results") == false)
-                    {
-                        throw new InvalidOperationException("Expected stream property 'Results' but got " + propery);
-                    }
-
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
-
-                    if (state.CurrentTokenType != JsonParserToken.StartArray)
-                    {
-                        throw new InvalidOperationException("Expected stream intial property, but got " +
-                                                            state.CurrentTokenType);
-                    }
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
-
-                    _session.Context.CachedProperties.NewDocument();
-                    var builder = new BlittableJsonDocumentBuilder(_session.Context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "ImportObject", parser, state);
-                    builder.ReadNestedObject();
-                    while (builder.Read() == false)
-                    {
-                        var read = await _response.Stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length).ConfigureAwait(false);
-                        if (read == 0)
-                            throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        parser.SetBuffer(buffer, 0, read);
-                    }
-                    builder.FinalizeDocument();
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
                     Current = builder.CreateReader();
-
-                    if (state.CurrentTokenType == JsonParserToken.EndArray)
-                    {
-                        await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
-
-                        if (state.CurrentTokenType != JsonParserToken.EndObject)
-                        {
-                            throw new InvalidOperationException("Expected stream closing token, but got " +
-                                                                state.CurrentTokenType);
-                        }
-                        _complete = true;
-                        return true;
-                    }
-
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
-
-                    if (state.CurrentTokenType != JsonParserToken.EndObject)
-                    {
-                        throw new InvalidOperationException("Expected stream closing token, but got " +
-                                                            state.CurrentTokenType);
-                    }
                     return true;
                 }
             }
 
-            public BlittableJsonReaderObject Current { get; private set; }
-
-            private unsafe LazyStringValue GetPropertyName(JsonParserState state)
+            private async Task InitializeAsync()
             {
-                return new LazyStringValue(null, state.StringBuffer, state.StringSize, _session.Context);
+                _initialized = true;
+
+                _state = new JsonParserState();
+                _parser = new UnmanagedJsonParser(_session.Context, _state, "stream contents");
+                _returnBuffer = _session.Context.GetManagedBuffer(out _buffer);
+
+                if (await UnmanagedJsonParserHelper.ReadAsync(_response.Stream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+
+                if (_state.CurrentTokenType != JsonParserToken.StartObject)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+
+                var property = UnmanagedJsonParserHelper.ReadString(_session.Context, _response.Stream, _parser, _state, _buffer);
+                if (string.Equals(property, "Results") == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+
+                if (await UnmanagedJsonParserHelper.ReadAsync(_response.Stream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+
+                if (_state.CurrentTokenType != JsonParserToken.StartArray)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson();
             }
+
+            public BlittableJsonReaderObject Current { get; private set; }
         }
     }
 }

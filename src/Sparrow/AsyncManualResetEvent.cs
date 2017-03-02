@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -56,6 +57,8 @@ namespace Sparrow
             [Pure]
             public async Task<bool> WaitAsync(TimeSpan timeout)
             {
+                Debug.Assert(timeout != TimeSpan.MaxValue);
+
                 var waitAsync = _tcs.Task;
                 var result = await Task.WhenAny(waitAsync, Task.Delay(timeout, _parent._token));
                 if (_parent._token != CancellationToken.None)

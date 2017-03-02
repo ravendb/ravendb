@@ -3,28 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-using Raven.Client;
-using Raven.Tests.Common;
-using Raven.Tests.MailingList;
+using FastTests;
+using Raven.Client.Documents;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB957 : RavenTest
+    public class RavenDB957 : RavenTestBase
     {
-        public class Role
+        private class Role
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-         [Fact]
-         public void LazyWithoutSelectNew()
+        [Fact]
+        public void LazyWithoutSelectNew()
         {
-            using (var documentStore =NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
-                documentStore.RegisterListener(new ChrisDNF.NoStaleQueriesAllowed());
                 using (var session = documentStore.OpenSession())
                 {
                     session.Store(new Role { Name = "Admin" });
@@ -35,9 +34,10 @@ namespace Raven.Tests.Issues
                 using (var session = documentStore.OpenSession())
                 {
                     var x = session.Query<Role>()
-                           .Select(r => new {r.Name})
-                           .Lazily()
-                           .Value;
+                        .Customize(c => c.WaitForNonStaleResults())
+                        .Select(r => new { r.Name })
+                        .Lazily()
+                        .Value;
 
                     Assert.Equal("Admin", x.First().Name);
                 }
@@ -46,13 +46,13 @@ namespace Raven.Tests.Issues
                 using (var session = documentStore.OpenSession())
                 {
                     var x = session.Query<Role>()
+                        .Customize(c => c.WaitForNonStaleResults())
                            .Select(r => r.Name)
                            .Lazily()
                            .Value;
                     Assert.Equal("Admin", x.First());
                 }
             }
-             
-         }
+        }
     }
 }

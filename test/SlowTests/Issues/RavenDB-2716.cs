@@ -12,12 +12,12 @@ namespace SlowTests.Issues
 {
     public class RavenDB_2716 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }
 
-        public class Users_ByName : AbstractIndexCreationTask<User>
+        private class Users_ByName : AbstractIndexCreationTask<User>
         {
             public Users_ByName()
             {

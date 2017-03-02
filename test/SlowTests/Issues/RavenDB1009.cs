@@ -1,17 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB1009 : RavenTest
+    public class RavenDB1009 : RavenTestBase
     {
-        class Foo
+        private class Foo
         {
             public byte[] Hash { get; set; }
         }
@@ -19,7 +13,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanHandleWhenSettingByteArrayToNull()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 // store a doc
                 using (var session = store.OpenSession())

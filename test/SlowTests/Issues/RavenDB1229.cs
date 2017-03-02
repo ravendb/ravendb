@@ -3,27 +3,28 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using Raven.Abstractions.Data;
-using Raven.Tests.Common;
 
+using System;
+using FastTests;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB1229 : RavenTest
+    public class RavenDB1229 : RavenTestBase
     {
         [Fact]
         public void DeleteByNotExistingIndex()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 try
                 {
-                    var op = store.DatabaseCommands.DeleteByIndex("noSuchIndex", new IndexQuery
+                    var op = store.Operations.Send(new DeleteByIndexOperation("noSuchIndex", new IndexQuery(store.Conventions)
                     {
                         Query = "Tag:Animals"
-                    });
+                    }));
 
                     op.WaitForCompletion();
 
@@ -33,7 +34,6 @@ namespace Raven.Tests.Issues
                 {
                     Assert.NotNull(e);
                 }
-
             }
         }
     }
