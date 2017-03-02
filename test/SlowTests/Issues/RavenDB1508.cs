@@ -1,54 +1,50 @@
 using System;
 using System.Linq;
 using System.Threading;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Sdk;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB1508 : RavenTest
+    public class RavenDB1508 : RavenTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string Name { get; set; }
             public Bar[] Bars { get; set; }
         }
 
-        public class Bar
+        private class Bar
         {
             public float Number { get; set; }
         }
 
-        public class BarViewModel
+        private class BarViewModel
         {
             public string FooName { get; set; }
             public float Number { get; set; }
         }
 
-        class BarSearchIndex : AbstractIndexCreationTask<Foo, BarViewModel>
+        private class BarSearchIndex : AbstractIndexCreationTask<Foo, BarViewModel>
         {
             public BarSearchIndex()
             {
                 Map = (foos) => from f in foos
                                 from b in f.Bars
-                                select new BarViewModel() { FooName = f.Name, Number = b.Number };
+                                select new BarViewModel { FooName = f.Name, Number = b.Number };
 
-                StoreAllFields(Raven.Abstractions.Indexing.FieldStorage.Yes);
-                Sort(x=>x.Number, SortOptions.Float);
+                StoreAllFields(FieldStorage.Yes);
+                Sort(x => x.Number, SortOptions.Numeric);
             }
         }
 
         [Fact]
         public void RangeQuerySucceedsWithEmbeddableStore()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 VerifyRangeQueryWithStore(store);
             }
@@ -57,14 +53,13 @@ namespace Raven.Tests.Issues
         [Fact]
         public void RangeQueryFailsAgainstServer()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 VerifyRangeQueryWithStore(store);
             }
         }
 
-
-        void VerifyRangeQueryWithStore(IDocumentStore store)
+        private static void VerifyRangeQueryWithStore(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -82,7 +77,7 @@ namespace Raven.Tests.Issues
                     var results = session.Query<BarViewModel, BarSearchIndex>()
                         .Where(x => x.Number >= 1.9f && x.Number <= 2.1f)
                         .ProjectFromIndexFieldsInto<BarViewModel>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
                     var model = Assert.Single(results);
@@ -90,7 +85,7 @@ namespace Raven.Tests.Issues
                 }, TimeSpan.FromSeconds(10));
             }
         }
-        public static void AssertEventually(Action assertion, TimeSpan timeout)
+        private static void AssertEventually(Action assertion, TimeSpan timeout)
         {
             DateTime start = DateTime.Now;
             TimeSpan retry = TimeSpan.FromMilliseconds(10);
@@ -102,7 +97,7 @@ namespace Raven.Tests.Issues
                     assertion();
                     return;
                 }
-                catch (AssertException ex)
+                catch (XunitException ex)
                 {
                     var elapsed = DateTime.Now - start;
                     if (elapsed > timeout)

@@ -16,12 +16,12 @@ namespace SlowTests.Issues
 {
     public class RavenDB1261 : RavenTestBase
     {
-        public class Student
+        private class Student
         {
             public string Email { get; set; }
         }
 
-        public class StudentIndex : AbstractIndexCreationTask<Student>
+        private class StudentIndex : AbstractIndexCreationTask<Student>
         {
             public StudentIndex()
             {
@@ -74,5 +74,5 @@ namespace SlowTests.Issues
                 }
             }
         }
-}
+    }
 }

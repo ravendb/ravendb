@@ -1,19 +1,18 @@
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
+using Sparrow.Json;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB982 : RavenTest
+    public class RavenDB982 : RavenTestBase
     {
         [Fact]
         public void WillNotForceValuesToBeString()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -26,13 +25,26 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                var queryResult = store.DatabaseCommands.Query("PeopleByAge", new IndexQuery(), null);
-                Assert.Equal(JTokenType.Integer, queryResult.Results[0]["Age"].Type);
-                Assert.Equal(JTokenType.Integer, queryResult.Results[0]["Count"].Type);
+                using (var commands = store.Commands())
+                {
+                    var queryResult = commands.Query("PeopleByAge", new IndexQuery(store.Conventions));
+
+                    var result = (BlittableJsonReaderObject)queryResult.Results[0];
+
+                    object age;
+                    Assert.True(result.TryGet("Age", out age));
+                    Assert.IsType(typeof(long), age);
+                    Assert.Equal(4L, age);
+
+                    object count;
+                    Assert.True(result.TryGetMember("Count", out count));
+                    Assert.IsType(typeof(long), count);
+                    Assert.Equal(2L, count);
+                }
             }
         }
 
-        public class PeopleByAge : AbstractIndexCreationTask<Person, PeopleByAge.Result>
+        private class PeopleByAge : AbstractIndexCreationTask<Person, PeopleByAge.Result>
         {
             public class Result
             {
@@ -55,13 +67,13 @@ namespace Raven.Tests.Issues
                          into g
                          select new
                          {
-                             Count = g.Sum(x=>x.Count),
+                             Count = g.Sum(x => x.Count),
                              Age = g.Key
                          };
             }
         }
 
-        public class Person
+        private class Person
         {
             public int Age { get; set; }
         }

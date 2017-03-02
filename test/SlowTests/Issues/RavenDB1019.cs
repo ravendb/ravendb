@@ -3,19 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
 
+using FastTests;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB1019 : RavenTest
+    public class RavenDB1019 : RavenTestBase
     {
         [Fact]
         public void StreamDocsShouldWork()
         {
-            using (var store = NewRemoteDocumentStore(runInMemory: false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -23,22 +23,25 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var enumerator = store.DatabaseCommands.StreamDocs();
-
-                var count = 0;
-                while (enumerator.MoveNext())
+                using (var session = store.OpenSession())
                 {
-                    count++;
-                }
+                    var enumerator = session.Advanced.Stream<object>(fromEtag: 0);
 
-                Assert.Equal(2, count);
+                    var count = 0;
+                    while (enumerator.MoveNext())
+                    {
+                        count++;
+                    }
+
+                    Assert.Equal(2, count);
+                }
             }
         }
 
         [Fact]
         public void CanDisposeEarly()
         {
-            using (var store = NewDocumentStore(runInMemory: false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -49,12 +52,15 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var enumerator = store.DatabaseCommands.StreamDocs();
-
-                while (enumerator.MoveNext())
+                using (var session = store.OpenSession())
                 {
-                    enumerator.Dispose();
-                    break;
+                    var enumerator = session.Advanced.Stream<object>(fromEtag: 0);
+
+                    while (enumerator.MoveNext())
+                    {
+                        enumerator.Dispose();
+                        break;
+                    }
                 }
             }
         }

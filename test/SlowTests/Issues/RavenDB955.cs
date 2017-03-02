@@ -1,18 +1,16 @@
 using System;
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB955 : RavenTest
+    public class RavenDB955 : RavenTestBase
     {
         [Fact]
         public void CanQueryWithNullComparison()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -34,7 +32,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanQueryWithHasValue()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -52,10 +50,9 @@ namespace Raven.Tests.Issues
 
         }
 
-        public class WithNullableField
+        private class WithNullableField
         {
-            public int? TheNullableField
-            { get; set; }
+            public int? TheNullableField { get; set; }
         }
     }
 }

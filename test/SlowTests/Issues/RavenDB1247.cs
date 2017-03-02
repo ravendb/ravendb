@@ -1,19 +1,14 @@
-using Raven.Abstractions.Data;
-using Raven.Json.Linq;
-
+using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using FastTests;
+using Microsoft.Extensions.Primitives;
+using Raven.Client;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB1247 : RavenTestBase
     {
-        #region Helper Classes
         private class FooDocumentWithIdProperty
         {
             public string Id { get; set; }
@@ -30,14 +25,12 @@ namespace Raven.Tests.Issues
             public int Property2 { get; set; }
         }
 
-        #endregion
-
         [Fact]
         public void DocumentWithoutIdPropertyIsStored_HashSymbolInId_HashSymbolNotRemovedFromId()
         {
             const string TEST_DOCUMENT_ID = "FooDocument/#123";
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var newDocument = new FooDocumentWithoutIdProperty()
                 {
@@ -45,24 +38,26 @@ namespace Raven.Tests.Issues
                     Property2 = 123456
                 };
 
-                store.DatabaseCommands.Put(TEST_DOCUMENT_ID, null, RavenJObject.FromObject(newDocument),
-                    new RavenJObject
-                    {
-                        {Constants.RavenEntityName, "FooDocumentWithoutIdProperties"}
-                    });
+                using (var commands = store.Commands())
+                {
+                    commands.Put(TEST_DOCUMENT_ID, null, newDocument,
+                        new Dictionary<string, StringValues>
+                        {
+                            {Constants.Documents.Metadata.Collection, "FooDocumentWithoutIdProperties"}
+                        });
+                }
 
-                while (store.DatabaseCommands.GetStatistics().StaleIndexes.Any())
-                    Thread.Sleep(10);               
+                WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
-                    
+
                     var relevantDocuments = session.Query<FooDocumentWithoutIdProperty>();
                     var fetchedDocument = relevantDocuments.FirstOrDefault();
                     Assert.NotNull(fetchedDocument);
 
-                    var fetchedDocumentId = session.Advanced.GetDocumentId(fetchedDocument);                    
-                    Assert.Equal(TEST_DOCUMENT_ID,fetchedDocumentId);
+                    var fetchedDocumentId = session.Advanced.GetDocumentId(fetchedDocument);
+                    Assert.Equal(TEST_DOCUMENT_ID, fetchedDocumentId);
                 }
 
             }
@@ -73,7 +68,7 @@ namespace Raven.Tests.Issues
         {
             const string TEST_DOCUMENT_ID = "FooDocument/#123";
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var newDocument = new FooDocumentWithIdProperty()
                 {
@@ -82,18 +77,20 @@ namespace Raven.Tests.Issues
                     Property2 = 123456
                 };
 
-                store.DatabaseCommands.Put(TEST_DOCUMENT_ID, null, RavenJObject.FromObject(newDocument),
-                                   new RavenJObject
-                    {
-                        {Constants.RavenEntityName, "FooDocumentWithIdProperty"}
-                    });
+                using (var commands = store.Commands())
+                {
+                    commands.Put(TEST_DOCUMENT_ID, null, newDocument,
+                        new Dictionary<string, StringValues>
+                        {
+                            {Constants.Documents.Metadata.Collection, "FooDocumentWithIdProperty"}
+                        });
+                }
 
                 using (var session = store.OpenSession())
-                {                    
+                {
                     var fetchedDocument = session.Load<FooDocumentWithIdProperty>(TEST_DOCUMENT_ID);
                     Assert.NotNull(fetchedDocument);
                 }
-
             }
         }
     }
