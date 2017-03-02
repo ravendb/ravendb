@@ -2,24 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class AvoidRaceConditionWhenWeLoadTheDataNotPatched : RavenTest
+    public class AvoidRaceConditionWhenWeLoadTheDataNotPatched : RavenTestBase
     {
         [Fact]
         public void GetReturnsFilteredResults()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var users = new[]
                 {
@@ -38,8 +36,7 @@ namespace Raven.Tests.Bugs
                 };
 
                 store.ExecuteIndex(new UserProfileIndex());
-                store.RegisterListener(new NoStaleQueriesAllowed());
-
+          
                 using (var session = store.OpenSession())
                 {
                     foreach (var obj in innovations)
@@ -56,6 +53,7 @@ namespace Raven.Tests.Bugs
 
                 using (var session = store.OpenSession())
                 {
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
                     var user = session.Load<UserProfile>("users/1");
 
                     if (!user.Relations.Any())
@@ -66,43 +64,35 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        public IEnumerable<ScriptedPatchCommandData> Establish(InnovationProfile edge1Profile, UserProfile edgeNProfile)
+        public IEnumerable<PatchCommandData> Establish(InnovationProfile edge1Profile, UserProfile edgeNProfile)
         {
             Relation edge1 = new HasCaseManager(edgeNProfile);
             Relation edgeN = new CaseManagerOf(edge1Profile);
 
-            yield return new ScriptedPatchCommandData
+            yield return new PatchCommandData(edge1Profile.Id, null, new PatchRequest
             {
-                Key = edge1Profile.Id,
-                Patch = new ScriptedPatchRequest
+                Script = "addRelation(relationClrType, relation);",
+                Values = new Dictionary<string, object>
                 {
-                    Script = "addRelation(relationClrType, relation);",
-                    Values = new Dictionary<string, object>
-                    {
-                        {"relation", edge1},
-                        {"relationClrType", ClrType(edge1.GetType())},
-                        {"otherSideRelationType", edgeN.Type},
-                        {"otherSideRelationSubType", edgeN.SubType}
-                    }
+                    {"relation", edge1},
+                    {"relationClrType", ClrType(edge1.GetType())},
+                    {"otherSideRelationType", edgeN.Type},
+                    {"otherSideRelationSubType", edgeN.SubType}
                 }
-            };
+            },null);
 
-            yield return new ScriptedPatchCommandData
+            yield return new PatchCommandData(edgeNProfile.Id, null, new PatchRequest
             {
-                Key = edgeNProfile.Id,
-                Patch = new ScriptedPatchRequest
-                {
-                    Script = "addRelation(relationClrType, relation);",
-                    Values = new Dictionary<string, object>
+                Script = "addRelation(relationClrType, relation);",
+                Values = new Dictionary<string, object>
                     {
                         {"relation", edgeN},
                         {"relationClrType", ClrType(edgeN.GetType())}
                     }
-                }
-            };
+            }, null);
         }
 
-        public void Commit(ScriptedPatchCommandData[] patches, IDocumentStore store)
+        public void Commit(PatchCommandData[] patches, IDocumentStore store)
         {
             var mergedPatchCommands = patches
                 .GroupBy(cmd => cmd.Key)
@@ -125,7 +115,7 @@ namespace Raven.Tests.Bugs
                         index++;
                     }
 
-                    var scriptedPatchRequest = new ScriptedPatchRequest
+                    var scriptedPatchRequest = new PatchRequest
                     {
                         Script = "var _this = this;" +
                                  "function addRelation(clrType, relation, thisArg) {" +
@@ -135,22 +125,19 @@ namespace Raven.Tests.Bugs
                         Values = g.SelectMany(cmd => cmd.Patch.Values).ToDictionary(kv => kv.Key, kv => kv.Value)
                     };
 
-                    return new ScriptedPatchCommandData
-                    {
-                        Key = docKey,
-                        Patch = scriptedPatchRequest
-                    };
-                })
-                .ToArray();
+                    return new PatchOperation(docKey, null, scriptedPatchRequest);
+                }).ToArray();
 
-            BatchResult[] results = store.DatabaseCommands.Batch(mergedPatchCommands);
-            if (results.Any(r => r.PatchResult.Value != PatchResult.Patched))
-                throw new InvalidOperationException("Some patches failed");
+            foreach (var patchCommandData in mergedPatchCommands)
+            {
+                if (store.Operations.Send(patchCommandData) != PatchStatus.Patched)
+                    throw new InvalidOperationException("Some patches failed");
+            }
         }
 
         public static string ClrType(Type t)
         {
-            return string.Concat(t.FullName, ", ", t.Assembly.GetName().Name);
+            return string.Concat(t.FullName, ", ", t.AssemblyQualifiedName);
         }
 
         public class UserProfileIndex : AbstractIndexCreationTask<UserProfile, UserProfileIndex.Result>
@@ -187,7 +174,7 @@ namespace Raven.Tests.Bugs
 
             public List<Relation> Relations { get; protected set; }
 
-            protected Profile()
+            public Profile()
             {
                 Relations = new List<Relation>();
             }
@@ -243,14 +230,6 @@ namespace Raven.Tests.Bugs
         {
             public string Id { get; set; }
             public CredentialsStatus Status { get; set; }
-        }
-
-        public class NoStaleQueriesAllowed : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
-            {
-                queryCustomization.WaitForNonStaleResults(TimeSpan.FromSeconds(60));
-            }
         }
     }
 }
