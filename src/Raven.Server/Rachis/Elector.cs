@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using Raven.Server.ServerWide.Context;
 
@@ -54,12 +55,32 @@ namespace Raven.Server.Rachis
                         long lastIndex;
                         long lastTerm;
                         string whoGotMyVoteIn;
+                        ClusterTopology clusterTopology;
 
                         using (context.OpenReadTransaction())
                         {
                             lastIndex = _engine.GetLastEntryIndex(context);
                             lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
                             whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+
+                            clusterTopology = _engine.GetTopology(context) ;
+                        }
+
+                        if (clusterTopology.Voters.Contains(rv.Source) == false &&
+                            clusterTopology.Promotables.Contains(rv.Source) == false &&
+                            clusterTopology.NonVotingMembers.Contains(rv.Source) == false)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                // we only report to the node asking for our vote if we are the leader, this gives
+                                // the oust node a authorotative confirmation that they were removed from the cluster
+                                NotInTopology = _engine.CurrentState == RachisConsensus.State.Leader,
+                                Message = $"Node {rv.Source} is not in my topology, cannot vote for it"
+                            });
+                            _connection.Dispose();
+                            return;
                         }
 
                         if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)

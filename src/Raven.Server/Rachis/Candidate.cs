@@ -90,17 +90,47 @@ namespace Raven.Server.Rachis
 
                         _peersWaiting.Reset();
 
+                        bool removedFromTopology = false;
                         var trialElectionsCount = 1;
                         var realElectionsCount = 1;
                         foreach (var ambassador in _voters)
                         {
+                            if (ambassador.NotInTopology)
+                            {
+                                removedFromTopology = true;
+                                break;
+                            }
                             if (ambassador.ReadlElectionWonAtTerm == ElectionTerm)
                                 realElectionsCount++;
                             if (ambassador.TrialElectionWonAtTerm == ElectionTerm)
                                 trialElectionsCount++;
                         }
 
+
                         var majority = ((_voters.Count + 1) / 2) + 1;
+
+                        if (removedFromTopology)
+                        {
+                            if (_engine.Log.IsInfoEnabled)
+                            {
+                                _engine.Log.Info($"A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
+                            }
+                            var engineCurrentTerm = _engine.CurrentTerm;
+                            using (_engine.ContextPool.AllocateOperationContext(out context))
+                            using (context.OpenWriteTransaction())
+                            {
+                                if (_engine.CurrentTerm == engineCurrentTerm)
+                                {
+                                    _engine.SetNewState(RachisConsensus.State.Passive, null, engineCurrentTerm,
+                                        $"I just learned from the leader that I\'m not in their topology, moving to passive state");
+                                    _engine.DeleteTopology(context);
+                                }
+                                context.Transaction.Commit();
+                            }
+                            break;
+                        }
+
+
                         if (realElectionsCount >= majority)
                         {
                             Running = false;

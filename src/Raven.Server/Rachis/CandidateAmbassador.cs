@@ -131,7 +131,7 @@ namespace Raven.Server.Rachis
                                             _engine.FoundAboutHigherTerm(rvr.Term);
                                             return;
                                         }
-
+                                        NotInTopology = rvr.NotInTopology;
                                         if (rvr.VoteGranted == false)
                                         {
                                             // we go a negative response here, so we can't proceed
@@ -164,7 +164,7 @@ namespace Raven.Server.Rachis
                                         _engine.FoundAboutHigherTerm(rvr.Term);
                                         return;
                                     }
-
+                                    NotInTopology = rvr.NotInTopology;
                                     if (rvr.VoteGranted == false)
                                     {
                                         // we go a negative response here, so we can't proceed
@@ -217,5 +217,7 @@ namespace Raven.Server.Rachis
                 }
             }
         }
+
+        public bool NotInTopology { get; private set; }
     }
 }

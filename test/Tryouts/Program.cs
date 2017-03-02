@@ -12,16 +12,16 @@ namespace Tryouts
         {
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
+            for (int i = 0; i < 100; i++)
             {
+                
                 //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
                 //LoggingSource.Instance.EnableConsoleLogging();
                 var sp = Stopwatch.StartNew();
-                using (var a = new FastTests.Issues.RavenDB_5669())
+                using (var a = new SlowTests.Server.Rachis.BasicCluster())
                 {
-                    a.FailingTest();
+                    a.ClusterWithThreeNodesAndElections().Wait();
                 }
-                GC.Collect(2);
-                GC.WaitForPendingFinalizers();
                 Console.WriteLine(sp.Elapsed);
             }
         }

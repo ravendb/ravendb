@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -51,6 +52,7 @@ namespace Raven.Server.Rachis
                         lastTruncate != appendEntries.TruncateLogBefore ||
                         entries.Count != 0)
                     {
+                        bool removedFromTopology = false;
                         // we start the tx after we finished reading from the network
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -60,8 +62,23 @@ namespace Raven.Server.Rachis
                                 {
                                     if (lastTopology != null)
                                     {
-                                        RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction,
-                                            lastTopology);
+                                        if (_engine.Log.IsInfoEnabled)
+                                        {
+                                            _engine.Log.Info($"Topology changed to {lastTopology}");
+                                        }
+
+                                        var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(lastTopology);
+                                        if (topology.Voters.Contains(_engine.Url) ||
+                                            topology.Promotables.Contains(_engine.Url) ||
+                                            topology.NonVotingMembers.Contains(_engine.Url))
+                                        {
+                                            RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction,
+                                                lastTopology);
+                                        }
+                                        else
+                                        {
+                                            removedFromTopology = true;
+                                        }
                                     }
                                 }
                             }
@@ -85,6 +102,17 @@ namespace Raven.Server.Rachis
                             lastCommit = lastEntryIndexToCommit;
 
                             tx.Commit();
+                        }
+
+                        if (removedFromTopology)
+                        {
+                            if (_engine.Log.IsInfoEnabled)
+                            {
+                                _engine.Log.Info($"Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
+                            }
+                            _engine.SetNewState(RachisConsensus.State.Passive, null, appendEntries.Term,
+                                               "I was kicked out of the cluster and moved to passive mode");
+                            return;
                         }
                     }
 

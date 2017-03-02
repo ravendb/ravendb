@@ -285,7 +285,7 @@ namespace Raven.Server.Rachis
 
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
-            using (context.OpenWriteTransaction()) // we just use the write transaction lock here
+            using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
                 if (expectedTerm != CurrentTerm && expectedTerm != -1)
                     throw new ConcurrencyException(
@@ -299,8 +299,14 @@ namespace Raven.Server.Rachis
 
                 if (disposable != null)
                     _disposables.Add(disposable);
-                else // if we are back to null state, wait to become candidate if no one talks to us
+                else if(state != State.Passive)// if we are back to null state, wait to become candidate if no one talks to us
                     Timeout.Start(SwitchToCandidateStateOnTimeout);
+
+                if (state == State.Passive)
+                {
+                    DeleteTopology(context);
+                }
+                context.Transaction.Commit();
             }
 
             UpdateState(state);
@@ -394,6 +400,13 @@ namespace Raven.Server.Rachis
             var candidate = new Candidate(this);
             SetNewState(State.Candidate, candidate, CurrentTerm, reason);
             candidate.Start();
+        }
+
+        public void DeleteTopology(TransactionOperationContext context)
+        {
+            var topology = GetTopology(context);
+            var newTopology = new ClusterTopology(topology.TopologyId, null, new string[0], new string[0], new string[0]);
+            SetTopology(context, newTopology);
         }
 
         public unsafe ClusterTopology GetTopology(TransactionOperationContext context)
@@ -500,7 +513,7 @@ namespace Raven.Server.Rachis
                     }
 
                     if (initialMessage.TopologyId != clusterTopology.TopologyId &&
-                        String.IsNullOrEmpty(clusterTopology.TopologyId) == false)
+                        string.IsNullOrEmpty(clusterTopology.TopologyId) == false)
                     {
                         throw new InvalidOperationException(
                             $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
