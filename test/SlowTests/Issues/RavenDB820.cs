@@ -3,24 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB820 : RavenTest
+    public class RavenDB820 : RavenTestBase
     {
-        class Foo
+        private class Foo
         {
             public string First { get; set; }
         }
 
-        class TestIndex : AbstractIndexCreationTask<Foo, TestIndex.QueryResult>
+        private class TestIndex : AbstractIndexCreationTask<Foo, TestIndex.QueryResult>
         {
             public class QueryResult
             {
@@ -29,7 +28,7 @@ namespace Raven.Tests.Issues
 
             public class ActualResult
             {
-                public string[]Query { get; set; }
+                public string[] Query { get; set; }
             }
 
             public TestIndex()
@@ -49,7 +48,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanGetProjectionOfMixedContent()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new TestIndex());
                 using (var session = store.OpenSession())

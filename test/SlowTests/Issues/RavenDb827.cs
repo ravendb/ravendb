@@ -1,24 +1,22 @@
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDb827 : RavenTestBase
     {
-        public class TranTest
+        private class TranTest
         {
             public string Id { get; set; }
             public IDictionary<string, string> Trans { get; set; }
         }
 
-        public class TranTestIndex : AbstractIndexCreationTask<TranTest>
+        private class TranTestIndex : AbstractIndexCreationTask<TranTest>
         {
             public TranTestIndex()
             {
@@ -37,7 +35,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Can_Use_Dictionary_Created_Field_In_Lucene_Search()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new TranTestIndex());
 
@@ -64,7 +62,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Can_Use_Dictionary_Created_Field_In_Linq_Where()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new TranTestIndex());
 
@@ -92,7 +90,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Can_Use_Dictionary_Created_Field_In_Linq_Search()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new TranTestIndex());
 
@@ -120,7 +118,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Can_Use_Dictionary_Created_Field_In_Linq_Search_Workaround()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new TranTestIndex());
 

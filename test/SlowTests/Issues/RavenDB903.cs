@@ -1,21 +1,18 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using FastTests;
+using Newtonsoft.Json;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB903 : RavenTestBase
     {
-        public class Product
+        private class Product
         {
             public string Name { get; set; }
             public string Description { get; set; }
@@ -41,9 +38,9 @@ namespace Raven.Tests.Issues
                                      .As<Product>());
         }
 
-        public void DoTest(Func<IDocumentSession, IQueryable<Product>> queryFunc)
+        private void DoTest(Func<IDocumentSession, IQueryable<Product>> queryFunc)
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new TestIndex());
 
@@ -76,7 +73,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class TestIndex : AbstractIndexCreationTask<Product>
+        private class TestIndex : AbstractIndexCreationTask<Product>
         {
             public TestIndex()
             {

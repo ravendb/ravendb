@@ -1,63 +1,64 @@
 using System.Collections.Generic;
-
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using FastTests;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Client;
+using Sparrow.Json.Parsing;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB815 : RavenTestBase
     {
-        public class Foo1
+        private class Foo1
         {
             public string Id { get; set; }
             public IList<string> Strings { get; set; }
         }
 
-        public class Foo2
+        private class Foo2
         {
             public string Id { get; set; }
             public IEnumerable<string> Strings { get; set; }
         }
 
-        public class Foo3
+        private class Foo3
         {
             public string Id { get; set; }
             public List<string> Strings { get; set; }
         }
 
-        public class Foo4
+        private class Foo4
         {
             public string Id { get; set; }
             public string[] Strings { get; set; }
         }
 
-        public class Foo5
+        private class Foo5
         {
             public string Id { get; set; }
             public IList<Bar> Bars { get; set; }
         }
 
-        public class Foo6
+        private class Foo6
         {
             public string Id { get; set; }
             public IEnumerable<Bar> Bars { get; set; }
         }
 
-        public class Foo7
+        private class Foo7
         {
             public string Id { get; set; }
             public List<Bar> Bars { get; set; }
         }
 
-        public class Foo8
+        private class Foo8
         {
             public string Id { get; set; }
             public Bar[] Bars { get; set; }
         }
 
-        public class Bar
+        private class Bar
         {
             public string Baz { get; set; }
         }
@@ -65,7 +66,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Inner_IList_Strings_From_Array()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -73,21 +74,25 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_IList_Strings_From_List()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -95,21 +100,25 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_IEnumerable_Strings_From_Array()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -117,21 +126,25 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_IEnumerable_Strings_From_List()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -139,21 +152,25 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_List_Strings()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -161,21 +178,25 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_Array_Strings()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -183,21 +204,25 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_IList_Objects_From_Array()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -205,8 +230,11 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -219,13 +247,14 @@ namespace Raven.Tests.Issues
     }
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_IList_Objects_From_List()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -233,8 +262,11 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -247,13 +279,14 @@ namespace Raven.Tests.Issues
     }
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_IEnumerable_Objects_From_Array()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -261,8 +294,11 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -275,13 +311,14 @@ namespace Raven.Tests.Issues
     }
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_IEnumerable_Objects_From_List()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -289,8 +326,11 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -303,13 +343,14 @@ namespace Raven.Tests.Issues
     }
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_List_Objects()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -317,8 +358,11 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -331,13 +375,14 @@ namespace Raven.Tests.Issues
     }
   ]
 }", doc);
+                }
             }
         }
 
         [Fact]
         public void Inner_Array_Objects()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -345,8 +390,11 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var doc = documentStore.DatabaseCommands.Get("foos/1").DataAsJson.ToString();
-                Assert.Equal(@"{
+                using (var commands = documentStore.Commands())
+                {
+                    var doc = GetJsonString(commands, "foos/1");
+
+                    Assert.Equal(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -359,7 +407,19 @@ namespace Raven.Tests.Issues
     }
   ]
 }", doc);
+                }
             }
+        }
+
+        private static string GetJsonString(DocumentStoreExtensions.DatabaseCommands commands, string id)
+        {
+            var doc = commands.Get(id);
+            var jsonString = doc.ToString();
+            var json = JObject.Parse(jsonString);
+
+            json.Remove(Constants.Documents.Metadata.Key);
+
+            return json.ToString(Formatting.Indented);
         }
     }
 }
