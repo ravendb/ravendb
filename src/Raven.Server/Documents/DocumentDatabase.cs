@@ -58,6 +58,7 @@ namespace Raven.Server.Documents
             ResourceName = "db/" + name;
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
+            IoChanges = new IoChangesNotifications();
             Changes = new DocumentsChanges();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this, _indexAndTransformerLocker);
@@ -68,7 +69,6 @@ namespace Raven.Server.Documents
             SubscriptionStorage = new SubscriptionStorage(this);
             Operations = new DatabaseOperations(this);
             Metrics = new MetricsCountersManager();
-            IoMetrics = serverStore?.IoMetrics ?? new IoMetrics(256, 256);
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
@@ -108,15 +108,14 @@ namespace Raven.Server.Documents
 
         public DocumentsChanges Changes { get; }
 
-        public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
+        public IoChangesNotifications IoChanges { get; }
 
+        public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
         public DatabaseOperations Operations { get; private set; }
 
         public HugeDocuments HugeDocuments { get; }
 
         public MetricsCountersManager Metrics { get; }
-
-        public IoMetrics IoMetrics { get; }
 
         public IndexStore IndexStore { get; private set; }
 

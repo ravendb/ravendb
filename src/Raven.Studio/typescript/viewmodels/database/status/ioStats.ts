@@ -5,9 +5,10 @@ import generalUtils = require("common/generalUtils");
 import fileDownloader = require("common/fileDownloader");
 import viewModelBase = require("viewmodels/viewModelBase");
 import gapFinder = require("common/helpers/graph/gapFinder");
+import messagePublisher = require("common/messagePublisher");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import getIOMetricsCommand = require("commands/database/debug/getIOMetricsCommand");
-import messagePublisher = require("common/messagePublisher");
+import liveIOStatsWebSocketClient = require("common/liveIOStatsWebSocketClient");
 
 type rTreeLeaf = {
     minX: number;
@@ -175,25 +176,30 @@ class metrics extends viewModelBase {
     private static readonly dataFlushString = "DataFlush";       
 
     /* observables */
-       
+
+    private autoScroll = ko.observable<boolean>(false);
+    private hasAnyData = ko.observable<boolean>(false);    
     private importFileName = ko.observable<string>();   
     private isImport = ko.observable<boolean>(false);
-    private hasIndexes = ko.observable<boolean>(false);
-    private isIndexesExpanded = ko.observable<boolean>(false);
-    private hasAnyData = ko.observable<boolean>(false);
+    private trackNames = ko.observableArray<string>();
 
     private searchText = ko.observable<string>();
-    private trackNames = ko.observableArray<string>();
+    private hasIndexes = ko.observable<boolean>(false);
+    private isIndexesExpanded = ko.observable<boolean>(false);     
     private filteredIndexesTracksNames = ko.observableArray<string>();   
+    private allIndexesAreFiltered = ko.observable<boolean>(false);
+    private indexesVisible: KnockoutComputed<boolean>; 
 
     private journalWriteLowSizeLevel = ko.observable<number>();
     private journalWriteHighSizeLevel = ko.observable<number>();
     private dataSyncLowSizeLevel = ko.observable<number>();
     private dataSyncHighSizeLevel = ko.observable<number>();
     private dataFlushLowSizeLevel = ko.observable<number>();
-    private dataFlushHighSizeLevel = ko.observable<number>();
+    private dataFlushHighSizeLevel = ko.observable<number>();   
 
     /* private */
+
+    private liveViewClient: liveIOStatsWebSocketClient;
 
     private data: Raven.Server.Documents.Handlers.IOMetricsResponse;    
     private commonPathsPrefix: string;     
@@ -225,11 +231,28 @@ class metrics extends viewModelBase {
     constructor() {
         super();
         this.searchText.throttle(200).subscribe(() => this.filterTracks());
+
+        this.autoScroll.subscribe(v => {
+            if (v) {
+                this.scrollToRight();
+            } else {
+                // Cancel transition (if any)
+                this.brushContainer.transition();
+            }
+        });
     }
 
-    activate(args: { indexName: string, database: string }): JQueryPromise<Raven.Server.Documents.Handlers.IOMetricsResponse> {
-        super.activate(args);
-        return this.getIOMetricsData();
+    activate(args: { indexName: string, database: string }): void {
+        super.activate(args);        
+        this.indexesVisible = ko.pureComputed(() => this.hasIndexes() && !this.allIndexesAreFiltered());    
+    }
+
+    deactivate() {
+        super.deactivate;
+
+        if (this.liveViewClient) {
+            this.cancelLiveView();
+        }
     }
 
     compositionComplete() {
@@ -245,16 +268,16 @@ class metrics extends viewModelBase {
             () => this.onToggleIndexes(),
             (item, x, y) => this.handleTrackTooltip(item, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
-            () => this.hideTooltip());
-        
-        this.initViewData();
-        this.draw();
+            () => this.hideTooltip());                    
+         
+        this.enableLiveView();
     }
 
     private initViewData() {
         let maxJournalWriteSize: number = 0;
         let maxVoronDataSyncSize: number = 0;
         let maxVoronDataFlushSize: number = 0;
+        this.hasIndexes(false);
 
         // 1. Find common paths prefix
         this.commonPathsPrefix = this.findPrefix(this.data.Environments.map(env => env.Path));
@@ -263,13 +286,10 @@ class metrics extends viewModelBase {
         this.data.Environments.forEach(env => {           
 
             // 2.0 Set the track name for the database path
-            let trackName = env.Path.substring(this.commonPathsPrefix.length + 1);
-            if (trackName === "") {
-                env.Path = `${env.Path}\\${metrics.documentsString}`;
-            }
+            let trackName = env.Path.substring(this.commonPathsPrefix.length);           
 
-            // 2.1 Check if indexes exist
-            if (env.Path.substring(this.commonPathsPrefix.length + 1).startsWith(metrics.indexesString)) {              
+            // 2.1 Check if indexes exist        
+            if (env.Path.substring(this.commonPathsPrefix.length).startsWith(metrics.indexesString)) {              
                 this.hasIndexes(true);
             } 
 
@@ -362,6 +382,19 @@ class metrics extends viewModelBase {
             .on("mouseup.tip", () => selection.on("mousemove.tip", onMove));
 
         selection
+            .on("mousedown.live", () => {
+                if (this.liveViewClient) {
+                    this.liveViewClient.pauseUpdates();
+                }
+            });
+        selection
+            .on("mouseup.live", () => {
+                if (this.liveViewClient) {
+                    this.liveViewClient.resumeUpdates();
+                }
+            });
+
+        selection
             .on("mousedown.yShift", () => {
                 const node = selection.node();
                 const initialClickLocation = d3.mouse(node);
@@ -384,31 +417,124 @@ class metrics extends viewModelBase {
     }
 
     private filterTracks() {
-        const criteria = this.searchText().toLowerCase();                
+        const criteria = this.searchText().toLowerCase();
+        this.allIndexesAreFiltered(false);
 
-        const indexesTracks = this.data.Environments.filter((x) => {
-            let temp = x.Path.substring(this.commonPathsPrefix.length + 1);           
+        const indexesTracks = this.data.Environments.filter((x) => {               
+            let temp = x.Path.substring(this.commonPathsPrefix.length);
             return temp.startsWith(metrics.indexesString);
         });                 
-
-        const indexesTracksNames = indexesTracks.map(x => x.Path.substring(this.commonPathsPrefix.length + 1 + metrics.indexesString.length + 1));
+       
+        const indexesTracksNames = indexesTracks.map(x => x.Path.substring(this.commonPathsPrefix.length + 1 + metrics.indexesString.length));
 
         // filteredIndexesTracksNames will be indexes tracks names that are NOT SUPPOSED TO BE SEEN ....
         this.filteredIndexesTracksNames(indexesTracksNames.filter(x => !(x.toLowerCase().includes(criteria))));       
-                
+
+        if (indexesTracks.length === this.filteredIndexesTracksNames().length) {
+            // All indexes are filetered out..
+            this.allIndexesAreFiltered(true);
+        }       
+
         this.drawMainSection();
     }
 
-    private draw() {
+    private enableLiveView() {
+        let firstTime = true;
+
+        const onDataUpdate = (mergedData: Raven.Server.Documents.Handlers.IOMetricsResponse) => {
+            let timeRange: [Date, Date];
+            if (!firstTime) {
+                const timeToRemap = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
+                timeRange = timeToRemap.map(x => this.xBrushTimeScale.invert(x));
+            }
+
+            this.data = mergedData;        
+            this.prepareTimeData();
+
+            if (!firstTime) {
+                const newBrush: [number, number] = timeRange.map(x => this.xBrushTimeScale(x));
+                this.setZoomAndBrush(newBrush, brush => brush.extent(newBrush));
+            }
+
+            if (this.autoScroll()) {
+                this.scrollToRight();
+            }
+
+            this.initViewData();
+            this.draw(firstTime);
+
+            if (firstTime) {
+                firstTime = false;
+            }
+        };
+
+        this.liveViewClient = new liveIOStatsWebSocketClient(this.activeDatabase(), onDataUpdate);
+    }
+
+    scrollToRight() {
+        const currentExtent = this.brush.extent() as [number, number];
+        const extentWidth = currentExtent[1] - currentExtent[0];
+
+        const existingBrushStart = currentExtent[0];
+
+        if (currentExtent[1] < this.totalWidth) {
+
+            const rightPadding = 100;
+            const desiredShift = rightPadding * extentWidth / this.totalWidth;
+
+            const desiredExtentStart = this.totalWidth + desiredShift - extentWidth;
+
+            const moveFunc = (startX: number) => {
+                this.brush.extent([startX, startX + extentWidth]);
+                this.brushContainer.call(this.brush);
+
+                this.onBrush();
+            };
+
+            this.brushContainer
+                .transition()
+                .duration(500)
+                .tween("side-effect", () => {
+                    const interpolator = d3.interpolate(existingBrushStart, desiredExtentStart);
+
+                    return (t) => {
+                        const currentStart = interpolator(t);
+                        moveFunc(currentStart);
+                    }
+                });
+        }
+    }
+
+    private cancelLiveView() {
+        if (this.liveViewClient) {
+            this.liveViewClient.dispose();
+            this.liveViewClient = null;
+        }
+    }   
+
+    private prepareTimeData() {
+        let timeRanges = this.extractTimeRanges();
+
+        if (timeRanges.length === 0) {
+            // no data - create fake scale
+            timeRanges = [[new Date(), new Date()]];
+        }
+
+        this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
+        this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
+    }
+
+    private draw(resetFilteredIndexNames: boolean) {
         if (this.hasAnyData()) {           
 
             // 0. Prepare
             this.prepareBrushSection();
-            this.prepareMainSection();
+            this.prepareMainSection(resetFilteredIndexNames);
 
             // 1. Draw the top brush section as image on the real DOM canvas
             const canvas = this.canvas.node() as HTMLCanvasElement;
             const context = canvas.getContext("2d");
+            context.beginPath(); 
             context.clearRect(0, 0, this.totalWidth, metrics.brushSectionHeight);
             context.drawImage(this.brushSection, 0, 0);
 
@@ -439,16 +565,14 @@ class metrics extends viewModelBase {
         context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
 
         // 3. Draw accumulative data in the brush section (the top area)
-        let yStartItem: number;
-        const visibleTimeFrame = this.xNumericScale.domain().map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
-        const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 0);
-        const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
+        let yStartItem: number;      
+        const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(this.xBrushTimeScale);
 
         this.data.Environments.forEach(env => {
             env.Files.forEach(file => {
                 file.Recent.forEach(recentItem => {
 
-                    // TODO: Create algorithm to calculate the exact color to be painted in the brush section for the Accumulated Data,
+                    // TODO: Maybe create algorithm to calculate the exact color to be painted in the brush section for the Accumulated Data,
                     //       Similar to what I did in indexing performance....  For now a default high color is used                       
                     context.fillStyle = this.calcItemColor(recentItem, false);
 
@@ -464,11 +588,11 @@ class metrics extends viewModelBase {
                             break;                        
                     }
                    
-                    // 4. Draw item in main canvas area 
-                    const startDate = this.isoParser.parse(recentItem.Start);
-                    const x1 = xScale(startDate);
+                    // 4. Draw item on canvas                    
+                    const startDate = this.isoParser.parse(recentItem.Start);                   
+                    const x1 = this.xBrushTimeScale(startDate);
                     let dx = extentFunc(recentItem.Duration);
-                    dx = dx < metrics.minItemWidth ? metrics.minItemWidth : dx;
+                    dx = dx < metrics.minItemWidth ? metrics.minItemWidth : dx;                   
                     context.fillRect(x1, yStartItem, dx, metrics.trackHeight);                 
                 });
             });
@@ -509,9 +633,11 @@ class metrics extends viewModelBase {
         }
     }
 
-    private prepareMainSection() {
-        this.trackNames(this.findTrackNamesWithoutCommonPrefix());
-        this.filteredIndexesTracksNames([]);       
+    private prepareMainSection(resetFilteredIndexNames: boolean) {
+        this.trackNames(this.findTrackNamesWithoutCommonPrefix());             
+        if (resetFilteredIndexNames) {
+            this.filteredIndexesTracksNames([]); 
+        }
     }
 
     private fixCurrentOffset() {
@@ -533,8 +659,8 @@ class metrics extends viewModelBase {
         range.push(currentOffset);
         currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
 
-        // 2. We want indexes to show in second track even though they are last in the endpoint info..
-        if (this.hasIndexes()) {
+        // 2. We want indexes to show in second track even though they are last in the endpoint info..       
+        if (this.indexesVisible()) {
             for (let i = 3; i < this.data.Environments.length; i++) {
 
                 // 2.1 indexes closed
@@ -570,7 +696,7 @@ class metrics extends viewModelBase {
             }
         }        
 
-        // 3. Subscription path
+        // 3. Subscriptions path
         domain.push(this.data.Environments[1].Path);
         range.push(currentOffset);
         currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
@@ -603,8 +729,8 @@ class metrics extends viewModelBase {
     private findTrackNamesWithoutCommonPrefix(): string[] {
         const result = new Set<string>();              
 
-        this.data.Environments.forEach(track => {
-            let trackName = track.Path.substring(this.commonPathsPrefix.length + 1);           
+        this.data.Environments.forEach(track => {                  
+            let trackName = track.Path.substring(this.commonPathsPrefix.length);           
             result.add(trackName);
         });
 
@@ -655,6 +781,8 @@ class metrics extends viewModelBase {
     }
 
     private onZoom() {
+        this.autoScroll(false);
+
         if (this.brushAndZoomCallbacksEnabled) {
             this.brush.extent(this.xNumericScale.domain() as [number, number]);
             this.brushContainer
@@ -679,7 +807,10 @@ class metrics extends viewModelBase {
         this.constructYScale();
 
         const visibleTimeFrame = this.xNumericScale.domain().map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
-        const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 0);
+        const visibleStartDateAsInt = visibleTimeFrame[0].getTime();
+        const visibleEndDateAsInt = visibleTimeFrame[1].getTime();
+
+        const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 0); 
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const context = canvas.getContext("2d");
 
@@ -720,63 +851,69 @@ class metrics extends viewModelBase {
             this.data.Environments.forEach(env => {
 
                 // 3.1. Check if this is an index track 
-                let trackName = env.Path.substring(this.commonPathsPrefix.length + 1);               
+                let trackName = env.Path.substring(this.commonPathsPrefix.length);
                 let isIndexTrack = trackName.startsWith(metrics.indexesString) ? true : false;                                 
                
                 // 3.2 Draw track name   
                 const yStart = this.yScale(env.Path);                                                                                 
                 this.drawTrackName(context, trackName, yStart);               
-               
+
+                // 3.3 Draw item in main canvas area (but only if item is inside the visible/selected area from the brush section..)
                 env.Files.forEach(file => {
                     file.Recent.forEach(recentItem => {                                                              
-                        if (!this.filtered(env.Path)) {
+                        if (!this.filtered(env.Path)) {                          
+                           
+                            const startDate = this.isoParser.parse(recentItem.Start);                            
+                            const itemStartDateAsInt = startDate.getTime();
+                            const itemEndDateAsInt = itemStartDateAsInt + recentItem.Duration;                       
 
-                            // 3.3 Determine color for item                       
-                            let calcColorBasedOnSize = true;
-                            if (!this.isIndexesExpanded() && isIndexTrack) { 
-                                                        
-                                // TODO: create algorithm to calculate the exact color to be painted - same TODO as in the brush section...
-                                calcColorBasedOnSize = false;
-                            }
-                            context.fillStyle = this.calcItemColor(recentItem, calcColorBasedOnSize);
+                            if (itemStartDateAsInt < visibleEndDateAsInt && itemEndDateAsInt > visibleStartDateAsInt) {
+                                
+                                // 3.4 Determine color for item                       
+                                let calcColorBasedOnSize = true;
+                                if (!this.isIndexesExpanded() && isIndexTrack) {
 
-                            // 3.4 Determine yStart for item
-                            switch (recentItem.Type) {
-                                case metrics.journalWriteString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin; break;                             
-                                case metrics.dataFlushString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin * 2 + metrics.itemHeight; break;
-                                case metrics.dataSyncString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin * 3 + metrics.itemHeight * 2; break;
-                            }
+                                    // TODO: Maybe create algorithm to calculate the exact color to be painted - same TODO as in the brush section...
+                                    calcColorBasedOnSize = false;
+                                }
+                                context.fillStyle = this.calcItemColor(recentItem, calcColorBasedOnSize);
 
-                            // 3.5 Draw item in main canvas area 
-                            const startDate = this.isoParser.parse(recentItem.Start);
-                            const x1 = xScale(startDate);
-                            let dx = extentFunc(recentItem.Duration);
-                            dx = dx < metrics.minItemWidth ? metrics.minItemWidth : dx;
-                            context.fillRect(x1, yStartItem, dx, metrics.itemHeight);
-
-                            // 3.6 Draw the human size text on the item if there is enough space.. but don't draw on closed indexes track 
-                            // Logic: Don't draw if: [closed && isIndexTrack] ==> [!(closed && isIndexTrack)] ==> [open || !isIndexTrack]
-                            if (this.isIndexesExpanded() || !isIndexTrack) {
-                                const humanSizeTextWidth = context.measureText(recentItem.HumanSize).width;
-                                if (dx > humanSizeTextWidth) {
-                                    context.fillStyle = 'black';
-                                    context.fillText(recentItem.HumanSize, x1 + dx / 2 - humanSizeTextWidth / 2, yStartItem + metrics.trackHeight / 2 + 4);
+                                // 3.5 Determine yStart for item
+                                switch (recentItem.Type) {
+                                    case metrics.journalWriteString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin; break;
+                                    case metrics.dataFlushString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin * 2 + metrics.itemHeight; break;
+                                    case metrics.dataSyncString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin * 3 + metrics.itemHeight * 2; break;
                                 }
 
-                                // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
-                                this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, metrics.itemHeight, recentItem);
-                            }    
+                                const x1 = xScale(startDate);
+                                let dx = extentFunc(recentItem.Duration);
+                                dx = dx < metrics.minItemWidth ? metrics.minItemWidth : dx;                               
+                                context.fillRect(x1, yStartItem, dx, metrics.itemHeight);
 
-                            // 3.8 If on the closed index track, might as well register toggle, so that indexes details will open, can be nice 
-                            if (!this.isIndexesExpanded() && isIndexTrack) {
-                                this.hitTest.registerIndexToggle(x1 - 5, yStartItem, dx + 5, metrics.itemHeight);
+                                // 3.6 Draw the human size text on the item if there is enough space.. but don't draw on closed indexes track 
+                                // Logic: Don't draw if: [closed && isIndexTrack] ==> [!(closed && isIndexTrack)] ==> [open || !isIndexTrack]
+                                if (this.isIndexesExpanded() || !isIndexTrack) {
+                                    const humanSizeTextWidth = context.measureText(recentItem.HumanSize).width;
+                                    if (dx > humanSizeTextWidth) {
+                                        context.fillStyle = 'black';
+                                        context.fillText(recentItem.HumanSize, x1 + dx / 2 - humanSizeTextWidth / 2, yStartItem + metrics.trackHeight / 2 + 4);
+                                    }
 
-                            }
+                                    // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
+                                    this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, metrics.itemHeight, recentItem);
+                                }    
+
+                                // 3.8 If on the closed index track, might as well register toggle, so that indexes details will open, can be nice 
+                                if (!this.isIndexesExpanded() && isIndexTrack) {
+                                    this.hitTest.registerIndexToggle(x1 - 5, yStartItem, dx + 5, metrics.itemHeight);
+                                }
+                            }                              
                         }
                     });
                 });
             });
-                        
+
+            // 4. Draw gaps   
             this.drawGaps(context, xScale);            
         }
         finally {
@@ -784,9 +921,8 @@ class metrics extends viewModelBase {
         }
     }
 
-    private filtered(envPath: string): boolean {
-
-        return _.includes(this.filteredIndexesTracksNames(), envPath.substring(this.commonPathsPrefix.length + 1 + metrics.indexesString.length + 1));        
+    private filtered(envPath: string): boolean {             
+        return _.includes(this.filteredIndexesTracksNames(), envPath.substring(this.commonPathsPrefix.length + 1 + metrics.indexesString.length));
     }
 
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
@@ -819,6 +955,7 @@ class metrics extends viewModelBase {
         let rectWidth;             
         let addedWidth = 8;
         let drawArrow = false;       
+        let skipDrawing = false;
 
         const isIndexTrack = trackName.startsWith(metrics.indexesString);
 
@@ -827,37 +964,41 @@ class metrics extends viewModelBase {
             xTextStart = 15;
             addedWidth = 18;
 
-            trackName = trackName.substring(metrics.indexesString.length + 1);
+            trackName = trackName.substring(metrics.indexesString.length + 1);            
 
             // 1.1 The first indexes track has the track name of: 'Indexes' (both when opened or closed..)
             if ((trackName === "") || (!this.isIndexesExpanded())) {
                 trackName = metrics.indexesString;                
                 addedWidth = 23;
-                drawArrow = true;                       
+                drawArrow = true;
+                skipDrawing = this.allIndexesAreFiltered();
             }           
         }     
 
-        context.font = "12px Lato"; // Define font before using measureText()...
-        rectWidth = context.measureText(trackName).width + addedWidth;
-        context.fillStyle = metrics.colors.trackNameBg;
+        if (!skipDrawing) {
+            context.font = "12px Lato"; // Define font before using measureText()...
+            rectWidth = context.measureText(trackName).width + addedWidth;
+            context.fillStyle = metrics.colors.trackNameBg;
 
-        if (!_.includes(this.filteredIndexesTracksNames(), trackName)) {
-            context.fillRect(2, yStart + metrics.closedTrackPadding, rectWidth, metrics.trackHeight);
-        }
+            if (!_.includes(this.filteredIndexesTracksNames(), trackName)) {
+                context.fillRect(2, yStart + metrics.closedTrackPadding, rectWidth, metrics.trackHeight);
+            }
 
-        // 2. Draw arrow only for indexes track
-        if (drawArrow) {                 
-            context.fillStyle = this.isIndexesExpanded() ? metrics.colors.openedTrackArrow : metrics.colors.closedTrackArrow;
-            graphHelper.drawArrow(context, 5, yStart + 6, !this.isIndexesExpanded());            
-            this.hitTest.registerIndexToggle(2, yStart + metrics.closedTrackPadding, rectWidth, metrics.trackHeight);
-        }
+            // 2. Draw arrow only for indexes track
+            if (drawArrow) {
+                context.fillStyle = this.isIndexesExpanded() ? metrics.colors.openedTrackArrow : metrics.colors.closedTrackArrow;
+                graphHelper.drawArrow(context, 5, yStart + 6, !this.isIndexesExpanded());
+                this.hitTest.registerIndexToggle(2, yStart + metrics.closedTrackPadding, rectWidth, metrics.trackHeight);
+            }
 
-        // 3. Draw track name (if not filtered out..)                
-        context.fillStyle = metrics.colors.trackNameFg;
-                         
-        if (!_.includes(this.filteredIndexesTracksNames(), trackName)) {
-            context.fillText(trackName, xTextStart + xTextShift, yStart + yTextShift);
-        }
+            // 3. Draw track name (if not filtered out..)                
+            context.fillStyle = metrics.colors.trackNameFg;
+            context.beginPath(); 
+
+            if (!_.includes(this.filteredIndexesTracksNames(), trackName)) {
+                context.fillText(trackName, xTextStart + xTextShift, yStart + yTextShift);
+            }
+        }        
     }
 
     private drawGaps(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
@@ -905,14 +1046,6 @@ class metrics extends viewModelBase {
         this.drawMainSection();
     }   
 
-    private getIOMetricsData(): JQueryPromise<Raven.Server.Documents.Handlers.IOMetricsResponse> {
-        return new getIOMetricsCommand(this.activeDatabase())
-            .execute()
-            .done((result) => {
-                this.data = result;
-            });
-    }
-
     fileSelected() {
         const fileInput = <HTMLInputElement>document.querySelector("#importFilePicker");
         const self = this;
@@ -922,8 +1055,7 @@ class metrics extends viewModelBase {
 
         const file = fileInput.files[0];
         const reader = new FileReader();
-        reader.onload = function () {
-            // ReSharper disable once SuspiciousThisUsage
+        reader.onload = function () {            
             self.dataImported(this.result);
         };
         reader.onerror = function (error: any) {
@@ -939,6 +1071,8 @@ class metrics extends viewModelBase {
     }
 
     private dataImported(result: string) {              
+        this.cancelLiveView();
+
         try {
             const importedData: Raven.Server.Documents.Handlers.IOMetricsResponse = JSON.parse(result); 
 
@@ -949,7 +1083,9 @@ class metrics extends viewModelBase {
             else {
                 this.data = importedData;
                 this.resetGraphData();
-                this.draw();
+                this.initViewData(); 
+                this.prepareTimeData();
+                this.draw(true);
                 this.isImport(true);
             }
 
@@ -959,18 +1095,16 @@ class metrics extends viewModelBase {
     }
 
     closeImport() {       
-        this.getIOMetricsData().done(() => {                                                                   
-            
-            this.resetGraphData();
-            this.draw();            
-            this.isImport(false);
-        });
+        this.isImport(false);
+        this.resetGraphData();
+        this.enableLiveView();
     }   
 
     private resetGraphData() {
         this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());      
         this.initViewData(); 
         this.searchText("");
+        this.allIndexesAreFiltered(false);
     }
 
     private setZoomAndBrush(scale: [number, number], brushAction: (brush: d3.svg.Brush<any>) => void) {
@@ -1151,6 +1285,7 @@ class metrics extends viewModelBase {
             this.hideTooltip();
         }
     }
+
     private hideTooltip() {       
         this.tooltip
             .transition()
