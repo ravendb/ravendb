@@ -21,10 +21,10 @@ namespace Raven.Database.Raft.Commands
             document.Id = DatabaseHelper.GetDatabaseName(databaseName);
 
             return new DatabaseUpdateCommand
-                   {
-                       Document = document,
-                       Completion = new TaskCompletionSource<object>()
-                   };
+            {
+                Document = document,
+                Completion = new TaskCompletionSource<object>()
+            };
         }
     }
 }
