@@ -3,29 +3,28 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB953 : RavenTest
+    public class RavenDB953 : RavenTestBase
     {
         [Fact]
         public void PutTransformerAsyncSucceedsWhenExistingDefinitionHasError()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 // put an index containing an intentional mistake (calling LoadDocument is not permitted in TransformResults)
-                store.DatabaseCommands.PutTransformer("test",
-                                                                new TransformerDefinition()
-                                                                {
-                                                                    Name = "test",
-                                                                    TransformResults = "from result in results select new {Doc = LoadDocument(result.Id)}"
-                                                                });
-
+                store.Admin.Send(new PutTransformerOperation(new TransformerDefinition
+                {
+                    Name = "test",
+                    TransformResults = "from result in results select new {Doc = LoadDocument(result.Id)}"
+                }));
 
                 using (var s = store.OpenSession())
                 {
@@ -47,16 +46,12 @@ namespace Raven.Tests.Issues
                 }
 
                 // now try to put the correct index definition
-                store.AsyncDatabaseCommands.PutTransformerAsync("test",
-                                new TransformerDefinition()
-                                {
-                                    Name = "test",
-                                    TransformResults = "from result in results select new {Doc = LoadDocument(result.Id)}"
-                                }).Wait();
-
-
+                store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
+                {
+                    Name = "test",
+                    TransformResults = "from result in results select new {Doc = LoadDocument(result.Id)}"
+                })).Wait();
             }
         }
-
     }
 }
