@@ -564,7 +564,8 @@ namespace Voron
                 }
                 finally
                 {
-                    _envDispose.Signal();
+                    if (_envDispose.IsSet == false)
+                        _envDispose.Signal();
                 }
                 throw;
             }
