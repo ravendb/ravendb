@@ -10,16 +10,16 @@ namespace SlowTests.Bugs
 {
     public class CanGetScores : RavenTestBase
     {
-        private IndexFieldOptions filedOptions = new IndexFieldOptions {Indexing = FieldIndexing.Analyzed};
+        private IndexFieldOptions filedOptions = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed };
 
         [Fact]
         public void FromQuery()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var s = store.OpenSession())
+                using (var s = store.OpenSession())
                 {
-                    s.Store(new User{ Name = "who is knocking on my doors"});
+                    s.Store(new User { Name = "who is knocking on my doors" });
                     s.Store(new User { Name = "doors ltd" });
                     s.SaveChanges();
                 }
@@ -51,14 +51,14 @@ namespace SlowTests.Bugs
         [Fact]
         public void FromQueryWithOrderByScoreThenName()
         {
-            using (var store = GetDocumentStore ())
+            using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenSession ())
+                using (var s = store.OpenSession())
                 {
-                    s.Store (new User { Name = "who is knocking on my doors" });
-                    s.Store (new User { Name = "doors doors ltd" });
-                    s.Store (new User { Name = "doors doors abc" });
-                    s.SaveChanges ();
+                    s.Store(new User { Name = "who is knocking on my doors" });
+                    s.Store(new User { Name = "doors doors ltd" });
+                    s.Store(new User { Name = "doors doors abc" });
+                    s.SaveChanges();
                 }
 
                 // Overloading the email property into a catchall freeform container to avoid rewriting the test entirely.
@@ -70,20 +70,20 @@ namespace SlowTests.Bugs
                     Name = "test"
                 }}));
 
-                using (var s = store.OpenSession ())
+                using (var s = store.OpenSession())
                 {
-                    var users = s.Query<User> ("test")
-                        .Customize (x => x.WaitForNonStaleResults ())
-                        .Where (x => x.Email == "doors")
+                    var users = s.Query<User>("test")
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Email == "doors")
                         .OrderByScore().ThenBy(x => x.Name)
-                        .ToList ();
+                        .ToList();
 
-                    Assert.Equal (3, users.Count);
+                    Assert.Equal(3, users.Count);
 
                     var sorted = (from u in users
-                        let score = s.Advanced.GetMetadataFor(u).GetDouble(Constants.Documents.Metadata.IndexScore)
-                        orderby score descending, u.Name
-                        select new {score, u.Name}).ToList();
+                                  let score = s.Advanced.GetMetadataFor(u).GetDouble(Constants.Documents.Metadata.IndexScore)
+                                  orderby score descending, u.Name
+                                  select new { score, u.Name }).ToList();
 
                     for (var i = 0; i < users.Count; i++)
                     {
@@ -98,14 +98,14 @@ namespace SlowTests.Bugs
         [Fact]
         public void FromQueryWithOrderByScoreThenNameDescending()
         {
-            using (var store = GetDocumentStore ())
+            using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenSession ())
+                using (var s = store.OpenSession())
                 {
-                    s.Store (new User { Name = "who is knocking on my doors" });
-                    s.Store (new User { Name = "doors doors ltd" });
-                    s.Store (new User { Name = "doors doors abc" });
-                    s.SaveChanges ();
+                    s.Store(new User { Name = "who is knocking on my doors" });
+                    s.Store(new User { Name = "doors doors ltd" });
+                    s.Store(new User { Name = "doors doors abc" });
+                    s.SaveChanges();
                 }
 
                 // Overloading the email property into a catchall freeform container to avoid rewriting the test entirely.
@@ -117,26 +117,26 @@ namespace SlowTests.Bugs
                     Name = "test"
                 }}));
 
-                using (var s = store.OpenSession ())
+                using (var s = store.OpenSession())
                 {
-                    var users = s.Query<User> ("test")
-                        .Customize (x => x.WaitForNonStaleResults ())
-                        .Where (x => x.Email == "doors")
-                        .OrderByScore ().ThenByDescending(x => x.Name)
-                        .ToList ();
+                    var users = s.Query<User>("test")
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Email == "doors")
+                        .OrderByScore().ThenByDescending(x => x.Name)
+                        .ToList();
 
-                    Assert.Equal (3, users.Count);
+                    Assert.Equal(3, users.Count);
 
                     var sorted = (from u in users
-                        let score = float.Parse(s.Advanced.GetMetadataFor(u).GetString(Constants.Documents.Metadata.IndexScore))
-                        orderby score descending, u.Name descending
-                        select new {score, u.Name}).ToList();
+                                  let score = s.Advanced.GetMetadataFor(u).GetDouble(Constants.Documents.Metadata.IndexScore)
+                                  orderby score descending, u.Name descending
+                                  select new { score, u.Name }).ToList();
 
                     for (var i = 0; i < users.Count; i++)
                     {
-                        Assert.Equal (sorted[i].Name, users[i].Name);
-                        var score = s.Advanced.GetMetadataFor (users[i])["@index-score"];
-                        Assert.NotNull (score);
+                        Assert.Equal(sorted[i].Name, users[i].Name);
+                        var score = s.Advanced.GetMetadataFor(users[i])["@index-score"];
+                        Assert.NotNull(score);
                     }
                 }
             }
