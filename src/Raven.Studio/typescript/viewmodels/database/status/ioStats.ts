@@ -93,6 +93,8 @@ class hitTest {
 
             if (item.actionType === "toggleIndexes") {
                 this.onToggleIndexes();
+                break; // since we register broader regions, we might end up with multiple toggle items, but we don't want to toggle this few times
+                // because it might result in no change at all (for even amount of matching elements)
             }
         }
     }
