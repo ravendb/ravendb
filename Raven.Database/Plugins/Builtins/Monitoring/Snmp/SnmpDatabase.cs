@@ -132,18 +132,23 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
                         loadedIndexes.GetOrAdd(notification.Name, AddIndex);
                     };
 
-                    database.ConfigurationRetriever.SubscribeToConfigurationDocumentChanges(Constants.RavenReplicationDestinations, () => AddReplicationDestinationsFromDatabase(database));
+                    database.ConfigurationRetriever.SubscribeToConfigurationDocumentChanges(Constants.RavenReplicationDestinations, AddReplicationDestinationsFromDatabase);
 
                     AddIndexesFromDatabase(database);
-                    AddReplicationDestinationsFromDatabase(database);
+                    AddReplicationDestinationsFromDatabase();
 
                     attached = true;
                 }
             });
         }
 
-        private void AddReplicationDestinationsFromDatabase(DocumentDatabase database)
+        private void AddReplicationDestinationsFromDatabase()
         {
+            if (databaseLandlord.IsDatabaseLoaded(databaseName) == false)
+                return;
+
+            var database = databaseLandlord.GetResourceInternal(databaseName).Result;
+
             var replicationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
             if (replicationDocument == null)
                 return;
