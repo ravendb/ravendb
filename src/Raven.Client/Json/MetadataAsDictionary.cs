@@ -23,7 +23,7 @@ namespace Raven.Client.Json
             _metadata = metadata;
         }
 
-        public void Init()
+        private void Init()
         {
             _metadata = new Dictionary<string, object>();
             var indexes = _source.GetPropertiesByInsertionOrder();
@@ -212,14 +212,14 @@ namespace Raven.Client.Json
         {
             object obj;
             var result = TryGetValue(key, out obj);
-            value = (string) obj;
+            value = (string)obj;
             return result;
         }
 
         public string GetString(string key)
         {
             var obj = this[key];
-            return (string) obj;
+            return (string)obj;
         }
 
         public long GetNumber(string key)
@@ -231,19 +231,19 @@ namespace Raven.Client.Json
         public bool GetBoolean(string key)
         {
             var obj = this[key];
-            return (bool) obj;
+            return (bool)obj;
         }
 
         public double GetDouble(string key)
         {
             var obj = this[key];
-            return (double) obj;
+            return (double)obj;
         }
 
         public IMetadataDictionary GetObject(string key)
         {
             var obj = this[key];
-            return (IMetadataDictionary) obj;
+            return (IMetadataDictionary)obj;
         }
 
         public IMetadataDictionary[] GetObjects(string key)
