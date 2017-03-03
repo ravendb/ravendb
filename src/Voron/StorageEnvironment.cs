@@ -492,8 +492,7 @@ namespace Voron
             bool flushInProgressReadLockTaken = false;
             try
             {
-                if (_envDispose.TryAddCount(1) == false)
-                    ThrowCurrentlyDisposing();
+                IncrementUsageOnNewTransaction();
 
                 if (flags == TransactionFlags.ReadWrite)
                 {
@@ -564,11 +563,22 @@ namespace Voron
                 }
                 finally
                 {
-                    if (_envDispose.IsSet == false)
-                        _envDispose.Signal();
+                    DecrementUsageOnTransactionCreationFailure();
                 }
                 throw;
             }
+        }
+
+        internal void IncrementUsageOnNewTransaction()
+        {
+            if (_envDispose.TryAddCount(1) == false)
+                ThrowCurrentlyDisposing();
+        }
+
+        internal void DecrementUsageOnTransactionCreationFailure()
+        {
+            if (_envDispose.IsSet == false)
+                _envDispose.Signal();
         }
 
         private void ThrowCurrentlyDisposing()

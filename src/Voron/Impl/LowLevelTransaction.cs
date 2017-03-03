@@ -715,20 +715,22 @@ namespace Voron.Impl
             AsyncCommit = writeToJournalIsRequired
                   ? Task.Run(() => { CommitStage2_WriteToJournal(); })
                   : Task.CompletedTask;
+
             try
             {
-
+                _env.IncrementUsageOnNewTransaction();
                 _env.WriteTransactionStarted();
                 _env.ActiveTransactions.Add(nextTx);
-
-
-
+                
                 return nextTx;
             }
             catch (Exception)
             {
                 // failure here means that we'll try to complete the current transaction normaly
                 // then throw as if commit was called normally and the next transaction failed
+
+                _env.DecrementUsageOnTransactionCreationFailure();
+                
                 EndAsyncCommit();
 
                 AsyncCommit = null;
