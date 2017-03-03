@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
                         session.Advanced.DocumentQuery<AccountListItem>("CustomerOrderProjection")
                             .WhereEquals("AccountId", accountId)
                             .WaitForNonStaleResults()
-                            .SetResultTransformer("CustomerOrderProjectionTeansformer")
+                            .SetTransformer("CustomerOrderProjectionTeansformer")
                             .ToList();
                     Assert.True(3 == results.Count);
                 }

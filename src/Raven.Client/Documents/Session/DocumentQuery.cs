@@ -6,9 +6,12 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -23,8 +26,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
         /// </summary>
-        public DocumentQuery(InMemoryDocumentSessionOperations session
-           ,  string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
+        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
             : base(session, indexName, fieldsToFetch, projectionFields, isMapReduce)
         {
         }
@@ -35,7 +37,6 @@ namespace Raven.Client.Documents.Session
         public DocumentQuery(DocumentQuery<T> other)
             : base(other)
         {
-
         }
 
         /// <summary>
@@ -46,7 +47,7 @@ namespace Raven.Client.Documents.Session
         {
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
-            var identityProperty = DocumentConventions.GetIdentityProperty(typeof(TProjection));
+            var identityProperty = Conventions.GetIdentityProperty(typeof(TProjection));
             var fields = propertyInfos.Select(p => (p == identityProperty) ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : p.Name).ToArray();
             return SelectFields<TProjection>(fields, projections);
         }
@@ -57,26 +58,20 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string transformer)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetTransformer(string transformer)
         {
-            SetResultTransformer(transformer);
+            SetTransformer(transformer);
             return this;
         }
 
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
-        {
-            SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
-            return this;
-        }
-
-        public IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+        public virtual IDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>()
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             var documentQuery = new DocumentQuery<TTransformerResult>(TheSession,
-                                                                     IndexName,
-                                                                     FieldsToFetch,
-                                                                     ProjectionFields,
-                                                                     IsMapReduce)
+                                                               IndexName,
+                                                               FieldsToFetch,
+                                                               ProjectionFields,
+                                                               IsMapReduce)
             {
                 PageSize = PageSize,
                 QueryText = new StringBuilder(QueryText.ToString()),
@@ -105,7 +100,7 @@ namespace Raven.Client.Documents.Session
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),
                 HighlighterPreTags = HighlighterPreTags,
                 HighlighterPostTags = HighlighterPostTags,
-                ResultsTransformer = new TTransformer().TransformerName,
+                Transformer = new TTransformer().TransformerName,
                 TransformerParameters = TransformerParameters,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
@@ -114,8 +109,16 @@ namespace Raven.Client.Documents.Session
                 DefaultOperator = DefaultOperator,
                 ShouldExplainScores = ShouldExplainScores
             };
+            documentQuery.AfterQueryExecuted(AfterQueryExecutedCallback);
             return documentQuery;
         }
+
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
+        {
+            SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
+            return this;
+        }
+
         public IDocumentQuery<T> OrderByScore()
         {
             AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, false);
@@ -134,19 +137,11 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        public IDocumentQuery<T> SetQueryInputs(Dictionary<string, object> queryInputs)
+        public IDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> transformerParameters)
         {
-            SetTransformerParameters(queryInputs);
+            TransformerParameters = transformerParameters;
             return this;
         }
-
-        public IDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> parameters)
-        {
-            TransformerParameters = parameters;
-            return this;
-        }
-
-        public bool IsDistinct => _isDistinct;
 
         /// <summary>
         /// Selects the specified fields directly from the index
@@ -196,7 +191,7 @@ namespace Raven.Client.Documents.Session
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),
                 HighlighterPreTags = HighlighterPreTags,
                 HighlighterPostTags = HighlighterPostTags,
-                ResultsTransformer = ResultsTransformer,
+                Transformer = Transformer,
                 TransformerParameters = TransformerParameters,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
@@ -396,6 +391,16 @@ namespace Raven.Client.Documents.Session
             {
                 NegateNext();
                 return this;
+            }
+        }
+
+        public QueryResult QueryResult
+        {
+            get
+            {
+                InitSync();
+
+                return QueryOperation.CurrentQueryResults.CreateSnapshot();
             }
         }
 
@@ -824,16 +829,16 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.Documents.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng)));
+            OrderBy(string.Format("{0};{1};{2}", Constants.Documents.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
             return this;
         }
 
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng, string sortedFieldName)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng, string spatialFieldName)
         {
-            OrderBy($"{Constants.Documents.Indexing.Fields.DistanceFieldName};{CharExtensions.ToInvariantString(lat)};{CharExtensions.ToInvariantString(lng)};{sortedFieldName}");
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Documents.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), spatialFieldName));
             return this;
         }
 
@@ -857,9 +862,7 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
         public IDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
-            var orderByfields = propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray();
-            OrderBy(orderByfields);
-
+            OrderBy(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
             return this;
         }
 
@@ -883,9 +886,7 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
         public IDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
-            var orderByfields = propertySelectors.Select(expression => MakeFieldSortDescending(GetMemberQueryPathForOrderBy(expression))).ToArray();
-            OrderByDescending(orderByfields);
-
+            OrderByDescending(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
             return this;
         }
 
@@ -991,7 +992,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="cutOffEtag">The cut off etag.</param>
         /// <returns></returns>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long? cutOffEtag)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag);
             return this;
@@ -1002,7 +1003,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="cutOffEtag">The cut off etag.</param>
         /// <param name="waitTimeout">The wait timeout.</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long? cutOffEtag, TimeSpan waitTimeout)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
             return this;
@@ -1040,6 +1041,15 @@ namespace Raven.Client.Documents.Session
             return GetEnumerator();
         }
 
+        /// <summary>
+        ///   Gets the enumerator.
+        /// </summary>
+        public virtual IEnumerator<T> GetEnumerator()
+        {
+            InitSync();
+            return QueryOperation.Complete<T>().GetEnumerator();
+        }
+
         public IDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             return Spatial(path.ToPropertyPath(), clause);
@@ -1063,6 +1073,153 @@ namespace Raven.Client.Documents.Session
             if (IsSpatialQuery)
                 return string.Format(CultureInfo.InvariantCulture, "{0} SpatialField: {1} QueryShape: {2} Relation: {3}", query, SpatialFieldName, QueryShape, SpatialRelation);
             return query;
+        }
+
+        public T First()
+        {
+            return ExecuteQueryOperation(1).First();
+        }
+
+        public T FirstOrDefault()
+        {
+            return ExecuteQueryOperation(1).FirstOrDefault();
+        }
+
+        public T Single()
+        {
+            return ExecuteQueryOperation(2).Single();
+        }
+
+        public T SingleOrDefault()
+        {
+            return ExecuteQueryOperation(2).SingleOrDefault();
+        }
+
+        private IEnumerable<T> ExecuteQueryOperation(int take)
+        {
+            if (PageSize.HasValue == false || PageSize > take)
+                Take(take);
+
+            InitSync();
+
+            return QueryOperation.Complete<T>();
+        }
+
+        public FacetedQueryResult GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
+        {
+            var q = GetIndexQuery();
+            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
+
+            var command = new GetFacetsCommand(TheSession.Context, query);
+            TheSession.RequestExecutor.Execute(command, TheSession.Context);
+
+            return command.Result;
+        }
+
+        public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
+        {
+            var q = GetIndexQuery();
+            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
+
+            var command = new GetFacetsCommand(TheSession.Context, query);
+            TheSession.RequestExecutor.Execute(command, TheSession.Context);
+
+            return command.Result;
+        }
+
+        public Lazy<FacetedQueryResult> GetFacetsLazy(string facetSetupDoc, int facetStart, int? facetPageSize)
+        {
+            var q = GetIndexQuery();
+            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
+
+            var lazyFacetsOperation = new LazyFacetsOperation(query);
+            return ((DocumentSession)TheSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetedQueryResult>)null);
+        }
+
+        public Lazy<FacetedQueryResult> GetFacetsLazy(List<Facet> facets, int facetStart, int? facetPageSize)
+        {
+            var q = GetIndexQuery();
+            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
+
+            var lazyFacetsOperation = new LazyFacetsOperation(query);
+            return ((DocumentSession)TheSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetedQueryResult>)null);
+        }
+
+        /// <summary>
+        /// Gets the total count of records for this query
+        /// </summary>
+        public int Count()
+        {
+            Take(0);
+            var queryResult = QueryResult;
+            return queryResult.TotalResults;
+        }
+
+        /// <summary>
+        /// Register the query as a lazy query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public Lazy<IEnumerable<T>> Lazily()
+        {
+            return Lazily(null);
+        }
+
+        /// <summary>
+        /// Register the query as a lazy-count query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public virtual Lazy<int> CountLazily()
+        {
+            if (QueryOperation == null)
+            {
+                Take(0);
+                QueryOperation = InitializeQueryOperation();
+            }
+
+
+            var lazyQueryOperation = new LazyQueryOperation<T>(QueryOperation, AfterQueryExecutedCallback);
+
+            return ((DocumentSession)TheSession).AddLazyCountOperation(lazyQueryOperation);
+        }
+
+        /// <summary>
+        /// Register the query as a lazy query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public virtual Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+        {
+            if (QueryOperation == null)
+            {
+                QueryOperation = InitializeQueryOperation();
+            }
+
+            var lazyQueryOperation = new LazyQueryOperation<T>(QueryOperation, AfterQueryExecutedCallback);
+            return ((DocumentSession)TheSession).AddLazyOperation(lazyQueryOperation, onEval);
+        }
+
+        protected virtual void InitSync()
+        {
+            if (QueryOperation != null)
+                return;
+
+            var beforeQueryExecutedEventArgs = new BeforeQueryExecutedEventArgs(TheSession, this);
+            TheSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);
+
+            QueryOperation = InitializeQueryOperation();
+            ExecuteActualQuery();
+        }
+
+        private void ExecuteActualQuery()
+        {
+            using (QueryOperation.EnterQueryContext())
+            {
+                QueryOperation.LogQuery();
+                var command = QueryOperation.CreateRequest();
+                TheSession.RequestExecutor.Execute(command, TheSession.Context);
+                QueryOperation.SetResult(command.Result);
+            }
+
+            InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
         }
     }
 }

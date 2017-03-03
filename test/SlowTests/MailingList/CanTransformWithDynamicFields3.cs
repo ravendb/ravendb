@@ -176,7 +176,7 @@ namespace SlowTests.MailingList
             using (var session = _store.OpenSession())
             {
                 var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_Map>()
-                    .SetResultTransformer(typeof(GlobalizationTransformer).Name)
+                    .SetTransformer(typeof(GlobalizationTransformer).Name)
                     .SetTransformerParameters(new Dictionary<string, object>
                         {
                             {GlobalizationTransformer.GlobalizationQueryListenerKey, "pt"}
@@ -201,7 +201,7 @@ namespace SlowTests.MailingList
             using (var session = _store.OpenSession())
             {
                 var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_MapReduce>()
-                    .SetResultTransformer(typeof(GlobalizationTransformer).Name)
+                    .SetTransformer(typeof(GlobalizationTransformer).Name)
                     .SetTransformerParameters(new Dictionary<string, object>
                         {
                             {GlobalizationTransformer.GlobalizationQueryListenerKey, "pt"}

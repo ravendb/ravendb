@@ -176,7 +176,7 @@ namespace Raven.Client.Documents.Linq
             if ((_session as AsyncDocumentSession) != null)
             {
                 var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
-                query = asyncDocumentQuery.GetIndexQuery(true).ToString();
+                query = asyncDocumentQuery.GetIndexQuery().ToString();
             }
             else
             {
@@ -196,10 +196,10 @@ namespace Raven.Client.Documents.Linq
             if (isAsync == false)
             {
                 var documentQuery = ravenQueryProvider.GetDocumentQueryFor(_expression);
-                return documentQuery.GetIndexQuery(false);
+                return documentQuery.GetIndexQuery();
             }
             var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
-            return asyncDocumentQuery.GetIndexQuery(true);
+            return asyncDocumentQuery.GetIndexQuery();
         }
 
         public virtual FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize)
@@ -260,7 +260,7 @@ namespace Raven.Client.Documents.Linq
                 var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, null, _indexName, new HashSet<string>(), new List<RenamedField>(), _isMapReduce,
                     _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
                 var documentQuery = ravenQueryProvider.GetDocumentQueryFor(_expression);
-                return ((IRavenQueryInspector)documentQuery).IndexQueried;
+                return documentQuery.IndexName;
             }
         }
 
@@ -274,7 +274,7 @@ namespace Raven.Client.Documents.Linq
                 var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, null, _indexName, new HashSet<string>(), new List<RenamedField>(), _isMapReduce,
                     _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
                 var documentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
-                return ((IRavenQueryInspector)documentQuery).IndexQueried;
+                return documentQuery.IndexName;
             }
         }
 
@@ -291,11 +291,11 @@ namespace Raven.Client.Documents.Linq
             if (isAsync)
             {
                 var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
-                return ((IRavenQueryInspector)asyncDocumentQuery).GetLastEqualityTerm(true);
+                return asyncDocumentQuery.GetLastEqualityTerm(true);
             }
 
             var documentQuery = ravenQueryProvider.GetDocumentQueryFor(_expression);
-            return ((IRavenQueryInspector)documentQuery).GetLastEqualityTerm();
+            return documentQuery.GetLastEqualityTerm();
         }
 
         /// <summary>

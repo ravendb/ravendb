@@ -74,7 +74,7 @@ namespace SlowTests.Core.Indexing
 
 
                     var companies = session.Advanced.DocumentQuery<Companies_WithReferencedEmployees.CompanyEmployees>(companiesWithEmployees.IndexName)
-                        .SetResultTransformer(companiesWithEmployeesTransformer.TransformerName)
+                        .SetTransformer(companiesWithEmployeesTransformer.TransformerName)
                         .ToArray();
 
                     Assert.Equal(1, companies.Length);

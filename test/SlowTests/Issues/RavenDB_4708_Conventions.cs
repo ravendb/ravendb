@@ -3,25 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Json.Linq;
+using FastTests;
+using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4708_Conventions
+    public class RavenDB_4708_Conventions : NoDisposalNeeded
     {
         [Fact]
         public void Sync_document_query_can_not_have_async_methods()
         {
-            var documentQueryType = typeof(DocumentQuery<RavenJObject>);
+            var documentQueryType = typeof(DocumentQuery<JObject>);
 
             var methods = documentQueryType.GetMethods(BindingFlags.Instance | BindingFlags.Public);
 
@@ -44,10 +45,10 @@ namespace Raven.Tests.Issues
             suspectedMethods = suspectedMethods.Where(x => x.ReturnType != typeof(IAsyncDocumentQuery<Employee>)).ToList();
 
             // filter out Lazy methods
-            suspectedMethods = suspectedMethods.Where(x => !x.ReturnType.IsGenericType || typeof(Lazy<>) != x.ReturnType.GetGenericTypeDefinition()).ToList();
+            suspectedMethods = suspectedMethods.Where(x => !x.ReturnType.GetTypeInfo().IsGenericType || typeof(Lazy<>) != x.ReturnType.GetGenericTypeDefinition()).ToList();
 
             // filter out methods which returns Task
-            suspectedMethods = suspectedMethods.Where(x => !x.ReturnType.IsGenericType || typeof(Task<>) != x.ReturnType.GetGenericTypeDefinition()).ToList();
+            suspectedMethods = suspectedMethods.Where(x => !x.ReturnType.GetTypeInfo().IsGenericType || typeof(Task<>) != x.ReturnType.GetGenericTypeDefinition()).ToList();
 
             // filter out where method as it only servs as reminder to not use in memory filtering
             suspectedMethods = suspectedMethods.Where(x => x.Name != "Where").ToList();

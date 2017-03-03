@@ -343,7 +343,7 @@ namespace Raven.Client.Documents.Linq
             var processor = GetQueryProviderProcessor<T>();
             var result = (IDocumentQuery<TResult>)processor.GetDocumentQueryFor(expression);
 
-            result.SetResultTransformer(ResultTransformer);
+            result.SetTransformer(ResultTransformer);
             var renamedFields = FieldsToFetch.Select(field =>
             {
                 var renamedField = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);

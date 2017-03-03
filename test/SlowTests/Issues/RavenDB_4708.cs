@@ -3,23 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Shard;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     /// <summary>
     /// We test async/sync x sharded/non sharded x single, singleOrDefault, first, firstOrDefault, count, countLazily
     /// </summary>
-    public class RavenDB_4708 : RavenTest
+    public class RavenDB_4708 : RavenTestBase
     {
 
         [Fact]
@@ -31,13 +29,13 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6283")]
         public void CanUseFirstSyncSharded()
         {
-            using (var documentStore = SetupShardedStore())
-            {
-                CanUseFirstSync(documentStore);
-            }
+            //using (var documentStore = SetupShardedStore())
+            //{
+            //    CanUseFirstSync(documentStore);
+            //}
         }
 
         [Fact]
@@ -49,13 +47,13 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanUseFirstAsyncSharded()
+        [Fact(Skip = "RavenDB-6283")]
+        public void CanUseFirstAsyncSharded()
         {
-            using (var documentStore = SetupShardedStore())
-            {
-                await CanUseFirstAsync(documentStore);
-            }
+            //using (var documentStore = SetupShardedStore())
+            //{
+            //    await CanUseFirstAsync(documentStore);
+            //}
         }
 
         [Fact]
@@ -67,13 +65,13 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6283")]
         public void CanUseSingleSyncSharded()
         {
-            using (var documentStore = SetupShardedStore())
-            {
-                CanUseSingleSync(documentStore);
-            }
+            //using (var documentStore = SetupShardedStore())
+            //{
+            //    CanUseSingleSync(documentStore);
+            //}
         }
 
         [Fact]
@@ -85,13 +83,13 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanUseSingleAsyncSharded()
+        [Fact(Skip = "RavenDB-6283")]
+        public void CanUseSingleAsyncSharded()
         {
-            using (var documentStore = SetupShardedStore())
-            {
-                await CanUseSingleAsync(documentStore);
-            }
+            //using (var documentStore = SetupShardedStore())
+            //{
+            //    await CanUseSingleAsync(documentStore);
+            //}
         }
 
         [Fact]
@@ -103,13 +101,13 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6283")]
         public void CanUseCountSyncSharded()
         {
-            using (var documentStore = SetupShardedStore())
-            {
-                CanUseCountAndCountLazilySync(documentStore);
-            }
+            //using (var documentStore = SetupShardedStore())
+            //{
+            //    CanUseCountAndCountLazilySync(documentStore);
+            //}
         }
 
         [Fact]
@@ -122,14 +120,14 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6283")]
         public void CanUseCountAsyncSharded()
         {
-            using (var documentStore = SetupShardedStore())
-            {
-                CanUseCountAsync(documentStore).Wait();
-                Assert.Throws<AggregateException>(() => CanUseCountLazilyAsync(documentStore).Wait());
-            }
+            //using (var documentStore = SetupShardedStore())
+            //{
+            //    CanUseCountAsync(documentStore).Wait();
+            //    Assert.Throws<AggregateException>(() => CanUseCountLazilyAsync(documentStore).Wait());
+            //}
         }
 
         [Fact]
@@ -141,13 +139,13 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6283")]
         public void CanUseLazilySyncShaded()
         {
-            using (var documentStore = SetupShardedStore())
-            {
-                CanUseLazilySync(documentStore);
-            }
+            //using (var documentStore = SetupShardedStore())
+            //{
+            //    CanUseLazilySync(documentStore);
+            //}
         }
 
         [Fact]
@@ -159,22 +157,20 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6283")]
         public void UseLazilyAsyncShardedIsNotSupported()
         {
-            using (var documentStore = SetupShardedStore())
-            {
-                Assert.Throws<AggregateException>(() => CanUseLazilyAsync(documentStore).Wait());
-            }
+            //using (var documentStore = SetupShardedStore())
+            //{
+            //    Assert.Throws<AggregateException>(() => CanUseLazilyAsync(documentStore).Wait());
+            //}
         }
 
-        private void CanUseFirstSync(DocumentStoreBase store)
+        private static void CanUseFirstSync(DocumentStoreBase store)
         {
             using (var session = store.OpenSession())
             {
-                Profile profile;
-
-                profile = session.Advanced.DocumentQuery<Profile>("ProfileByName")
+                var profile = session.Advanced.DocumentQuery<Profile>("ProfileByName")
                     .Where("Name:Google")
                     .First();
 
@@ -201,13 +197,11 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private async Task CanUseFirstAsync(DocumentStoreBase store)
+        private static async Task CanUseFirstAsync(DocumentStoreBase store)
         {
             using (var session = store.OpenAsyncSession())
             {
-                Profile profile;
-
-                profile = await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
+                Profile profile = await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
                     .Where("Name:Google")
                     .FirstAsync();
 
@@ -234,7 +228,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private void CanUseSingleSync(DocumentStoreBase store)
+        private static void CanUseSingleSync(DocumentStoreBase store)
         {
             using (var session = store.OpenSession())
             {
@@ -272,13 +266,11 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private async Task CanUseSingleAsync(DocumentStoreBase store)
+        private static async Task CanUseSingleAsync(DocumentStoreBase store)
         {
             using (var session = store.OpenAsyncSession())
             {
-                Profile profile;
-
-                profile = await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
+                Profile profile = await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
                     .Where("Name:Google")
                     .SingleAsync();
 
@@ -409,41 +401,41 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private ShardedDocumentStore SetupShardedStore()
-        {
-            var server1 = GetNewServer(8079);
-            var server2 = GetNewServer(8078);
-            var shards = new Dictionary<string, IDocumentStore>
-            {
-                {"Shard1", new DocumentStore {Url = server1.Configuration.ServerUrl}},
-                {"Shard2", new DocumentStore {Url = server2.Configuration.ServerUrl}},
-            };
+        //private ShardedDocumentStore SetupShardedStore()
+        //{
+        //    var server1 = GetNewServer(8079);
+        //    var server2 = GetNewServer(8078);
+        //    var shards = new Dictionary<string, IDocumentStore>
+        //    {
+        //        {"Shard1", new DocumentStore {Url = server1.Configuration.ServerUrl}},
+        //        {"Shard2", new DocumentStore {Url = server2.Configuration.ServerUrl}},
+        //    };
 
-            var shardStrategy = new ShardStrategy(shards);
-            shardStrategy.ShardingOn<Profile>(x => x.Location);
+        //    var shardStrategy = new ShardStrategy(shards);
+        //    shardStrategy.ShardingOn<Profile>(x => x.Location);
 
-            var shardedDocumentStore = new ShardedDocumentStore(shardStrategy);
-            shardedDocumentStore.Initialize();
+        //    var shardedDocumentStore = new ShardedDocumentStore(shardStrategy);
+        //    shardedDocumentStore.Initialize();
 
-            FillDatabase(shardedDocumentStore);
+        //    FillDatabase(shardedDocumentStore);
 
-            foreach (var documentStore in shards.Values)
-            {
-                WaitForIndexing(documentStore);
-            }
+        //    foreach (var documentStore in shards.Values)
+        //    {
+        //        WaitForIndexing(documentStore);
+        //    }
 
-            return shardedDocumentStore;
-        }
+        //    return shardedDocumentStore;
+        //}
 
         private DocumentStore SetupNonShardedStore()
         {
-            var store = NewRemoteDocumentStore();
+            var store = GetDocumentStore();
             FillDatabase(store);
             WaitForIndexing(store);
             return store;
         }
 
-        private void FillDatabase(DocumentStoreBase store)
+        private static void FillDatabase(DocumentStoreBase store)
         {
             store.ExecuteIndex(new ProfileByName());
 
@@ -457,26 +449,26 @@ namespace Raven.Tests.Issues
                 documentSession.SaveChanges();
             }
         }
-    }
 
-    public class ProfileByName : AbstractIndexCreationTask<Profile>
-    {
-        public ProfileByName()
+        private class ProfileByName : AbstractIndexCreationTask<Profile>
         {
-            Map = docs => from doc in docs
-                select new
-                {
-                    doc.Name
-                };
+            public ProfileByName()
+            {
+                Map = docs => from doc in docs
+                              select new
+                              {
+                                  doc.Name
+                              };
+            }
         }
-    }
 
-    public class Profile
-    {
-        public string Id { get; set; }
+        private class Profile
+        {
+            public string Id { get; set; }
 
-        public string Name { get; set; }
+            public string Name { get; set; }
 
-        public string Location { get; set; }
+            public string Location { get; set; }
+        }
     }
 }

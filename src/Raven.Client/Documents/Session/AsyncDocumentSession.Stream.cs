@@ -80,9 +80,10 @@ namespace Raven.Client.Documents.Session
         {
             var documentQuery = (AsyncDocumentQuery<T>)query;
             var projectionFields = documentQuery.ProjectionFields;
+            var indexQuery = query.GetIndexQuery();
 
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest((IRavenQueryInspector)query);
+            var command = streamOperation.CreateRequest(query.IndexName, indexQuery);
             await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
 

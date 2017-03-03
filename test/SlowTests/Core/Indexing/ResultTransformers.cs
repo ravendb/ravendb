@@ -304,7 +304,7 @@ namespace SlowTests.Core.Indexing
 
                     var documentQueryResult =
                         session.Advanced.DocumentQuery<PostWithContentTransformer.Result, Posts_ByContent>()
-                            .SetResultTransformer("PostWithContentTransformer")
+                            .SetTransformer("PostWithContentTransformer")
                             .First();
 
                     Assert.Equal("Lorem ipsum...", documentQueryResult.Content);

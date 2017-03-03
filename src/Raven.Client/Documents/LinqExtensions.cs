@@ -244,9 +244,9 @@ namespace Raven.Client.Documents
         /// <param name="query">The document query interface for the function to be applied to</param>
         public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
-            var indexQuery = query.GetIndexQuery(isAsync: false);
+            var indexQuery = query.GetIndexQuery();
             var documentQuery = ((DocumentQuery<T>)query);
-            var facetQuery = FacetQuery.Create(documentQuery.IndexQueried, indexQuery, facetSetupDoc, null, start, pageSize, documentQuery.Conventions);
+            var facetQuery = FacetQuery.Create(documentQuery.IndexName, indexQuery, facetSetupDoc, null, start, pageSize, documentQuery.Conventions);
             var lazyOperation = new LazyFacetsOperation(facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
@@ -267,9 +267,9 @@ namespace Raven.Client.Documents
             if (facetsList.Any() == false)
                 throw new ArgumentException("Facets must contain at least one entry", nameof(facets));
 
-            var indexQuery = query.GetIndexQuery(isAsync: false);
+            var indexQuery = query.GetIndexQuery();
             var documentQuery = (DocumentQuery<T>)query;
-            var facetQuery = FacetQuery.Create(documentQuery.IndexQueried, indexQuery, null, facetsList, start, pageSize, documentQuery.Conventions);
+            var facetQuery = FacetQuery.Create(documentQuery.IndexName, indexQuery, null, facetsList, start, pageSize, documentQuery.Conventions);
             var lazyOperation = new LazyFacetsOperation(facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);

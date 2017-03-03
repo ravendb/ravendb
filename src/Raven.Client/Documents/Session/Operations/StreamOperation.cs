@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -18,28 +19,28 @@ namespace Raven.Client.Documents.Session.Operations
             _session = session;
         }
 
-        public StreamCommand CreateRequest(IRavenQueryInspector query)
+        public StreamCommand CreateRequest(string indexName, IndexQuery query)
         {
-            var ravenQueryInspector = query;
-            var indexQuery = ravenQueryInspector.GetIndexQuery(false);
-            if (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow)
+            if (query.WaitForNonStaleResults || query.WaitForNonStaleResultsAsOfNow)
                 throw new NotSupportedException(
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
-            _session.IncrementRequestCount();
-            var index = ravenQueryInspector.IndexQueried;
-            if (string.IsNullOrEmpty(index))
+
+            var index = query;
+            if (string.IsNullOrEmpty(indexName))
                 throw new ArgumentException("Key cannot be null or empty index");
+
+            _session.IncrementRequestCount();
             string path;
-            if (indexQuery.Query != null && indexQuery.Query.Length > _session.Conventions.MaxLengthOfQueryUsingGetUrl)
+            if (query.Query != null && query.Query.Length > _session.Conventions.MaxLengthOfQueryUsingGetUrl)
             {
-                path = indexQuery.GetIndexQueryUrl(index, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false);
+                path = query.GetIndexQueryUrl(indexName, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false);
             }
             else
             {
-                path = indexQuery.GetIndexQueryUrl(index, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false);
+                path = query.GetIndexQueryUrl(indexName, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false);
             }
 
-            return new StreamCommand(path, string.IsNullOrWhiteSpace(indexQuery.Transformer) == false);
+            return new StreamCommand(path, string.IsNullOrWhiteSpace(query.Transformer) == false);
         }
 
         public StreamCommand CreateRequest(long? fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)

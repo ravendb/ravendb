@@ -120,7 +120,7 @@ namespace SlowTests.MailingList
                     {
                         QueryStatistics stats;
                         var query = session.Advanced.DocumentQuery<WodsProjection, Wod_Search>()
-                            .SetResultTransformer(wodSearchTransformer.TransformerName)
+                            .SetTransformer(wodSearchTransformer.TransformerName)
                             .WaitForNonStaleResults()
                             .Statistics(out stats)
                             .SelectFields<WodsProjection>();

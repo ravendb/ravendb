@@ -1285,8 +1285,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                  expression.Method.Name.EndsWith("Descending"));
                     break;
                 case "GroupBy":
-
-                    if (_documentQuery.IndexQueried.StartsWith("dynamic/") == false)
+                    if (_documentQuery.IndexName.StartsWith("dynamic/") == false)
                         throw new NotSupportedException("GroupBy method is only supported in dynamic map-reduce queries");
 
                     if (expression.Arguments.Count == 5) // GroupBy(x => keySelector, x => elementSelector, x => resultSelecor, IEqualityComparer)
@@ -1723,7 +1722,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddToFieldsToFetch(string docField, string renamedField)
         {
-            var identityProperty = _documentQuery.DocumentConventions.GetIdentityProperty(typeof(T));
+            var identityProperty = _documentQuery.Conventions.GetIdentityProperty(typeof(T));
             if (identityProperty != null && identityProperty.Name == docField)
             {
                 FieldsToFetch.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
@@ -1740,7 +1739,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 if (identityProperty == null)
                 {
-                    var idPropName = _documentQuery.DocumentConventions.FindIdentityPropertyNameFromEntityName(_documentQuery.DocumentConventions.GetCollectionName(typeof(T)));
+                    var idPropName = _documentQuery.Conventions.FindIdentityPropertyNameFromEntityName(_documentQuery.Conventions.GetCollectionName(typeof(T)));
                     if (docField == idPropName)
                     {
                         FieldsToRename.Add(new RenamedField
@@ -1819,7 +1818,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
         {
-            var identityProperty = _documentQuery.DocumentConventions.GetIdentityProperty(typeof(T));
+            var identityProperty = _documentQuery.Conventions.GetIdentityProperty(typeof(T));
             if (identityProperty != null && identityProperty.Name == expression.Path)
             {
                 if (identityProperty.Type() == typeof(int) ||
@@ -1850,8 +1849,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             q.SetTransformerParameters(_transformerParameters);
 
             _documentQuery = (IAbstractDocumentQuery<T>)q;
-            _documentQuery.SetOriginalQueryType(_originalQueryType);
-            _documentQuery.SetResultTransformer(_resultsTransformer);
+            _documentQuery.SetTransformer(_resultsTransformer);
             try
             {
                 VisitExpression(expression);
@@ -1878,8 +1876,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var q = QueryGenerator.AsyncQuery<T>(IndexName, _isMapReduce);
 
             _documentQuery = (IAbstractDocumentQuery<T>)q;
-            _documentQuery.SetOriginalQueryType(_originalQueryType);
-            _documentQuery.SetResultTransformer(_resultsTransformer);
+            _documentQuery.SetTransformer(_resultsTransformer);
             try
             {
                 VisitExpression(expression);
@@ -1905,7 +1902,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public IAsyncDocumentQuery<T> GetAsyncDocumentQueryFor(Expression expression)
         {
             var asyncDocumentQuery = QueryGenerator.AsyncQuery<T>(IndexName, _isMapReduce);
-            asyncDocumentQuery.SetResultTransformer(_resultsTransformer);
+            asyncDocumentQuery.SetTransformer(_resultsTransformer);
             asyncDocumentQuery.SetTransformerParameters(_transformerParameters);
             _documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;
             try
@@ -1959,7 +1956,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             //no reason to override a value that may or may not exist there
             if (!String.IsNullOrEmpty(_resultsTransformer))
-                finalQuery.SetResultTransformer(_resultsTransformer);
+                finalQuery.SetTransformer(_resultsTransformer);
             finalQuery.SetTransformerParameters(_transformerParameters);
 
             if (FieldsToRename.Count > 0)
