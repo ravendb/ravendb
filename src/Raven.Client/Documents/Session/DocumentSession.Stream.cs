@@ -24,9 +24,10 @@ namespace Raven.Client.Documents.Session
         {
             var documentQuery = (DocumentQuery<T>)query;
             var projectionFields = documentQuery.ProjectionFields;
+            var indexQuery = query.GetIndexQuery();
 
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest((IRavenQueryInspector)query);
+            var command = streamOperation.CreateRequest(query.IndexName, indexQuery);
             RequestExecutor.Execute(command, Context);
             using (var result = streamOperation.SetResult(command.Result))
             {

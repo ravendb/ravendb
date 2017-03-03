@@ -18,8 +18,13 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Gets the document convention from the query session
         /// </summary>
-        DocumentConventions DocumentConventions { get; }
+        DocumentConventions Conventions { get; }
 
+        /// <summary>
+        ///  The last term that we asked the query to use equals on
+        /// </summary>
+        /// <param name="isAsync"></param>
+        KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
         /// <summary>
         ///     Negate the next operation
         /// </summary>
@@ -113,18 +118,6 @@ If you really want to do in memory filtering on the data returned from the query
         int Count(Func<T, bool> predicate);
 
         /// <summary>
-        ///     This function exists solely to forbid in memory where clause on IDocumentQuery, because
-        ///     that is nearly always a mistake.
-        /// </summary>
-        [Obsolete(@"
-You cannot issue an in memory filter - such as Count() - on IDocumentQuery. 
-This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
-Consider using session.Query<T>() instead of session.DocumentQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.DocumentQuery<T>() is intended for lower level API access.
-If you really want to do in memory filtering on the data returned from the query, you can use: session.DocumentQuery<T>().ToList().Count()
-", true)]
-        int Count();
-
-        /// <summary>
         ///     Apply distinct operation to this query
         /// </summary>
         TSelf Distinct();
@@ -133,16 +126,6 @@ If you really want to do in memory filtering on the data returned from the query
         ///     Adds explanations of scores calculated for queried documents to the query result
         /// </summary>
         TSelf ExplainScores();
-
-        /// <summary>
-        ///     Returns first element or throws if sequence is empty.
-        /// </summary>
-        T First();
-
-        /// <summary>
-        ///     Returns first element or default value for type if sequence is empty.
-        /// </summary>
-        T FirstOrDefault();
 
         /// <summary>
         ///     Specifies a fuzziness factor to the single word term in the last where clause
@@ -436,25 +419,14 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///     Sets a transformer to use after executing a query
         /// </summary>
-        /// <param name="resultsTransformer"></param>
-        TSelf SetResultTransformer(string resultsTransformer);
+        /// <param name="transformer"></param>
+        TSelf SetTransformer(string transformer);
 
         /// <summary>
         ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
         ///     results). Default: false
         /// </summary>
         TSelf ShowTimings();
-
-        /// <summary>
-        ///     Returns first element or throws if sequence is empty or contains more than one element.
-        /// </summary>
-        T Single();
-
-        /// <summary>
-        ///     Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than
-        ///     one element.
-        /// </summary>
-        T SingleOrDefault();
 
         /// <summary>
         ///     Skips the specified count.
@@ -517,7 +489,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
         ///     <para>use the Cutoff date option, instead.</para>
         /// </param>
-        TSelf WaitForNonStaleResultsAsOf(long? cutOffEtag);
+        TSelf WaitForNonStaleResultsAsOf(long cutOffEtag);
 
         /// <summary>
         ///     Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
@@ -536,7 +508,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     <para>use the Cutoff date option, instead.</para>
         /// </param>
         /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
-        TSelf WaitForNonStaleResultsAsOf(long? cutOffEtag, TimeSpan waitTimeout);
+        TSelf WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout);
 
         /// <summary>
         ///     Instructs the query to wait for non stale results as of now.

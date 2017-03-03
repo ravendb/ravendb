@@ -7,7 +7,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Transformers;
 
@@ -18,6 +20,8 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IDocumentQuery<T> : IEnumerable<T>, IDocumentQueryBase<T, IDocumentQuery<T>>
     {
+        string IndexName { get; }
+
         /// <summary>
         ///     Whatever we should apply distinct operation to the query on the server side
         /// </summary>
@@ -43,7 +47,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Create the index query object for this query
         /// </summary>
-        IndexQuery GetIndexQuery(bool isAsync);
+        IndexQuery GetIndexQuery();
 
         /// <summary>
         ///     Register the query as a lazy query in the session and return a lazy
@@ -82,7 +86,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <typeparam name="TProjection">Type of the projection from which fields will be taken.</typeparam>
         IDocumentQuery<TProjection> SelectFields<TProjection>();
-        
+
         /// <summary>
         ///     Ability to use one factory to determine spatial shape that will be used in query.
         /// </summary>
@@ -100,8 +104,54 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Sets a transformer to use after executing a query
         /// </summary>
-        IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+        IDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>()
             where TTransformer : AbstractTransformerCreationTask, new();
 
+        /// <summary>
+        /// Get the facets as per the specified facet document with the given start and pageSize
+        /// </summary>
+        FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize);
+
+        /// <summary>
+        /// Get the facet results as per the specified facets with the given start and pageSize
+        /// </summary>
+        FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize);
+
+        /// <summary>
+        ///     Get the facets lazily as per the specified doc with the given start and pageSize
+        /// </summary>
+        Lazy<FacetedQueryResult> GetFacetsLazy(string facetSetupDoc, int facetStart, int? facetPageSize);
+
+        /// <summary>
+        ///     Get the facets lazily as per the specified doc with the given start and pageSize
+        /// </summary>
+        Lazy<FacetedQueryResult> GetFacetsLazy(List<Facet> facets, int facetStart, int? facetPageSize);
+
+        /// <summary>
+        ///     Returns first element or throws if sequence is empty.
+        /// </summary>
+        T First();
+
+        /// <summary>
+        ///     Returns first element or default value for type if sequence is empty.
+        /// </summary>
+        T FirstOrDefault();
+
+        /// <summary>
+        ///     Returns first element or throws if sequence is empty or contains more than one element.
+        /// </summary>
+        T Single();
+
+        /// <summary>
+        ///     Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than
+        ///     one element.
+        /// </summary>
+        T SingleOrDefault();
+
+        /// <summary>
+        /// Gets the total count of records for this query
+        /// </summary>
+        /// <returns></returns>
+        int Count();
     }
 }

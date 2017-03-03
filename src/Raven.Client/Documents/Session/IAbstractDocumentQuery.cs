@@ -11,15 +11,12 @@ namespace Raven.Client.Documents.Session
     ///</summary>
     public interface IAbstractDocumentQuery<T>
     {
-        /// <summary>
-        ///   Get the name of the index being queried
-        /// </summary>
-        string IndexQueried { get; }
+        string IndexName { get; }
 
         /// <summary>
         /// Gets the document convention from the query session
         /// </summary>
-        DocumentConventions DocumentConventions { get; }
+        DocumentConventions Conventions { get; }
 
         /// <summary>
         /// Determines if it is a dynamic map-reduce query
@@ -346,7 +343,7 @@ namespace Raven.Client.Documents.Session
 
         void Intersect();
         void AddRootType(Type type);
-        void SetResultTransformer(string resultsTransformer);
+        void SetTransformer(string transformer);
         void Distinct();
 
         /// <summary>
@@ -360,13 +357,6 @@ namespace Raven.Client.Documents.Session
         void ContainsAll(string fieldName, IEnumerable<object> values);
 
         void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
-
-
-        /// <summary>
-        /// Sets the original query type incase of TransforWith usage.
-        /// </summary>
-        /// <param name="originalType"></param>
-        void SetOriginalQueryType(Type originalType);
 
         /// <summary>
         /// Adds a dynamic query field to the query

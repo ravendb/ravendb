@@ -38,7 +38,7 @@ namespace FastTests.Client.Indexing
                     q = session.Advanced.DocumentQuery<Person>()
                         .WhereEquals(x => x.Name, "John")
                         .Take(20)
-                        .GetIndexQuery(isAsync: false);
+                        .GetIndexQuery();
                 }
 
                 var query1 = new IndexQueryServerSide

@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
                     QueryStatistics stats;
 
                     var tst = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>()
-                        .SetResultTransformer("Data/SearchTransformer")
+                        .SetTransformer("Data/SearchTransformer")
                         .WaitForNonStaleResults()
                         .Statistics(out stats)
                         .WhereEquals(x => x.Optional, null)
@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
                     Assert.False(stats.IsStale, "Index is stale.");
                     Assert.True(tst1.Count > 0, "Regular query for projection failed.");
 
-                    var tst2 = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>().SetResultTransformer("Data/SearchTransformer")
+                    var tst2 = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>().SetTransformer("Data/SearchTransformer")
                         .Statistics(out stats)
                         .WhereEquals(x => x.Optional, null)
                         .SelectFields<Data_Search.ProjectionResult>(new string[0])

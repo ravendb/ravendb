@@ -16,7 +16,7 @@ namespace FastTests.Server.Documents.Queries
         [Fact]
         public async Task Cutoff_etag_usage()
         {
-            long? lastEtagOfUser;
+            long lastEtagOfUser;
 
             using (var store = GetDocumentStore())
             {
@@ -31,7 +31,7 @@ namespace FastTests.Server.Documents.Queries
 
                     await session.SaveChangesAsync();
 
-                    lastEtagOfUser = session.Advanced.GetEtagFor(entity);
+                    lastEtagOfUser = session.Advanced.GetEtagFor(entity).Value;
                 }
 
                 using (var session = store.OpenSession())

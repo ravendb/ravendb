@@ -7,10 +7,14 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 
@@ -465,7 +469,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="latitude">The latitude.</param>
         /// <param name="longitude">The longitude.</param>
         /// <param name="radiusUnits">The units of the <paramref name="radius"/>.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits)
+        public IAsyncDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = Indexes.Spatial.SpatialUnits.Kilometers)
         {
             return GenerateQueryWithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
         }
@@ -473,7 +477,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Filter matches to be inside the specified radius
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits)
+        public IAsyncDocumentQuery<T> WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = Indexes.Spatial.SpatialUnits.Kilometers)
         {
             return GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
         }
@@ -497,7 +501,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance(double lat, double lng)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.Documents.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng)));
+            OrderBy(string.Format("{0};{1};{2}", Constants.Documents.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
             return this;
         }
         /// <summary>
@@ -505,7 +509,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance(double lat, double lng, string spatialFieldName)
         {
-            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Documents.Indexing.Fields.DistanceFieldName, CharExtensions.ToInvariantString(lat), CharExtensions.ToInvariantString(lng), spatialFieldName));
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Documents.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), spatialFieldName));
             return this;
         }
 
@@ -644,7 +648,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="cutOffEtag">The cut off etag.</param>
         /// <returns></returns>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long? cutOffEtag)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag);
             return this;
@@ -655,7 +659,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="cutOffEtag">The cut off etag.</param>
         /// <param name="waitTimeout">The wait timeout.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long? cutOffEtag, TimeSpan waitTimeout)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
             return this;
@@ -676,7 +680,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution)
         {
-            BeforeQueryExecution(BeforeQueryExecutionAction);
+            BeforeQueryExecution(beforeQueryExecution);
             return this;
         }
 
@@ -695,7 +699,7 @@ namespace Raven.Client.Documents.Session
         /// Selects all the projection fields directly from the index
         /// </summary>
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
-        public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>()
+        public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>()
         {
             return SelectFields<TProjection>(ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Select(x => x.Name).ToArray());
         }
@@ -713,11 +717,11 @@ namespace Raven.Client.Documents.Session
         /// Selects the specified fields directly from the index
         /// </summary>
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
-        public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
+        public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
         {
             var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(TheSession,
-                                                                         IndexName, fields, projections,
-                                                                         IsMapReduce)
+                IndexName, fields, projections,
+                IsMapReduce)
             {
                 PageSize = PageSize,
                 QueryText = new StringBuilder(QueryText.ToString()),
@@ -748,7 +752,7 @@ namespace Raven.Client.Documents.Session
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),
                 HighlighterPreTags = HighlighterPreTags,
                 HighlighterPostTags = HighlighterPostTags,
-                ResultsTransformer = ResultsTransformer,
+                Transformer = Transformer,
                 TransformerParameters = TransformerParameters,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
@@ -771,16 +775,11 @@ namespace Raven.Client.Documents.Session
             return GenerateSpatialQueryData(fieldName, criteria);
         }
 
-        public void SetQueryInputs(Dictionary<string, object> queryInputs)
-        {
-            SetTransformerParameters(queryInputs);
-        }
-
-        public void SetTransformerParameters(Dictionary<string, object> parameters)
+        public IAsyncDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> parameters)
         {
             TransformerParameters = parameters;
+            return this;
         }
-
 
         /// <summary>
         /// Register the query as a lazy-count query in the session and return a lazy
@@ -813,7 +812,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Adds an ordering by score for a specific field to the query
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScore()
+        public IAsyncDocumentQuery<T> OrderByScore()
         {
             AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, false);
             return this;
@@ -822,7 +821,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Adds an ordering by score descending for a specific field to the query
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScoreDescending()
+        public IAsyncDocumentQuery<T> OrderByScoreDescending()
         {
             AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, true);
             return this;
@@ -973,14 +972,14 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Sets a transformer to use after executing a query
         /// </summary>
-        /// <param name="resultsTransformer"></param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
+        /// <param name="transformer"></param>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetTransformer(string transformer)
         {
-            SetResultTransformer(resultsTransformer);
+            SetTransformer(transformer);
             return this;
         }
 
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ExplainScores()
+        public IAsyncDocumentQuery<T> ExplainScores()
         {
             ShouldExplainScores = true;
             return this;
@@ -989,8 +988,208 @@ namespace Raven.Client.Documents.Session
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
         {
-            base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
+            SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
             return this;
+        }
+
+        public IAsyncDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>() where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var documentQuery = new AsyncDocumentQuery<TTransformerResult>(TheSession,
+                IndexName,
+                FieldsToFetch,
+                ProjectionFields,
+                IsMapReduce)
+            {
+                PageSize = PageSize,
+                QueryText = new StringBuilder(QueryText.ToString()),
+                Start = Start,
+                Timeout = Timeout,
+                CutoffEtag = CutoffEtag,
+                QueryStats = QueryStats,
+                TheWaitForNonStaleResults = TheWaitForNonStaleResults,
+                TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
+                OrderByFields = OrderByFields,
+                DynamicMapReduceFields = DynamicMapReduceFields,
+                _isDistinct = _isDistinct,
+                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
+                Negate = Negate,
+                TransformResultsFunc = TransformResultsFunc,
+                Includes = new HashSet<string>(Includes),
+                IsSpatialQuery = IsSpatialQuery,
+                SpatialFieldName = SpatialFieldName,
+                QueryShape = QueryShape,
+                SpatialRelation = SpatialRelation,
+                SpatialUnits = SpatialUnits,
+                DistanceErrorPct = DistanceErrorPct,
+                RootTypes = { typeof(T) },
+                DefaultField = DefaultField,
+                BeforeQueryExecutionAction = BeforeQueryExecutionAction,
+                HighlightedFields = new List<HighlightedField>(HighlightedFields),
+                HighlighterPreTags = HighlighterPreTags,
+                HighlighterPostTags = HighlighterPostTags,
+                Transformer = new TTransformer().TransformerName,
+                TransformerParameters = TransformerParameters,
+                DisableEntitiesTracking = DisableEntitiesTracking,
+                DisableCaching = DisableCaching,
+                ShowQueryTimings = ShowQueryTimings,
+                LastEquality = LastEquality,
+                DefaultOperator = DefaultOperator,
+                ShouldExplainScores = ShouldExplainScores
+            };
+            documentQuery.AfterQueryExecuted(AfterQueryExecutedCallback);
+            return documentQuery;
+        }
+
+        public async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        {
+            var q = GetIndexQuery();
+            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
+
+            var command = new GetFacetsCommand(TheSession.Context, query);
+            await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
+
+            return command.Result;
+        }
+
+        public async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        {
+            var q = GetIndexQuery();
+            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
+
+            var command = new GetFacetsCommand(TheSession.Context, query);
+            await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
+
+            return command.Result;
+        }
+
+        public Lazy<Task<FacetedQueryResult>> GetFacetsLazyAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        {
+            var q = GetIndexQuery();
+            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
+
+            var lazyFacetsOperation = new LazyFacetsOperation(query);
+            return ((AsyncDocumentSession)TheSession).AddLazyOperation<FacetedQueryResult>(lazyFacetsOperation, null, token);
+        }
+
+        public Lazy<Task<FacetedQueryResult>> GetFacetsLazyAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        {
+            var q = GetIndexQuery();
+            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
+
+            var lazyFacetsOperation = new LazyFacetsOperation(query);
+            return ((AsyncDocumentSession)TheSession).AddLazyOperation<FacetedQueryResult>(lazyFacetsOperation, null, token);
+        }
+
+        /// <summary>
+        /// Returns a list of results for a query asynchronously. 
+        /// </summary>
+        public async Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken))
+        {
+            await InitAsync(token).ConfigureAwait(false);
+            var tuple = await ProcessEnumerator(QueryOperation).WithCancellation(token).ConfigureAwait(false);
+            return tuple.Item2;
+        }
+
+        public async Task<T> FirstAsync(CancellationToken token = default(CancellationToken))
+        {
+            var operation = await ExecuteQueryOperation(1, token).ConfigureAwait(false);
+            return operation.First();
+        }
+
+        public async Task<T> FirstOrDefaultAsync(CancellationToken token = default(CancellationToken))
+        {
+            var operation = await ExecuteQueryOperation(1, token).ConfigureAwait(false);
+            return operation.FirstOrDefault();
+        }
+
+        public async Task<T> SingleAsync(CancellationToken token = default(CancellationToken))
+        {
+            var operation = await ExecuteQueryOperation(2, token).ConfigureAwait(false);
+            return operation.Single();
+        }
+
+        public async Task<T> SingleOrDefaultAsync(CancellationToken token = default(CancellationToken))
+        {
+            var operation = await ExecuteQueryOperation(2, token).ConfigureAwait(false);
+            return operation.SingleOrDefault();
+        }
+
+        private async Task<IEnumerable<T>> ExecuteQueryOperation(int take, CancellationToken token)
+        {
+            if (PageSize.HasValue == false || PageSize > take)
+                Take(take);
+
+            await InitAsync(token).ConfigureAwait(false);
+
+            return QueryOperation.Complete<T>();
+        }
+
+        /// <summary>
+        /// Register the query as a lazy query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval = null)
+        {
+            if (QueryOperation == null)
+            {
+                QueryOperation = InitializeQueryOperation();
+            }
+
+            var lazyQueryOperation = new LazyQueryOperation<T>(QueryOperation, AfterQueryExecutedCallback);
+            return ((AsyncDocumentSession)TheSession).AddLazyOperation(lazyQueryOperation, onEval);
+        }
+
+        /// <summary>
+        /// Gets the total count of records for this query
+        /// </summary>
+        public async Task<int> CountAsync(CancellationToken token = default(CancellationToken))
+        {
+            Take(0);
+            var result = await QueryResultAsync(token).ConfigureAwait(false);
+            return result.TotalResults;
+        }
+
+        private static Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
+        {
+            var list = currentQueryOperation.Complete<T>();
+            return Task.FromResult(Tuple.Create(currentQueryOperation.CurrentQueryResults, list));
+        }
+
+        /// <summary>
+        ///   Gets the query result
+        ///   Execute the query the first time that this is called.
+        /// </summary>
+        /// <value>The query result.</value>
+        public async Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken))
+        {
+            await InitAsync(token).ConfigureAwait(false);
+
+            return QueryOperation.CurrentQueryResults.CreateSnapshot();
+        }
+
+        protected virtual async Task InitAsync(CancellationToken token)
+        {
+            if (QueryOperation != null)
+                return;
+
+            var beforeQueryExecutedEventArgs = new BeforeQueryExecutedEventArgs(TheSession, this);
+            TheSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);
+
+            QueryOperation = InitializeQueryOperation();
+            await ExecuteActualQueryAsync(token).ConfigureAwait(false);
+        }
+
+        private async Task ExecuteActualQueryAsync(CancellationToken token)
+        {
+            using (QueryOperation.EnterQueryContext())
+            {
+                QueryOperation.LogQuery();
+                var command = QueryOperation.CreateRequest();
+                await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
+                QueryOperation.SetResult(command.Result);
+            }
+
+            InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
         }
     }
 }
