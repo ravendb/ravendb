@@ -1,19 +1,18 @@
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB741 : RavenTest
+    public class RavenDB741 : RavenTestBase
     {
         [Fact]
         public void Nested_Dictionary_Dynamic_Count_Property_Should_Work()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
 
@@ -34,7 +33,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Nested_Dictionary_Dynamic_Count_Method_Should_Work()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
 
@@ -55,7 +54,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Nested_Dictionary_Dynamic_Enumerable_Count_Should_Work()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
 
@@ -67,7 +66,7 @@ namespace Raven.Tests.Issues
                                          .Customize(x => x.WaitForNonStaleResults())
                                          .Where(x => Enumerable.Count(x.Bars) == 0)
                                          .ToList();
-                    
+
                     WaitForUserToContinueTheTest(documentStore);
 
                     Assert.Equal(2, results.Count);
@@ -78,7 +77,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Nested_Dictionary_Static_Count_Property_Should_Work()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
                 documentStore.ExecuteIndex(new Foos_ByBarCount_Property());
@@ -100,7 +99,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Nested_Dictionary_Static_Count_Method_Should_Work()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
                 documentStore.ExecuteIndex(new Foos_ByBarCount_Method());
@@ -122,7 +121,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Nested_Dictionary_Static_Enumerable_Count_Should_Work()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
                 documentStore.ExecuteIndex(new Foos_ByBarCount_Enumerable());
@@ -141,7 +140,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private static void PutSampleData(EmbeddableDocumentStore documentStore)
+        private static void PutSampleData(IDocumentStore documentStore)
         {
             using (var session = documentStore.OpenSession())
             {
@@ -183,19 +182,19 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public Dictionary<string, Bar> Bars { get; set; }
         }
 
-        public class Bar
+        private class Bar
         {
             public string Name { get; set; }
             public string Value { get; set; }
         }
 
-        public class Foos_ByBarCount_Property : AbstractIndexCreationTask<Foo>
+        private class Foos_ByBarCount_Property : AbstractIndexCreationTask<Foo>
         {
             public Foos_ByBarCount_Property()
             {
@@ -207,7 +206,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Foos_ByBarCount_Method : AbstractIndexCreationTask<Foo>
+        private class Foos_ByBarCount_Method : AbstractIndexCreationTask<Foo>
         {
             public Foos_ByBarCount_Method()
             {
@@ -219,7 +218,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Foos_ByBarCount_Enumerable : AbstractIndexCreationTask<Foo>
+        private class Foos_ByBarCount_Enumerable : AbstractIndexCreationTask<Foo>
         {
             public Foos_ByBarCount_Enumerable()
             {

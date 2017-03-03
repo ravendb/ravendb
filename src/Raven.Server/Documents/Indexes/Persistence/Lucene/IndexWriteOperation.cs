@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 throw new IndexWriteException(e);
             }
-            }
+        }
 
         public override void Dispose()
         {
@@ -81,10 +81,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 using (stats.For(IndexingOperation.Lucene.FlushToDisk))
                     _writer.Commit(); // just make sure changes are flushed to disk
             }
-            }
+        }
 
         public virtual void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
-            {
+        {
             EnsureValidStats(stats);
 
             bool shouldSkip;
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     return;
 
                 using (Stats.AddStats.Start())
-                     _writer.AddDocument(_converter.Document, _analyzer);
+                    _writer.AddDocument(_converter.Document, _analyzer);
 
                 stats.RecordIndexingOutput();
 

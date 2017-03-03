@@ -5,7 +5,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_3300 : RavenTestBase
     {

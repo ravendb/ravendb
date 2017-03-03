@@ -3,19 +3,17 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using FastTests;
+using Raven.Client.Documents.Linq;
 using Xunit;
-using Raven.Client.Linq;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class Q14235692 : RavenTestBase
     {
-        public class Company
+        private class Company
         {
             public string Name { get; set; }
             public string Country { get; set; }
@@ -24,7 +22,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Empty_Strings_Can_Be_Used_In_Where_Equals()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -49,7 +47,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Empty_Strings_Can_Be_Used_In_Where_In_Once()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -74,7 +72,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Empty_Strings_Can_Be_Used_In_Where_In_Twice()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -99,7 +97,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Empty_Strings_Can_Be_Used_In_Where_In_Thrice()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -124,7 +122,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Empty_Strings_Can_Be_Used_In_Where_In_With_Other_Data()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
