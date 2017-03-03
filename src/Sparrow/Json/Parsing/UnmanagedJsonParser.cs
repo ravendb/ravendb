@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Sparrow.Json.Parsing
@@ -36,6 +37,16 @@ namespace Sparrow.Json.Parsing
         private bool _escapeMode;
         private bool _maybeBeforePreamble = true;
 
+        private enum ParseNumberAction
+        {
+            Fail = 0,
+            ParseNumber,
+            ParseEnd,
+            ParseUnlikely
+        }
+
+        private static readonly ParseNumberAction[] ParseNumberTable;        
+
         static UnmanagedJsonParser()
         {
             ParseStringTable = new byte[255];
@@ -47,6 +58,22 @@ namespace Sparrow.Json.Parsing
             ParseStringTable['"'] = (byte)'"';
             ParseStringTable['\\'] = (byte)'\\';
             ParseStringTable['/'] = (byte)'/';
+            ParseStringTable['\n'] = Unlikely;
+            ParseStringTable['\r'] = Unlikely;
+            ParseStringTable['u'] = Unlikely;            
+
+            ParseNumberTable = new ParseNumberAction[255];
+
+            ParseNumberTable['-'] = ParseNumberAction.ParseNumber;
+            for (byte ch = (byte)'0'; ch <= '9'; ch++)
+                ParseNumberTable[ch] = ParseNumberAction.ParseNumber;
+
+            ParseNumberTable['}'] = ParseNumberTable[']'] = ParseNumberTable[','] = ParseNumberTable[' '] = ParseNumberAction.ParseEnd;
+            ParseNumberTable['\t'] = ParseNumberTable['\v'] = ParseNumberTable['\f'] = ParseNumberAction.ParseEnd;
+
+            ParseNumberTable['.'] = ParseNumberTable['e'] = ParseNumberTable['E'] = ParseNumberAction.ParseUnlikely;
+            ParseNumberTable['-'] = ParseNumberTable['+'] = ParseNumberAction.ParseUnlikely;
+            ParseNumberTable['\r'] = ParseNumberTable['\n'] = ParseNumberAction.ParseUnlikely;
         }
 
         public UnmanagedJsonParser(JsonOperationContext ctx, JsonParserState state, string debugTag)
@@ -54,7 +81,7 @@ namespace Sparrow.Json.Parsing
             _ctx = ctx;
             _state = state;
             _debugTag = debugTag;
-            _unmanagedWriteBuffer = ctx.GetStream();
+            _unmanagedWriteBuffer = ctx.GetStream();           
         }
 
         public void SetBuffer(JsonOperationContext.ManagedPinnedBuffer inputBuffer)
@@ -137,6 +164,61 @@ namespace Sparrow.Json.Parsing
 
                 switch (b)
                 {
+                    case (byte)':':
+                    case (byte)',':
+                        if (_state.CurrentTokenType == JsonParserToken.Separator || _state.CurrentTokenType == JsonParserToken.StartObject || _state.CurrentTokenType == JsonParserToken.StartArray)
+                            throw CreateException("Cannot have a '" + (char)b + "' in this position");
+
+                        _state.CurrentTokenType = JsonParserToken.Separator;
+                        continue;
+
+                    case (byte)'{':
+                        _state.CurrentTokenType = JsonParserToken.StartObject;
+                        return true;
+                    case (byte)'[':
+                        _state.CurrentTokenType = JsonParserToken.StartArray;
+                        return true;
+                    case (byte)'}':
+                        _state.CurrentTokenType = JsonParserToken.EndObject;
+                        return true;
+                    case (byte)']':
+                        _state.CurrentTokenType = JsonParserToken.EndArray;
+                        return true;
+
+                    case (byte)'0':
+                    case (byte)'1':
+                    case (byte)'2':
+                    case (byte)'3':
+                    case (byte)'4':
+                    case (byte)'5':
+                    case (byte)'6':
+                    case (byte)'7':
+                    case (byte)'8':
+                    case (byte)'9':
+                    case (byte)'-':
+                        {
+                            _unmanagedWriteBuffer.Clear();
+                            _state.EscapePositions.Clear();
+                            _state.Long = 0;
+                            _zeroPrefix = b == '0';
+                            _isNegative = false;
+                            _isDouble = false;
+                            _isExponent = false;
+
+                            // ParseNumber need to call _charPos++ & _pos++, so we'll reset them for the first char
+                            _pos--;
+                            _charPos--;
+
+                            if (ParseNumber() == false)
+                            {
+                                _state.Continuation = JsonParserTokenContinuation.PartialNumber;
+                                return false;
+                            }
+                            if (_state.CurrentTokenType == JsonParserToken.Float)
+                                _unmanagedWriteBuffer.EnsureSingleChunk(_state);
+                            return true;
+                        }
+
                     case (byte)'\r':
                         if (_pos >=  _bufSize)
                             return false;
@@ -154,28 +236,7 @@ namespace Sparrow.Json.Parsing
                     case (byte)'\v':
                     case (byte)'\f':
                         //white space, we can safely ignore
-                        continue;
-
-                    case (byte)'{':
-                        _state.CurrentTokenType = JsonParserToken.StartObject;
-                        return true;
-                    case (byte)'[':
-                        _state.CurrentTokenType = JsonParserToken.StartArray;
-                        return true;
-                    case (byte)'}':
-                        _state.CurrentTokenType = JsonParserToken.EndObject;
-                        return true;
-                    case (byte)']':
-                        _state.CurrentTokenType = JsonParserToken.EndArray;
-                        return true;
-
-                    case (byte)':':
-                    case (byte)',':
-                        if (_state.CurrentTokenType == JsonParserToken.Separator || _state.CurrentTokenType == JsonParserToken.StartObject || _state.CurrentTokenType == JsonParserToken.StartArray)
-                            throw CreateException("Cannot have a '" + (char) b + "' in this position");
-
-                        _state.CurrentTokenType = JsonParserToken.Separator;
-                        continue;
+                        continue; 
 
                     case (byte)'N':
                         _state.CurrentTokenType = JsonParserToken.Float;
@@ -222,40 +283,6 @@ namespace Sparrow.Json.Parsing
                             return false;
                         }
                         return true;
-
-                    case (byte)'0':
-                    case (byte)'1':
-                    case (byte)'2':
-                    case (byte)'3':
-                    case (byte)'4':
-                    case (byte)'5':
-                    case (byte)'6':
-                    case (byte)'7':
-                    case (byte)'8':
-                    case (byte)'9':
-                    case (byte)'-':
-                        {
-                            _unmanagedWriteBuffer.Clear();
-                            _state.EscapePositions.Clear();
-                            _state.Long = 0;
-                            _zeroPrefix = b == '0';
-                            _isNegative = false;
-                            _isDouble = false;
-                            _isExponent = false;
-
-                            // ParseNumber need to call _charPos++ & _pos++, so we'll reset them for the first char
-                            _pos--;
-                            _charPos--;
-
-                            if (ParseNumber() == false)
-                            {
-                                _state.Continuation = JsonParserTokenContinuation.PartialNumber;
-                                return false;
-                            }
-                            if (_state.CurrentTokenType == JsonParserToken.Float)
-                                _unmanagedWriteBuffer.EnsureSingleChunk(_state);
-                            return true;
-                        }
                 }
 
                 ThrowCannotHaveCharInThisPosition(b);
@@ -392,6 +419,7 @@ namespace Sparrow.Json.Parsing
         {
             JsonParserState state = _state;
             byte* currentBuffer = _inputBuffer;
+
             while (true)
             {
                 if (_pos >= _bufSize)
@@ -408,83 +436,104 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                switch (b)
+                if (b == ' ' || b == ',' || b == '}' || b == ']' || ParseNumberTable[b] == ParseNumberAction.ParseEnd)
                 {
-                    case (byte)'.':
+                    if (!_zeroPrefix || _unmanagedWriteBuffer.SizeInBytes == 1)
                     {
-                        if (!_isDouble)
-                        {
-                            _zeroPrefix = false; // 0.5, frex
-                            _isDouble = true;
-                            break;
-                        }
+                        if (_isNegative)
+                            state.Long *= -1;
 
-                        ThrowWhenMalformed("Already got '.' in this number value");
-                        break;
+                        state.CurrentTokenType = _isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
+
+                        _pos--; _charPos--;// need to re-read this char
+
+                        return true;
                     }
-                    case (byte)'+':
-                        break; // just record, appears in 1.4e+3
-                    case (byte)'e':
-                    case (byte)'E':
+
+                    ThrowWhenMalformed("Invalid number with zero prefix");
+                    break;
+                }
+            
+                if (ParseNumberTable[b] == ParseNumberAction.ParseUnlikely)
+                {
+                    if (ParseNumberUnlikely(b, state))
+                        return true;
+
+                    _unmanagedWriteBuffer.WriteByte(b);
+                    continue;
+                }
+
+                // No hit, we are done.
+                ThrowWhenMalformed("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
+            }
+
+            return false; // Will never execute.
+        }
+
+        private bool ParseNumberUnlikely(byte b, JsonParserState state)
+        {
+            switch (b)
+            {
+                case (byte)'.':
+                {
+                    if (!_isDouble)
                     {
-                        if (_isExponent)
-                            ThrowWhenMalformed("Already got 'e' in this number value");
-                        _isExponent = true;
+                        _zeroPrefix = false; // 0.5, frex
                         _isDouble = true;
                         break;
                     }
-                    case (byte)'-':
-                    {
-                        if (!_isNegative || _isExponent != false)
-                        {
-                            _isNegative = true;
-                            break;
-                        }
 
-                        ThrowWhenMalformed("Already got '-' in this number value");
+                    ThrowWhenMalformed("Already got '.' in this number value");
+                    break;
+                }
+                case (byte)'+':
+                    break; // just record, appears in 1.4e+3
+                case (byte)'e':
+                case (byte)'E':
+                {
+                    if (_isExponent)
+                        ThrowWhenMalformed("Already got 'e' in this number value");
+                    _isExponent = true;
+                    _isDouble = true;
+                    break;
+                }
+                case (byte)'-':
+                {
+                    if (!_isNegative || _isExponent != false)
+                    {
+                        _isNegative = true;
                         break;
                     }
 
-                    case (byte)'\r':
-                    case (byte)'\n':
-                        _line++;
-                        _charPos = 1;
-                        goto case (byte)' ';
-
-                    case (byte)' ':
-                    case (byte)'\t':
-                    case (byte)'\v':
-                    case (byte)'\f':
-                    case (byte)',':
-                    case (byte)']':
-                    case (byte)'}':
-                    {
-                        if (!_zeroPrefix || _unmanagedWriteBuffer.SizeInBytes == 1)
-                        {
-                            if (_isNegative)
-                                state.Long *= -1;
-
-                            state.CurrentTokenType = _isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
-
-                            _pos--; _charPos--;// need to re-read this char
-
-                            return true;
-                        }
-
-                        ThrowWhenMalformed("Invalid number with zero prefix");
-                        break;
-                    }
-
-                    default:
-                    {
-                        ThrowWhenMalformed("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
-                        break;
-                    }
-
+                    ThrowWhenMalformed("Already got '-' in this number value");
+                    break;
                 }
 
-                _unmanagedWriteBuffer.WriteByte(b);
+                case (byte)'\r':
+                case (byte)'\n':
+                { 
+                    _line++;
+                    _charPos = 1;
+
+                    if (!_zeroPrefix || _unmanagedWriteBuffer.SizeInBytes == 1)
+                    {
+                        if (_isNegative)
+                            state.Long *= -1;
+
+                        state.CurrentTokenType = _isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
+
+                        _pos--;
+                        _charPos--; // need to re-read this char
+
+                        return true;
+                    }
+
+                    ThrowWhenMalformed("Invalid number with zero prefix");
+                    break;
+                }
             }
+
+            return false;
         }
 
         private void ThrowWhenMalformed(string message)
@@ -507,12 +556,14 @@ namespace Sparrow.Json.Parsing
         }
 
         private const byte NoSubstitution = 0;
+        private const byte Unlikely = 1;
         private static readonly byte[] ParseStringTable;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool ParseString()
         {
             byte* currentBuffer = _inputBuffer;
+            byte[] parseStringTable = ParseStringTable;
 
             while (true)
             {
@@ -549,7 +600,13 @@ namespace Sparrow.Json.Parsing
                             _prevEscapePosition = _unmanagedWriteBuffer.SizeInBytes + 1;
                         }
 
-                        if (b == (byte)'\n')
+                        byte op = parseStringTable[b];
+                        if (op > Unlikely)
+                        {
+                            // We have a known substitution to apply
+                            _unmanagedWriteBuffer.WriteByte(op);
+                        }
+                        else if (b == (byte)'\n')
                         {
                             _line++;
                             _charPos = 1;
@@ -567,23 +624,14 @@ namespace Sparrow.Json.Parsing
                             if (currentBuffer[_pos] == (byte)'\n')
                                 _pos++; // consume the \,\r,\n
                         }
+                        else if (b == (byte)'u')
+                        {
+                            if (ParseUnicodeValue() == false)
+                                return false;
+                        }
                         else
                         {
-                            byte op = ParseStringTable[b];
-                            if (op != NoSubstitution)
-                            {
-                                // We have a known substitution to apply
-                                _unmanagedWriteBuffer.WriteByte(op);
-                            }
-                            else if (b == (byte) 'u')
-                            {
-                                if (ParseUnicodeValue() == false)
-                                    return false;
-                            }
-                            else
-                            {
-                                ThrowInvalidEscapeChar(b);
-                            }
+                            ThrowInvalidEscapeChar(b);
                         }
                     }
                 }

@@ -214,6 +214,7 @@ namespace Sparrow.Json
             return arrayInfoStart;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int SetPropertyIdSizeFlag(ref BlittableJsonToken objectToken, int maxPropId)
         {
             if (maxPropId <= byte.MaxValue)
@@ -280,6 +281,7 @@ namespace Sparrow.Json
             WriteNumber((int)documentToken, sizeof(byte));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int SetOffsetSizeFlag(ref BlittableJsonToken objectToken, long distanceFromFirstProperty)
         {
             if (distanceFromFirstProperty <= byte.MaxValue)
