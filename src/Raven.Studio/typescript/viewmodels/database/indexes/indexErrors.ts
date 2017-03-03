@@ -38,7 +38,7 @@ class indexErrors extends viewModelBase {
         clearTimeout(this.updateNowTimeoutHandle);
     }
 
-    fetchIndexErrors(): JQueryPromise<databaseStatisticsDto> {
+    fetchIndexErrors(): JQueryPromise<any> { //TODO: use type
         var db = this.activeDatabase();
         if (db) {
             /* TODO

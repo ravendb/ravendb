@@ -19,8 +19,8 @@ class indexMergeSuggestions extends viewModelBase {
     appUrls: computedAppUrls;
     suggestions = ko.observableArray<indexMergeSuggestion>();
     unmergables = ko.observableArray<{ indexName: string; reason: string; }>();
-    idleOrAbandonedIndexes = ko.observableArray<indexStatisticsDto>();
-    notUsedForLastWeek = ko.observableArray<indexStatisticsDto>();
+    /* TODOidleOrAbandonedIndexes = ko.observableArray<indexStatisticsDto>();
+    notUsedForLastWeek = ko.observableArray<indexStatisticsDto>();*/
     
     constructor() {
         super();
@@ -58,6 +58,7 @@ class indexMergeSuggestions extends viewModelBase {
         return null;
     }
 
+    /* TODO
     private processStatsResults(stats: databaseStatisticsDto) {
         this.idleOrAbandonedIndexes([]);
         this.notUsedForLastWeek([]);
@@ -80,7 +81,7 @@ class indexMergeSuggestions extends viewModelBase {
                 }
             }
         });
-    }
+    }*/
 
     private fetchIndexMergeSuggestions() {
         var deferred = $.Deferred();
@@ -142,6 +143,7 @@ class indexMergeSuggestions extends viewModelBase {
         dialog.show(deleteViewModel);
     }
 
+    /* TODO
     deleteAllIdleOrAbandoned() {
         eventsCollector.default.reportEvent("index-merge-suggestions", "delete-all-idle-or-abandoned");
         var db = this.activeDatabase();
@@ -156,7 +158,7 @@ class indexMergeSuggestions extends viewModelBase {
         var deleteViewModel = new deleteIndexesConfirm(this.notUsedForLastWeek().map(index => index.Name), db, "Delete all indexes not used within last week?");
         deleteViewModel.deleteTask.always(() => this.reload());
         dialog.show(deleteViewModel);
-    }
+    }*/
 }
 
 export = indexMergeSuggestions; 

@@ -8,29 +8,6 @@ export = getStatsMenuItem;
 function getStatsMenuItem(appUrls: computedAppUrls) {
     let activeDatabase = activeResourceTracker.default.database;
     var items: menuItem[] = [
-        /*TODO
-        new intermediateMenuItem('Indexing',
-            [
-                new leafMenuItem({
-                    route: 'databases/status/indexing/batchSize',
-                    moduleId: 'viewmodels/database/status/indexing/indexBatchSize',
-                    title: 'Index batch size',
-                    tooltip: "Index batch sizes",
-                    nav: true,
-                    css: 'icon-index-batch-size',
-                    dynamicHash: appUrls.indexBatchSize
-                }),
-                new leafMenuItem({
-                    route: 'databases/status/indexing/prefetches',
-                    moduleId: 'viewmodels/database/status/indexing/indexPrefetches',
-                    title: 'Prefetches',
-                    tooltip: "Prefetches",
-                    nav: true,
-                    css: 'icon-prefetches',
-                    dynamicHash: appUrls.indexPrefetches
-                })
-            ],
-            'icon-indexes'),*/
         new leafMenuItem({
             route: 'databases/status/storage/report',
             moduleId: 'viewmodels/database/status/storageReport',
