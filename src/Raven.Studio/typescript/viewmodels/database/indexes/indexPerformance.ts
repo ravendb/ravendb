@@ -264,7 +264,10 @@ class metrics extends viewModelBase {
             return indexNames.length && indexNames.length !== expandedTracks.length;
         });
 
-        this.searchText.throttle(200).subscribe(() => this.filterIndexes());
+        this.searchText.throttle(200).subscribe(() => {
+            this.filterIndexes();
+            this.drawMainSection();
+        });
 
         this.autoScroll.subscribe(v => {
             if (v) {
@@ -422,8 +425,6 @@ class metrics extends viewModelBase {
         const criteria = this.searchText().toLowerCase();
 
         this.filteredIndexNames(this.indexNames().filter(x => x.toLowerCase().includes(criteria)));
-
-        this.drawMainSection();
     }
 
     private enableLiveView() {
@@ -621,9 +622,11 @@ class metrics extends viewModelBase {
 
     private prepareMainSection(resetFilteredIndexNames: boolean) {
         this.findAndSetIndexNames();
+
         if (resetFilteredIndexNames) {
-            this.filteredIndexNames(this.indexNames());
+            this.searchText("");
         }
+        this.filterIndexes();
     }
 
     private findAndSetIndexNames() {
@@ -782,9 +785,11 @@ class metrics extends viewModelBase {
                 const ticks = this.getTicks(xScale);
 
                 context.save();
+                context.beginPath();
                 context.rect(0, metrics.axisHeight - 3, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
                 context.clip();
-                this.drawXaxisTimeLines(context, ticks, this.yScale(this.data[0].IndexName) - 3, this.totalHeight);
+                const timeYStart = this.yScale.range()[0] || metrics.axisHeight;
+                this.drawXaxisTimeLines(context, ticks, timeYStart - 3, this.totalHeight);
                 context.restore();
 
                 this.drawXaxisTimeLabels(context, ticks, -20, 17);
@@ -840,6 +845,10 @@ class metrics extends viewModelBase {
         const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
 
         this.data.forEach(perfStat => {
+            if (!_.includes(this.filteredIndexNames(), perfStat.IndexName)) {
+                return;
+            }
+
             const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
             let yStart = this.yScale(perfStat.IndexName);
             yStart += isOpened ? metrics.openedTrackPadding : metrics.closedTrackPadding;
@@ -969,11 +978,11 @@ class metrics extends viewModelBase {
         context.beginPath();
         context.strokeStyle = metrics.colors.gaps;       
 
-        for (let i = 1; i < range.length; i += 2) { 
+        for (let i = 1; i < range.length - 1; i += 2) { 
             const gapX = Math.floor(range[i]) + 0.5;
             
             context.moveTo(gapX, metrics.axisHeight);
-            context.lineTo(gapX, this.totalHeight);           
+            context.lineTo(gapX, this.totalHeight);
 
             // Can't use xScale.invert here because there are Duplicate Values in xScale.range,
             // Using direct array access to xScale.domain instead
