@@ -3,41 +3,41 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4903 : RavenTest
+    public class RavenDB_4903 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }
 
-        public class UserByReverseName : AbstractIndexCreationTask<User>
+        private class UserByReverseName : AbstractIndexCreationTask<User>
         {
             public UserByReverseName()
             {
                 Map = users => from user in users
-                    select new {Name = user.Name.Reverse()};
+                               select new { Name = user.Name.Reverse() };
             }
         }
 
         [Fact]
         public void CanAutomaticallyWaitForIndexes_ForSpecificIndex()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var userByReverseName = new UserByReverseName();
                 userByReverseName.Execute(store);
                 using (var s = store.OpenSession())
                 {
-                    s.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), indexes:new [] {userByReverseName.IndexName});
+                    s.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), indexes: new[] { userByReverseName.IndexName });
 
                     s.Store(new User { Name = "Oren" });
 
@@ -55,7 +55,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanAutomaticallyWaitForIndexes()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -66,7 +66,7 @@ namespace Raven.Tests.Issues
                 {
                     s.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(30));
 
-                    s.Store(new User {Name = "Oren"});
+                    s.Store(new User { Name = "Oren" });
 
                     s.SaveChanges();
                 }

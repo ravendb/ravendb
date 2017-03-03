@@ -1,18 +1,33 @@
 ﻿using System;
 using System.Linq;
-using Raven.Tests.Helpers;
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_5617 : RavenTestBase
     {
+        private class User
+        {
+            public string Name { get; set; }
+        }
+
+        private class UserByReverseName : AbstractIndexCreationTask<User>
+        {
+            public UserByReverseName()
+            {
+                Map = users => from user in users
+                               select new { Name = user.Name.Reverse() };
+            }
+        }
+
         [Fact]
         public void CanAutomaticallyWaitForIndexes_ForSpecificIndex()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                var userByReverseName = new RavenDB_4903.UserByReverseName();
+                var userByReverseName = new UserByReverseName();
                 userByReverseName.Execute(store);
                 using (var s = store.OpenSession())
                 {
@@ -21,14 +36,14 @@ namespace Raven.Tests.Issues
                         indexes: new[] { userByReverseName.IndexName },
                         throwOnTimeout: true);
 
-                    s.Store(new RavenDB_4903.User { Name = "Oren" });
+                    s.Store(new User { Name = "Oren" });
 
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
-                    Assert.NotEmpty(s.Query<RavenDB_4903.User, RavenDB_4903.UserByReverseName>().Where(x => x.Name == "nerO").ToList());
+                    Assert.NotEmpty(s.Query<User, UserByReverseName>().Where(x => x.Name == "nerO").ToList());
                 }
             }
         }
