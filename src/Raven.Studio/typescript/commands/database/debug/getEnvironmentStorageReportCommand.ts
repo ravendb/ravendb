@@ -15,7 +15,8 @@ class getEnvironmentStorageReportCommand extends commandBase {
         };
         const url = endpoints.databases.storage.debugStorageEnvironmentReport + this.urlEncodeArgs(args);
         
-        return this.query<detailedStorageReportItemDto>(url, null, this.db);
+        return this.query<detailedStorageReportItemDto>(url, null, this.db)
+            .fail((response: JQueryXHR) => this.reportError("Failed to load detailed storage report", response.responseText, response.statusText));
     }
 }
 
