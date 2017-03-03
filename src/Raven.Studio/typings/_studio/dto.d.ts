@@ -205,6 +205,11 @@ interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Index
     CompletedAsDate: Date; // user for caching
 }
 
+interface IOMetricsRecentStatsWithCache extends Raven.Server.Documents.Handlers.IOMetricsRecentStats {
+    StartedAsDate: Date; // used for caching
+    CompletedAsDate: Date; // used for caching
+}
+
 interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.Indexes.IndexingPerformanceOperation {
     Parent: Raven.Client.Documents.Indexes.IndexingPerformanceStats;
 }
