@@ -14,10 +14,11 @@ using Raven.Database.Commercial;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using System.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Database.Config.Retriever
 {
-    public class ConfigurationRetriever
+    public class ConfigurationRetriever : IDisposable
     {
         private readonly DocumentDatabase systemDatabase;
 
@@ -54,6 +55,8 @@ namespace Raven.Database.Config.Retriever
         private readonly SqlReplicationConfigurationRetriever sqlReplicationConfigurationRetriever;
 
         private readonly JavascriptFunctionsRetriever javascriptFunctionsRetriever;
+
+        private readonly ConcurrentSet<Action<DocumentDatabase, DocumentChangeNotification, RavenJObject>> systemOnDocumentChangeNotifications = new ConcurrentSet<Action<DocumentDatabase, DocumentChangeNotification, RavenJObject>>();
 
         private static DateTime? licenseEnabled;
 
@@ -142,17 +145,10 @@ namespace Raven.Database.Config.Retriever
         {
             var globalKey = GetGlobalConfigurationDocumentKey(key);
 
-            WeakReference<Action> weakAction = new WeakReference<Action>(action);
-            Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> globalNotification = null;
-            globalNotification = (documentDatabase, notification, metadata) =>
-            {
-                Action target;
-                if (weakAction.TryGetTarget(out target))
-                    SendNotification(notification, globalKey, target);
-                else
-                    systemDatabase.Notifications.OnDocumentChange -= globalNotification;
-            };
-            systemDatabase.Notifications.OnDocumentChange += globalNotification;
+            Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> systemNotification = (documentDatabase, notification, metadata) => SendNotification(notification, globalKey, action);
+            systemOnDocumentChangeNotifications.Add(systemNotification);
+            systemDatabase.Notifications.OnDocumentChange += systemNotification;
+
             database.Notifications.OnDocumentChange += (documentDatabase, notification, metadata) => SendNotification(notification, key, action);
         }
 
@@ -234,6 +230,14 @@ namespace Raven.Database.Config.Retriever
             JavascriptFunctions,
             PeriodicExportSettingsConfiguration,
             ReplicationConflictResolutionConfiguration
+        }
+
+        public void Dispose()
+        {
+            foreach (var systemNotification in systemOnDocumentChangeNotifications)
+                systemDatabase.Notifications.OnDocumentChange -= systemNotification;
+
+            systemOnDocumentChangeNotifications.Clear();
         }
     }
 }

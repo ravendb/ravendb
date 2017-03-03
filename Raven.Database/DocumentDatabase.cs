@@ -529,7 +529,7 @@ namespace Raven.Database
 
             if (unfilteredAggregate == null || unfilteredAggregate.Catalogs.Count == 0)
                 return new List<string>();
-           
+
             var bundles = unfilteredAggregate.SelectMany(x => x.ExportDefinitions)
                 .Where(x => x.Metadata.ContainsKey("Bundle"))
                 .OrderBy(x => x.Metadata.ContainsKey("Order")
@@ -538,7 +538,7 @@ namespace Raven.Database
                 .Select(x => x.Metadata["Bundle"] as string)
                 .Distinct()
                 .ToList();
-           
+
             return bundles;
         }
 
@@ -1012,14 +1012,17 @@ namespace Raven.Database
             if (TimerManager != null)
                 exceptionAggregator.Execute(TimerManager.Dispose);
 
-            if (AttachmentDeleteTriggers!= null && AttachmentDeleteTriggers.Count>0)
-                exceptionAggregator.Execute(()=>AttachmentDeleteTriggers.Apply(x=>x.Dispose()));
-            
-            if (DeleteTriggers!= null && DeleteTriggers.Count>0)
-                exceptionAggregator.Execute(()=>DeleteTriggers.Apply(x=>x.Dispose()));
+            if (AttachmentDeleteTriggers != null && AttachmentDeleteTriggers.Count > 0)
+                exceptionAggregator.Execute(() => AttachmentDeleteTriggers.Apply(x => x.Dispose()));
 
-            if (inFlightTransactionalState!= null)
+            if (DeleteTriggers != null && DeleteTriggers.Count > 0)
+                exceptionAggregator.Execute(() => DeleteTriggers.Apply(x => x.Dispose()));
+
+            if (inFlightTransactionalState != null)
                 exceptionAggregator.Execute(inFlightTransactionalState.Dispose);
+
+            if (ConfigurationRetriever != null)
+                exceptionAggregator.Execute(ConfigurationRetriever.Dispose);
 
             try
             {
@@ -1574,7 +1577,7 @@ namespace Raven.Database
 
             if (MappingTask != null)
                 return;
-            
+
             MappingTask = new Task(RunMapIndexes, TaskCreationOptions.LongRunning);
             MappingTask.Start();
         }
@@ -1617,7 +1620,7 @@ namespace Raven.Database
 
             if (ReducingTask != null)
                 return;
-            
+
             ReducingTask = new Task(RunReduceIndexes, TaskCreationOptions.LongRunning);
             ReducingTask.Start();
         }
