@@ -6,8 +6,6 @@ interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<A
 interface conflictsInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<conflictDto>> {
 }
 
-
-
 interface logNotificationDto {
     Level: string;
     TimeStamp: string;
@@ -22,165 +20,6 @@ interface logNotificationDto {
     InnerRequestsCount?: number;
     QueryTimings: any;
 
-}
-
-interface databaseStatisticsDto {
-    ApproximateTaskCount: number;
-    CountOfDocuments: number;
-    CountOfIndexes: number;
-    CurrentNumberOfItemsToIndexInSingleBatch: number;
-    CountOfStaleIndexesExcludingDisabledAndAbandoned: number;
-    CountOfIndexesExcludingDisabledAndAbandoned: number;
-    CurrentNumberOfItemsToReduceInSingleBatch: number;
-    DatabaseId: string;
-    DatabaseTransactionVersionSizeInMB: number;
-    Errors: serverErrorDto[];
-    InMemoryIndexingQueueSizes: number[];
-    Indexes: indexStatisticsDto[];
-    LastDocEtag: string;
-    LastIndexingDateTime: string;
-    Prefetches: futureBatchStatsDto[];
-    StaleIndexes: string[];
-    SupportsDtc: boolean;
-    Is64Bit: boolean;
-}
-
-interface futureBatchStatsDto {
-    Timestamp: string;
-    Duration: string;
-    Size: number;
-    Retries: number;
-    PrefetchingUser: string;
-}
-
-interface indexStatisticsDto {
-    Name: string;
-    IndexingAttempts: number;
-    IndexingSuccesses: number;
-    IndexingErrors: number;
-    LastIndexedEtag: string;
-    LastIndexedTimestamp: string;
-    LastQueryTimestamp: string;
-    TouchCount: number;
-    Priority: string;
-    ReduceIndexingAttempts: number;
-    ReduceIndexingSuccesses: number;
-    ReduceIndexingErrors: number;
-    LastReducedEtag: string;
-    LastReducedTimestamp: string;
-    CreatedTimestamp: string;
-    LastIndexingTime: string;
-    IsOnRam: string; // Yep, it's really a string. Example values: "false", "true (3 KBytes)"
-    LockMode: string;
-    IsMapReduce: boolean;
-    ForEntityName: string[];
-    Performance: indexPerformanceDto[];
-    DocsCount: number;
-    IsInvalidIndex: boolean;
-    IsTestIndex: boolean;
-}
-
-interface indexingBatchInfoDto {
-    Id: number;
-    BatchType: string;
-    IndexesToWorkOn: string[];
-    TotalDocumentCount: number;
-    TotalDocumentSize: number;
-    StartedAt: string; // ISO date string.
-    StartedAtDate?: Date;
-    TotalDurationMs: number;
-    PerfStats: indexNameAndMapPerformanceStats[];  
-}
-
-interface indexNameAndMapPerformanceStats {
-    indexName: string;
-    stats: indexPerformanceDto;
-    CacheThreadCount?: number;
-}
-
-interface indexPerformanceDto {
-    Operation: string;
-    ItemsCount: number;
-    InputCount: number;
-    OutputCount: number;
-    Started: string; // Date
-    Completed: string; // Date
-    Duration: string;
-    DurationMilliseconds: number;
-    Operations: basePerformanceStatsDto[];
-    WaitingTimeSinceLastBatchCompleted: string;
-}
-
-interface reducingBatchInfoDto {
-    Id: number;
-    IndexesToWorkOn: string[];
-    StartedAt: string; // ISO date string.
-    StartedAtDate?: Date;
-    TotalDurationMs: number;
-    TimeSinceFirstReduceInBatchCompletedMs: number;
-    PerfStats: indexNameAndReducingPerformanceStats[];
-}
-
-interface deletionBatchInfoDto {
-    Id: number;
-    IndexName: string;
-    TotalDocumentCount: number;
-    StartedAt: string; // ISO date string.
-    StartedAtDate?: Date;
-    TotalDurationMs: number;
-    PerformanceStats: deletionPerformanceStatsDto[];
-}
-
-interface indexNameAndReducingPerformanceStats {
-    indexName: string;
-    stats: reducePerformanceStatsDto;
-    parent?: reducingBatchInfoDto;
-}
-
-interface reducePerformanceStatsDto {
-    ReduceType?: string;
-    LevelStats: reduceLevelPeformanceStatsDto[];
-}
-
-interface deletionPerformanceStatsDto extends basePerformanceStatsDto {
-    Name: string;
-}
-
-interface reduceLevelPeformanceStatsDto {
-    Level: number;
-    ItemsCount: number;
-    InputCount: number;
-    OutputCount: number;
-    Started: string; // ISO date string
-    Completed: string; // Date
-    Duration: string;
-    DurationMs: number;
-    Operations: basePerformanceStatsDto[];
-    parent?: indexNameAndReducingPerformanceStats;
-    CacheThreadCount?: number;
-}
-
-interface basePerformanceStatsDto {
-    DurationMs: number;
-    CacheWidth?: number;
-    CacheCumulativeSum?: number;
-    CacheIsSingleThread?: boolean;
-}
-
-interface performanceStatsDto extends basePerformanceStatsDto {
-    Name: string;
-    ParallelParent?: parallelBatchStatsDto;
-}
-
-interface parallelPefromanceStatsDto extends basePerformanceStatsDto {
-    NumberOfThreads: number;
-    BatchedOperations: parallelBatchStatsDto[];
-}
-
-interface parallelBatchStatsDto {
-    StartDelay: number;
-    Operations: performanceStatsDto[];
-    Parent?: parallelPefromanceStatsDto;
 }
 
 interface apiKeyDto extends documentDto {
@@ -1168,13 +1007,6 @@ interface diskIoPerformanceRunIoResultDto extends documentDto {
 interface performanceRunItemDto {
     displayName: string;
     documentId: string;
-}
-
-
-interface filteredOutIndexStatDto {
-    Timestamp: string;
-    TimestampParsed?: Date;
-    IndexName: string;
 }
 
 interface generatedCodeDto {

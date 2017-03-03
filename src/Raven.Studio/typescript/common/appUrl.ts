@@ -60,8 +60,6 @@ class appUrl {
         requestsCount: ko.computed(() => appUrl.forRequestsCount(appUrl.currentDatabase())),
         requestsTracing: ko.computed(() => appUrl.forRequestsTracing(appUrl.currentDatabase())),
         indexPerformance: ko.computed(() => appUrl.forIndexPerformance(appUrl.currentDatabase())),
-        indexBatchSize: ko.computed(() => appUrl.forIndexBatchSize(appUrl.currentDatabase())),
-        indexPrefetches: ko.computed(() => appUrl.forIndexPrefetches(appUrl.currentDatabase())),
 
         about: ko.computed(() => appUrl.forAbout()),
 
@@ -416,14 +414,6 @@ class appUrl {
 
     static forIndexPerformance(db: database, indexName?: string): string {
         return `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
-    }
-
-    static forIndexBatchSize(db: database): string {
-        return "#databases/status/indexing/batchSize?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forIndexPrefetches(db: database): string {
-        return "#databases/status/indexing/prefetches?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebug(db: database): string {
