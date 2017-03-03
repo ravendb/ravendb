@@ -101,11 +101,14 @@ class hitTest {
 
     onMouseMove() {
         const clickLocation = d3.mouse(this.container.node());
-        const items = this.findItems(clickLocation[0], clickLocation[1]);              
+        const items = this.findItems(clickLocation[0], clickLocation[1]);
+
+        const overToggleIndex = items.filter(x => x.actionType === "toggleIndex").length > 0;
+        this.cursor(overToggleIndex ? "pointer" : "auto");
 
         const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Documents.Indexes.IndexingPerformanceOperation)[0];
         if (currentItem) {
-            this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);           
+            this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
         }
         else {
             const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
