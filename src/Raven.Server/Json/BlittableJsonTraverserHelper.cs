@@ -55,6 +55,13 @@ namespace Raven.Server.Json
                         return true;
                     }
 
+                    var obj = value as BlittableJsonReaderObject;
+                    if (obj != null)
+                    {
+                        value = obj.Count;
+                        return true;
+                    }
+
                     value = null;
                     return false;
                 }
@@ -79,7 +86,8 @@ namespace Raven.Server.Json
                     return true;
                 }
 
-                throw new InvalidOperationException($"Could not extract {path} from {document.Key}.");
+                value = null;
+                return false;
             }
 
             value = TypeConverter.ConvertForIndexing(value);

@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Linq
                     {
                         MemberType = callExpression.Method.ReturnType,
                         IsNestedPath = false,
-                        Path = target.Path + @".Count\(\)"
+                        Path = target.Path + @".Count"
                     };
                 }
 

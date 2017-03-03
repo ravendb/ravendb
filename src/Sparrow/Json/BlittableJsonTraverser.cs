@@ -65,7 +65,14 @@ namespace Sparrow.Json
                 case PropertySeparator:
                     var subObject = reader as BlittableJsonReaderObject;
                     if (subObject != null)
-                        return TryRead(subObject, pathSegment, out result, out leftPath);
+                    {
+                        if (TryRead(subObject, pathSegment, out result, out leftPath))
+                            return true;
+
+                        leftPath = pathSegment;
+                        result = reader;
+                        return false;
+                    }
 
                     leftPath = pathSegment;
                     result = reader;
