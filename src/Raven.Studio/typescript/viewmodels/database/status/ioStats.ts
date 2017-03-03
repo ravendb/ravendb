@@ -1009,7 +1009,7 @@ class metrics extends viewModelBase {
         context.beginPath();
         context.strokeStyle = metrics.colors.gaps;
        
-        for (let i = 1; i < range.length; i += 2) {
+        for (let i = 1; i < range.length - 1; i += 2) {
             const gapX = Math.floor(range[i]) + 0.5;
          
             context.moveTo(gapX, metrics.axisHeight);
