@@ -211,11 +211,10 @@ class metrics extends viewModelBase {
     private gapFinder: gapFinder;   
     private hitTest = new hitTest();
     private brushSection: HTMLCanvasElement; // a virtual canvas for brush section
-    private brushAndZoomCallbacksEnabled = true;    
+    private brushAndZoomCallbacksDisabled = false;    
 
     /* d3 */
 
-    private isoParser = d3.time.format.iso;
     private xTickFormat = d3.time.format("%H:%M:%S");
     private canvas: d3.Selection<any>;
     private svg: d3.Selection<any>; // spans to canvas size (to provide brush + zoom/pan features)
@@ -570,7 +569,7 @@ class metrics extends viewModelBase {
 
         this.data.Environments.forEach(env => {
             env.Files.forEach(file => {
-                file.Recent.forEach(recentItem => {
+                file.Recent.forEach((recentItem: IOMetricsRecentStatsWithCache) => {
 
                     // TODO: Maybe create algorithm to calculate the exact color to be painted in the brush section for the Accumulated Data,
                     //       Similar to what I did in indexing performance....  For now a default high color is used                       
@@ -588,9 +587,8 @@ class metrics extends viewModelBase {
                             break;                        
                     }
                    
-                    // 4. Draw item on canvas                    
-                    const startDate = this.isoParser.parse(recentItem.Start);                   
-                    const x1 = this.xBrushTimeScale(startDate);
+                    // 4. Draw item on canvas
+                    const x1 = this.xBrushTimeScale(recentItem.StartedAsDate);
                     let dx = extentFunc(recentItem.Duration);
                     dx = dx < metrics.minItemWidth ? metrics.minItemWidth : dx;                   
                     context.fillRect(x1, yStartItem, dx, metrics.trackHeight);                 
@@ -749,7 +747,7 @@ class metrics extends viewModelBase {
 
             context.setLineDash([4, 2]);           
             context.strokeStyle = metrics.colors.axis;    
-          
+
             ticks.forEach((x, i) => {
                 context.moveTo(metrics.initialOffset + (i * metrics.step) + 0.5, yStart);
                 context.lineTo(metrics.initialOffset + (i * metrics.step) + 0.5, yEnd);
@@ -783,7 +781,7 @@ class metrics extends viewModelBase {
     private onZoom() {
         this.autoScroll(false);
 
-        if (this.brushAndZoomCallbacksEnabled) {
+        if (!this.brushAndZoomCallbacksDisabled) {
             this.brush.extent(this.xNumericScale.domain() as [number, number]);
             this.brushContainer
                 .call(this.brush);
@@ -793,7 +791,7 @@ class metrics extends viewModelBase {
     }
 
     private onBrush() {
-        if (this.brushAndZoomCallbacksEnabled) {
+        if (!this.brushAndZoomCallbacksDisabled) {
             this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
             this.zoom.x(this.xNumericScale);
             this.drawMainSection();
@@ -820,79 +818,82 @@ class metrics extends viewModelBase {
         try {
             context.save();
 
+
             context.translate(0, metrics.brushSectionHeight); 
-            context.clearRect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);                                                   
-           
+            context.clearRect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+
+            context.beginPath();
             context.rect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
             context.clip();
 
             // 1. Draw tracks background 
-            this.drawTracksBackground(context, xScale);           
+            this.drawTracksBackground(context, xScale);
 
-            // 2. Draw vertical dotted time lines & time labels in main section                  
+            // 2. Draw vertical dotted time lines & time labels in main section
             if (xScale.domain().length) {
                 const ticks = this.getTicks(xScale);
 
                 context.save();              
                 context.rect(0, metrics.axisHeight - 3 , this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
                 context.clip();
-                this.drawXaxisTimeLines(context, ticks, this.yScale(this.data.Environments[0].Path) - 3, this.totalHeight);                
+                this.drawXaxisTimeLines(context, ticks, this.yScale(this.data.Environments[0].Path) - 3, this.totalHeight);
                 context.restore();
 
                 this.drawXaxisTimeLabels(context, ticks, -20, 17);
             }          
 
-            // 3. Draw all other data (track name + items on track)                                 
+            // 3. Draw all other data (track name + items on track)
+            context.beginPath();
             context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
             context.clip(); 
             
             const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
+            const indexesExpanded = this.isIndexesExpanded();
 
-            this.data.Environments.forEach(env => {
+            for (let envIdx = 0; envIdx < this.data.Environments.length; envIdx++) {
+                const env = this.data.Environments[envIdx];
 
                 // 3.1. Check if this is an index track 
                 let trackName = env.Path.substring(this.commonPathsPrefix.length);
-                let isIndexTrack = trackName.startsWith(metrics.indexesString) ? true : false;                                 
+                let isIndexTrack = trackName.startsWith(metrics.indexesString);
                
-                // 3.2 Draw track name   
-                const yStart = this.yScale(env.Path);                                                                                 
-                this.drawTrackName(context, trackName, yStart);               
+                // 3.2 Draw track name
+                const yStart = this.yScale(env.Path);
+                this.drawTrackName(context, trackName, yStart);
+
+                const yStartPerTypeCache = new Map<Sparrow.MeterType, number>();
+                yStartPerTypeCache.set(metrics.journalWriteString, yStart + metrics.closedTrackHeight + metrics.itemMargin);
+                yStartPerTypeCache.set(metrics.dataFlushString, yStart + metrics.closedTrackHeight + metrics.itemMargin * 2 + metrics.itemHeight);
+                yStartPerTypeCache.set(metrics.dataSyncString, yStart + metrics.closedTrackHeight + metrics.itemMargin * 3 + metrics.itemHeight * 2);
+                
 
                 // 3.3 Draw item in main canvas area (but only if item is inside the visible/selected area from the brush section..)
-                env.Files.forEach(file => {
-                    file.Recent.forEach(recentItem => {                                                              
-                        if (!this.filtered(env.Path)) {                          
-                           
-                            const startDate = this.isoParser.parse(recentItem.Start);                            
-                            const itemStartDateAsInt = startDate.getTime();
-                            const itemEndDateAsInt = itemStartDateAsInt + recentItem.Duration;                       
+                for (let fileIdx = 0; fileIdx < env.Files.length; fileIdx++) {
+                    const file = env.Files[fileIdx];
+                    if (!this.filtered(env.Path)) {
+                        for (let recentIdx = 0; recentIdx < file.Recent.length; recentIdx++) {
+                            const recentItem = file.Recent[recentIdx] as IOMetricsRecentStatsWithCache;
+                            const itemStartDateAsInt = recentItem.StartedAsDate.getTime();
+                            const itemEndDateAsInt = recentItem.CompletedAsDate.getTime();
 
                             if (itemStartDateAsInt < visibleEndDateAsInt && itemEndDateAsInt > visibleStartDateAsInt) {
                                 
-                                // 3.4 Determine color for item                       
-                                let calcColorBasedOnSize = true;
-                                if (!this.isIndexesExpanded() && isIndexTrack) {
-
-                                    // TODO: Maybe create algorithm to calculate the exact color to be painted - same TODO as in the brush section...
-                                    calcColorBasedOnSize = false;
-                                }
-                                context.fillStyle = this.calcItemColor(recentItem, calcColorBasedOnSize);
+                                // 3.4 Determine color for item
+                                context.fillStyle = this.calcItemColor(recentItem, !isIndexTrack || indexesExpanded);
 
                                 // 3.5 Determine yStart for item
-                                switch (recentItem.Type) {
-                                    case metrics.journalWriteString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin; break;
-                                    case metrics.dataFlushString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin * 2 + metrics.itemHeight; break;
-                                    case metrics.dataSyncString: yStartItem = yStart + metrics.closedTrackHeight + metrics.itemMargin * 3 + metrics.itemHeight * 2; break;
-                                }
+                                const yStartItem = yStartPerTypeCache.get(recentItem.Type);
 
-                                const x1 = xScale(startDate);
+                                const x1 = xScale(recentItem.StartedAsDate);
                                 let dx = extentFunc(recentItem.Duration);
-                                dx = dx < metrics.minItemWidth ? metrics.minItemWidth : dx;                               
-                                context.fillRect(x1, yStartItem, dx, metrics.itemHeight);
+                                dx = dx < metrics.minItemWidth ? metrics.minItemWidth : dx;
 
+                                context.fillRect(x1, yStartItem, dx, metrics.itemHeight);
+                                
                                 // 3.6 Draw the human size text on the item if there is enough space.. but don't draw on closed indexes track 
                                 // Logic: Don't draw if: [closed && isIndexTrack] ==> [!(closed && isIndexTrack)] ==> [open || !isIndexTrack]
-                                if (this.isIndexesExpanded() || !isIndexTrack) {
+                                
+                                if (indexesExpanded || !isIndexTrack) {
                                     const humanSizeTextWidth = context.measureText(recentItem.HumanSize).width;
                                     if (dx > humanSizeTextWidth) {
                                         context.fillStyle = 'black';
@@ -901,20 +902,18 @@ class metrics extends viewModelBase {
 
                                     // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
                                     this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, metrics.itemHeight, recentItem);
-                                }    
-
-                                // 3.8 If on the closed index track, might as well register toggle, so that indexes details will open, can be nice 
-                                if (!this.isIndexesExpanded() && isIndexTrack) {
+                                } else {
+                                    // 3.8 If on the closed index track, might as well register toggle, so that indexes details will open, can be nice 
                                     this.hitTest.registerIndexToggle(x1 - 5, yStartItem, dx + 5, metrics.itemHeight);
                                 }
-                            }                              
+                            }
                         }
-                    });
-                });
-            });
+                    }
+                };
+            };
 
             // 4. Draw gaps   
-            this.drawGaps(context, xScale);            
+            this.drawGaps(context, xScale);
         }
         finally {
             context.restore();
@@ -1082,6 +1081,7 @@ class metrics extends viewModelBase {
             }
             else {
                 this.data = importedData;
+                this.fillCache();
                 this.resetGraphData();
                 this.initViewData(); 
                 this.prepareTimeData();
@@ -1092,6 +1092,16 @@ class metrics extends viewModelBase {
         } catch (e) {
             messagePublisher.reportError("Failed to parse json data", undefined, undefined);
         }             
+    }
+
+    private fillCache() {
+        this.data.Environments.forEach(env => {
+            env.Files.forEach(file => {
+                file.Recent.forEach(stat => {
+                    liveIOStatsWebSocketClient.fillCache(stat);
+                });
+            });
+        });
     }
 
     closeImport() {       
@@ -1108,7 +1118,7 @@ class metrics extends viewModelBase {
     }
 
     private setZoomAndBrush(scale: [number, number], brushAction: (brush: d3.svg.Brush<any>) => void) {
-        this.brushAndZoomCallbacksEnabled = false;
+        this.brushAndZoomCallbacksDisabled = true;
 
         this.xNumericScale.domain(scale);
         this.zoom.x(this.xNumericScale);
@@ -1116,7 +1126,7 @@ class metrics extends viewModelBase {
         brushAction(this.brush);
         this.brushContainer.call(this.brush);
 
-        this.brushAndZoomCallbacksEnabled = true;
+        this.brushAndZoomCallbacksDisabled = false;
     }
 
     exportAsJson() {
@@ -1129,7 +1139,14 @@ class metrics extends viewModelBase {
             exportFileName = `IOStats-of-${this.activeDatabase().name}-${moment().format("YYYY-MM-DD-HH-mm")}`;
         }
 
-        fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName);
+        const keysToIgnore: Array<keyof IOMetricsRecentStatsWithCache> = ["StartedAsDate", "CompletedAsDate"];
+
+        fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName, (key, value) => {
+            if (_.includes(keysToIgnore, key)) {
+                return undefined;
+            }
+            return value;
+        });
     }
 
     private findPrefix(strings: Array<string>) {
@@ -1199,11 +1216,9 @@ class metrics extends viewModelBase {
         const result = [] as Array<[Date, Date]>;
         this.data.Environments.forEach(env => {
             env.Files.forEach(file => {
-                file.Recent.forEach(recentItem => {
+                file.Recent.forEach((recentItem: IOMetricsRecentStatsWithCache) => {
                     // Get the events time ranges
-                    const startTime = this.isoParser.parse(recentItem.Start);
-                    const endTime = new Date(startTime.getTime() + recentItem.Duration);
-                    result.push([startTime, endTime]);                   
+                    result.push([recentItem.StartedAsDate, recentItem.CompletedAsDate]);                   
                 });
             });
         });  

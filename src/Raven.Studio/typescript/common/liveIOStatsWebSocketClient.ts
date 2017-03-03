@@ -4,11 +4,12 @@ import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
+import d3 = require("d3");
 
 class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Documents.Handlers.IOMetricsResponse> {
 
     private readonly onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void;
-    private isoParser = d3.time.format.iso;
+    private static isoParser = d3.time.format.iso;
     private mergedData: Raven.Server.Documents.Handlers.IOMetricsResponse;    
     private pendingDataToApply: Raven.Server.Documents.Handlers.IOMetricsResponse[] = []; // Used to hold data when pauseUpdates
     private updatesPaused = false;
@@ -57,7 +58,11 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
     private mergeIncomingData(e: Raven.Server.Documents.Handlers.IOMetricsResponse) { 
         e.Environments.forEach(env => {                     
 
-            let  existingEnv = this.mergedData.Environments.find(x => x.Path === env.Path);
+            env.Files.forEach(file => {
+                file.Recent.forEach(x => liveIOStatsWebSocketClient.fillCache(x));
+            });
+
+            let existingEnv = this.mergedData.Environments.find(x => x.Path === env.Path);
           
             if (!existingEnv) {
                 // A new 'environment', add it to mergedData
@@ -68,6 +73,12 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
                 env.Files.forEach(x => existingEnv.Files.push(x));
             }
         });
+    }
+
+    static fillCache(stat: Raven.Server.Documents.Handlers.IOMetricsRecentStats) {
+        const withCache = stat as IOMetricsRecentStatsWithCache;
+        withCache.StartedAsDate = stat.Start ? liveIOStatsWebSocketClient.isoParser.parse(stat.Start) : undefined;
+        withCache.CompletedAsDate = withCache.StartedAsDate ? new Date(withCache.StartedAsDate.getTime() + stat.Duration) : undefined;
     }
 }
 
