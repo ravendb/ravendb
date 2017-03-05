@@ -109,7 +109,7 @@ namespace Raven.Client.Http
                         _firstTimeTryLoadFromTopologyCache = false;
 
                         var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
-                        if (cachedTopology != null && cachedTopology.Etag > 0)
+                        if (cachedTopology != null && cachedTopology.Etag > _topology.Etag)
                         {
                             _topology = cachedTopology;
                             // we have cached topology, but we need to verify it is up to date, we'll check in 
@@ -123,7 +123,7 @@ namespace Raven.Client.Http
                     try
                     {
                         await ExecuteAsync(new ChoosenNode { Node = node }, context, command);
-                        if (_topology.Etag != command.Result.Etag)
+                        if (_topology.Etag < command.Result.Etag)
                         {
                             _topology = command.Result;
                             TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, context);
