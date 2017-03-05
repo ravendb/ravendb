@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Session
 
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest((IRavenQueryInspector)query);
-            await RequestExecuter.ExecuteAsync(command, Context, token).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
 
             var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
@@ -117,7 +117,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, startAfter, transformer,
                 transformerParameters);
-            await RequestExecuter.ExecuteAsync(command, Context, token).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
             return new YieldStream<T>(this, null, null, result, token);
         }

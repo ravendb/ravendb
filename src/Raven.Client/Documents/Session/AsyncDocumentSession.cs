@@ -29,8 +29,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
         /// </summary>
-        public AsyncDocumentSession(string dbName, DocumentStore documentStore, RequestExecuter requestExecuter, Guid id)
-            : base(dbName, documentStore, requestExecuter, id)
+        public AsyncDocumentSession(string dbName, DocumentStore documentStore, RequestExecutor requestExecutor, Guid id)
+            : base(dbName, documentStore, requestExecutor, id)
         {
             GenerateDocumentKeysOnStore = false;
         }
@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Session
                 Ids = new[] { documentInfo.Id },
                 Context = Context
             };
-            await RequestExecuter.ExecuteAsync(command, Context, token);
+            await RequestExecutor.ExecuteAsync(command, Context, token);
 
             RefreshInternal(entity, command, documentInfo);
         }
@@ -111,7 +111,7 @@ namespace Raven.Client.Documents.Session
                 if (command == null)
                     return;
 
-                await RequestExecuter.ExecuteAsync(command, Context, token);
+                await RequestExecutor.ExecuteAsync(command, Context, token);
                 saveChangesOperation.SetResult(command.Result);
             }
         }

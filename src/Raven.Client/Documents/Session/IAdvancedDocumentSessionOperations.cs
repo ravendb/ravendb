@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDictionary<string, object> ExternalState { get; }
 
-        RequestExecuter RequestExecuter { get; }
+        RequestExecutor RequestExecutor { get; }
         JsonOperationContext Context { get; }
 
         event EventHandler<BeforeStoreEventArgs> OnBeforeStore;

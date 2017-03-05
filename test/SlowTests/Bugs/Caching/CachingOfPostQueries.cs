@@ -63,10 +63,10 @@ namespace SlowTests.Bugs.Caching
                 {
                     var response = session.Query<Person, PersonsIndex>().FirstOrDefault(x => x.Name == "Johnny");
                     Assert.Equal(session.Advanced.NumberOfRequests, 1);
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().FirstOrDefault(x => x.Name == "Johnny");
                     Assert.Equal(session.Advanced.NumberOfRequests, 2);
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
         }
@@ -82,10 +82,10 @@ namespace SlowTests.Bugs.Caching
                 {
                     var response = session.Query<Person, PersonsIndex>().FirstOrDefault(x => x.Name != "Jane" && x.Name != "Mika" && x.Name != "Michael" && x.Name != "Samuel");
                     Assert.Equal(session.Advanced.NumberOfRequests, 1);
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().FirstOrDefault(x => x.Name != "Jane" && x.Name != "Mika" && x.Name != "Michael" && x.Name != "Samuel");
                     Assert.Equal(session.Advanced.NumberOfRequests, 2);
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
                 store.Conventions.MaxLengthOfQueryUsingGetUrl = maxLengthOfGetRequest;
             }
@@ -105,7 +105,7 @@ namespace SlowTests.Bugs.Caching
                             Name = "Age"
                         }
                     });
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").ToFacets(new[]
                     {
                         new Facet
@@ -113,7 +113,7 @@ namespace SlowTests.Bugs.Caching
                             Name = "Age"
                         }
                     });
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
         }
@@ -129,12 +129,12 @@ namespace SlowTests.Bugs.Caching
                     {
                         Name = "Age"
                     }));
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").ToFacets(Enumerable.Repeat(1, 200).Select(x => new Facet()
                     {
                         Name = "Age"
                     }));
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
         }
@@ -161,7 +161,7 @@ namespace SlowTests.Bugs.Caching
                         }
                     }));
 
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
 
                     await session.Advanced.DocumentStore.Operations.SendAsync(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
                     {
@@ -178,7 +178,7 @@ namespace SlowTests.Bugs.Caching
                         }
                     }));
 
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
         }

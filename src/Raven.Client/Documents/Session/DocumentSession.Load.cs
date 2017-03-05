@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Session
 
             if (command != null)
             {
-                RequestExecuter.Execute(command, Context);
+                RequestExecutor.Execute(command, Context);
                 loadOeration.SetResult(command.Result);
             }
 
@@ -132,7 +132,7 @@ namespace Raven.Client.Documents.Session
             var command = loadOeration.CreateRequest();
             if (command != null)
             {
-                RequestExecuter.Execute(command, Context);
+                RequestExecutor.Execute(command, Context);
                 loadOeration.SetResult(command.Result);
             }
 
@@ -148,7 +148,7 @@ namespace Raven.Client.Documents.Session
             var command = loadOeration.CreateRequest();
             if (command != null)
             {
-                RequestExecuter.Execute(command, Context);
+                RequestExecutor.Execute(command, Context);
                 loadOeration.SetResult(command.Result);
             }
 
@@ -169,7 +169,7 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                RequestExecuter.Execute(command, Context);
+                RequestExecutor.Execute(command, Context);
                 operation.SetResult(command.Result);
             }
 
@@ -191,7 +191,7 @@ namespace Raven.Client.Documents.Session
             var command = loadTransformerOeration.CreateRequest();
             if (command != null)
             {
-                RequestExecuter.Execute(command, Context);
+                RequestExecutor.Execute(command, Context);
                 loadTransformerOeration.SetResult(command.Result);
             }
 
@@ -209,7 +209,7 @@ namespace Raven.Client.Documents.Session
             var command = loadStartingWithOperation.CreateRequest();
             if (command != null)
             {
-                RequestExecuter.Execute(command, Context);
+                RequestExecutor.Execute(command, Context);
                 loadStartingWithOperation.SetResult(command.Result);
             }
 
@@ -234,7 +234,7 @@ namespace Raven.Client.Documents.Session
             var command = loadStartingWithOperation.CreateRequest();
             if (command != null)
             {
-                RequestExecuter.Execute(command, Context);
+                RequestExecutor.Execute(command, Context);
             }
 
             return loadStartingWithOperation.GetTransformedDocuments<TResult>(command?.Result);

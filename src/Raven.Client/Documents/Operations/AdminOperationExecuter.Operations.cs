@@ -19,8 +19,8 @@ namespace Raven.Client.Documents.Operations
             {
                 var command = operation.GetCommand(_store.Conventions, context);
 
-                await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
-                return new Operation(_requestExecuter, _store.Conventions, command.Result.OperationId);
+                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                return new Operation(_requestExecutor, _store.Conventions, command.Result.OperationId);
             }
         }
     }

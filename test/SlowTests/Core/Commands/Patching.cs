@@ -147,7 +147,7 @@ namespace SlowTests.Core.Commands
                         skipPatchIfEtagMismatch: false,
                         returnDebugInformation: true);
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     var commandResult = command.Result;
                     var array = (BlittableJsonReaderArray)commandResult.Debug["Info"];
@@ -201,7 +201,7 @@ namespace SlowTests.Core.Commands
                         skipPatchIfEtagMismatch: false,
                         returnDebugInformation: true);
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     var result = command.Result;
                     var array = (BlittableJsonReaderArray)result.Debug["Info"];
@@ -231,7 +231,7 @@ namespace SlowTests.Core.Commands
                         skipPatchIfEtagMismatch: false,
                         returnDebugInformation: true);
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     result = command.Result;
                     array = (BlittableJsonReaderArray)result.Debug["Info"];

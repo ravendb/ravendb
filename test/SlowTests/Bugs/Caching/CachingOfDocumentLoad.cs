@@ -42,7 +42,7 @@ namespace SlowTests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Load<User>("users/1");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
         }
@@ -68,14 +68,14 @@ namespace SlowTests.Bugs.Caching
                 {
                     var user = s.Load<User>("users/1");
                     user.Name = "Rahien";
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
                     s.Load<User>("users/1");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems); // did NOT get from cache
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems); // did NOT get from cache
                 }
             }
         }

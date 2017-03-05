@@ -47,8 +47,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>
-        public DocumentSession(string dbName, DocumentStore documentStore, Guid id, RequestExecuter requestExecuter)
-            : base(dbName, documentStore, requestExecuter, id)
+        public DocumentSession(string dbName, DocumentStore documentStore, Guid id, RequestExecutor requestExecutor)
+            : base(dbName, documentStore, requestExecutor, id)
         {
         }
 
@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Session
                 if (command == null)
                     return;
 
-                RequestExecuter.Execute(command, Context);
+                RequestExecutor.Execute(command, Context);
                 saveChangesOperation.SetResult(command.Result);
             }
         }
@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Session
                 Ids = new[] { documentInfo.Id },
                 Context = Context
             };
-            RequestExecuter.Execute(command, Context);
+            RequestExecutor.Execute(command, Context);
 
             RefreshInternal(entity, command, documentInfo);
         }
@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Session
             if (DocumentsByEntity.TryGetValue(entity, out document) == false)
                 throw new InvalidOperationException("Could not figure out identifier for transient instance");
 
-            return RequestExecuter.UrlFor(document.Id);
+            return RequestExecutor.UrlFor(document.Id);
         }
 
         /// <summary>
@@ -167,7 +167,7 @@ namespace Raven.Client.Documents.Session
             var requests = PendingLazyOperations.Select(x => x.CreateRequest()).ToList();
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
-            RequestExecuter.Execute(multiGetCommand, Context);
+            RequestExecutor.Execute(multiGetCommand, Context);
             var responses = multiGetCommand.Result;
 
             for (var i = 0; i < PendingLazyOperations.Count; i++)

@@ -107,7 +107,7 @@ namespace Raven.Client.Documents.Session
             var command = loadOeration.CreateRequest();
             if (command != null)
             {
-                await RequestExecuter.ExecuteAsync(command, Context, token);
+                await RequestExecutor.ExecuteAsync(command, Context, token);
                 loadOeration.SetResult(command.Result);
             }
 
@@ -123,7 +123,7 @@ namespace Raven.Client.Documents.Session
             var command = loadOeration.CreateRequest();
             if (command != null)
             {
-                await RequestExecuter.ExecuteAsync(command, Context, token);
+                await RequestExecutor.ExecuteAsync(command, Context, token);
                 loadOeration.SetResult(command.Result);
             }
 
@@ -140,7 +140,7 @@ namespace Raven.Client.Documents.Session
             var command = loadOeration.CreateRequest();
             if (command != null)
             {
-                await RequestExecuter.ExecuteAsync(command, Context, token);
+                await RequestExecutor.ExecuteAsync(command, Context, token);
                 loadOeration.SetResult(command.Result);
             }
 
@@ -163,7 +163,7 @@ namespace Raven.Client.Documents.Session
             var command = loadTransformerOeration.CreateRequest();
             if (command != null)
             {
-                await RequestExecuter.ExecuteAsync(command, Context, token);
+                await RequestExecutor.ExecuteAsync(command, Context, token);
                 loadTransformerOeration.SetResult(command.Result);
             }
 
@@ -191,7 +191,7 @@ namespace Raven.Client.Documents.Session
             var command = loadStartingWithOperation.CreateRequest();
             if (command != null)
             {
-                await RequestExecuter.ExecuteAsync(command, Context, token);
+                await RequestExecutor.ExecuteAsync(command, Context, token);
             }
 
             return loadStartingWithOperation.GetTransformedDocuments<TResult>(command?.Result);
@@ -209,7 +209,7 @@ namespace Raven.Client.Documents.Session
             var command = loadStartingWithOperation.CreateRequest();
             if (command != null)
             {
-                await RequestExecuter.ExecuteAsync(command, Context, token);
+                await RequestExecutor.ExecuteAsync(command, Context, token);
                 loadStartingWithOperation.SetResult(command.Result);
             }
 

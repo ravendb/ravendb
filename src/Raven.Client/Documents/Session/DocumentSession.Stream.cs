@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session
 
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest((IRavenQueryInspector)query);
-            RequestExecuter.Execute(command, Context);
+            RequestExecutor.Execute(command, Context);
             using (var result = streamOperation.SetResult(command.Result))
             {
                 while (result.MoveNext())
@@ -112,7 +112,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, startAfter, transformer,
                 transformerParameters);
-            RequestExecuter.Execute(command, Context);
+            RequestExecutor.Execute(command, Context);
             using (var result = streamOperation.SetResult(command.Result))
             {
                 while (result.MoveNext())

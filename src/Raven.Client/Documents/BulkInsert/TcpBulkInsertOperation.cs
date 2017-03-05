@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        public TcpBulkInsertOperation(string database, IDocumentStore store, RequestExecuter requestExecuter, CancellationTokenSource cts)
+        public TcpBulkInsertOperation(string database, IDocumentStore store, RequestExecutor requestExecutor, CancellationTokenSource cts)
         {
             _throttlingEvent.Set();
             _cts = cts ?? new CancellationTokenSource();
@@ -72,7 +72,7 @@ namespace Raven.Client.Documents.BulkInsert
             _store = store;
             _contextPool = store.GetRequestExecuter(database).ContextPool;
             _entityToBlittable = new EntityToBlittable(null);
-            var connectToServerTask = ConnectToServer(requestExecuter);
+            var connectToServerTask = ConnectToServer(requestExecutor);
 
             _sentAccumulator = 0;
             _getServerResponseTask = connectToServerTask.ContinueWith(task =>
@@ -86,15 +86,15 @@ namespace Raven.Client.Documents.BulkInsert
             });
         }
 
-        private async Task<ConnectToServerResult> ConnectToServer(RequestExecuter requestExecuter)
+        private async Task<ConnectToServerResult> ConnectToServer(RequestExecutor requestExecutor)
         {
             var command = new GetTcpInfoCommand();
             JsonOperationContext context;
             string apiToken;
-            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out context))
             {
-                await requestExecuter.ExecuteAsync(command, context).ConfigureAwait(false);
-                apiToken = await requestExecuter.GetAuthenticationToken(context, command.RequestedNode);
+                await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
+                apiToken = await requestExecutor.GetAuthenticationToken(context, command.RequestedNode);
             }
 
 
