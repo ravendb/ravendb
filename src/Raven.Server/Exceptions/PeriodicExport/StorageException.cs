@@ -28,7 +28,7 @@ namespace Raven.Server.Exceptions.PeriodicExport
             string responseString = null;
             if (response.Content != null)
             {
-                var readAsStringAsync = RequestExecuter.ReadAsStreamUncompressedAsync(response);
+                var readAsStringAsync = RequestExecutor.ReadAsStreamUncompressedAsync(response);
                 if (readAsStringAsync.IsCompleted)
                 {
                     using (var streamReader = new StreamReader(readAsStringAsync.Result))

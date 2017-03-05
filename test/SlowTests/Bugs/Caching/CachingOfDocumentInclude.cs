@@ -52,7 +52,7 @@ namespace SlowTests.Bugs.Caching
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
 
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
         }
@@ -199,7 +199,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     var user = s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                     user.Name = "Foo";
                     s.SaveChanges();
                 }
@@ -209,7 +209,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems); // did NOT increase cache
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems); // did NOT increase cache
                 }
             }
         }
@@ -303,7 +303,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                     s.Load<User>("users/1").Name = "foo";
                     s.SaveChanges();
                 }
@@ -312,7 +312,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems); // did NOT increase cache
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems); // did NOT increase cache
                 }
             }
         }

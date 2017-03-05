@@ -548,7 +548,7 @@ namespace Raven.Client.Documents.Session
             var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
 
             var command = new GetFacetsCommand(TheSession.Context, query);
-            TheSession.RequestExecuter.Execute(command, TheSession.Context);
+            TheSession.RequestExecutor.Execute(command, TheSession.Context);
             return command.Result;
         }
 
@@ -558,7 +558,7 @@ namespace Raven.Client.Documents.Session
             var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
 
             var command = new GetFacetsCommand(TheSession.Context, query);
-            TheSession.RequestExecuter.Execute(command, TheSession.Context);
+            TheSession.RequestExecutor.Execute(command, TheSession.Context);
             return command.Result;
         }
 
@@ -568,7 +568,7 @@ namespace Raven.Client.Documents.Session
             var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
 
             var command = new GetFacetsCommand(TheSession.Context, query);
-            await TheSession.RequestExecuter.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
+            await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
 
             return command.Result;
         }
@@ -579,7 +579,7 @@ namespace Raven.Client.Documents.Session
             var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
 
             var command = new GetFacetsCommand(TheSession.Context, query);
-            await TheSession.RequestExecuter.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
+            await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
 
             return command.Result;
         }
@@ -628,7 +628,7 @@ namespace Raven.Client.Documents.Session
             {
                 QueryOperation.LogQuery();
                 var command = QueryOperation.CreateRequest();
-                TheSession.RequestExecuter.Execute(command, TheSession.Context);
+                TheSession.RequestExecutor.Execute(command, TheSession.Context);
                 QueryOperation.SetResult(command.Result);
             }
 
@@ -1662,7 +1662,7 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 QueryOperation.LogQuery();
                 var command = QueryOperation.CreateRequest();
-                await TheSession.RequestExecuter.ExecuteAsync(command, TheSession.Context, token);
+                await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token);
                 QueryOperation.SetResult(command.Result);
 
                 InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);

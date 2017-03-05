@@ -193,7 +193,7 @@ namespace Raven.Client.Documents
 
         string DefaultDatabase { get; set; }
 
-        RequestExecuter GetRequestExecuter(string databaseName = null);
+        RequestExecutor GetRequestExecuter(string databaseName = null);
 
         AdminOperationExecuter Admin { get; }
 

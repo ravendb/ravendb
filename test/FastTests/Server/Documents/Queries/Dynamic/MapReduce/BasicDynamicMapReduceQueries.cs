@@ -318,7 +318,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                         WaitForNonStaleResultsAsOfNow = true
                     });
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     var result = command.Result;
                     var results = new DynamicArray(result.Results);

@@ -86,7 +86,7 @@ namespace Raven.Client.Http
                 // ReSharper disable once PossibleInvalidOperationException
                 var etag = response.GetEtagHeader().Value;
                 // We do not cache the stream response.
-                var uncompressedStream = await RequestExecuter.ReadAsStreamUncompressedAsync(response);
+                var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response);
                 SetResponse(uncompressedStream, contentType, etag, fromCache: false);
             }
         }

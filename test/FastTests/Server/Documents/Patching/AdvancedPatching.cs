@@ -387,7 +387,7 @@ namespace FastTests.Server.Documents.Patching
                         skipPatchIfEtagMismatch: false,
                         returnDebugInformation: true);
 
-                    await commands.RequestExecuter.ExecuteAsync(command, commands.Context);
+                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
                     var result = command.Result;
                     var array = (BlittableJsonReaderArray)result.Debug["Info"];

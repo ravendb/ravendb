@@ -31,7 +31,7 @@ namespace FastTests
         public class DatabaseCommands : IDisposable
         {
             private readonly IDocumentStore _store;
-            public readonly RequestExecuter RequestExecuter;
+            public readonly RequestExecutor RequestExecutor;
 
             public readonly JsonOperationContext Context;
             private readonly IDisposable _returnContext;
@@ -43,9 +43,9 @@ namespace FastTests
 
                 _store = store;
 
-                RequestExecuter = store.GetRequestExecuter(databaseName);
+                RequestExecutor = store.GetRequestExecuter(databaseName);
 
-                _returnContext = RequestExecuter.ContextPool.AllocateOperationContext(out Context);
+                _returnContext = RequestExecutor.ContextPool.AllocateOperationContext(out Context);
             }
 
             public BlittableJsonReaderObject ParseJson(string json)
@@ -118,7 +118,7 @@ namespace FastTests
                         Document = documentJson
                     };
 
-                    await RequestExecuter.ExecuteAsync(command, Context, cancellationToken);
+                    await RequestExecutor.ExecuteAsync(command, Context, cancellationToken);
 
                     return command.Result;
                 }
@@ -136,7 +136,7 @@ namespace FastTests
 
                 var command = new DeleteDocumentCommand(id, etag);
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
             }
 
             public long? Head(string id)
@@ -151,7 +151,7 @@ namespace FastTests
 
                 var command = new HeadDocumentCommand(id, null);
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 return command.Result;
             }          
@@ -159,7 +159,7 @@ namespace FastTests
             public GetConflictsResult.Conflict[] GetConflictsFor(string id)
             {
                 var getConflictsCommand = new GetConflictsCommand(id);
-                RequestExecuter.Execute(getConflictsCommand, Context);
+                RequestExecutor.Execute(getConflictsCommand, Context);
 
                 return getConflictsCommand.Result.Results;
             }
@@ -180,7 +180,7 @@ namespace FastTests
                     MetadataOnly = metadataOnly
                 };
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 if (command.Result == null || command.Result.Results.Length == 0)
                     return null;
@@ -199,7 +199,7 @@ namespace FastTests
                     Ids = ids
                 };
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 return new DynamicArray(command.Result.Results);
             }
@@ -212,7 +212,7 @@ namespace FastTests
                     PageSize = pageSize
                 };
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 return new DynamicArray(command.Result.Results);
             }
@@ -226,7 +226,7 @@ namespace FastTests
             {
                 var command = new QueryCommand(_store.Conventions, Context, indexName, query, metadataOnly: metadataOnly, indexEntriesOnly: indexEntriesOnly);
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 return command.Result;
             }
@@ -240,7 +240,7 @@ namespace FastTests
             {
                 var command = new BatchCommand(_store.Conventions, Context, commands);
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
             }
 
             public TResult RawGetJson<TResult>(string url)
@@ -260,7 +260,7 @@ namespace FastTests
             {
                 var command = new GetJsonCommand<TResult>(url);
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 return command.Result;
             }
@@ -274,7 +274,7 @@ namespace FastTests
 
                     var command = new JsonCommandWithPayload<TResult>(url, Context, HttpMethod.Delete, payloadJson);
 
-                    await RequestExecuter.ExecuteAsync(command, Context);
+                    await RequestExecutor.ExecuteAsync(command, Context);
 
                     return command.Result;
                 }

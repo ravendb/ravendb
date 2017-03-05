@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public abstract class InMemoryDocumentSessionOperations : IDisposable
     {
-        protected readonly RequestExecuter _requestExecuter;
+        protected readonly RequestExecutor _requestExecutor;
         private readonly IDisposable _releaseOperationContext;
         private readonly JsonOperationContext _context;
         protected readonly List<ILazyOperation> PendingLazyOperations = new List<ILazyOperation>();
@@ -91,7 +91,7 @@ namespace Raven.Client.Documents.Session
         ///</summary>
         public IDocumentStore DocumentStore => _documentStore;
 
-        public RequestExecuter RequestExecuter => _requestExecuter;
+        public RequestExecutor RequestExecutor => _requestExecutor;
 
         public JsonOperationContext Context => _context;
         /// <summary>
@@ -150,14 +150,14 @@ namespace Raven.Client.Documents.Session
         protected InMemoryDocumentSessionOperations(
             string databaseName,
             DocumentStoreBase documentStore,
-            RequestExecuter requestExecuter,
+            RequestExecutor requestExecutor,
             Guid id)
         {
             Id = id;
             DatabaseName = databaseName;
             _documentStore = documentStore;
-            _requestExecuter = requestExecuter;
-            _releaseOperationContext = requestExecuter.ContextPool.AllocateOperationContext(out _context);
+            _requestExecutor = requestExecutor;
+            _releaseOperationContext = requestExecutor.ContextPool.AllocateOperationContext(out _context);
             UseOptimisticConcurrency = documentStore.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);

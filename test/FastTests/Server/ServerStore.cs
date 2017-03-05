@@ -26,7 +26,7 @@ namespace FastTests.Server
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
                     var getCommand = new GetDatabaseDocumentTestCommand();
-                    using (var requestExecuter = new RequestExecuter(store.Url, store.DefaultDatabase, null))
+                    using (var requestExecuter = new RequestExecutor(store.Url, store.DefaultDatabase, null))
                     {
                         requestExecuter.Execute(getCommand, context);
                         using (var putCommand = new PutDatabaseDocumentTestCommand(getCommand.Result))
@@ -111,7 +111,7 @@ namespace FastTests.Server
         private bool HasEtagInDatabaseDocumentResponse(string url, string databaseName, JsonOperationContext context)
         {
             var command = new GetDatabaseDocumentTestCommand();
-            using (var requestExecuter = new RequestExecuter(url, databaseName, null))
+            using (var requestExecuter = new RequestExecutor(url, databaseName, null))
             {
                 requestExecuter.Execute(command, context);
             }

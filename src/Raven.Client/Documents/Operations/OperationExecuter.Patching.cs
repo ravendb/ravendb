@@ -18,9 +18,9 @@ namespace Raven.Client.Documents.Operations
             JsonOperationContext context;
             using (GetContext(out context))
             {
-                var command = operation.GetCommand(_store.Conventions, context, _requestExecuter.Cache);
+                var command = operation.GetCommand(_store.Conventions, context, _requestExecutor.Cache);
 
-                await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
 
                 if (command.StatusCode == HttpStatusCode.NotModified)
                     return PatchStatus.NotModified;
@@ -42,9 +42,9 @@ namespace Raven.Client.Documents.Operations
             JsonOperationContext context;
             using (GetContext(out context))
             {
-                var command = operation.GetCommand(_store.Conventions, context, _requestExecuter.Cache);
+                var command = operation.GetCommand(_store.Conventions, context, _requestExecutor.Cache);
 
-                await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
 
                 var result = new PatchOperation.Result<TEntity>();
 

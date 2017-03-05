@@ -452,14 +452,14 @@ namespace SlowTests.Core.Session
                 {
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
                     session.Load<User>("users/1");
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
 
                 using (var session = store.OpenSession())
                 {
                     session.Load<User>("users/1");
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     for (var i = 0; i <= 20; i++)

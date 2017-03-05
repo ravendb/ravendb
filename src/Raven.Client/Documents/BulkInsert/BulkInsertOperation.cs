@@ -42,9 +42,9 @@ namespace Raven.Client.Documents.BulkInsert
             Operation = GetBulkInsertOperation(database, store.GetRequestExecuter(database));
         }
 
-        protected virtual TcpBulkInsertOperation GetBulkInsertOperation(string database, RequestExecuter requestExecuter)
+        protected virtual TcpBulkInsertOperation GetBulkInsertOperation(string database, RequestExecutor requestExecutor)
         {
-            return new TcpBulkInsertOperation(database, _store, requestExecuter, default(CancellationTokenSource));
+            return new TcpBulkInsertOperation(database, _store, requestExecutor, default(CancellationTokenSource));
         }
 
         public async Task DisposeAsync()

@@ -219,9 +219,9 @@ namespace FastTests
                 Ids = ids,
                 Context = session.Advanced.Context
             };
-            if (session.Advanced.RequestExecuter == null)
+            if (session.Advanced.RequestExecutor == null)
                 Console.WriteLine();
-            session.Advanced.RequestExecuter.Execute(command, session.Advanced.Context);
+            session.Advanced.RequestExecutor.Execute(command, session.Advanced.Context);
             var document = (BlittableJsonReaderObject)command.Result.Results[0];
             BlittableJsonReaderObject metadata;
             if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
@@ -272,7 +272,7 @@ namespace FastTests
                 Document = documentInfo.Document,
                 Context = session.Advanced.Context
             };
-            session.Advanced.RequestExecuter.Execute(putCommand, session.Advanced.Context);
+            session.Advanced.RequestExecutor.Execute(putCommand, session.Advanced.Context);
         }
 
         protected override void Dispose(ExceptionAggregator exceptionAggregator)

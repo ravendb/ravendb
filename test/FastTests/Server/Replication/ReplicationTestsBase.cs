@@ -31,7 +31,7 @@ namespace FastTests.Server.Replication
             {
                 var command = new GetRevisionsCommand(id);
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }
@@ -44,7 +44,7 @@ namespace FastTests.Server.Replication
             {                
                 var command = new GetReplicationStatsCommand((DocumentSession)session);
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }
@@ -68,7 +68,7 @@ namespace FastTests.Server.Replication
             {
                 var command = new GetConncectionFailuresCommand();
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }
@@ -80,7 +80,7 @@ namespace FastTests.Server.Replication
             {
                 var command = new GetReplicationConflictsCommand(docId);
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }
@@ -277,7 +277,7 @@ namespace FastTests.Server.Replication
             {
                 var command = new GetReplicationTombstonesCommand();
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }
@@ -289,7 +289,7 @@ namespace FastTests.Server.Replication
             {
                 var command = new GetFullTopologyCommand();
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }
