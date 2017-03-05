@@ -143,7 +143,7 @@ namespace Raven.Tests.Issues
                     Script = @"
                                 var doc = Raven.Json.Linq.RavenJObject.Parse('{ ""Name"" : ""Raven"" }');
                                 var metadata = Raven.Json.Linq.RavenJObject.Parse('{ ""Raven-Entity-Name"" : ""Docs"" }');
-                                database.Documents.Put('doc/1', null, doc, metadata, null, null);
+                                database.Documents.Put('doc/1', null, doc, metadata, null, null,Raven.Database.Storage.InvokeSource.Default);
                              "
                 });
 
