@@ -34,8 +34,6 @@ namespace Raven.Tests.Raft
                 client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = false}).Wait(3000);
             }
 
-            WaitForClusterToBecomeNonStale(3);
-
             var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
             Assert.NotNull(leader);
 
