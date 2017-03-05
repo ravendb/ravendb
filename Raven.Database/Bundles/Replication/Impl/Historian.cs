@@ -52,8 +52,10 @@ namespace Raven.Database.Bundles.Replication.Impl
                 var sourceAsString = entryAsObject[Constants.RavenReplicationSource].Value<string>();
                 var versionAsLong = entryAsObject[Constants.RavenReplicationVersion].Value<long>();
                 RavenJObject val;
-                if (!sourcesToVersionEntries.TryGetValue(sourceAsString, out val)
-                    || val[Constants.RavenReplicationVersion].Value<long>() < versionAsLong)
+                RavenJToken ravenReplicationVersion;
+                if (sourcesToVersionEntries.TryGetValue(sourceAsString, out val) == false || 
+                    val.TryGetValue(Constants.RavenReplicationVersion, out ravenReplicationVersion) == false ||
+                    ravenReplicationVersion.Value<long>() < versionAsLong)
                     sourcesToVersionEntries[sourceAsString] = entryAsObject;
             }
         }
