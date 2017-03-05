@@ -93,8 +93,9 @@ class hitTest {
 
             if (item.actionType === "toggleIndexes") {
                 this.onToggleIndexes();
-                break; // since we register broader regions, we might end up with multiple toggle items, but we don't want to toggle this few times
-                // because it might result in no change at all (for even amount of matching elements)
+                break;
+                // Since we register broader regions, we might end up with multiple toggle items, 
+                // we don't want to toggle this few times because it might result in no change at all (for even amount of matching elements)
             }
         }
     }
@@ -249,7 +250,7 @@ class metrics extends viewModelBase {
     }
 
     deactivate() {
-        super.deactivate;
+        super.deactivate();
 
         if (this.liveViewClient) {
             this.cancelLiveView();
@@ -431,10 +432,7 @@ class metrics extends viewModelBase {
         // filteredIndexesTracksNames will be indexes tracks names that are NOT SUPPOSED TO BE SEEN ....
         this.filteredIndexesTracksNames(indexesTracksNames.filter(x => !(x.toLowerCase().includes(criteria))));       
 
-        if (indexesTracks.length === this.filteredIndexesTracksNames().length) {
-            // All indexes are filetered out..
-            this.allIndexesAreFiltered(true);
-        }       
+        this.allIndexesAreFiltered(indexesTracks.length === this.filteredIndexesTracksNames().length);     
 
         this.drawMainSection();
     }
@@ -854,25 +852,25 @@ class metrics extends viewModelBase {
 
             for (let envIdx = 0; envIdx < this.data.Environments.length; envIdx++) {
                 const env = this.data.Environments[envIdx];
+                if (!this.filtered(env.Path)) {
 
-                // 3.1. Check if this is an index track 
-                let trackName = env.Path.substring(this.commonPathsPrefix.length);
-                let isIndexTrack = trackName.startsWith(metrics.indexesString);
-               
-                // 3.2 Draw track name
-                const yStart = this.yScale(env.Path);
-                this.drawTrackName(context, trackName, yStart);
+                    // 3.1. Check if this is an index track 
+                    let trackName = env.Path.substring(this.commonPathsPrefix.length);
+                    let isIndexTrack = trackName.startsWith(metrics.indexesString);
 
-                const yStartPerTypeCache = new Map<Sparrow.MeterType, number>();
-                yStartPerTypeCache.set(metrics.journalWriteString, yStart + metrics.closedTrackHeight + metrics.itemMargin);
-                yStartPerTypeCache.set(metrics.dataFlushString, yStart + metrics.closedTrackHeight + metrics.itemMargin * 2 + metrics.itemHeight);
-                yStartPerTypeCache.set(metrics.dataSyncString, yStart + metrics.closedTrackHeight + metrics.itemMargin * 3 + metrics.itemHeight * 2);
-                
+                    // 3.2 Draw track name
+                    const yStart = this.yScale(env.Path);
+                    this.drawTrackName(context, trackName, yStart);
 
-                // 3.3 Draw item in main canvas area (but only if item is inside the visible/selected area from the brush section..)
-                for (let fileIdx = 0; fileIdx < env.Files.length; fileIdx++) {
-                    const file = env.Files[fileIdx];
-                    if (!this.filtered(env.Path)) {
+                    const yStartPerTypeCache = new Map<Sparrow.MeterType, number>();
+                    yStartPerTypeCache.set(metrics.journalWriteString, yStart + metrics.closedTrackHeight + metrics.itemMargin);
+                    yStartPerTypeCache.set(metrics.dataFlushString, yStart + metrics.closedTrackHeight + metrics.itemMargin * 2 + metrics.itemHeight);
+                    yStartPerTypeCache.set(metrics.dataSyncString, yStart + metrics.closedTrackHeight + metrics.itemMargin * 3 + metrics.itemHeight * 2);
+
+                    // 3.3 Draw item in main canvas area (but only if item is inside the visible/selected area from the brush section..)
+                    for (let fileIdx = 0; fileIdx < env.Files.length; fileIdx++) {
+                        const file = env.Files[fileIdx];
+                       
                         for (let recentIdx = 0; recentIdx < file.Recent.length; recentIdx++) {
                             const recentItem = file.Recent[recentIdx] as IOMetricsRecentStatsWithCache;
                             const itemStartDateAsInt = recentItem.StartedAsDate.getTime();
@@ -894,7 +892,6 @@ class metrics extends viewModelBase {
                                 
                                 // 3.6 Draw the human size text on the item if there is enough space.. but don't draw on closed indexes track 
                                 // Logic: Don't draw if: [closed && isIndexTrack] ==> [!(closed && isIndexTrack)] ==> [open || !isIndexTrack]
-                                
                                 if (indexesExpanded || !isIndexTrack) {
                                     const humanSizeTextWidth = context.measureText(recentItem.HumanSize).width;
                                     if (dx > humanSizeTextWidth) {
@@ -904,7 +901,8 @@ class metrics extends viewModelBase {
 
                                     // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
                                     this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, metrics.itemHeight, recentItem);
-                                } else {
+                                }
+                                else {
                                     // 3.8 If on the closed index track, might as well register toggle, so that indexes details will open, can be nice 
                                     this.hitTest.registerIndexToggle(x1 - 5, yStartItem, dx + 5, metrics.itemHeight);
                                 }
@@ -1082,11 +1080,13 @@ class metrics extends viewModelBase {
                 messagePublisher.reportError("Invalid IO Stats file format", undefined, undefined);
             }
             else {
+                if (this.hasAnyData()) {
+                    this.resetGraphData();
+                }
                 this.data = importedData;
-                this.fillCache();
-                this.resetGraphData();
-                this.initViewData(); 
+                this.fillCache();     
                 this.prepareTimeData();
+                this.initViewData();                
                 this.draw(true);
                 this.isImport(true);
             }
@@ -1113,10 +1113,11 @@ class metrics extends viewModelBase {
     }   
 
     private resetGraphData() {
-        this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());      
-        this.initViewData(); 
+        this.data = null;
         this.searchText("");
-        this.allIndexesAreFiltered(false);
+        this.hasAnyData(false);   
+        this.allIndexesAreFiltered(false);     
+        this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());                           
     }
 
     private setZoomAndBrush(scale: [number, number], brushAction: (brush: d3.svg.Brush<any>) => void) {
