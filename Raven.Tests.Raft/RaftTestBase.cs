@@ -254,12 +254,20 @@ namespace Raven.Tests.Raft
 
         protected void WaitForClusterToBecomeNonStale(int numberOfNodes)
         {
-            servers.ForEach(server => Assert.True(SpinWait.SpinUntil(() =>
+            using (var countDownEvent = new CountdownEvent(numberOfNodes))
             {
-                var topology = server.Options.ClusterManager.Value.Engine.CurrentTopology;
-                var count = topology.AllVotingNodes.Count();
-                return count == numberOfNodes;
-            }, TimeSpan.FromSeconds(15*numberOfNodes)), $"Node didn't become unstale in time, {server}"));
+                foreach (var ravenDbServer in servers)
+                {
+                    ravenDbServer.Options.ClusterManager.Value.Engine.TopologyChanged += command =>
+                    {
+                        if (command.Requested.AllVotingNodes.Count() == numberOfNodes)
+                        {
+                            countDownEvent.Signal();
+                        }
+                    };
+                }
+                Assert.True(countDownEvent.Wait(TimeSpan.FromSeconds(15 * numberOfNodes)), $"Cluster didn't become un-stale in time");
+            }
         }
 
         protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true, Dictionary<string, string> databaseSettings = null)
