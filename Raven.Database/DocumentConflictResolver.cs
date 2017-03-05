@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Plugins;
+using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Storage;
 using Raven.Json.Linq;
 
@@ -13,6 +16,8 @@ namespace Raven.Database
 {
     public static class DocumentConflictResolver
     {
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
         public static void ResolveConflict(this DocumentDatabase database, JsonDocument document, Storage.IStorageActionsAccessor actions, out JsonDocument newDocument)
         {
 
@@ -94,19 +99,23 @@ namespace Raven.Database
 
         public static ReplicationConfig GetReplicationConfig(this DocumentDatabase database)
         {
-            var configDoc = database.Documents.Get(Constants.RavenReplicationConfig, null);
-
-            if (configDoc == null)
-                return null;
-
-            ReplicationConfig config;
             try
             {
-                config = configDoc.DataAsJson.JsonDeserialization<ReplicationConfig>();
-                return config;
+                var configDoc = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationConfig>(Constants.RavenReplicationConfig);
+                return configDoc?.MergedDocument;
             }
             catch (Exception e)
             {
+                Log.ErrorException("Could not read the configuration for replication conflict resolution", e);
+                database.AddAlert(new Alert
+                {
+                    AlertLevel = AlertLevel.Error,
+                    CreatedAt = SystemTime.UtcNow,
+                    Message = e.Message,
+                    Title = "Could not read the configuration for replication conflict resolution",
+                    Exception = e.ToString(),
+                    UniqueKey = "Replication Conflict Resolution Configuration Error"
+                });
                 return null;
             }
         }
