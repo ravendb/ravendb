@@ -427,7 +427,7 @@ namespace Raven.Bundles.Replication.Tasks
 
                                     try
                                     {
-                                        if (ReplicateTo(destination, out lastDocumentEtag, out lastAttachmentEtag) == false)
+                                        if (ReplicateTo(destination, out lastDocumentEtag, out lastAttachmentEtag))
                                         {
                                             docDb.WorkContext.NotifyAboutWork();
 
@@ -471,7 +471,7 @@ namespace Raven.Bundles.Replication.Tasks
                             docDb.TransactionalStorage.Batch(actions =>
                             {
                                 var shouldRunAgain = t.Result.LastReplicatedDocumentEtag != Etag.InvalidEtag &&
-                                        actions.Staleness.GetMostRecentDocumentEtag() != t.Result.LastReplicatedDocumentEtag == false;
+                                        actions.Staleness.GetMostRecentDocumentEtag() != t.Result.LastReplicatedDocumentEtag;
                                 if (shouldRunAgain)
                                 {
                                     docDb.WorkContext.ReplicationResetEvent.Set();
