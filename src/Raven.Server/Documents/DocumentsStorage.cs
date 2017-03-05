@@ -1149,7 +1149,6 @@ namespace Raven.Server.Documents
                     }
                     table.Delete(doc.StorageId);
 
-                    // TODO: Do not delete the attachment streams if versioning is on
                     DeleteAttachmentsOfDocument(context, loweredKey);
                 }
             }
@@ -1184,6 +1183,9 @@ namespace Raven.Server.Documents
             {
                 table.DeleteByPrimaryKeyPrefix(startSlice, holder =>
                 {
+                    // TODO: Do not delete the attachment streams if :
+                    // 1. There is the same hash in another metadata
+                    // 2. There is the same hash in versioned metadata
                     var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
                     int size;
                     var ptr = holder.Reader.Read((int) AttachmentsTable.Hash, out size);
@@ -2712,7 +2714,7 @@ namespace Raven.Server.Documents
                     table.Insert(tbv);
                 }
 
-                PutAttachmentStream(context, hashSlice, stream);
+                PutAttachmentStream(context, keySlice, hashSlice, stream);
 
                 _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
@@ -2727,12 +2729,12 @@ namespace Raven.Server.Documents
             };
         }
 
-        private void PutAttachmentStream(DocumentsOperationContext context, Slice hash, Stream stream)
+        private void PutAttachmentStream(DocumentsOperationContext context, Slice key, Slice hash, Stream stream)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
             var existingStream = tree.ReadStream(hash);
             if (existingStream == null)
-                tree.AddStream(hash, stream);
+                tree.AddStream(hash, stream, tag: key);
         }
 
         private void UpdateDocumentAfterAttachmentWrite(
