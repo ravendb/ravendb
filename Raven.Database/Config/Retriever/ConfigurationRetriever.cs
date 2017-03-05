@@ -25,22 +25,22 @@ namespace Raven.Database.Config.Retriever
         private readonly DocumentDatabase database;
 
         private readonly Dictionary<string, DocumentType> documentTypes = new Dictionary<string, DocumentType>(StringComparer.OrdinalIgnoreCase)
-                                                                          {
-                                                                              {Constants.RavenReplicationDestinations, DocumentType.ReplicationDestinations},
-                                                                              {Constants.Versioning.RavenVersioningDefaultConfiguration, DocumentType.VersioningConfiguration},
-                                                                              {PeriodicExportSetup.RavenDocumentKey, DocumentType.PeriodicExportConfiguration},
-                                                                              {Constants.DocsHardLimit, DocumentType.QuotasConfiguration},
-                                                                              {Constants.DocsSoftLimit, DocumentType.QuotasConfiguration},
-                                                                              {Constants.SizeHardLimitInKB, DocumentType.QuotasConfiguration},
-                                                                              {Constants.SizeSoftLimitInKB, DocumentType.QuotasConfiguration},
-                                                                              {Constants.PeriodicExport.AwsAccessKey, DocumentType.PeriodicExportSettingsConfiguration},
-                                                                              {Constants.PeriodicExport.AwsSecretKey, DocumentType.PeriodicExportSettingsConfiguration},
-                                                                              {Constants.PeriodicExport.AzureStorageAccount, DocumentType.PeriodicExportSettingsConfiguration},
-                                                                              {Constants.PeriodicExport.AzureStorageKey, DocumentType.PeriodicExportSettingsConfiguration},
-                                                                              {Constants.SqlReplication.SqlReplicationConnectionsDocumentName, DocumentType.SqlReplicationConnections},
-                                                                              {Constants.RavenJavascriptFunctions, DocumentType.JavascriptFunctions},
-                                                                              {Constants.RavenReplicationConfig, DocumentType.ReplicationConflictResolutionConfiguration}
-                                                                          };
+        {
+            {Constants.RavenReplicationDestinations, DocumentType.ReplicationDestinations},
+            {Constants.Versioning.RavenVersioningDefaultConfiguration, DocumentType.VersioningConfiguration},
+            {PeriodicExportSetup.RavenDocumentKey, DocumentType.PeriodicExportConfiguration},
+            {Constants.DocsHardLimit, DocumentType.QuotasConfiguration},
+            {Constants.DocsSoftLimit, DocumentType.QuotasConfiguration},
+            {Constants.SizeHardLimitInKB, DocumentType.QuotasConfiguration},
+            {Constants.SizeSoftLimitInKB, DocumentType.QuotasConfiguration},
+            {Constants.PeriodicExport.AwsAccessKey, DocumentType.PeriodicExportSettingsConfiguration},
+            {Constants.PeriodicExport.AwsSecretKey, DocumentType.PeriodicExportSettingsConfiguration},
+            {Constants.PeriodicExport.AzureStorageAccount, DocumentType.PeriodicExportSettingsConfiguration},
+            {Constants.PeriodicExport.AzureStorageKey, DocumentType.PeriodicExportSettingsConfiguration},
+            {Constants.SqlReplication.SqlReplicationConnectionsDocumentName, DocumentType.SqlReplicationConnections},
+            {Constants.RavenJavascriptFunctions, DocumentType.JavascriptFunctions},
+            {Constants.RavenReplicationConfig, DocumentType.ReplicationConflictResolutionConfiguration}
+        };
 
         private readonly ReplicationConflictResolutionConfigurationRetriever replicationConflictResolutionConfigurationRetriever;
 

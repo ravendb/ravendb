@@ -54,7 +54,7 @@ namespace Raven.Tests.Raft
                     {
                         using (var session = clusterStores[i].OpenSession())
                         {
-                            session.Store(new ReplicationConfig()
+                            session.Store(new ReplicationConfig
                             {
                                 DocumentConflictResolution = StraightforwardConflictResolution.ResolveToLatest
                             }, Constants.RavenReplicationConfig);
