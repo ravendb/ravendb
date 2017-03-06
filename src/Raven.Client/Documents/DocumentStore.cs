@@ -32,7 +32,7 @@ namespace Raven.Client.Documents
 
         private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> _observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 
-        private readonly ConcurrentDictionary<string, Lazy<RequestExecuter>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecuter>>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecutor>>(StringComparer.OrdinalIgnoreCase);
 
         private AsyncMultiDatabaseHiLoKeyGenerator _asyncMultiDbHiLo;
 
@@ -175,12 +175,12 @@ namespace Raven.Client.Documents
             return session;
         }
 
-        public override RequestExecuter GetRequestExecuter(string databaseName = null)
+        public override RequestExecutor GetRequestExecuter(string databaseName = null)
         {
             if (databaseName == null)
                 databaseName = DefaultDatabase;
 
-            var lazy = _requestExecuters.GetOrAdd(databaseName, dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey)));
+            var lazy = _requestExecuters.GetOrAdd(databaseName, dbName => new Lazy<RequestExecutor>(() => new RequestExecutor(Url, dbName, ApiKey)));
             return lazy.Value;
         }
 

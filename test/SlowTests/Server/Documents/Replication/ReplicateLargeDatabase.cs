@@ -53,7 +53,7 @@ namespace SlowTests.Server.Documents.Replication
             {
                 var command = new CreateSampleDatabaseEndpoint();
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }

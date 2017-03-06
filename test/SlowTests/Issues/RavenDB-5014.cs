@@ -35,7 +35,7 @@ namespace SlowTests.Issues
 
                     var operationId = JsonDeserializationClient.OperationIdResult(json);
 
-                    new Operation(commands.RequestExecuter, store.Conventions, operationId.OperationId).WaitForCompletion();
+                    new Operation(commands.RequestExecutor, store.Conventions, operationId.OperationId).WaitForCompletion();
 
                     var collectionStats = store.Admin.Send(new GetCollectionStatisticsOperation());
 

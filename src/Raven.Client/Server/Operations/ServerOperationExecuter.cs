@@ -11,12 +11,12 @@ namespace Raven.Client.Server.Operations
     public class ServerOperationExecuter
     {
         private readonly DocumentStoreBase _store;
-        private readonly RequestExecuter _requestExecuter;
+        private readonly RequestExecutor _requestExecutor;
 
         public ServerOperationExecuter(DocumentStoreBase store)
         {
             _store = store;
-            _requestExecuter = store.GetRequestExecuter();
+            _requestExecutor = store.GetRequestExecuter();
         }
 
         public void Send(IServerOperation operation)
@@ -36,7 +36,7 @@ namespace Raven.Client.Server.Operations
             {
                 var command = operation.GetCommand(_store.Conventions, context);
 
-                await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
             }
         }
 
@@ -47,14 +47,14 @@ namespace Raven.Client.Server.Operations
             {
                 var command = operation.GetCommand(_store.Conventions, context);
 
-                await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
                 return command.Result;
             }
         }
 
         private IDisposable GetContext(out JsonOperationContext context)
         {
-            return _requestExecuter.ContextPool.AllocateOperationContext(out context);
+            return _requestExecutor.ContextPool.AllocateOperationContext(out context);
         }
     }
 }

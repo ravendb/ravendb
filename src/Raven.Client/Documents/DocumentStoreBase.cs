@@ -265,7 +265,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public string ApiKey { get; set; }
 
-        public abstract RequestExecuter GetRequestExecuter(string databaseName = null);
+        public abstract RequestExecutor GetRequestExecuter(string databaseName = null);
 
         /// <summary>
         /// Setup the context for aggressive caching.

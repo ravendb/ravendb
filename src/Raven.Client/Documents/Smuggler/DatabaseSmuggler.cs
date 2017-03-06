@@ -16,13 +16,13 @@ namespace Raven.Client.Documents.Smuggler
     {
         private readonly DocumentStore _store;
         private readonly string _databaseName;
-        private readonly RequestExecuter _requestExecuter;
+        private readonly RequestExecutor _requestExecutor;
 
         public DatabaseSmuggler(DocumentStore store, string databaseName = null)
         {
             _store = store;
             _databaseName = databaseName;
-            _requestExecuter = store.GetRequestExecuter(databaseName);
+            _requestExecutor = store.GetRequestExecuter(databaseName);
         }
 
         public DatabaseSmuggler ForDatabase(string databaseName)
@@ -49,11 +49,11 @@ namespace Raven.Client.Documents.Smuggler
                 throw new ArgumentNullException(nameof(options));
 
             JsonOperationContext context;
-            using (_requestExecuter.ContextPool.AllocateOperationContext(out context))
+            using (_requestExecutor.ContextPool.AllocateOperationContext(out context))
             {
                 var command = new ExportCommand(_store.Conventions, context, options);
 
-                await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
 
                 return command.Result;
             }
@@ -124,11 +124,11 @@ namespace Raven.Client.Documents.Smuggler
                 throw new ArgumentNullException(nameof(stream));
 
             JsonOperationContext context;
-            using (_requestExecuter.ContextPool.AllocateOperationContext(out context))
+            using (_requestExecutor.ContextPool.AllocateOperationContext(out context))
             {
                 var command = new ImportCommand(options, stream);
 
-                await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
             }
         }
 

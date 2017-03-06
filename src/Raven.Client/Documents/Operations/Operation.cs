@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations
 {
     public class Operation : IObserver<OperationStatusChange>
     {
-        private readonly RequestExecuter _requestExecuter;
+        private readonly RequestExecutor _requestExecutor;
         private readonly DocumentConventions _conventions;
         private readonly long _id;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
@@ -24,11 +24,11 @@ namespace Raven.Client.Documents.Operations
 
         internal long Id => _id;
 
-        public Operation(RequestExecuter requestExecuter, DocumentConventions conventions, long id)
+        public Operation(RequestExecutor requestExecutor, DocumentConventions conventions, long id)
         {
             DevelopmentHelper.TimeBomb(); // use changes API
 
-            _requestExecuter = requestExecuter;
+            _requestExecutor = requestExecutor;
             _conventions = conventions;
             _id = id;
             _work = true;
@@ -68,7 +68,7 @@ namespace Raven.Client.Documents.Operations
         {
             var command = new GetOperationStateCommand(_conventions, _id);
 
-            await _requestExecuter.ExecuteAsync(command, _context);
+            await _requestExecutor.ExecuteAsync(command, _context);
 
             OnNext(new OperationStatusChange
             {
@@ -115,7 +115,7 @@ namespace Raven.Client.Documents.Operations
 
         public async Task<IOperationResult> WaitForCompletionAsync(TimeSpan? timeout = null)
         {
-            using (_requestExecuter.ContextPool.AllocateOperationContext(out _context))
+            using (_requestExecutor.ContextPool.AllocateOperationContext(out _context))
             {
 #pragma warning disable 4014
                 Task.Factory.StartNew(Initialize);

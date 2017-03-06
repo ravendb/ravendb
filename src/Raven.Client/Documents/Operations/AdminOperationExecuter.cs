@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations
     {
         private readonly DocumentStoreBase _store;
         private readonly string _databaseName;
-        private readonly RequestExecuter _requestExecuter;
+        private readonly RequestExecutor _requestExecutor;
         private readonly JsonOperationContext _context;
         private ServerOperationExecuter _serverOperationExecuter;
 
@@ -20,13 +20,13 @@ namespace Raven.Client.Documents.Operations
         {
             _store = store;
             _databaseName = databaseName ?? store.DefaultDatabase;
-            _requestExecuter = store.GetRequestExecuter(databaseName);
+            _requestExecutor = store.GetRequestExecuter(databaseName);
         }
 
-        internal AdminOperationExecuter(DocumentStoreBase store, RequestExecuter requestExecuter, JsonOperationContext context)
+        internal AdminOperationExecuter(DocumentStoreBase store, RequestExecutor requestExecutor, JsonOperationContext context)
         {
             _store = store;
-            _requestExecuter = requestExecuter;
+            _requestExecutor = requestExecutor;
             _context = context;
         }
 
@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Operations
             {
                 var command = operation.GetCommand(_store.Conventions, context);
 
-                await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
             }
         }
 
@@ -68,7 +68,7 @@ namespace Raven.Client.Documents.Operations
             {
                 var command = operation.GetCommand(_store.Conventions, context);
 
-                await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
                 return command.Result;
             }
         }
@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Operations
         private IDisposable GetContext(out JsonOperationContext context)
         {
             if (_context == null)
-                return _requestExecuter.ContextPool.AllocateOperationContext(out context);
+                return _requestExecutor.ContextPool.AllocateOperationContext(out context);
 
             context = _context;
             return null;

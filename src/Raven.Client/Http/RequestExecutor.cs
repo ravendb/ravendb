@@ -19,7 +19,7 @@ using Sparrow.Logging;
 
 namespace Raven.Client.Http
 {
-    public class RequestExecuter : IDisposable
+    public class RequestExecutor : IDisposable
     {
 
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
@@ -29,7 +29,7 @@ namespace Raven.Client.Http
         private static readonly Lazy<HttpClient> GlobalHttpClient = new Lazy<HttpClient>(() => CreateClient(GlobalHttpClientTimeout));
 
         private readonly string _apiKey;
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecuter>("Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
 
         public readonly JsonContextPool ContextPool;
 
@@ -51,7 +51,7 @@ namespace Raven.Client.Http
         private Timer _updateCurrentTokenTimer;
         private readonly Timer _updateFailingNodesStatus;
 
-        public RequestExecuter(string url, string databaseName, string apiKey)
+        public RequestExecutor(string url, string databaseName, string apiKey)
         {
             _apiKey = apiKey;
             _topology = new Topology
@@ -72,9 +72,9 @@ namespace Raven.Client.Http
             _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
-        public static RequestExecuter ShortTermSingleUse(string url, string databaseName, string apiKey)
+        public static RequestExecutor ShortTermSingleUse(string url, string databaseName, string apiKey)
         {
-            return new ShortTermSingleUseRequestExecuter(url, databaseName, apiKey);
+            return new ShortTermSingleUseRequestExecutor(url, databaseName, apiKey);
         }
 
         protected virtual void UpdateTopologyCallback(object _)
@@ -257,7 +257,7 @@ namespace Raven.Client.Http
             return new HttpCache.ReleaseCacheItem();
         }
 
-        public static readonly string ClientVersion = typeof(RequestExecuter).GetTypeInfo().Assembly.GetName().Version.ToString();
+        public static readonly string ClientVersion = typeof(RequestExecutor).GetTypeInfo().Assembly.GetName().Version.ToString();
 
         private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
         {
@@ -392,7 +392,7 @@ namespace Raven.Client.Http
                 {
                     if (command.IsFailedWithNode(leaderNode) == false)
                         return new ChoosenNode { Node = leaderNode };
-                    throw new HttpRequestException("Leader not was failed to make this request. The current ReadBehavior is set to Leader to we won't failover to a differnt node.", exception);
+                    throw new HttpRequestException("Leader node was failed to make this request. The current ReadBehavior is set to Leader Only failover to a different node is not authorized.", exception);
                 }
 
                 if (topology.ReadBehavior == ReadBehavior.RoundRobin)
@@ -447,7 +447,7 @@ namespace Raven.Client.Http
             {
                 if (command.IsFailedWithNode(leaderNode) == false)
                     return new ChoosenNode { Node = leaderNode };
-                throw new HttpRequestException("Leader not was failed to make this request. The current WriteBehavior is set to Leader to we won't failover to a differnt node.", exception);
+                throw new HttpRequestException("Leader node was failed to make this request. The current WriteBehavior is set to Leader Only failover to a different node is not authorized", exception);
             }
 
             if (topology.WriteBehavior == WriteBehavior.LeaderWithFailover)
@@ -637,9 +637,9 @@ namespace Raven.Client.Http
             return GlobalHttpClient.Value;
         }
 
-        private class ShortTermSingleUseRequestExecuter : RequestExecuter
+        private class ShortTermSingleUseRequestExecutor : RequestExecutor
         {
-            public ShortTermSingleUseRequestExecuter(string url, string databaseName, string apiKey)
+            public ShortTermSingleUseRequestExecutor(string url, string databaseName, string apiKey)
                 : base(url, databaseName, apiKey)
             {
             }

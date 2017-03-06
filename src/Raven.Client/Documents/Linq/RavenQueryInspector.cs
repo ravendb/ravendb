@@ -208,7 +208,7 @@ namespace Raven.Client.Documents.Linq
             var query = FacetQuery.Create(_indexName, q, facetSetupDoc, null, start, pageSize, q.Conventions);
 
             var command = new GetFacetsCommand(_session.Context, query);
-            _session.RequestExecuter.Execute(command, _session.Context);
+            _session.RequestExecutor.Execute(command, _session.Context);
             return command.Result;
         }
 
@@ -217,7 +217,7 @@ namespace Raven.Client.Documents.Linq
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(_indexName, q, null, facets, start, pageSize, q.Conventions);
             var command = new GetFacetsCommand(_session.Context, query);
-            _session.RequestExecuter.Execute(command, _session.Context);
+            _session.RequestExecutor.Execute(command, _session.Context);
             return command.Result;
         }
 
@@ -227,7 +227,7 @@ namespace Raven.Client.Documents.Linq
             var query = FacetQuery.Create(_indexName, q, facetSetupDoc, null, start, pageSize, q.Conventions);
 
             var command = new GetFacetsCommand(_session.Context, query);
-            await _session.RequestExecuter.ExecuteAsync(command, _session.Context, token).ConfigureAwait(false);
+            await _session.RequestExecutor.ExecuteAsync(command, _session.Context, token).ConfigureAwait(false);
 
             return command.Result;
         }
@@ -238,7 +238,7 @@ namespace Raven.Client.Documents.Linq
             var query = FacetQuery.Create(_indexName, q, null, facets, start, pageSize, q.Conventions);
 
             var command = new GetFacetsCommand(_session.Context, query);
-            await _session.RequestExecuter.ExecuteAsync(command, _session.Context, token).ConfigureAwait(false);
+            await _session.RequestExecutor.ExecuteAsync(command, _session.Context, token).ConfigureAwait(false);
 
             return command.Result;
         }
