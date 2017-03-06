@@ -42,6 +42,21 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         }
 
         [Fact]
+        public void InvalidJSon()
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var invalid = @"{
+ 'User': 'ayende',
+ 'Age': 18,{'Error': 'ObjectDisposed'}";
+                var stream = new MemoryStream(Encoding.UTF8.GetBytes(invalid));
+                var invalidDataException = Assert.Throws<InvalidDataException>(() => context.Read(stream, "docs/1"));
+
+                Assert.Contains(invalid, invalidDataException.Message);
+            }
+        }
+
+        [Fact]
         public void ShouldNotCrashForManyDifferentProperties()
         {
             foreach (var name in new[] { "geo.json", "comments.json", "blog_post.json" })

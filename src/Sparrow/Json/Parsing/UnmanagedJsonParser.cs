@@ -167,7 +167,7 @@ namespace Sparrow.Json.Parsing
                     case (byte)':':
                     case (byte)',':
                         if (_state.CurrentTokenType == JsonParserToken.Separator || _state.CurrentTokenType == JsonParserToken.StartObject || _state.CurrentTokenType == JsonParserToken.StartArray)
-                            throw CreateException("Cannot have a '" + (char)b + "' in this position");
+                            ThrowException("Cannot have a '" + (char)b + "' in this position");
 
                         _state.CurrentTokenType = JsonParserToken.Separator;
                         continue;
@@ -291,7 +291,7 @@ namespace Sparrow.Json.Parsing
 
         private void ThrowCannotHaveCharInThisPosition(byte b)
         {
-            throw CreateException("Cannot have a '" + (char) b + "' in this position");
+            ThrowException("Cannot have a '" + (char) b + "' in this position");
         }
 
         private bool ReadMaybeBeforePreamble()
@@ -408,7 +408,8 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
                 default:
-                    throw CreateException("Somehow got continuation for single byte token " + _state.Continuation);
+                    ThrowException("Somehow got continuation for single byte token " + _state.Continuation);
+                    return false; // never hit
             }
 
             return false;
@@ -538,7 +539,7 @@ namespace Sparrow.Json.Parsing
 
         private void ThrowWhenMalformed(string message)
         {
-            throw CreateException(message);
+            ThrowException(message);
         }
 
         public bool EnsureRestOfToken()
@@ -548,7 +549,7 @@ namespace Sparrow.Json.Parsing
                 if (_pos >= _bufSize)
                     return false;
                 if (_inputBuffer[_pos++] != _expectedTokenBuffer[i])
-                    throw CreateException("Invalid token found, expected: " + _expectedTokenString);
+                    ThrowException("Invalid token found, expected: " + _expectedTokenString);
                 _expectedTokenBufferPosition++;
                 _charPos++;
             }
@@ -675,7 +676,7 @@ namespace Sparrow.Json.Parsing
                 }
                 else
                 {
-                    throw CreateException("Invalid hex value , numeric value is: " + b);
+                    ThrowException("Invalid hex value , numeric value is: " + b);
                 }
             }
             WriteUnicodeCharacterToStringBuffer(val);
@@ -702,7 +703,7 @@ namespace Sparrow.Json.Parsing
         public void ValidateFloat()
         {
             if (_unmanagedWriteBuffer.SizeInBytes > 100)
-                throw CreateException("Too many characters in double: " + _unmanagedWriteBuffer.SizeInBytes);
+                ThrowException("Too many characters in double: " + _unmanagedWriteBuffer.SizeInBytes);
 
             if (_doubleStringBuffer == null || _unmanagedWriteBuffer.SizeInBytes > _doubleStringBuffer.Length)
                 _doubleStringBuffer = new string(' ', _unmanagedWriteBuffer.SizeInBytes);
@@ -730,22 +731,25 @@ namespace Sparrow.Json.Parsing
             }
             catch (Exception e)
             {
-                throw CreateException("Could not parse double", e);
+                ThrowException("Could not parse double", e);
             }
         }
 
 
-        protected InvalidDataException CreateException(string message, Exception inner = null)
+        protected void ThrowException(string message, Exception inner = null)
         {
-            var start = Math.Max(0, _pos - 25);
-            var count = Math.Min(BufferOffset, _bufSize) - start;  
-            var s = Encoding.UTF8.GetString(_inputBuffer + start, count);
-            return new InvalidDataException(message + " at (" + _line + "," + _charPos + ") around: " + s, inner);
+            throw new InvalidDataException($"{message} at {GenerateErrorState()}", inner);
         }
 
         public void Dispose()
         {
             _unmanagedWriteBuffer.Dispose();
+        }
+
+        public string GenerateErrorState()
+        {
+            var s = Encoding.UTF8.GetString(_inputBuffer, _bufSize);
+            return " (" + _line + "," + _charPos + ") around: " + s;
         }
     }
 }

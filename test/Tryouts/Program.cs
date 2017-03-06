@@ -13,16 +13,11 @@ namespace Tryouts
         {
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
-            Parallel.For(0, 10, i =>
+
+            using (var a = new FastTests.Issues.RavenDB_6064())
             {
-                var sp = Stopwatch.StartNew();
-                using (var a = new SlowTests.Server.Rachis.BasicCluster())
-                {
-                    a.ClusterWithThreeNodesAndElections().Wait();
-                }
-                Console.WriteLine(sp.Elapsed);
-            });
-          
+                a.MapOnSeveralCompressedStrings();
+            }
         }
     }
 }

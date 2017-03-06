@@ -305,17 +305,17 @@ namespace Sparrow.Json
 
         private void ThrowExpectedProperty()
         {
-            throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType);
+            throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
         }
 
         private void ThrowExpectedStartOfArray()
         {
-            throw new InvalidDataException("Expected start of array, but got " + _state.CurrentTokenType);
+            throw new InvalidDataException("Expected start of array, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
         }
 
         private void ThrowExpectedStartOfObject()
         {
-            throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType);
+            throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
         }
 
         private unsafe void ReadJsonValue()

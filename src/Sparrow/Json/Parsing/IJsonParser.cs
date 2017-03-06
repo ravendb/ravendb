@@ -6,5 +6,6 @@ namespace Sparrow.Json.Parsing
     {
         bool Read();
         void ValidateFloat();
+        string GenerateErrorState();
     }
 }

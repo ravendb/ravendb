@@ -503,5 +503,10 @@ namespace Sparrow.Json.Parsing
         {
             // all floats are valid by definition
         }
+
+        public string GenerateErrorState()
+        {
+            return string.Empty;
+        }
     }
 }
