@@ -288,6 +288,22 @@ namespace Sparrow.Json
             _disposed = true;
         }
 
+        public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
+        {
+            LazyStringValue value;
+
+            var field = key.Value;
+            if (!_fieldNames.TryGetValue(field, out value))
+            {                
+                value = GetLazyString(key, longLived: true);
+                _fieldNames[field] = value;
+            }
+
+            //sanity check, in case the 'value' is manually disposed outside of this function
+            Debug.Assert(value.IsDisposed == false);
+            return value;
+        }
+
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
             LazyStringValue value;

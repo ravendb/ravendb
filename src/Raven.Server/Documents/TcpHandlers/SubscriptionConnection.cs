@@ -19,6 +19,10 @@ namespace Raven.Server.Documents.TcpHandlers
 {
     public class SubscriptionConnection : IDisposable
     {
+        private static readonly StringSegment DataSegment = new StringSegment("Data");
+        private static readonly StringSegment TypeSegment = new StringSegment("Type");
+
+
         public readonly TcpConnectionOptions TcpConnection;
         public readonly string ClientUri;
         private readonly MemoryStream _buffer = new MemoryStream();
@@ -355,10 +359,10 @@ namespace Raven.Server.Documents.TcpHandlers
                                         doc.EnsureMetadata();
 
                                         writer.WriteStartObject();
-                                        writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Type"));
-                                        writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching("Data"));
+                                        writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
+                                        writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
                                         writer.WriteComma();
-                                        writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Data"));
+                                        writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
                                         writer.WriteDocument(dbContext, doc);
                                         //context.Write(writer, new DynamicJsonValue
                                         //{

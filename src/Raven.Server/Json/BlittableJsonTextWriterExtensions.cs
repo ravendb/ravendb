@@ -15,6 +15,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -1235,6 +1236,8 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
+        private static readonly StringSegment MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
+
         public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
             if (_buffers == null)
@@ -1242,7 +1245,7 @@ namespace Raven.Server.Json
 
             writer.WriteStartObject();
 
-            var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
+            var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
             bool first = true;
             BlittableJsonReaderObject metadata = null;
             var size = document.Data.GetPropertiesByInsertionOrder(_buffers);

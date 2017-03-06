@@ -524,7 +524,7 @@ namespace Sparrow.Json
                 return -1;
 
             int min = 0, max = _propCount - 1;
-            var comparer = _context.GetLazyStringForFieldWithCaching(name.Value);
+            var comparer = _context.GetLazyStringForFieldWithCaching(name);
 
             int mid = comparer.LastFoundAt ?? (min + max) / 2;
             if (mid > max)

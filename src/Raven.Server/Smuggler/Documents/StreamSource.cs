@@ -21,6 +21,7 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class StreamSource : ISmugglerSource
     {
+        private static readonly StringSegment MetadataCollectionSegment = new StringSegment(Constants.Documents.Metadata.Collection );
         private readonly Stream _stream;
         private readonly JsonOperationContext _context;
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
@@ -281,7 +282,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (*(long*)state.StringBuffer == 7945807069737017682 &&
                                *(long*)(state.StringBuffer + sizeof(long)) == 7881666780093245812)
                             {
-                                var collection = _ctx.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection);
+                                var collection = _ctx.GetLazyStringForFieldWithCaching(MetadataCollectionSegment);
                                 state.StringBuffer = collection.AllocatedMemoryData.Address;
                                 state.StringSize = collection.Size;
                             }

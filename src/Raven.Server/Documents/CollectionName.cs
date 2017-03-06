@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.Static;
+using Sparrow;
 using Sparrow.Json;
 using Voron;
 
@@ -34,11 +35,22 @@ namespace Raven.Server.Documents
         public const string EmptyCollection = "@empty";
         public const string SystemCollection = "@system";
 
+        public static readonly StringSegment EmptyCollectionSegment;
+        public static readonly StringSegment MetadataKeySegment;
+        public static readonly StringSegment MetadataCollectionSegment;
+
         private readonly string _documents;
         private readonly string _tombstones;
 
         public readonly string Name;
         public readonly bool IsSystem;
+
+        static CollectionName()
+        {
+            EmptyCollectionSegment = new StringSegment(EmptyCollection);
+            MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
+            MetadataCollectionSegment = new StringSegment(Constants.Documents.Metadata.Collection);
+        }
 
         public CollectionName(string name)
         {
@@ -167,10 +179,10 @@ namespace Raven.Server.Documents
         {
             BlittableJsonReaderObject metadata;
             LazyStringValue collectionName;
-            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Collection, out collectionName) == false)
+            if (document.TryGet(MetadataKeySegment, out metadata) == false ||
+                metadata.TryGet(MetadataCollectionSegment, out collectionName) == false)
             {
-                return context.GetLazyStringForFieldWithCaching(EmptyCollection);
+                return context.GetLazyStringForFieldWithCaching(EmptyCollectionSegment);
             }
             return collectionName;
         }
@@ -185,8 +197,7 @@ namespace Raven.Server.Documents
 
             document.NoCache = true;
 
-            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Collection, out collectionName) == false)
+            if (document.TryGet(MetadataKeySegment, out metadata) == false || metadata.TryGet(MetadataCollectionSegment, out collectionName) == false)
             {
                 collectionName = EmptyCollection;
             }
