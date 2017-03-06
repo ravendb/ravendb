@@ -83,7 +83,8 @@ namespace Raven.Client.Http
                     return;
                 }
 
-                var contentType = response.Content.Headers.ContentType?.ToString();
+                IEnumerable<string> contentTypeVale;
+                var contentType = response.Content.Headers.TryGetValues("Content-Type", out contentTypeVale) ? contentTypeVale.First() : null;
                 // ReSharper disable once PossibleInvalidOperationException
                 var etag = response.GetEtagHeader().Value;
                 // We do not cache the stream response.

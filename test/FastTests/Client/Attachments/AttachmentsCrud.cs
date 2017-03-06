@@ -128,6 +128,55 @@ namespace FastTests.Client.Attachments
             }
         }
 
+        [Theory]
+        [InlineData("\t", null)]
+        [InlineData("\\", "\\")]
+        [InlineData("/", "/")]
+        [InlineData("5", "5")]
+        public void PutAndGetSpecialChar(string nameAndContentType, string expectedContentType)
+        {
+            var name = "aA" + nameAndContentType;
+            if (expectedContentType != null)
+                expectedContentType = "aA" + expectedContentType;
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", name, profileStream, name));
+                    Assert.Equal(2, result.Etag);
+                    Assert.Equal(name, result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal(name, result.ContentType);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                    var attachment = attachments.Single();
+                    Assert.Equal(name, attachment.GetString(nameof(Attachment.Name)));
+                }
+
+                var readBuffer = new byte[8];
+                using (var attachmentStream = new MemoryStream(readBuffer))
+                {
+                    var attachment = store.Operations.Send(new GetAttachmentOperation("users/1", name, (result, stream) => stream.CopyTo(attachmentStream)));
+                    Assert.Equal(name, attachment.Name);
+                    Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
+                    Assert.Equal(expectedContentType, attachment.ContentType);
+                }
+            }
+        }
+
         [Fact]
         public async Task DeleteAttachments()
         {

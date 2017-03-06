@@ -46,10 +46,28 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                var fileName = Path.GetFileName(attachment.Name);
-                fileName = Uri.EscapeDataString(fileName);
-                HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
-                HttpContext.Response.Headers["Content-Type"] = attachment.ContentType.ToString();
+                try
+                {
+                    var fileName = Path.GetFileName(attachment.Name);
+                    fileName = Uri.EscapeDataString(fileName);
+                    HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
+                }
+                catch (ArgumentException e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Skip Content-Disposition header because of not valid file name: {attachment.Name}", e);
+                }
+                try
+                {
+                    HttpContext.Response.Headers["Content-Type"] = attachment.ContentType.ToString();
+                }
+                catch (InvalidOperationException e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Skip Content-Type header because of not valid content type: {attachment.ContentType}", e);
+                    if (HttpContext.Response.Headers.ContainsKey("Content-Type"))
+                        HttpContext.Response.Headers.Remove("Content-Type");
+                }
                 HttpContext.Response.Headers["Content-Hash"] = attachment.Hash.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.Etag}\"";
 
