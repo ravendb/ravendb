@@ -1050,7 +1050,7 @@ namespace Raven.Server.Documents
                     if (local.Item2 != null || local.Item1 != null)
                     {
                         // Something is wrong, we can't have conflicts and local document/tombstone
-                        throw new InvalidDataException($"we can't have conflicts and local document/tombstone with the key {loweredKey}");
+                        ThrowInvalidConflictWithTombstone(loweredKey);
                     }
                     collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out etag);
                 }
@@ -1184,6 +1184,11 @@ namespace Raven.Server.Documents
                 Etag = etag
             };
 
+        }
+
+        private static void ThrowInvalidConflictWithTombstone(Slice loweredKey)
+        {
+            throw new InvalidDataException($"we can't have conflicts and local document/tombstone with the key {loweredKey}");
         }
 
         private void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice loweredDocumentId)

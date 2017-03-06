@@ -237,7 +237,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         [Fact]
         public async Task ReduceOutputShouldNotBeReplicated()
         {
-            var date = DateTime.Today;
+            var date = new DateTime(2017,2,14);
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {

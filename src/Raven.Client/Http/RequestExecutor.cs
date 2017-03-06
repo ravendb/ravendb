@@ -154,7 +154,10 @@ namespace Raven.Client.Http
 
         private bool UpdateTopologyField(Topology topology)
         {
-            Debug.Assert(topology?.LeaderNode != null);
+            if (topology == null)
+                return false;
+
+            Debug.Assert(topology.LeaderNode != null);
 
             var oldTopology = _topology;
             do

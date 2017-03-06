@@ -18,7 +18,7 @@ namespace Raven.Server.Documents
 
         private readonly DocumentDatabase _documentDatabase;
 
-        private readonly ConcurrentSet<IDocumentTombstoneAware> _subscriptions = new ConcurrentSet<IDocumentTombstoneAware>();
+        private readonly HashSet<IDocumentTombstoneAware> _subscriptions = new HashSet<IDocumentTombstoneAware>();
 
         private Timer _timer;
 
@@ -35,12 +35,18 @@ namespace Raven.Server.Documents
 
         public void Subscribe(IDocumentTombstoneAware subscription)
         {
-            _subscriptions.Add(subscription);
+            lock (_locker)
+            {
+                _subscriptions.Add(subscription);
+            }
         }
 
         public void Unsubscribe(IDocumentTombstoneAware subscription)
         {
-            _subscriptions.TryRemove(subscription);
+            lock (_locker)
+            {
+                _subscriptions.Remove(subscription);
+            }
         }
 
         internal void ExecuteCleanup(object state)
