@@ -14,9 +14,9 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            using (var a = new SlowTests.Bugs.CanPatchADocumentThatContainsBytes())
+            using (var a = new FastTests.Sparrow.IoMetric())
             {
-                a.DocumentWithBytes();
+                a.CanReportMetricsInParallel();
             }
         }
     }

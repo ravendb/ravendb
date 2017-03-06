@@ -50,7 +50,7 @@ namespace Sparrow
 
         public IoMeterBuffer.DurationMeasurement MeterIoRate(string fileName, MeterType type, long size)
         {
-            var fileIoMetrics = _fileMetrics.GetOrAdd(fileName, new FileIoMetrics(fileName, BufferSize, SummaryBufferSize));
+            var fileIoMetrics = _fileMetrics.GetOrAdd(fileName, fn => new FileIoMetrics(fn, BufferSize, SummaryBufferSize));
 
             IoMeterBuffer buffer;
             switch (type)
