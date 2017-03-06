@@ -16,7 +16,7 @@ namespace SlowTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
 

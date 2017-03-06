@@ -112,7 +112,7 @@ namespace Raven.Server.Utils
                 }
             }
             BlittableJsonReaderArray reader;
-            using (var mergedArray = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(_context))
+            using (var mergedArray = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(_context))
             {
                 mergedArray.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                 mergedArray.StartArrayDocument();
@@ -204,7 +204,7 @@ namespace Raven.Server.Utils
             public BlittableJsonReaderObject Metadata { get; set; }
         }
 
-        private void WriteToken(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, string propertyName, Object propertyValue)
+        private void WriteToken(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, string propertyName, Object propertyValue)
         {
             writer.WritePropertyName(propertyName);
             if (propertyValue is BlittableJsonReaderObject.PropertyDetails)
@@ -253,8 +253,8 @@ namespace Raven.Server.Utils
             throw new InvalidOperationException("Could not understand how to deal with: " + propertyValue);
         }
 
-        private void WriteConflictResolver(string name, ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> documentWriter, 
-            ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> metadataWriter, ConflictResovlerAdvisor resolver, int indent)
+        private void WriteConflictResolver(string name, ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> documentWriter,
+            ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> metadataWriter, ConflictResovlerAdvisor resolver, int indent)
         {
             MergeResult result = resolver.Resolve(indent);
 
@@ -281,8 +281,8 @@ namespace Raven.Server.Utils
 
         private MergeResult GenerateOutput(Dictionary<string, object> result, int indent)
         {
-            using (var documentWriter = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(_context))
-            using (var metadataWriter = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(_context))
+            using (var documentWriter = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(_context))
+            using (var metadataWriter = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(_context))
             {
                 documentWriter.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                 metadataWriter.Reset(BlittableJsonDocumentBuilder.UsageMode.None);

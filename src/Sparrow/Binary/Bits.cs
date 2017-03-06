@@ -11,19 +11,19 @@ namespace Sparrow.Binary
     {
         // Code taken from http://graphics.stanford.edu/~seander/bithacks.html#IntegerLogDeBruijn
 
-        private static readonly int[] MultiplyDeBruijnBitPosition = 
+        private static readonly byte[] MultiplyDeBruijnBitPosition = 
                 {
                     0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
                     8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
                 };
 
-        private static readonly int[] DeBruijnBytePos64 = 
+        private static readonly byte[] DeBruijnBytePos64 = 
             {
                 0, 0, 0, 0, 0, 1, 1, 2, 0, 3, 1, 3, 1, 4, 2, 7, 0, 2, 3, 6, 1, 5, 3, 5, 1, 3, 4, 4, 2, 5, 6, 7,
                 7, 0, 1, 2, 3, 3, 4, 6, 2, 6, 5, 5, 3, 4, 5, 6, 7, 1, 2, 4, 6, 4, 4, 5, 7, 2, 6, 5, 7, 6, 7, 7
             };
 
-        private static readonly int[] DeBruijnBytePos32 = 
+        private static readonly byte[] DeBruijnBytePos32 = 
             {
                 0, 0, 3, 0, 3, 1, 3, 0, 3, 2, 2, 1, 3, 2, 0, 1, 3, 3, 1, 2, 2, 2, 2, 0, 3, 1, 2, 0, 1, 0, 1, 1
             };
@@ -37,7 +37,7 @@ namespace Sparrow.Binary
             n |= n >> 8;
             n |= n >> 16;
 
-            return MultiplyDeBruijnBitPosition[(uint)(n * 0x07C4ACDDU) >> 27];
+            return MultiplyDeBruijnBitPosition[(n * 0x07C4ACDDU) >> 27];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

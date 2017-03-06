@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Sparrow.Collections;
 using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
 {
-    public class ManualBlittalbeJsonDocumentBuilder<TWriter> : IDisposable
+    public class ManualBlittableJsonDocumentBuilder<TWriter> : IDisposable
         where TWriter : struct, IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
@@ -21,7 +22,7 @@ namespace Sparrow.Json
         /// <param name="context"></param>
         /// <param name="mode"></param>
         /// <param name="writer"></param>
-        public ManualBlittalbeJsonDocumentBuilder(
+        public ManualBlittableJsonDocumentBuilder(
             JsonOperationContext context,
             UsageMode? mode = null,
             BlittableWriter<TWriter> writer = null)
@@ -50,7 +51,7 @@ namespace Sparrow.Json
             currentState.CurrentProperty = prop;
             currentState.MaxPropertyId = prop.PropertyId;
             currentState.FirstWrite = _writer.Position;
-            currentState.Properties = new List<PropertyTag>
+            currentState.Properties = new FastList<PropertyTag>
                         {
                             new PropertyTag
                             {
@@ -99,7 +100,7 @@ namespace Sparrow.Json
             _continuationState.Push(new BuildingState()
             {
                 State = ContinuationState.ReadPropertyName,
-                Properties = new List<PropertyTag>(),
+                Properties = new FastList<PropertyTag>(),
                 FirstWrite = -1
             });
         }
@@ -128,12 +129,11 @@ namespace Sparrow.Json
                             }
                             else
                             {
-                                outerState.Properties.Add(new PropertyTag
-                                {
-                                    Position = _writeToken.ValuePos,
-                                    Type = (byte)_writeToken.WrittenToken,
-                                    Property = outerState.CurrentProperty
-                                });
+                                outerState.Properties.Add(new PropertyTag(
+                                    type: (byte)_writeToken.WrittenToken,
+                                    property: outerState.CurrentProperty,
+                                    position: _writeToken.ValuePos                                    
+                                ));
                             }
 
                             if (outerState.FirstWrite == -1)
@@ -186,8 +186,8 @@ namespace Sparrow.Json
             _continuationState.Push(new BuildingState
             {
                 State = ContinuationState.ReadArray,
-                Types = new List<BlittableJsonToken>(),
-                Positions = new List<int>()
+                Types = new FastList<BlittableJsonToken>(),
+                Positions = new FastList<int>()
             });
         }
 
@@ -198,8 +198,12 @@ namespace Sparrow.Json
             switch (currentState.State)
             {
                 case ContinuationState.ReadArrayDocument:
-                    currentState.Properties[0].Type = (byte)_writeToken.WrittenToken;
-                    currentState.Properties[0].Position = _writeToken.ValuePos;
+                    currentState.Properties[0] = new PropertyTag
+                    {
+                        Property = currentState.Properties[0].Property,
+                        Type = (byte) _writeToken.WrittenToken,
+                        Position = _writeToken.ValuePos
+                    };
 
                     // Register property position, name id (PropertyId) and type (object type and metadata)
                     _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
@@ -207,8 +211,7 @@ namespace Sparrow.Json
                     break;
                 case ContinuationState.ReadArray:
                     var arrayToken = BlittableJsonToken.StartArray;
-                    var arrayInfoStart = _writer.WriteArrayMetadata(currentState.Positions, currentState.Types,
-                        ref arrayToken);
+                    var arrayInfoStart = _writer.WriteArrayMetadata(currentState.Positions, currentState.Types, ref arrayToken);
 
                     _writeToken = new WriteToken
                     {
@@ -226,12 +229,11 @@ namespace Sparrow.Json
                         if (outerState.State == ContinuationState.ReadPropertyName ||
                             outerState.State == ContinuationState.ReadPropertyValue)
                         {
-                            outerState.Properties.Add(new PropertyTag
-                            {
-                                Position = _writeToken.ValuePos,
-                                Type = (byte)_writeToken.WrittenToken,
-                                Property = outerState.CurrentProperty
-                            });
+                            outerState.Properties.Add(new PropertyTag(
+                                type: (byte)_writeToken.WrittenToken,
+                                property: outerState.CurrentProperty,
+                                position: _writeToken.ValuePos
+                            ));
                             outerState.State = ContinuationState.ReadPropertyName;
                         }
                         else if (outerState.State == ContinuationState.ReadArray)
@@ -241,8 +243,11 @@ namespace Sparrow.Json
                         }
                         else if (outerState.State == ContinuationState.ReadArrayDocument)
                         {
-                            outerState.Properties[0].Type = (byte)_writeToken.WrittenToken;
-                            outerState.Properties[0].Position = _writeToken.ValuePos;
+                            outerState.Properties[0] = new PropertyTag(
+                                type: (byte)_writeToken.WrittenToken,
+                                property: outerState.Properties[0].Property,                             
+                                position: _writeToken.ValuePos
+                            );
 
                             // Register property position, name id (PropertyId) and type (object type and metadata)
                             _writeToken = _writer.WriteObjectMetadata(outerState.Properties, outerState.FirstWrite, outerState.MaxPropertyId);

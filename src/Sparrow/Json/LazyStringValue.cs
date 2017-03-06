@@ -25,7 +25,27 @@ namespace Sparrow.Json
             unsafe
             {
                 return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
-            }            
+            }
+        }
+    }
+
+    public struct LazyStringValueStructComparer : IEqualityComparer<LazyStringValue>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(LazyStringValue x, LazyStringValue y)
+        {
+            if (x == y) return true;
+            if (x == null || y == null) return false;
+            return x.CompareTo(y) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(LazyStringValue obj)
+        {
+            unsafe
+            {
+                return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
+            }
         }
     }
 

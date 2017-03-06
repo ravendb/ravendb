@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Patch
                 return true;
             }
             var obj = scope.ActualPatchResult.AsObject();
-            using (var writer = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+            using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
             {
                 writer.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                 writer.StartWriteObjectDocument();
