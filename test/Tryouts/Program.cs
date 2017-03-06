@@ -14,9 +14,9 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            using (var a = new FastTests.Issues.RavenDB_6064())
+            using (var a = new SlowTests.Bugs.CanPatchADocumentThatContainsBytes())
             {
-                a.MapOnSeveralCompressedStrings();
+                a.DocumentWithBytes();
             }
         }
     }

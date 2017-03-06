@@ -145,11 +145,17 @@ namespace Raven.Server.Utils
             if (value == null)
                 return DynamicNullObject.Null;
 
+            BlittableJsonReaderArray jsonArray;
             var jsonObject = value as BlittableJsonReaderObject;
             if (jsonObject != null)
-                return new DynamicBlittableJson(jsonObject);
+            {
+                if(jsonObject.TryGetWithoutThrowingOnError("$values",out jsonArray))
+                    return new DynamicArray(jsonArray);
 
-            var jsonArray = value as BlittableJsonReaderArray;
+                return new DynamicBlittableJson(jsonObject);
+            }
+
+            jsonArray = value as BlittableJsonReaderArray;
             if (jsonArray != null)
                 return new DynamicArray(jsonArray);
 
