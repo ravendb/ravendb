@@ -304,7 +304,7 @@ namespace Raven.Client.Http
                     else if (command.ResponseType == RavenCommandResponseType.Array)
                         command.SetResponse((BlittableJsonReaderArray)null, fromCache: false);
                     else
-                        command.SetResponse(null, null, 0, fromCache: false);
+                        command.SetResponse(null, null, null, 0, fromCache: false);
                     return true;
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -34,7 +35,7 @@ namespace Raven.Client.Http
             throw new NotSupportedException($"When {nameof(ResponseType)} is set to Array then please override this method to handle the response.");
         }
 
-        public virtual void SetResponse(Stream stream, string contentType, long etag, bool fromCache)
+        public virtual void SetResponse(Stream stream, string contentType, string hash, long etag, bool fromCache)
         {
             throw new NotSupportedException($"When {nameof(ResponseType)} is set to Stream then please override this method to handle the response.");
         }
@@ -87,7 +88,9 @@ namespace Raven.Client.Http
                 var etag = response.GetEtagHeader().Value;
                 // We do not cache the stream response.
                 var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response);
-                SetResponse(uncompressedStream, contentType, etag, fromCache: false);
+                IEnumerable<string> hashVal;
+                var hash = response.Headers.TryGetValues("Content-Hash", out hashVal) ? hashVal.First() : null;
+                SetResponse(uncompressedStream, contentType, hash, etag, fromCache: false);
             }
         }
 

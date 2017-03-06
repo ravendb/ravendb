@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Operations
                 ThrowInvalidResponse();
             }
 
-            public override void SetResponse(Stream stream, string contentType, long etag, bool fromCache)
+            public override void SetResponse(Stream stream, string contentType, string hash, long etag, bool fromCache)
             {
                 if (stream == null)
                     return;
@@ -74,6 +74,7 @@ namespace Raven.Client.Documents.Operations
                     Etag = etag,
                     Name = _name,
                     DocumentId = _documentId,
+                    Hash = hash,
                 };
 
                 _handleStreamResponse(Result, stream);
