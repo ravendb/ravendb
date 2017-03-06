@@ -63,12 +63,6 @@ namespace Raven.Server.Smuggler.Documents.Processors
                 case IndexType.Map:
                 case IndexType.MapReduce:
                     var indexDefinition = (IndexDefinition)definition;
-                    if (string.Equals(indexDefinition.Name, "Raven/DocumentsByEntityName", StringComparison.OrdinalIgnoreCase))
-                        return;
-
-                    if (string.Equals(indexDefinition.Name, "Raven/ConflictDocuments", StringComparison.OrdinalIgnoreCase))
-                        return;
-
                     if (removeAnalyzers)
                     {
                         foreach (var indexDefinitionField in indexDefinition.Fields)
