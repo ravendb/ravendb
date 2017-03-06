@@ -143,6 +143,10 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WritePropertyName(nameof(AttachmentResult.ContentType));
                     writer.WriteString(result.ContentType);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(AttachmentResult.Hash));
+                    writer.WriteString(result.Hash);
 
                     writer.WriteEndObject();
                 }

@@ -2767,7 +2767,11 @@ namespace Raven.Server.Documents
                     table.Insert(tbv);
                 }
 
-                PutAttachmentStream(context, keySlice, hashSlice, stream);
+                Slice readableHashSlice;
+                using (SliceToKey(context, hashSlice, out readableHashSlice))
+                {
+                    PutAttachmentStream(context, keySlice, readableHashSlice, stream);
+                }
 
                 _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
@@ -2779,6 +2783,7 @@ namespace Raven.Server.Documents
                 ContentType = contentType,
                 Name = name,
                 DocumentId = documentId,
+                Hash = hash,
             };
         }
 
@@ -3060,6 +3065,16 @@ namespace Raven.Server.Documents
             return new LazyStringValue(null, ptr + offset, size, context);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope SliceToKey(
+            DocumentsOperationContext context, Slice key, out Slice readableKey)
+        {
+            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
+            byte offset;
+            var size = BlittableJsonReaderBase.ReadVariableSizeInt(key.Content.Ptr, 0, out offset);
+            return Slice.External(context.Allocator, key.Content.Ptr + offset, size, out readableKey);
+        }
+
         private static void ThrowConcurrentExceptionOnMissingAttacment(string documentId, string name, long expectedEtag)
         {
             throw new ConcurrencyException(
@@ -3153,9 +3168,13 @@ namespace Raven.Server.Documents
                 };
                 table.Update(tvr.Id, tbv);
 
-                // TODO: Delete stream only if not versioned
-                var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                tree.DeleteStream(hashSlice);
+                Slice readableHashSlice;
+                using (SliceToKey(context, hashSlice, out readableHashSlice))
+                {
+                    // TODO: Delete stream only if not versioned and there is not other metadata with the same hash
+                    var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+                    tree.DeleteStream(readableHashSlice);
+                }
             }
         }
     }

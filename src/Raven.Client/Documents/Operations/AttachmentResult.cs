@@ -6,5 +6,6 @@
         public long Etag;
         public string Name;
         public string DocumentId;
+        public string Hash;
     }
 }

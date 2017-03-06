@@ -11,7 +11,7 @@ namespace FastTests.Client.Attachments
 {
     public class AttachmentsCrud : RavenTestBase
     {
-        [Fact(Skip = "WIP")]
+        [Fact]
         public void PutAttachments()
         {
             using (var store = GetDocumentStore())
@@ -35,6 +35,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("A5BYxvLAy0ksUzsKTRTvd8wPeKvMztUofYShogEc+4E=", result.Hash);
                 }
                 using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
                 {
@@ -43,6 +44,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
+                    Assert.Equal("bvU6ZAjsRCl5H6gI5PvnhD+TYxaVCiC6X7u90BzSmJk=", result.Hash);
                 }
                 using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
                 {
@@ -51,6 +53,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
+                    Assert.Equal("dPgf4WfZm0y0HW0MzagieMrunz4vJdXlo5Nv89zsYNA=", result.Hash);
                 }
 
                 using (var session = store.OpenSession())
@@ -89,16 +92,19 @@ namespace FastTests.Client.Attachments
                         {
                             Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
                             Assert.Equal("image/png", attachment.ContentType);
+                            Assert.Equal("A5BYxvLAy0ksUzsKTRTvd8wPeKvMztUofYShogEc+4E=", attachment.Hash);
                         }
                         else if (i == 1)
                         {
                             Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
                             Assert.Equal("ImGgE/jPeG", attachment.ContentType);
+                            Assert.Equal("bvU6ZAjsRCl5H6gI5PvnhD+TYxaVCiC6X7u90BzSmJk=", attachment.Hash);
                         }
                         else if (i == 2)
                         {
                             Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
                             Assert.Null(attachment.ContentType);
+                            Assert.Equal("dPgf4WfZm0y0HW0MzagieMrunz4vJdXlo5Nv89zsYNA=", attachment.Hash);
                         }
                     }
                 }
@@ -110,7 +116,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task DeleteAttachments()
         {
             using (var store = GetDocumentStore())
@@ -126,6 +132,7 @@ namespace FastTests.Client.Attachments
                     using (var profileStream = new MemoryStream(Enumerable.Range(1, 3 * i).Select(x => (byte) x).ToArray()))
                         store.Operations.Send(new PutAttachmentOperation("users/1", "file" + i, profileStream, "image/png"));
                 }
+                Assert.Equal(3, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
 
                 store.Operations.Send(new DeleteAttachmentOperation("users/1", "file2"));
                 Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
