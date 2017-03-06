@@ -70,14 +70,16 @@ namespace Sparrow
             public long Size;
             private readonly DateTime _start;
             private long _fileSize;
+            public Action<MeterItem> _onFileChange;
 
-            public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size, long filesize)
+            public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size, long filesize, Action<MeterItem> onFileChange)
             {
                 Parent = parent;
                 _type = type;
                 Size = size;
                 _fileSize = filesize;
                 _start = DateTime.UtcNow;
+                _onFileChange = onFileChange;
             }
 
             public void IncrementSize(long size)
@@ -87,7 +89,7 @@ namespace Sparrow
 
             public void Dispose()
             {
-                Parent.Mark(Size, _start, DateTime.UtcNow, _type, _fileSize);
+                Parent.Mark(Size, _start, DateTime.UtcNow, _type, _fileSize, _onFileChange);
             }
 
             public void IncrementFileSize(long fileSize)
@@ -96,7 +98,7 @@ namespace Sparrow
             }
         }
 
-        internal void Mark(long size, DateTime start, DateTime end, IoMetrics.MeterType type, long filesize)
+        internal void Mark(long size, DateTime start, DateTime end, IoMetrics.MeterType type, long filesize, Action<MeterItem> onFileChange = null)
         {
             var meterItem = new MeterItem
             {
@@ -106,6 +108,8 @@ namespace Sparrow
                 Type = type,
                 End = end
             };
+
+            onFileChange?.Invoke(meterItem);
 
             var pos = Interlocked.Increment(ref _bufferPos);
             var adjustedTail = pos%_buffer.Length;

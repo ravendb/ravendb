@@ -19,10 +19,13 @@ namespace Sparrow
 
         private readonly ConcurrentQueue<string> _closedFiles = new ConcurrentQueue<string>();
 
-        public IoMetrics(int currentBufferSize, int summaryBufferSize)
+        private readonly IoChangesNotifications _ioChanges;
+
+        public IoMetrics(int currentBufferSize, int summaryBufferSize, IoChangesNotifications ioChanges = null)
         {
             BufferSize = currentBufferSize;
             SummaryBufferSize = summaryBufferSize;
+            _ioChanges = ioChanges;
         }
 
         public int BufferSize { get; }
@@ -45,10 +48,10 @@ namespace Sparrow
             }
         }
 
-        public IoMeterBuffer.DurationMeasurement MeterIoRate(string filename, MeterType type, long size)
+        public IoMeterBuffer.DurationMeasurement MeterIoRate(string fileName, MeterType type, long size)
         {
-            var fileIoMetrics = _fileMetrics.GetOrAdd(filename,
-                name => new FileIoMetrics(name, BufferSize, SummaryBufferSize));
+            var fileIoMetrics = _fileMetrics.GetOrAdd(fileName, new FileIoMetrics(fileName, BufferSize, SummaryBufferSize));
+
             IoMeterBuffer buffer;
             switch (type)
             {
@@ -64,7 +67,13 @@ namespace Sparrow
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
-            return new IoMeterBuffer.DurationMeasurement(buffer, type, size, 0);
+
+            Action<IoMeterBuffer.MeterItem> onFileChange = meterItem =>
+            {
+                _ioChanges?.RaiseNotifications(fileName, meterItem);
+            };
+
+            return new IoMeterBuffer.DurationMeasurement(buffer, type, size, 0, onFileChange);
         }
 
         public class FileIoMetrics
