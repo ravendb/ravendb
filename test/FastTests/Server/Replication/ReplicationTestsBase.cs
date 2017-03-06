@@ -8,6 +8,7 @@ using System.Threading;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -74,7 +75,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected Dictionary<string, List<ChangeVectorEntry[]>> GetConflicts(DocumentStore store, string docId)
+        protected GetConflictsResult GetConflicts(DocumentStore store, string docId)
         {
             using (var commands = store.Commands())
             {
@@ -95,16 +96,16 @@ namespace FastTests.Server.Replication
 
             if (Debugger.IsAttached)
                 timeout *= 100;
-            Dictionary<string, List<ChangeVectorEntry[]>> conflicts;
+            GetConflictsResult conflicts;
             var sw = Stopwatch.StartNew();
             do
             {
                 conflicts = GetConflicts(store, docId);
 
                 List<ChangeVectorEntry[]> list;
-                if (conflicts.TryGetValue(docId, out list) == false)
+                if (conflicts.Results.Length == 0)
                     list = new List<ChangeVectorEntry[]>();
-                if (list.Count >= count)
+                else if (conflicts.Results.Length >= count)
                     break;
 
                 if (sw.ElapsedMilliseconds > timeout)
@@ -112,11 +113,15 @@ namespace FastTests.Server.Replication
                     var replicationStats = GetReplicationStats(store);
 
                     Assert.False(true,
-                        "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts \r\n" +
+                        "Timed out while waiting for conflicts on " + docId + " we have " + conflicts.Results.Length + " conflicts \r\n" +
                         JsonConvert.SerializeObject(replicationStats, Formatting.Indented));
                 }
             } while (true);
-            return conflicts;
+
+            return new Dictionary<string, List<ChangeVectorEntry[]>>
+            {
+                { conflicts.Key, new List<ChangeVectorEntry[]>(conflicts.Results.Select(x => x.ChangeVector)) }
+            };
         }
 
         protected bool WaitForDocumentDeletion(DocumentStore store,
@@ -640,7 +645,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        private class GetReplicationConflictsCommand : RavenCommand<Dictionary<string, List<ChangeVectorEntry[]>>>
+        private class GetReplicationConflictsCommand : RavenCommand<GetConflictsResult>
         {
             private readonly string _id;
 
@@ -667,46 +672,9 @@ namespace FastTests.Server.Replication
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null)
-                    ThrowInvalidResponse();
+                    ThrowInvalidResponse();               
 
-                BlittableJsonReaderArray array;
-                if (response.TryGet("Results", out array) == false)
-                    ThrowInvalidResponse();
-
-                var result = new Dictionary<string, List<ChangeVectorEntry[]>>();
-                foreach (BlittableJsonReaderObject json in array)
-                {
-                    string key;
-                    if (json.TryGet("Key", out key) == false)
-                        ThrowInvalidResponse();
-
-                    BlittableJsonReaderArray vectorsArray;
-                    if (json.TryGet("ChangeVector", out vectorsArray) == false)
-                        ThrowInvalidResponse();
-
-                    var vectors = new ChangeVectorEntry[vectorsArray.Length];
-                    for (int i = 0; i < vectorsArray.Length; i++)
-                    {
-                        var vectorJson = (BlittableJsonReaderObject)vectorsArray[i];
-                        var vector = new ChangeVectorEntry();
-
-                        if (vectorJson.TryGet(nameof(ChangeVectorEntry.DbId), out vector.DbId) == false)
-                            ThrowInvalidResponse();
-
-                        if (vectorJson.TryGet(nameof(ChangeVectorEntry.Etag), out vector.Etag) == false)
-                            ThrowInvalidResponse();
-
-                        vectors[i] = vector;
-                    }
-
-                    List<ChangeVectorEntry[]> values;
-                    if (result.TryGetValue(key, out values) == false)
-                        result[key] = values = new List<ChangeVectorEntry[]>();
-
-                    values.Add(vectors);
-                }
-
-                Result = result;
+                Result = JsonDeserializationClient.GetConflictsResult(response);
             }
         }
     }

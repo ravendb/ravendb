@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Exceptions;
@@ -221,7 +222,7 @@ namespace Raven.Server
             if (documentConflictException != null)
             {
                 djv[nameof(DocumentConflictException.DocId)] = documentConflictException.DocId;
-                djv[nameof(DocumentConflictException.Conflicts)] = documentConflictException.GetConflicts();
+                djv[nameof(DocumentConflictException.LargestEtag)] = documentConflictException.LargestEtag;
             }
         }
 

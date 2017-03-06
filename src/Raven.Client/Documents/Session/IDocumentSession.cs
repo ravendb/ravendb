@@ -39,6 +39,15 @@ namespace Raven.Client.Documents.Session
         void Delete(string id);
 
         /// <summary>
+        ///     Marks the specified entity for deletion. The entity will be deleted when
+        ///     <see cref="IDocumentSession.SaveChanges" /> is called.
+        ///     <para>WARNING: This method will not call beforeDelete listener!</para>
+        /// </summary>
+        /// <param name="id">entity Id</param>
+        /// <param name="expectedEtag">Expected etag of a document to delete.</param>
+        void Delete(string id, long? expectedEtag);
+
+        /// <summary>
         ///     Saves all the pending changes to the server.
         /// </summary>
         void SaveChanges();

@@ -47,8 +47,8 @@ namespace FastTests.Server.Replication
 
             Assert.True(WaitForDocument(store1, "foo/bar"));
 
-            Assert.Empty(GetConflicts(store1, "foo/bar"));
-            Assert.Empty(GetConflicts(store2, "foo/bar"));
+            Assert.Empty(GetConflicts(store1, "foo/bar").Results);
+            Assert.Empty(GetConflicts(store2, "foo/bar").Results);
         }  
 
         [Fact]
@@ -102,9 +102,8 @@ namespace FastTests.Server.Replication
                     }
                     catch (DocumentConflictException e)
                     {
-                        Assert.NotEmpty(e.Conflicts);
-                        Assert.Equal(2, e.Conflicts.Count);
-
+                        Assert.Equal(e.DocId,"users/1");
+                        Assert.NotEqual(e.LargestEtag, 0);
                         slave.Commands().Delete("users/1",null);//resolve conflict to the one with tombstone
                     }
                 }

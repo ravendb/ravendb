@@ -47,7 +47,6 @@ namespace SlowTests.Issues
 
                     var e = Assert.Throws<DocumentConflictException>(() => session.Load<User>("users/1"));
                     Assert.Equal("users/1", e.DocId);
-                    Assert.Equal(2, e.Conflicts.Count());
 
                     session.Load<User>("users/2"); //this should not throw
                 }
@@ -82,7 +81,6 @@ namespace SlowTests.Issues
 
                     var e = Assert.Throws<DocumentConflictException>(() => session.Load<User>("users/1"));
                     Assert.Equal("users/1", e.DocId);
-                    Assert.Equal(2, e.Conflicts.Count());
 
                     session.Load<User>("users/2"); //this should not throw
                 }
@@ -119,7 +117,7 @@ namespace SlowTests.Issues
                 }
 
                 var conflicts = GetConflicts(storeA, "users/1");
-                Assert.Equal(0,conflicts.Count);
+                Assert.Equal(0,conflicts.Results.Length);
             }
         }
 
@@ -157,7 +155,6 @@ namespace SlowTests.Issues
                 {
                     var e = Assert.Throws<DocumentConflictException>(() => session.Load<User>("users/1"));
                     Assert.Equal("users/1", e.DocId);
-                    Assert.Equal(3, e.Conflicts.Count());
                 }
             }
         }

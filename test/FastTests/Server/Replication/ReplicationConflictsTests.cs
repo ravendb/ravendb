@@ -561,7 +561,7 @@ namespace FastTests.Server.Replication
 
                 SetReplicationConflictResolution(store2, StraightforwardConflictResolution.ResolveToLatest);
 
-                var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Count, 0);
+                var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Results.Length, 0);
                 Assert.Equal(count, 0);
 
                 var newCollection = WaitForValue(() =>
@@ -608,7 +608,7 @@ namespace FastTests.Server.Replication
                     s2.SaveChanges();
                 }
 
-                var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Count, 0);
+                var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Results.Length, 0);
                 Assert.Equal(count, 0);
 
                 New_User2 newDoc = null;
