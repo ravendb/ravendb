@@ -1203,10 +1203,9 @@ namespace Raven.Server.Documents
                     // 1. There is the same hash in another metadata
                     // 2. There is the same hash in versioned metadata
                     var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                    int size;
-                    var ptr = holder.Reader.Read((int) AttachmentsTable.Hash, out size);
+                    var hash = TableValueToKey(context, (int) AttachmentsTable.Hash, ref holder.Reader);
                     Slice hashSlice;
-                    using (Slice.External(context.Allocator, ptr, size, out hashSlice))
+                    using (Slice.External(context.Allocator, hash.Buffer, hash.Size, out hashSlice))
                     {
                         tree.DeleteStream(hashSlice);
                     }
