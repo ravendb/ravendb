@@ -66,6 +66,9 @@ namespace Raven.Server.Smuggler.Documents.Processors
                     if (string.Equals(indexDefinition.Name, "Raven/DocumentsByEntityName", StringComparison.OrdinalIgnoreCase))
                         return;
 
+                    if (string.Equals(indexDefinition.Name, "Raven/ConflictDocuments", StringComparison.OrdinalIgnoreCase))
+                        return;
+
                     if (removeAnalyzers)
                     {
                         foreach (var indexDefinitionField in indexDefinition.Fields)
