@@ -24,17 +24,11 @@ namespace SlowTests.Client.Subscriptions
                 var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria
-                {
-                    Collection = "Things",
-                };
+                var subscriptionCriteria = new SubscriptionCriteria("Things");
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
 
                 using (
-                    var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
-                    {
-                        SubscriptionId = subsId
-                    }))
+                    var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
                     var takingOverSubscriptionList = new BlockingCollection<Thing>();
@@ -69,9 +63,8 @@ namespace SlowTests.Client.Subscriptions
                     Assert.False(acceptedSusbscriptionList.TryTake(out thing));
 
                     // open second subscription
-                    using (var takingOverSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
+                    using (var takingOverSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
                     {
-                        SubscriptionId = subsId,
                         Strategy = SubscriptionOpeningStrategy.TakeOver
                     }))
                     {

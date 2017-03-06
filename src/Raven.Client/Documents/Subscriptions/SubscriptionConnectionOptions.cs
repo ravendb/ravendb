@@ -59,20 +59,26 @@ namespace Raven.Client.Documents.Subscriptions
 
     public class SubscriptionConnectionOptions
     {
-        public long SubscriptionId { get; set; }
-
-        public SubscriptionConnectionOptions()
+        private SubscriptionConnectionOptions()
         {
-            Strategy = SubscriptionOpeningStrategy.OpenIfFree;
-            MaxDocsPerBatch = 4096;
+            // for deserialization
         }
 
-        public int TimeToWaitBeforeConnectionRetryMilliseconds { get; set; } = 5000;
-        public bool IgnoreSubscribersErrors { get; set; }
+        public SubscriptionConnectionOptions(long subscriptionId)
+        {
+            if (subscriptionId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(subscriptionId));
+
+            SubscriptionId = subscriptionId;
+            Strategy = SubscriptionOpeningStrategy.OpenIfFree;
+            MaxDocsPerBatch = 4096;
+            TimeToWaitBeforeConnectionRetryMilliseconds = 5000;
+        }
+
+        public long SubscriptionId { get; private set; }
+        public int TimeToWaitBeforeConnectionRetryMilliseconds { get; set; }
+        public bool IgnoreSubscriberErrors { get; set; }
         public SubscriptionOpeningStrategy Strategy { get; set; }
         public int MaxDocsPerBatch { get; set; }
-        public long ClientSubscriptionId { get; set; } = Interlocked.Increment(ref _counter);
-
-        private static long _counter;
     }
 }

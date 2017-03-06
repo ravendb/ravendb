@@ -26,16 +26,12 @@ namespace FastTests.Client.Subscriptions
                 var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria
+                var subscriptionCriteria = new SubscriptionCriteria("Things")
                 {
-                    Collection = "Things",
                     FilterJavaScript = " return this.Name == 'ThingNo3'",
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
-                using (var subscription = subscriptionManager.Open<Thing>(new SubscriptionConnectionOptions()
-                {
-                    SubscriptionId = subsId
-                }))
+                using (var subscription = subscriptionManager.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var list = new BlockingCollection<Thing>();
                     subscription.Subscribe(x =>

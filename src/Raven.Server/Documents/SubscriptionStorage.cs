@@ -296,10 +296,9 @@ namespace Raven.Server.Documents
             {
                 [nameof(SubscriptionConnectionOptions.SubscriptionId)] = options.SubscriptionId,
                 [nameof(SubscriptionConnectionOptions.TimeToWaitBeforeConnectionRetryMilliseconds)] = options.TimeToWaitBeforeConnectionRetryMilliseconds,
-                [nameof(SubscriptionConnectionOptions.IgnoreSubscribersErrors)] = options.IgnoreSubscribersErrors,
+                [nameof(SubscriptionConnectionOptions.IgnoreSubscriberErrors)] = options.IgnoreSubscriberErrors,
                 [nameof(SubscriptionConnectionOptions.Strategy)] = options.Strategy,
-                [nameof(SubscriptionConnectionOptions.MaxDocsPerBatch)] = options.MaxDocsPerBatch,
-                [nameof(SubscriptionConnectionOptions.ClientSubscriptionId)] = options.ClientSubscriptionId
+                [nameof(SubscriptionConnectionOptions.MaxDocsPerBatch)] = options.MaxDocsPerBatch
             };
         }
 

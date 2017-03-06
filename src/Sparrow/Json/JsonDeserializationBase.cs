@@ -25,12 +25,14 @@ namespace Sparrow.Json
                     return null;
                 }
 
-                var ctor = type.GetConstructor(EmptyTypes);
+                var ctor = type
+                    .GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                    .FirstOrDefault(x => x.GetParameters().Length == 0);
                 var instance = ctor != null
                     ? Expression.New(ctor)
                     : Expression.New(type);
 
-                if (typeof(T).GetInterfaces().Contains(typeof(IFillFromBlittableJson)))
+                if (type.GetInterfaces().Contains(typeof(IFillFromBlittableJson)))
                 {
                     var obj = Expression.Parameter(type, "obj");
                     var methodToCall = typeof(IFillFromBlittableJson).GetMethod(nameof(IFillFromBlittableJson.FillFromBlittableJson), BindingFlags.Public | BindingFlags.Instance);

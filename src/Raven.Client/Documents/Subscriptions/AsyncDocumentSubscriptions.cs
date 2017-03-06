@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Extensions;
@@ -30,12 +31,10 @@ namespace Raven.Client.Documents.Subscriptions
             if (criteria == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
 
-            var nonGenericCriteria = new SubscriptionCriteria
+            var nonGenericCriteria = new SubscriptionCriteria(_store.Conventions.GetCollectionName(typeof(T)))
             {
-                Collection = _store.Conventions.GetCollectionName(typeof(T)),
                 FilterJavaScript = criteria.FilterJavaScript
             };
-
 
             return CreateAsync(nonGenericCriteria, startEtag, database);
         }
@@ -79,8 +78,6 @@ namespace Raven.Client.Documents.Subscriptions
 
         public async Task<List<SubscriptionConfig>> GetSubscriptionsAsync(int start, int take, string database = null)
         {
-            List<SubscriptionConfig> configs = new List<SubscriptionConfig>();
-
             JsonOperationContext jsonOperationContext;
             var requestExecuter = _store.GetRequestExecuter(database ?? _store.DefaultDatabase);
             requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
@@ -88,12 +85,7 @@ namespace Raven.Client.Documents.Subscriptions
             var command = new GetSubscriptionsCommand(start, take);
             await requestExecuter.ExecuteAsync(command, jsonOperationContext);
 
-            foreach (BlittableJsonReaderObject document in command.Result.Results)
-            {
-                configs.Add((SubscriptionConfig)_store.Conventions.DeserializeEntityFromBlittable(typeof(SubscriptionConfig), document));
-            }
-
-            return configs;
+            return command.Result.ToList();
         }
 
         public async Task DeleteAsync(long id, string database = null)
