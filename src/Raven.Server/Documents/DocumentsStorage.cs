@@ -1037,6 +1037,17 @@ namespace Raven.Server.Documents
                 var conflicts = GetConflictsFor(context, loweredKey);
                 if (conflicts.Count > 0) //we do have a conflict for our deletion candidate
                 {
+                    // Since this document resolve the conflict we dont need to alter the change vector.
+                    // This way we avoid another replication back to the source
+                    if (expectedEtag.HasValue)
+                    {
+                        long currentMaxConflictEtag;
+                        currentMaxConflictEtag = GetConflictsMaxEtagFor(context, loweredKey);
+
+                        throw new ConcurrencyException(
+                            $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. This means that the conflict information with which you are trying to resolve the conflict is outdated. Get conflict information and try resolving again.");
+                    }
+
                     if (local.Item2 != null || local.Item1 != null)
                     {
                         // Something is wrong, we can't have conflicts and local document/tombstone
@@ -1278,26 +1289,29 @@ namespace Raven.Server.Documents
 
         private static void ThrowOnDocumentConflict(DocumentsOperationContext context, Slice loweredKey)
         {
+            //TODO: don't forget to refactor this method
             var conflicts = GetConflictsFor(context, loweredKey);
+            long largestEtag = 0;
             if (conflicts.Count > 0)
             {
                 var conflictRecords = new List<GetConflictsResult.Conflict>();
                 foreach (var conflict in conflicts)
                 {
+                    if (largestEtag < conflict.Etag)
+                        largestEtag = conflict.Etag;
                     conflictRecords.Add(new GetConflictsResult.Conflict
-                    {
-                        Key = conflict.Key,
+                    {                        
                         ChangeVector = conflict.ChangeVector
                     });
                 }
 
-                ThrowDocumentConflictException(loweredKey, conflictRecords);
+                ThrowDocumentConflictException(loweredKey.ToString(), largestEtag);
             }
         }
 
-        private static void ThrowDocumentConflictException(Slice loweredKey, List<GetConflictsResult.Conflict> conflicts)
+        private static void ThrowDocumentConflictException(string docId,long etag)
         {
-            throw new DocumentConflictException(loweredKey.ToString(), conflicts);
+            throw new DocumentConflictException($"Conflict detected on '{docId}', conflict must be resolved before the document will be accessible.",docId, etag);
         }
 
         public long GenerateNextEtag()
@@ -1375,6 +1389,24 @@ namespace Raven.Server.Documents
                 }
             }
             return newEtag;
+        }
+
+        public long GetConflictsMaxEtagFor(DocumentsOperationContext context, Slice loweredKey)
+        {
+            if (_conflictCount == 0)
+                return 0;
+
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            long maxEtag = 0L;
+            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
+            {
+                int size;
+                var etag = Bits.SwapBytes(*(long*)tvr.Result.Reader.Read((int)ConflictsTable.Etag, out size));
+                if (maxEtag < etag)
+                    maxEtag = etag;
+            }
+
+            return maxEtag;
         }
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string key)
@@ -2006,7 +2038,18 @@ namespace Raven.Server.Documents
             {
                 // Since this document resolve the conflict we dont need to alter the change vector.
                 // This way we avoid another replication back to the source
+                if (expectedEtag.HasValue)
+                {
+                    Slice keySlice;
+                    long currentMaxConflictEtag;
+                    using (Slice.External(context.Allocator, lowerKey, lowerSize, out keySlice))
+                    {
+                        currentMaxConflictEtag = GetConflictsMaxEtagFor(context, keySlice);
+                    }
 
+                    throw new ConcurrencyException(
+                        $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. This means that the conflict information with which you are trying to resolve the conflict is outdated. Get conflict information and try resolving again.");
+                }
                 if (fromReplication)
                 {
                     DeleteConflictsFor(context, key);
@@ -2026,20 +2069,20 @@ namespace Raven.Server.Documents
 
             var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
-            Slice keySlice;
-            using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
+            Slice loweredKey;
+            using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out loweredKey))
             {
                 var oldValue = default(TableValueReader);
                 if (knownNewKey == false)
                 {
-                    table.ReadByKey(keySlice, out oldValue);
+                    table.ReadByKey(loweredKey, out oldValue);
                 }
 
                 if (changeVector == null)
                 {
                     var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, 4) : null;
                     changeVector = SetDocumentChangeVectorForLocalChange(context,
-                        keySlice,
+                        loweredKey,
                         oldChangeVector, newEtag);
                 }
 
@@ -2098,7 +2141,7 @@ namespace Raven.Server.Documents
                 if (collectionName.IsSystem == false)
                 {
                     _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context,
-                        keySlice, document);
+                        loweredKey, document);
                 }
 
                 _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);

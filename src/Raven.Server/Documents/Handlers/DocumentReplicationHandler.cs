@@ -54,6 +54,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
             DocumentsOperationContext context;
+            long maxEtag = 0;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
@@ -62,9 +63,11 @@ namespace Raven.Server.Documents.Handlers
                 var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
                 foreach (var conflict in conflicts)
                 {
+                    if (maxEtag < conflict.Etag)
+                        maxEtag = conflict.Etag;
+
                     array.Add(new DynamicJsonValue
-                    {
-                        [nameof(GetConflictsResult.Conflict.Key)] = conflict.Key,
+                    {                        
                         [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
                         [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc
                     });
@@ -72,6 +75,8 @@ namespace Raven.Server.Documents.Handlers
 
                 context.Write(writer, new DynamicJsonValue
                 {
+                    [nameof(GetConflictsResult.Key)] = docId,
+                    [nameof(GetConflictsResult.LargestEtag)] = maxEtag,
                     [nameof(GetConflictsResult.Results)] = array
                 });
 

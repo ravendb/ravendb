@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using SlowTests.Server.Rachis;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Tryouts
 {
@@ -14,9 +10,9 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            using (var a = new FastTests.Sparrow.IoMetric())
+            using (var a = new FastTests.Server.Documents.PeriodicExport.PeriodicExportTests())
             {
-                a.CanReportMetricsInParallel();
+                a.CanExportToDirectory().Wait();
             }
         }
     }

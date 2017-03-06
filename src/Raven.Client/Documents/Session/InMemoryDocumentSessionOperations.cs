@@ -457,26 +457,41 @@ more responsive application.
         /// <param name="id"></param>
         public void Delete(string id)
         {
+            Delete(id, null);
+        }
+
+        public void Delete(string id, long? expectedEtag)
+        {
             if (id == null) throw new ArgumentNullException(nameof(id));
-            DocumentInfo documentInfo;
             long? etag = null;
-            if (DocumentsById.TryGetValue(id, out documentInfo))
+            if (expectedEtag == null)
             {
-                BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
-                if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo, null))
+                DocumentInfo documentInfo;
+                if (DocumentsById.TryGetValue(id, out documentInfo))
                 {
-                    throw new InvalidOperationException(
-                        "Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
+                    var newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
+                    if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo, null))
+                    {
+                        throw new InvalidOperationException(
+                            "Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
+                    }
+                    if (documentInfo.Entity != null)
+                    {
+                        DocumentsByEntity.Remove(documentInfo.Entity);
+                    }
+                    DocumentsById.Remove(id);
+                    etag = documentInfo.ETag;
                 }
-                if (documentInfo.Entity != null)
-                {
-                    DocumentsByEntity.Remove(documentInfo.Entity);
-                }
-                DocumentsById.Remove(id);
-                etag = documentInfo.ETag;
+            }
+            else
+            {
+                etag = expectedEtag;
             }
             KnownMissingIds.Add(id);
-            etag = UseOptimisticConcurrency ? etag : null;
+
+            //if using expectedEtag explicitly, this means that we do want to use optimistic concurrency
+            if(expectedEtag.HasValue == false)
+                etag = UseOptimisticConcurrency ? etag : null;
             Defer(new DeleteCommandData(id, etag));
         }
 

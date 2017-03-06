@@ -104,7 +104,7 @@ namespace FastTests.Server.Replication
         }
 
 
-        [Fact(Skip = "RavenDB-6415")]
+        [Fact]
         public void ShouldCreateConflictThenResolveIt()
         {
             using (var source = GetDocumentStore())
@@ -131,22 +131,21 @@ namespace FastTests.Server.Replication
                 }
 
                 Assert.Throws<DocumentConflictException>(() => destination.Commands().Get("docs/1"));
-
                 //now actually resolve the conflict
                 //(resolve by using first variant)
                 var resolution = conflicts[0];
-                destination.Commands().Put(resolution.Key, null, resolution.Doc);
+                destination.Commands().Put("docs/1", null, resolution.Doc);
 
                 ////this shouldn't throw since we have just resolved the conflict
-                //var fetchedDoc = destination.Commands().Get("docs/1");
-                //var actualVal = resolution.Doc["Key"] as LazyStringValue;
-                //var fetchedVal = fetchedDoc["Key"] as LazyStringValue;
+                var fetchedDoc = destination.Commands().Get("docs/1");
+                var actualVal = resolution.Doc["Key"] as LazyStringValue;
+                var fetchedVal = fetchedDoc["Key"] as LazyStringValue;
 
                 ////not null asserts -> precaution
-                //Assert.NotNull(actualVal); 
-                //Assert.NotNull(fetchedVal);
+                Assert.NotNull(actualVal); 
+                Assert.NotNull(fetchedVal);
 
-                //Assert.Equal(fetchedVal.ToString(), actualVal.ToString());
+                Assert.Equal(fetchedVal.ToString(), actualVal.ToString());
             }
         }
     }

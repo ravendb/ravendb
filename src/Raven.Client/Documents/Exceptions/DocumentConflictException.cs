@@ -1,76 +1,47 @@
-﻿using System.Collections.Generic;
+﻿using System.IO;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
-using Raven.Client.Json.Converters;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Exceptions
 {
     public class DocumentConflictException : ConflictException
     {
-        public string DocId { get; private set; }
+        public string DocId { get; }
 
-        public List<GetConflictsResult.Conflict> Conflicts { get; }
+        public long LargestEtag { get; }
 
-        private DocumentConflictException(string message, string docId, List<GetConflictsResult.Conflict> conflicts)
+        public DocumentConflictException(string message, string docId, long etag)
             : base(message)
         {
             DocId = docId;
-            Conflicts = conflicts;
+            LargestEtag = etag;
         }
 
-        public DocumentConflictException(string docId, List<GetConflictsResult.Conflict> conflicts)
-            : this($"Conflict detected on '{docId}', conflict must be resolved before the document will be accessible.", docId, conflicts)
+        public DocumentConflictException(GetConflictsResult conflicts)
+            : this($"Conflict detected on '{conflicts.Key}', conflict must be resolved before the document will be accessible.", conflicts.Key, conflicts.LargestEtag)
         {
-        }
-
-        public DynamicJsonValue GetConflicts()
-        {
-            var array = new DynamicJsonArray();
-            foreach (var conflict in Conflicts)
-            {
-                array.Add(new DynamicJsonValue
-                {
-                    [nameof(GetConflictsResult.Conflict.Key)] = conflict.Key,
-                    [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
-                });
-            }
-
-            return new DynamicJsonValue
-            {
-                [nameof(GetConflictsResult.Results)] = array
-            }; 
         }
 
         public static DocumentConflictException From(string message)
         {
-            return new DocumentConflictException(message, null, null);
+            return new DocumentConflictException(message, null,0);
         }
 
         public static DocumentConflictException From(BlittableJsonReaderObject json)
         {
-            string message;
-            json.TryGet("Message", out message);
-
             string docId;
-            json.TryGet(nameof(DocId), out docId);
+            if (!json.TryGet(nameof(DocId), out docId))
+                throw new InvalidDataException("Expected to find property named " + nameof(DocId) + " in the exception received from the server, but didn't find it. This is probably a bug and should be reported.");
 
-            var conflicts = new List<GetConflictsResult.Conflict>();
-            BlittableJsonReaderObject conflictsObject;
-            BlittableJsonReaderArray conflictsArray;
-            if (json.TryGet(nameof(Conflicts), out conflictsObject) &&
-                conflictsObject.TryGet("Results",out conflictsArray))
-            {
-                foreach (BlittableJsonReaderObject conflictObj in conflictsArray)
-                {
-                    var conflict = JsonDeserializationClient.DocumentConflict(conflictObj);
-                    conflicts.Add(conflict);
-                }
-            }
+            string message;
+            if (!json.TryGet(nameof(Message), out message))
+                throw new InvalidDataException("Expected to find property named " + nameof(Message) + " in the exception received from the server, but didn't find it. This is probably a bug and should be reported.");
 
-            return new DocumentConflictException(message, docId, conflicts);
+            long etag;
+            if (!json.TryGet(nameof(LargestEtag), out etag))
+                throw new InvalidDataException("Expected to find property named " + nameof(LargestEtag) + " in the exception received from the server, but didn't find it. This is probably a bug and should be reported.");
+            return new DocumentConflictException(message,docId,etag);
         }
     }
 }
