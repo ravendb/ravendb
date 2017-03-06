@@ -81,7 +81,7 @@ namespace Sparrow.Json
         {
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             Tuple<object, BlittableJsonToken> result;
-            if (_cache != null && _cache.TryGetValue(index, out result))
+            if (NoCache == false && _cache != null && _cache.TryGetValue(index, out result))
                 return result;
 
             if (index >= _count || index < 0)
@@ -93,13 +93,20 @@ namespace Sparrow.Json
             result = Tuple.Create(_parent.GetObject((BlittableJsonToken)token,
                 (int)(_dataStart - _parent.BasePointer - offset)), (BlittableJsonToken)token & TypesMask);
 
-            if (result.Item1 is BlittableJsonReaderBase)
+            var blittableJsonReaderBase = result.Item1 as BlittableJsonReaderBase;
+            if (blittableJsonReaderBase  != null)
             {
-                if (_cache == null)
+                blittableJsonReaderBase.NoCache = NoCache;
+                if (NoCache == false)
                 {
-                    _cache = new FastDictionary<int, Tuple<object, BlittableJsonToken>, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
+                    if (_cache == null)
+                    {
+                        _cache =
+                            new FastDictionary<int, Tuple<object, BlittableJsonToken>, NumericEqualityStructComparer>(
+                                default(NumericEqualityStructComparer));
+                    }
+                    _cache[index] = result;
                 }
-                _cache[index] = result;
             }
             return result;
         }

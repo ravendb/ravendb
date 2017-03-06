@@ -27,7 +27,6 @@ namespace Sparrow.Json
         private FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> _objectsPathCache;
         private FastDictionary<int, object, NumericEqualityStructComparer> _objectsPathCacheByIndex;
         public string _allocation;
-        public bool NoCache { get; set; }
 
         public override string ToString()
         {
@@ -652,9 +651,15 @@ namespace Sparrow.Json
                 case BlittableJsonToken.EmbeddedBlittable:
                     return ReadNestedObject(position);
                 case BlittableJsonToken.StartObject:
-                    return new BlittableJsonReaderObject(position, _parent ?? this, type);
+                    return new BlittableJsonReaderObject(position, _parent ?? this, type)
+                    {
+                        NoCache = NoCache
+                    };
                 case BlittableJsonToken.StartArray:
-                    return new BlittableJsonReaderArray(position, _parent ?? this, type);
+                    return new BlittableJsonReaderArray(position, _parent ?? this, type)
+                    {
+                        NoCache = NoCache
+                    };
                 case BlittableJsonToken.CompressedString:
                     return ReadCompressStringLazily(position);
                 case BlittableJsonToken.Boolean:

@@ -10,6 +10,7 @@ namespace Sparrow.Json
         protected byte* _propNames;
         protected int _propNamesDataOffsetSize;
         protected internal JsonOperationContext _context;
+        public bool NoCache { get; set; }
 
         public int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {
@@ -124,7 +125,10 @@ namespace Sparrow.Json
         {
             byte offset;
             var size = ReadVariableSizeInt(pos, out offset);
-            return new BlittableJsonReaderObject(_mem + pos + offset, size, _context);
+            return new BlittableJsonReaderObject(_mem + pos + offset, size, _context)
+            {
+                NoCache = NoCache
+            };
         }
 
         public LazyStringValue ReadStringLazily(int pos)

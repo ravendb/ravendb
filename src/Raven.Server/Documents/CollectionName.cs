@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.Static;
@@ -179,8 +180,12 @@ namespace Raven.Server.Documents
             string collectionName;
             BlittableJsonReaderObject metadata;
 
-            if (document == null ||
-                document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+            if(document == null)
+                return EmptyCollection;
+
+            document.NoCache = true;
+
+            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Collection, out collectionName) == false)
             {
                 collectionName = EmptyCollection;
