@@ -592,6 +592,9 @@ namespace Sparrow.Json
 
         public int GetPropertiesByInsertionOrder(PropertiesInsertionBuffer buffers)
         {
+            if(_metadataPtr == null)
+                ThrowObjectDisposed();
+
             if (buffers.Properties == null ||
                 buffers.Properties.Length < _propCount)
             {
