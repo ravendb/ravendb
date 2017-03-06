@@ -164,6 +164,11 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         public event AfterAcknowledgment AfterAcknowledgment = delegate { };
 
+        public void Start()
+        {
+            AsyncHelpers.RunSync(StartAsync);
+        }
+
         public Task StartAsync()
         {
             if (_started)
@@ -498,7 +503,7 @@ namespace Raven.Client.Documents.Subscriptions
                             $"Subscription #{_options.SubscriptionId}. Subscriber threw an exception", ex);
                     }
 
-                    if (_options.IgnoreSubscribersErrors == false)
+                    if (_options.IgnoreSubscriberErrors == false)
                     {
                         IsErroredBecauseOfSubscriber = true;
                         LastSubscriberException = ex;

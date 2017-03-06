@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetSubscriptionsCommand : RavenCommand<GetSubscriptionsResult>
+    public class GetSubscriptionsCommand : RavenCommand<SubscriptionConfig[]>
     {
         private readonly int _start;
         private readonly int _pageSize;
@@ -35,7 +35,8 @@ namespace Raven.Client.Documents.Commands
                 Result = null;
                 return;
             }
-            Result = JsonDeserializationClient.GetSubscriptionsResult(response);
+
+            Result = JsonDeserializationClient.GetSubscriptionsResult(response).Results;
         }
 
         public override bool IsReadRequest => true;

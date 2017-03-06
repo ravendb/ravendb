@@ -36,19 +36,12 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
 
                     var user2Etag = session.Advanced.GetEtagFor(us2);
-                    var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria
-                    {
-                        Collection = "Users"
-                    }, user2Etag ?? 0);
+                    var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria("Users"), user2Etag ?? 0);
 
                     var users = new List<dynamic>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
+                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(id)))
                     {
-                        SubscriptionId = id
-                    }))
-                    {
-
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
@@ -121,10 +114,7 @@ namespace FastTests.Client.Subscriptions
 
                     var users = new List<User>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions
-                    {
-                        SubscriptionId = id
-                    }))
+                    using (var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(id)))
                     {
 
                         var docs = new BlockingCollection<User>();
@@ -195,18 +185,11 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
 
                     var user2Etag = session.Advanced.GetEtagFor(us2);
-                    subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria
-                    {
-                        Collection = "Users"
-                    }, user2Etag ?? 0);
-
+                    subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria("Users"), user2Etag ?? 0);
 
                     var users = new List<dynamic>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
-                    {
-                        SubscriptionId = subscriptionId
-                    }))
+                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                     {
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
@@ -251,12 +234,8 @@ namespace FastTests.Client.Subscriptions
                     }
                 }
 
-                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
+                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                 {
-                    SubscriptionId = subscriptionId
-                }))
-                {
-
                     var docs = new BlockingCollection<dynamic>();
 
                     subscription.Subscribe(o => docs.Add(o));

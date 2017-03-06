@@ -3,23 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
+using FastTests;
+using FastTests.Server.Documents.Notifications;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4645 : RavenTest
+    public class RavenDB_4645 : RavenTestBase
     {
         [Fact]
         public void ShouldStopPullingTaskWhenSubscriptionIsDeleted()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 // insert few documents and fetch them using subscription
                 using (var session = store.OpenSession())
@@ -32,16 +33,17 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var id = store.Subscriptions.Create(new SubscriptionCriteria());
+                var id = store.Subscriptions.Create(new SubscriptionCriteria("Companies"));
 
-                var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions
+                var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
                 {
-                    BatchOptions = new SubscriptionBatchOptions { MaxDocCount = 5 }
+                    MaxDocsPerBatch = 5
                 });
 
-                var docs = new List<RavenJObject>();
+                var docs = new List<dynamic>();
 
                 subscription.Subscribe(docs.Add);
+                subscription.Start();
 
                 Assert.True(SpinWait.SpinUntil(() => docs.Count == 10, TimeSpan.FromSeconds(60)));
 
@@ -64,6 +66,6 @@ namespace Raven.Tests.Issues
                 // wait 3 seconds for new documents - we shouldn't get any
                 Assert.False(SpinWait.SpinUntil(() => docs.Count != 10, TimeSpan.FromSeconds(3)));
             }
-        } 
+        }
     }
 }

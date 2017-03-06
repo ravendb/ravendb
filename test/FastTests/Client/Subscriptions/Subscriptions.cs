@@ -18,10 +18,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCriteria = new SubscriptionCriteria
-                {
-                    Collection = "People",
-                };
+                var subscriptionCriteria = new SubscriptionCriteria("People");
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria);
 
                 var subscriptionsConfig = await store.AsyncSubscriptions.GetSubscriptionsAsync(0, 10);
@@ -44,15 +41,9 @@ namespace FastTests.Client.Subscriptions
                 var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria
-                {
-                    Collection = "Things",
-                };
+                var subscriptionCriteria = new SubscriptionCriteria("Things");
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
-                using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
-                {
-                    SubscriptionId = subsId
-                }))
+                using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var list = new BlockingCollection<Thing>();
                     subscription.Subscribe<Thing>(x =>
@@ -81,15 +72,11 @@ namespace FastTests.Client.Subscriptions
                 var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria
-                {
-                    Collection = "Things",
-                };
+                var subscriptionCriteria = new SubscriptionCriteria("Things");
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
                 using (
-                    var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
+                    var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
                     {
-                        SubscriptionId = subsId,
                         TimeToWaitBeforeConnectionRetryMilliseconds = 20000
                     }))
                 {
@@ -114,9 +101,8 @@ namespace FastTests.Client.Subscriptions
                     // open second subscription
                     using (
                         var rejectedSusbscription =
-                            store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
+                            store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
                             {
-                                SubscriptionId = subsId,
                                 Strategy = SubscriptionOpeningStrategy.OpenIfFree,
                                 TimeToWaitBeforeConnectionRetryMilliseconds = 2000
                             }))
@@ -152,16 +138,10 @@ namespace FastTests.Client.Subscriptions
                 var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria
-                {
-                    Collection = "Things",
-                };
+                var subscriptionCriteria = new SubscriptionCriteria("Things");
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
                 using (
-                    var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
-                    {
-                        SubscriptionId = subsId
-                    }))
+                    var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
 
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
@@ -192,9 +172,8 @@ namespace FastTests.Client.Subscriptions
                     // open second subscription
                     using (
                         var waitingSubscription =
-                            store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
+                            store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
                             {
-                                SubscriptionId = subsId,
                                 Strategy = SubscriptionOpeningStrategy.WaitForFree,
                                 TimeToWaitBeforeConnectionRetryMilliseconds = 250
                             }))

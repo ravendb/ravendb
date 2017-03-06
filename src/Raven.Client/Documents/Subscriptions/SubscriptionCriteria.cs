@@ -4,17 +4,46 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using Sparrow.Json;
+
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionCriteria
+    public class SubscriptionCriteria : IFillFromBlittableJson
     {
-        public string Collection { get; set; }
+        private SubscriptionCriteria()
+        {
+            // for deserialization
+        }
+
+        public SubscriptionCriteria(string collection)
+        {
+            if (collection == null)
+                throw new ArgumentNullException(nameof(collection));
+
+            Collection = collection;
+        }
+
+        public string Collection { get; private set; }
         public string FilterJavaScript { get; set; }
+
+        public void FillFromBlittableJson(BlittableJsonReaderObject json)
+        {
+            if (json == null)
+                return;
+
+            string collection;
+            if (json.TryGet(nameof(Collection), out collection))
+                Collection = collection;
+
+            string filterJavaScript;
+            if (json.TryGet(nameof(FilterJavaScript), out filterJavaScript))
+                FilterJavaScript = filterJavaScript;
+        }
     }
 
     public class SubscriptionCriteria<T>
     {
-        public string Collection { get; set; }
         public string FilterJavaScript { get; set; }
     }
 }

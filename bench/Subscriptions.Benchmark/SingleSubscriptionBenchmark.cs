@@ -105,16 +105,12 @@ namespace SubscriptionsBenchmark
             {
                 if (_subscriptionId.HasValue == false)
                 {
-                    _subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria()
-                    {
-                        Collection = _collectionName
-                    }).ConfigureAwait(false);
+                    _subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria(_collectionName)).ConfigureAwait(false);
                 }
 
 
-                using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
+                using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(_subscriptionId.Value)
                 {
-                    SubscriptionId = _subscriptionId.Value,
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 }))
                 {

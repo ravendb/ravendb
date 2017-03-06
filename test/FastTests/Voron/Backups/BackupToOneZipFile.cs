@@ -24,10 +24,7 @@ namespace FastTests.Voron.Backups
             {
                 var context = DocumentsOperationContext.ShortTermSingleUse(database);
 
-                var subscriptionCriteria = new SubscriptionCriteria
-                {
-                    Collection = "Users",
-                };
+                var subscriptionCriteria = new SubscriptionCriteria("Users");
                 var obj = JObject.FromObject(subscriptionCriteria);
                 var objString = obj.ToString(Formatting.None);
                 var stream = new MemoryStream();
@@ -109,10 +106,7 @@ namespace FastTests.Voron.Backups
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
 
-                    var subscriptionCriteria = new SubscriptionCriteria
-                    {
-                        Collection = "Users",
-                    };
+                    var subscriptionCriteria = new SubscriptionCriteria("Users");
                     var obj = JObject.FromObject(subscriptionCriteria);
                     var objString = obj.ToString(Formatting.None);
                     var stream = new MemoryStream();

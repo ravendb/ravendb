@@ -4,12 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Sparrow.Json;
-
 namespace Raven.Client.Documents.Subscriptions
 {
     public class GetSubscriptionsResult
     {
-        public BlittableJsonReaderArray Results;
+        public SubscriptionConfig[] Results;
     }
 }
