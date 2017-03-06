@@ -120,11 +120,6 @@ interface documentCountDto {
     IsEtl: boolean;
 }
 
-interface documentPreviewDto {
-    Results: documentDto[];
-    TotalResults: number;
-}
-
 interface replicationDestinationDto {
     Url: string;
     Username: string;

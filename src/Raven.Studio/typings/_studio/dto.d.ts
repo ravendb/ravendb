@@ -22,6 +22,10 @@ interface resultsDto<T> {
     Results: T[];
 }
 
+interface resultsWithTotalCountDto<T> extends resultsDto<T> {
+    TotalResults: number;
+}
+
 
 interface documentDto extends metadataAwareDto {
     [key: string]: any;

@@ -111,7 +111,9 @@ namespace Raven.Server.Documents.Handlers
         private void GetDocuments(DocumentsOperationContext context, Transformer transformer, bool metadataOnly)
         {
             // everything here operates on all docs
-            var actualEtag = ComputeAllDocumentsEtag(context);
+            var actualEtag = DocumentsStorage.ComputeEtag(
+                DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction), Database.DocumentsStorage.GetNumberOfDocuments(context)
+            );
 
             if (GetLongFromHeaders("If-None-Match") == actualEtag)
             {
@@ -341,18 +343,6 @@ namespace Raven.Server.Documents.Handlers
             }
             return (long)Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
-
-        private unsafe long ComputeAllDocumentsEtag(DocumentsOperationContext context)
-        {
-            var buffer = stackalloc long[2];
-
-            buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
-            buffer[1] = Database.DocumentsStorage.GetNumberOfDocuments(context);
-
-            return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
-        }
-
-
 
         [RavenAction("/databases/*/docs", "DELETE", "/databases/{databaseName:string}/docs?id={documentId:string}")]
         public async Task Delete()

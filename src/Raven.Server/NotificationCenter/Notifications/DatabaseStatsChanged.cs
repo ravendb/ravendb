@@ -52,19 +52,11 @@ namespace Raven.Server.NotificationCenter.Notifications
                 Severity = NotificationSeverity.Info,
                 CountOfDocuments = countOfDocs,
                 LastEtag = lastEtag,
-                GlobalDocumentsEtag = ComputeEtag(lastEtag, countOfDocs).ToString(), // use string here as javascript may round longs
+                GlobalDocumentsEtag = DocumentsStorage.ComputeEtag(lastEtag, countOfDocs).ToString(), // use string here as javascript may round longs
                 CountOfIndexes = countOfIndexes,
                 CountOfStaleIndexes = countOfStaleIndexes,
                 ModifiedCollections = modifiedCollections,
             };
-        }
-
-        public static unsafe long ComputeEtag(long etag, long numberOfDocuments)
-        {
-            var buffer = stackalloc long[2];
-            buffer[0] = etag;
-            buffer[1] = numberOfDocuments;
-            return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
         }
 
         public class ModifiedCollection
@@ -82,7 +74,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                 Name = name;
                 Count = count;
                 LastDocumentEtag = lastDocumentEtag;
-                CollectionEtag = ComputeEtag(lastDocumentEtag, count).ToString();
+                CollectionEtag = DocumentsStorage.ComputeEtag(lastDocumentEtag, count).ToString();
             }
 
             public bool Equals(ModifiedCollection other)

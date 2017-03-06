@@ -225,11 +225,11 @@ class virtualGrid<T> {
         if (this.isLoading()) {
             this.queuedFetch = { skip: skip, take: take };
         } else {
-            this.isLoading(true);
-
             const [safeSkip, safeTake] = this.makeSkipAndTakeSafe(skip, take);
 
             if (safeTake > 0) {
+                this.isLoading(true);
+
                 this.settings.fetcher(safeSkip, safeTake)
                     .then((results: pagedResult<T>) => this.chunkFetched(results, safeSkip, safeTake))
                     .fail(error => this.chunkFetchFailed(error, skip, safeTake))
@@ -357,15 +357,15 @@ class virtualGrid<T> {
         let firstVisibleRowIndex: number | null = null;
         let totalVisible = 0;
         for (let i = 0; i < this.virtualRows.length; i++) {
-            const virtualRow = this.virtualRows[i];
-            const isVisible = !virtualRow.isOffscreen(scrollTop, scrollBottom);
+            const row = this.virtualRows[i];
+            const isVisible = !row.isOffscreen(scrollTop, scrollBottom);
             if (isVisible) {
-                firstVisibleRowIndex = firstVisibleRowIndex === null ? virtualRow.index : Math.min(virtualRow.index, firstVisibleRowIndex);
+                firstVisibleRowIndex = firstVisibleRowIndex === null ? row.index : Math.min(row.index, firstVisibleRowIndex);
                 totalVisible++;
 
                 // Fill it with the data we've got loaded. If there's no data, it will display the loading indicator.
-                const isRowChecked = this.isSelected(virtualRow.index);
-                virtualRow.populate(this.items[virtualRow.index], virtualRow.index, isRowChecked, columns);
+                const isRowChecked = this.isSelected(row.index);
+                row.populate(this.items[row.index], row.index, isRowChecked, columns);
             }
         }
 
