@@ -7,7 +7,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import gapFinder = require("common/helpers/graph/gapFinder");
 import messagePublisher = require("common/messagePublisher");
 import graphHelper = require("common/helpers/graph/graphHelper");
-import getIOMetricsCommand = require("commands/database/debug/getIOMetricsCommand");
 import liveIOStatsWebSocketClient = require("common/liveIOStatsWebSocketClient");
 
 type rTreeLeaf = {
