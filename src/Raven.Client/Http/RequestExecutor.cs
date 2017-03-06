@@ -109,23 +109,23 @@ namespace Raven.Client.Http
                         _firstTimeTryLoadFromTopologyCache = false;
 
                         var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
-                        if (cachedTopology != null && cachedTopology.Etag > _topology.Etag)
+                        if (UpdateTopologyField(cachedTopology))
                         {
-                            _topology = cachedTopology;
                             // we have cached topology, but we need to verify it is up to date, we'll check in 
                             // 1 second, and let the rest of the system start
                             _updateTopologyTimer.Change(TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
-                            return;
                         }
+                        return;
                     }
 
                     var command = new GetTopologyCommand();
                     try
                     {
+                     
                         await ExecuteAsync(new ChoosenNode { Node = node }, context, command);
-                        if (_topology.Etag < command.Result.Etag)
+
+                        if (UpdateTopologyField(command.Result))
                         {
-                            _topology = command.Result;
                             TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, context);
                         }
                     }
@@ -150,6 +150,23 @@ namespace Raven.Client.Http
                 if(lookTaken)
                     Monitor.Exit(this);
             }
+        }
+
+        private bool UpdateTopologyField(Topology topology)
+        {
+            Debug.Assert(topology?.LeaderNode != null);
+
+            var oldTopology = _topology;
+            do
+            {
+                if (oldTopology.Etag >= topology.Etag)
+                    return false;
+
+                var changed = Interlocked.CompareExchange(ref _topology, topology, oldTopology);
+                if (changed == oldTopology)
+                    return true;
+                oldTopology = changed;
+            } while (true);
         }
 
         public void Execute<TResult>(RavenCommand<TResult> command, JsonOperationContext context)
@@ -203,7 +220,7 @@ namespace Raven.Client.Http
                     {
                         response = await GetHttpClientForCommand(command).SendAsync(request, token).ConfigureAwait(false);
                     }
-
+                    
                     sp.Stop();
                 }
                 catch (HttpRequestException e) // server down, network down
@@ -385,6 +402,7 @@ namespace Raven.Client.Http
             var topology = _topology;
 
             var leaderNode = topology.LeaderNode;
+            Debug.Assert(leaderNode != null);
 
             if (command.IsReadRequest)
             {
