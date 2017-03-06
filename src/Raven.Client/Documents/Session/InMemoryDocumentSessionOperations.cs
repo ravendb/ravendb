@@ -464,35 +464,26 @@ more responsive application.
         {
             if (id == null) throw new ArgumentNullException(nameof(id));
             long? etag = null;
-            if (expectedEtag == null)
+            DocumentInfo documentInfo;
+            if (DocumentsById.TryGetValue(id, out documentInfo))
             {
-                DocumentInfo documentInfo;
-                if (DocumentsById.TryGetValue(id, out documentInfo))
+                var newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
+                if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo, null))
                 {
-                    var newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
-                    if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo, null))
-                    {
-                        throw new InvalidOperationException(
-                            "Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
-                    }
-                    if (documentInfo.Entity != null)
-                    {
-                        DocumentsByEntity.Remove(documentInfo.Entity);
-                    }
-                    DocumentsById.Remove(id);
-                    etag = documentInfo.ETag;
+                    throw new InvalidOperationException(
+                        "Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
                 }
+                if (documentInfo.Entity != null)
+                {
+                    DocumentsByEntity.Remove(documentInfo.Entity);
+                }
+                DocumentsById.Remove(id);
+                etag = documentInfo.ETag;
             }
-            else
-            {
-                etag = expectedEtag;
-            }
+            
             KnownMissingIds.Add(id);
-
-            //if using expectedEtag explicitly, this means that we do want to use optimistic concurrency
-            if(expectedEtag.HasValue == false)
-                etag = UseOptimisticConcurrency ? etag : null;
-            Defer(new DeleteCommandData(id, etag));
+            etag = UseOptimisticConcurrency ? etag : null;
+            Defer(new DeleteCommandData(id, expectedEtag ?? etag));
         }
 
         //TODO

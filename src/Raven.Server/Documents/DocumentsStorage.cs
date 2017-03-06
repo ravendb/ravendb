@@ -1044,8 +1044,7 @@ namespace Raven.Server.Documents
                         long currentMaxConflictEtag;
                         currentMaxConflictEtag = GetConflictsMaxEtagFor(context, loweredKey);
 
-                        throw new ConcurrencyException(
-                            $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. This means that the conflict information with which you are trying to resolve the conflict is outdated. Get conflict information and try resolving again.");
+                        ThrowConcurrencyExceptionOnConflict(expectedEtag, currentMaxConflictEtag);
                     }
 
                     if (local.Item2 != null || local.Item1 != null)
@@ -1398,7 +1397,7 @@ namespace Raven.Server.Documents
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
             long maxEtag = 0L;
-            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
+            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, startsWith: true))
             {
                 int size;
                 var etag = Bits.SwapBytes(*(long*)tvr.Result.Reader.Read((int)ConflictsTable.Etag, out size));
@@ -2047,8 +2046,7 @@ namespace Raven.Server.Documents
                         currentMaxConflictEtag = GetConflictsMaxEtagFor(context, keySlice);
                     }
 
-                    throw new ConcurrencyException(
-                        $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. This means that the conflict information with which you are trying to resolve the conflict is outdated. Get conflict information and try resolving again.");
+                    ThrowConcurrencyExceptionOnConflict(expectedEtag, currentMaxConflictEtag);
                 }
                 if (fromReplication)
                 {
@@ -2170,6 +2168,12 @@ namespace Raven.Server.Documents
                 Key = key,
                 Collection = collectionName
             };
+        }
+
+        private static void ThrowConcurrencyExceptionOnConflict(long? expectedEtag, long currentMaxConflictEtag)
+        {
+            throw new ConcurrencyException(
+                $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. This means that the conflict information with which you are trying to resolve the conflict is outdated. Get conflict information and try resolving again.");
         }
 
         private static void ThrowConcurrentExceptionOnMissingDoc(string key, long expectedEtag)
