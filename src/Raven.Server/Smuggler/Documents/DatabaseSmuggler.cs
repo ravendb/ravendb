@@ -261,6 +261,12 @@ namespace Raven.Server.Smuggler.Documents
                                 continue;
                             }
 
+                            if (string.Equals(indexDefinition.Name, "Raven/ConflictDocuments", StringComparison.OrdinalIgnoreCase))
+                            {
+                                result.AddInfo("Skipped 'Raven/ConflictDocuments' index. It is no longer needed.");
+                                continue;
+                            }
+
                             try
                             {
                                 if (_options.RemoveAnalyzers)

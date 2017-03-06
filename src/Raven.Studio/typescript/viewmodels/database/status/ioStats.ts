@@ -103,6 +103,9 @@ class hitTest {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
+        const overToggleIndexes = items.filter(x => x.actionType === "toggleIndexes").length > 0;
+        this.cursor(overToggleIndexes ? "pointer" : "auto");
+
         const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Server.Documents.Handlers.IOMetricsRecentStats)[0];
         if (currentItem) {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);          
@@ -122,13 +125,13 @@ class hitTest {
         return this.rTree.search({
             minX: x,
             maxX: x,
-            minY: y - metrics.brushSectionHeight,
-            maxY: y - metrics.brushSectionHeight
+            minY: y - ioStats.brushSectionHeight,
+            maxY: y - ioStats.brushSectionHeight
         });
     }
 }
 
-class metrics extends viewModelBase {
+class ioStats extends viewModelBase {
 
     /* static */
 
@@ -158,9 +161,9 @@ class metrics extends viewModelBase {
     private static readonly trackMargin = 4;
     private static readonly closedTrackPadding = 2;
     private static readonly openedTrackPadding = 4;
-    private static readonly closedTrackHeight = metrics.closedTrackPadding + metrics.trackHeight + metrics.closedTrackPadding;
-    private static readonly openedTrackHeight = metrics.closedTrackHeight * 4;
-    static readonly brushSectionHeight = metrics.openedTrackHeight;       
+    private static readonly closedTrackHeight = ioStats.closedTrackPadding + ioStats.trackHeight + ioStats.closedTrackPadding;
+    private static readonly openedTrackHeight = ioStats.closedTrackHeight * 4;
+    static readonly brushSectionHeight = ioStats.openedTrackHeight;       
 
     private static readonly itemHeight = 19;
     private static readonly itemMargin = 1;    
@@ -290,7 +293,7 @@ class metrics extends viewModelBase {
             let trackName = env.Path.substring(this.commonPathsPrefix.length);           
 
             // 2.1 Check if indexes exist        
-            if (env.Path.substring(this.commonPathsPrefix.length).startsWith(metrics.indexesString)) {              
+            if (env.Path.substring(this.commonPathsPrefix.length).startsWith(ioStats.indexesString)) {              
                 this.hasIndexes(true);
             } 
 
@@ -299,13 +302,13 @@ class metrics extends viewModelBase {
                 file.Recent.forEach(recentItem => {
                    
                     // 2.3 Calc highest batch size for each type
-                    if (recentItem.Type === metrics.journalWriteString) {
+                    if (recentItem.Type === ioStats.journalWriteString) {
                         maxJournalWriteSize = recentItem.Size > maxJournalWriteSize ? recentItem.Size : maxJournalWriteSize;
                     }
-                    if (recentItem.Type === metrics.dataSyncString) {
+                    if (recentItem.Type === ioStats.dataSyncString) {
                         maxVoronDataSyncSize = recentItem.Size > maxVoronDataSyncSize ? recentItem.Size : maxVoronDataSyncSize;
                     }
-                    if (recentItem.Type === metrics.dataFlushString) {
+                    if (recentItem.Type === ioStats.dataFlushString) {
                         maxVoronDataFlushSize = recentItem.Size > maxVoronDataFlushSize ? recentItem.Size : maxVoronDataFlushSize;
                     }
 
@@ -357,8 +360,8 @@ class metrics extends viewModelBase {
             .append("svg:rect")
             .attr("class", "pane")
             .attr("width", this.totalWidth)
-            .attr("height", this.totalHeight - metrics.brushSectionHeight)
-            .attr("transform", "translate(" + 0 + "," + metrics.brushSectionHeight + ")")
+            .attr("height", this.totalHeight - ioStats.brushSectionHeight)
+            .attr("transform", "translate(" + 0 + "," + ioStats.brushSectionHeight + ")")
             .call(this.zoom)
             .call(d => this.setupEvents(d));
     }
@@ -423,10 +426,10 @@ class metrics extends viewModelBase {
 
         const indexesTracks = this.data.Environments.filter((x) => {               
             let temp = x.Path.substring(this.commonPathsPrefix.length);
-            return temp.startsWith(metrics.indexesString);
+            return temp.startsWith(ioStats.indexesString);
         });                 
        
-        const indexesTracksNames = indexesTracks.map(x => x.Path.substring(this.commonPathsPrefix.length + 1 + metrics.indexesString.length));
+        const indexesTracksNames = indexesTracks.map(x => x.Path.substring(this.commonPathsPrefix.length + 1 + ioStats.indexesString.length));
 
         // filteredIndexesTracksNames will be indexes tracks names that are NOT SUPPOSED TO BE SEEN ....
         this.filteredIndexesTracksNames(indexesTracksNames.filter(x => !(x.toLowerCase().includes(criteria))));       
@@ -518,7 +521,7 @@ class metrics extends viewModelBase {
             timeRanges = [[new Date(), new Date()]];
         }
 
-        this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
+        this.gapFinder = new gapFinder(timeRanges, ioStats.minGapSize);
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
     }
 
@@ -533,7 +536,7 @@ class metrics extends viewModelBase {
             const canvas = this.canvas.node() as HTMLCanvasElement;
             const context = canvas.getContext("2d");
             context.beginPath(); 
-            context.clearRect(0, 0, this.totalWidth, metrics.brushSectionHeight);
+            context.clearRect(0, 0, this.totalWidth, ioStats.brushSectionHeight);
             context.drawImage(this.brushSection, 0, 0);
 
             // 2. Draw main (bottom) section
@@ -546,21 +549,21 @@ class metrics extends viewModelBase {
         // 1. Prepare virtual canvas element for the brush section, will not be appended to the DOM
         this.brushSection = document.createElement("canvas");
         this.brushSection.width = this.totalWidth;
-        this.brushSection.height = metrics.brushSectionHeight;
+        this.brushSection.height = ioStats.brushSectionHeight;
        
         const timeRanges = this.extractTimeRanges();
-        this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
+        this.gapFinder = new gapFinder(timeRanges, ioStats.minGapSize);
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
 
         const context = this.brushSection.getContext("2d");
 
         // 2. Draw scale
         const ticks = this.getTicks(this.xBrushTimeScale);
-        this.drawXaxisTimeLines(context, ticks, 0, metrics.brushSectionHeight);
+        this.drawXaxisTimeLines(context, ticks, 0, ioStats.brushSectionHeight);
         this.drawXaxisTimeLabels(context, ticks, 5, 5);
 
-        context.strokeStyle = metrics.colors.axis;
-        context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
+        context.strokeStyle = ioStats.colors.axis;
+        context.strokeRect(0.5, 0.5, this.totalWidth - 1, ioStats.brushSectionHeight - 1);
 
         // 3. Draw accumulative data in the brush section (the top area)
         let yStartItem: number;      
@@ -575,22 +578,22 @@ class metrics extends viewModelBase {
                     context.fillStyle = this.calcItemColor(recentItem, false);
 
                     switch (recentItem.Type) {
-                        case metrics.journalWriteString:
-                            yStartItem = metrics.closedTrackHeight;
+                        case ioStats.journalWriteString:
+                            yStartItem = ioStats.closedTrackHeight;
                             break;
-                        case metrics.dataFlushString:
-                            yStartItem = metrics.closedTrackHeight * 2;
+                        case ioStats.dataFlushString:
+                            yStartItem = ioStats.closedTrackHeight * 2;
                             break;
-                        case metrics.dataSyncString:
-                            yStartItem = metrics.closedTrackHeight * 3;       
+                        case ioStats.dataSyncString:
+                            yStartItem = ioStats.closedTrackHeight * 3;       
                             break;                        
                     }
                    
                     // 4. Draw item on canvas
                     const x1 = this.xBrushTimeScale(recentItem.StartedAsDate);
                     let dx = extentFunc(recentItem.Duration);
-                    dx = dx < metrics.minItemWidth ? metrics.minItemWidth : dx;                   
-                    context.fillRect(x1, yStartItem, dx, metrics.trackHeight);                 
+                    dx = dx < ioStats.minItemWidth ? ioStats.minItemWidth : dx;                   
+                    context.fillRect(x1, yStartItem, dx, ioStats.trackHeight);                 
                 });
             });
         });
@@ -601,14 +604,14 @@ class metrics extends viewModelBase {
 
     private drawBrushGaps(context: CanvasRenderingContext2D) {
         context.beginPath();
-        context.strokeStyle = metrics.colors.gaps;
+        context.strokeStyle = ioStats.colors.gaps;
 
         for (let i = 0; i < this.gapFinder.gapsPositions.length; i++) {
             const gap = this.gapFinder.gapsPositions[i];
            
             const gapX = this.xBrushTimeScale(gap.start);
             context.moveTo(gapX, 1);
-            context.lineTo(gapX, metrics.brushSectionHeight - 2);            
+            context.lineTo(gapX, ioStats.brushSectionHeight - 2);            
         }
 
         context.stroke();
@@ -626,7 +629,7 @@ class metrics extends viewModelBase {
                 .call(this.brush)
                 .selectAll("rect")
                 .attr("y", 0)
-                .attr("height", metrics.brushSectionHeight - 1);
+                .attr("height", ioStats.brushSectionHeight - 1);
         }
     }
 
@@ -642,7 +645,7 @@ class metrics extends viewModelBase {
     }
 
     private constructYScale() {              
-        let currentOffset = metrics.axisHeight - this.currentYOffset;  
+        let currentOffset = ioStats.axisHeight - this.currentYOffset;  
       
         let domain = [] as Array<string>;
         let range = [] as Array<number>;
@@ -654,7 +657,7 @@ class metrics extends viewModelBase {
         // 1. Database main path
         domain.push(this.data.Environments[0].Path);
         range.push(currentOffset);
-        currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
+        currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
 
         // 2. We want indexes to show in second track even though they are last in the endpoint info..       
         if (this.indexesVisible()) {
@@ -663,7 +666,7 @@ class metrics extends viewModelBase {
                 // 2.1 indexes closed
                 if (!this.isIndexesExpanded()) {
                     if (firstIndex) {
-                        domain.push(metrics.indexesString);
+                        domain.push(ioStats.indexesString);
                         range.push(currentOffset);
                         firstIndex = false;
                     }
@@ -674,29 +677,29 @@ class metrics extends viewModelBase {
                 else {
                     // If first index.... push the special indexes header ...
                     if (firstIndex) {
-                        domain.push(metrics.indexesString);
+                        domain.push(ioStats.indexesString);
                         range.push(currentOffset);
-                        currentOffset += metrics.closedTrackHeight + metrics.trackMargin;
+                        currentOffset += ioStats.closedTrackHeight + ioStats.trackMargin;
                         firstIndex = false;
                     }
                     // Push the index path - only if not filtered out..
                     if (!this.filtered(this.data.Environments[i].Path)) {
                         domain.push(this.data.Environments[i].Path);
                         range.push(currentOffset);
-                        currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
+                        currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
                     }
                 }
             }
 
             if (!this.isIndexesExpanded()) {
-                currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
+                currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
             }
         }        
 
         // 3. Subscriptions path
         domain.push(this.data.Environments[1].Path);
         range.push(currentOffset);
-        currentOffset += metrics.openedTrackHeight + metrics.trackMargin;
+        currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
 
         // 4. Configuration path
         domain.push(this.data.Environments[2].Path);
@@ -708,17 +711,17 @@ class metrics extends viewModelBase {
     }
 
     private calcMaxYOffset() {    
-        let offset = metrics.axisHeight;       
+        let offset = ioStats.axisHeight;       
 
         if (this.isIndexesExpanded()) {
-            offset += metrics.openedTrackHeight * this.data.Environments.length + metrics.closedTrackHeight;
+            offset += ioStats.openedTrackHeight * this.data.Environments.length + ioStats.closedTrackHeight;
         }
         else {                      
-            offset += metrics.openedTrackHeight * 4; // * 4 because I have 4 tracks: Data|Indexes|Subscriptions|Configurations
+            offset += ioStats.openedTrackHeight * 4; // * 4 because I have 4 tracks: Data|Indexes|Subscriptions|Configurations
         }        
 
         const extraBottomMargin = 100;
-        const availableHeightForTracks = this.totalHeight - metrics.brushSectionHeight;        
+        const availableHeightForTracks = this.totalHeight - ioStats.brushSectionHeight;        
 
         this.maxYOffset = Math.max(offset + extraBottomMargin - availableHeightForTracks, 0);
     }
@@ -735,7 +738,7 @@ class metrics extends viewModelBase {
     }
 
     private getTicks(scale: d3.time.Scale<number, number>): Date[] {       
-        return d3.range(metrics.initialOffset, this.totalWidth - metrics.step, metrics.step)
+        return d3.range(ioStats.initialOffset, this.totalWidth - ioStats.step, ioStats.step)
                  .map(y => scale.invert(y));   
     }
 
@@ -745,11 +748,11 @@ class metrics extends viewModelBase {
             context.beginPath();
 
             context.setLineDash([4, 2]);           
-            context.strokeStyle = metrics.colors.axis;    
+            context.strokeStyle = ioStats.colors.axis;    
 
             ticks.forEach((x, i) => {
-                context.moveTo(metrics.initialOffset + (i * metrics.step) + 0.5, yStart);
-                context.lineTo(metrics.initialOffset + (i * metrics.step) + 0.5, yEnd);
+                context.moveTo(ioStats.initialOffset + (i * ioStats.step) + 0.5, yStart);
+                context.lineTo(ioStats.initialOffset + (i * ioStats.step) + 0.5, yEnd);
             });
 
             context.stroke();      
@@ -766,10 +769,10 @@ class metrics extends viewModelBase {
             context.textAlign = "left";
             context.textBaseline = "top";
             context.font = "10px Lato";
-            context.fillStyle = metrics.colors.axis;
+            context.fillStyle = ioStats.colors.axis;
            
             ticks.forEach((x, i) => {
-                context.fillText(this.xTickFormat(x), metrics.initialOffset + (i * metrics.step) + timePaddingLeft, timePaddingTop);
+                context.fillText(this.xTickFormat(x), ioStats.initialOffset + (i * ioStats.step) + timePaddingLeft, timePaddingTop);
             });
         }
         finally {
@@ -818,11 +821,11 @@ class metrics extends viewModelBase {
             context.save();
 
 
-            context.translate(0, metrics.brushSectionHeight); 
-            context.clearRect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+            context.translate(0, ioStats.brushSectionHeight); 
+            context.clearRect(0, 0, this.totalWidth, this.totalHeight - ioStats.brushSectionHeight);
 
             context.beginPath();
-            context.rect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+            context.rect(0, 0, this.totalWidth, this.totalHeight - ioStats.brushSectionHeight);
             context.clip();
 
             // 1. Draw tracks background 
@@ -833,7 +836,7 @@ class metrics extends viewModelBase {
                 const ticks = this.getTicks(xScale);
 
                 context.save();              
-                context.rect(0, metrics.axisHeight - 3 , this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+                context.rect(0, ioStats.axisHeight - 3, this.totalWidth, this.totalHeight - ioStats.brushSectionHeight);
                 context.clip();
                 this.drawXaxisTimeLines(context, ticks, this.yScale(this.data.Environments[0].Path) - 3, this.totalHeight);
                 context.restore();
@@ -843,7 +846,7 @@ class metrics extends viewModelBase {
 
             // 3. Draw all other data (track name + items on track)
             context.beginPath();
-            context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+            context.rect(0, ioStats.axisHeight, this.totalWidth, this.totalHeight - ioStats.brushSectionHeight);
             context.clip(); 
             
             const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
@@ -855,16 +858,16 @@ class metrics extends viewModelBase {
 
                     // 3.1. Check if this is an index track 
                     let trackName = env.Path.substring(this.commonPathsPrefix.length);
-                    let isIndexTrack = trackName.startsWith(metrics.indexesString);
+                    let isIndexTrack = trackName.startsWith(ioStats.indexesString);
 
                     // 3.2 Draw track name
                     const yStart = this.yScale(env.Path);
                     this.drawTrackName(context, trackName, yStart);
 
                     const yStartPerTypeCache = new Map<Sparrow.MeterType, number>();
-                    yStartPerTypeCache.set(metrics.journalWriteString, yStart + metrics.closedTrackHeight + metrics.itemMargin);
-                    yStartPerTypeCache.set(metrics.dataFlushString, yStart + metrics.closedTrackHeight + metrics.itemMargin * 2 + metrics.itemHeight);
-                    yStartPerTypeCache.set(metrics.dataSyncString, yStart + metrics.closedTrackHeight + metrics.itemMargin * 3 + metrics.itemHeight * 2);
+                    yStartPerTypeCache.set(ioStats.journalWriteString, yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
+                    yStartPerTypeCache.set(ioStats.dataFlushString, yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 2 + ioStats.itemHeight);
+                    yStartPerTypeCache.set(ioStats.dataSyncString, yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 3 + ioStats.itemHeight * 2);
 
                     // 3.3 Draw item in main canvas area (but only if item is inside the visible/selected area from the brush section..)
                     for (let fileIdx = 0; fileIdx < env.Files.length; fileIdx++) {
@@ -885,9 +888,9 @@ class metrics extends viewModelBase {
 
                                 const x1 = xScale(recentItem.StartedAsDate);
                                 let dx = extentFunc(recentItem.Duration);
-                                dx = dx < metrics.minItemWidth ? metrics.minItemWidth : dx;
+                                dx = dx < ioStats.minItemWidth ? ioStats.minItemWidth : dx;
 
-                                context.fillRect(x1, yStartItem, dx, metrics.itemHeight);
+                                context.fillRect(x1, yStartItem, dx, ioStats.itemHeight);
                                 
                                 // 3.6 Draw the human size text on the item if there is enough space.. but don't draw on closed indexes track 
                                 // Logic: Don't draw if: [closed && isIndexTrack] ==> [!(closed && isIndexTrack)] ==> [open || !isIndexTrack]
@@ -895,15 +898,15 @@ class metrics extends viewModelBase {
                                     const humanSizeTextWidth = context.measureText(recentItem.HumanSize).width;
                                     if (dx > humanSizeTextWidth) {
                                         context.fillStyle = 'black';
-                                        context.fillText(recentItem.HumanSize, x1 + dx / 2 - humanSizeTextWidth / 2, yStartItem + metrics.trackHeight / 2 + 4);
+                                        context.fillText(recentItem.HumanSize, x1 + dx / 2 - humanSizeTextWidth / 2, yStartItem + ioStats.trackHeight / 2 + 4);
                                     }
 
                                     // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
-                                    this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, metrics.itemHeight, recentItem);
+                                    this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, ioStats.itemHeight, recentItem);
                                 }
                                 else {
                                     // 3.8 If on the closed index track, might as well register toggle, so that indexes details will open, can be nice 
-                                    this.hitTest.registerIndexToggle(x1 - 5, yStartItem, dx + 5, metrics.itemHeight);
+                                    this.hitTest.registerIndexToggle(x1 - 5, yStartItem, dx + 5, ioStats.itemHeight);
                                 }
                             }
                         }
@@ -920,27 +923,27 @@ class metrics extends viewModelBase {
     }
 
     private filtered(envPath: string): boolean {             
-        return _.includes(this.filteredIndexesTracksNames(), envPath.substring(this.commonPathsPrefix.length + 1 + metrics.indexesString.length));
+        return _.includes(this.filteredIndexesTracksNames(), envPath.substring(this.commonPathsPrefix.length + 1 + ioStats.indexesString.length));
     }
 
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
         context.save();
 
         context.beginPath();
-        context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+        context.rect(0, ioStats.axisHeight, this.totalWidth, this.totalHeight - ioStats.brushSectionHeight);
         context.clip();
 
-        context.fillStyle = metrics.colors.trackBackground;
+        context.fillStyle = ioStats.colors.trackBackground;
         this.data.Environments.forEach(env => {  
              if (!this.filtered(env.Path)) {
-                 context.fillRect(0, this.yScale(env.Path), this.totalWidth, metrics.openedTrackHeight);
+                 context.fillRect(0, this.yScale(env.Path), this.totalWidth, ioStats.openedTrackHeight);
              }               
         });
 
         // The special case...draw the additional index heading when in expanded state
         if (this.isIndexesExpanded()) {
-            context.fillRect(0, this.yScale(metrics.indexesString), context.measureText(metrics.indexesString).width + 30, metrics.closedTrackHeight);
-            this.drawTrackName(context, metrics.indexesString, this.yScale(metrics.indexesString));
+            context.fillRect(0, this.yScale(ioStats.indexesString), context.measureText(ioStats.indexesString).width + 30, ioStats.closedTrackHeight);
+            this.drawTrackName(context, ioStats.indexesString, this.yScale(ioStats.indexesString));
         }
 
         context.restore();
@@ -955,18 +958,18 @@ class metrics extends viewModelBase {
         let drawArrow = false;       
         let skipDrawing = false;
 
-        const isIndexTrack = trackName.startsWith(metrics.indexesString);
+        const isIndexTrack = trackName.startsWith(ioStats.indexesString);
 
         // 1. Draw background color for track name - first check if track is an 'index' track
         if (isIndexTrack) {
             xTextStart = 15;
             addedWidth = 18;
 
-            trackName = trackName.substring(metrics.indexesString.length + 1);            
+            trackName = trackName.substring(ioStats.indexesString.length + 1);            
 
             // 1.1 The first indexes track has the track name of: 'Indexes' (both when opened or closed..)
             if ((trackName === "") || (!this.isIndexesExpanded())) {
-                trackName = metrics.indexesString;                
+                trackName = ioStats.indexesString;                
                 addedWidth = 23;
                 drawArrow = true;
                 skipDrawing = this.allIndexesAreFiltered();
@@ -976,21 +979,21 @@ class metrics extends viewModelBase {
         if (!skipDrawing) {
             context.font = "12px Lato"; // Define font before using measureText()...
             rectWidth = context.measureText(trackName).width + addedWidth;
-            context.fillStyle = metrics.colors.trackNameBg;
+            context.fillStyle = ioStats.colors.trackNameBg;
 
             if (!_.includes(this.filteredIndexesTracksNames(), trackName)) {
-                context.fillRect(2, yStart + metrics.closedTrackPadding, rectWidth, metrics.trackHeight);
+                context.fillRect(2, yStart + ioStats.closedTrackPadding, rectWidth, ioStats.trackHeight);
             }
 
             // 2. Draw arrow only for indexes track
             if (drawArrow) {
-                context.fillStyle = this.isIndexesExpanded() ? metrics.colors.openedTrackArrow : metrics.colors.closedTrackArrow;
+                context.fillStyle = this.isIndexesExpanded() ? ioStats.colors.openedTrackArrow : ioStats.colors.closedTrackArrow;
                 graphHelper.drawArrow(context, 5, yStart + 6, !this.isIndexesExpanded());
-                this.hitTest.registerIndexToggle(2, yStart + metrics.closedTrackPadding, rectWidth, metrics.trackHeight);
+                this.hitTest.registerIndexToggle(2, yStart + ioStats.closedTrackPadding, rectWidth, ioStats.trackHeight);
             }
 
             // 3. Draw track name (if not filtered out..)                
-            context.fillStyle = metrics.colors.trackNameFg;
+            context.fillStyle = ioStats.colors.trackNameFg;
             context.beginPath(); 
 
             if (!_.includes(this.filteredIndexesTracksNames(), trackName)) {
@@ -1006,12 +1009,12 @@ class metrics extends viewModelBase {
         const range = xScale.range(); 
        
         context.beginPath();
-        context.strokeStyle = metrics.colors.gaps;
+        context.strokeStyle = ioStats.colors.gaps;
        
         for (let i = 1; i < range.length - 1; i += 2) {
             const gapX = Math.floor(range[i]) + 0.5;
          
-            context.moveTo(gapX, metrics.axisHeight);
+            context.moveTo(gapX, ioStats.axisHeight);
             context.lineTo(gapX, this.totalHeight);          
 
             // Can't use xScale.invert here because there are Duplicate Values in xScale.range,
@@ -1021,7 +1024,7 @@ class metrics extends viewModelBase {
 
             if (gapInfo) {
                 // Register gap for tooltip 
-                this.hitTest.registerGapItem(gapX - 5, metrics.axisHeight, 10, this.totalHeight,
+                this.hitTest.registerGapItem(gapX - 5, ioStats.axisHeight, 10, this.totalHeight,
                     { durationInMillis: gapInfo.durationInMillis, start: gapInfo.start });
             }
         }
@@ -1173,40 +1176,40 @@ class metrics extends viewModelBase {
         let color: string;
 
         switch (recentItem.Type) {
-            case metrics.journalWriteString: {
-                color = metrics.eventsColors.JournalWriteLowSizeColor;
+            case ioStats.journalWriteString: {
+                color = ioStats.eventsColors.JournalWriteLowSizeColor;
                 if (recentItem.Size > this.journalWriteLowSizeLevel()) {
-                    color = metrics.eventsColors.JournalWriteMedSizeColor;
+                    color = ioStats.eventsColors.JournalWriteMedSizeColor;
                 }
                 if (recentItem.Size > this.journalWriteHighSizeLevel()) {
-                    color = metrics.eventsColors.JournalWriteHighSizeColor;
+                    color = ioStats.eventsColors.JournalWriteHighSizeColor;
                 }
                 if (!calcColorBasedOnSize) {
-                    color = metrics.eventsColors.JournalWriteHighSizeColor;
+                    color = ioStats.eventsColors.JournalWriteHighSizeColor;
                 }
             } break;
-            case metrics.dataSyncString: {
-                color = metrics.eventsColors.DataSyncLowSizeColor;
+            case ioStats.dataSyncString: {
+                color = ioStats.eventsColors.DataSyncLowSizeColor;
                 if (recentItem.Size > this.dataSyncLowSizeLevel()) {
-                    color = metrics.eventsColors.DataSyncMedSizeColor;
+                    color = ioStats.eventsColors.DataSyncMedSizeColor;
                 }
                 if (recentItem.Size > this.dataSyncHighSizeLevel()) {
-                    color = metrics.eventsColors.DataSyncHighSizeColor;
+                    color = ioStats.eventsColors.DataSyncHighSizeColor;
                 }
                 if (!calcColorBasedOnSize) {
-                    color = metrics.eventsColors.DataSyncHighSizeColor;
+                    color = ioStats.eventsColors.DataSyncHighSizeColor;
                 }
             } break;
-            case metrics.dataFlushString: {
-                color = metrics.eventsColors.DataFlushLowSizeColor;
+            case ioStats.dataFlushString: {
+                color = ioStats.eventsColors.DataFlushLowSizeColor;
                 if (recentItem.Size > this.dataFlushLowSizeLevel()) {
-                    color = metrics.eventsColors.DataFlushMedSizeColor;
+                    color = ioStats.eventsColors.DataFlushMedSizeColor;
                 }
                 if (recentItem.Size > this.dataFlushHighSizeLevel()) {
-                    color = metrics.eventsColors.DataFlushHighSizeColor;
+                    color = ioStats.eventsColors.DataFlushHighSizeColor;
                 }
                 if (!calcColorBasedOnSize) {
-                    color = metrics.eventsColors.DataFlushHighSizeColor;
+                    color = ioStats.eventsColors.DataFlushHighSizeColor;
                 }
             } break;
         }
@@ -1313,4 +1316,4 @@ class metrics extends viewModelBase {
     }   
 }
 
-export = metrics;
+export = ioStats;
