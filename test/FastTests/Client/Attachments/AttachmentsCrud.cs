@@ -239,7 +239,6 @@ namespace FastTests.Client.Attachments
                 {
                     database.DocumentsStorage.AssertNoAttachmentsForDocument(context, "users/1");
                 }
-
                 Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
             }
         }

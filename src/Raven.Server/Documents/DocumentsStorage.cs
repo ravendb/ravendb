@@ -2939,10 +2939,6 @@ namespace Raven.Server.Documents
                     var attachment = TableValueToAttachment(context, ref sr.Reader);
                     throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");
                 }
-
-                // There is no way to go from attachment stream to the attachment name.
-                // So we test that all of the attachments has an existing hash in AttachmentsMetadata table.
-                // TODO: Impelemnt this check
             }
         }
 
