@@ -412,7 +412,7 @@ namespace Raven.Server.Rachis
         {
             BlittableJsonReaderObject entry;
             using (var writer =
-                new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(
+                new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(
                     context, BlittableJsonDocumentBuilder.UsageMode.None))
             {
                 writer.Reset(BlittableJsonDocumentBuilder.UsageMode.None);

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using Sparrow.Collections;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow.Binary;
 
 namespace Sparrow.Json
@@ -23,12 +25,13 @@ namespace Sparrow.Json
         private readonly JsonOperationContext _context;
         private int _propertyNameCounter;
 
-        public sealed class PropertyName :IComparable<PropertyName>
+        public sealed class PropertyName : IComparable<PropertyName>
         {
+            public readonly int HashCode;
+
             public LazyStringValue Comparer;
             public int GlobalSortOrder;
-            public int PropertyId;
-            public readonly int HashCode;
+            public int PropertyId;            
 
             public PropertyName(int hash)
             {
@@ -73,7 +76,7 @@ namespace Sparrow.Json
 
         private class CachedSort
         {
-            public readonly List<PropertyPosition> Sorting = new List<PropertyPosition>();
+            public readonly FastList<PropertyPosition> Sorting = new FastList<PropertyPosition>();
             public int FinalCount;
 
             public override string ToString()
@@ -84,9 +87,10 @@ namespace Sparrow.Json
 
         private const int CachedSortsSize = 512;
         private readonly CachedSort[] _cachedSorts = new CachedSort[CachedSortsSize]; // size is fixed and used in GetPropertiesHashedIndex
-        private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
+
+        private readonly FastList<PropertyName> _docPropNames = new FastList<PropertyName>();
         private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
-        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(LazyStringValueComparer.Instance);
+        private readonly FastDictionary<LazyStringValue, PropertyName, LazyStringValueStructComparer> _propertyNameToId = new FastDictionary<LazyStringValue, PropertyName, LazyStringValueStructComparer>(default(LazyStringValueStructComparer));
         private bool _propertiesNeedSorting;
 
         public int PropertiesDiscovered;
@@ -138,7 +142,7 @@ namespace Sparrow.Json
             // in different order. 
             // we'll assume the later and move the property around, this is safe to 
             // do because we ignore the properties showing up after the PropertiesDiscovered
-            
+
             var old = _docPropNames[PropertiesDiscovered];
             _docPropNames[PropertiesDiscovered] = _docPropNames[prop.PropertyId];
             old.PropertyId = _docPropNames[PropertiesDiscovered].PropertyId;
@@ -148,7 +152,7 @@ namespace Sparrow.Json
             return prop;
         }
 
-        public void Sort(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
+        public void Sort(FastList<BlittableJsonDocumentBuilder.PropertyTag> properties)
         {
             var index = GetPropertiesHashedIndex(properties);
 
@@ -157,14 +161,14 @@ namespace Sparrow.Json
             {
                 UpdatePropertiesSortOrder();
             }
-            var cachedSort = _cachedSorts[index];
 
+            var cachedSort = _cachedSorts[index];
             if (cachedSort?.Sorting.Count != properties.Count)
             {
                 UnlikelySortProperties(properties);
                 return;
             }
-            
+
             // we are frequently going to see documents with ids in the same order
             // so we can take advantage of that by remember the previous sort, we 
             // check if the values are the same, and if so, save the sort
@@ -191,27 +195,27 @@ namespace Sparrow.Json
             if (properties.Count != cachedSort.FinalCount)
             {
                 properties.RemoveRange(cachedSort.FinalCount, properties.Count - cachedSort.FinalCount);
-            }
-
-            
+            }            
         }
 
-        private int GetPropertiesHashedIndex(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int GetPropertiesHashedIndex(FastList<BlittableJsonDocumentBuilder.PropertyTag> properties)
         {
+            int count = properties.Count;
+
             int hash = 0;
-            for (int i = 0; i < properties.Count; i++)
+            for (int i = 0; i < count; i++)
             {
-                hash = (hash*397) ^ properties[i].Property.HashCode;
+                hash = Hashing.CombineInline(hash, properties[i].Property.HashCode);
             }
 
-            Debug.Assert(_cachedSorts.Length == CachedSortsSize &&
-                         Bits.NextPowerOf2(CachedSortsSize) == CachedSortsSize); 
+            Debug.Assert(_cachedSorts.Length == CachedSortsSize && Bits.NextPowerOf2(CachedSortsSize) == CachedSortsSize); 
 
             hash &= (CachedSortsSize-1); // % CachedSortsSize 
             return hash;
         }
 
-        private void UnlikelySortProperties(List<BlittableJsonDocumentBuilder.PropertyTag> properties)
+        private void UnlikelySortProperties(FastList<BlittableJsonDocumentBuilder.PropertyTag> properties)
         {
             _hasDuplicates = false;
 
@@ -257,8 +261,7 @@ namespace Sparrow.Json
                         i--;
                     }
                 }
-            }
-            
+            }            
 
             for (int i = 0; i < _cachedSorts[index].Sorting.Count; i++)
             {

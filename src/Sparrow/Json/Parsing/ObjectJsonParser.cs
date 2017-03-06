@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Utils;
 
@@ -119,12 +120,14 @@ namespace Sparrow.Json.Parsing
 
     public unsafe class ObjectJsonParser : IJsonParser
     {
+        private static readonly UTF8Encoding Utf8Encoding = new UTF8Encoding();
+
         private readonly JsonParserState _state;
         private readonly JsonOperationContext _ctx;
-        private readonly Stack<object> _elements = new Stack<object>();
-        private static readonly Encoding Utf8Encoding = Encoding.UTF8;
+        private readonly FastStack<object> _elements = new FastStack<object>();
+
         private bool _disposed;
-        private AllocatedMemoryData _currentStateBuffer = null;
+        private AllocatedMemoryData _currentStateBuffer;
 
         public void Reset(object root)
         {
@@ -146,8 +149,6 @@ namespace Sparrow.Json.Parsing
             _ctx = ctx;
         }
 
-        public IReadOnlyCollection<object> Elements => _elements;
-
         public void Dispose()
         {
             if (_disposed)
@@ -158,12 +159,6 @@ namespace Sparrow.Json.Parsing
         }
 
         public bool Read()
-        {
-            ReadInternal();
-            return true;
-        }
-
-        private void ReadInternal()
         {
             if (_disposed)
                 ThrowOnDisposed();
@@ -183,17 +178,18 @@ namespace Sparrow.Json.Parsing
                         value.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         _elements.Push(value);
-                        return;
+                        return true;
                     }
                     if (value.Properties.Count == 0)
                     {
                         _state.CurrentTokenType = JsonParserToken.EndObject;
-                        return;
+                        return true;
                     }
                     _elements.Push(value);
                     current = value.Properties.Dequeue();
                     continue;
                 }
+
                 var array = current as DynamicJsonArray;
                 if (array != null)
                 {
@@ -202,17 +198,18 @@ namespace Sparrow.Json.Parsing
                         array.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         _elements.Push(array);
-                        return;
+                        return true;
                     }
                     if (array.Items.Count == 0)
                     {
                         _state.CurrentTokenType = JsonParserToken.EndArray;
-                        return;
+                        return true;
                     }
                     _elements.Push(array);
                     current = array.Items.Dequeue();
                     continue;
                 }
+
                 var tuple = current as Tuple<string, object>;
                 if (tuple != null)
                 {
@@ -220,6 +217,7 @@ namespace Sparrow.Json.Parsing
                     current = tuple.Item1;
                     continue;
                 }
+
                 var prop = current as Tuple<LazyStringValue, object>;
                 if (prop != null)
                 {
@@ -227,6 +225,7 @@ namespace Sparrow.Json.Parsing
                     current = prop.Item1;
                     continue;
                 }
+
                 var bjro = current as BlittableJsonReaderObject;
                 if (bjro != null)
                 {
@@ -238,7 +237,7 @@ namespace Sparrow.Json.Parsing
                         bjro.Modifications.AlreadySeen = true;
                         bjro.Modifications.SourceProperties = bjro.GetPropertiesByInsertionOrder();
                         _state.CurrentTokenType = JsonParserToken.StartObject;
-                        return;
+                        return true;
                     }
 
                     var modifications = bjro.Modifications;
@@ -260,6 +259,7 @@ namespace Sparrow.Json.Parsing
                     current = modifications;
                     continue;
                 }
+
                 var bjra = current as BlittableJsonReaderArray;
                 if (bjra != null)
                 {
@@ -270,8 +270,9 @@ namespace Sparrow.Json.Parsing
                         _elements.Push(bjra);
                         bjra.Modifications.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
-                        return;
+                        return true;
                     }
+
                     var modifications = bjra.Modifications;
                     modifications.SourceIndex++;
                     if (modifications.SourceIndex < bjra.Length)
@@ -290,7 +291,6 @@ namespace Sparrow.Json.Parsing
                 }
 
                 var dbj = current as IBlittableJsonContainer;
-
                 if (dbj != null)
                 {
                     current = dbj.BlittableJson;
@@ -298,7 +298,6 @@ namespace Sparrow.Json.Parsing
                 }
 
                 var enumerable = current as IEnumerable<object>;
-
                 if (enumerable != null)
                 {
                     current = new DynamicJsonArray(enumerable);
@@ -313,8 +312,9 @@ namespace Sparrow.Json.Parsing
                     _state.CompressedSize = null;// don't even try
                     _state.CurrentTokenType = JsonParserToken.String;
                     ReadEscapePositions(lsv.Buffer, lsv.Size);
-                    return;
+                    return true;
                 }
+
                 var lcsv = current as LazyCompressedStringValue;
                 if (lcsv != null)
                 {
@@ -323,7 +323,7 @@ namespace Sparrow.Json.Parsing
                     _state.CompressedSize = lcsv.CompressedSize;
                     _state.CurrentTokenType = JsonParserToken.String;
                     ReadEscapePositions(lcsv.Buffer, lcsv.CompressedSize);
-                    return;
+                    return true;
                 }
 
                 var ldv = current as LazyDoubleValue;
@@ -334,7 +334,7 @@ namespace Sparrow.Json.Parsing
                     _state.CompressedSize = null;// don't even try
                     _state.CurrentTokenType = JsonParserToken.Float;
                     ReadEscapePositions(ldv.Inner.Buffer, ldv.Inner.Size);
-                    return;
+                    return true;
                 }
 
                 var str = current as string;
@@ -342,42 +342,47 @@ namespace Sparrow.Json.Parsing
                 {
                     SetStringBuffer(str);
                     _state.CurrentTokenType = JsonParserToken.String;
-                    return;
+                    return true;
                 }
 
                 if (current is int || current is byte || current is short)
                 {
                     _state.Long = Convert.ToInt32(current);
                     _state.CurrentTokenType = JsonParserToken.Integer;
-                    return;
+                    return true;
                 }
+
                 if (current is long)
                 {
                     _state.Long = (long)current;
                     _state.CurrentTokenType = JsonParserToken.Integer;
-                    return;
+                    return true;
                 }
+
                 if (current is bool)
                 {
                     _state.CurrentTokenType = ((bool)current) ? JsonParserToken.True : JsonParserToken.False;
-                    return;
+                    return true;
                 }
+
                 if (current is float)
                 {
                     var d = (double)(float)current;
                     var s = EnsureDecimalPlace(d, d.ToString("R", CultureInfo.InvariantCulture));
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.Float;
-                    return;
+                    return true;
                 }
+
                 if (current is double)
                 {
                     var d = (double)current;
                     var s = EnsureDecimalPlace(d, d.ToString("R", CultureInfo.InvariantCulture));
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.Float;
-                    return;
+                    return true;
                 }
+
                 if (current is DateTime)
                 {
                     var dateTime = (DateTime)current;
@@ -385,8 +390,9 @@ namespace Sparrow.Json.Parsing
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;
-                    return;
+                    return true;
                 }
+
                 if (current is DateTimeOffset)
                 {
                     var dateTime = (DateTimeOffset)current;
@@ -394,8 +400,9 @@ namespace Sparrow.Json.Parsing
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;
-                    return;
+                    return true;
                 }
+
                 if (current is TimeSpan)
                 {
                     var timeSpan = (TimeSpan)current;
@@ -403,8 +410,9 @@ namespace Sparrow.Json.Parsing
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;
-                    return;
+                    return true;
                 }
+
                 if (current is decimal)
                 {
                     var d = (decimal)current;
@@ -414,7 +422,7 @@ namespace Sparrow.Json.Parsing
                         var s = EnsureDecimalPlace((double)d, d.ToString(CultureInfo.InvariantCulture));
                         SetStringBuffer(s);
                         _state.CurrentTokenType = JsonParserToken.Float;
-                        return;
+                        return true;
                     }
 
                     current = (long)d;
@@ -424,7 +432,7 @@ namespace Sparrow.Json.Parsing
                 if (current == null)
                 {
                     _state.CurrentTokenType = JsonParserToken.Null;
-                    return;
+                    return true;
                 }
 
                 if (current is Enum)
@@ -458,17 +466,18 @@ namespace Sparrow.Json.Parsing
         {
             // max possible size - we avoid using GetByteCount because profiling showed it to take 2% of runtime
             // the buffer might be a bit longer, but we'll reuse it, and it is better than the computing cost
-
             int byteCount = Utf8Encoding.GetMaxByteCount(str.Length);
-
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
 
+            // If we do not have a buffer or the buffer is too small, return the memory and get more.
             var size = byteCount + escapePositionsSize;
+            if (_currentStateBuffer == null || _currentStateBuffer.SizeInBytes < size)
+            {
+                if (_currentStateBuffer != null)
+                    _ctx.ReturnMemory(_currentStateBuffer);
+                _currentStateBuffer = _ctx.GetMemory(size);
+            }
 
-            if (_currentStateBuffer != null)
-                _ctx.ReturnMemory(_currentStateBuffer);
-
-            _currentStateBuffer = _ctx.GetMemory(size);
             _state.StringBuffer = _currentStateBuffer.Address;
 
             fixed (char* pChars = str)
@@ -481,7 +490,6 @@ namespace Sparrow.Json.Parsing
                 _state.WriteEscapePositionsTo(escapePos);
             }
         }
-
 
         private static string EnsureDecimalPlace(double value, string text)
         {

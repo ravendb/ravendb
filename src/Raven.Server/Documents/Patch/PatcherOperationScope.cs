@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Patch
             return property + "." + key;
         }
 
-        public void ToBlittableJsonReaderObject(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
+        public void ToBlittableJsonReaderObject(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
             bool recursiveCall = false)
         {
             if (jsObject.Class == "Function")
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Patch
             writer.WriteObjectEnd();
         }
 
-        public void WriteRawObjectPropertiesToBlittable(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
+        public void WriteRawObjectPropertiesToBlittable(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
             bool recursiveCall = false)
         {
             foreach (var property in jsObject.GetOwnProperties())
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private void ToBlittableJsonReaderValue(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, JsValue v, string propertyKey, bool recursiveCall)
+        private void ToBlittableJsonReaderValue(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, JsValue v, string propertyKey, bool recursiveCall)
         {
             if (v.IsBoolean())
             {

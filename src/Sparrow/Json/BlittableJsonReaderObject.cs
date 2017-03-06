@@ -942,7 +942,7 @@ namespace Sparrow.Json
             return current;
         }
 
-        public void AddItemsToStream<T>(ManualBlittalbeJsonDocumentBuilder<T> writer)
+        public void AddItemsToStream<T>(ManualBlittableJsonDocumentBuilder<T> writer)
             where T : struct, IUnmanagedWriteBuffer
         {
             for (var i = 0; i < Count; i++)

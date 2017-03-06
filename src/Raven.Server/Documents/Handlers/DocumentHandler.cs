@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
 
             using (var streamBuffer = new UnmanagedStreamBuffer(context, ResponseBodyStream()))
-            using (var writer = new ManualBlittalbeJsonDocumentBuilder<UnmanagedStreamBuffer>(context,
+            using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedStreamBuffer>(context,
                 null, new BlittableWriter<UnmanagedStreamBuffer>(context, streamBuffer)))
             {
                 writer.StartWriteObjectDocument();

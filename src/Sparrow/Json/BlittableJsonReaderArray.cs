@@ -68,7 +68,7 @@ namespace Sparrow.Json
 
         }
 
-        public void AddItemsToStream<T>(ManualBlittalbeJsonDocumentBuilder<T> writer) where T : struct, IUnmanagedWriteBuffer
+        public void AddItemsToStream<T>(ManualBlittableJsonDocumentBuilder<T> writer) where T : struct, IUnmanagedWriteBuffer
         {
             for (var i = 0; i < _count; i++)
             {
