@@ -444,6 +444,14 @@ namespace Raven.Server.Documents
             return lastEtag;
         }
 
+        public static long ComputeEtag(long etag, long numberOfDocuments)
+        {
+            var buffer = stackalloc long[2];
+            buffer[0] = etag;
+            buffer[1] = numberOfDocuments;
+            return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
+        }
+
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId, int start, int take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);

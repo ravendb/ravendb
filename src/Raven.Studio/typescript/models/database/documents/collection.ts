@@ -1,8 +1,7 @@
-import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
-import getAllDocumentsMetadataCommand = require("commands/database/documents/getAllDocumentsMetadataCommand");
 import database = require("models/resources/database");
 import cssGenerator = require("common/cssGenerator");
 import document = require("models/database/documents/document");
+import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 
 class collection {
     static readonly allDocumentsCollectionName = "All Documents";
@@ -32,18 +31,12 @@ class collection {
     }
 
     fetchDocuments(skip: number, take: number): JQueryPromise<pagedResult<document>> {
-        //TODO: use doc-preview endpoint for fetching this!
-        /*
-        TODO:
-        In current commands we use total results from collection count,
-        as result it produces invalid output after deleting documents.
-        Solution is to add total results count to response, but we anyway will implement
-        doc-preview endpoint with this property, so let's leave it for now. 
-        */
         if (this.isAllDocuments) {
-            return new getAllDocumentsMetadataCommand(this.db, skip, take).execute();
+            return new getDocumentsPreviewCommand(this.db, skip, take)
+                .execute(); //TODO:bindings
         } else {
-            return new getDocumentsFromCollectionCommand(this, skip, take).execute();
+            return new getDocumentsPreviewCommand(this.db, skip, take, this.name)
+                .execute(); //TODO: bindings
         }
     }
 
