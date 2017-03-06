@@ -40,6 +40,8 @@ namespace Raven.Client.Json
 
                 foreach (var prop in _documentInfo.Metadata.Modifications.Properties)
                 {
+                    if(prop.Item1.StartsWith("@") && prop.Item1 != Constants.Documents.Metadata.Collection)
+                        continue; // system property, ignoring it
                     _manualBlittableJsonDocumentBuilder.WritePropertyName(prop.Item1);
                     var value = prop.Item2;
 

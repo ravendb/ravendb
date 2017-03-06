@@ -18,6 +18,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         {
             _shutdown = shutdown;
             Logger = LoggingSource.Instance.GetLogger<NotificationCenter>(resourceName);
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
@@ -26,14 +27,17 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         {
             Debug.Assert(_currentTask == null);
 
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
+            if (_cts.IsCancellationRequested)
+            {
+                _cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
+            }
 
             _currentTask = Task.Run(Run, CancellationToken);
         }
 
         public void Stop()
         {
-            if (_cts == null || _cts.IsCancellationRequested)
+            if (_cts.IsCancellationRequested)
                 return;
 
             Debug.Assert(_currentTask != null);
@@ -56,7 +60,6 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             _currentTask = null;
             _cts.Dispose();
-            _cts = null;
         }
 
         protected abstract Task Run();
