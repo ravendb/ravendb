@@ -77,7 +77,7 @@ namespace Raven.Tests.Raft
         public async Task WhenChangingTopologyReplicationShouldBeConfiguredProperly()
         {
             var clusterStores = CreateRaftCluster(3);
-
+            var topologyId = servers.First().Options.ClusterManager.Value.Engine.CurrentTopology.TopologyId;
             using (clusterStores[0])
             using (clusterStores[1])
             using (clusterStores[2])
@@ -94,7 +94,7 @@ namespace Raven.Tests.Raft
                     Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
                 });
 
-                var extraStores = ExtendRaftCluster(2);
+                var extraStores = ExtendRaftCluster(2, topologyId);
                 using (extraStores[0])
                 using (extraStores[1])
                 {
@@ -112,7 +112,7 @@ namespace Raven.Tests.Raft
                     // fetch etags of each replication destination document
                     var etags = allStores.Select(store => store.DatabaseCommands.ForSystemDatabase().Head(Constants.Global.ReplicationDestinationsDocumentName).Etag).ToList();
 
-                    RemoveFromCluster(servers[4]);
+                    RemoveFromCluster(servers[4], topologyId);
 
                     for (var i = 0; i < allStores.Count; i++)
                     {

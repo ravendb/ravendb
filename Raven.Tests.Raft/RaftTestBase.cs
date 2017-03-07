@@ -150,11 +150,11 @@ namespace Raven.Tests.Raft
             return documentStores;
         }
 
-        public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
+        public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes,Guid topologyId, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
         {
             if (configureStore == null)
                 configureStore = defaultConfigureStore;
-            var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
+            var leader = ChooseTheRealLeader(topologyId);
             Assert.NotNull(leader);
 
             var nodes = Enumerable.Range(0, numberOfExtraNodes)
@@ -196,19 +196,19 @@ namespace Raven.Tests.Raft
                 .ToList();
         }
 
-        public void RemoveFromCluster(RavenDbServer serverToRemove)
+        public void RemoveFromCluster(RavenDbServer serverToRemove, Guid topologyId)
         {
             //any tests that fails because of this is invalid.
             if (servers.Count <= 2)
                 throw new InvalidOperationException("Can't remove node from cluster when there are two nodes in the cluster, you need to brutly remove the node.");
-            var leader = ChooseTheRealLeader();
+            var leader = ChooseTheRealLeader(topologyId);
             if (leader == null)
                 throw new InvalidOperationException("Leader is currently not present, thus can't remove node from cluster");
             if (leader == serverToRemove)
             {                
                 leader.Options.ClusterManager.Value.Engine.StepDownAsync().Wait();
                 leader.Server.Options.ClusterManager.Value.Engine.WaitForLeader();
-                leader = ChooseTheRealLeader();
+                leader = ChooseTheRealLeader(topologyId);
                 leader.Server.Options.ClusterManager.Value.Engine.WaitForLeaderConfirmed();
                 //this is because a leader chosen event is placed wrongly
                 //SpinWait.SpinUntil(()=>leader.Options.ClusterManager.Value.Engine.PersistentState.GetLogEntry(leader.Options.ClusterManager.Value.Engine.CommitIndex).Term
@@ -217,11 +217,12 @@ namespace Raven.Tests.Raft
             leader.Options.ClusterManager.Value.Engine.RemoveFromClusterAsync(serverToRemove.Options.ClusterManager.Value.Engine.Options.SelfConnection).Wait(10000);
         }
 
-        private RavenDbServer ChooseTheRealLeader()
+        private RavenDbServer ChooseTheRealLeader(Guid topologyId)
         {
             return servers.OrderByDescending(server => server.Options.ClusterManager.Value.Engine.PersistentState.LastLogEntry().Term)
                 .ThenByDescending(server => server.Options.ClusterManager.Value.Engine.PersistentState.LastLogEntry().Index)
-                .FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
+                .FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader()
+                && topologyId == server.Options.ClusterManager.Value.Engine.CurrentTopology.TopologyId);
         }
 
         private void WaitForClusterToBecomeNonStale(IReadOnlyCollection<RavenDbServer> nodes)
@@ -266,7 +267,22 @@ namespace Raven.Tests.Raft
                         }
                     };
                 }
-                Assert.True(countDownEvent.Wait(TimeSpan.FromSeconds(15 * numberOfNodes)), $"Cluster didn't become un-stale in time");
+                var clusterNotStale = countDownEvent.Wait(TimeSpan.FromSeconds(5 * numberOfNodes));
+                if (clusterNotStale == false)
+                {
+                    clusterNotStale = true;
+                    //making sure we didn't miss a topology change event that happened before this method was called
+                    foreach (var ravenDbServer in servers)
+                    {
+                        var topology = ravenDbServer.Options.ClusterManager.Value.Engine.CurrentTopology;
+                        if (topology.AllNodes.All(node => topology.IsVoter(node.Name)) == false)
+                        {
+                            clusterNotStale = false;
+                            break;
+                        }
+                    }
+                }
+                Assert.True(clusterNotStale, $"Cluster didn't become un-stale in time");
             }
         }
 
