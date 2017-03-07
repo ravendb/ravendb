@@ -13,6 +13,19 @@ namespace Raven.Client.Extensions
 {
     internal static class HttpExtensions
     {
+        public static long GetRequiredEtagHeader(this HttpResponseMessage response)
+        {
+            IEnumerable<string> values;
+            if (response.Headers.TryGetValues(Constants.Headers.Etag, out values) == false || values == null)
+                throw new InvalidOperationException("Response didn't had an ETag header");
+
+            var value = values.FirstOrDefault();
+            if (value == null)
+                throw new InvalidOperationException("Response didn't had an ETag header");
+
+            return EtagHeaderToEtag(value);
+        }
+
         public static long? GetEtagHeader(this HttpResponseMessage response)
         {
             IEnumerable<string> values;

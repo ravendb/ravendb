@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -63,11 +66,17 @@ namespace Raven.Client.Documents.Operations
                 ThrowInvalidResponse();
             }
 
-            public override void SetResponse(Stream stream, string contentType, string hash, long etag, bool fromCache)
+            public override void SetResponseUncached(HttpResponseMessage response, Stream stream)
             {
                 if (stream == null)
                     return;
 
+                IEnumerable<string> contentTypeVale;
+                var contentType = response.Content.Headers.TryGetValues("Content-Type", out contentTypeVale) ? contentTypeVale.First() : null;
+                var etag = response.GetRequiredEtagHeader();
+                IEnumerable<string> hashVal;
+                var hash = response.Headers.TryGetValues("Content-Hash", out hashVal) ? hashVal.First() : null;
+          
                 Result = new AttachmentResult
                 {
                     ContentType = contentType,

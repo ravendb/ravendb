@@ -13,7 +13,7 @@ namespace Raven.Server.Documents
         public DateTime LastModified;
         public LazyStringValue Name;
         public LazyStringValue ContentType;
-        public Slice Hash;
+        public Slice Base64Hash;
         public Stream Stream;
     }
 }

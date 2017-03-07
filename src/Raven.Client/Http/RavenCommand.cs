@@ -35,7 +35,7 @@ namespace Raven.Client.Http
             throw new NotSupportedException($"When {nameof(ResponseType)} is set to Array then please override this method to handle the response.");
         }
 
-        public virtual void SetResponse(Stream stream, string contentType, string hash, long etag, bool fromCache)
+        public virtual void SetResponseUncached(HttpResponseMessage response, Stream stream)
         {
             throw new NotSupportedException($"When {nameof(ResponseType)} is set to Stream then please override this method to handle the response.");
         }
@@ -83,15 +83,11 @@ namespace Raven.Client.Http
                     return;
                 }
 
-                IEnumerable<string> contentTypeVale;
-                var contentType = response.Content.Headers.TryGetValues("Content-Type", out contentTypeVale) ? contentTypeVale.First() : null;
-                // ReSharper disable once PossibleInvalidOperationException
-                var etag = response.GetEtagHeader().Value;
+            
                 // We do not cache the stream response.
                 var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response);
-                IEnumerable<string> hashVal;
-                var hash = response.Headers.TryGetValues("Content-Hash", out hashVal) ? hashVal.First() : null;
-                SetResponse(uncompressedStream, contentType, hash, etag, fromCache: false);
+              
+                SetResponseUncached(response, uncompressedStream);
             }
         }
 

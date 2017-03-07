@@ -567,12 +567,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool AreThereAttachmentsForHash(DocumentsOperationContext context, Slice hash, int skip)
+        private long GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            var results = table.SeekForwardExactMatch(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
-            return results.Skip(skip).Any();
+            return table.GetCountOfMatchesFor(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
         }
 
         public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, int start, int take)
@@ -1211,12 +1209,14 @@ namespace Raven.Server.Documents
             Slice startSlice;
             using (GetAttachmentPrefix(context, loweredDocumentId.Content.Ptr, loweredDocumentId.Size, out startSlice))
             {
-                table.DeleteByPrimaryKeyPrefix(startSlice, holder =>
+                table.DeleteByPrimaryKeyPrefix(startSlice, before =>
                 {
                     Slice hashSlice;
-                    using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref holder.Reader, out hashSlice))
+                    using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref before.Reader, out hashSlice))
                     {
-                        DeleteAttachmentStream(context, hashSlice, skip: 1);
+                        // we are running just before the delete, so we may still have 1 entry there, the one just
+                        // about to be deleted
+                        DeleteAttachmentStream(context, hashSlice, expectedCount: 1);
                     }
                 });
             }
@@ -2799,9 +2799,9 @@ namespace Raven.Server.Documents
                 tree.AddStream(hash, stream, tag: key);
         }
 
-        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int skip = 0)
+        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 0)
         {
-            if (AreThereAttachmentsForHash(context, hash, skip) == false &&
+            if (GetCountOfAttachmentsForHash(context, hash) == expectedCount &&
                 (_documentDatabase.BundleLoader.VersioningStorage?.AreThereAttachmentsForHash(context, hash) ?? false) == false)
             {
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
@@ -2982,7 +2982,7 @@ namespace Raven.Server.Documents
                 if (attachment == null)
                     return null;
 
-                var stream = GetAttachmentStream(context, attachment.Hash);
+                var stream = GetAttachmentStream(context, attachment.Base64Hash);
                 if (stream == null)
                     throw new FileNotFoundException($"Attachment's stream {name} on {documentId} was not found. This should not happen and is likely a bug.");
                 attachment.Stream = stream;
@@ -3047,7 +3047,7 @@ namespace Raven.Server.Documents
             result.ContentType = TableValueToKey(context, (int)AttachmentsTable.ContentType, ref tvr);
             result.LastModified = new DateTime(*(long*)tvr.Read((int) AttachmentsTable.LastModified, out size));
 
-            TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Hash);
+            TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
 
             return result;
         }

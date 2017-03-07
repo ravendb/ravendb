@@ -1222,12 +1222,12 @@ namespace Raven.Server.Json
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(nameof(attachment.Name));
+                writer.WritePropertyName(nameof(AttachmentResult.Name));
                 writer.WriteString(attachment.Name);
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(attachment.Hash));
-                writer.WriteRawStringWhichMustBeWithoutEscapeChars(attachment.Hash.Content.Ptr, attachment.Hash.Size);
+                writer.WritePropertyName(nameof(AttachmentResult.Hash));
+                writer.WriteRawStringWhichMustBeWithoutEscapeChars(attachment.Base64Hash.Content.Ptr, attachment.Base64Hash.Size);
 
                 writer.WriteEndObject();
             }

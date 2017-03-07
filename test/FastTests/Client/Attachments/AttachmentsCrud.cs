@@ -69,7 +69,7 @@ namespace FastTests.Client.Attachments
                         var name = orderedNames[i];
                         var attachment = attachments[i];
                         Assert.Equal(name, attachment.GetString(nameof(Attachment.Name)));
-                        var hash = attachment.GetString(nameof(Attachment.Hash));
+                        var hash = attachment.GetString(nameof(AttachmentResult.Hash));
                         if (i == 0)
                         {
                             Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", hash);
@@ -206,9 +206,9 @@ namespace FastTests.Client.Attachments
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
                     Assert.Equal(2, attachments.Length);
                     Assert.Equal("file1", attachments[0].GetString(nameof(Attachment.Name)));
-                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachments[0].GetString(nameof(Attachment.Hash)));
+                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachments[0].GetString(nameof(AttachmentResult.Hash)));
                     Assert.Equal("file3", attachments[1].GetString(nameof(Attachment.Name)));
-                    Assert.Equal("5VAt5Ayu6fKD6IGJimMLj73IlN8kgtGd", attachments[1].GetString(nameof(Attachment.Hash)));
+                    Assert.Equal("5VAt5Ayu6fKD6IGJimMLj73IlN8kgtGd", attachments[1].GetString(nameof(AttachmentResult.Hash)));
                 }
 
                 var readBuffer = new byte[16];
