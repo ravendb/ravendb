@@ -46,7 +46,6 @@ namespace Raven.Client.Http
 
         private Topology _topology;
         private readonly Timer _updateTopologyTimer;
-        private readonly bool _firstTimeTryLoadFromTopologyCache = true;
 
         private Timer _updateCurrentTokenTimer;
         private readonly Timer _updateFailingNodesStatus;
@@ -72,7 +71,8 @@ namespace Raven.Client.Http
 
             ContextPool = new JsonContextPool();
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
-            _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1),
+                TimeSpan.FromMinutes(1));
 
             JsonOperationContext context;
             ContextPool.AllocateOperationContext(out context);
@@ -80,15 +80,10 @@ namespace Raven.Client.Http
             var node = _topology.LeaderNode;
             var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
 
-            if (_firstTimeTryLoadFromTopologyCache)
+            var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
+            if (cachedTopology != null && cachedTopology.Etag > _topology.Etag)
             {
-                _firstTimeTryLoadFromTopologyCache = false;
-
-                var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
-                if (cachedTopology != null && cachedTopology.Etag > _topology.Etag)
-                {
-                    _topology = cachedTopology;
-                }
+                _topology = cachedTopology;
             }
         }
 
@@ -246,7 +241,8 @@ namespace Raven.Client.Http
                 catch (HttpRequestException e) // server down, network down
                 {
                     sp.Stop();
-                    await HandleServerDown(choosenNode, context, command, e);
+                    if (await HandleServerDown(choosenNode, context, command, e) == false)
+                        throw;
                     return;
                 }
                 finally
@@ -392,11 +388,11 @@ namespace Raven.Client.Http
             }
         }
 
-        private async Task HandleServerDown<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command,
+        private async Task<bool> HandleServerDown<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestException e)
         {
             if (command.AvoidFailover)
-                return;
+                return false;
 
             if (command.FailedNodes == null)
                 command.FailedNodes = new HashSet<ServerNode>();
@@ -406,6 +402,8 @@ namespace Raven.Client.Http
 
             var failoverNode = ChooseNodeForRequest(command, e);
             await ExecuteAsync(failoverNode, context, command);
+
+            return true;
         }
 
         public string UrlFor(string documentKey)

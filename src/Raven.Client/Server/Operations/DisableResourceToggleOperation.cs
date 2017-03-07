@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class DisableResourceToggleOperation : IServerOperation<DisableResoureceToggleResult>
+    public class DisableResourceToggleOperation : IServerOperation<DisableResourceToggleResult>
     {
         private readonly string _databaseName;
         private readonly bool _ifDisableRequest;
@@ -22,13 +22,13 @@ namespace Raven.Client.Server.Operations
             _ifDisableRequest = ifDisableRequest;
         }
 
-        public RavenCommand<DisableResoureceToggleResult> GetCommand(DocumentConventions conventions,
+        public RavenCommand<DisableResourceToggleResult> GetCommand(DocumentConventions conventions,
             JsonOperationContext context)
         {
             return new DisableResourceToggleCommand(_databaseName, _ifDisableRequest);
         }
 
-        public class DisableResourceToggleCommand : RavenCommand<DisableResoureceToggleResult>
+        public class DisableResourceToggleCommand : RavenCommand<DisableResourceToggleResult>
         {
 
             private readonly string _databaseName;

@@ -16,10 +16,8 @@ namespace FastTests.Server.Replication
         [Fact]
         public async Task LoadDocumentsWithFailOver()
         {
-            var master = GetDocumentStore(ignoreDisabledDatabase: true);
-            var slave = GetDocumentStore(ignoreDisabledDatabase: true);
-
-            try
+            using (var master = GetDocumentStore(ignoreDisabledDatabase: true))
+            using (var slave = GetDocumentStore(ignoreDisabledDatabase: true))
             {
 
                 SetupReplication(master, slave);
@@ -55,11 +53,6 @@ namespace FastTests.Server.Replication
                     Assert.Equal("Shalom", user2.Name);
                 }
 
-            }
-            finally
-            {
-                master.Dispose();
-                slave.Dispose();
             }
         }
     }
