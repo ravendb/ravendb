@@ -10,7 +10,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_556 : RavenTestBase
     {
-        public class Person
+        private class Person
         {
             public string FirstName { get; set; }
 

@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -21,16 +23,21 @@ namespace Raven.Client.Documents.Session
             private readonly IAsyncEnumerator<BlittableJsonReaderObject> _enumerator;
             private readonly IAsyncDocumentQuery<T> _query;
             private readonly string[] _projectionFields;
+            private readonly bool _usedTransformer;
             private readonly CancellationToken _token;
+            private IEnumerator<StreamResult<T>> _innerEnumerator;
 
-            public YieldStream(AsyncDocumentSession parent, IAsyncDocumentQuery<T> query, string[] projectionFields, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token)
+            public YieldStream(AsyncDocumentSession parent, IAsyncDocumentQuery<T> query, string[] projectionFields, bool usedTransformer, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token)
             {
                 _parent = parent;
                 _enumerator = enumerator;
                 _token = token;
                 _query = query;
                 _projectionFields = projectionFields;
+                _usedTransformer = usedTransformer;
             }
+
+            public StreamResult<T> Current { get; protected set; }
 
             public void Dispose()
             {
@@ -39,19 +46,44 @@ namespace Raven.Client.Documents.Session
 
             public async Task<bool> MoveNextAsync()
             {
-                if (await _enumerator.MoveNextAsync().WithCancellation(_token).ConfigureAwait(false) == false)
+                if (_usedTransformer && _innerEnumerator != null)
                 {
-                    return false;
-                }
-                SetCurrent();
-                return true;
-            }
+                    if (_innerEnumerator.MoveNext())
+                    {
+                        Current = _innerEnumerator.Current;
+                        return true;
+                    }
 
-            protected void SetCurrent()
-            {
-                var x = _enumerator.Current;
-                _query?.InvokeAfterStreamExecuted(x);
-                Current = CreateStreamResult<T>(x);
+                    _innerEnumerator.Dispose();
+                    _innerEnumerator = null;
+                }
+
+                while (true)
+                {
+                    if (await _enumerator.MoveNextAsync().WithCancellation(_token).ConfigureAwait(false) == false)
+                        return false;
+
+                    _query?.InvokeAfterStreamExecuted(_enumerator.Current);
+
+                    if (_usedTransformer)
+                    {
+                        Debug.Assert(_innerEnumerator == null);
+
+                        _innerEnumerator = CreateMultipleStreamResults<T>(_enumerator.Current).GetEnumerator();
+                        if (_innerEnumerator.MoveNext() == false)
+                        {
+                            _innerEnumerator.Dispose();
+                            _innerEnumerator = null;
+                            continue;
+                        }
+
+                        Current = _innerEnumerator.Current;
+                        return true;
+                    }
+
+                    Current = CreateStreamResult<T>(_enumerator.Current);
+                    return true;
+                }
             }
 
             private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json)
@@ -73,7 +105,27 @@ namespace Raven.Client.Documents.Session
                 return streamResult;
             }
 
-            public StreamResult<T> Current { get; protected set; }
+            private IEnumerable<StreamResult<T>> CreateMultipleStreamResults<T>(BlittableJsonReaderObject json)
+            {
+                BlittableJsonReaderArray values;
+                if (json.TryGet(Constants.Json.Fields.Values, out values) == false)
+                    throw new InvalidOperationException("Transformed document must have a $values property");
+
+                var metadata = json.GetMetadata();
+                var etag = metadata.GetEtag();
+                var id = metadata.GetId();
+
+                foreach (var value in TransformerHelper.ParseResultsForStreamOperation<T>(_parent, values))
+                {
+                    yield return new StreamResult<T>
+                    {
+                        Key = id,
+                        Etag = etag,
+                        Document = value,
+                        Metadata = new MetadataAsDictionary(metadata)
+                    };
+                }
+            }
         }
 
         public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default(CancellationToken))
@@ -89,7 +141,7 @@ namespace Raven.Client.Documents.Session
 
             var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
             queryOperation.DisableEntitiesTracking = true;
-            return new YieldStream<T>(this, query, projectionFields, result, token);
+            return new YieldStream<T>(this, query, projectionFields, command.UsedTransformer, result, token);
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default(CancellationToken))
@@ -120,7 +172,7 @@ namespace Raven.Client.Documents.Session
                 transformerParameters);
             await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
-            return new YieldStream<T>(this, null, null, result, token);
+            return new YieldStream<T>(this, null, null, command.UsedTransformer, result, token);
         }
     }
 }
