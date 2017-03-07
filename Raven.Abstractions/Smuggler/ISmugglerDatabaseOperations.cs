@@ -81,5 +81,7 @@ namespace Raven.Abstractions.Smuggler
         Task<List<KeyValuePair<string, long>>> GetIdentities();
 
         Task SeedIdentities(List<KeyValuePair<string, long>> identities);
+
+        Task WaitForLastBulkInsertTaskToFinish();
     }
 }

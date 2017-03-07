@@ -59,6 +59,16 @@ namespace Raven.Client.Document
             processedItemsInCurrentOperation++;
         }
 
+        public async Task WaitForLastTaskToFinish()
+        {
+            if (disposed == false && current != null)
+            {
+                await current.DisposeAsync().ConfigureAwait(false);
+                current = null;
+            }
+                
+        }
+
         private RemoteBulkInsertOperation GetBulkInsertOperation()
         {
             if (current == null)

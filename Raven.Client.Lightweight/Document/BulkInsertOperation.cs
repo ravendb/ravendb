@@ -73,6 +73,11 @@ namespace Raven.Client.Document
             return Operation.DisposeAsync();
         }
 
+        public async Task WaitForLastTaskToFinish()
+        {
+            await Operation.WaitForLastTaskToFinish().ConfigureAwait(false);
+        }
+
         public void Dispose()
         {
             Operation.Dispose();

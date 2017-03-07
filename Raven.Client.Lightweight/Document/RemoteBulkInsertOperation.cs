@@ -40,6 +40,8 @@ namespace Raven.Client.Document
 
         void Write(string id, RavenJObject metadata, RavenJObject data, int? dataSize = null);
 
+        Task WaitForLastTaskToFinish();
+
         Task<int> DisposeAsync();
 
         /// <summary>
@@ -331,6 +333,11 @@ namespace Raven.Client.Document
                 operationTask.Wait(); //error early if we have any error
 
             throw new TimeoutException("Could not flush in the specified timeout, server probably not responding or responding too slowly.\r\nAre you writing very big documents?");
+        }
+
+        public async Task WaitForLastTaskToFinish()
+        {
+            throw new NotImplementedException("WaitForLastTaskToFinish not implemented for RemoteBulkInsertOperation, see ChunkedRemoteBulkInsertOperation");
         }
 
         private async Task<bool> IsOperationCompleted(long operationId)

@@ -338,6 +338,11 @@ namespace Raven.Database.Smuggler
             return new CompletedTask();
         }
 
+        public async Task WaitForLastBulkInsertTaskToFinish()
+        {
+            //noop
+        }
+
         public Task<IAsyncEnumerator<RavenJObject>> ExportItems(ItemType types, OperationState state)
         {
             var exporter = new SmugglerExporter(database, ExportOptions.Create(state, types, Options.ExportDeletions, Options.Limit));

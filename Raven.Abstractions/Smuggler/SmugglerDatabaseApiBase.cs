@@ -1642,7 +1642,7 @@ namespace Raven.Abstractions.Smuggler
             await Operations.DeleteDocument(Constants.BulkImportHeartbeatDocKey).ConfigureAwait(false);
 
             await Operations.PutDocument(null, -1).ConfigureAwait(false); // force flush    
-
+            await Operations.WaitForLastBulkInsertTaskToFinish().ConfigureAwait(false);
             return count;
         }
 
