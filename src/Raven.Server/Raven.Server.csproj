@@ -36,6 +36,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AsyncFriendlyStackTrace" Version="1.4.1" />
+    <PackageReference Include="Jint" Version="2.10.99" />
+    <PackageReference Include="Lucene.Net" Version="3.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="1.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.WebSockets.Server" Version="0.1.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="2.0.0-rc4" />
@@ -51,26 +53,6 @@
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.Csp" Version="4.3.0" />
     <PackageReference Include="System.Threading.Tasks.Parallel" Version="4.3.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="GeoAPI">
-      <HintPath>..\..\libs\GeoAPI\netstandard1.6\GeoAPI.dll</HintPath>
-    </Reference>
-    <Reference Include="Jint">
-      <HintPath>..\..\libs\Jint\netstandard1.3\Jint.dll</HintPath>
-    </Reference>
-    <Reference Include="Lucene.Net">
-      <HintPath>..\..\libs\Lucene.Net\netstandard1.6\Lucene.Net.dll</HintPath>
-    </Reference>
-    <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
-      <HintPath>..\..\libs\Lucene.Net.Contrib.Spatial.NTS\netstandard1.6\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
-    </Reference>
-    <Reference Include="NetTopologySuite">
-      <HintPath>..\..\libs\NetTopologySuite\netstandard1.6\NetTopologySuite.dll</HintPath>
-    </Reference>
-    <Reference Include="Spatial4n.Core">
-      <HintPath>..\..\libs\Spatial4n.Core\netstandard1.6\Spatial4n.Core.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DebugType>portable</DebugType>

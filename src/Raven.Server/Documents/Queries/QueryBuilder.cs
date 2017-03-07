@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Queries
                                 FieldName = new FieldName(defaultField ?? string.Empty)
                             });
                         // The parser should throw ParseException in this case.
-                        if (res == null) throw new GeoAPI.IO.ParseException("Could not parse query");
+                        if (res == null) throw new ParseException("Could not parse query");
                         return res;
                     }
                     catch (ParseException pe)
