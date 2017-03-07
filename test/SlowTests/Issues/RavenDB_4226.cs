@@ -1,32 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.MailingList;
+using FastTests;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4226 : RavenTest
+    public class RavenDB_4226 : RavenTestBase
     {
-        public class A
+        private class A
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class B
+        private class B
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class A2B : AbstractTransformerCreationTask<A>
+        private class A2B : AbstractTransformerCreationTask<A>
         {
             public A2B()
             {
@@ -34,20 +29,20 @@ namespace Raven.Tests.Issues
                                                let idAsStr = entity.Id.ToString()
                                                select new { Id = idAsStr.Remove(0, 3), Name = entity.Name.Reverse() };
             }
-
         }
+
         [Fact]
         public void QueryShouldRecpectOriginalQueryTypeNotTransformerType()
         {
-            var ids = new List<int> { 1, 2, 3 };
-            using (var store = NewRemoteDocumentStore())
+            var ids = new List<string> { "as/1", "as/2", "as/3" };
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteTransformer(new A2B());
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new A { Id = 7, Name = "Shmulick" });
-                    session.Store(new A { Id = 2, Name = "Itzik" });
-                    session.Store(new A { Id = 11, Name = "Shalom" });
+                    session.Store(new A { Id = "as/7", Name = "Shmulick" });
+                    session.Store(new A { Id = "as/2", Name = "Itzik" });
+                    session.Store(new A { Id = "as/11", Name = "Shalom" });
                     session.SaveChanges();
                 }
 

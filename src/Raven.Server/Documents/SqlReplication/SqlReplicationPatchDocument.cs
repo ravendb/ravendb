@@ -14,17 +14,17 @@ namespace Raven.Server.Documents.SqlReplication
         private const int DefaultSize = 50;
 
         private readonly DocumentsOperationContext _context;
-        private readonly SqlReplicationScriptResult scriptResult;
-        private readonly SqlReplicationConfiguration config;
+        private readonly SqlReplicationScriptResult _scriptResult;
+        private readonly SqlReplicationConfiguration _config;
         private readonly string _documentKey;
 
         public SqlReplicationPatchDocument(DocumentDatabase database, DocumentsOperationContext context, SqlReplicationScriptResult scriptResult, SqlReplicationConfiguration config, string documentKey)
             : base(database)
         {
             _context = context;
-            this.scriptResult = scriptResult;
-            this.config = config;
-            this._documentKey = documentKey;
+            _scriptResult = scriptResult;
+            _config = config;
+            _documentKey = documentKey;
         }
 
         protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.SqlReplication
             engine.Global.Delete("replicateTo", true);
             engine.Global.Delete("varchar", true);
             engine.Global.Delete("nVarchar", true);
-            foreach (var sqlReplicationTable in config.SqlReplicationTables)
+            foreach (var sqlReplicationTable in _config.SqlReplicationTables)
             {
                 engine.Global.Delete("replicateTo" + sqlReplicationTable.TableName, true);
             }
@@ -47,8 +47,8 @@ namespace Raven.Server.Documents.SqlReplication
 
             engine.SetValue("documentId", _documentKey);
             engine.SetValue("replicateTo", new Action<string, JsValue>((tableName, colsAsObject) => ReplicateToFunction(tableName, colsAsObject, scope)));
-            scriptResult.Keys.Add(_documentKey);
-            foreach (var sqlReplicationTable in config.SqlReplicationTables)
+            _scriptResult.Keys.Add(_documentKey);
+            foreach (var sqlReplicationTable in _config.SqlReplicationTables)
             {
                 var current = sqlReplicationTable;
                 engine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<JsValue>)(cols =>
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.SqlReplication
             if (colsAsObject == null)
                 throw new ArgumentException("cols parameter is mandatory");
 
-            var itemToReplicates = scriptResult.Data.GetOrAdd(tableName);
+            var itemToReplicates = _scriptResult.Data.GetOrAdd(tableName);
             var dynamicJsonValue = scope.ToBlittable(colsAsObject.AsObject());
             var blittableJsonReaderObject = _context.ReadObject(dynamicJsonValue, tableName);
             var columns = new List<SqlReplicationColumn>(blittableJsonReaderObject.Count);

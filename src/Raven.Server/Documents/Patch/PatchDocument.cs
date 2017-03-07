@@ -268,7 +268,7 @@ namespace Raven.Server.Documents.Patch
         protected void SetupInputs(Document document, PatcherOperationScope scope, Engine jintEngine)
         {
             jintEngine.SetValue("__document_id", document.Key);
-            scope.PatchObject = scope.ToJsObject(jintEngine, document.Data);
+            scope.PatchObject = scope.ToJsObject(jintEngine, document);
         }
 
         private void CleanupEngine(PatchRequest patch, Engine jintEngine, PatcherOperationScope scope)
