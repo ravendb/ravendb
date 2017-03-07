@@ -52,6 +52,7 @@ namespace Raven.Server.Documents
         private static readonly Slice AttachmentsSlice;
         private static readonly Slice AttachmentsMetadataSlice;
         private static readonly Slice AttachmentsEtagSlice;
+        private static readonly Slice AttachmentsHashSlice;
 
         private static readonly Slice AllTombstonesEtagsSlice;
         public static readonly TableSchema DocsSchema = new TableSchema();
@@ -122,6 +123,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "Attachments", ByteStringType.Immutable, out AttachmentsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsMetadata", ByteStringType.Immutable, out AttachmentsMetadataSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsEtag", ByteStringType.Immutable, out AttachmentsEtagSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "AttachmentsHash", ByteStringType.Immutable, out AttachmentsHashSlice);
 
             /*
             Collection schema is:
@@ -232,6 +234,11 @@ namespace Raven.Server.Documents
             {
                 StartIndex = (int)AttachmentsTable.Etag,
                 Name = AttachmentsEtagSlice
+            });
+            AttachmentsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)AttachmentsTable.Hash,
+                Name = AttachmentsHashSlice
             });
         }
 
@@ -554,11 +561,18 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
-            // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], etag, 0))
             {
                 yield return ReplicationBatchDocumentItem.From(TableValueToAttachment(context, ref result.Reader));
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool AreThereAttachmentsForHash(DocumentsOperationContext context, Slice hash, int skip)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            var results = table.SeekForwardExactMatch(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
+            return results.Skip(skip).Any();
         }
 
         public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, int start, int take)
@@ -1199,15 +1213,10 @@ namespace Raven.Server.Documents
             {
                 table.DeleteByPrimaryKeyPrefix(startSlice, holder =>
                 {
-                    // TODO: Do not delete the attachment streams if :
-                    // 1. There is the same hash in another metadata
-                    // 2. There is the same hash in versioned metadata
-                    var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                    var hash = TableValueToKey(context, (int) AttachmentsTable.Hash, ref holder.Reader);
                     Slice hashSlice;
-                    using (Slice.External(context.Allocator, hash.Buffer, hash.Size, out hashSlice))
+                    using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref holder.Reader, out hashSlice))
                     {
-                        tree.DeleteStream(hashSlice);
+                        DeleteAttachmentStream(context, hashSlice, skip: 1);
                     }
                 });
             }
@@ -2726,7 +2735,7 @@ namespace Raven.Server.Documents
             Slice keySlice, contentTypeSlice, hashSlice;
             using (GetAttachmentKey(context, lowerDocumentId, lowerDocumentIdSize, lowerName, lowerNameSize, out keySlice))
             using (DocumentKeyWorker.GetStringPreserveCase(context, contentType, out contentTypeSlice))
-            using (DocumentKeyWorker.GetStringPreserveCase(context, hash, out hashSlice))
+            using (Slice.From(context.Allocator, hash, out hashSlice)) // Hash is a base64 string, so this is a special case that we do not need to escape
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
@@ -2766,11 +2775,7 @@ namespace Raven.Server.Documents
                     table.Insert(tbv);
                 }
 
-                Slice readableHashSlice;
-                using (SliceToKey(context, hashSlice, out readableHashSlice))
-                {
-                    PutAttachmentStream(context, keySlice, readableHashSlice, stream);
-                }
+                PutAttachmentStream(context, keySlice, hashSlice, stream);
 
                 _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
@@ -2792,6 +2797,16 @@ namespace Raven.Server.Documents
             var existingStream = tree.ReadStream(hash);
             if (existingStream == null)
                 tree.AddStream(hash, stream, tag: key);
+        }
+
+        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int skip = 0)
+        {
+            if (AreThereAttachmentsForHash(context, hash, skip) == false &&
+                (_documentDatabase.BundleLoader.VersioningStorage?.AreThereAttachmentsForHash(context, hash) ?? false) == false)
+            {
+                var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+                tree.DeleteStream(hash);
+            }
         }
 
         private void UpdateDocumentAfterAttachmentWrite(
@@ -2987,14 +3002,10 @@ namespace Raven.Server.Documents
             return TableValueToAttachment(context, ref tvr);
         }
 
-        private Stream GetAttachmentStream(DocumentsOperationContext context, LazyStringValue hash)
+        private Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice)
         {
-            Slice hashSlice;
-            using (Slice.External(context.Allocator, hash.Buffer, hash.Length, out hashSlice))
-            {
-                var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
-                return tree.ReadStream(hashSlice);
-            }
+            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            return tree.ReadStream(hashSlice);
         }
 
         private ReleaseMemory GetAttachmentKey(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, byte* lowerName, int lowerNameSize, out Slice keySlice)
@@ -3034,8 +3045,9 @@ namespace Raven.Server.Documents
             result.Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
             result.Name = TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr);
             result.ContentType = TableValueToKey(context, (int)AttachmentsTable.ContentType, ref tvr);
-            result.Hash = TableValueToKey(context, (int)AttachmentsTable.Hash, ref tvr);
             result.LastModified = new DateTime(*(long*)tvr.Read((int) AttachmentsTable.LastModified, out size));
+
+            TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Hash);
 
             return result;
         }
@@ -3061,13 +3073,12 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope SliceToKey(
-            DocumentsOperationContext context, Slice key, out Slice readableKey)
+        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope TableValueToSlice(
+            DocumentsOperationContext context, int index, ref TableValueReader tvr, out Slice slice)
         {
-            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
-            byte offset;
-            var size = BlittableJsonReaderBase.ReadVariableSizeInt(key.Content.Ptr, 0, out offset);
-            return Slice.External(context.Allocator, key.Content.Ptr + offset, size, out readableKey);
+            int size;
+            var ptr = tvr.Read(index, out size);
+            return Slice.External(context.Allocator, ptr, size, out slice);
         }
 
         private static void ThrowConcurrentExceptionOnMissingAttacment(string documentId, string name, long expectedEtag)
@@ -3146,10 +3157,8 @@ namespace Raven.Server.Documents
                 };
             }
 
-            int size;
-            var ptr = tvr.Read((int) AttachmentsTable.Hash, out size);
             Slice hashSlice;
-            using (Slice.From(context.Allocator, ptr, size, out hashSlice))
+            using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out hashSlice))
             {
                 var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
                 var tbv = new TableValueBuilder
@@ -3158,18 +3167,12 @@ namespace Raven.Server.Documents
                     newEtagBigEndian,
                     {null, 0},
                     {null, 0},
-                    {hashSlice.Content.Ptr, hashSlice.Size},
+                    {null, 0},
                     modifiedTicks,
                 };
                 table.Update(tvr.Id, tbv);
 
-                Slice readableHashSlice;
-                using (SliceToKey(context, hashSlice, out readableHashSlice))
-                {
-                    // TODO: Delete stream only if not versioned and there is not other metadata with the same hash
-                    var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                    tree.DeleteStream(readableHashSlice);
-                }
+                DeleteAttachmentStream(context, hashSlice);
             }
         }
     }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Util.Helpers;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -441,6 +442,13 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
             return table.GetNumberEntriesFor(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice]);
+        }
+
+        public bool AreThereAttachmentsForHash(DocumentsOperationContext context, Slice hash)
+        {
+            // TODO: Implement
+            DevelopmentHelper.TimeBomb();
+            return false;
         }
     }
 }

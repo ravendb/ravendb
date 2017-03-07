@@ -115,7 +115,7 @@ namespace FastTests.Client.Attachments
                         else if (i == 2)
                         {
                             Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
-                            Assert.Null(attachment.ContentType);
+                            Assert.Equal("", attachment.ContentType);
                             Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", attachment.Hash);
                         }
                     }
@@ -239,6 +239,92 @@ namespace FastTests.Client.Attachments
                 {
                     database.DocumentsStorage.AssertNoAttachmentsForDocument(context, "users/1");
                 }
+                Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+            }
+        }
+
+        [Fact]
+        public void PutAndDeleteAttachmentsWithTheSameStream_AlsoTestBigStreams()
+        {
+            using (var store = GetDocumentStore())
+            {
+                for (int i = 1; i <= 3; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User {Name = "Fitzchak " + i}, "users/" + i);
+                        session.SaveChanges();
+                    }
+
+                    // Use 128 KB file to test hashing a big file (> 32 KB)
+                    using (var stream1 = new MemoryStream(Enumerable.Range(1, 128 * 1024).Select(x => (byte) x).ToArray()))
+                        store.Operations.Send(new PutAttachmentOperation("users/" + i, "file" + i, stream1, "image/png"));
+                }
+                using (var stream2 = new MemoryStream(Enumerable.Range(1, 999 * 1024).Select(x => (byte) x).ToArray()))
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "big-file", stream2, "image/png"));
+                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+
+                var readBuffer = new byte[1024 * 1024];
+                using (var attachmentStream = new MemoryStream(readBuffer))
+                {
+                    var attachment = store.Operations.Send(new GetAttachmentOperation("users/3", "file3", (result, stream) => stream.CopyTo(attachmentStream)));
+                    Assert.Equal(8, attachment.Etag);
+                    Assert.Equal("file3", attachment.Name);
+                    Assert.Equal("fLtSLG1vPKEedr7AfTOgijyIw3ppa4h6", attachment.Hash);
+                    Assert.Equal(128 * 1024, attachmentStream.Position);
+                    Assert.Equal(Enumerable.Range(1, 128 * 1024).Select(x => (byte)x), readBuffer.Take((int)attachmentStream.Position));
+                }
+                using (var attachmentStream = new MemoryStream(readBuffer))
+                {
+                    var attachment = store.Operations.Send(new GetAttachmentOperation("users/1", "big-file", (result, stream) => stream.CopyTo(attachmentStream)));
+                    Assert.Equal(10, attachment.Etag);
+                    Assert.Equal("big-file", attachment.Name);
+                    Assert.Equal("OLSEi3K4Iio9JV3ymWJeF12Nlkjakwer", attachment.Hash);
+                    Assert.Equal(999 * 1024, attachmentStream.Position);
+                    Assert.Equal(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x), readBuffer.Take((int)attachmentStream.Position));
+                }
+
+                store.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
+                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+
+                store.Operations.Send(new DeleteAttachmentOperation("users/2", "file2"));
+                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+
+                store.Operations.Send(new DeleteAttachmentOperation("users/3", "file3"));
+                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+
+                store.Operations.Send(new DeleteAttachmentOperation("users/1", "big-file"));
+                Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+            }
+        }
+
+        [Fact]
+        public void DeleteDocumentWithAttachmentsThatHaveTheSameStream()
+        {
+            using (var store = GetDocumentStore())
+            {
+                for (int i = 1; i <= 3; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User { Name = "Fitzchak " + i }, "users/" + i);
+                        session.SaveChanges();
+                    }
+
+                    using (var profileStream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
+                        store.Operations.Send(new PutAttachmentOperation("users/" + i, "file" + i, profileStream, "image/png"));
+                }
+                using (var profileStream = new MemoryStream(Enumerable.Range(1, 17).Select(x => (byte)x).ToArray()))
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "second-file", profileStream, "image/png"));
+                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+
+                store.Commands().Delete("users/2", null);
+                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+
+                store.Commands().Delete("users/1", null);
+                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+
+                store.Commands().Delete("users/3", null);
                 Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
             }
         }

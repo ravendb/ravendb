@@ -337,6 +337,12 @@ namespace Sparrow
         {
             return this == other;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Match(ByteString other)
+        {
+            return GetContentHash() == other.GetContentHash();
+        }
     }
 
     public sealed unsafe class UnmanagedGlobalSegment : IDisposable

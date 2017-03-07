@@ -740,7 +740,7 @@ namespace Voron.Data.Tables
                 if (startsWith)
                     it.RequiredPrefix = value.Clone(_tx.Allocator);
 
-                if (it.Seek(value) == false)
+                if (it.Seek(it.RequiredPrefix) == false)
                     yield break;
 
                 do
@@ -763,6 +763,33 @@ namespace Voron.Data.Tables
             }
         }
 
+        public IEnumerable<SeekResult> SeekForwardExactMatch(TableSchema.SchemaIndexDef index, Slice value)
+        {
+            var tree = GetTree(index);
+            using (var it = tree.Iterate(false))
+            {
+                it.RequiredPrefix = value.Clone(_tx.Allocator);
+
+                if (it.Seek(it.RequiredPrefix) == false)
+                    yield break;
+
+                do
+                {
+                    foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    {
+                        if (it.CurrentKey.Content.Match(it.RequiredPrefix.Content) == false)
+                            break;
+
+                        yield return new SeekResult
+                        {
+                            Key = it.CurrentKey,
+                            Result = result
+                        };
+                    }
+                } while (it.MoveNext());
+            }
+        }
+
         public IEnumerable<TableValueHolder> SeekByPrimaryKeyStartingWith(Slice requiredPrefix, Slice startAfter, int skip)
         {
             var isStartAfter = startAfter.Equals(Slices.Empty) == false;
@@ -774,7 +801,7 @@ namespace Voron.Data.Tables
             {
                 it.RequiredPrefix = requiredPrefix.Clone(_tx.Allocator);
 
-                var seekValue = isStartAfter ? startAfter : requiredPrefix;
+                var seekValue = isStartAfter ? startAfter : it.RequiredPrefix;
                 if (it.Seek(seekValue) == false)
                     yield break;
 

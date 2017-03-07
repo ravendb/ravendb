@@ -265,6 +265,16 @@ namespace Sparrow.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteRawStringWhichMustBeWithoutEscapeChars(byte* buffer, int size)
+        {
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+            WriteRawString(buffer, size);
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+        }
+
         private void WriteRawString(byte* buffer, int size)
         {
             if (size < _bufferLen)

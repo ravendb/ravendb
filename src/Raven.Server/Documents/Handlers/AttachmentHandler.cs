@@ -119,8 +119,8 @@ namespace Raven.Server.Documents.Handlers
                             if (bufferRead == buffer.Buffer.Count)
                             {
                                 PartialComputeHash(metroCtx,xxhas64Ctx, buffer, bufferRead);
-                                bufferRead = 0;
                                 await file.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, bufferRead, Database.DatabaseShutdown);
+                                bufferRead = 0;
                             }
                         }
                         await file.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, bufferRead, Database.DatabaseShutdown);

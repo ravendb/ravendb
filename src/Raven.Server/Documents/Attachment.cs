@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.Documents
 {
@@ -12,7 +13,7 @@ namespace Raven.Server.Documents
         public DateTime LastModified;
         public LazyStringValue Name;
         public LazyStringValue ContentType;
-        public LazyStringValue Hash;
+        public Slice Hash;
         public Stream Stream;
     }
 }

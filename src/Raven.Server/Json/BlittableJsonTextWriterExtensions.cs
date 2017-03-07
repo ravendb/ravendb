@@ -1207,7 +1207,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static void WriteAttachments(this BlittableJsonTextWriter writer, IEnumerable<Attachment> attachments)
+        private static unsafe void WriteAttachments(this BlittableJsonTextWriter writer, IEnumerable<Attachment> attachments)
         {
             writer.WritePropertyName(Constants.Documents.Metadata.Attachments);
 
@@ -1227,7 +1227,7 @@ namespace Raven.Server.Json
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(attachment.Hash));
-                writer.WriteString(attachment.Hash);
+                writer.WriteRawStringWhichMustBeWithoutEscapeChars(attachment.Hash.Content.Ptr, attachment.Hash.Size);
 
                 writer.WriteEndObject();
             }

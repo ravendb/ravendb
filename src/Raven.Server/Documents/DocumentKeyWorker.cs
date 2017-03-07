@@ -206,6 +206,7 @@ namespace Raven.Server.Documents
             int lowerKeySize;
             byte* key;
             int keySize;
+            // TODO: Optimize this
             GetLowerKeySliceAndStorageKey(context, str, out lowerKey, out lowerKeySize, out key, out keySize);
 
             return Slice.From(context.Allocator, key, keySize, out strSlice);
