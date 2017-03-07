@@ -45,7 +45,8 @@ namespace FastTests
             string path = null,
             Action<DatabaseDocument> modifyDatabaseDocument = null,
             Func<string, string> modifyName = null,
-            string apiKey = null)
+            string apiKey = null,
+            bool ignoreDisabledDatabase = false)
         {
             lock (_getDocumentStoreSync)
             {
@@ -107,7 +108,7 @@ namespace FastTests
 
                     if (Server.Disposed == false)
                     {
-                        var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+                        var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
                         if (databaseTask != null && databaseTask.IsCompleted == false)
                             databaseTask.Wait();
                                 // if we are disposing store before database had chance to load then we need to wait

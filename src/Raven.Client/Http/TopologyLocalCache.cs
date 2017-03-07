@@ -92,6 +92,13 @@ namespace Raven.Client.Http
 
                     writer.WritePropertyName(context.GetLazyString(nameof(Topology.WriteBehavior)));
                     writer.WriteString(context.GetLazyString(topology.WriteBehavior.ToString()));
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.SLA)));
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(context.GetLazyString(nameof(topology.SLA.RequestTimeThresholdInMilliseconds)));
+                    writer.WriteInteger(topology.SLA.RequestTimeThresholdInMilliseconds);
+                    writer.WriteEndObject();
+
                     writer.WriteEndObject();
                 }
             }

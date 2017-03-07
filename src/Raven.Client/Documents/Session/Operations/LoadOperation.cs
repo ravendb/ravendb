@@ -124,15 +124,18 @@ namespace Raven.Client.Documents.Session.Operations
                 }
             }
 
-            foreach (BlittableJsonReaderObject document in result.Results)
+            if (result.Results != null)
             {
-                if (document == null)
-                    continue;
+                foreach (BlittableJsonReaderObject document in result.Results)
+                {
+                    if (document == null)
+                        continue;
 
-                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
-                _session.DocumentsById.Add(newDocumentInfo);
+                    var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
+                    _session.DocumentsById.Add(newDocumentInfo);
+                }
             }
-
+            
             if (_includes != null && _includes.Length > 0)
             {
                 _session.RegisterMissingIncludes(result.Results, _includes);

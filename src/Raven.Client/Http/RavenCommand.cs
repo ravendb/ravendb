@@ -23,6 +23,8 @@ namespace Raven.Client.Http
         public abstract bool IsReadRequest { get; }
         public HttpStatusCode StatusCode;
 
+        public bool AvoidFailover;
+
         public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;
 
         public TimeSpan? Timeout { get; protected set; }
