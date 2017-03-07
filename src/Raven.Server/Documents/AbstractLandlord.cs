@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
 
         public TimeSpan DatabaseLoadTimeout => ServerStore.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;
 
-        public abstract Task<TResource> TryGetOrCreateResourceStore(StringSegment resourceName);
+        public abstract Task<TResource> TryGetOrCreateResourceStore(StringSegment resourceName, bool ignoreDisabledDatabase = false);
 
         public void Dispose()
         {

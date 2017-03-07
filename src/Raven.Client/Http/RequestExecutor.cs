@@ -46,7 +46,7 @@ namespace Raven.Client.Http
 
         private Topology _topology;
         private readonly Timer _updateTopologyTimer;
-        private bool _firstTimeTryLoadFromTopologyCache = true;
+        private readonly bool _firstTimeTryLoadFromTopologyCache = true;
 
         private Timer _updateCurrentTokenTimer;
         private readonly Timer _updateFailingNodesStatus;
@@ -64,12 +64,32 @@ namespace Raven.Client.Http
                 ReadBehavior = ReadBehavior.LeaderOnly,
                 WriteBehavior = WriteBehavior.LeaderOnly,
                 Etag = int.MinValue,
+                SLA = new TopologySla
+                {
+                    RequestTimeThresholdInMilliseconds = 100
+                }
             };
 
             ContextPool = new JsonContextPool();
-
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
             _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+
+            JsonOperationContext context;
+            ContextPool.AllocateOperationContext(out context);
+
+            var node = _topology.LeaderNode;
+            var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
+
+            if (_firstTimeTryLoadFromTopologyCache)
+            {
+                _firstTimeTryLoadFromTopologyCache = false;
+
+                var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
+                if (cachedTopology != null && cachedTopology.Etag > _topology.Etag)
+                {
+                    _topology = cachedTopology;
+                }
+            }
         }
 
         public static RequestExecutor ShortTermSingleUse(string url, string databaseName, string apiKey)
@@ -82,16 +102,16 @@ namespace Raven.Client.Http
             GC.KeepAlive(UpdateTopology());
         }
 
-        private async Task UpdateTopology()
+        public async Task<bool> UpdateTopology()
         {
             if (_disposed)
-                return;
+                return false;
             bool lookTaken = false;
             Monitor.TryEnter(this,0, ref lookTaken);
             try
             {
                 if (_disposed)
-                    return;
+                    return false;
                 JsonOperationContext context;
                 var operationContext = ContextPool.AllocateOperationContext(out context);
                 try
@@ -101,22 +121,7 @@ namespace Raven.Client.Http
                     Monitor.Exit(this); // don't lock now, we aren't using any more shared resources that require protection
 
                     var node = _topology.LeaderNode;
-
                     var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
-
-                    if (_firstTimeTryLoadFromTopologyCache)
-                    {
-                        _firstTimeTryLoadFromTopologyCache = false;
-
-                        var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
-                        if (UpdateTopologyField(cachedTopology))
-                        {
-                            // we have cached topology, but we need to verify it is up to date, we'll check in 
-                            // 1 second, and let the rest of the system start
-                            _updateTopologyTimer.Change(TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
-                        }
-                        return;
-                    }
 
                     var command = new GetTopologyCommand();
                     try
@@ -133,6 +138,7 @@ namespace Raven.Client.Http
                     {
                         if (Logger.IsInfoEnabled)
                             Logger.Info("Failed to update topology", ex);
+                        return false;
                     }
                     finally
                     {
@@ -150,6 +156,7 @@ namespace Raven.Client.Http
                 if(lookTaken)
                     Monitor.Exit(this);
             }
+            return true;
         }
 
         private bool UpdateTopologyField(Topology topology)
@@ -223,8 +230,18 @@ namespace Raven.Client.Http
                     {
                         response = await GetHttpClientForCommand(command).SendAsync(request, token).ConfigureAwait(false);
                     }
-                    
+
                     sp.Stop();
+               
+                    switch (response.StatusCode)
+                    {
+                        case HttpStatusCode.GatewayTimeout:
+                        case HttpStatusCode.RequestTimeout:
+                        case HttpStatusCode.BadGateway:
+                        case HttpStatusCode.ServiceUnavailable:
+                            await HandleServerDown(choosenNode, context, command, null);
+                            return;
+                    }
                 }
                 catch (HttpRequestException e) // server down, network down
                 {
@@ -378,6 +395,9 @@ namespace Raven.Client.Http
         private async Task HandleServerDown<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestException e)
         {
+            if (command.AvoidFailover)
+                return;
+
             if (command.FailedNodes == null)
                 command.FailedNodes = new HashSet<ServerNode>();
 

@@ -7,6 +7,11 @@ namespace Raven.Client.Server.Commands
 {
     public class GetTopologyCommand : RavenCommand<Topology>
     {
+        public GetTopologyCommand()
+        {
+            AvoidFailover = true;
+        }
+
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/topology?url={node.Url}";
