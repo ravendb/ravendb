@@ -36,7 +36,7 @@ namespace Raven.Server.Smuggler.Documents
 
             using (var scope = new OperationScope())
             {
-                var jsObject = scope.ToJsObject(_engine, document.Data);
+                var jsObject = scope.ToJsObject(_engine, document);
                 var jsObjectTransformed = _engine.Invoke("Transform", jsObject);
 
                 if (jsObjectTransformed.IsObject() == false)

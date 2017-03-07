@@ -14,13 +14,13 @@ namespace Raven.Server.Documents
             {
                 Script = filterJavaScript
             };
-
         }
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
             // override to make it "no-op"
         }
+
         public bool MatchCriteria(DocumentsOperationContext context, Document document)
         {
             var actualPatchResult = ApplySingleScript(context, document, _patchRequest, debugMode: false).ActualPatchResult;

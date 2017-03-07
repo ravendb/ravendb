@@ -3,27 +3,25 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Data;
-using Raven.Tests.Common;
+
+using FastTests;
+using Raven.Client.Documents.Operations;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    
-    public class RavenDB_4147 : RavenTest
+    public class RavenDB_4147 : RavenTestBase
     {
-
         public class Dates
         {
             public string Date1 { get; set; }
             public string Date2 { get; set; }
         }
 
-
         [Fact]
         public void LastModifiedShouldBeAvailableInPatchContext()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -33,10 +31,10 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.DatabaseCommands.Patch("dates/1", new ScriptedPatchRequest
+                store.Operations.Send(new PatchOperation("dates/1", null, new PatchRequest
                 {
-                    Script = "this.Date1 = this[\"@metadata\"][\"Last-Modified\"]; this.Date2 = this[\"@metadata\"][\"Raven-Last-Modified\"];"
-                });
+                    Script = "this.Date1 = this[\"@metadata\"][\"@last-modified\"]; this.Date2 = this[\"@metadata\"][\"@last-modified\"];"
+                }));
 
                 using (var session = store.OpenSession())
                 {

@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Patch
             foreach (var doc in _docs)
             {
                 //TODO : add unit test that has a conflict here to make sure that it is ok
-                var jsVal = scope.ToJsObject(jintEngine, doc.Doc, "doc" + index);
+                var jsVal = scope.ToJsObject(jintEngine, doc, "doc" + index);
                 docsArr.FastAddProperty(index.ToString(), jsVal, true, true, true);
                 index++;
             }
