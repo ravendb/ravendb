@@ -215,6 +215,8 @@ class patch extends viewModelBase {
                 this.clearDocumentPreview();
             }
         });
+
+        //TODO: install doc preview tooltip
     }
 
     activate(recentPatchHash?: string) {

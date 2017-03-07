@@ -32,6 +32,8 @@ import queryTransformerParameter = require("models/database/query/queryTransform
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
 
 type indexItem = {
     name: string;
@@ -96,6 +98,8 @@ class query extends viewModelBase {
     requestedIndexForQuery = ko.observable<string>();
     staleResult: KnockoutComputed<boolean>;
     dirtyResult = ko.observable<boolean>();
+
+    private columnPreview = new columnPreviewPlugin<document>();
 
     selectedIndexLabel: KnockoutComputed<string>;
     hasEditableIndex: KnockoutComputed<boolean>;
@@ -302,6 +306,7 @@ class query extends viewModelBase {
         this.updateHelpLink('KCIMJK');
         
         const db = this.activeDatabase();
+
         return $.when<any>(this.fetchAllCollections(db), this.fetchAllIndexes(db))
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
@@ -351,6 +356,15 @@ class query extends viewModelBase {
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
         this.fetcher.subscribe(() => grid.reset());
+
+        this.columnPreview.install("virtual-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+            if (column instanceof textColumn) {
+                const value = _.isString(column.valueAccessor) ? (doc as any)[column.valueAccessor] : column.valueAccessor(doc);
+                const json = JSON.stringify(value, null, 4);
+                const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                onValue(html);
+            }
+        });
     }
 
     private loadRecentQueries() {

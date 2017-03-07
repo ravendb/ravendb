@@ -12,6 +12,7 @@ import messagePublisher = require("common/messagePublisher");
 import copyDocuments = require("viewmodels/database/documents/copyDocuments");
 import copyDocumentIds = require("viewmodels/database/documents/copyDocumentIds");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
 
 import notificationCenter = require("common/notifications/notificationCenter");
 
@@ -58,6 +59,8 @@ class documents extends viewModelBase {
     private collectionToSelectName: string;
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
+
+    private fullDocumentsProvider: documentPropertyProvider;
 
     spinners = {
         delete: ko.observable<boolean>(false),
@@ -118,6 +121,7 @@ class documents extends viewModelBase {
 
         const db = this.activeDatabase();
         this.tracker = new collectionsTracker(db, () => this.gridController().resultEtag());
+        this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
         return this.fetchCollectionsStats(db).done(results => {
             this.collectionsLoaded(results, db);
@@ -186,13 +190,13 @@ class documents extends viewModelBase {
 
         this.tracker.currentCollection.subscribe(this.onCollectionSelected, this);
 
-        this.columnPreview.install(".documents-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject) => {
+        this.columnPreview.install(".documents-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
-                const value = column.valueAccessor(doc);
-                const json = JSON.stringify(value, null, 4);
-                return Prism.highlight(json, (Prism.languages as any).javascript);
-            } else {
-                return undefined;
+                this.fullDocumentsProvider.resolvePropertyValue(doc, column.valueAccessor, (v: any) => {
+                    const json = JSON.stringify(v, null, 4);
+                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    onValue(html);
+                });
             }
         });
     }

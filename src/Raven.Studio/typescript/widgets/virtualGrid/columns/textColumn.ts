@@ -10,7 +10,7 @@ type preparedValue = {
 
 class textColumn<T> implements virtualColumn {
     constructor(
-        public valueAccessor: (item: T) => any,
+        public valueAccessor: ((item: T) => any) | string,
         public header: string, 
         public width: string) {
     }
@@ -21,7 +21,7 @@ class textColumn<T> implements virtualColumn {
     }
 
     protected prepareValue(item: T): preparedValue {
-        const cellValue = this.valueAccessor(item);
+        const cellValue = _.isFunction(this.valueAccessor) ? this.valueAccessor(item) : (item as any)[this.valueAccessor as string];
 
         if (_.isString(cellValue)) {
             const rawText = utils.escape(cellValue);
