@@ -1312,7 +1312,7 @@ namespace Raven.Server.Documents
                     if (largestEtag < conflict.Etag)
                         largestEtag = conflict.Etag;
                     conflictRecords.Add(new GetConflictsResult.Conflict
-                    {                        
+                    {
                         ChangeVector = conflict.ChangeVector
                     });
                 }
@@ -1321,9 +1321,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static void ThrowDocumentConflictException(string docId,long etag)
+        private static void ThrowDocumentConflictException(string docId, long etag)
         {
-            throw new DocumentConflictException($"Conflict detected on '{docId}', conflict must be resolved before the document will be accessible.",docId, etag);
+            throw new DocumentConflictException($"Conflict detected on '{docId}', conflict must be resolved before the document will be accessible.", docId, etag);
         }
 
         public long GenerateNextEtag()
@@ -1446,25 +1446,32 @@ namespace Raven.Server.Documents
                 return list;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
-            var conflictsTableStorageIdsToDelete = new List<long>();
 
-            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
+            while (true)
             {
-                int size;
-                var etag = *(long*)tvr.Result.Reader.Read((int)ConflictsTable.Etag, out size);
-                var cve = tvr.Result.Reader.Read((int)ConflictsTable.ChangeVector, out size);
-                var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
-                fixed (ChangeVectorEntry* pVector = vector)
+                var more = false;
+                foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
                 {
-                    Memory.Copy((byte*)pVector, cve, size);
-                }
-                list.Add(vector);
-                conflictsTableStorageIdsToDelete.Add(tvr.Result.Reader.Id);
-                EnsureLastEtagIsPersisted(context, etag);
-            }
+                    more = true;
 
-            foreach (var storageId in conflictsTableStorageIdsToDelete)
-                conflictsTable.Delete(storageId);
+                    int size;
+                    var etag = *(long*)tvr.Result.Reader.Read((int)ConflictsTable.Etag, out size);
+                    var cve = tvr.Result.Reader.Read((int)ConflictsTable.ChangeVector, out size);
+                    var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
+                    fixed (ChangeVectorEntry* pVector = vector)
+                    {
+                        Memory.Copy((byte*)pVector, cve, size);
+                    }
+                    list.Add(vector);
+                    EnsureLastEtagIsPersisted(context, etag);
+
+                    conflictsTable.Delete(tvr.Result.Reader.Id);
+                    break;
+                }
+
+                if (more == false)
+                    break;
+            }
 
             // once this value has been set, we can't set it to false
             // an older transaction may be running and seeing it is false it
@@ -2696,12 +2703,12 @@ namespace Raven.Server.Documents
         }
 
         public AttachmentResult PutAttachment(
-            DocumentsOperationContext context, 
-            string documentId, 
-            string name, 
-            string contentType, 
-            string hash, 
-            long? expectedEtag, 
+            DocumentsOperationContext context,
+            string documentId,
+            string name,
+            string contentType,
+            string hash,
+            long? expectedEtag,
             Stream stream,
             long? lastModifiedTicks = null)
         {
@@ -3045,7 +3052,7 @@ namespace Raven.Server.Documents
             result.Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
             result.Name = TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr);
             result.ContentType = TableValueToKey(context, (int)AttachmentsTable.ContentType, ref tvr);
-            result.LastModified = new DateTime(*(long*)tvr.Read((int) AttachmentsTable.LastModified, out size));
+            result.LastModified = new DateTime(*(long*)tvr.Read((int)AttachmentsTable.LastModified, out size));
 
             TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
 
