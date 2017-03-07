@@ -5,14 +5,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    internal class BlitPath
+    internal class BlittablePath
     {
         private readonly string _expression;
         public List<object> Parts { get; }
 
         private int _currentIndex;
 
-        public BlitPath(string expression)
+        public BlittablePath(string expression)
         {
             _expression = expression;
             Parts = new List<object>();
@@ -114,7 +114,7 @@ namespace Raven.Client.Json
         {
             object current = root;
 
-            foreach (object part in Parts)
+            foreach (var part in Parts)
             {
                 var propertyName = part as string;
                 if (propertyName != null)
@@ -122,19 +122,11 @@ namespace Raven.Client.Json
                     var o = current as BlittableJsonReaderObject;
                     if (o != null)
                     {
-                        var newProp = o[propertyName];
-                        if (newProp != null)
-                        {
-                            current = o[propertyName];
-                        }
-                        else
-                        {
+                        if (o.TryGet(propertyName, out current) == false)
                             current = null;
-                        }
 
                         if (current == null && errorWhenNoMatch)
                             string.Format(CultureInfo.InvariantCulture, "Property '{0}' does not exist on JSON.", propertyName);
-
                     }
                     else
                     {
