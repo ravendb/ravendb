@@ -147,10 +147,9 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public bool PutFromDocument(DocumentsOperationContext context, CollectionName collectionName, string key,
-            BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector = null)
+        public DocumentFlags ShouldVersionDocument(CollectionName collectionName, BlittableJsonReaderObject document, out VersioningConfigurationCollection configuration)
         {
-            var enableVersioning = false;
+            configuration = null;
             BlittableJsonReaderObject metadata;
             if (document.TryGet(Constants.Documents.Metadata.Key, out metadata))
             {
@@ -163,35 +162,51 @@ namespace Raven.Server.Documents.Versioning
                     metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
                     mutatedMetadata.Remove(Constants.Documents.Versioning.DisableVersioning);
                     if (disableVersioning)
-                        return false;
+                    {
+                        return DocumentFlags.SkipVersioning;
+                    }
                 }
 
+                bool enableVersioning;
                 if (metadata.TryGet(Constants.Documents.Versioning.EnableVersioning, out enableVersioning))
                 {
                     DynamicJsonValue mutatedMetadata = metadata.Modifications;
                     if (mutatedMetadata == null)
                         metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
                     mutatedMetadata.Remove(Constants.Documents.Versioning.EnableVersioning);
+                    if (enableVersioning)
+                    {
+                        return DocumentFlags.ForceVersioning | DocumentFlags.Versioned;
+                    }
                 }
             }
 
-            var configuration = GetVersioningConfiguration(collectionName);
-            if (enableVersioning == false && configuration.Active == false)
-                return false;
+            configuration = GetVersioningConfiguration(collectionName);
+            return configuration.Active ? DocumentFlags.Versioned : DocumentFlags.None;
+        }
 
+        public void PutFromDocument(DocumentsOperationContext context, string key,
+            BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector = null, VersioningConfigurationCollection configuration = null)
+        {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
+            PutInternal(context, key, document, table, changeVector);
+
+            if (configuration == null)
+            {
+                var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, key, document);
+                configuration = GetVersioningConfiguration(collectionName);
+            }
+
             Slice prefixSlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, key, out prefixSlice))
             {
+                // We delete the old revsions after we put the current one, 
+                // because in case that MaxRevisions is 3 or lower we may get a revsion document from replication
+                // which is old. But becasue we put it first, we make sure to clean this document, becuase of the order to the revisions.
                 var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
                 DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
-
-                PutInternal(context, key, document, table, changeVector);
             }
-
-            return true;
         }
-
 
         public void PutDirect(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector)
         {
@@ -413,20 +428,14 @@ namespace Raven.Server.Documents.Versioning
             {
                 StorageId = tvr.Id
             };
+            result.Key = DocumentsStorage.TableValueToKey(context, (int)Columns.Key, ref tvr);
+            result.Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr);
+
             int size;
-            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
-            var ptr = tvr.Read((int)Columns.Key, out size);
-            byte offset;
-            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
-            result.Key = new LazyStringValue(null, ptr + offset, size, context);
-            ptr = tvr.Read((int)Columns.Etag, out size);
-            result.Etag = Bits.SwapBytes(*(long*)ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read((int)Columns.Document, out size), size, context);
 
-
-            int changeVectorSize = sizeof(ChangeVectorEntry);
-            ptr = tvr.Read((int)Columns.ChangeVector, out size);
-            int changeVecotorCount = size / changeVectorSize;
+            var ptr = tvr.Read((int)Columns.ChangeVector, out size);
+            int changeVecotorCount = size / sizeof(ChangeVectorEntry);
             result.ChangeVector = new ChangeVectorEntry[changeVecotorCount];
             for (var i = 0; i < changeVecotorCount; i++)
             {
@@ -442,13 +451,6 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
             return table.GetNumberEntriesFor(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice]);
-        }
-
-        public bool AreThereAttachmentsForHash(DocumentsOperationContext context, Slice hash)
-        {
-            // TODO: Implement
-            DevelopmentHelper.TimeBomb();
-            return false;
         }
     }
 }

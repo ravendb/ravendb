@@ -317,7 +317,7 @@ namespace Raven.Server.Documents
 
         public void Initialize(StorageEnvironmentOptions options)
         {
-            options.SchemaVersion = 2;
+            options.SchemaVersion = 3;
             try
             {
                 Environment = new StorageEnvironment(options);
@@ -2114,14 +2114,15 @@ namespace Raven.Server.Documents
 
                 if (collectionName.IsSystem == false && (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
-                    bool hasVersion =
-                        _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
-                        key, document, changeVector) ?? false;
-                    if (hasVersion)
+                    if (_documentDatabase.BundleLoader.VersioningStorage != null)
                     {
-                        flags |= DocumentFlags.Versioned;
+                        VersioningConfigurationCollection configuration;
+                        flags |= _documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, document, out configuration);
+                        if ((flags & DocumentFlags.Versioned) == DocumentFlags.Versioned)
+                        {
+                            _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, changeVector, configuration);
+                        }
                     }
-
                 }
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -2816,8 +2817,7 @@ namespace Raven.Server.Documents
 
         private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 0)
         {
-            if (GetCountOfAttachmentsForHash(context, hash) == expectedCount &&
-                (_documentDatabase.BundleLoader.VersioningStorage?.AreThereAttachmentsForHash(context, hash) ?? false) == false)
+            if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
             {
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
                 tree.DeleteStream(hash);
@@ -3077,7 +3077,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static LazyStringValue TableValueToKey(JsonOperationContext context, int index, ref TableValueReader tvr)
+        public static LazyStringValue TableValueToKey(JsonOperationContext context, int index, ref TableValueReader tvr)
         {
             int size;
             // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
