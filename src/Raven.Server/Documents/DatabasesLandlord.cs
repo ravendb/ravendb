@@ -23,7 +23,7 @@ namespace Raven.Server.Documents
         public event Action<string> OnDatabaseLoaded = delegate { };
 
 
-        public override Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName)
+        public override Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false)
         {
             if (HasLocks != 0)
             {
@@ -45,12 +45,12 @@ namespace Raven.Server.Documents
                 }
             }
 
-            return CreateDatabase(databaseName);
+            return CreateDatabase(databaseName, ignoreDisabledDatabase);
         }
 
-        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName)
+        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, bool ignoreDisabledDatabase = false)
         {
-            var config = CreateDatabaseConfiguration(databaseName);
+            var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase);
             if (config == null)
                 return null;
 
