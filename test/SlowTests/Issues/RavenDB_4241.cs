@@ -3,19 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
+
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4241 : RavenTest
+    public class RavenDB_4241 : RavenTestBase
     {
         [Fact]
         public void passing_duplicate_document_ids_to_Advanced_Lazily_Load_should_not_result_in_documents_failing_to_load()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
-                var documentId = "TestDocuments/1";
+                const string documentId = "TestDocuments/1";
                 using (var session = documentStore.OpenSession())
                 {
                     session.Store(new TestDocument { Id = documentId, Value = 1 });
@@ -40,10 +41,8 @@ namespace Raven.Tests.Issues
 
                     var docs = lazyLoad.Value;
 
-                    Assert.Equal(2, docs.Length);
-                    Assert.NotNull(docs[0]);
-                    Assert.NotNull(docs[1]);
-                    Assert.Same(docs[0], docs[1]);
+                    Assert.Equal(1, docs.Count);
+                    Assert.NotNull(docs[documentId]);
                 }
 
                 using (var session = documentStore.OpenSession())
@@ -52,12 +51,8 @@ namespace Raven.Tests.Issues
 
                     var docs = lazyLoad.Value;
 
-                    Assert.Equal(3, docs.Length);
-                    Assert.NotNull(docs[0]);
-                    Assert.NotNull(docs[1]);
-                    Assert.NotNull(docs[2]);
-                    Assert.Same(docs[0], docs[1]);
-                    Assert.Same(docs[1], docs[2]);
+                    Assert.Equal(1, docs.Count);
+                    Assert.NotNull(docs[documentId]);
                 }
 
                 using (var session = documentStore.OpenSession())
@@ -66,11 +61,9 @@ namespace Raven.Tests.Issues
 
                     var docs = lazyLoad.Value;
 
-                    Assert.Equal(3, docs.Length);
-                    Assert.NotNull(docs[0]);
-                    Assert.Null(docs[1]);
-                    Assert.NotNull(docs[2]);
-                    Assert.Same(docs[0], docs[2]);
+                    Assert.Equal(2, docs.Count);
+                    Assert.NotNull(docs[documentId]);
+                    Assert.Null(docs["items/123"]);
                 }
             }
         }
@@ -78,9 +71,9 @@ namespace Raven.Tests.Issues
         [Fact]
         public void passing_duplicate_document_ids_to_Load_with_Include_should_not_throw()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
-                var documentId = "TestDocuments/1";
+                const string documentId = "TestDocuments/1";
                 using (var session = documentStore.OpenSession())
                 {
                     session.Store(new TestDocument { Id = documentId, Value = 1 });
@@ -90,30 +83,23 @@ namespace Raven.Tests.Issues
 
                 using (var session = documentStore.OpenSession())
                 {
-                    TestDocument[] docs = null;
+                    var docs = session.Include("foo").Load<TestDocument>(new[] { documentId, documentId });
 
-                    Assert.DoesNotThrow(() => docs = session.Include("foo").Load<TestDocument>(new[] { documentId, documentId }));
-
-                    Assert.Equal(2, docs.Length);
-                    Assert.Same(docs[0], docs[1]);
+                    Assert.Equal(1, docs.Count);
                 }
 
                 using (var session = documentStore.OpenSession())
                 {
-                    TestDocument[] docs = null;
+                    var docs = session.Include("foo").Load<TestDocument>(new[] { documentId, "items/123", documentId });
 
-                    Assert.DoesNotThrow(() => docs = session.Include("foo").Load<TestDocument>(new[] { documentId, "items/123", documentId }));
-
-                    Assert.Equal(3, docs.Length);
-                    Assert.NotNull(docs[0]);
-                    Assert.Null(docs[1]);
-                    Assert.NotNull(docs[2]);
-                    Assert.Same(docs[0], docs[2]);
+                    Assert.Equal(2, docs.Count);
+                    Assert.NotNull(docs[documentId]);
+                    Assert.Null(docs["items/123"]);
                 }
             }
         }
 
-        public class TestDocument
+        private class TestDocument
         {
             public string Id { get; set; }
             public int Value { get; set; }

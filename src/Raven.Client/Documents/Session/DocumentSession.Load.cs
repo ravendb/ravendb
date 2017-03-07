@@ -141,18 +141,18 @@ namespace Raven.Client.Documents.Session
 
         public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes)
         {
-            var loadOeration = new LoadOperation(this);
-            loadOeration.ByIds(ids);
-            loadOeration.WithIncludes(includes);
+            var loadOperation = new LoadOperation(this);
+            loadOperation.ByIds(ids);
+            loadOperation.WithIncludes(includes);
 
-            var command = loadOeration.CreateRequest();
+            var command = loadOperation.CreateRequest();
             if (command != null)
             {
                 RequestExecutor.Execute(command, Context);
-                loadOeration.SetResult(command.Result);
+                loadOperation.SetResult(command.Result);
             }
 
-            return loadOeration.GetDocuments<T>();
+            return loadOperation.GetDocuments<T>();
         }
 
         public Dictionary<string, T> LoadInternal<T>(string[] ids, string transformer, Dictionary<string, object> transformerParameters = null)
