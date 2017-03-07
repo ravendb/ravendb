@@ -11,7 +11,7 @@ class columnPreviewPlugin<T> {
 
     private static readonly delay = 500;
 
-    install(selector: string, tooltipSelector: string, previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject) => string) {
+    install(selector: string, tooltipSelector: string, previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject, onValueProvided: (context: any) => void) => void) {
 
         const $grid = $(selector + " .virtual-grid");
         const grid = ko.dataFor($grid[0]) as virtualGrid<T>;
@@ -27,10 +27,9 @@ class columnPreviewPlugin<T> {
             const [element, column] = this.findItemAndColumn(e);
             this.previewTimeoutHandle = setTimeout(() => {
                 this.previewVisible = true;
-                const markup = previewContextProvider(element, column, e);
-                if (markup != null) {
-                    this.show(markup, e);
-                }
+
+                previewContextProvider(element, column, e, markup => this.show(markup, e));
+
             }, columnPreviewPlugin.delay);
         });
 

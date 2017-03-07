@@ -5,9 +5,9 @@ import document = require("models/database/documents/document");
 
 class getDocumentsPreviewCommand extends commandBase {
 
-    private static readonly ObjectStubsKey = "$o";
-    private static readonly ArrayStubsKey = "$a";
-    private static readonly TrimmedValueKey = "$t";
+    static readonly ObjectStubsKey = "$o";
+    static readonly ArrayStubsKey = "$a";
+    static readonly TrimmedValueKey = "$t";
 
     constructor(private database: database, private skip: number, private take: number, private collectionName?: string, private bindings?: string[]) {
         super();

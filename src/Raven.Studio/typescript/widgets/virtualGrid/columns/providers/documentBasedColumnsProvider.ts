@@ -63,7 +63,7 @@ class documentBasedColumnsProvider {
                 return new hyperlinkColumn((x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), "Id", columnWidth);
             }
 
-            return new hyperlinkColumn((obj: document) => (obj as any)[p], _.partial(this.findLink, _, p).bind(this), p, columnWidth);
+            return new hyperlinkColumn(p, _.partial(this.findLink, _, p).bind(this), p, columnWidth);
         }));
     }
 
