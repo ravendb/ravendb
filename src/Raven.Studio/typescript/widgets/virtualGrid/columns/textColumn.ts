@@ -6,7 +6,6 @@ import utils = require("widgets/virtualGrid/virtualGridUtils");
 type preparedValue = {
     rawText: string;
     typeCssClass: string;
-    title: string;
 }
 
 class textColumn<T> implements virtualColumn {
@@ -18,7 +17,7 @@ class textColumn<T> implements virtualColumn {
 
     renderCell(item: T, isSelected: boolean): string {
         const preparedValue = this.prepareValue(item);
-        return `<div class="cell text-cell ${preparedValue.typeCssClass}" title="${preparedValue.title}" style="width: ${this.width}">${preparedValue.rawText}</div>`;
+        return `<div class="cell text-cell ${preparedValue.typeCssClass}" style="width: ${this.width}">${preparedValue.rawText}</div>`;
     }
 
     protected prepareValue(item: T): preparedValue {
@@ -28,7 +27,6 @@ class textColumn<T> implements virtualColumn {
             const rawText = utils.escape(cellValue);
             return {
                 rawText: rawText,
-                title: rawText,
                 typeCssClass: "token-string"
             };
         }
@@ -37,7 +35,6 @@ class textColumn<T> implements virtualColumn {
             const value = cellValue.toLocaleString();
             return {
                 rawText: value,
-                title: value,
                 typeCssClass: "token-number"
             };
         }
@@ -46,7 +43,6 @@ class textColumn<T> implements virtualColumn {
             const value = !!cellValue;
             return {
                 rawText: value ? 'true' : 'false',
-                title: value ? 'true' : 'false',
                 typeCssClass: "token-boolean"
             }
         }
@@ -54,7 +50,6 @@ class textColumn<T> implements virtualColumn {
         if (_.isNull(cellValue)) {
             return {
                 rawText: "null",
-                title: "null",
                 typeCssClass: "token-null"
             }
         }
@@ -62,7 +57,6 @@ class textColumn<T> implements virtualColumn {
         if (_.isUndefined(cellValue)) {
             return {
                 rawText: "",
-                title: "",
                 typeCssClass: "token-undefined"
             }
         }
@@ -72,7 +66,6 @@ class textColumn<T> implements virtualColumn {
 
             return {
                 rawText: "[ ... ]",
-                title: value,
                 typeCssClass: "token-array"
             }
         }
@@ -82,7 +75,6 @@ class textColumn<T> implements virtualColumn {
 
             return {
                 rawText: "{ ... }",
-                title: value,
                 typeCssClass: "token-object"
             }
         }
@@ -91,7 +83,6 @@ class textColumn<T> implements virtualColumn {
             const value = utils.escape(cellValue.toString());
             return {
                 rawText: value,
-                title: value,
                 typeCssClass: ""
             };
         }

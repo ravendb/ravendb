@@ -37,6 +37,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 
 class documents extends viewModelBase {
 
@@ -56,6 +57,7 @@ class documents extends viewModelBase {
 
     private collectionToSelectName: string;
     private gridController = ko.observable<virtualGridController<document>>();
+    private columnPreview = new columnPreviewPlugin<document>();
 
     spinners = {
         delete: ko.observable<boolean>(false),
@@ -183,6 +185,16 @@ class documents extends viewModelBase {
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
         this.tracker.currentCollection.subscribe(this.onCollectionSelected, this);
+
+        this.columnPreview.install(".documents-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject) => {
+            if (column instanceof textColumn) {
+                const value = column.valueAccessor(doc);
+                const json = JSON.stringify(value, null, 4);
+                return Prism.highlight(json, (Prism.languages as any).javascript);
+            } else {
+                return undefined;
+            }
+        });
     }
 
     private onCollectionSelected(newCollection: collection) {
