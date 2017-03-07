@@ -376,6 +376,11 @@ namespace Raven.Smuggler
             return client.SeedIdentitiesAsync(itemsToInsert);
         }
 
+        public async Task FinishBulkInsertOperation()
+        {
+            await Operation.DisposeAsync().ConfigureAwait(false);
+        }
+
         public Task<IAsyncEnumerator<RavenJObject>> ExportItems(ItemType types, OperationState state)
         {
             var options = ExportOptions.Create(state, types, Options.ExportDeletions, Options.Limit);
