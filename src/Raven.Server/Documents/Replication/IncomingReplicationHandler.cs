@@ -678,7 +678,7 @@ namespace Raven.Server.Documents.Replication
                         documentsContext.TransactionMarkerOffset = doc.TransactionMarker;
 
                         ReadChangeVector(doc, buffer, maxReceivedChangeVectorByDatabase);                        
-                        BlittableJsonReaderObject json = null;
+                        BlittableJsonReaderObject document = null;
                         if (doc.DocumentSize >= 0) //no need to load document data for tombstones
                                                    // document size == -1 --> doc is a tombstone
                         {
@@ -687,17 +687,21 @@ namespace Raven.Server.Documents.Replication
 
                             //if something throws at this point, this means something is really wrong and we should stop receiving documents.
                             //the other side will receive negative ack and will retry sending again.
-                            json = new BlittableJsonReaderObject(
+                            document = new BlittableJsonReaderObject(
                                 buffer + doc.Position + (doc.ChangeVectorCount * sizeof(ChangeVectorEntry)),
                                 doc.DocumentSize, documentsContext);
-                            json.BlittableValidation();
+                            document.BlittableValidation();
                         }
 
                         if ((doc.Flags & DocumentFlags.FromVersionStorage) == DocumentFlags.FromVersionStorage)
                         {
-                            var collectionName = _database.DocumentsStorage.ExtractCollectionName(documentsContext, doc.Id, json);
-                            _database.BundleLoader?.VersioningStorage.PutFromDocument(documentsContext, 
-                                collectionName, doc.Id, json,_tempReplicatedChangeVector);
+                            if (_database.BundleLoader.VersioningStorage == null)
+                            {
+                                if (_log.IsOperationsEnabled)
+                                    _log.Operations("Versioing storage is disabled but the node got a versioned document from replication.");
+                                continue;
+                            }
+                            _database.BundleLoader.VersioningStorage.PutFromDocument(documentsContext, doc.Id, document, _tempReplicatedChangeVector);
                            continue; 
                         }
                            
@@ -708,12 +712,12 @@ namespace Raven.Server.Documents.Replication
                         switch (conflictStatus)
                         {
                             case ConflictStatus.Update:
-                                if (json != null)
+                                if (document != null)
                                 {
                                     if (_log.IsInfoEnabled)
                                         _log.Info(
                                             $"Conflict check resolved to Update operation, doing PUT on doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
-                                    _database.DocumentsStorage.Put(documentsContext, doc.Id, null, json,
+                                    _database.DocumentsStorage.Put(documentsContext, doc.Id, null, document,
                                         doc.LastModifiedTicks,
                                         _tempReplicatedChangeVector,DocumentFlags.FromReplication);
                                 }
@@ -739,7 +743,7 @@ namespace Raven.Server.Documents.Replication
                                 if (_log.IsInfoEnabled)
                                     _log.Info(
                                         $"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
-                                HandleConflictForDocument(documentsContext,doc, conflictingVector, json);
+                                HandleConflictForDocument(documentsContext,doc, conflictingVector, document);
                                 break;
                             case ConflictStatus.AlreadyMerged:
                                 if (_log.IsInfoEnabled)
