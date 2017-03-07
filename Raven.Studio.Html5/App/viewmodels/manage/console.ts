@@ -40,7 +40,7 @@ class consoleJs extends viewModelBase {
             Name: "Put document",
             Code: "var doc = Raven.Json.Linq.RavenJObject.Parse('{ \"Name\" : \"Raven\" }');" +
             "\nvar metadata = Raven.Json.Linq.RavenJObject.Parse('{ \"Raven-Entity-Name\" : \"Docs\" }');" +
-            "\n\ndatabase.Documents.Put('doc/1', null, doc, metadata, null);" });
+            "\n\ndatabase.Documents.Put('doc/1', null, doc, metadata, null, null, Raven.Database.Storage.InvokeSource.Default);" });
 
 
         aceEditorBindingHandler.install();
