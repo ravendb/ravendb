@@ -1,0 +1,62 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <VersionPrefix>4.0.0</VersionPrefix>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <WarningsAsErrors>true</WarningsAsErrors>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>SlowTests</AssemblyName>
+    <PackageId>SlowTests</PackageId>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Data\non-leaf-page-seq-id-large-values-2.txt" />
+    <None Remove="Data\non-leaf-page-seq-id-large-values.txt" />
+    <None Remove="Data\places.txt" />
+    <None Remove="MailingList\Everett\DocumentWithBytes.txt" />
+    <None Remove="Smuggler\Indexes_And_Transformers_3.5.ravendbdump" />
+    <None Remove="Smuggler\Northwind_3.5.35168.ravendbdump" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
+    <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values.txt" />
+    <EmbeddedResource Include="Data\places.txt" />
+    <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
+    <EmbeddedResource Include="Smuggler\Indexes_And_Transformers_3.5.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Northwind_3.5.35168.ravendbdump" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
+    <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+    <ProjectReference Include="..\FastTests\FastTests.csproj" />
+    <ProjectReference Include="..\Tests.Infrastructure\Tests.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0-preview-20170125-04" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0-beta5-build1225" />
+    <PackageReference Include="System.Diagnostics.TraceSource" Version="4.3.0" />
+    <PackageReference Include="xunit" Version="2.2.0-beta5-build3474" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Lucene.Net">
+      <HintPath>..\..\libs\Lucene.Net\netstandard1.6\Lucene.Net.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+  </ItemGroup>
+</Project>
