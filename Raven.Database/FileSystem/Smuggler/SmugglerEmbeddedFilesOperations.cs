@@ -169,7 +169,7 @@ namespace Raven.Database.FileSystem.Smuggler
         {
             if (metadata != null)
             {
-                metadata.Add(Constants.RavenIgnoreVersioning, true);
+                metadata[Constants.RavenIgnoreVersioning] = true;
             }
 
             return metadata;
