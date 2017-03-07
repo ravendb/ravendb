@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Server.Operations;
 using Xunit;
@@ -40,9 +41,9 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                var result = master.Admin.Server.Send(new DisableResourceToggleOperation("LoadDocumentsWithFailOver_1", true));
+                var result = master.Admin.Server.Send(new DisableResourceToggleOperation(master.DefaultDatabase, true));
                 Assert.True(result.Disabled);
-                Assert.Equal("LoadDocumentsWithFailOver_1", result.Name);
+                Assert.Equal(master.DefaultDatabase, result.Name);
 
                 using (var session = master.OpenSession())
                 {
