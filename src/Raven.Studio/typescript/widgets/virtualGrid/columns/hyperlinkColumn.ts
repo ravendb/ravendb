@@ -23,7 +23,7 @@ class hyperlinkColumn<T> extends textColumn<T> {
             // decorate with link
             const preparedValue = this.prepareValue(item);
 
-            return `<div class="cell text-cell ${preparedValue.typeCssClass}" title="${preparedValue.title}" style="width: ${this.width}"><a href="${hyperlinkValue}">${preparedValue.rawText}</a></div>`;
+            return `<div class="cell text-cell ${preparedValue.typeCssClass}" style="width: ${this.width}"><a href="${hyperlinkValue}">${preparedValue.rawText}</a></div>`;
         } else {
             // fallback to plain text column
             return super.renderCell(item, isSelected);

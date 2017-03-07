@@ -46,12 +46,15 @@ var paths = {
         //'wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css',
         'wwwroot/lib/animate.css/animate.css',
         'wwwroot/lib/toastr/toastr.css',
+        'wwwroot/lib/prism/themes/prism-dark.css',
         'wwwroot/Content/css/styles.css',
         'wwwroot/Content/css/legacy_styles.css'
     ],
     externalLibs: [
         "jquery/dist/jquery.js",
         'lodash/dist/lodash.js',
+        'prism/prism.js',
+        'prism/components/prism-javascript.js',
         "blockUI/jquery.blockUI.js",
         "knockout/dist/knockout.debug.js",
         "knockout-validation/dist/knockout.validation.js",

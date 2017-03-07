@@ -520,9 +520,17 @@ class virtualGrid<T> {
         return $target;
     }
 
-    private findRowForCell(cellElement: JQuery): virtualRow {
+    findRowForCell(cellElement: JQuery | Element): virtualRow {
         return this.virtualRows
-            .find(r => r.element.find(cellElement).length > 0);
+            .find(r => r.element.find(cellElement as any).length > 0);
+    }
+
+    findColumnForCell(cellElement: Element): virtualColumn {
+        const $cell = $(cellElement).closest(".cell");
+        const $row = $cell.closest(".virtual-row");
+        const $cells = $row.find(".cell");
+        const cellIdx = $cells.index($cell);
+        return this.columns()[cellIdx];
     }
 
     /**
