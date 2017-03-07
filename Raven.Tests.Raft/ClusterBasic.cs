@@ -130,12 +130,12 @@ namespace Raven.Tests.Raft
         public void CanCreateExtendAndRemoveFromCluster()
         {
             var clusterStores = CreateRaftCluster(3); // 3 nodes
+            var topolofyId = servers.First().Options.ClusterManager.Value.Engine.CurrentTopology.TopologyId;
+            RemoveFromCluster(servers[1], topolofyId); // 2 nodes
+            WaitForClusterToBecomeNonStale(2);
+            ExtendRaftCluster(3, topolofyId); // 5 nodes
 
-            RemoveFromCluster(servers[1]); // 2 nodes
-
-            ExtendRaftCluster(3); // 5 nodes
-
-            ExtendRaftCluster(2); // 7 nodes
+            ExtendRaftCluster(2, topolofyId); // 7 nodes
             var removeIndexes = new List<int> {0,2,3,4,5,6};
             var rand = new Random();
             while (removeIndexes.Count>2)
@@ -143,7 +143,7 @@ namespace Raven.Tests.Raft
                 var popIndex = rand.Next(removeIndexes.Count);
                 var popServer = servers[removeIndexes[popIndex]];
                 removeIndexes.RemoveAt(popIndex);
-                RemoveFromCluster(popServer);
+                RemoveFromCluster(popServer, topolofyId);
             }
         }
 
