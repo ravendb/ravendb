@@ -27,7 +27,7 @@ namespace SlowTests.Bugs
                 {
                     session.Store(new User
                     {
-                        EmailEncrypted = new byte[] {1, 2, 3, 4, 5, 6},
+                        EmailEncrypted = new byte[] { 1, 2, 3, 4, 5, 6 },
                         Skills = new Collection<UserSkill>
                         {
                             new UserSkill {SkillId = 1, IsPrimary = true},
@@ -62,28 +62,28 @@ for (var i = 0; i < this.Skills.$values.length; i++) {
                     var user = session.Load<User>("Users/1");
                     Assert.False(user.Skills.Single().IsPrimary);
                 }
-            }   
+            }
         }
 
-        public class User
+        private class User
         {
             //public int Id { get; set; }
             public byte[] EmailEncrypted { get; set; }
             public ICollection<UserSkill> Skills { get; set; }
         }
 
-        public class UserSkill
+        private class UserSkill
         {
             public int SkillId { get; set; }
             public bool IsPrimary { get; set; }
         }
 
-        public class Skill
+        private class Skill
         {
             public int Id { get; set; }
         }
 
-        public class PrimarySkills : AbstractIndexCreationTask<User, PrimarySkills.Result>
+        private class PrimarySkills : AbstractIndexCreationTask<User, PrimarySkills.Result>
         {
 
             public class Result

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using FastTests.Server.Replication;
+﻿using FastTests.Server.Replication;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Exceptions;
 using Xunit;
@@ -11,7 +7,7 @@ namespace FastTests.Issues
 {
     public class RavenDB_6415 : ReplicationTestsBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }
@@ -24,13 +20,13 @@ namespace FastTests.Issues
             {
                 using (var session = storeA.OpenSession())
                 {
-                    session.Store(new User {Name = "John Doe"}, "users/1");
+                    session.Store(new User { Name = "John Doe" }, "users/1");
                     session.SaveChanges();
                 }
 
                 using (var session = storeB.OpenSession())
                 {
-                    session.Store(new User {Name = "Jane Doe"}, "users/1");
+                    session.Store(new User { Name = "Jane Doe" }, "users/1");
                     session.SaveChanges();
                 }
 
@@ -94,7 +90,7 @@ namespace FastTests.Issues
 
                 //should throw concurrency exception because we use lower etag then max etag of existing conflicts
                 using (var session = storeA.OpenSession())
-                {                    
+                {
                     session.Delete("users/1", maxConflictEtag - 1);
                     Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
                 }

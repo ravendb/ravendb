@@ -25,7 +25,6 @@ namespace Raven.Client.Documents.Session.Operations
                 throw new NotSupportedException(
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
 
-            var index = query;
             if (string.IsNullOrEmpty(indexName))
                 throw new ArgumentException("Key cannot be null or empty index");
 

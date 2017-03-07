@@ -3,23 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4420 : RavenTest
+    public class RavenDB_4420 : RavenTestBase
     {
 
         [Fact]
         public void CanQueryProperlyWhenSaveEnumAsIntegerIsSetToTrue()
         {
-            using (var store = NewRemoteDocumentStore(fiddler:true))
+            using (var store = GetDocumentStore())
             {
                 // arrange
                 store.ExecuteIndex(new MyIndex());
@@ -27,7 +27,7 @@ namespace Raven.Tests.Issues
                 store.Conventions.SaveEnumsAsIntegers = true;
                 InsertTwoDocuments(store);
 
-                var values = new [] { MyEnum.Value1, MyEnum.Value2 };
+                var values = new[] { MyEnum.Value1, MyEnum.Value2 };
 
                 WaitForIndexing(store);
 
@@ -37,7 +37,7 @@ namespace Raven.Tests.Issues
 
                     var whereInRawQuery = session.Advanced.DocumentQuery<MyDocument, MyIndex>()
                         .WhereIn(x => x.MyProperty, values)
-                        .GetIndexQuery(false);
+                        .GetIndexQuery();
 
                     var whereInQuery = session
                         .Query<MyDocument, MyIndex>()
@@ -46,7 +46,7 @@ namespace Raven.Tests.Issues
 
                     var whereRawQuery = session.Advanced.DocumentQuery<MyDocument, MyIndex>()
                        .WhereEquals(x => x.MyProperty, MyEnum.Value1)
-                       .GetIndexQuery(false);
+                       .GetIndexQuery();
 
                     var whereQuery = session
                         .Query<MyDocument, MyIndex>()
@@ -80,28 +80,27 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class MyIndex : AbstractIndexCreationTask<MyDocument>
+        private class MyIndex : AbstractIndexCreationTask<MyDocument>
         {
             public MyIndex()
             {
                 Map = document => from s in document
-                             select new
-                             {
-                                 s.MyProperty
-                             };
+                                  select new
+                                  {
+                                      s.MyProperty
+                                  };
             }
         }
 
-        public enum MyEnum
+        private enum MyEnum
         {
             Value1,
             Value2
         }
 
-        public class MyDocument
+        private class MyDocument
         {
             public MyEnum MyProperty { get; set; }
         }
-
     }
 }

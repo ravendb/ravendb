@@ -10,7 +10,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_483 : NoDisposalNeeded
     {
-        public class Driver
+        private class Driver
         {
             public string PersonId { get; set; }
 
@@ -21,7 +21,7 @@ namespace SlowTests.Issues
             public string CarMake { get; set; }
         }
 
-        public class Car
+        private class Car
         {
             public Car(string registration, string make, string model)
             {
@@ -35,7 +35,7 @@ namespace SlowTests.Issues
             public string Model { get; set; }
         }
 
-        public class Person
+        private class Person
         {
             public Person(string name)
             {
