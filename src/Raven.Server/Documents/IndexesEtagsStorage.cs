@@ -288,18 +288,29 @@ namespace Raven.Server.Documents
 
             Debug.Assert(table != null);
 
-            var idsToDelete = new List<long>();
-            foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], etag, 0))
+            while (true)
             {
-                if (taken++ >= take)
-                    break;
-                var metadata = TableValueToMetadata(ref tvr.Reader, context, false);
-                if (metadata.Id == -1)
-                    idsToDelete.Add(tvr.Reader.Id);
-            }
+                var more = false;
+                foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], etag, 0))
+                {
+                    more = true;
+                    if (taken++ >= take)
+                    {
+                        more = false;
+                        break;
+                    }
 
-            foreach (var id in idsToDelete)
-                table.Delete(id);
+                    var metadata = TableValueToMetadata(ref tvr.Reader, context, false);
+                    if (metadata.Id == -1)
+                    {
+                        table.Delete(tvr.Reader.Id);
+                        break;
+                    }
+                }
+
+                if (more == false)
+                    break;
+            }
 
             if (Logger.IsInfoEnabled)
             {
@@ -383,17 +394,22 @@ namespace Raven.Server.Documents
             Debug.Assert(table != null);
 
             var list = new List<ChangeVectorEntry[]>();
-            var storageIdsToDelete = new List<long>();
 
-            foreach (var tvr in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName], name, 0, true))
+            while (true)
             {
-                list.Add(ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr.Result.Reader, (int)MetadataFields.ChangeVector));
+                var more = false;
+                foreach (var tvr in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName], name, 0, true))
+                {
+                    more = true;
+                    list.Add(ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr.Result.Reader, (int)MetadataFields.ChangeVector));
 
-                storageIdsToDelete.Add(tvr.Result.Reader.Id);
+                    table.Delete(tvr.Result.Reader.Id);
+                    break;
+                }
+
+                if (more == false)
+                    break;
             }
-
-            foreach (var storageId in storageIdsToDelete)
-                table.Delete(storageId);
 
             return list;
         }
