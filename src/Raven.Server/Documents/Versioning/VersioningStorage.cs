@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public DocumentFlags ShouldVersionDocument(CollectionName collectionName, BlittableJsonReaderObject document, out VersioningConfigurationCollection configuration)
+        public bool ShouldVersionDocument(CollectionName collectionName, BlittableJsonReaderObject document, out VersioningConfigurationCollection configuration)
         {
             configuration = null;
             BlittableJsonReaderObject metadata;
@@ -162,9 +162,7 @@ namespace Raven.Server.Documents.Versioning
                     metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
                     mutatedMetadata.Remove(Constants.Documents.Versioning.DisableVersioning);
                     if (disableVersioning)
-                    {
-                        return DocumentFlags.SkipVersioning;
-                    }
+                        return false;
                 }
 
                 bool enableVersioning;
@@ -175,14 +173,12 @@ namespace Raven.Server.Documents.Versioning
                         metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
                     mutatedMetadata.Remove(Constants.Documents.Versioning.EnableVersioning);
                     if (enableVersioning)
-                    {
-                        return DocumentFlags.ForceVersioning | DocumentFlags.Versioned;
-                    }
+                        return true;
                 }
             }
 
             configuration = GetVersioningConfiguration(collectionName);
-            return configuration.Active ? DocumentFlags.Versioned : DocumentFlags.None;
+            return configuration.Active;
         }
 
         public void PutFromDocument(DocumentsOperationContext context, string key,
