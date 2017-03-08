@@ -10,6 +10,7 @@ namespace Sparrow.Json
         protected byte* _propNames;
         protected int _propNamesDataOffsetSize;
         protected internal JsonOperationContext _context;
+
         public bool NoCache { get; set; }
 
         public int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
@@ -164,6 +165,7 @@ namespace Sparrow.Json
             return result;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ReadVariableSizeInt(byte* buffer, int pos, out byte offset)
         {
             if (pos < 0)

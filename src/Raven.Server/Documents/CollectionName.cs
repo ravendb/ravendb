@@ -155,10 +155,29 @@ namespace Raven.Server.Documents
 
             return true;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsSystemCollectionName(string key)
+        {
+            if (key.Length < 6)
+                return false;
+
+            // case insensitive 'Raven/' match without doing allocations
+
+            if ( key[5] != '/' ||
+                (key[0] != 'R' && key[0] != 'r') ||
+                (key[1] != 'A' && key[1] != 'a') ||
+                (key[2] != 'V' && key[2] != 'v') ||
+                (key[3] != 'E' && key[3] != 'e') ||
+                (key[4] != 'N' && key[4] != 'n'))
+                return false;
+
+            return true;
+        }
         
         public static string GetCollectionName(string key, BlittableJsonReaderObject document)
         {
-            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+            if (key != null && IsSystemCollectionName(key))
                 return SystemCollection;
 
             return GetCollectionName(document);
@@ -169,7 +188,7 @@ namespace Raven.Server.Documents
             dynamic dynamicDocument = document;
             string key = dynamicDocument.Id;
 
-            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+            if (key != null && IsSystemCollectionName(key))
                 return SystemCollection;
 
             return GetCollectionName(document.BlittableJson);
