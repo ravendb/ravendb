@@ -14,10 +14,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
-using Sparrow.Json;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -185,7 +184,7 @@ namespace Raven.Client.Documents.Indexes
         /// <param name="store"></param>
         /// <param name="conventions"></param>
         /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
-        public virtual void SideBySideExecute(DocumentStoreBase store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
+        public virtual void SideBySideExecute(IDocumentStore store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
         {
             PutIndex(store, conventions, minimumEtagBeforeReplace);
         }
@@ -193,74 +192,28 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
-        public virtual void Execute(DocumentStoreBase store, DocumentConventions conventions)
+        public virtual void Execute(IDocumentStore store, DocumentConventions conventions)
         {
             PutIndex(store, conventions);
         }
 
-        private void PutIndex(DocumentStoreBase store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
+        private void PutIndex(IDocumentStore store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
         {
-            Conventions = conventions;
-            var indexDefinition = CreateIndexDefinition();
-
-            var requestExecuter = store.GetRequestExecuter();
-
-            JsonOperationContext context;
-            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
-            {
-                var admin = new AdminOperationExecuter(store, requestExecuter, context);
-                indexDefinition.MinimumEtagBeforeReplace = minimumEtagBeforeReplace;
-                indexDefinition.Name = IndexName;
-                var putIndexOperation = new PutIndexesOperation(indexDefinition);
-                admin.Send(putIndexOperation);
-
-                if (Priority != null)
-                {
-                    var setIndexPriority = new SetIndexPriorityOperation(IndexName, Priority.Value);
-                    admin.Send(setIndexPriority);
-                }
-            }
+            AsyncHelpers.RunSync(() => PutIndexAsync(store, conventions, minimumEtagBeforeReplace));
         }
 
-        private async Task PutIndexAsync(DocumentStoreBase store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
+        private Task PutIndexAsync(IDocumentStore store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
         {
             Conventions = conventions;
+
             var indexDefinition = CreateIndexDefinition();
+            indexDefinition.MinimumEtagBeforeReplace = minimumEtagBeforeReplace;
+            indexDefinition.Name = IndexName;
 
-            var requestExecuter = store.GetRequestExecuter();
+            if (Priority.HasValue)
+                indexDefinition.Priority = Priority.Value;
 
-            JsonOperationContext context;
-            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
-            {
-                var admin = new AdminOperationExecuter(store, requestExecuter, context);
-                indexDefinition.MinimumEtagBeforeReplace = minimumEtagBeforeReplace;
-                indexDefinition.Name = IndexName;
-                var putIndexOperation = new PutIndexesOperation(indexDefinition);
-
-                await admin.SendAsync(putIndexOperation).ConfigureAwait(false);
-
-                if (Priority != null)
-                {
-                    var setIndexPriority = new SetIndexPriorityOperation(IndexName, Priority.Value);
-                    await admin.SendAsync(setIndexPriority).ConfigureAwait(false);
-                }
-            }
-        }
-
-        public IndexDefinition GetLegacyIndexDefinition(DocumentConventions conventions)
-        {
-            IndexDefinition legacyIndexDefinition;
-            var oldPrettifyGeneratedLinqExpressions = conventions.PrettifyGeneratedLinqExpressions;
-            conventions.PrettifyGeneratedLinqExpressions = false;
-            try
-            {
-                legacyIndexDefinition = CreateIndexDefinition();
-            }
-            finally
-            {
-                conventions.PrettifyGeneratedLinqExpressions = oldPrettifyGeneratedLinqExpressions;
-            }
-            return legacyIndexDefinition;
+            return store.Admin.SendAsync(new PutIndexesOperation(indexDefinition), token);
         }
 
         /// <summary>
@@ -279,17 +232,17 @@ namespace Raven.Client.Documents.Indexes
             return store.ExecuteIndexAsync(this);
         }
 
-        public virtual async Task SideBySideExecuteAsync(DocumentStoreBase store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
+        public virtual Task SideBySideExecuteAsync(IDocumentStore store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
         {
-            await PutIndexAsync(store, conventions, minimumEtagBeforeReplace).ConfigureAwait(false);
+            return PutIndexAsync(store, conventions, minimumEtagBeforeReplace, token);
         }
 
         /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>
-        public virtual async Task ExecuteAsync(DocumentStoreBase store, DocumentConventions conventions, CancellationToken token = default(CancellationToken))
+        public virtual Task ExecuteAsync(IDocumentStore store, DocumentConventions conventions, CancellationToken token = default(CancellationToken))
         {
-            await PutIndexAsync(store, conventions).ConfigureAwait(false);
+            return PutIndexAsync(store, conventions, minimumEtagBeforeReplace: null, token: token);
         }
     }
 

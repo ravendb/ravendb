@@ -8,20 +8,18 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class CreateIndexesRemotely :RavenTestBase
+    public class CreateIndexesRemotely : RavenTestBase
     {
         [Fact]
         public void CanDoSo_DirectUrl()
         {
             using (var store = GetDocumentStore())
             {
-                var assembly = new AssemblyName(typeof(CreateIndexesRemotely).GetTypeInfo().Assembly.FullName);
-                IndexCreation.CreateIndexes(Assembly.Load(assembly), store, 
-                    new [] { typeof(PostsByMonthPublishedCount), typeof(TagsCount) });              
+                store.ExecuteIndexes(new AbstractIndexCreationTask[] { new PostsByMonthPublishedCount(), new TagsCount() });
             }
         }
-        
-        public class PostsByMonthPublishedCount : AbstractIndexCreationTask<Post, PostCountByMonth>
+
+        private class PostsByMonthPublishedCount : AbstractIndexCreationTask<Post, PostCountByMonth>
         {
             public PostsByMonthPublishedCount()
             {
@@ -30,11 +28,11 @@ namespace SlowTests.Bugs
                 Reduce = results => from result in results
                                     group result by new { result.Year, result.Month }
                                         into g
-                                        select new { g.Key.Year, g.Key.Month, Count = g.Sum(x => x.Count) };
+                                    select new { g.Key.Year, g.Key.Month, Count = g.Sum(x => x.Count) };
             }
         }
 
-        public class TagsCount : AbstractIndexCreationTask<Post, TagCount>
+        private class TagsCount : AbstractIndexCreationTask<Post, TagCount>
         {
             public TagsCount()
             {
@@ -44,25 +42,25 @@ namespace SlowTests.Bugs
                 Reduce = results => from tagCount in results
                                     group tagCount by tagCount.Name
                                         into g
-                                        select new { Name = g.Key, Count = g.Sum(x => x.Count), LastSeenAt = g.Max(x => (DateTimeOffset)x.LastSeenAt) };
+                                    select new { Name = g.Key, Count = g.Sum(x => x.Count), LastSeenAt = g.Max(x => (DateTimeOffset)x.LastSeenAt) };
             }
         }
 
-        public class PostCountByMonth
+        private class PostCountByMonth
         {
             public int Year { get; set; }
             public int Month { get; set; }
             public int Count { get; set; }
         }
 
-        public class TagCount
+        private class TagCount
         {
             public string Name { get; set; }
             public int Count { get; set; }
             public DateTimeOffset LastSeenAt { get; set; }
         }
 
-        public class Post
+        private class Post
         {
             public string Id { get; set; }
 

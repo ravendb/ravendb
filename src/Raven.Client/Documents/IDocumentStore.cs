@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
@@ -135,38 +136,38 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Executes the index creation in side-by-side mode.
         /// </summary>
-        void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null);
+        void SideBySideExecuteIndex(AbstractIndexCreationTask task, long? minimumEtagBeforeReplace = null);
 
         /// <summary>
         /// Executes the index creation in side-by-side mode.
         /// </summary>
-        Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null);
+        Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask task, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken));
 
-        void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null);
+        void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> tasks, long? minimumEtagBeforeReplace = null);
 
-        Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null);
-
-        /// <summary>
-        /// Executes the index creation.
-        /// </summary>
-        void ExecuteIndex(AbstractIndexCreationTask indexCreationTask);
-
-        void ExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks);
+        Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         /// Executes the index creation.
         /// </summary>
-        /// <param name="indexCreationTask"></param>
-        Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask);
+        void ExecuteIndex(AbstractIndexCreationTask task);
 
-        Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks);
+        void ExecuteIndexes(IEnumerable<AbstractIndexCreationTask> tasks);
+
+        /// <summary>
+        /// Executes the index creation.
+        /// </summary>
+        /// <param name="task"></param>
+        Task ExecuteIndexAsync(AbstractIndexCreationTask task, CancellationToken token = default(CancellationToken));
+
+        Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         /// Executes the transformer creation
         /// </summary>
-        void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask);
+        void ExecuteTransformer(AbstractTransformerCreationTask task);
 
-        Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask);
+        Task ExecuteTransformerAsync(AbstractTransformerCreationTask task, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         /// Gets the conventions.

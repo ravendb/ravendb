@@ -3,22 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
-using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
 
+using FastTests;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3878 : RavenTest
+    public class RavenDB_3878 : RavenTestBase
     {
         [Fact]
         public void CanHandle304InMultiGet()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
