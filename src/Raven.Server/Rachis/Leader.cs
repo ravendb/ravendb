@@ -159,11 +159,14 @@ namespace Raven.Server.Rachis
                 ambasaddor.Start();
             }
 
-            foreach (var ambasaddor in old)
+            Task.Run(() =>
             {
-                // it is not used by anything else, so we can close it
-                ambasaddor.Value.Dispose();
-            }
+                foreach (var ambasaddor in old)
+                {
+                    // it is not used by anything else, so we can close it
+                    ambasaddor.Value.Dispose();
+                }
+            });
         }
 
         /// <summary>

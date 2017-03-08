@@ -480,7 +480,10 @@ namespace Raven.Server.Rachis
 
             tx.LowLevelTransaction.OnDispose += _ =>
             {
-                Interlocked.Exchange(ref engine._topologyChanged, new TaskCompletionSource<object>()).TrySetResult(null);
+                Task.Run(() =>
+                {
+                    Interlocked.Exchange(ref engine._topologyChanged, new TaskCompletionSource<object>()).TrySetResult(null);
+                });
             };
 
 
