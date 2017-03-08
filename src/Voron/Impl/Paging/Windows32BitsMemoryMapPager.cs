@@ -283,7 +283,11 @@ namespace Voron.Impl.Paging
 
                 if ((long)offset.Value + size > _fileStreamLength)
                 {
-                    ThrowInvalidMappingRequested(startPage, size);
+                    // We need to map less then the allocation granularity because it's the end of the file.
+                    if (size == AllocationGranularity && (long)offset.Value < _fileStreamLength)
+                        size = _fileStreamLength - (long) offset.Value;
+                    else
+                        ThrowInvalidMappingRequested(startPage, size);
                 }
 
                 var result = MapViewOfFileEx(_hFileMappingObject, _mmFileAccessType, offset.High,
@@ -339,6 +343,9 @@ namespace Voron.Impl.Paging
 
         private TransactionState GetTransactionState(IPagerLevelTransactionState tx)
         {
+            if (tx == null)
+                throw new NotSupportedException("Cannot use 32 bits pager without a transaction... it's responsible to call unmap");
+
             TransactionState transactionState;
             if (tx.PagerTransactionState32Bits == null)
             {
