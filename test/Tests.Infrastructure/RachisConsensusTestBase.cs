@@ -48,13 +48,11 @@ namespace Tests.Infrastructure
             return leader;
         }
 
-        protected RachisConsensus<CountingStateMachine> GetFirstNonLeader()
+        protected RachisConsensus<CountingStateMachine> GetRandomFollower()
         {
-            return
-                RachisConsensuses.First(
-                    x =>
-                        x.CurrentState != RachisConsensus.State.Leader &&
-                        x.CurrentState != RachisConsensus.State.LeaderElect);
+            var followers = GetFollowers();
+            var indexOfFollower = _random.Next(followers.Count);
+            return followers[indexOfFollower];
         }
 
         protected List<RachisConsensus<CountingStateMachine>> GetFollowers()
@@ -93,9 +91,9 @@ namespace Tests.Infrastructure
             return nodes.FirstOrDefault(x => x.CurrentState == RachisConsensus.State.Leader);
         }
 
-        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false)
+        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false,int port = 0)
         {
-            var tcpListener = new TcpListener(IPAddress.Loopback, 0);
+            var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
             var ch = (char)(65 + (_count++));
             var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/#" + ch;
