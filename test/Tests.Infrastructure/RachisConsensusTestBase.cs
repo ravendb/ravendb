@@ -6,10 +6,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using NetTopologySuite.IO;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data;
 using Xunit;
@@ -55,11 +57,11 @@ namespace Tests.Infrastructure
                         x.CurrentState != RachisConsensus.State.LeaderElect);
         }
 
-        protected IEnumerable<RachisConsensus<CountingStateMachine>> GetFollowers()
+        protected List<RachisConsensus<CountingStateMachine>> GetFollowers()
         {
             return RachisConsensuses.Where(
                      x => x.CurrentState != RachisConsensus.State.Leader &&
-                     x.CurrentState != RachisConsensus.State.LeaderElect);
+                     x.CurrentState != RachisConsensus.State.LeaderElect).ToList();
         }
 
 
@@ -98,11 +100,11 @@ namespace Tests.Infrastructure
             var ch = (char)(65 + (_count++));
             var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/#" + ch;
 
-            var serverA = StorageEnvironmentOptions.CreateMemoryOnly();
+            var server = StorageEnvironmentOptions.CreateMemoryOnly();
             if (bootstrap)
-                RachisConsensus.Bootstarp(serverA, url);
+                RachisConsensus.Bootstarp(server, url);
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
-            var rachis = new RachisConsensus<CountingStateMachine>(serverA, url, seed);
+            var rachis = new RachisConsensus<CountingStateMachine>(server, url, seed);
             rachis.Initialize();
             _listeners.Add(tcpListener);
             RachisConsensuses.Add(rachis);
@@ -174,6 +176,43 @@ namespace Tests.Infrastructure
             }
         }
 
+        protected async Task<long> IssueCommandsAndWaitForCommit(RachisConsensus<CountingStateMachine> leader,int numberOfCommands,String Name,int value)
+        {
+            Assert.True(leader.CurrentState == RachisConsensus.State.Leader || leader.CurrentState == RachisConsensus.State.LeaderElect, "Can't append commands from non leader");
+            TransactionOperationContext context;
+            using (leader.ContextPool.AllocateOperationContext(out context))
+            {
+                for (var i = 0; i < 3; i++)
+                {
+                    await leader.PutAsync(context.ReadObject(new DynamicJsonValue
+                    {
+                        ["Name"] = Name,
+                        ["Value"] = value
+                    }, Name));
+                }
+                using (context.OpenReadTransaction())
+                    return leader.GetLastEntryIndex(context);
+            }
+        }
+
+        protected List<Task> IssueCommandsWithoutWaitingForCommits(RachisConsensus<CountingStateMachine> leader, int inumberOfCommands, string Name, int value)
+        {
+            Assert.True(leader.CurrentState == RachisConsensus.State.Leader, "Can't append commands from non leader");
+            TransactionOperationContext context;
+            List<Task> waitingList = new List<Task>();
+            using (leader.ContextPool.AllocateOperationContext(out context))
+            {
+                for (var i = 0; i < 3; i++)
+                {
+                    waitingList.Add( leader.PutAsync(context.ReadObject(new DynamicJsonValue
+                    {
+                        ["Name"] = Name,
+                        ["Value"] = value
+                    }, Name)));
+                }
+            }
+            return waitingList;
+        }
         private readonly ConcurrentDictionary<string, ConcurrentSet<string>> _rejectionList = new ConcurrentDictionary<string, ConcurrentSet<string>>();
         private readonly ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>> _connections = new ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>>();
         private readonly List<TcpListener> _listeners = new List<TcpListener>();

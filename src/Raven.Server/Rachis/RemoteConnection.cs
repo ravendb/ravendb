@@ -16,9 +16,10 @@ namespace Raven.Server.Rachis
         private readonly Stream _stream;
         private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
         private Logger _log;
+        private string _fullSource;
 
         public string Source => _src;
-
+        public string FullSource => _fullSource;
         public RemoteConnection(string dest, Stream stream)
         {
             _dest = new Uri(dest).Fragment ?? dest;
@@ -30,6 +31,7 @@ namespace Raven.Server.Rachis
         {
             _dest = new Uri(dest).Fragment ?? dest;
             _src = new Uri(src).Fragment ?? src;
+            _fullSource = src;
             _log = LoggingSource.Instance.GetLogger<RemoteConnection>(_src + " > " + _dest);
             _stream = stream;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
@@ -330,6 +332,7 @@ namespace Raven.Server.Rachis
                     new Uri(rachisHello.DebugSourceIdentifier).Fragment ??
                     rachisHello.DebugSourceIdentifier ?? 
                     "unknown";
+                _fullSource = rachisHello.DebugSourceIdentifier ?? null;
                 _log = LoggingSource.Instance.GetLogger<RemoteConnection>(_src + " > " + _dest);
                 return rachisHello;
             }
