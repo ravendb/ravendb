@@ -166,9 +166,9 @@ class editIndex extends viewModelBase {
                     return !_.includes(this.transformersNames(), val);
                 },
                 message: "Already being used by an existing transformer."
-            }, {
-                validator: (val: string) => {
-                    return !_.includes(this.indexesNames(), val);
+                }, {
+                    validator: (val: string) => {
+                        return val === this.originalIndexName || !_.includes(this.indexesNames(), val);
                 },
                 message: "Already being used by an existing index."
             }]
@@ -225,7 +225,7 @@ class editIndex extends viewModelBase {
 
     private initializeDirtyFlag() {
         const indexDef: indexDefinition = this.editedIndex();
-        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfFields, indexDef.indexStoragePath];
+        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfFields, indexDef.indexStoragePath, indexDef.outputReduceToCollection];
 
         const configuration = indexDef.configuration();
         if (configuration) {

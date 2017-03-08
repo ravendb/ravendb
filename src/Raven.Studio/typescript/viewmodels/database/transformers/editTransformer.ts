@@ -103,7 +103,7 @@ class editTransformer extends viewModelBase {
                 },
                 {
                     validator: (val: string) => {
-                        return !_.includes(this.transformersNames(), val);
+                        return val === this.loadedTransformerName() || !_.includes(this.transformersNames(), val);
                     },
                     message: "Already being used by an existing transformer."
                 },
