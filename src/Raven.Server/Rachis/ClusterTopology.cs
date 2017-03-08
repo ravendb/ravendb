@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Rachis
+﻿using System.Linq;
+
+namespace Raven.Server.Rachis
 {
     public class ClusterTopology
     {
@@ -9,6 +11,11 @@
             Voters = voters;
             Promotables = promotables;
             NonVotingMembers = nonVotingMembers;
+        }
+
+        public bool Contains(string node)
+        {
+            return Voters.Contains(node) || Promotables.Contains(node) || NonVotingMembers.Contains(node);
         }
 
         public ClusterTopology()

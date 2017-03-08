@@ -19,7 +19,7 @@ namespace SlowTests.Server.Rachis
             const int commandCount = 10;
             const int clusterSize = 3;
             var leader = await CreateNetworkAndGetLeader(clusterSize);
-            var nonLeader = GetFirstNonLeader();
+            var nonLeader = GetRandomFollower();
             var tasks = new List<Task>();
             long lastIndex;
             TransactionOperationContext context;
@@ -48,7 +48,7 @@ namespace SlowTests.Server.Rachis
             const int commandCount = 3;
             const int clusterSize = 3;
             var leader = await CreateNetworkAndGetLeader(clusterSize);
-            var nonLeader = GetFirstNonLeader();
+            var nonLeader = GetRandomFollower();
             var tasks = new List<Task>();
             long lastIndex;
             TransactionOperationContext context;

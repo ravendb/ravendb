@@ -538,7 +538,7 @@ namespace Raven.Server.Rachis
             Remove
         }
 
-        public bool TryModifyTopology(string node, TopologyModification modification, out Task task)
+        public bool TryModifyTopology(string node, TopologyModification modification, out Task task, bool validateNotInTopology = false)
         {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -552,6 +552,11 @@ namespace Raven.Server.Rachis
                 }
 
                 var clusterTopology = _engine.GetTopology(context);
+                if (validateNotInTopology && clusterTopology.Contains(node))
+                {
+                    throw new InvalidOperationException($"Was requested to modify the topology for node={node} " +
+                                                        $"with validation that it is not contained by the topology but current topology contains it.");
+                }
 
                 switch (modification)
                 {
@@ -577,6 +582,11 @@ namespace Raven.Server.Rachis
                         );
                         break;
                     case TopologyModification.Remove:
+                        if (clusterTopology.Contains(node) == false)
+                        {
+                            throw new InvalidOperationException($"Was requested to remove node={node} from the topology " +
+                                                        $"but it is not contained by the topology.");
+                        }
                         clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
                             clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
                             clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),

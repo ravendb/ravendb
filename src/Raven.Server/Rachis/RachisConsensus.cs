@@ -233,8 +233,9 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForTopology(Leader.TopologyModification modification)
+        public async Task WaitForTopology(Leader.TopologyModification modification,string nodeUrl = null)
         {
+            var url = nodeUrl ?? _url;
             while (true)
             {
                 var task = _topologyChanged.Task;
@@ -246,21 +247,21 @@ namespace Raven.Server.Rachis
                     switch (modification)
                     {
                         case Leader.TopologyModification.Voter:
-                            if (clusterTopology.Voters.Contains(_url))
+                            if (clusterTopology.Voters.Contains(url))
                                 return;
                             break;
                         case Leader.TopologyModification.Promotable:
-                            if (clusterTopology.Promotables.Contains(_url))
+                            if (clusterTopology.Promotables.Contains(url))
                                 return;
                             break;
                         case Leader.TopologyModification.NonVoter:
-                            if (clusterTopology.NonVotingMembers.Contains(_url))
+                            if (clusterTopology.NonVotingMembers.Contains(url))
                                 return;
                             break;
                         case Leader.TopologyModification.Remove:
-                            if (clusterTopology.Voters.Contains(_url) == false &&
-                                clusterTopology.Promotables.Contains(_url) == false &&
-                                clusterTopology.NonVotingMembers.Contains(_url) == false)
+                            if (clusterTopology.Voters.Contains(url) == false &&
+                                clusterTopology.Promotables.Contains(url) == false &&
+                                clusterTopology.NonVotingMembers.Contains(url) == false)
                                 return;
                             break;
                         default:
@@ -1102,7 +1103,7 @@ namespace Raven.Server.Rachis
 
         public Task AddToClusterAsync(string node)
         {
-            return ModifyTopologyAsync(node, Leader.TopologyModification.Promotable);
+            return ModifyTopologyAsync(node, Leader.TopologyModification.Promotable,true);
         }
     
         public Task RemoveFromClusterAsync(string node)
@@ -1110,14 +1111,14 @@ namespace Raven.Server.Rachis
             return ModifyTopologyAsync(node, Leader.TopologyModification.Remove);
         }
 
-        private async Task ModifyTopologyAsync(string newNode, Leader.TopologyModification modification)
+        private async Task ModifyTopologyAsync(string newNode, Leader.TopologyModification modification,bool validateNotInTopology = false)
         {
             var leader = _currentLeader;
             if (leader == null)
                 throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
             Task task;
-            while (leader.TryModifyTopology(newNode, modification, out task) == false)
+            while (leader.TryModifyTopology(newNode, modification, out task, validateNotInTopology) == false)
                 await task;
 
             await task;
