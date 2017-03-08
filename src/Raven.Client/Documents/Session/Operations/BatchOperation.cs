@@ -57,9 +57,9 @@ namespace Raven.Client.Documents.Session.Operations
                 BlittableJsonReaderObject metadata;
                 if (batchResult.TryGet("Metadata", out metadata))
                     documentInfo.Metadata = metadata;
-                if (batchResult.TryGet("Etag", out etag))
+                if (metadata.TryGet(Constants.Documents.Metadata.Etag, out etag))
                     documentInfo.ETag = etag;
-                if (batchResult.TryGet("Key", out key))
+                if (metadata.TryGet(Constants.Documents.Metadata.Id, out key))
                 {
                     documentInfo.Id = key;
                     _session.DocumentsById.Add(documentInfo);

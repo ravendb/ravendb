@@ -1,14 +1,11 @@
 using System.Linq;
 using System.Runtime.Serialization;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Client.Document;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-
+using FastTests;
+using Newtonsoft.Json.Linq;
+using Sparrow.Json.Parsing;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
     [DataContract]
     public class Item
@@ -17,23 +14,24 @@ namespace Raven.Tests.Bugs
         public string Version { get; set; }
     }
 
-    public class EntitiesWithAttributes : RavenTest
+    public class EntitiesWithAttributes : RavenTestBase
     {
+        [Fact]
         public void EntitiesSerializeCorrectlyWithAttributes()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var jObject = JObject.FromObject(new Item { Version = "First" }, store.Conventions.CreateSerializer());
                 Assert.Equal("First", jObject["Version"]);
 
-                var rjObject = RavenJObject.FromObject(new Item { Version = "First" }, store.Conventions.CreateSerializer());
-                Assert.Equal("First", rjObject["Version"]);
+//                var rjObject = RavenJObject.FromObject(new Item { Version = "First" }, store.Conventions.CreateSerializer());
+//                Assert.Equal("First", rjObject["Version"]);
             }
         }
-
+        [Fact]
         public void PropertiesCanHaveAttributes()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

@@ -3,20 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class Etag : RavenTest
+    public class Etag : RavenTestBase
     {
         [Fact]
         public void WhenSaving_ThenGetsEtag()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var foo = new IndexWithTwoProperties.Foo {Id = Guid.NewGuid().ToString(), Value = "foo"};
 
@@ -25,9 +24,9 @@ namespace Raven.Tests.Bugs
                     session.Store(foo);
 
                     session.SaveChanges();
-
+                    
                     var metadata = session.Advanced.GetMetadataFor(foo);
-                    Assert.NotNull(metadata.Value<string>("@etag"));
+                    Assert.NotNull(metadata["@etag"]);
                 }
 
                 using (var session = store.OpenSession())
@@ -35,7 +34,7 @@ namespace Raven.Tests.Bugs
                     var loaded = session.Load<IndexWithTwoProperties.Foo>(foo.Id);
 
                     var metadata = session.Advanced.GetMetadataFor(loaded);
-                    Assert.NotNull(metadata.Value<string>("@etag"));
+                    Assert.NotNull(metadata["@etag"]);
 
                 }
             }

@@ -152,6 +152,7 @@ namespace Sparrow.Json.Parsing
                         _state.CurrentTokenType = JsonParserToken.Separator;
                         break;
                     case (byte)'N':
+                        _unmanagedWriteBuffer.Clear();
                         _state.CurrentTokenType = JsonParserToken.Float;
                         _expectedTokenBuffer = NaN;
                         _expectedTokenBufferPosition = 1;
@@ -161,7 +162,8 @@ namespace Sparrow.Json.Parsing
                             _state.Continuation = JsonParserTokenContinuation.PartialNaN;
                             return false;
                         }
-
+                        _unmanagedWriteBuffer.Write(NaN,0, NaN.Length);
+                        _unmanagedWriteBuffer.EnsureSingleChunk(_state);
                         return true;
                     case (byte)'n':
                         _state.CurrentTokenType = JsonParserToken.Null;

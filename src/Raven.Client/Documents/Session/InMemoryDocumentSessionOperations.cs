@@ -1001,6 +1001,9 @@ more responsive application.
             {
                 foreach (var include in includes)
                 {
+                    if(include == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                        continue;
+
                     IncludesUtil.Include(result, include, id =>
                     {
                         if (id == null)
