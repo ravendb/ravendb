@@ -254,11 +254,11 @@ namespace Voron.Impl.Paging
                 return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
             }
 
-            page = MapPages(state, allocationStartPosition, AllocationGranularity);
+            page = MapPages(state, allocationStartPosition, AllocationGranularity, allowPartialMapAtEndOfFile:true);
             return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
         }
 
-        private LoadedPage MapPages(TransactionState state, long startPage, long size)
+        private LoadedPage MapPages(TransactionState state, long startPage, long size, bool allowPartialMapAtEndOfFile = false)
         {
             _globalMemory.EnterReadLock();
             try
@@ -283,8 +283,13 @@ namespace Voron.Impl.Paging
 
                 if ((long)offset.Value + size > _fileStreamLength)
                 {
-                    // We need to map less then the allocation granularity because it's the end of the file.
-                    if (size == AllocationGranularity && (long)offset.Value < _fileStreamLength)
+                    // this can happen when the file size is not a natural multiple of the allocation granularity
+                    // frex: granularity of 64KB, and the file size is 80KB. In this case, a request to map the last
+                    // 64 kb will run into a problem, there aren't any. In this case only, we'll map the bytes that are
+                    // actually there in the file, and if the codewill attemp to access beyond the end of file, we'll get
+                    // an access denied error, but this is already handled in higher level of the code, since we aren't just
+                    // handing out access to the full range we are mapping immediately.
+                    if (allowPartialMapAtEndOfFile && (long)offset.Value < _fileStreamLength)
                         size = _fileStreamLength - (long) offset.Value;
                     else
                         ThrowInvalidMappingRequested(startPage, size);
