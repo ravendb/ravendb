@@ -176,7 +176,8 @@ class indexPerformance extends viewModelBase {
             "Aggregation/NestedValues": "#d81a60",
             "Lucene/FlushToDisk": "#a487ba",
             "Storage/Commit": "#5b912d",
-            "Lucene/RecreateSearcher": "#b79ec7"
+            "Lucene/RecreateSearcher": "#b79ec7",
+            "SaveOutputDocuments": "#fed101"
         }
     }
 
