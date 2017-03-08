@@ -339,7 +339,7 @@ namespace Raven.Server.Documents
 
         public void Initialize(StorageEnvironmentOptions options)
         {
-            options.SchemaVersion = 3;
+            options.SchemaVersion = 4;
             try
             {
                 Environment = new StorageEnvironment(options);
@@ -2035,7 +2035,6 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             bool knownNewKey = false;
-            bool fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
             if (string.IsNullOrWhiteSpace(key))
             {
                 key = Guid.NewGuid().ToString();
@@ -2077,6 +2076,8 @@ namespace Raven.Server.Documents
 
                     ThrowConcurrencyExceptionOnConflict(expectedEtag, currentMaxConflictEtag);
                 }
+
+                var fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
                 if (fromReplication)
                 {
                     DeleteConflictsFor(context, key);
@@ -2118,9 +2119,10 @@ namespace Raven.Server.Documents
                     if (_documentDatabase.BundleLoader.VersioningStorage != null)
                     {
                         VersioningConfigurationCollection configuration;
-                        flags |= _documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, document, out configuration);
-                        if ((flags & DocumentFlags.Versioned) == DocumentFlags.Versioned)
+                        var version = _documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, document, out configuration);
+                        if (version)
                         {
+                            flags |= DocumentFlags.Versioned;
                             _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, changeVector, configuration);
                         }
                     }
@@ -2722,20 +2724,20 @@ namespace Raven.Server.Documents
                 return default(AttachmentResult); // never reached
             }
 
-            // Attachment etag should be generated before generating the updateDocumentEtag
+            // Attachment etag should be generated before updating the document
             var attachmenEtag = GenerateNextEtag();
-            var updateDocumentEtag = GenerateNextEtag();
+            var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
-            byte* lowerDocumentId;
-            int lowerDocumentIdSize;
-            byte* documentIdPtr; // not in use
-            int documentIdSize; // not in use
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerDocumentId, out lowerDocumentIdSize,
-                out documentIdPtr, out documentIdSize);
+            Slice lowerDocumentId;
+            DocumentKeyWorker.GetSliceFromKey(context, documentId, out lowerDocumentId);
+
+            TableValueReader tvr;
+            var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out tvr);
+            if (hasDoc == false)
+                throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
 
             // Update the document with an etag which is bigger than the attachmenEtag
-            var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
-            UpdateDocumentAfterAttachmentWrite(context, lowerDocumentId, lowerDocumentIdSize, documentId, name, updateDocumentEtag, modifiedTicks);
+            var putResult = UpdateDocumentForAttachmentChange(context, documentId, tvr, modifiedTicks);
 
             byte* lowerName;
             int lowerNameSize;
@@ -2744,16 +2746,15 @@ namespace Raven.Server.Documents
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, name, out lowerName, out lowerNameSize, out namePtr, out nameSize);
 
             Slice keySlice, contentTypeSlice, hashSlice;
-            using (GetAttachmentKey(context, lowerDocumentId, lowerDocumentIdSize, lowerName, lowerNameSize, out keySlice))
+            using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName, lowerNameSize, out keySlice))
             using (DocumentKeyWorker.GetStringPreserveCase(context, contentType, out contentTypeSlice))
             using (Slice.From(context.Allocator, hash, out hashSlice)) // Hash is a base64 string, so this is a special case that we do not need to escape
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
                 var tbv = new TableValueBuilder
                 {
                     {keySlice.Content.Ptr, keySlice.Size},
-                    newEtagBigEndian,
+                    Bits.SwapBytes(attachmenEtag),
                     {namePtr, nameSize},
                     {contentTypeSlice.Content.Ptr, contentTypeSlice.Size},
                     {hashSlice.Content.Ptr, hashSlice.Size},
@@ -2791,6 +2792,16 @@ namespace Raven.Server.Documents
 
                 _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
+
+                context.Transaction.AddAfterCommitNotification(new AttachmentChange
+                {
+                    Etag = attachmenEtag,
+                    CollectionName = putResult.Collection.Name,
+                    Key = documentId,
+                    Name = name,
+                    Type = DocumentChangeTypes.PutAttachment,
+                    IsSystemDocument = putResult.Collection.IsSystem,
+                });
             }
 
             return new AttachmentResult
@@ -2820,27 +2831,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void UpdateDocumentAfterAttachmentWrite(
-            DocumentsOperationContext context,
-            byte* lowerDocumentId,
-            int lowerDocumentIdSize,
-            string documentId,
-            string name,
-            long newEtag,
-            long modifiedTicks)
-        {
-            Slice loweredKey;
-            using (Slice.External(context.Allocator, lowerDocumentId, lowerDocumentIdSize, out loweredKey))
-            {
-                TableValueReader tvr;
-                var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, loweredKey, out tvr);
-                if (hasDoc == false)
-                    throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
-
-                UpdateDocumentForAttachmentChange(context, documentId, name, newEtag, modifiedTicks, tvr, loweredKey, DocumentChangeTypes.PutAttachment);
-            }
-        }
-
         private bool TryGetDocumentTableValueReaderForAttachment(DocumentsOperationContext context, string documentId,
             string name, Slice loweredKey, out TableValueReader tvr)
         {
@@ -2851,34 +2841,18 @@ namespace Raven.Server.Documents
             }
             catch (DocumentConflictException e)
             {
-                throw new InvalidOperationException(
-                    $"Cannot put/delete an attachment {name} on a document '{documentId}' when it has an unresolved conflict.",
-                    e);
+                throw new InvalidOperationException($"Cannot put/delete an attachment {name} on a document '{documentId}' when it has an unresolved conflict.", e);
             }
             return hasDoc;
         }
 
-        private void UpdateDocumentForAttachmentChange(
-            DocumentsOperationContext context,
-            string documentId,
-            string name,
-            long newEtag,
-            long modifiedTicks,
-            TableValueReader tvr,
-            Slice loweredKey,
-            DocumentChangeTypes change)
+        private PutOperationResults UpdateDocumentForAttachmentChange(
+            DocumentsOperationContext context, 
+            string documentId, 
+            TableValueReader tvr, 
+            long modifiedTicks)
         {
-            int size;
-            var data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out size), size, context);
-            var collectionName = ExtractCollectionName(context, documentId, data);
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents));
-
-            var newEtagBigEndian = Bits.SwapBytes(newEtag);
-
-            var oldChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, 4);
-            var changeVector = SetDocumentChangeVectorForLocalChange(context, loweredKey, oldChangeVector, newEtag);
-
+            // We can optimize this by copy just the document's data instead of the all tvr
             var copyOfDoc = context.GetMemory(tvr.Size);
             try
             {
@@ -2887,43 +2861,14 @@ namespace Raven.Server.Documents
                 Memory.Copy(copyOfDoc.Address, tvr.Pointer, tvr.Size);
                 var copyTvr = new TableValueReader(copyOfDoc.Address, tvr.Size);
 
-                fixed (ChangeVectorEntry* pChangeVector = changeVector)
-                {
-                    var transactionMarker = context.GetTransactionMarker();
-                    var flags = *(DocumentFlags*)copyTvr.Read((int)DocumentsTable.Flags, out size) |
-                                DocumentFlags.HasAttachments;
-                    var tbv = new TableValueBuilder
-                    {
-                        {copyTvr.Read((int) DocumentsTable.LoweredKey, out size), size},
-                        newEtagBigEndian,
-                        {copyTvr.Read((int) DocumentsTable.Key, out size), size},
-                        {copyTvr.Read((int) DocumentsTable.Data, out size), size},
-                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
-                        modifiedTicks,
-                        (int) flags,
-                        transactionMarker
-                    };
-
-                    table.Update(tvr.Id, tbv);
-                }
+                int size;
+                var data = new BlittableJsonReaderObject(copyTvr.Read((int)DocumentsTable.Data, out size), size, context);
+                return Put(context, documentId, null, data, modifiedTicks, null, DocumentFlags.HasAttachments);
             }
             finally
             {
                 context.ReturnMemory(copyOfDoc);
             }
-
-            _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
-            _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(data.Size);
-
-            context.Transaction.AddAfterCommitNotification(new AttachmentChange
-            {
-                Etag = newEtag,
-                CollectionName = collectionName.Name,
-                Key = documentId,
-                Name = name,
-                Type = change,
-                IsSystemDocument = collectionName.IsSystem,
-            });
         }
 
         private IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, Slice startSlice)
@@ -3132,27 +3077,20 @@ namespace Raven.Server.Documents
         private void DeleteAttachment(DocumentsOperationContext context, Slice keySlice, Slice lowerDocumentId, string documentId, string name, long? expectedEtag)
         {
             var attachmenEtag = GenerateNextEtag();
-            var updateDocumentEtag = GenerateNextEtag();
             var modifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
 
-            Slice startSlice;
-            using (GetAttachmentPrefix(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, out startSlice))
+            TableValueReader docTvr;
+            var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out docTvr);
+            if (hasDoc == false)
             {
-                TableValueReader docTvr;
-                var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out docTvr);
-                if (hasDoc == false)
-                {
-                    if (expectedEtag != null)
-                        throw new ConcurrencyException(
-                            $"Document {documentId} does not exist, but delete was called with etag {expectedEtag} to remove attachment {name}. Optimistic concurrency violation, transaction will be aborted.");
+                if (expectedEtag != null)
+                    throw new ConcurrencyException(
+                        $"Document {documentId} does not exist, but delete was called with etag {expectedEtag} to remove attachment {name}. Optimistic concurrency violation, transaction will be aborted.");
 
-                    // this basically mean that we tried to delete attachment whose document doesn't exist.
-                    return;
-                }
-
-                UpdateDocumentForAttachmentChange(context, documentId, name, updateDocumentEtag, modifiedTicks, docTvr, lowerDocumentId,
-                    DocumentChangeTypes.DeleteAttachment);
+                // this basically mean that we tried to delete attachment whose document doesn't exist.
+                return;
             }
+            var putResult = UpdateDocumentForAttachmentChange(context, documentId, docTvr, modifiedTicks);
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             TableValueReader tvr;
@@ -3178,11 +3116,10 @@ namespace Raven.Server.Documents
             Slice hashSlice;
             using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out hashSlice))
             {
-                var newEtagBigEndian = Bits.SwapBytes(attachmenEtag);
                 var tbv = new TableValueBuilder
                 {
                     {keySlice.Content.Ptr, keySlice.Size},
-                    newEtagBigEndian,
+                    Bits.SwapBytes(attachmenEtag),
                     {null, 0},
                     {null, 0},
                     {null, 0},
@@ -3192,6 +3129,16 @@ namespace Raven.Server.Documents
 
                 DeleteAttachmentStream(context, hashSlice);
             }
+
+            context.Transaction.AddAfterCommitNotification(new AttachmentChange
+            {
+                Etag = attachmenEtag,
+                CollectionName = putResult.Collection.Name,
+                Key = documentId,
+                Name = name,
+                Type = DocumentChangeTypes.Delete,
+                IsSystemDocument = putResult.Collection.IsSystem,
+            });
         }
     }
 }

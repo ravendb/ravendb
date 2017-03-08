@@ -9,12 +9,14 @@ namespace Raven.Server.Documents
 
         Artificial = 0x1,
         Versioned = 0x2,
-        SkipVersioning = 0x4,
-        ForceVersioning = 0x8,
+        Reserved1 = 0x4,
+        Reserved2 = 0x8,
 
         FromIndex = 0x10,
         FromVersionStorage = 0x20,
         FromReplication = 0x40,
-        HasAttachments = 0x80,
+        Reserved3 = 0x80,
+
+        HasAttachments = 0x100,
     }
 }
