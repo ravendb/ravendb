@@ -788,6 +788,15 @@ more responsive application.
                 if (entity.Value.IgnoreChanges || EntityChanged(document, entity.Value, null) == false)
                     continue;
 
+                if (result.DeferredCommandsCount > 0)
+                {
+                    foreach (var resultCommand in result.Commands)
+                    {
+                        if(resultCommand.Key == entity.Value.Id)
+                            ThrowInvalidModifiedDocumentWithDefferredCommand(resultCommand);
+                    }
+                }
+
                 var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
                 OnBeforeStore?.Invoke(this, beforeStoreEventArgs);
                 if ((OnBeforeStore != null) && EntityChanged(document, entity.Value, null))
@@ -809,6 +818,12 @@ more responsive application.
 
                 result.Commands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, etag, document));
             }
+        }
+
+        private static void ThrowInvalidModifiedDocumentWithDefferredCommand(ICommandData resultCommand)
+        {
+            throw new InvalidOperationException(
+                $"Cannot perfrom save because document {resultCommand.Key} has been modified by the session and is also taking part in deferred {resultCommand.Method} command");
         }
 
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)

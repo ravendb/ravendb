@@ -82,6 +82,32 @@ namespace FastTests
         }
 
         [Fact]
+        public void CanPatchAndModify()
+        {
+            var user = new User { Numbers = new[] { 66 } };
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var loaded = session.Load<User>(_docId);
+                    loaded.Numbers[0] = 1;
+                    session.Advanced.Patch(loaded, u => u.Numbers[0], 2);
+                    Assert.Throws<InvalidOperationException>(() =>
+                    {
+                        session.SaveChanges();
+                    });
+                }
+            }
+        }
+
+        [Fact]
         public void CanPatchComplex()
         {
             var stuff = new Stuff[3];
