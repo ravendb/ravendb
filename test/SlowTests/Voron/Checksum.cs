@@ -20,6 +20,7 @@ using Voron.Platform.Win32;
 using Xunit;
 using Sparrow;
 using Voron.Data;
+using Voron.Impl.Paging;
 
 namespace SlowTests.Voron
 {
@@ -79,8 +80,9 @@ namespace SlowTests.Voron
             // Lets corrupt something
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
             using (var pager = new WindowsMemoryMapPager(options, Path.Combine(DataDir, "Raven.Voron")))
+            using (var tempTX = new TempPagerTransaction())
             {
-                var writePtr = pager.AcquirePagePointer(null, 2) + PageHeader.SizeOf + 43; // just some random place on page #2
+                var writePtr = pager.AcquirePagePointer(tempTX, 2) + PageHeader.SizeOf + 43; // just some random place on page #2
                 for (byte i = 0; i < 8; i++)
                 {
                     writePtr[i] = i;

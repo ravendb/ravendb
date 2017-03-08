@@ -27,6 +27,7 @@ namespace StressTests.Voron
         [Theory]
         [InlineData(2)]
         [InlineData(6, Skip = "Too large to run on scratch machines. For manual run only")]
+        [SkipWhen32BitsEnvironment]
         public void CanWriteBigTransactions(long transactionSizeInGb)
         {
             var tmpFile = Path.Combine(Path.GetTempPath(), "TestBigTx" + transactionSizeInGb);
@@ -132,6 +133,7 @@ namespace StressTests.Voron
         [InlineData(2)] // in = 3GB, out ~= 1.5GB
         [InlineData(1)] // in = 3GB, out > 3GB (rare case)
         [InlineData(0)] // special case : in = Exactly 1GB, out > 1GB
+        [SkipWhen32BitsEnvironment]
         public unsafe void LZ4TestAbove2GB(long devider)
         {
             var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, $"bigLz4-test-{devider}.data"));
