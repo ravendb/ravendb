@@ -44,8 +44,13 @@ namespace Raven.Server.Documents
         private static readonly Slice CollectionEtagsSlice;
         private static readonly Slice AllDocsEtagsSlice;
         private static readonly Slice TombstonesSlice;
+        private static readonly Slice CollectionsSlice;
         private static readonly Slice KeyAndChangeVectorSlice;
         private static readonly Slice AllConflictedDocsEtagsSlice;
+        private static readonly Slice ConflictsSlice;
+        private static readonly Slice IdentitiesSlice;
+        private static readonly Slice LastReplicatedEtagsSlice;
+        private static readonly Slice ChangeVectorSlice;
         private static readonly Slice ConflictedCollectionSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
@@ -76,6 +81,18 @@ namespace Raven.Server.Documents
             Etag = 4,
             Collection = 5,
             LastModified = 6,
+        }
+        private enum TombstoneTable
+        {
+            LoweredKey = 0,
+            Etag = 1,
+            DeletedEtag = 2,
+            Key = 3,
+            ChangeVector = 4,
+            Collection = 5,
+            Flags = 6,
+            TransactionMarker = 7,
+            LastModified = 8,
         }
 
         // The attachments schema is as follows
@@ -116,9 +133,14 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AllConflictedDocsEtags", ByteStringType.Immutable, out AllConflictedDocsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Tombstones", ByteStringType.Immutable, out TombstonesSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Collections", ByteStringType.Immutable, out CollectionsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndChangeVector", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Conflicts", ByteStringType.Immutable, out ConflictsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Identities", ByteStringType.Immutable, out IdentitiesSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Attachments", ByteStringType.Immutable, out AttachmentsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsMetadata", ByteStringType.Immutable, out AttachmentsMetadataSlice);
@@ -330,16 +352,16 @@ namespace Raven.Server.Documents
                         tx.LowLevelTransaction);
 
                     tx.CreateTree(DocsSlice);
-                    tx.CreateTree("LastReplicatedEtags");
-                    tx.CreateTree("Identities");
-                    tx.CreateTree("ChangeVector");
+                    tx.CreateTree(LastReplicatedEtagsSlice);
+                    tx.CreateTree(IdentitiesSlice);
+                    tx.CreateTree(ChangeVectorSlice);
                     tx.CreateTree(AttachmentsSlice);
 
-                    ConflictsSchema.Create(tx, "Conflicts", 32);
-                    CollectionsSchema.Create(tx, "Collections", 32);
+                    ConflictsSchema.Create(tx, ConflictsSlice, 32);
+                    CollectionsSchema.Create(tx, CollectionsSlice, 32);
                     AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 32);
 
-                    _conflictCount = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries;
+                    _conflictCount = tx.OpenTable(ConflictsSchema, ConflictsSlice).NumberOfEntries;
 
                     _lastEtag = ReadLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
@@ -368,13 +390,13 @@ namespace Raven.Server.Documents
         {
             AssertTransaction(context);
 
-            var tree = context.Transaction.InnerTransaction.ReadTree("ChangeVector");
+            var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
             return ReplicationUtils.ReadChangeVectorFrom(tree);
         }
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)
         {
-            var tree = context.Transaction.InnerTransaction.ReadTree("ChangeVector");
+            var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
             ReplicationUtils.WriteChangeVectorTo(context, changeVector, tree);
         }
 
@@ -628,18 +650,18 @@ namespace Raven.Server.Documents
 
         public List<DocumentConflict> GetAllConflictsBySameKeyAfter(DocumentsOperationContext context, ref Slice lastKey)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             var list = new List<DocumentConflict>();
             LazyStringValue firstKey = null;
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], lastKey, 0))
             {
                 var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
-                if (lastKey.Size == conflict.LoweredKey.Length &&
-                    Memory.Compare(lastKey.Content.Ptr, conflict.LoweredKey.Buffer, lastKey.Size) == 0)
+                if (lastKey.Content.Match(conflict.LoweredKey))
                 {
                     // same key as we already seen, skip it
                     break;
                 }
+
                 if (firstKey == null)
                     firstKey = conflict.LoweredKey;
                 list.Add(conflict);
@@ -658,7 +680,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<ReplicationBatchDocumentItem> GetConflictsFrom(DocumentsOperationContext context, long etag)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, 0))
             {
                 yield return ReplicationBatchDocumentItem.From(TableValueToConflictDocument(context, ref tvr.Reader));
@@ -859,7 +881,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             int size;
-            var ptr = result.Reader.Read(1, out size);
+            var ptr = result.Reader.Read((int) DocumentsTable.Etag, out size);
             return IPAddress.NetworkToHostOrder(*(long*)ptr);
         }
 
@@ -938,20 +960,14 @@ namespace Raven.Server.Documents
             {
                 StorageId = tvr.Id
             };
-            int size;
-            var ptr = tvr.Read((int)DocumentsTable.LoweredKey, out size);
-            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
-
+            result.LoweredKey = TableValueToString(context, (int)DocumentsTable.LoweredKey, ref tvr);
             result.Key = TableValueToKey(context, (int)DocumentsTable.Key, ref tvr);
-
             result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
 
+            int size;
             result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out size), size, context);
-
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)DocumentsTable.ChangeVector);
-
             result.LastModified = new DateTime(*(long*)tvr.Read((int)DocumentsTable.LastModified, out size));
-
             result.Flags = *(DocumentFlags*)tvr.Read((int)DocumentsTable.Flags, out size);
 
             result.TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size);
@@ -965,11 +981,14 @@ namespace Raven.Server.Documents
             {
                 StorageId = tvr.Id
             };
-            int size;
-            var ptr = tvr.Read((int)ConflictsTable.LoweredKey, out size);
-            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
+            
+            result.LoweredKey = TableValueToString(context, (int)ConflictsTable.LoweredKey, ref tvr);
             result.Key = TableValueToKey(context, (int)ConflictsTable.OriginalKey, ref tvr);
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictsTable.ChangeVector);
+            result.Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr);
+            result.Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr);
+
+            int size;
             var read = tvr.Read((int)ConflictsTable.Data, out size);
             if (size > 0)
             {
@@ -977,11 +996,6 @@ namespace Raven.Server.Documents
                 result.Doc = new BlittableJsonReaderObject(read, size, context);
                 DebugDisposeReaderAfterTransction(context.Transaction, result.Doc);
             }
-
-            result.Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr);
-
-            result.Collection = new LazyStringValue(null, tvr.Read((int)ConflictsTable.Collection, out size), size,
-                context);
 
             result.LastModified = new DateTime(*(long*)tvr.Read((int)ConflictsTable.LastModified, out size));
 
@@ -1009,23 +1023,17 @@ namespace Raven.Server.Documents
             {
                 StorageId = tvr.Id
             };
+            result.LoweredKey = TableValueToString(context, (int)TombstoneTable.LoweredKey, ref tvr);
+            result.Key = TableValueToKey(context, (int)TombstoneTable.Key, ref tvr);
+            result.Etag = TableValueToEtag((int)TombstoneTable.Etag, ref tvr);
+            result.DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr);
+            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)TombstoneTable.ChangeVector);
+            result.Collection = TableValueToString(context, (int)TombstoneTable.Collection, ref tvr);
+
             int size;
-            var ptr = tvr.Read(0, out size);
-            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
-
-            result.Key = TableValueToKey(context, 3, ref tvr);
-            result.Etag = TableValueToEtag(1, ref tvr);
-            result.DeletedEtag = TableValueToEtag(2, ref tvr);
-
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, 4);
-
-            result.Collection = new LazyStringValue(null, tvr.Read(5, out size), size, context);
-
-            result.Flags = (DocumentFlags)(*(int*)tvr.Read(6, out size));
-
-            result.TransactionMarker = *(short*)tvr.Read(7, out size);
-
-            result.LastModified = new DateTime(*(long*)tvr.Read(8, out size));
+            result.Flags = *(DocumentFlags*)tvr.Read((int)TombstoneTable.Flags, out size);
+            result.TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out size);
+            result.LastModified = new DateTime(*(long*)tvr.Read((int)TombstoneTable.LastModified, out size));
 
             return result;
         }
@@ -1159,8 +1167,8 @@ namespace Raven.Server.Documents
                     var ptr = table.DirectRead(doc.StorageId, out size);
                     var tvr = new TableValueReader(ptr, size);
 
-                    lowerKey = tvr.Read(0, out lowerSize);
-                    keyPtr = tvr.Read(2, out keySize);
+                    lowerKey = tvr.Read((int) DocumentsTable.LoweredKey, out lowerSize);
+                    keyPtr = tvr.Read((int) DocumentsTable.Key, out keySize);
 
                     etag = CreateTombstone(context,
                         lowerKey,
@@ -1416,12 +1424,11 @@ namespace Raven.Server.Documents
             if (_conflictCount == 0)
                 return 0;
 
-            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             long maxEtag = 0L;
             foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, startsWith: true))
             {
-                int size;
-                var etag = Bits.SwapBytes(*(long*)tvr.Result.Reader.Read((int)ConflictsTable.Etag, out size));
+                var etag = TableValueToEtag((int) ConflictsTable.Etag, ref tvr.Result.Reader);
                 if (maxEtag < etag)
                     maxEtag = etag;
             }
@@ -1453,7 +1460,7 @@ namespace Raven.Server.Documents
             if (_conflictCount == 0)
                 return list;
 
-            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
             while (true)
             {
@@ -1504,7 +1511,7 @@ namespace Raven.Server.Documents
             if (_conflictCount == 0)
                 return;
 
-            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
@@ -1530,7 +1537,7 @@ namespace Raven.Server.Documents
             string key,
             ChangeVectorEntry[] changeVector)
         {
-            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
             byte* lowerKey;
             int lowerSize;
@@ -1593,21 +1600,15 @@ namespace Raven.Server.Documents
 
         private static IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, Slice loweredKey)
         {
-            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             var items = new List<DocumentConflict>();
             foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
             {
-                int conflictKeySize;
-                var conflictKey = tvr.Result.Reader.Read((int)ConflictsTable.LoweredKey, out conflictKeySize);
-
-                if (conflictKeySize != loweredKey.Size)
+                var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
+                if (loweredKey.Content.Match(conflict.LoweredKey))
                     break;
 
-                var compare = Memory.Compare(loweredKey.Content.Ptr, conflictKey, loweredKey.Size);
-                if (compare != 0)
-                    break;
-
-                items.Add(TableValueToConflictDocument(context, ref tvr.Result.Reader));
+                items.Add(conflict);
             }
 
             return items;
@@ -1844,7 +1845,7 @@ namespace Raven.Server.Documents
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Adding conflict to {key} (Incoming change vector {incomingChangeVector.Format()})");
             var tx = context.Transaction.InnerTransaction;
-            var conflictsTable = tx.OpenTable(ConflictsSchema, "Conflicts");
+            var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
 
             CollectionName collectionName;
 
@@ -2156,7 +2157,7 @@ namespace Raven.Server.Documents
                             ThrowConcurrentException(key, expectedEtag, oldEtag);
 
                         int oldSize;
-                        var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
+                        var oldDoc = new BlittableJsonReaderObject(oldValue.Read((int) DocumentsTable.Data, out oldSize), oldSize, context);
                         var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
                         if (oldCollectionName != collectionName)
                             ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
@@ -2353,7 +2354,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)
         {
-            var identities = context.Transaction.InnerTransaction.ReadTree("Identities");
+            var identities = context.Transaction.InnerTransaction.ReadTree(IdentitiesSlice);
             using (var it = identities.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)
@@ -2371,7 +2372,7 @@ namespace Raven.Server.Documents
 
         public string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, DocumentsOperationContext context, out int tries)
         {
-            var identities = context.Transaction.InnerTransaction.ReadTree("Identities");
+            var identities = context.Transaction.InnerTransaction.ReadTree(IdentitiesSlice);
             var nextIdentityValue = identities.Increment(key, 1);
             var finalKey = AppendIdentityValueToKey(key, nextIdentityValue);
             Slice finalKeySlice;
@@ -2440,7 +2441,7 @@ namespace Raven.Server.Documents
 
         public long IdentityFor(DocumentsOperationContext ctx, string key)
         {
-            var identities = ctx.Transaction.InnerTransaction.ReadTree("Identities");
+            var identities = ctx.Transaction.InnerTransaction.ReadTree(IdentitiesSlice);
             return identities.Increment(key, 1);
         }
 
@@ -2590,7 +2591,7 @@ namespace Raven.Server.Documents
 
         public void UpdateIdentities(DocumentsOperationContext context, Dictionary<string, long> identities)
         {
-            var readTree = context.Transaction.InnerTransaction.ReadTree("Identities");
+            var readTree = context.Transaction.InnerTransaction.ReadTree(IdentitiesSlice);
             foreach (var identity in identities)
             {
                 readTree.AddMax(identity.Key, identity.Value);
@@ -2599,7 +2600,7 @@ namespace Raven.Server.Documents
 
         public long GetLastReplicateEtagFrom(DocumentsOperationContext context, string dbId)
         {
-            var readTree = context.Transaction.InnerTransaction.ReadTree("LastReplicatedEtags");
+            var readTree = context.Transaction.InnerTransaction.ReadTree(LastReplicatedEtagsSlice);
             var readResult = readTree.Read(dbId);
             if (readResult == null)
                 return 0;
@@ -2608,7 +2609,7 @@ namespace Raven.Server.Documents
 
         public void SetLastReplicateEtagFrom(DocumentsOperationContext context, string dbId, long etag)
         {
-            var etagsTree = context.Transaction.InnerTransaction.CreateTree("LastReplicatedEtags");
+            var etagsTree = context.Transaction.InnerTransaction.CreateTree(LastReplicatedEtagsSlice);
             Slice etagSlice;
             Slice keySlice;
             using (Slice.From(context.Allocator, dbId, out keySlice))
@@ -2647,7 +2648,7 @@ namespace Raven.Server.Documents
             if (_collectionsCache.TryGetValue(collectionName, out name))
                 return name;
 
-            var collections = context.Transaction.InnerTransaction.OpenTable(CollectionsSchema, "Collections");
+            var collections = context.Transaction.InnerTransaction.OpenTable(CollectionsSchema, CollectionsSlice);
 
             name = new CollectionName(collectionName);
 
@@ -2683,20 +2684,14 @@ namespace Raven.Server.Documents
         {
             var result = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
-            var collections = tx.OpenTable(CollectionsSchema, "Collections");
+            var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
 
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
-                    int size;
-                    var ptr = tvr.Reader.Read(0, out size);
-                    var collection = new LazyStringValue(null, ptr, size, context);
-
-                    Slice tableNameSlice;
-                    Slice.External(tx.Allocator, ptr, size, out tableNameSlice);// intentionally not disposing, will be disposed by the tx
-
+                    var collection = TableValueToString(context, 0, ref tvr.Reader);
                     var collectionName = new CollectionName(collection);
                     result.Add(collection, collectionName);
 
@@ -2768,6 +2763,7 @@ namespace Raven.Server.Documents
                 TableValueReader oldValue;
                 if (table.ReadByKey(keySlice, out oldValue))
                 {
+                    // TODO: Support overwrite
                     throw new NotImplementedException("Cannot overwrite an exisitng attachment.");
 
                     /*
@@ -3053,13 +3049,12 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id
             };
 
-            int size;
-            var ptr = tvr.Read((int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, out size);
-            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
-
+            result.LoweredKey = TableValueToString(context, (int)AttachmentsTable.LoweredDocumentIdAndRecordSeparatorAndLoweredName, ref tvr);
             result.Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
             result.Name = TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr);
             result.ContentType = TableValueToKey(context, (int)AttachmentsTable.ContentType, ref tvr);
+
+            int size;
             result.LastModified = new DateTime(*(long*)tvr.Read((int)AttachmentsTable.LastModified, out size));
 
             TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
@@ -3074,6 +3069,14 @@ namespace Raven.Server.Documents
             var ptr = tvr.Read(index, out size);
             var etag = Bits.SwapBytes(*(long*)ptr);
             return etag;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static LazyStringValue TableValueToString(JsonOperationContext context, int index, ref TableValueReader tvr)
+        {
+            int size;
+            var ptr = tvr.Read(index, out size);
+            return new LazyStringValue(null, ptr, size, context);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

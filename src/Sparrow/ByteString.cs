@@ -341,7 +341,15 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Match(ByteString other)
         {
-            return GetContentHash() == other.GetContentHash();
+            return Length == other.Length &&
+                   Memory.Compare(Ptr, other.Ptr, Length) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Match(LazyStringValue other)
+        {
+            return Length == other.Length &&
+                   Memory.Compare(Ptr, other.Buffer, Length) == 0;
         }
     }
 
