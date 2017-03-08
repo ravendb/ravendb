@@ -34,19 +34,46 @@ rect.pane {
     }
 }
 
-.legendColor {
-    width: 12px;
-    height: 12px;
-    display: inline-block;
+.arrow_down {
+  position: absolute;
+  top: 20px; 
+  width: 0; 
+  height: 0; 
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #f00;
 }
 
-.legendHeading {
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 1px;
-    padding-bottom: 1px;
+.legend_container {
+  position: relative;
+  width: 200px;
+  float: left;
 }
 
-.legendText {
-    font-size:0.8em;
+.legend_start_range {
+  position: absolute;
+  top: 0;
+  left: -20px;
+  right: 180px;
 }
+
+.legend_end_range {
+  position: absolute;
+  top: 0;
+  left: 50px;
+  right: -50px;
+}
+
+.legend_container img {
+  margin-top: 20px;
+}
+
+.legend_container div {
+  font-size: 12px;
+  text-align: center;
+
+  &.legend_title {
+      width: 150px;
+  }
+}            
+

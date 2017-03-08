@@ -145,15 +145,12 @@ class ioStats extends viewModelBase {
     }
 
     static readonly eventsColors = {       
-        "JournalWriteLowSizeColor": "#38761d",
-        "JournalWriteMedSizeColor": "#6aa84f",
-        "JournalWriteHighSizeColor": "#93c47d",
-        "DataFlushLowSizeColor": "#085394",
-        "DataFlushMedSizeColor": "#597eaa",
-        "DataFlushHighSizeColor": "#6fa8dc",
-        "DataSyncLowSizeColor": "#b45f06",
-        "DataSyncMedSizeColor": "#e69138",
-        "DataSyncHighSizeColor": "#f6b26b"
+        "LowSizeColorJW": "#38761d",       // JW - Journal Write
+        "HighSizeColorJW": "#93c47d",
+        "LowSizeColorDF": "#085394",       // DF - Data Flush
+        "HighSizeColorDF": "#6fa8dc",
+        "LowSizeColorDS": "#b45f06",       // DS - Data Sync
+        "HighSizeColorDS": "#f6b26b"
     }
    
     private static readonly trackHeight = 18; 
@@ -175,11 +172,18 @@ class ioStats extends viewModelBase {
 
     private static readonly indexesString = "Indexes";
     private static readonly documentsString = "Documents";
-    private static readonly journalWriteString = "JournalWrite";
-    private static readonly dataSyncString = "DataSync";
-    private static readonly dataFlushString = "DataFlush";       
+    private static readonly journalWriteString = "JournalWrite";  
+    private static readonly dataFlushString = "DataFlush";      
+    private static readonly dataSyncString = "DataSync"; 
 
-    /* observables */
+    private static readonly legendImageWidth = 150;
+    private static readonly legendImageHeight = 20;
+
+    static legendImageStrJW = ko.observable<string>();
+    static legendImageStrDF = ko.observable<string>();
+    static legendImageStrDS = ko.observable<string>();
+
+    /* private observables */
 
     private autoScroll = ko.observable<boolean>(false);
     private hasAnyData = ko.observable<boolean>(false);    
@@ -194,17 +198,20 @@ class ioStats extends viewModelBase {
     private allIndexesAreFiltered = ko.observable<boolean>(false);
     private indexesVisible: KnockoutComputed<boolean>; 
 
-    private journalWriteLowSizeLevel = ko.observable<number>();
-    private journalWriteHighSizeLevel = ko.observable<number>();
-    private dataSyncLowSizeLevel = ko.observable<number>();
-    private dataSyncHighSizeLevel = ko.observable<number>();
-    private dataFlushLowSizeLevel = ko.observable<number>();
-    private dataFlushHighSizeLevel = ko.observable<number>();   
+    private maxSizeJW = ko.observable<number>(0);
+    private maxSizeDF = ko.observable<number>(0);
+    private maxSizeDS = ko.observable<number>(0);     
+
+    private itemSizePositionJW = ko.observable<string>(); 
+    private itemSizePositionDF = ko.observable<string>(); 
+    private itemSizePositionDS = ko.observable<string>(); 
+    private itemHoveredJW = ko.observable<boolean>(false); 
+    private itemHoveredDF = ko.observable<boolean>(false); 
+    private itemHoveredDS = ko.observable<boolean>(false); 
 
     /* private */
 
     private liveViewClient: liveIOStatsWebSocketClient;
-
     private data: Raven.Server.Documents.Handlers.IOMetricsResponse;    
     private commonPathsPrefix: string;     
     private totalWidth: number;
@@ -218,6 +225,13 @@ class ioStats extends viewModelBase {
     private brushAndZoomCallbacksDisabled = false;    
 
     /* d3 */
+
+    private legendSizeScaleJW: d3.scale.Linear<number, number>; // domain: legend pixels, range: item size
+    private legendSizeScaleDF: d3.scale.Linear<number, number>;
+    private legendSizeScaleDS: d3.scale.Linear<number, number>;
+    private legendColorScaleJW: d3.scale.Linear<string, string>; // domain: item size, range: item color
+    private legendColorScaleDF: d3.scale.Linear<string, string>;
+    private legendColorScaleDS: d3.scale.Linear<string, string>;
 
     private xTickFormat = d3.time.format("%H:%M:%S");
     private canvas: d3.Selection<any>;
@@ -264,8 +278,8 @@ class ioStats extends viewModelBase {
         this.tooltip = d3.select(".tooltip");
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
         this.totalHeight -= 50; // substract toolbar height
-
-        this.initCanvas();
+              
+        this.initCanvas();     
 
         this.hitTest.init(this.svg,
             () => this.onToggleIndexes(),
@@ -276,16 +290,89 @@ class ioStats extends viewModelBase {
         this.enableLiveView();
     }
 
-    private initViewData() {
-        let maxJournalWriteSize: number = 0;
-        let maxVoronDataSyncSize: number = 0;
-        let maxVoronDataFlushSize: number = 0;
+    private initLegendImages() {
+        // Create legend image on a virtual canvas,
+        // Will be used as an image in the dom 
+
+        const legendCanvas = document.createElement("canvas");       
+        const legendContext = legendCanvas.getContext("2d");
+        legendCanvas.width = ioStats.legendImageWidth;
+        legendCanvas.height = ioStats.legendImageHeight;
+
+        // JW (Journal Write)
+        this.createLegendImage(legendCanvas, legendContext, ioStats.legendImageStrJW,ioStats.eventsColors.LowSizeColorJW, ioStats.eventsColors.HighSizeColorJW);
+        // DF (Data Flush)
+        this.createLegendImage(legendCanvas, legendContext, ioStats.legendImageStrDF, ioStats.eventsColors.LowSizeColorDF, ioStats.eventsColors.HighSizeColorDF);
+        // DS (Data Sync)
+        this.createLegendImage(legendCanvas, legendContext, ioStats.legendImageStrDS, ioStats.eventsColors.LowSizeColorDS, ioStats.eventsColors.HighSizeColorDS);      
+    }
+
+    private createLegendImage(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, imageStr: KnockoutObservable<string>,
+                              lowColor: string, highColor: string) {
+
+        const widthToColorScale = d3.scale.linear<string, string>()
+            .domain([0, ioStats.legendImageWidth])
+            .range([lowColor, highColor])
+            .interpolate(d3.interpolateHsl);
+
+        context.fillStyle = lowColor;
+        context.fillRect(0, 0, 1, 25);
+
+        for (let i = 0; i < ioStats.legendImageWidth; i++) {
+            context.fillStyle = widthToColorScale(i);
+            context.fillRect(i, 7, 1, ioStats.legendImageHeight);
+        }
+
+        context.fillStyle = highColor;
+        context.fillRect(ioStats.legendImageWidth - 1, 0, 1, 25);
+
+        imageStr(canvas.toDataURL());    
+    }
+  
+    private setLegendScales() {
+        // JW
+        this.legendSizeScaleJW = d3.scale.linear<number>()
+            .domain([0, ioStats.legendImageWidth])                     
+            .range([0, this.maxSizeJW()]);
+
+        this.legendColorScaleJW = d3.scale.linear<string>()
+            .domain([0, this.maxSizeJW()])
+            .range([ioStats.eventsColors.LowSizeColorJW, ioStats.eventsColors.HighSizeColorJW])
+            .interpolate(d3.interpolateHsl);  
+
+        // DF
+        this.legendSizeScaleDF = d3.scale.linear<number>()
+            .domain([0, ioStats.legendImageWidth])
+            .range([0, this.maxSizeDF()]);
+
+        this.legendColorScaleDF = d3.scale.linear<string>()
+            .domain([0, this.maxSizeDF()])
+            .range([ioStats.eventsColors.LowSizeColorDF, ioStats.eventsColors.HighSizeColorDF])
+            .interpolate(d3.interpolateHsl);
+
+        // DS
+        this.legendSizeScaleDS = d3.scale.linear<number>()
+            .domain([0, ioStats.legendImageWidth])
+            .range([0, this.maxSizeDS()]);
+
+        this.legendColorScaleDS = d3.scale.linear<string>()
+            .domain([0, this.maxSizeDS()])
+            .range([ioStats.eventsColors.LowSizeColorDS, ioStats.eventsColors.HighSizeColorDS])
+            .interpolate(d3.interpolateHsl);           
+    }
+
+    private initViewData() {        
         this.hasIndexes(false);
 
         // 1. Find common paths prefix
         this.commonPathsPrefix = this.findPrefix(this.data.Environments.map(env => env.Path));
 
-        // 2. Loop on info from EndPoint 
+        // 1.1 Init max size (for legend scale)
+        this.maxSizeJW(0);
+        this.maxSizeDF(0);
+        this.maxSizeDS(0);
+
+        // 2. Loop on info from EndPoint        
         this.data.Environments.forEach(env => {           
 
             // 2.0 Set the track name for the database path
@@ -302,13 +389,13 @@ class ioStats extends viewModelBase {
                    
                     // 2.3 Calc highest batch size for each type
                     if (recentItem.Type === ioStats.journalWriteString) {
-                        maxJournalWriteSize = recentItem.Size > maxJournalWriteSize ? recentItem.Size : maxJournalWriteSize;
-                    }
-                    if (recentItem.Type === ioStats.dataSyncString) {
-                        maxVoronDataSyncSize = recentItem.Size > maxVoronDataSyncSize ? recentItem.Size : maxVoronDataSyncSize;
+                        this.maxSizeJW(recentItem.Size > this.maxSizeJW() ? recentItem.Size : this.maxSizeJW());
                     }
                     if (recentItem.Type === ioStats.dataFlushString) {
-                        maxVoronDataFlushSize = recentItem.Size > maxVoronDataFlushSize ? recentItem.Size : maxVoronDataFlushSize;
+                        this.maxSizeDF(recentItem.Size > this.maxSizeDF() ? recentItem.Size : this.maxSizeDF());
+                    }
+                    if (recentItem.Type === ioStats.dataSyncString) {
+                        this.maxSizeDS(recentItem.Size > this.maxSizeDS() ? recentItem.Size : this.maxSizeDS());
                     }
 
                     this.hasAnyData(true);
@@ -316,15 +403,9 @@ class ioStats extends viewModelBase {
             });
         });
 
-        // 3. Calc levels so we know what color to use for the data in UI (low/med/high)
-        this.journalWriteLowSizeLevel(generalUtils.roundBytesToNearstSize(maxJournalWriteSize / 3));
-        this.journalWriteHighSizeLevel(generalUtils.roundBytesToNearstSize(maxJournalWriteSize / 3 * 2));
-
-        this.dataSyncLowSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataSyncSize / 3));
-        this.dataSyncHighSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataSyncSize / 3 * 2));
-
-        this.dataFlushLowSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataFlushSize / 3));
-        this.dataFlushHighSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataFlushSize / 3 * 2));
+        this.maxSizeJW(this.maxSizeJW() === 0 ? 1 : this.maxSizeJW());
+        this.maxSizeDF(this.maxSizeDF() === 0 ? 1 : this.maxSizeDF());
+        this.maxSizeDS(this.maxSizeDS() === 0 ? 1 : this.maxSizeDS());     
     }
 
     private initCanvas() {
@@ -461,6 +542,12 @@ class ioStats extends viewModelBase {
             }
 
             this.initViewData();
+            this.setLegendScales();
+
+            if (firstTime) {
+                this.initLegendImages();
+            }
+           
             this.draw(firstTime);
 
             if (firstTime) {
@@ -651,7 +738,7 @@ class ioStats extends viewModelBase {
         let firstIndex = true;        
 
         // TODO: Maybe refactor this method so it can handle any incoming number of environments,
-        // But, as discussed, this will be left out for now inorder to avoid extra string comparisons
+        // But, as discussed, this will be left out for now in order to avoid extra string comparisons
 
         // 1. Database main path
         domain.push(this.data.Environments[0].Path);
@@ -897,7 +984,8 @@ class ioStats extends viewModelBase {
                                     const humanSizeTextWidth = context.measureText(recentItem.HumanSize).width;
                                     if (dx > humanSizeTextWidth) {
                                         context.fillStyle = 'black';
-                                        context.fillText(recentItem.HumanSize, x1 + dx / 2 - humanSizeTextWidth / 2, yStartItem + ioStats.trackHeight / 2 + 4);
+                                        context.fillText(generalUtils.formatBytesToSize(recentItem.Size), x1 + dx / 2 - humanSizeTextWidth / 2, yStartItem + ioStats.trackHeight / 2 + 4);
+                                        // Note: there is a slight difference between Server side calculated 'HumanSize' &  the generalUtils calculation ....
                                     }
 
                                     // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
@@ -1088,6 +1176,7 @@ class ioStats extends viewModelBase {
                 this.fillCache();     
                 this.prepareTimeData();
                 this.initViewData();                
+                this.setLegendScales();
                 this.draw(true);
                 this.isImport(true);
             }
@@ -1176,41 +1265,29 @@ class ioStats extends viewModelBase {
 
         switch (recentItem.Type) {
             case ioStats.journalWriteString: {
-                color = ioStats.eventsColors.JournalWriteLowSizeColor;
-                if (recentItem.Size > this.journalWriteLowSizeLevel()) {
-                    color = ioStats.eventsColors.JournalWriteMedSizeColor;
+                if (calcColorBasedOnSize) {
+                    color = this.legendColorScaleJW(recentItem.Size);                    
                 }
-                if (recentItem.Size > this.journalWriteHighSizeLevel()) {
-                    color = ioStats.eventsColors.JournalWriteHighSizeColor;
-                }
-                if (!calcColorBasedOnSize) {
-                    color = ioStats.eventsColors.JournalWriteHighSizeColor;
-                }
-            } break;
-            case ioStats.dataSyncString: {
-                color = ioStats.eventsColors.DataSyncLowSizeColor;
-                if (recentItem.Size > this.dataSyncLowSizeLevel()) {
-                    color = ioStats.eventsColors.DataSyncMedSizeColor;
-                }
-                if (recentItem.Size > this.dataSyncHighSizeLevel()) {
-                    color = ioStats.eventsColors.DataSyncHighSizeColor;
-                }
-                if (!calcColorBasedOnSize) {
-                    color = ioStats.eventsColors.DataSyncHighSizeColor;
+                else {
+                    color = ioStats.eventsColors.HighSizeColorJW;
                 }
             } break;
             case ioStats.dataFlushString: {
-                color = ioStats.eventsColors.DataFlushLowSizeColor;
-                if (recentItem.Size > this.dataFlushLowSizeLevel()) {
-                    color = ioStats.eventsColors.DataFlushMedSizeColor;
+                if (calcColorBasedOnSize) {                  
+                    color = this.legendColorScaleDF(recentItem.Size);
                 }
-                if (recentItem.Size > this.dataFlushHighSizeLevel()) {
-                    color = ioStats.eventsColors.DataFlushHighSizeColor;
-                }
-                if (!calcColorBasedOnSize) {
-                    color = ioStats.eventsColors.DataFlushHighSizeColor;
+                else {
+                    color = ioStats.eventsColors.HighSizeColorDF;
                 }
             } break;
+            case ioStats.dataSyncString: {
+                if (calcColorBasedOnSize) {
+                    color = this.legendColorScaleDS(recentItem.Size);                  
+                }
+                else {
+                    color = ioStats.eventsColors.HighSizeColorDS;
+                }
+            } break;           
         }
 
         return color;
@@ -1253,19 +1330,40 @@ class ioStats extends viewModelBase {
     private handleTrackTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) {     
         const currentDatum = this.tooltip.datum();
 
+        // 1. Show item size position in the legend (in addition to showing the tooltip)
+        this.itemHoveredJW(false);
+        this.itemHoveredDF(false);
+        this.itemHoveredDS(false);
+               
+        switch (element.Type) {           
+            case ioStats.journalWriteString: {
+                this.itemHoveredJW(true);
+                this.itemSizePositionJW((this.legendSizeScaleJW.invert(element.Size)-6).toString() + "px");
+            } break;
+            case ioStats.dataFlushString: {
+                this.itemHoveredDF(true);
+                this.itemSizePositionDF((this.legendSizeScaleDF.invert(element.Size)-6).toString() + "px");
+            } break;
+            case ioStats.dataSyncString: {
+                this.itemHoveredDS(true);
+                this.itemSizePositionDS((this.legendSizeScaleDS.invert(element.Size)-6).toString() + "px");
+            } break;
+        }
+
+        // 2. Show tooltip
         if (currentDatum !== element) {
             let typeString;
             switch (element.Type) {
-                case "JournalWrite": typeString = "Journal Write"; break;
-                case "DataSync": typeString = "Voron Data Sync"; break;
-                case "DataFlush": typeString = "Voron Data Flush"; break;
+                case ioStats.journalWriteString: typeString = "Journal Write"; break;               
+                case ioStats.dataFlushString: typeString = "Voron Data Flush"; break;
+                case ioStats.dataSyncString: typeString = "Voron Data Sync"; break;
             }
             let tooltipHtml = `*** ${typeString} ***<br/>`;
             let duration = (element.Duration === 0) ? "0" : generalUtils.formatMillis((element).Duration);
             tooltipHtml += `Duration: ${duration}<br/>`;
-            tooltipHtml += `Size: ${element.HumanSize}<br/>`;
+            tooltipHtml += `Size: ${generalUtils.formatBytesToSize(element.Size)}<br/>`; 
             tooltipHtml += `Size (bytes): ${element.Size.toLocaleString()}<br/>`;
-            tooltipHtml += `Allocated Size: ${element.HumanFileSize.toLocaleString()}<br/>`;
+            tooltipHtml += `Allocated Size: ${generalUtils.formatBytesToSize(element.FileSize)}<br/>`; 
             tooltipHtml += `Allocated Size (bytes): ${element.FileSize.toLocaleString()}<br/>`;
 
             this.handleTooltip(element, x, y, tooltipHtml);
@@ -1312,6 +1410,11 @@ class ioStats extends viewModelBase {
             .style("opacity", 0);
 
         this.tooltip.datum(null);
+
+        // No need to show arrow position in legend any more..
+        this.itemHoveredJW(false);
+        this.itemHoveredDF(false);
+        this.itemHoveredDS(false);
     }   
 }
 
