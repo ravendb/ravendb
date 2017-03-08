@@ -460,6 +460,7 @@ namespace Raven.Server.Rachis
             var engineCurrentTerm = _engine.CurrentTerm;
             _engine.SetNewState(RachisConsensus.State.Follower, this, engineCurrentTerm,
                 $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
+            _engine.LeaderUrl = _connection.FullSource;
             _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
 
             _thread = new Thread(Run)

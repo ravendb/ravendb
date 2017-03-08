@@ -1123,6 +1123,33 @@ namespace Raven.Server.Rachis
             await task;
         }
 
+        private volatile string _leaderUrl;
+        public string LeaderUrl
+        {
+            get
+            {
+                switch (CurrentState)
+                {
+                    case State.Passive:
+                        return string.Empty;
+                    case State.Candidate:
+                        return string.Empty;
+                    case State.Follower:
+                        return _leaderUrl;
+                    case State.LeaderElect:
+                        return Url;
+                    case State.Leader:
+                        return Url;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+            internal set
+            {
+                Debug.Assert(CurrentState == State.Follower);
+                _leaderUrl = value;
+            }
+        }
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
         public abstract void Apply(TransactionOperationContext context, long uptoInclusive);

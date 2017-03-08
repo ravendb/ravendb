@@ -193,7 +193,7 @@ namespace Raven.Server.Rachis
                     _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.Noop);
                     tx.Commit();
                 }
-
+                _newEntry.Set(); //This is so the noop would register right away
                 while (true)
                 {
                     switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeoutMs))
