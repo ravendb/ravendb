@@ -26,16 +26,7 @@ namespace SlowTests.Server.Rachis
             var newLeader = WaitForAnyToBecomeLeader(followers);
             Assert.NotNull(newLeader);
             ReconnectToNode(leader);
-            await leader.WaitForState(RachisConsensus.State.Follower);
-            TransactionOperationContext context;
-            using (leader.ContextPool.AllocateOperationContext(out context))
-            using (context.OpenReadTransaction())
-            {
-                var topology = leader.GetTopology(context);
-                Assert.False(topology.Voters.Contains(newServer.Url) == false &&
-                             topology.Promotables.Contains(newServer.Url) == false &&
-                             topology.NonVotingMembers.Contains(newServer.Url) == false);
-            }
+            Assert.True(leader.WaitForTopology(Leader.TopologyModification.Remove, newServer.Url).Wait(leader.ElectionTimeoutMs * 3));
         }
         /// <summary>
         /// This test checks that a node could be added to the cluster even if the node is down.
@@ -46,30 +37,34 @@ namespace SlowTests.Server.Rachis
         public async Task New_node_can_be_added_even_if_it_is_down()
         {
             var leader = await CreateNetworkAndGetLeader(3);
-            Assert.True(leader.AddToClusterAsync("non-existing-node").Wait(leader.ElectionTimeoutMs*2),"non existing node should be able to join the cluster");
+            Assert.True(leader.AddToClusterAsync("http://rachis.example.com:1337").Wait(leader.ElectionTimeoutMs*2),"non existing node should be able to join the cluster");
             List<Task> waitingList = new List<Task>();
             foreach (var consensus in RachisConsensuses)
             {
-                waitingList.Add(consensus.WaitForTopology(Leader.TopologyModification.Promotable, "non-existing-node"));
+                waitingList.Add(consensus.WaitForTopology(Leader.TopologyModification.Promotable, "http://rachis.example.com:1337"));
             }
             Assert.True(Task.WhenAll(waitingList).Wait(leader.ElectionTimeoutMs * 2),"Cluster was non informed about new node within two election periods");
         }
 
         /// <summary>
         /// This test creates two nodes that don't exists and then setup those two nodes and make sure they are been updated with the current log.
-        /// This test may fail if the ports i selected are used by somebody else.
         /// </summary>
-        /// <returns></returns>
         [Fact]
         public async Task Adding_additional_node_that_goes_offline_and_then_online_should_still_work()
         {
-            var leader = await CreateNetworkAndGetLeader(3);            
-            Assert.True(leader.AddToClusterAsync("http://localhost:53899/#D").Wait(leader.ElectionTimeoutMs * 2), "non existing node should be able to join the cluster");
-            Assert.True(leader.AddToClusterAsync("http://localhost:53898/#E").Wait(leader.ElectionTimeoutMs * 2), "non existing node should be able to join the cluster");
-            var t = IssueCommandsAndWaitForCommit(leader, 3, "test", 1);
-            Assert.True(t.Wait(leader.ElectionTimeoutMs * 2),"Commands were not committed in time although there is a majority of active nodes in the cluster");
             var node4 = SetupServer(false, 53899);
             var node5 = SetupServer(false, 53898);
+            DisconnectFromNode(node4);
+            DisconnectFromNode(node5);
+            var leader = await CreateNetworkAndGetLeader(3);            
+            Assert.True(leader.AddToClusterAsync(node4.Url).Wait(leader.ElectionTimeoutMs * 2), "non existing node should be able to join the cluster");
+            Assert.True(leader.AddToClusterAsync(node5.Url).Wait(leader.ElectionTimeoutMs * 2), "non existing node should be able to join the cluster");
+            var t = IssueCommandsAndWaitForCommit(leader, 3, "test", 1);
+            Assert.True(t.Wait(leader.ElectionTimeoutMs * 2),"Commands were not committed in time although there is a majority of active nodes in the cluster");
+
+            ReconnectToNode(node4);
+            ReconnectToNode(node5);
+
             Assert.True(node4.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, t.Result).Wait(leader.ElectionTimeoutMs * 2),
                 "#D server didn't get the commands in time");
             Assert.True(node5.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, t.Result).Wait(leader.ElectionTimeoutMs * 2),
@@ -95,7 +90,7 @@ namespace SlowTests.Server.Rachis
                 () => leader.RemoveFromClusterAsync("http://not-a-real-url.com"));
         }
 
-        [Theory(Skip = "Waiting for node to be removed seems to run forever need to debug this")]
+        [Theory]
         [InlineData(3)]
         [InlineData(5)]
         [InlineData(7)]

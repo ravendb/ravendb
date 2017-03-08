@@ -25,26 +25,27 @@ namespace Tests.Infrastructure
 
         protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount)
         {
+            var initialCount = RachisConsensuses.Count;
             var leaderIndex = _random.Next(0, nodeCount);
             for (var i = 0; i < nodeCount; i++)
             {
                 SetupServer(i == leaderIndex);
             }
-            var leader = RachisConsensuses[leaderIndex];
+            var leader = RachisConsensuses[leaderIndex + initialCount];
             for (var i = 0; i < nodeCount; i++)
             {
                 if (i == leaderIndex)
                 {
                     continue;
                 }
-                var follower = RachisConsensuses[i];
+                var follower = RachisConsensuses[i + initialCount];
                 await leader.AddToClusterAsync(follower.Url);
                 await follower.WaitForTopology(Leader.TopologyModification.Voter);
             }
-            var currentState = RachisConsensuses[leaderIndex].CurrentState;
+            var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;
             Assert.True(currentState == RachisConsensus.State.Leader ||
                         currentState == RachisConsensus.State.LeaderElect,
-                "The leader has changed while waiting for cluster to become stable. " + leader.LastStateChangeReason);
+                "The leader has changed while waiting for cluster to become stable, it is now " + currentState + " Beacuse: " + leader.LastStateChangeReason);
             return leader;
         }
 
@@ -65,12 +66,12 @@ namespace Tests.Infrastructure
 
         protected void DisconnectFromNode(RachisConsensus<CountingStateMachine> node)
         {
-            foreach (var follower in RachisConsensuses.Where(x=>x.Url != node.Url))
+            foreach (var follower in RachisConsensuses.Where(x => x.Url != node.Url))
             {
                 Disconnect(follower.Url, node.Url);
             }
         }
-        
+
         protected void ReconnectToNode(RachisConsensus<CountingStateMachine> node)
         {
             foreach (var follower in RachisConsensuses.Where(x => x.Url != node.Url))
@@ -91,7 +92,7 @@ namespace Tests.Infrastructure
             return nodes.FirstOrDefault(x => x.CurrentState == RachisConsensus.State.Leader);
         }
 
-        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false,int port = 0)
+        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
@@ -167,14 +168,14 @@ namespace Tests.Infrastructure
             lock (this)
             {
                 ConcurrentSet<string> rejectionList;
-                if(_rejectionList.TryGetValue(to, out rejectionList) == false)
+                if (_rejectionList.TryGetValue(to, out rejectionList) == false)
                     return;
 
                 rejectionList.TryRemove(from);
             }
         }
 
-        protected async Task<long> IssueCommandsAndWaitForCommit(RachisConsensus<CountingStateMachine> leader,int numberOfCommands,String Name,int value)
+        protected async Task<long> IssueCommandsAndWaitForCommit(RachisConsensus<CountingStateMachine> leader, int numberOfCommands, String Name, int value)
         {
             Assert.True(leader.CurrentState == RachisConsensus.State.Leader || leader.CurrentState == RachisConsensus.State.LeaderElect, "Can't append commands from non leader");
             TransactionOperationContext context;
@@ -202,7 +203,7 @@ namespace Tests.Infrastructure
             {
                 for (var i = 0; i < 3; i++)
                 {
-                    waitingList.Add( leader.PutAsync(context.ReadObject(new DynamicJsonValue
+                    waitingList.Add(leader.PutAsync(context.ReadObject(new DynamicJsonValue
                     {
                         ["Name"] = Name,
                         ["Value"] = value
@@ -215,7 +216,7 @@ namespace Tests.Infrastructure
         private readonly ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>> _connections = new ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>>();
         private readonly List<TcpListener> _listeners = new List<TcpListener>();
         protected readonly List<RachisConsensus<CountingStateMachine>> RachisConsensuses = new List<RachisConsensus<CountingStateMachine>>();
-        private readonly List<Task> _mustBeSuccessfulTasks = new List<Task>();        
+        private readonly List<Task> _mustBeSuccessfulTasks = new List<Task>();
         private readonly Random _random = new Random();
         private int _count;
 
@@ -261,7 +262,7 @@ namespace Tests.Infrastructure
 
             public override void OnSnapshotInstalled(TransactionOperationContext context)
             {
-            
+
             }
 
             public override bool ShouldSnapshot(Slice slice, RootObjectType type)
