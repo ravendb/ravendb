@@ -195,6 +195,7 @@ namespace Raven.Client.Documents.Session
         ///   Gets the session associated with this document query
         /// </summary>
         public IDocumentSession Session => (IDocumentSession)TheSession;
+        public IAsyncDocumentSession AsyncSession => (IAsyncDocumentSession)TheSession;
 
         public bool IsDynamicMapReduce => DynamicMapReduceFields.Length > 0;
 

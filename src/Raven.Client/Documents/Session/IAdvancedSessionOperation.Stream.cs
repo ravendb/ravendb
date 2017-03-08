@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Commands;
 
@@ -60,6 +61,11 @@ namespace Raven.Client.Documents.Session
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
         IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null);
+
+        /// <summary>
+        ///     Returns the results of a query directly into stream 
+        /// </summary>
+        void StreamInto<T>(IDocumentQuery<T> query, Stream output);
 
     }
 }

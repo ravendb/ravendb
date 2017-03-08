@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -173,6 +174,20 @@ namespace Raven.Client.Documents.Session
             await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
             return new YieldStream<T>(this, null, null, command.UsedTransformer, result, token);
+        }
+
+        public async Task StreamIntoAsync<T>(IAsyncDocumentQuery<T> query, Stream output, CancellationToken token = default(CancellationToken))
+        {
+            var streamOperation = new StreamOperation(this);
+            var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
+
+            await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
+
+            using (command.Result.Response)
+            using (command.Result.Stream)
+            {
+                await command.Result.Stream.CopyToAsync(output).ConfigureAwait(false);
+            }
         }
     }
 }
