@@ -83,6 +83,15 @@ namespace Raven.Server.Rachis
             _thread.Start();
         }
 
+        public void StepDown()
+        {
+            if(_voters.Count == 0)
+                throw new InvalidOperationException("Cannot step down when I'm the only voter int he cluster");
+            var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x=>x.LastReplyFromFollower).First();
+            nextLeader.ForceElectionsNow = true;
+            var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
+            old.TrySetResult(null);
+        }
 
         private void RefreshAmbassadors(ClusterTopology clusterTopology)
         {

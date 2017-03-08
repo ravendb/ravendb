@@ -375,7 +375,7 @@ namespace Raven.Server.Rachis
             SwitchToCandidateState("Election timeout");
         }
 
-        public void SwitchToCandidateState(string reason)
+        public void SwitchToCandidateState(string reason, bool forced = false)
         {
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -397,7 +397,10 @@ namespace Raven.Server.Rachis
             {
                 Log.Info("Switching to candidate state");
             }
-            var candidate = new Candidate(this);
+            var candidate = new Candidate(this)
+            {
+                IsForcedElection = forced
+            };
             SetNewState(State.Candidate, candidate, CurrentTerm, reason);
             candidate.Start();
         }

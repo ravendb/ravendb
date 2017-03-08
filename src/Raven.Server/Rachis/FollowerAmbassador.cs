@@ -39,6 +39,7 @@ namespace Raven.Server.Rachis
         public DateTime LastReplyFromFollower => new DateTime(Interlocked.Read(ref _lastReplyFromFollower));
         public DateTime LastSendToFollower => new DateTime(Interlocked.Read(ref _lastSendToFollower));
         public string LastSendMsg => _lastSentMsg;
+        public bool ForceElectionsNow { get; set; }
 
         private void UpdateLastSend(string msg)
         {
@@ -137,6 +138,7 @@ namespace Raven.Server.Rachis
 
                                             appendEntries = new AppendEntries
                                             {
+                                                ForceElections = ForceElectionsNow,
                                                 EntriesCount = entries.Count,
                                                 LeaderCommit = _engine.GetLastCommitIndex(context),
                                                 Term = _engine.CurrentTerm,

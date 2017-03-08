@@ -39,28 +39,7 @@ namespace Raven.Server.Rachis
             {
                 if (_timeoutEventSlim.IsSet == false)
                 {
-                    lock (this)
-                    {
-                        if (_timeoutHappened == null)
-                            return;
-                        if (Disable)
-                            return;
-                        _timer.Change(Timeout.Infinite, Timeout.Infinite);
-                        try
-                        {
-                             _timeoutHappened?.Invoke();
-                        }
-                        catch (ConcurrencyException)
-                        {
-                            
-                            // expected, ignoring
-                        }
-                        finally
-                        {
-                            _timeoutHappened = null;
-                            _currentLeader = null;
-                        }
-                    }
+                    ExecuteTimeoutBehavior();
                     return;
                 }
                 _timeoutEventSlim.Reset();
@@ -70,6 +49,32 @@ namespace Raven.Server.Rachis
                 _edi = ExceptionDispatchInfo.Capture(e);
                 _timer.Dispose();
             }
+        }
+
+        public void ExecuteTimeoutBehavior()
+        {
+            lock (this)
+            {
+                if (_timeoutHappened == null)
+                    return;
+                if (Disable)
+                    return;
+                _timer.Change(Timeout.Infinite, Timeout.Infinite);
+                try
+                {
+                    _timeoutHappened?.Invoke();
+                }
+                catch (ConcurrencyException)
+                {
+                    // expected, ignoring
+                }
+                finally
+                {
+                    _timeoutHappened = null;
+                    _currentLeader = null;
+                }
+            }
+            return;
         }
 
         public void Defer(string leader)

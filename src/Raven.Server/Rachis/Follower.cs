@@ -116,6 +116,12 @@ namespace Raven.Server.Rachis
                         }
                     }
 
+                    if (appendEntries.ForceElections)
+                    {
+                        _engine.SwitchToCandidateState("Was asked to do so by my leader", forced: true);
+                        return;
+                    }
+
                     _connection.Send(context, new AppendEntriesResponse
                     {
                         CurrentTerm = _engine.CurrentTerm,

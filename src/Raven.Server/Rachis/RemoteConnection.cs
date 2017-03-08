@@ -137,7 +137,7 @@ namespace Raven.Server.Rachis
 
         public void Send(JsonOperationContext context, AppendEntries ae, List<BlittableJsonReaderObject> items = null)
         {
-            Send(context, new DynamicJsonValue
+            var msg = new DynamicJsonValue
             {
                 ["Type"] = nameof(AppendEntries),
                 [nameof(AppendEntries.EntriesCount)] = ae.EntriesCount,
@@ -146,7 +146,12 @@ namespace Raven.Server.Rachis
                 [nameof(AppendEntries.PrevLogTerm)] = ae.PrevLogTerm,
                 [nameof(AppendEntries.Term)] = ae.Term,
                 [nameof(AppendEntries.TruncateLogBefore)] = ae.TruncateLogBefore,
-            });
+            };
+
+            if (ae.ForceElections)
+                msg[nameof(AppendEntries.ForceElections)] = true;
+
+            Send(context, msg);
 
             if (items == null || items.Count == 0)
                 return;
