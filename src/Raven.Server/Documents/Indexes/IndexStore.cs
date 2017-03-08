@@ -108,46 +108,72 @@ namespace Raven.Server.Documents.Indexes
             {
                 var transformer = _documentDatabase.TransformerStore.GetTransformer(definition.Name);
                 if (transformer != null)
-                {
                     throw new IndexOrTransformerAlreadyExistException($"Tried to create an index with a name of {definition.Name}, but a transformer under the same name exist");
-                }
-                Index existingIndex;
-                var lockMode = ValidateIndexDefinition(definition.Name, out existingIndex);
-                if (lockMode == IndexLockMode.LockedIgnore)
-                    return existingIndex.IndexId;
 
+                ValidateIndexName(definition.Name);
                 definition.RemoveDefaultValues();
-
                 ValidateAnalyzers(definition);
-                var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
-                Index replacementIndex;
 
-                switch (GetIndexCreationOptions(definition, existingIndex))
+                var lockMode = IndexLockMode.Unlock;
+                var creationOptions = IndexCreationOptions.Create;
+                var existingIndex = GetIndex(definition.Name);
+                if (existingIndex != null)
                 {
-                    case IndexCreationOptions.Noop:
-                        if (_indexes.TryGetByName(replacementIndexName, out replacementIndex))
-                            DeleteIndex(replacementIndex.IndexId);
+                    lockMode = existingIndex.Definition.LockMode;
+                    creationOptions = GetIndexCreationOptions(definition, existingIndex);
+                }
+
+                var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
+
+                if (creationOptions == IndexCreationOptions.Noop)
+                {
+                    Debug.Assert(existingIndex != null);
+
+                    TryDeleteIndexIfExists(replacementIndexName);
+
+                    return existingIndex.IndexId;
+                }
+
+                if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
+                {
+                    Debug.Assert(existingIndex != null);
+
+                    if (lockMode == IndexLockMode.LockedIgnore)
                         return existingIndex.IndexId;
-                    case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
-                        if (_indexes.TryGetByName(replacementIndexName, out replacementIndex))
-                            DeleteIndex(replacementIndex.IndexId);
-                        switch (definition.Type)
-                        {
-                            case IndexType.Map:
-                                MapIndex.Update(existingIndex, definition, _documentDatabase);
-                                break;
-                            case IndexType.MapReduce:
-                                MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
-                                break;
-                            default:
-                                throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
-                        }
+
+                    if (lockMode == IndexLockMode.LockedError)
+                        throw new InvalidOperationException("Can not overwrite locked index: " + existingIndex.Name);
+
+                    TryDeleteIndexIfExists(replacementIndexName);
+
+                    switch (definition.Type)
+                    {
+                        case IndexType.Map:
+                            MapIndex.Update(existingIndex, definition, _documentDatabase);
+                            break;
+                        case IndexType.MapReduce:
+                            MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
+                            break;
+                        default:
+                            throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
+                    }
+
+                    return existingIndex.IndexId;
+                }
+
+                if (creationOptions == IndexCreationOptions.Update)
+                {
+                    Debug.Assert(existingIndex != null);
+
+                    if (lockMode == IndexLockMode.LockedIgnore)
                         return existingIndex.IndexId;
-                    case IndexCreationOptions.Update:
-                        definition.Name = replacementIndexName;
-                        if (_indexes.TryGetByName(replacementIndexName, out replacementIndex))
-                            DeleteIndex(replacementIndex.IndexId);
-                        break;
+
+                    if (lockMode == IndexLockMode.LockedError)
+                        throw new InvalidOperationException($"Can not overwrite locked index: {existingIndex.Name}");
+
+                    TryDeleteIndexIfExists(replacementIndexName);
+
+                    definition.Name = replacementIndexName;
                 }
 
                 var indexId = _indexes.GetNextIndexId();
@@ -179,20 +205,39 @@ namespace Raven.Server.Documents.Indexes
 
             lock (_indexAndTransformerLocker)
             {
-                Index existingIndex;
-                var lockMode = ValidateIndexDefinition(definition.Name, out existingIndex);
-                if (lockMode == IndexLockMode.LockedIgnore)
-                    return existingIndex.IndexId;
+                var transformer = _documentDatabase.TransformerStore.GetTransformer(definition.Name);
+                if (transformer != null)
+                    throw new IndexOrTransformerAlreadyExistException($"Tried to create an index with a name of {definition.Name}, but a transformer under the same name exist");
 
-                switch (GetIndexCreationOptions(definition, existingIndex))
+                ValidateIndexName(definition.Name);
+
+                var lockMode = IndexLockMode.Unlock;
+                var creationOptions = IndexCreationOptions.Create;
+                var existingIndex = GetIndex(definition.Name);
+                if (existingIndex != null)
                 {
-                    case IndexCreationOptions.Noop:
+                    lockMode = existingIndex.Definition.LockMode;
+                    creationOptions = GetIndexCreationOptions(definition, existingIndex);
+                }
+
+                if (creationOptions == IndexCreationOptions.Noop)
+                {
+                    Debug.Assert(existingIndex != null);
+
+                    return existingIndex.IndexId;
+                }
+
+                if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex || creationOptions == IndexCreationOptions.Update)
+                {
+                    Debug.Assert(existingIndex != null);
+
+                    if (lockMode == IndexLockMode.LockedIgnore)
                         return existingIndex.IndexId;
-                    case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
-                        throw new NotSupportedException();
-                    case IndexCreationOptions.Update:
-                        //TODO - Efrat
-                        throw new NotSupportedException();
+
+                    if (lockMode == IndexLockMode.LockedError)
+                        throw new InvalidOperationException($"Can not overwrite locked index: {existingIndex.Name}");
+
+                    throw new NotSupportedException();
                 }
 
                 var indexId = _indexes.GetNextIndexId();
@@ -298,26 +343,6 @@ namespace Raven.Server.Documents.Indexes
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
             return IndexCreationOptions.Update;
-        }
-
-        private IndexLockMode ValidateIndexDefinition(string name, out Index existingIndex)
-        {
-            ValidateIndexName(name);
-
-            if (_indexes.TryGetByName(name, out existingIndex))
-            {
-                switch (existingIndex.Definition.LockMode)
-                {
-                    case IndexLockMode.SideBySide:
-                        return IndexLockMode.SideBySide;
-                    case IndexLockMode.LockedIgnore:
-                        return IndexLockMode.LockedIgnore;
-                    case IndexLockMode.LockedError:
-                        throw new InvalidOperationException("Can not overwrite locked index: " + name);
-                }
-            }
-
-            return IndexLockMode.Unlock;
         }
 
         private void ValidateIndexName(string name)
@@ -587,8 +612,8 @@ namespace Raven.Server.Documents.Indexes
                 var nameFromMetadata = IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory.FullName);
                 string desiredIndexDirName;
 
-                if (nameFromMetadata != null && 
-                    indexDirectory.Name != 
+                if (nameFromMetadata != null &&
+                    indexDirectory.Name !=
                     (desiredIndexDirName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexId, nameFromMetadata)))
                 {
                     var newPath = new PathSetting(indexDirectory.FullName)

@@ -1068,7 +1068,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
 
                 index1.SetLock(IndexLockMode.LockedError);
-                Assert.Throws<InvalidOperationException>(() => database.IndexStore.CreateIndex(definition2));
+                indexId2 = database.IndexStore.CreateIndex(definition2); // no-op
+                Assert.Equal(indexId1, indexId2);
             }
         }
 
