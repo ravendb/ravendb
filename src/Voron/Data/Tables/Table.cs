@@ -14,6 +14,8 @@ namespace Voron.Data.Tables
 {
     public unsafe class Table : IDisposable
     {
+        public static ObjectPool<TableValueBuilder, TableValueBuilder.ResetBehavior> BuilderPool = new ObjectPool<TableValueBuilder, TableValueBuilder.ResetBehavior>(() => new TableValueBuilder());
+
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
         private readonly Tree _tableTree;

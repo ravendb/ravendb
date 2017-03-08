@@ -257,15 +257,20 @@ namespace Raven.Server.Documents
 
                     var bitSwappedId = Bits.SwapBytes(indexIndexId);
 
-                    table.Set(new TableValueBuilder
-                        {
-                            {(byte*) &bitSwappedId, sizeof(int)},
-                            {(byte*) &bitSwappedEtag, sizeof(long)},
-                            indexNameAsSlice,
-                            {(byte*) &type, sizeof(byte)},
-                            {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVectorForWrite.Length},
-                            {(byte*) &isConflicted, sizeof(bool)}
-                        });
+                    using (var scope = Table.BuilderPool.AllocateInContext())
+                    {
+                        var tvb = scope.Value;
+
+                        tvb.Add((byte*)&bitSwappedId, sizeof(int));
+                        tvb.Add((byte*)&bitSwappedEtag, sizeof(long));
+                        tvb.Add(indexNameAsSlice);
+                        tvb.Add((byte*)&type, sizeof(byte));
+                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVectorForWrite.Length);
+                        tvb.Add((byte*)&isConflicted, sizeof(bool));
+
+                        table.Set(tvb);
+                    }
+                        
                 }
             }
 

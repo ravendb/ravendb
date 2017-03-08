@@ -485,19 +485,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 var pageNumber = Bits.SwapBytes(modifiedPage);
                 var numberOfOutputs = result.Count;
 
-                var tvb = new TableValueBuilder
+                using (var scope = Table.BuilderPool.AllocateInContext())
                 {
-                    pageNumber,
-                    aggregatedEntries,
-                    numberOfOutputs
-                };
+                    var tvb = scope.Value;
+                    tvb.Add(pageNumber);
+                    tvb.Add(aggregatedEntries);
+                    tvb.Add(numberOfOutputs);
 
-                foreach (var output in result.GetOutputsToStore())
-                {
-                    tvb.Add(output.BasePointer, output.Size);
+                    foreach (var output in result.GetOutputsToStore())
+                    {
+                        tvb.Add(output.BasePointer, output.Size);
+                    }
+
+                    table.Set(tvb);
                 }
-
-                table.Set(tvb);
             }
         }
 
