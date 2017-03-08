@@ -19,7 +19,6 @@ import getResourcesCommand = require("commands/resources/getResourcesCommand");
 import getResourceCommand = require("commands/resources/getResourceCommand");
 import resourceInfo = require("models/resources/info/resourceInfo");
 import databaseInfo = require("models/resources/info/databaseInfo");
-import filesystemInfo = require("models/resources/info/filesystemInfo");
 import database = require("models/resources/database");
 import EVENTS = require("common/constants/events");
 import messagePublisher = require("common/messagePublisher");

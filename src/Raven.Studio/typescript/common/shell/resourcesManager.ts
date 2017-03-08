@@ -2,9 +2,6 @@
 import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
 import resource = require("models/resources/resource");
-import filesystem = require("models/filesystem/filesystem");
-import counterStorage = require("models/counter/counterStorage");
-import timeSeries = require("models/timeSeries/timeSeries");
 import resourceActivatedEventArgs = require("viewmodels/resources/resourceActivatedEventArgs");
 import changesContext = require("common/changesContext");
 import changesApi = require("common/changesApi");
@@ -41,22 +38,14 @@ class resourcesManager {
     ] as Array<(qualifier: string, name: string) => void>;
 
     databases = ko.computed<database[]>(() => this.resources().filter(x => x instanceof database) as database[]);
-    fileSystems = ko.computed<filesystem[]>(() => this.resources().filter(x => x instanceof filesystem) as filesystem[]);
-    counterStorages = ko.computed<counterStorage[]>(() => this.resources().filter(x => x instanceof counterStorage) as counterStorage[]);
-    timeSeries = ko.computed<timeSeries[]>(() => this.resources().filter(x => x instanceof timeSeries) as timeSeries[]);
 
     constructor() { 
         ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (rs: resource) => this.reloadDataAfterReconnection(rs));
 
         ko.postbox.subscribe(EVENTS.Resource.Activate, ({ resource }: resourceActivatedEventArgs) => {
+            //TODO: 
             if (resource instanceof database) {
                 return this.activateDatabase(resource as database);
-            } else if (resource instanceof filesystem) {
-               return this.activateFileSystem(resource as filesystem);
-            } else if (resource instanceof counterStorage) {
-               //TODO:return this.activateCounterStorage(resource as counterStorage);
-            } else if (resource instanceof timeSeries) {
-               //TODO: return this.activateTimeSeries(resource as timeSeries);
             }
 
             throw new Error(`Invalid resource type ${resource.type}`);
@@ -72,42 +61,11 @@ class resourcesManager {
             .find(x => name.toLowerCase() === x.name.toLowerCase());
     }
 
-    getFileSystemByName(name: string): filesystem {
-        if (!name) {
-            return null;
-        }
-        return this
-            .fileSystems()
-            .find(x => name.toLowerCase() === x.name.toLowerCase());
-    }
-
-    getCounterStorageByName(name: string): counterStorage {
-        if (!name) {
-            return null;
-        }
-        return this
-            .counterStorages()
-            .find(x => name.toLowerCase() === x.name.toLowerCase());
-    }
-
-    getTimeSeriesByName(name: string): timeSeries {
-        if (!name) {
-            return null;
-        }
-        return this
-            .timeSeries()
-            .find(x => name.toLowerCase() === x.name.toLowerCase());
-    }
-
     getResourceByQualifiedName(qualifiedName: string): resource {
         const dbPrefix = database.qualifier + "/";
-        const fsPrefix = filesystem.qualifier + "/";
-        //TODO: support for cs, ts
 
         if (qualifiedName.startsWith(dbPrefix)) {
             return this.getDatabaseByName(qualifiedName.substring(dbPrefix.length));
-        } else if (qualifiedName.startsWith(fsPrefix)) {
-            return this.getFileSystemByName(qualifiedName.substring(fsPrefix.length));
         } else {
             throw new Error("Unable to find resource: " + qualifiedName);
         }
@@ -137,21 +95,9 @@ class resourcesManager {
 
     activateBasedOnCurrentUrl() {
         const dbUrl = appUrl.getDatabaseNameFromUrl();
-        const fsUrl = appUrl.getFileSystemNameFromUrl();
-        const csUrl = appUrl.getCounterStorageNameFromUrl();
-        const tsUrl = appUrl.getTimeSeriesNameFromUrl();
         if (dbUrl) {
             const db = this.getDatabaseByName(dbUrl);
             this.activateIfDifferent(db, dbUrl, appUrl.forResources);
-        } else if (fsUrl) {
-            const fs = this.getFileSystemByName(fsUrl);
-            this.activateIfDifferent(fs, fsUrl, appUrl.forResources);
-        } else if (tsUrl) {
-            const ts = this.getTimeSeriesByName(tsUrl);
-            this.activateIfDifferent(ts, tsUrl, appUrl.forResources);
-        } else if (csUrl) {
-            const cs = this.getCounterStorageByName(csUrl);
-            this.activateIfDifferent(cs, csUrl, appUrl.forResources);
         }
     }
 
@@ -183,12 +129,6 @@ class resourcesManager {
         //TODO: this.fecthStudioConfigForDatabase(db);
 
         this.changesContext.changeResource(db);
-    }
-
-    private activateFileSystem(fs: filesystem) {
-        //TODO: ???? this.fecthStudioConfigForDatabase(new database(fs.name));
-
-        this.changesContext.changeResource(fs);
     }
 
     private reloadDataAfterReconnection(rs: resource) {
@@ -273,11 +213,7 @@ class resourcesManager {
     private createResource(qualifer: string, resourceInfo: Raven.Client.Server.Operations.ResourceInfo): resource {
         if (database.qualifier === qualifer) {
             return new database(resourceInfo as Raven.Client.Server.Operations.DatabaseInfo);
-        } else if (filesystem.qualifier === qualifer) {
-            return new filesystem(resourceInfo as Raven.Client.Server.Operations.FileSystemInfo);
         }
-
-        //TODO: ts, cs
         throw new Error("Unhandled resource type: " + qualifer);
     }
 

@@ -13,7 +13,6 @@ import searchBox = require("common/shell/searchBox");
 import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
-import uploadItem = require("models/filesystem/uploadItem");
 import license = require("models/auth/license");
 import topology = require("models/database/replication/topology");
 import environmentColor = require("models/resources/environmentColor");
@@ -23,7 +22,6 @@ import allRoutes = require("common/shell/routes");
 import registration = require("viewmodels/shell/registration");
 
 import appUrl = require("common/appUrl");
-import uploadQueueHelper = require("common/uploadQueueHelper");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 import enableResizeBindingHandler = require("common/bindingHelpers/enableResizeBindingHandler");
@@ -118,7 +116,6 @@ class shell extends viewModelBase {
         });
 
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -363,12 +360,6 @@ class shell extends viewModelBase {
     showApiKeyDialog() {
         var dialog = new enterApiKey();
         return app.showBootstrapDialog(dialog).then(() => window.location.href = "#resources");
-    }
-
-    uploadStatusChanged(item: uploadItem) {
-        var queue: uploadItem[] = uploadQueueHelper.parseUploadQueue(window.localStorage[uploadQueueHelper.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
-        uploadQueueHelper.updateQueueStatus(item.id(), item.status(), queue);
-        uploadQueueHelper.updateLocalStorage(queue, item.filesystem);
     }
 
     showLicenseStatusDialog() {

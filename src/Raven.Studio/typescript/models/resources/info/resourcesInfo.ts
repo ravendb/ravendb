@@ -2,20 +2,17 @@
 
 import resourceInfo = require("models/resources/info/resourceInfo");
 import databaseInfo = require("models/resources/info/databaseInfo");
-import filesystemInfo = require("models/resources/info/filesystemInfo");
 
 class resourcesInfo {
 
     sortedResources = ko.observableArray<resourceInfo>();
 
     databasesCount: KnockoutComputed<number>;
-    filesystemCount: KnockoutComputed<number>;
 
 
     constructor(dto: Raven.Client.Server.Operations.ResourcesInfo) {
 
         const databases = dto.Databases.map(db => new databaseInfo(db));
-        //TODO: fs, cs, ts
 
         const resources = [...databases] as resourceInfo[];
         resources.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
@@ -36,7 +33,7 @@ class resourcesInfo {
             resourceToUpdate.update(newResourceInfo);
         } else { // new resource - create instance of it
             let resourceToAdd: resourceInfo;
-            switch (resourceType) {
+            switch (resourceType) { //TODO: no need
                 case "db":
 
                     let dto = newResourceInfo as Raven.Client.Server.Operations.DatabaseInfo;
@@ -45,8 +42,6 @@ class resourcesInfo {
 
                 default:
                     throw new Error("Unsupported resource type = " + resourceType);
-
-                //TODO: implement fs, cs, ts		
             }
 
             let locationToInsert = _.sortedIndexBy(this.sortedResources(), resourceToAdd, function (item) { return item.name.toLowerCase() });
@@ -58,11 +53,6 @@ class resourcesInfo {
         this.databasesCount = ko.pureComputed(() => this
             .sortedResources()
             .filter(r => r instanceof databaseInfo)
-            .length);
-
-        this.filesystemCount = ko.pureComputed(() => this
-            .sortedResources()
-            .filter(r => r instanceof filesystemInfo)
             .length);
     }
 }

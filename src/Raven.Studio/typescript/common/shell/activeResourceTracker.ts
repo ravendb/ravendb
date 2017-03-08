@@ -1,9 +1,6 @@
 ﻿import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
 import resource = require("models/resources/resource");
-import filesystem = require("models/filesystem/filesystem");
-import counterStorage = require("models/counter/counterStorage");
-import timeSeries = require("models/timeSeries/timeSeries");
 import resourceActivatedEventArgs = require("viewmodels/resources/resourceActivatedEventArgs");
 import resourceDisconnectedEventArgs = require("viewmodels/resources/resourceDisconnectedEventArgs");
 import router = require("plugins/router");
@@ -19,15 +16,6 @@ class activeResourceTracker {
 
     database: KnockoutComputed<database> = ko.computed<database>(() =>
         this.tryCastActiveResource<database>(database.qualifier));
-
-    fileSystem: KnockoutComputed<filesystem> = ko.computed<filesystem>(() =>
-        this.tryCastActiveResource<filesystem>(filesystem.qualifier));
-
-    counterStorage: KnockoutComputed<counterStorage> = ko.computed<counterStorage>(() =>
-        this.tryCastActiveResource<counterStorage>(counterStorage.qualifier));
-
-    timeSeries: KnockoutComputed<timeSeries> = ko.computed<timeSeries>(() =>
-        this.tryCastActiveResource<timeSeries>(timeSeries.qualifier));
 
     constructor() {
         ko.postbox.subscribe(EVENTS.Resource.Activate, (e: resourceActivatedEventArgs) => {

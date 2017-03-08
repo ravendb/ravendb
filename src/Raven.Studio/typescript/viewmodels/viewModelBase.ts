@@ -23,10 +23,7 @@ import changesApi = require("common/changesApi");
 class viewModelBase {
 
     protected activeDatabase = activeResourceTracker.default.database;
-    protected activeFilesystem = activeResourceTracker.default.fileSystem;
-    protected activeCounterStorage = activeResourceTracker.default.counterStorage;
-    protected activeTimeSeries = activeResourceTracker.default.timeSeries;
-    protected activeResource = activeResourceTracker.default.resource;
+    protected activeResource = activeResourceTracker.default.resource; //TODO: delete me!
     
     downloader = new downloader();
 

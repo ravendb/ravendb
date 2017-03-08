@@ -76,29 +76,5 @@ interface computedAppUrls {
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     resourcesManagement: KnockoutComputed<string>;
 
-    filesystemFiles: KnockoutComputed<string>;
-    filesystemSearch: KnockoutComputed<string>;
-    filesystemSynchronization: KnockoutComputed<string>;
-    filesystemStatus: KnockoutComputed<string>;
-    filesystemTasks: KnockoutComputed<string>;
-    filesystemSettings: KnockoutComputed<string>;
-    filesystemSynchronizationDestinations: KnockoutComputed<string>;
-    filesystemConfiguration: KnockoutComputed<string>;
-    filesystemSynchronizationConfiguration: KnockoutComputed<string>;
-    filesystemVersioning: KnockoutComputed<string>;
-
-    counterStorages:KnockoutComputed<string>;
-    counterStorageCounters: KnockoutComputed<string>;
-    counterStorageReplication: KnockoutComputed<string>;
-    counterStorageTasks: KnockoutComputed<string>;
-    counterStorageStats: KnockoutComputed<string>;
-    counterStorageConfiguration: KnockoutComputed<string>;
-
-    timeSeriesType: KnockoutComputed<string>;
-    timeSeriesPoints: KnockoutComputed<string>;
-    timeSeriesStats: KnockoutComputed<string>;
-    timeSeriesConfiguration: KnockoutComputed<string>;
-    timeSeriesConfigurationTypes: KnockoutComputed<string>;
-
     subscriptions: KnockoutComputed<string>;
 }

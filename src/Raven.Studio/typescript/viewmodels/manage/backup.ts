@@ -2,11 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import resource = require("models/resources/resource");
 import database = require("models/resources/database");
-import filesystem = require("models/filesystem/filesystem");
-import counterStorage = require("models/counter/counterStorage");
 import backupDatabaseCommand = require("commands/maintenance/backupDatabaseCommand");
-import backupFilesystemCommand = require("commands/filesystem/backupFilesystemCommand");
-import backupCounterStorageCommand = require("commands/counter/backupCounterStorageCommand");
 import getResourceDrives = require("commands/resources/getResourceDrives");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import resourcesManager = require("common/shell/resourcesManager");
@@ -99,8 +95,6 @@ class backupDatabase extends viewModelBase {
     resourcesManager = resourcesManager.default;
 
     private dbBackupOptions = new resourceBackup(database.qualifier, this.resourcesManager.databases);
-    private fsBackupOptions = new resourceBackup(filesystem.qualifier, this.resourcesManager.fileSystems);
-    private csBackupOptions = new resourceBackup(counterStorage.qualifier, this.resourcesManager.counterStorages);
     
     isForbidden = ko.observable<boolean>();
 
@@ -117,7 +111,6 @@ class backupDatabase extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         $('form :input[name="databaseName"]').on("keypress", (e) => e.which !== 13);
-        $('form :input[name="filesystemName"]').on("keypress", (e) => e.which !== 13);
     }
 
     startDbBackup() {
@@ -126,26 +119,6 @@ class backupDatabase extends viewModelBase {
 
         const dbTobackup = this.resourcesManager.getDatabaseByName(backupOptions.resourceName());
         new backupDatabaseCommand(dbTobackup, backupOptions.backupLocation(), backupOptions.updateBackupStatus.bind(this.dbBackupOptions), backupOptions.incremental())
-            .execute()
-            .always(() => backupOptions.isBusy(false));
-    }
-
-    startFsBackup() {
-        var backupOptions = this.fsBackupOptions;
-        backupOptions.isBusy(true);
-
-        const fsToBackup = this.resourcesManager.getFileSystemByName(backupOptions.resourceName());
-        new backupFilesystemCommand(fsToBackup, backupOptions.backupLocation(), backupOptions.updateBackupStatus.bind(this.fsBackupOptions), backupOptions.incremental())
-            .execute()
-            .always(() => backupOptions.isBusy(false));
-    }
-
-    startCsBackup() {
-        var backupOptions = this.csBackupOptions;
-        backupOptions.isBusy(true);
-
-        const csToBackup = this.resourcesManager.getCounterStorageByName(backupOptions.resourceName());
-        new backupCounterStorageCommand(csToBackup, backupOptions.backupLocation(), backupOptions.updateBackupStatus.bind(this.csBackupOptions), backupOptions.incremental())
             .execute()
             .always(() => backupOptions.isBusy(false));
     }
