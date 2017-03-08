@@ -198,12 +198,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// get those documents again)
         /// </summary>
         public event AfterAcknowledgment AfterAcknowledgment = delegate { };
-
-        public void Start()
-        {
-            AsyncHelpers.RunSync(StartAsync);
-        }
-
+        
         public Task StartAsync()
         {
             if (_started)

@@ -10,16 +10,16 @@ using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Sparrow;
-using Sparrow.Logging;
-using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Subscriptions
 {
     // todo: implement functionality for limiting amount of opened subscriptions
     public class SubscriptionStorage : IDisposable

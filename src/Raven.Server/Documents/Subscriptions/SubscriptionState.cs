@@ -8,7 +8,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Sparrow;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Subscriptions
 {
     public class SubscriptionState:IDisposable
     {
