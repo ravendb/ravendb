@@ -183,17 +183,6 @@ interface databaseAccessDto {
     ReadOnly: boolean;
 }
 
-interface windowsAuthDataDto {
-    Name: string;
-    Enabled: boolean;
-    Databases: databaseAccessDto[];
-}
-
-interface windowsAuthDto {
-    RequiredGroups: windowsAuthDataDto[];
-    RequiredUsers: windowsAuthDataDto[];
-}
-
 interface storedPatchDto extends patchDto {
     Hash: number;
 }
@@ -258,11 +247,6 @@ interface databaseRestoreRequestDto extends restoreRequestDto {
     DatabaseLocation: string;
     DisableReplicationDestinations: boolean;
     GenerateNewDatabaseId?: boolean;
-}
-
-interface filesystemRestoreRequestDto extends restoreRequestDto {
-    FilesystemName: string;
-    FilesystemLocation: string;
 }
 
 interface restoreStatusDto {
@@ -388,9 +372,6 @@ interface statusDebugChangesDto {
     Id: string;
     Connected: boolean;
     DocumentStore: statusDebugChangesDocumentStoreDto;
-    FileSystem: statusDebugChangesFileSystemDto;
-    CounterStorage: statusDebugChangesCounterStorageDto;
-    TimeSeries: statusDebugChangesTimeSeriesDto;
     WatchAllDocuments: boolean;
     WatchAllIndexes: boolean;
     WatchConfig: boolean;
@@ -416,14 +397,6 @@ interface statusDebugChangesDocumentStoreDto {
     WatchedDocumentsInCollection: Array<string>;
     WatchedDocumentsOfType: Array<string>;
     WatchedBulkInserts: Array<string>;
-}
-
-interface statusDebugChangesFileSystemDto {
-    WatchConflicts: boolean;
-    WatchSync: boolean;
-    WatchCancellations: boolean;
-    WatchConfig: boolean;
-    WatchedFolders: Array<string>;
 }
 
 interface statusDebugMetricsDto {
@@ -600,15 +573,6 @@ interface tenantDto {
     IsAdminCurrentTenant: boolean;
 }
 
-interface fileSystemDto extends tenantDto {
-}
-
-interface counterStorageDto extends tenantDto {
-}
-
-interface timeSeriesDto extends tenantDto {
-}
-
 interface suggestionsDto {
     Suggestions: Array<string>;
 }
@@ -642,42 +606,15 @@ interface visualizerDataObjectDto {
     idx: number;
 }
 
-interface visualizerDataObjectNodeDto {
-    children?: visualizerDataObjectNodeDto[];
-    name?: string;
-    level?: number;
-    origin?: visualizerDataObjectNodeDto;
-    x?: number;
-    y?: number;
-    depth?: number;
-    parent?: visualizerDataObjectNodeDto;
-    payload?: mappedResultInfo;
-    connections?: visualizerDataObjectNodeDto[];
-    cachedId?: string;
-}
-
 interface queryIndexDebugMapArgsDto {
     key?: string;
     sourceId?: string;
     startsWith?: string;
 }
 
-interface graphLinkDto {
-    source: visualizerDataObjectNodeDto;
-    target: visualizerDataObjectNodeDto;
-    cachedId?: string;
-}
-
 interface mergeResult {
   Document: string;
   Metadata: string;
-}
-
-interface visualizerExportDto {
-    indexName: string;
-    docKeys: string[];
-    reduceKeys: string[];
-    tree: visualizerDataObjectNodeDto;
 }
 
 interface operationStatusDto {
@@ -726,8 +663,6 @@ interface importOperationStatusDto extends operationStatusDto{
 
 interface globalTopologyDto {
     Databases: replicationTopologyDto;
-    FileSystems: synchronizationTopologyDto;
-    Counters: countersReplicationTopologyDto;
 }
 
 interface replicationTopologyDto {
@@ -739,12 +674,6 @@ interface replicationTopologyDto {
 interface synchronizationTopologyDto {
     Servers: string[];
     Connections: synchronizationTopologyConnectionDto[];
-    SkippedResources: string[];
-}
-
-interface countersReplicationTopologyDto {
-    Servers: string[];
-    Connections: countersReplicationTopologyConnectionDto[];
     SkippedResources: string[];
 }
 
@@ -773,18 +702,6 @@ interface synchronizationTopologyConnectionDto {
     UiType: string;
 }
 
-interface countersReplicationTopologyConnectionDto {
-    Destination: string;
-    DestinationToSourceState: string;
-    Errors: string[];
-    LastEtag: string;
-    SendServerId: string;
-    Source: string;
-    SourceToDestinationState: string;
-    StoredServerId: string;
-    UiType: string;
-}
-
 interface runningTaskDto {
     Id: number;
     Status: operationStateDto;
@@ -803,13 +720,6 @@ interface adminLogsConfigEntryDto {
     category: string;
     level: string;
     includeStackTrace: boolean;
-}
-
-interface fileSystemSettingsDto {
-    name: string;
-    path: string;
-    logsPath: string;
-    storageEngine: string;
 }
 
 interface performanceTestRequestDto {
@@ -867,14 +777,6 @@ interface destinationInformationDto {
     DatabaseName: string;
     ServerInstanceId: string;
     LastDocumentEtag: string;
-}
-
-
-
-interface synchronizationConfigDto {
-    FileConflictResolution: string;
-    MaxNumberOfSynchronizationsPerDestination: number;
-    SynchronizationLockTimeoutMiliseconds: number;
 }
 
 interface pluginsInfoDto {
@@ -972,8 +874,6 @@ interface consoleJsSampleDto {
     Name: string;
     Code: string;
 }
-
-
 
 interface diskIoPerformanceRunDto {
     ProcessId: number;
