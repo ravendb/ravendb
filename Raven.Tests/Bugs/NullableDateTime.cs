@@ -101,43 +101,28 @@ namespace Raven.Tests.Bugs
         {
             var path = NewDataPath();
 
-            using (var server = new Raven.Server.RavenDbServer(new
-                                                                Raven.Database.Config.RavenConfiguration()
-                                                                {
-                                                                    HostName = "localhost",
-                                                                    DataDirectory = path,
-                                                                    Port = 8079,
-                                                                    AccessControlAllowOrigin = {"*"},
-                                                                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-                                                                })
+            using (IDocumentStore documentStore = NewRemoteDocumentStore(dataDirectory: path))
             {
-                UseEmbeddedHttpServer = true
-            })
-            {
-                server.Initialize();
-                using (IDocumentStore documentStore = NewRemoteDocumentStore(ravenDbServer: server))
+                using (IDocumentSession session = documentStore.OpenSession())
                 {
-                    using (IDocumentSession session = documentStore.OpenSession())
+                    new UnsetDocs().Execute(documentStore);
+                    session.Store(new Doc
                     {
-                        new UnsetDocs().Execute(documentStore);
-                        session.Store(new Doc
-                                        {
-                                            Id = "test/doc1",
-                                            Date = SystemTime.UtcNow
-                                        });
-                        session.Store(new Doc { Id = "test/doc2", Date = null });
-                        session.SaveChanges();
+                        Id = "test/doc1",
+                        Date = SystemTime.UtcNow
+                    });
+                    session.Store(new Doc { Id = "test/doc2", Date = null });
+                    session.SaveChanges();
 
-                    }
+                }
 
-                    using (var session = documentStore.OpenSession())
-                    {
-                        session
-                            .Query<Doc, UnsetDocs>()
-                            .Customize(x => x.WaitForNonStaleResults())
-                            .ProjectFromIndexFieldsInto<DocSummary>()
-                            .ToArray();
-                    }
+                using (var session = documentStore.OpenSession())
+                {
+                    session
+                        .Query<Doc, UnsetDocs>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ProjectFromIndexFieldsInto<DocSummary>()
+                        .ToArray();
                 }
             }
         }

@@ -59,7 +59,8 @@ namespace Raven.Tests.Issues
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 RunInMemory = false,
                 Port = port,
-                DefaultStorageTypeName = "esent"
+                DefaultStorageTypeName = "esent",
+                MaxSecondsForTaskToWaitForDatabaseToLoad = 20
             };
 
             if (removeDataDirectory)

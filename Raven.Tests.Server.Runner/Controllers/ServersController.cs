@@ -107,6 +107,7 @@ namespace Raven.Tests.Server.Runner.Controllers
             configuration.DataDirectory = Path.Combine(Context.DataDir, port, "System");
             configuration.FileSystem.DataDirectory = Path.Combine(Context.DataDir, port, "FileSystem");
             configuration.AccessControlAllowOrigin = new HashSet<string> { "*" };
+            configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 20;
 
             if (configuration.RunInMemory == false && deleteData)
             {

@@ -23,26 +23,6 @@ namespace Raven.Tests.Bugs.MultiTenancy
 {
     public class Basic : RavenTest
     {
-        protected RavenDbServer GetNewServer(int port)
-        {
-            var dataDirectory = Path.Combine(NewDataPath(), "System");
-            var configuration = new RavenConfiguration
-                                {
-                                    Port = port,
-                                    DataDirectory = dataDirectory,
-                                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-                                };
-            configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
-
-            var ravenDbServer = new RavenDbServer(configuration)
-            {
-                UseEmbeddedHttpServer = true
-            };
-
-            ravenDbServer.Initialize();
-            return ravenDbServer;
-        }
-
         [Fact]
         public void CanCreateDatabaseUsingExtensionMethod()
         {

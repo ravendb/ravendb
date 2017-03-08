@@ -12,7 +12,7 @@ using Raven.Tests.Common.Util;
 
 namespace Raven.Tests.Bundles.CompressionAndEncryption
 {
-    public class CompressionAndEncryption : IDisposable
+    public abstract class CompressionAndEncryption : IDisposable
     {
         protected readonly string path;
         protected readonly DocumentStore documentStore;
@@ -20,7 +20,7 @@ namespace Raven.Tests.Bundles.CompressionAndEncryption
         private bool closed = false;
         private Raven.Database.Config.RavenConfiguration settings;
 
-        public CompressionAndEncryption()
+        protected CompressionAndEncryption()
         {
             path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
@@ -29,6 +29,7 @@ namespace Raven.Tests.Bundles.CompressionAndEncryption
             {
                 Port = 8079,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+                MaxSecondsForTaskToWaitForDatabaseToLoad = 20,
                 DataDirectory = path,
                 Settings =
                     {

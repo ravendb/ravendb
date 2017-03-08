@@ -106,9 +106,7 @@ namespace Raven.Tests.Embedded
         [Fact]
         public void CanInsertSeveralDocuments()
         {
-            var configuration = new RavenConfiguration();
-            configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
-            using (var server = new RavenDbServer(configuration).Initialize())
+            using (var server = GetNewServer())
             {
                 var store = server.DocumentStore;
                 var bulkInsertOperation = new RemoteBulkInsertOperation(new BulkInsertOptions(), (AsyncServerClient)store.AsyncDatabaseCommands, store.Changes());

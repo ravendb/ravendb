@@ -19,26 +19,8 @@ using Raven.Client.Extensions;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
-    public class CreatingIndexes : RavenTest, IDisposable
+    public class CreatingIndexes : RavenTest
     {
-        protected RavenDbServer GetNewServer(int port)
-        {
-            RavenDbServer ravenDbServer = new RavenDbServer(new RavenConfiguration
-            {
-                Port = port,
-                RunInMemory = true,
-                DataDirectory = "Data",
-                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-            })
-            {
-                UseEmbeddedHttpServer = true
-            };
-            ravenDbServer.Initialize();
-            return
-                ravenDbServer;
-        }
-
-
         [Fact]
         public void Multitenancy_Test()
         {
