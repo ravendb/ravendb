@@ -26,7 +26,6 @@ namespace Sparrow.Json
 
         private FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> _objectsPathCache;
         private FastDictionary<int, object, NumericEqualityStructComparer> _objectsPathCacheByIndex;
-        public string _allocation;
 
         public override string ToString()
         {
@@ -778,8 +777,7 @@ namespace Sparrow.Json
                 throw new InvalidDataException("Root metadata not valid");
         }
 
-        private int PropertiesNamesValidation(int numberOfProps, int propsOffsetList, int propsNamesOffsetSize,
-            int currentSize)
+        private int PropertiesNamesValidation(int numberOfProps, int propsOffsetList, int propsNamesOffsetSize, int currentSize)
         {
             var blittableSize = currentSize;
             var offsetCounter = 0;
@@ -938,8 +936,7 @@ namespace Sparrow.Json
                     case BlittableJsonToken.EmbeddedBlittable:
                         byte offsetLen;
                         stringLength = ReadVariableSizeInt(propValueOffset, out offsetLen);
-                        var blittableJsonReaderObject = new BlittableJsonReaderObject(
-                            _mem + propValueOffset + offsetLen, stringLength, _context);
+                        var blittableJsonReaderObject = new BlittableJsonReaderObject(_mem + propValueOffset + offsetLen, stringLength, _context);
                         blittableJsonReaderObject.BlittableValidation();
                         break;
                     default:

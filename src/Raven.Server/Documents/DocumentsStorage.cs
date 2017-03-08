@@ -958,11 +958,11 @@ namespace Raven.Server.Documents
         {
             var result = new Document
             {
-                StorageId = tvr.Id
+                StorageId = tvr.Id,
+                LoweredKey = TableValueToString(context, (int)DocumentsTable.LoweredKey, ref tvr),
+                Key = TableValueToKey(context, (int)DocumentsTable.Key, ref tvr),
+                Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr)
             };
-            result.LoweredKey = TableValueToString(context, (int)DocumentsTable.LoweredKey, ref tvr);
-            result.Key = TableValueToKey(context, (int)DocumentsTable.Key, ref tvr);
-            result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
 
             int size;
             result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out size), size, context);
@@ -979,14 +979,14 @@ namespace Raven.Server.Documents
         {
             var result = new DocumentConflict
             {
-                StorageId = tvr.Id
+                StorageId = tvr.Id,
+                LoweredKey = TableValueToString(context, (int)ConflictsTable.LoweredKey, ref tvr),
+                Key = TableValueToKey(context, (int)ConflictsTable.OriginalKey, ref tvr),
+                ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictsTable.ChangeVector),
+                Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
+                Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr)
             };
 
-            result.LoweredKey = TableValueToString(context, (int)ConflictsTable.LoweredKey, ref tvr);
-            result.Key = TableValueToKey(context, (int)ConflictsTable.OriginalKey, ref tvr);
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictsTable.ChangeVector);
-            result.Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr);
-            result.Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr);
 
             int size;
             var read = tvr.Read((int)ConflictsTable.Data, out size);
