@@ -1216,20 +1216,20 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Returns the query results as a stream
         /// </summary>
-        public static async Task ToStreamAsync<T>(this IQueryable<T> self, Stream stream)
+        public static async Task ToStreamAsync<T>(this IQueryable<T> self, Stream stream, CancellationToken token = default(CancellationToken))
         {
             var queryProvider = (IRavenQueryProvider)self.Provider;
             var docQuery = queryProvider.ToAsyncDocumentQuery<T>(self.Expression);
-            await ToStreamAsync(docQuery, stream).ConfigureAwait(false);
+            await ToStreamAsync(docQuery, stream, token ).ConfigureAwait(false);
         }
         /// <summary>
         /// Returns the query results as a stream
         /// </summary>
-        public static async Task ToStreamAsync<T>(this IAsyncDocumentQuery<T> self, Stream stream)
+        public static async Task ToStreamAsync<T>(this IAsyncDocumentQuery<T> self, Stream stream, CancellationToken token= default(CancellationToken))
         {
             var documentQuery = (AbstractDocumentQuery<T, AsyncDocumentQuery<T>>)self;
             var session = documentQuery.AsyncSession;
-            await session.Advanced.StreamIntoAsync(self, stream).ConfigureAwait(false);
+            await session.Advanced.StreamIntoAsync(self, stream, token).ConfigureAwait(false);
         }
     }
 }

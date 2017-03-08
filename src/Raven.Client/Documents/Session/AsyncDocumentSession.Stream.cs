@@ -186,7 +186,7 @@ namespace Raven.Client.Documents.Session
             using (command.Result.Response)
             using (command.Result.Stream)
             {
-                await command.Result.Stream.CopyToAsync(output).ConfigureAwait(false);
+                await command.Result.Stream.CopyToAsync(output, 16 * 1024, token).ConfigureAwait(false);
             }
         }
     }
