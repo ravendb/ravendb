@@ -251,8 +251,6 @@ namespace Raven.Server.Documents.Handlers
 
                             Reply.Add(new DynamicJsonValue
                             {
-                                ["Key"] = putResult.Key,
-                                ["Etag"] = putResult.Etag,
                                 ["Method"] = "PUT",
                                 ["Metadata"] = metadata
                             });
