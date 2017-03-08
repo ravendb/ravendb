@@ -46,8 +46,6 @@ namespace Raven.Server.Web.System
                         WriteDatabaseInfo(databaseName, dbDoc.Data, context, w);
                     }); 
 
-                    //TODO: write fs, cs, ts
-
                     writer.WriteEndObject();
                 }
             }

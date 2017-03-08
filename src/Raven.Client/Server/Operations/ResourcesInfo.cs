@@ -9,10 +9,6 @@ namespace Raven.Client.Server.Operations
     {
         public List<DatabaseInfo> Databases { get; set; }
 
-        public List<FileSystemInfo> FileSystems { get; set; }
-
-        //TODO: ts, cs
-
     }
 
     public class ResourceInfo
@@ -61,9 +57,4 @@ namespace Raven.Client.Server.Operations
         public int? IndexesCount { get; set; }
     }
 
-    public class FileSystemInfo : ResourceInfo
-    {
-        public int? FilesCount { get; set; }
-        //TODO: fill with fs specific properties
-    }
 }

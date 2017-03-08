@@ -243,12 +243,6 @@ class appUrl {
         return resourceTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
-    static forEditCounter(rs: resource, groupName: string, counterName: string) {
-        var urlPart = appUrl.getEncodedResourcePart(rs);
-        var itemIdUrlPart = "&groupName=" + encodeURIComponent(groupName) + "&counterName=" + encodeURIComponent(counterName);    
-        return "#counterstorages/edit?" + itemIdUrlPart + urlPart;
-    }
-
     static forEditQueryItem(itemNumber: number, res: resource, index: string, query?: string, sort?:string): string {
         var databaseUrlPart = appUrl.getEncodedResourcePart(res);
         var indexUrlPart = "&index=" + index;

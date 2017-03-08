@@ -72,7 +72,6 @@ class consoleJs extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         $('form :input[name="databaseName"]').on("keypress",(e) => e.which != 13);
-        $('form :input[name="filesystemName"]').on("keypress",(e) => e.which != 13);
     }
 
     executeJs() {

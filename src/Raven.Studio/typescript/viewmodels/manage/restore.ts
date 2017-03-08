@@ -89,7 +89,6 @@ class restore extends viewModelBase {
                             .execute()
                             .always(() => {
                                 $("#databaseRawLogsContainer").resize();
-                                $("#filesystemRawLogsContainer").resize();
                                 this.anotherRestoreInProgres(false);
                             });
 

@@ -166,11 +166,6 @@ class resourcesManager {
         incomingData.Databases.forEach(dbInfo => {
             this.updateResource(dbInfo, name => this.getDatabaseByName(name), database.qualifier);
         });
-
-        /* TODO:
-        incomingData.FileSystems.forEach(fsInfo => {
-            this.updateResource(fsInfo, name => this.getFileSystemByName(name), filesystem.qualifier);
-        });*/
     }
 
     private deleteRemovedResources(incomingData: Raven.Client.Server.Operations.ResourcesInfo) {
@@ -184,14 +179,6 @@ class resourcesManager {
                 toDelete.push(db);
             }
         });
-
-        /* TODO
-        this.fileSystems().forEach(fs => {
-            const matchedFs = incomingData.FileSystems.find(x => x.Name.toLowerCase() === fs.name.toLowerCase());
-            if (!matchedFs) {
-                toDelete.push(fs);
-            }
-        });*/
 
         existingResources.removeAll(toDelete);
     }
@@ -225,7 +212,6 @@ class resourcesManager {
             serverWideClient.watchResourceChangeStartingWith("db/", e => this.onResourceUpdateReceivedViaChangesApi(e)),
             serverWideClient.watchReconnect(() => this.refreshResources())
 
-            //TODO: fs, cs, ts
              //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
         ];
     }
@@ -271,26 +257,6 @@ class resourcesManager {
             callback(rs.qualifier, rs.name);
         });
     }
-    
-    /*TODO
-    private activateCounterStorage(cs: counterStorage) {
-        var changesSubscriptionArray = () => [
-            changesContext.currentResourceChangesApi().watchAllCounters(() => this.fetchCsStats(cs)),
-            changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.fetchCsStats(cs))
-        ];
-        var isNotACounterStorage = this.isPreviousDifferentKind(TenantType.CounterStorage);
-        this.updateChangesApi(cs, isNotACounterStorage, () => this.fetchCsStats(cs), changesSubscriptionArray);
-    }
-
-    private activateTimeSeries(ts: timeSeries) {
-        var changesSubscriptionArray = () => [
-            changesContext.currentResourceChangesApi().watchAllTimeSeries(() => this.fetchTsStats(ts)),
-            changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.fetchTsStats(ts))
-        ];
-        var isNotATimeSeries = this.isPreviousDifferentKind(TenantType.TimeSeries);
-        this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTsStats(ts), changesSubscriptionArray);
-    }*/
-
    
 }
 

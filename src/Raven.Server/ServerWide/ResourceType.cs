@@ -3,7 +3,6 @@
     public enum ResourceType
     {
         Server,
-        Database,
-        FileSystem
+        Database
     }
 }

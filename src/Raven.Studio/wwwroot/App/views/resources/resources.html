@@ -184,15 +184,6 @@
         </div>
     </div>
 
-    <div class="properties-item" data-bind="visible: $data.qualifier === 'fs' && filesCount(), if: $data.qualifier === 'fs'">
-        <div class="properties-value value-only">
-            <div class="set-size">
-                <i class="icon-filesystem"></i>
-                <span data-bind="text: $root.pluralize(filesCount().toLocaleString(), 'file', 'files')"></span>
-            </div>
-        </div>
-    </div>
-
     <div class="properties-item" data-bind="visible: errors()">
         <div class="properties-value value-only text-danger">
             <div class="set-size">
