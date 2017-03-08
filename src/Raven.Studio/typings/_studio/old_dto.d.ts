@@ -548,11 +548,6 @@ interface resourceStyleMap {
     styleMap: any;
 }
 
-interface timeSeriesDto {
-    Name: string;
-    Path?: string;
-}
-
 interface changesApiEventDto {
     Time: string; // ISO date string
     Type: string;

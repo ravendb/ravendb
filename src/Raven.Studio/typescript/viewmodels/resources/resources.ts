@@ -81,8 +81,6 @@ class resources extends viewModelBase {
         this.addNotification(this.changesContext.serverNotifications().watchResourceChangeStartingWith("db/", (e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) => this.fetchResource(e)));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchResources()));
 
-        // TODO: add notification for fs, cs, ts
-
         return this.fetchResources();
     }
 
@@ -153,8 +151,6 @@ class resources extends viewModelBase {
             const db = rs.asResource();
             return appUrl.forDocuments(null, db);
         }
-        //TODO:fs, cs, ts
-
         return null;
     }
 

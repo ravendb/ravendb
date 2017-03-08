@@ -24,7 +24,6 @@ import registration = require("viewmodels/shell/registration");
 import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
-import enableResizeBindingHandler = require("common/bindingHelpers/enableResizeBindingHandler");
 import helpBindingHandler = require("common/bindingHelpers/helpBindingHandler");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
@@ -119,7 +118,6 @@ class shell extends viewModelBase {
 
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-        enableResizeBindingHandler.install();
         helpBindingHandler.install();
 
         this.clientBuildVersion.subscribe(v =>
