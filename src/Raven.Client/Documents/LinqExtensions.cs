@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -1191,6 +1192,44 @@ namespace Raven.Client.Documents
             }
             var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
             return (IOrderedQueryable<T>)queryable;
+        }
+
+        /// <summary>
+        /// Returns the query results as a stream
+        /// </summary>
+        public static void ToStream<T>(this IQueryable<T> self, Stream stream)
+        {
+            var queryProvider = (IRavenQueryProvider)self.Provider;
+            var docQuery = queryProvider.ToDocumentQuery<T>(self.Expression);
+            ToStream(docQuery, stream);
+        }
+        /// <summary> 
+        /// Returns the query results as a stream
+        /// </summary>
+        public static void ToStream<T>(this IDocumentQuery<T> self, Stream stream)
+        {
+            var documentQuery = (DocumentQuery<T>)self;
+            var session = (DocumentSession)documentQuery.Session;
+            session.Advanced.StreamInto(self, stream);
+        }
+
+        /// <summary>
+        /// Returns the query results as a stream
+        /// </summary>
+        public static async Task ToStreamAsync<T>(this IQueryable<T> self, Stream stream)
+        {
+            var queryProvider = (IRavenQueryProvider)self.Provider;
+            var docQuery = queryProvider.ToAsyncDocumentQuery<T>(self.Expression);
+            await ToStreamAsync(docQuery, stream).ConfigureAwait(false);
+        }
+        /// <summary>
+        /// Returns the query results as a stream
+        /// </summary>
+        public static async Task ToStreamAsync<T>(this IAsyncDocumentQuery<T> self, Stream stream)
+        {
+            var documentQuery = (AbstractDocumentQuery<T, AsyncDocumentQuery<T>>)self;
+            var session = documentQuery.AsyncSession;
+            await session.Advanced.StreamIntoAsync(self, stream).ConfigureAwait(false);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
@@ -46,6 +47,20 @@ namespace Raven.Client.Documents.Session
 
                     yield return CreateStreamResult<T>(json, projectionFields);
                 }
+            }
+        }
+
+        public void StreamInto<T>(IDocumentQuery<T> query, Stream output)
+        {
+            var streamOperation = new StreamOperation(this);
+            var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
+
+            RequestExecutor.Execute(command, Context);
+
+            using (command.Result.Response)
+            using (command.Result.Stream)
+            {
+                command.Result.Stream.CopyTo(output);
             }
         }
 
