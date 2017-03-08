@@ -52,7 +52,7 @@ namespace Voron.Data.Tables
             var hasNext = index + 1 < Count;
 
             if ((index < 0) || (index >= Count))
-                throw new ArgumentOutOfRangeException(nameof(index));
+                ThrowIndexOutOfRange();
 
             int position;
             int nextPos;
@@ -72,11 +72,23 @@ namespace Voron.Data.Tables
                     nextPos = hasNext ? ((int*) _dataPtr)[index + 1] : _dataSize;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(_elementSize), "Unknown element size " + _elementSize);
+                    ThrowInvalidElementSize();
+                    goto case 1; // never hit
             }
 
             size = nextPos - position;
             return _dataPtr + position;
+        }
+
+        private void ThrowInvalidElementSize()
+        {
+            throw new ArgumentOutOfRangeException(nameof(_elementSize), "Unknown element size " + _elementSize);
+        }
+
+        private static void ThrowIndexOutOfRange()
+        {
+            // ReSharper disable once NotResolvedInText
+            throw new ArgumentOutOfRangeException("index");
         }
     }
 }
