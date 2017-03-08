@@ -217,10 +217,7 @@ namespace FastTests.Client.Subscriptions
                 var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria
-                {
-                    Collection = "Things",
-                };
+                var subscriptionCriteria = new SubscriptionCriteria("Things");
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
 
                 using (
