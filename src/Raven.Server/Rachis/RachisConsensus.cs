@@ -1133,7 +1133,7 @@ namespace Raven.Server.Rachis
                     case State.Passive:
                         return string.Empty;
                     case State.Candidate:
-                        return string.Empty;
+                        return "<me, I hope?>";
                     case State.Follower:
                         return _leaderUrl;
                     case State.LeaderElect:
@@ -1146,7 +1146,6 @@ namespace Raven.Server.Rachis
             }
             internal set
             {
-                Debug.Assert(CurrentState == State.Follower);
                 _leaderUrl = value;
             }
         }
