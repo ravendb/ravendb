@@ -10,9 +10,9 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            using (var a = new FastTests.Server.Documents.Indexing.MapReduce.RavenDB_4323_Replication())
+            using (var a = new FastTests.Server.Replication.ReplicationIndexesAndTransformers())
             {
-                a.ReduceOutputShouldNotBeReplicated().Wait();
+                a.Can_replicate_multiple_indexes();
             }
         }
     }

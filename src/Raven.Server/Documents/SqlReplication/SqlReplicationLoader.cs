@@ -21,16 +21,18 @@ namespace Raven.Server.Documents.SqlReplication
         private BlittableJsonReaderObject _connections;
 
         public Action<SqlReplicationStatistics> AfterReplicationCompleted;
-        protected Logger _logger;
-        protected DocumentDatabase _database;
-        public readonly ConcurrentSet<SqlReplication> Replications = new ConcurrentSet<SqlReplication>();
+        protected Logger Logger;
+        protected DocumentDatabase Database;
+        private SqlReplication[] _replications = new SqlReplication[0];
+
+        public IEnumerable<SqlReplication> Replications => _replications;
 
         public SqlReplicationLoader(DocumentDatabase database)
         {
-            _database = database;
-            _logger = LoggingSource.Instance.GetLogger(_database.Name, GetType().FullName);
-            _database.Changes.OnDocumentChange += WakeReplication;
-            _database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
+            Database = database;
+            Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
+            Database.Changes.OnDocumentChange += WakeReplication;
+            Database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
 
         }
 
@@ -46,11 +48,11 @@ namespace Raven.Server.Documents.SqlReplication
         protected void LoadConfigurations()
         {
             DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
 
-                var sqlReplicationConnections = _database.DocumentsStorage.Get(context, Constants.Documents.SqlReplication.SqlReplicationConnections);
+                var sqlReplicationConnections = Database.DocumentsStorage.Get(context, Constants.Documents.SqlReplication.SqlReplicationConnections);
                 if (sqlReplicationConnections != null)
                 {
                     object connections;
@@ -59,18 +61,22 @@ namespace Raven.Server.Documents.SqlReplication
                         _connections = connections as BlittableJsonReaderObject;
                     }
                 }
-
-                var documents = _database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix, null, null, null, 0, MaxSupportedSqlReplication);
+                var replications = new List<SqlReplication>();
+                var documents = Database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix, null, null, null, 0, MaxSupportedSqlReplication);
                 foreach (var document in documents)
                 {
                     var configuration = JsonDeserializationServer.SqlReplicationConfiguration(document.Data);
-                    var sqlReplication = new SqlReplication(_database, configuration);
-                    Replications.Add(sqlReplication);
+                    var sqlReplication = new SqlReplication(Database, configuration);
+                    replications.Add(sqlReplication);
                     if (sqlReplication.ValidateName() == false ||
                         sqlReplication.PrepareSqlReplicationConfig(_connections) == false)
                         return;
                     sqlReplication.Start();
                 }
+                _replications = replications.ToArray();
+
+
+
             }
         }
 
@@ -78,8 +84,8 @@ namespace Raven.Server.Documents.SqlReplication
         {
             try
             {
-                var document = _database.DocumentsStorage.Get(context, simulateSqlReplication.DocumentId);
-                var sqlReplication = new SqlReplication(_database, simulateSqlReplication.Configuration);
+                var document = Database.DocumentsStorage.Get(context, simulateSqlReplication.DocumentId);
+                var sqlReplication = new SqlReplication(Database, simulateSqlReplication.Configuration);
 
                 var result = sqlReplication.ApplyConversionScript(new List<Document> { document }, context);
 
@@ -110,22 +116,26 @@ namespace Raven.Server.Documents.SqlReplication
 
         private void WakeReplication(DocumentChange documentChange)
         {
-            foreach (var replication in Replications)
-                replication.WaitForChanges.Set();
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < _replications.Length; i++)
+            {
+                _replications[i].WaitForChanges.Set();
+            }
         }
 
         private void HandleSystemDocumentChange(DocumentChange change)
         {
             if (ShouldReloadConfiguration(change.Key))
             {
-                foreach (var replication in Replications)
+                foreach (var replication in _replications)
                     replication.Dispose();
 
-                Replications.Clear();
+                _replications = new SqlReplication[0];
+
                 LoadConfigurations();
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Replication configuration was changed: {change.Key}");
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Replication configuration was changed: {change.Key}");
             }
         }
 
@@ -136,8 +146,8 @@ namespace Raven.Server.Documents.SqlReplication
 
         public virtual void Dispose()
         {
-            _database.Changes.OnDocumentChange -= WakeReplication;
-            _database.Changes.OnSystemDocumentChange -= HandleSystemDocumentChange;
+            Database.Changes.OnDocumentChange -= WakeReplication;
+            Database.Changes.OnSystemDocumentChange -= HandleSystemDocumentChange;
         }
     }
 }
