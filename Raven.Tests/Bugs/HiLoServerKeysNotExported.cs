@@ -48,18 +48,7 @@ namespace Raven.Tests.Bugs
             if(server != null)
                 server.Dispose();
 
-            server = new RavenDbServer(new RavenConfiguration
-                                        {
-                                            Port = 8079,
-                                            DataDirectory = "HiLoData",
-                                            RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                                            AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-                                        })
-            {
-                UseEmbeddedHttpServer = true
-            };
-            server.Initialize();
-
+            server = GetNewServer();
         }
 
         [Fact]
