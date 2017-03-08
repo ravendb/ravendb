@@ -11,7 +11,7 @@ import ace = require("ace/ace");
 
 system.debug(true);
 
-type dbCreator = (db: new (dto: Raven.Client.Data.DatabaseInfo) => any) => any;
+type dbCreator = (db: new (dto: Raven.Client.Server.Operations.DatabaseInfo) => any) => any;
 
 type viewmodelTestOpts<T> = {
     viewmodelConstructorArgs?: any[],
@@ -53,7 +53,7 @@ class Utils {
         return {
             Name: dbName,
             Disabled: false
-        } as Raven.Client.Data.DatabaseInfo;
+        } as Raven.Client.Server.Operations.DatabaseInfo;
     }
 
     static initInjector() {
@@ -67,7 +67,7 @@ class Utils {
                 .mock('jquery', jQuery);
 
             Utils.mockCommand('commands/auth/getSingleAuthTokenCommand', () => ({ Token: "Fake Token" }));
-            Utils.mockCommand('commands/resources/getResourcesCommand', () => ({ "Databases": [] } as Raven.Client.Data.ResourcesInfo));
+            Utils.mockCommand('commands/resources/getResourcesCommand', () => ({ "Databases": [] } as Raven.Client.Server.Operations.ResourcesInfo));
 
             return this.aceEditorFacade(Utils.injector)
                 .then(() => Utils.applyConfiguration());

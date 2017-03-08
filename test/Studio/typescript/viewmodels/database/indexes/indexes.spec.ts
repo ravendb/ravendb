@@ -37,14 +37,14 @@ describe(viewUnderTest, () => {
     });
 });
 
-function getFaultyIndexStatus(): Raven.Client.Data.Indexes.IndexingStatus {
+function getFaultyIndexStatus(): Raven.Client.Documents.Indexes.IndexingStatus {
     return {
         Status: "Running",
         Indexes: []
     }
 }
 
-function getFaultyIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
+function getFaultyIndexStats(): Raven.Client.Documents.Indexes.IndexStats[] {
     return [
         {
             State: "Normal",
@@ -55,7 +55,7 @@ function getFaultyIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "LastIndexingTime": null,
             "LastQueryingTime": null,
             "LockMode": "Unlock",
-            LastBatchStats: null as Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
+            LastBatchStats: null,
             "Name": "Faulty/Indexes/8",
             "Priority": "Low",
             "Type": "Faulty",
@@ -72,12 +72,13 @@ function getFaultyIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             MappedPerSecondRate: 0,
             ReducedPerSecondRate: 0,
             "IsTestIndex": false,
-            Status: "Paused"
+            Status: "Paused", 
+            MaxNumberOfOutputsPerDocument: 255
         }
     ];
 }
 
-function getSampleIndexStatus(): Raven.Client.Data.Indexes.IndexingStatus {
+function getSampleIndexStatus(): Raven.Client.Documents.Indexes.IndexingStatus {
     return {
         Status: "Running",
         Indexes: [
@@ -97,7 +98,7 @@ function getSampleIndexStatus(): Raven.Client.Data.Indexes.IndexingStatus {
     }
 }
 
-function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
+function getSampleIndexStats(): Raven.Client.Documents.Indexes.IndexStats[] {
     return [
         {
             State: "Normal",
@@ -125,7 +126,7 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
                     HumaneSize: "1232"
                 }
             },
-            LastBatchStats: null as Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
+            LastBatchStats: null,
             "LastIndexingTime": "2016-09-29T10:44:55.9350079Z",
             "LastQueryingTime": "2016-09-29T10:44:55.9199676Z",
             "LockMode": "LockedIgnore",
@@ -145,7 +146,8 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             ReducedPerSecondRate: 0,
             "ErrorsCount": 0,
             "IsTestIndex": false,
-            Status: "Paused"
+            Status: "Paused",
+            MaxNumberOfOutputsPerDocument: 255
         },
         {
             State: "Normal",
@@ -173,7 +175,7 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
                     HumaneSize: "1232"
                 }
             },
-            LastBatchStats: null as Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
+            LastBatchStats: null,
             "LastIndexingTime": "2016-09-29T10:44:56.0849063Z",
             "LastQueryingTime": "2016-09-29T10:44:56.0773863Z",
             "LockMode": "Unlock",
@@ -193,7 +195,8 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             ReducedPerSecondRate: 0,
             "ErrorsCount": 0,
             "IsTestIndex": false,
-            Status: "Paused"
+            Status: "Paused",
+            MaxNumberOfOutputsPerDocument: 255
         },
         {
             IsStale: false,
@@ -206,7 +209,7 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
                     "TombstoneLag": 0
                 }
             },
-            LastBatchStats: null as Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
+            LastBatchStats: null,
             "Memory": {
                 "DiskSize": {
                     "SizeInBytes": 458752,
@@ -241,7 +244,8 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "ErrorsCount": 0,
             "IsTestIndex": false,
             Status: "Paused",
-            State: "Normal"
+            State: "Normal",
+            MaxNumberOfOutputsPerDocument: 255
         }
     ];
 }

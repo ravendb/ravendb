@@ -12,7 +12,7 @@ describe(viewUnderTest, () => {
 
                 utils.mockCommand('commands/resources/getResourcesCommand', () => getResourcesData());
 
-                changesContext.default.connectGlobalChangesApi();
+                changesContext.default.connectServerWideNotificationCenter();
 
                 utils.runViewmodelTest(viewUnderTest, {})
                     .then(() => done());
@@ -20,13 +20,14 @@ describe(viewUnderTest, () => {
     });
 });
 
-function getResourcesData(): Raven.Client.Data.ResourcesInfo {
+function getResourcesData(): Raven.Client.Server.Operations.ResourcesInfo {
     return {
         "Databases": [
             {
                 "Bundles": ["Replication"],
                 "IsAdmin": true,
                 "Name": "sample",
+                LoadError: null,
                 "Disabled": false,
                 "TotalSize": {
                     "HumaneSize": "80.4 GBytes",
@@ -50,6 +51,7 @@ function getResourcesData(): Raven.Client.Data.ResourcesInfo {
                 "Bundles": [],
                 "IsAdmin": true,
                 "Name": "sample2",
+                LoadError: null,
                 "Disabled": true,
                 "TotalSize": {
                     "HumaneSize": "80.4 GBytes",
