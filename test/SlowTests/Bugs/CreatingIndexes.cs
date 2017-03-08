@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Reflection;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -8,7 +7,7 @@ namespace SlowTests.Bugs
 {
     public class CreatingIndexes : RavenTestBase
     {
-        public class AllDocs1 : AbstractIndexCreationTask<object>
+        private class AllDocs1 : AbstractIndexCreationTask<object>
         {
             public AllDocs1()
             {
@@ -16,7 +15,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        public class AllDocs2 : AbstractIndexCreationTask<object>
+        private class AllDocs2 : AbstractIndexCreationTask<object>
         {
             public AllDocs2()
             {
@@ -27,10 +26,9 @@ namespace SlowTests.Bugs
         [Fact]
         public void CanCreateIndexes()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                var assembly = new AssemblyName(typeof(CreatingIndexes).GetTypeInfo().Assembly.FullName);
-                IndexCreation.CreateIndexes(Assembly.Load(assembly), store, new [] { typeof(AllDocs1), typeof(AllDocs2) });
+                IndexCreation.CreateIndexes(new AbstractIndexCreationTask[] { new AllDocs1(), new AllDocs2() }, null, store);
             }
         }
     }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Transformers
@@ -130,86 +131,24 @@ namespace Raven.Client.Documents.Transformers
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
-        public virtual void Execute(IDocumentStore documentStore, DocumentConventions conventions)
+        public virtual void Execute(IDocumentStore store, DocumentConventions conventions)
         {
-            Conventions = conventions;
-            var prettify = conventions.PrettifyGeneratedLinqExpressions;
-            var transformerDefinition = CreateTransformerDefinition(prettify);
-
-            var requestExecuter = documentStore.GetRequestExecuter(documentStore.DefaultDatabase);
-            JsonOperationContext jsonOperationContext;
-            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
-
-            if (transformerDefinition.Name == null)
-                transformerDefinition.Name = TransformerName;
-
-            documentStore.Admin.Send(new PutTransformerOperation(transformerDefinition));
-
-            /*if (conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Transformers))
-                ReplicateTransformerIfNeeded(databaseCommands);*/
-        }
-
-        internal void ReplicateTransformerIfNeeded()
-        {
-            throw new NotImplementedException("databaseCommands");
-            /*var serverClient = databaseCommands as ServerClient;
-            if (serverClient == null)
-                return;
-
-            var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
-            using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethods.Post))
-            {
-                try
-                {
-                    replicateTransformerRequest.ExecuteRawResponseAsync().Wait();
-                }
-                catch (Exception)
-                {
-                    // ignoring errors
-                }
-            }*/
-        }
-
-        private async Task ReplicateTransformerIfNeededAsync()
-        {
-            throw new NotImplementedException("databaseCommands");
-            /*var serverClient = databaseCommands as AsyncServerClient;
-            if (serverClient == null)
-                return;
-
-            var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
-            using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethods.Post))
-            {
-                try
-                {
-                    await replicateTransformerRequest.ExecuteRawResponseAsync().ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    // ignoring error
-                }
-            }*/
+            AsyncHelpers.RunSync(() => ExecuteAsync(store, conventions));
         }
 
         /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>
-        public virtual async Task ExecuteAsync(IDocumentStore documentStore, DocumentConventions conventions, CancellationToken token = default(CancellationToken))
+        public virtual Task ExecuteAsync(IDocumentStore store, DocumentConventions conventions, CancellationToken token = default(CancellationToken))
         {
             Conventions = conventions;
             var prettify = conventions.PrettifyGeneratedLinqExpressions;
             var transformerDefinition = CreateTransformerDefinition(prettify);
 
-            var requestExecuter = documentStore.GetRequestExecuter(documentStore.DefaultDatabase);
-            JsonOperationContext jsonOperationContext;
-            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
-
             if (transformerDefinition.Name == null)
                 transformerDefinition.Name = TransformerName;
 
-            await documentStore.Admin.SendAsync(new PutTransformerOperation(transformerDefinition), token).ConfigureAwait(false);
-
-            //await ReplicateTransformerIfNeededAsync(asyncDatabaseCommands).ConfigureAwait(false);
+            return store.Admin.SendAsync(new PutTransformerOperation(transformerDefinition), token);
         }
     }
 

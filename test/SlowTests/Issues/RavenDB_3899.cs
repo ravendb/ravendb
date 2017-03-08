@@ -1,26 +1,21 @@
-using System.Linq;
-
-using Raven.Abstractions.Indexing;
-
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3899 : RavenTest
+    public class RavenDB_3899 : RavenTestBase
     {
         [Fact]
         public void CanSaveTransformerWithMultipleSelectMany()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var t1 = new TransformerDefinition
                 {
                     Name = "T1",
-                    TransformResults = "from people in results " + 
+                    TransformResults = "from people in results " +
                          " from child in people.Children " +
                          " from grandchild in child.Children " +
                          " from great in grandchild.Children " +
@@ -29,14 +24,14 @@ namespace Raven.Tests.Issues
                          "     Name = child.Name  " +
                          "  }"
                 };
-                store.DatabaseCommands.PutTransformer("T1", t1);
+                store.Admin.Send(new PutTransformerOperation(t1));
             }
         }
 
         [Fact]
         public void CanSaveTransformerWithCastToDynamic()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var t1 = new TransformerDefinition
                 {
@@ -50,7 +45,7 @@ namespace Raven.Tests.Issues
                          "     Name = child.Name  " +
                          "  }"
                 };
-                store.DatabaseCommands.PutTransformer("T1", t1);
+                store.Admin.Send(new PutTransformerOperation(t1));
             }
         }
     }

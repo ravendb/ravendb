@@ -3,19 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
 
-using Raven.Abstractions.Data;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto.Faceted;
-
+using FastTests;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3928 : RavenTest
+    public class RavenDB_3928 : RavenTestBase
     {
         private class Person
         {
