@@ -1,5 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
+import virtualGrid = require("widgets/virtualGrid/virtualGrid");
+
 class extensions {
     static install() {
         extensions.installObservableExtensions();
@@ -7,6 +9,8 @@ class extensions {
         extensions.installBindingHandlers();
         extensions.installJqueryExtensions();
         extensions.configureValidation();
+
+        virtualGrid.install();
 
         // Want Intellisense for your extensions?
         // Go to extensionInterfaces.ts and add the function signature there.

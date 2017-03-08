@@ -15,7 +15,7 @@ describe(viewUnderTest, () => {
     });
 });
 
-function getIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
+function getIndexStats(): Raven.Client.Documents.Indexes.IndexStats[] {
     return [
         {
             "Collections": {
@@ -61,17 +61,20 @@ function getIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "ReducedPerSecondRate": 0.0,
             "State": "Normal",
             "Status": "Running",
-            "Type": "MapReduce"
+            "Type": "MapReduce",
+            MaxNumberOfOutputsPerDocument: 255
         }
     ];
 }
 
-function getTestData(): Raven.Client.Data.DatabaseStatistics {
+function getTestData(): Raven.Client.Documents.Operations.DatabaseStatistics {
     return {
         StaleIndexes: [],
+        Pager: "",
         "CountOfIndexes": 3,
         "CountOfDocuments": 1059,
         "CountOfTransformers": 1,
+        CountOfAttachments: 0,
         "DatabaseId": "0acab7bf-e569-463d-845f-3514902788ed",
         "Is64Bit": true,
         "LastDocEtag": 1059,
@@ -84,6 +87,7 @@ function getTestData(): Raven.Client.Data.DatabaseStatistics {
                 "LockMode": "Unlock",
                 "State": "Normal",
                 "Type": "MapReduce",
+                Priority: "Normal",
                 "LastIndexingTime": "2016-12-03T19:55:22.1925141Z"
             },
             {
@@ -93,6 +97,7 @@ function getTestData(): Raven.Client.Data.DatabaseStatistics {
                 "LockMode": "Unlock",
                 "State": "Normal",
                 "Type": "Map",
+                Priority: "Normal",
                 "LastIndexingTime": "2016-12-03T19:55:22.1864985Z"
             },
             {
@@ -102,6 +107,7 @@ function getTestData(): Raven.Client.Data.DatabaseStatistics {
                 "LockMode": "Unlock",
                 "State": "Normal",
                 "Type": "MapReduce",
+                Priority: "Normal",
                 "LastIndexingTime": "2016-12-03T19:55:22.1995331Z"
             }
         ]
