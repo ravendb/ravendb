@@ -298,7 +298,7 @@ namespace Raven.Server.Rachis
 
             var maxIndexOnQuorum = GetMaxIndexOnQuorum(VotersMajority);
 
-            if (_lastCommit == maxIndexOnQuorum ||
+            if (_lastCommit >= maxIndexOnQuorum ||
                 maxIndexOnQuorum == 0)
                 return; // nothing to do here
 
@@ -307,7 +307,7 @@ namespace Raven.Server.Rachis
             {
                 _lastCommit = _engine.GetLastCommitIndex(context);
 
-                if (_lastCommit == maxIndexOnQuorum)
+                if (_lastCommit >= maxIndexOnQuorum)
                     return; // nothing to do here
 
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < _engine.CurrentTerm)

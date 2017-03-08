@@ -10,7 +10,7 @@ namespace SlowTests.Server.Rachis
 {
     public class TopologyChangesTests : RachisConsensusTestBase
     {
-        [Fact(Skip = "Nodes don't seem to elect a new leader")]
+        [Fact]
         public async Task CanEnforceTopologyOnOldLeader()
         {
             var leader = await CreateNetworkAndGetLeader(3);
@@ -25,6 +25,7 @@ namespace SlowTests.Server.Rachis
             await leader.WaitForState(RachisConsensus.State.Follower);
             TransactionOperationContext context;
             using (leader.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
                 var topology = leader.GetTopology(context);
                 Assert.False(topology.Voters.Contains(newServer.Url) == false &&
