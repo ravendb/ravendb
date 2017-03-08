@@ -10,9 +10,9 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            using (var a = new FastTests.Server.Replication.ReplicationIndexesAndTransformers())
+            using (var a = new FastTests.Issues.RavenDB_5610())
             {
-                a.Can_replicate_multiple_indexes();
+                a.WillUpdate();
             }
         }
     }

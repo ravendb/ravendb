@@ -109,7 +109,8 @@ namespace Voron.Util
                     var len = Math.Min(array.Length, threadActiveTransactions.Length);
                     for (int i = 0; i < len; i++)
                     {
-                        var transaction = array[i].Transaction;
+                        var node = array[i];
+                        var transaction = node?.Transaction;
                         if (transaction == null)
                             continue;
 
