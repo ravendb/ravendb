@@ -36,6 +36,8 @@ class indexDefinition {
     fields = ko.observableArray<indexFieldOptions>();
     defaultFieldOptions = ko.observable<indexFieldOptions>();
 
+    outputReduceToCollection = ko.observable<string>();
+
     numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
 
@@ -56,6 +58,7 @@ class indexDefinition {
         this.reduce(dto.Reduce);
         this.isTestIndex(dto.IsTestIndex);
         this.isSideBySideIndex(dto.IsSideBySideIndex);
+        this.outputReduceToCollection(dto.OutputReduceToCollection);
         this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto, indexFieldOptions.defaultFieldOptions())));
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
         if (defaultFieldOptions) {
@@ -165,7 +168,7 @@ class indexDefinition {
             Fields: this.fieldToDto(),
             IsSideBySideIndex: false, //TODO side by side
             IsTestIndex: false, //TODO: test indexes
-            OutputReduceToCollection: null
+            OutputReduceToCollection: this.outputReduceToCollection()
         }
     }
 
