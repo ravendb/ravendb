@@ -1605,7 +1605,7 @@ namespace Raven.Server.Documents
             foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
             {
                 var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
-                if (loweredKey.Content.Match(conflict.LoweredKey))
+                if (loweredKey.Content.Match(conflict.LoweredKey) == false)
                     break;
 
                 items.Add(conflict);
