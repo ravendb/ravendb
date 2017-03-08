@@ -3,20 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class EntityWithDate : RavenTest
+    public class EntityWithDate : RavenTestBase
     {
         [Fact]
         public void CanSerializeAndDeserializeEntityWithDates()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 using(var session = store.OpenSession())
                 {

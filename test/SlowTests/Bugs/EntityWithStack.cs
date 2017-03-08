@@ -3,15 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class EntityWithStack : RavenTest
+    public class EntityWithStack : RavenTestBase
     {
 
         public class Order
@@ -28,7 +27,7 @@ namespace Raven.Tests.Bugs
         public void CanWork()
         {
              string id;
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {

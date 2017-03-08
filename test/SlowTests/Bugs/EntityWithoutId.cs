@@ -3,18 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Tests.Common;
 
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class EntityWithoutId : RavenTest
+    public class EntityWithoutId : RavenTestBase
     {
         [Fact]
         public void CanBeSaved()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanBeUpdated()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -75,7 +75,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanBeDeleted()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -110,7 +110,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanGetId()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {

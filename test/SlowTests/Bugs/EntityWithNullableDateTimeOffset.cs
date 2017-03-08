@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
     public class EntityWithNullableDateTimeOffset
     {

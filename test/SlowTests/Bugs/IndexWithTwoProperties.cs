@@ -3,21 +3,22 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class IndexWithTwoProperties : RavenTest
+    public class IndexWithTwoProperties : RavenTestBase
     {
         [Fact]
         public void CanCreateIndexByTwoProperties()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
                 session.Store(new Foo { Id = "1", Value = "foo" });
@@ -27,17 +28,13 @@ namespace Raven.Tests.Bugs
 
 
                 session.SaveChanges();
+                var index = new IndexDefinitionBuilder<Foo>("FeedSync/TwoProperties")
+                {
 
-                store.DatabaseCommands.PutIndex(
-                    "FeedSync/TwoProperties",
-                    new IndexDefinitionBuilder<Foo>
-
-
-                    {
-                        Map = ids => from id in ids
-                                        select new { id.Id, id.Value },
-                    },
-                    true);
+                    Map = ids => from id in ids
+                        select new {id.Id, id.Value},
+                }.ToIndexDefinition(new DocumentConventions());
+                store.Admin.Send(new PutIndexesOperation(index));
             }
         }
 

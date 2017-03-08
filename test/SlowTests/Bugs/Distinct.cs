@@ -1,21 +1,30 @@
+using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class Distinct : RavenTest
+    public class Distinct : RavenTestBase
     {
+        private readonly IndexDefinition _index = new IndexDefinition
+        {
+            Name = "test",
+            Maps = new HashSet<string> {"from doc in docs select new { doc.Name }"},
+            Fields = new Dictionary<string, IndexFieldOptions>
+            {
+                {"Name", new IndexFieldOptions {Storage = FieldStorage.Yes}}
+            }
+        };
+
         [Fact]
         public void CanQueryForDistinctItems()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -25,12 +34,8 @@ namespace Raven.Tests.Bugs
                     s.SaveChanges();
                 }
 
-                store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
-                {
-                    Map = "from doc in docs select new { doc.Name }",
-                    Stores = { { "Name", FieldStorage.Yes } }
-                });
-
+                store.Admin.Send(new PutIndexesOperation(_index));
+    
                 using (var s = store.OpenSession())
                 {
                     var objects = s.Advanced.DocumentQuery<dynamic>("test")
@@ -42,8 +47,8 @@ namespace Raven.Tests.Bugs
                         .ToList();
 
                     Assert.Equal(2, objects.Count);
-                    Assert.Equal("ayende", objects[0].Name);
-                    Assert.Equal("rahien", objects[1].Name);
+                    Assert.Equal("ayende", objects[0].Name.ToString());
+                    Assert.Equal("rahien", objects[1].Name.ToString());
                 }
             }
         }
@@ -51,7 +56,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanQueryForDistinctItemsUsingLinq()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -61,11 +66,7 @@ namespace Raven.Tests.Bugs
                     s.SaveChanges();
                 }
 
-                store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
-                {
-                    Map = "from doc in docs select new { doc.Name }",
-                    Stores = { { "Name", FieldStorage.Yes } }
-                });
+                store.Admin.Send(new PutIndexesOperation(_index));
 
                 using (var s = store.OpenSession())
                 {
@@ -85,7 +86,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanQueryForDistinctItemsUsingLinq_WithPaging()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -95,11 +96,7 @@ namespace Raven.Tests.Bugs
                     s.SaveChanges();
                 }
 
-                store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
-                {
-                    Map = "from doc in docs select new { doc.Name }",
-                    Stores = { { "Name", FieldStorage.Yes } }
-                });
+                store.Admin.Send(new PutIndexesOperation(_index));
 
                 using (var s = store.OpenSession())
                 {
@@ -120,7 +117,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanQueryForDistinctItemsAndProperlyPage()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -130,11 +127,7 @@ namespace Raven.Tests.Bugs
                     s.SaveChanges();
                 }
 
-                store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
-                {
-                    Map = "from doc in docs select new { doc.Name }",
-                    Stores = { { "Name", FieldStorage.Yes } }
-                });
+                store.Admin.Send(new PutIndexesOperation(_index));
 
                 using (var s = store.OpenSession())
                 {
@@ -148,7 +141,7 @@ namespace Raven.Tests.Bugs
                         .ToList();
 
                     Assert.Equal(1, objects.Count);
-                    Assert.Equal("rahien", objects[0].Name);
+                    Assert.Equal("rahien", objects[0].Name.ToString());
                 }
             }
         }
@@ -156,7 +149,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void IncludeWithDistinct()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new CustomersIndex().Execute(store);
 
@@ -175,8 +168,7 @@ namespace Raven.Tests.Bugs
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-
-                    RavenQueryStatistics qs;
+                    QueryStatistics qs;
                     var qRes = session.Advanced.DocumentQuery<Customer>("CustomersIndex")
                         .Statistics(out qs).Where("Occupation:Marketing")
                         .Distinct()
@@ -193,7 +185,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void DistinctWithMapReduce()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ReducedCustomersIndex().Execute(store);
 
@@ -204,8 +196,10 @@ namespace Raven.Tests.Bugs
                         Location = "PT CT",
                         Occupation = "Marketing",
                         CustomerId = "1",
-                        HeadingId = "2"
+                        HeadingId = "Customers/3"
                     }, "Customers/2");
+
+                    
                     session.SaveChanges();
                 }
 
@@ -213,7 +207,7 @@ namespace Raven.Tests.Bugs
                 using (var session = store.OpenSession())
                 {
 
-                    RavenQueryStatistics qs;
+                    QueryStatistics qs;
                     var qRes = session.Advanced.DocumentQuery<Customer>("ReducedCustomersIndex")
                         .Statistics(out qs).Where("Occupation:Marketing")
                         .Distinct()
@@ -257,7 +251,7 @@ namespace Raven.Tests.Bugs
                 Map = customers => from customer in customers
                                    select new { customer.Occupation, customer.CustomerId, Count = 1 };
                 Reduce = results => from result in results
-                                    group result by new { result.Occupation, result.CustomerId, result.Count }
+                                    group result by new { result.Occupation, result.CustomerId }
                                         into g
                                         select new
                                         {

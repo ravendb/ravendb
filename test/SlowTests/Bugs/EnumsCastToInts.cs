@@ -1,12 +1,10 @@
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs
 {
-    public class EnumsCastToInts : RavenTest
+    public class EnumsCastToInts : RavenTestBase
     {
         public enum SampleClassKind
         {
@@ -24,7 +22,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanCastInsideWhereClause()
         {
-            using (var document = NewDocumentStore())
+            using (var document = GetDocumentStore())
             {
                 const string entityId = "SampleId";
 
@@ -52,7 +50,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanGetQueryResults()
         {
-            using (var document = NewDocumentStore())
+            using (var document = GetDocumentStore())
             {
                 const string entityId = "SampleId";
 

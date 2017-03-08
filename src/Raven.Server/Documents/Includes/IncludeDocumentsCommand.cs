@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Primitives;
+using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using StringSegment = Sparrow.StringSegment;
@@ -42,7 +43,15 @@ namespace Raven.Server.Documents.Includes
                 _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var include in _includes)
+            {
+                if (include == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                {
+                    _includedIds.Add(document.Key);
+                    continue;
+                }
                 IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedIds);
+            }
+                
         }
 
         public void Fill(List<Document> result)
