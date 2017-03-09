@@ -43,7 +43,7 @@ class Utils {
         return new Promise<void>((resolve, reject) => {
             Utils.injector.require(["models/resources/database", "common/shell/activeDatabaseTracker"], (dbCtr: new () => any, databaseTracker: any) => {
                 var dbInstance = factory(dbCtr);
-                databaseTracker.default.resource(dbInstance);
+                databaseTracker.default.database(dbInstance);
                 resolve();
             }, reject);
         });
@@ -67,7 +67,7 @@ class Utils {
                 .mock('jquery', jQuery);
 
             Utils.mockCommand('commands/auth/getSingleAuthTokenCommand', () => ({ Token: "Fake Token" }));
-            Utils.mockCommand('commands/resources/getResourcesCommand', () => ({ "Databases": [] } as Raven.Client.Server.Operations.ResourcesInfo));
+            Utils.mockCommand('commands/resources/getDatabasesCommand', () => ({ "Databases": [] } as Raven.Client.Server.Operations.DatabasesInfo));
 
             return this.aceEditorFacade(Utils.injector)
                 .then(() => Utils.applyConfiguration());

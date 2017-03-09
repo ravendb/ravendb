@@ -203,7 +203,7 @@
             background-color: @gray-base;
         }
 
-        .resource-switcher-container,
+        .database-switcher-container,
         .search-container {
             position: relative;
             top: 2px;
@@ -266,10 +266,10 @@
                 }
             }
 
-            .resource-filter-container {
+            .database-filter-container {
                 position: relative;
 
-                .resource-filter {
+                .database-filter {
                     background-color: @gray !important;
                     //border-color: @gray !important;
                     padding: 2px (@grid-gutter-width / 2);
@@ -311,7 +311,7 @@
             &.active {
                 z-index: 23;
 
-                .resource-switcher {
+                .database-switcher {
                     background-color: @gray-dark;
                     border-color: @gray-dark;
                 }
@@ -329,7 +329,7 @@
             }
         }
 
-        .resource-switcher-container {
+        .database-switcher-container {
             .database {
                 &:before {
                     margin-right: 10px;
@@ -387,7 +387,7 @@
             max-height: none;
             position: relative;
 
-            .resource-switcher-container {
+            .database-switcher-container {
                 position: absolute;
                 right: @grid-gutter-width / 2;
                 left: 51%;
@@ -431,7 +431,7 @@
             }
         }
 
-        .resource-switcher {
+        .database-switcher {
             position: relative;
             z-index: 20;
             cursor: pointer;

@@ -4,11 +4,11 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import shell = require("viewmodels/shell");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import appUrl = require("common/appUrl");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import database = require("models/resources/database");
 
 class watchTrafficConfigDialog extends dialogViewModelBase {
-    private resourcesManager = resourcesManager.default;
+    private databasesManager = databasesManager.default;
     public configurationTask = $.Deferred();
     
     watchedResourceMode = ko.observable("SingleResourceView");
@@ -22,7 +22,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
 
     constructor() {
         super();
-        this.allDatabasesNames = this.resourcesManager.databases().map(x => x.name);
+        this.allDatabasesNames = this.databasesManager.databases().map(x => x.name);
 
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
@@ -78,7 +78,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     confirmConfig() {
         var tracedResource: database;
         if (this.watchedResourceMode() === "SingleResourceView")
-            tracedResource = this.resourcesManager.databases().find((db: database) => db.name === this.resourceName());
+            tracedResource = this.databasesManager.databases().find((db: database) => db.name === this.resourceName());
 
         var resourcePath = appUrl.forDatabaseQuery(tracedResource);
         

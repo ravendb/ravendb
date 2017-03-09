@@ -8,7 +8,7 @@ import viewLocator = require("durandal/viewLocator");
 import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import resourceSwitcher = require("common/shell/resourceSwitcher");
+import databaseSwitcher = require("common/shell/databaseSwitcher");
 import searchBox = require("common/shell/searchBox");
 import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
@@ -81,7 +81,7 @@ class shell extends viewModelBase {
 
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
-    resourceSwitcher = new resourceSwitcher();
+    databaseSwitcher = new databaseSwitcher();
 
     displayUsageStatsInfo = ko.observable<boolean>(false);
     trackingTask = $.Deferred();
@@ -109,7 +109,7 @@ class shell extends viewModelBase {
             // (connection will be started after executing this method) - it was just scheduled 2 lines above
             // please notice we don't wait here for connection to be established
             // since this invocation is sync we can't end up with race condition
-            this.resourcesManager.setupGlobalNotifications();
+            this.databasesManager.setupGlobalNotifications();
             this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
         });
 
@@ -184,7 +184,7 @@ class shell extends viewModelBase {
         updateMenu(activeDatabaseTracker.default.database());
         activeDatabaseTracker.default.database.subscribe(updateMenu);
 
-        this.resourceSwitcher.initialize();
+        this.databaseSwitcher.initialize();
         this.searchBox.initialize();
     }
 
@@ -235,7 +235,7 @@ class shell extends viewModelBase {
                 apiKeyLocalStorage.setValue(match[1]);
             }
             var splittedHash = hash.split("&#api-key");
-            var url = (splittedHash.length === 1) ? "#resources" : splittedHash[0];
+            var url = (splittedHash.length === 1) ? "#databases" : splittedHash[0];
             window.location.href = url;
         } else {
             var apiKeyFromStorage = apiKeyLocalStorage.get();
@@ -290,8 +290,8 @@ class shell extends viewModelBase {
 
     connectToRavenServer() {
         const serverConfigsLoadTask: JQueryPromise<void> = this.loadServerConfig();
-        const resourcesTask = this.resourcesManager.init();
-        return $.when<any>(serverConfigsLoadTask, resourcesTask);
+        const managerTask = this.databasesManager.init();
+        return $.when<any>(serverConfigsLoadTask, managerTask);
     }
 
     private static activateHotSpareEnvironment(hotSpare: HotSpareDto) {
@@ -356,7 +356,7 @@ class shell extends viewModelBase {
 
     showApiKeyDialog() {
         var dialog = new enterApiKey();
-        return app.showBootstrapDialog(dialog).then(() => window.location.href = "#resources");
+        return app.showBootstrapDialog(dialog).then(() => window.location.href = "#databases");
     }
 
     showLicenseStatusDialog() {

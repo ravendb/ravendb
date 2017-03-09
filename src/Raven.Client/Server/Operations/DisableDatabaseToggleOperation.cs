@@ -8,12 +8,12 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class DisableResourceToggleOperation : IServerOperation<DisableResourceToggleResult>
+    public class DisableDatabaseToggleOperation : IServerOperation<DisableDatabaseToggleResult>
     {
         private readonly string _databaseName;
         private readonly bool _ifDisableRequest;
 
-        public DisableResourceToggleOperation(string databaseName, bool ifDisableRequest)
+        public DisableDatabaseToggleOperation(string databaseName, bool ifDisableRequest)
         {
             if(databaseName == null)
                 throw new ArgumentNullException(nameof(databaseName));
@@ -22,19 +22,19 @@ namespace Raven.Client.Server.Operations
             _ifDisableRequest = ifDisableRequest;
         }
 
-        public RavenCommand<DisableResourceToggleResult> GetCommand(DocumentConventions conventions,
+        public RavenCommand<DisableDatabaseToggleResult> GetCommand(DocumentConventions conventions,
             JsonOperationContext context)
         {
-            return new DisableResourceToggleCommand(_databaseName, _ifDisableRequest);
+            return new DisableDatabaseToggleCommand(_databaseName, _ifDisableRequest);
         }
 
-        public class DisableResourceToggleCommand : RavenCommand<DisableResourceToggleResult>
+        public class DisableDatabaseToggleCommand : RavenCommand<DisableDatabaseToggleResult>
         {
 
             private readonly string _databaseName;
             private readonly bool _ifDisableRequest;
 
-            public DisableResourceToggleCommand(string databaseName, bool ifDisableRequest)
+            public DisableDatabaseToggleCommand(string databaseName, bool ifDisableRequest)
             {
                 _databaseName = databaseName;
                 _ifDisableRequest = ifDisableRequest;

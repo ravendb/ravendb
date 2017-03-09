@@ -647,32 +647,24 @@ class appUrl {
     /**
     * Gets the address for the current page but for the specified database.
     */
-    static forCurrentPage(rs: database) {
+    static forCurrentPage(db: database) {
         const routerInstruction = router.activeInstruction();
         if (routerInstruction) {
 
-            let currentResourceName: string = null;
-            let currentResourceType: string = null;
-            let currentResourceQualifier: string; 
+            let currentDatabaseName: string = null;
             const dbInUrl = routerInstruction.queryParams[database.type];
             if (dbInUrl) {
-                currentResourceName = dbInUrl;
-                currentResourceType = database.type;
-                currentResourceQualifier = database.qualifier;
+                currentDatabaseName = dbInUrl;
             }
 
-            if (currentResourceType && currentResourceQualifier !== rs.qualifier) {
-                // user changed resource type - navigate to resources page and preselect resource
-                return appUrl.forDatabases() + "?" + rs.type + "=" + encodeURIComponent(rs.name);
-            }
-            const isDifferentResourceInAddress = !currentResourceName || currentResourceName !== rs.name.toLowerCase();
-            if (isDifferentResourceInAddress) {
+            const isDifferentDatabaseInAddress = !currentDatabaseName || currentDatabaseName !== db.name.toLowerCase();
+            if (isDifferentDatabaseInAddress) {
                 const existingAddress = window.location.hash;
-                const existingQueryString = currentResourceName ? currentResourceType + "=" + encodeURIComponent(currentResourceName) : null;
-                const newQueryString = currentResourceType + "=" + encodeURIComponent(rs.name);
+                const existingQueryString = currentDatabaseName ? "database=" + encodeURIComponent(currentDatabaseName) : null;
+                const newQueryString = "database=" + encodeURIComponent(db.name);
                 return existingQueryString ?
                     existingAddress.replace(existingQueryString, newQueryString) :
-                    existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + rs.type + "=" + encodeURIComponent(rs.name);
+                    existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + db.type + "=" + encodeURIComponent(db.name);
             }
         }
     }

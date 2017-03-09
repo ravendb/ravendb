@@ -12,7 +12,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
 
         public string DatabaseName { get; private set; }
 
-        public ResourceChangeType ChangeType { get; private set; }
+        public DatabaseChangeType ChangeType { get; private set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -24,7 +24,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
             return json;
         }
 
-        public static DatabaseChanged Create(string databaseName, ResourceChangeType change)
+        public static DatabaseChanged Create(string databaseName, DatabaseChangeType change)
         {
             return new DatabaseChanged
             {

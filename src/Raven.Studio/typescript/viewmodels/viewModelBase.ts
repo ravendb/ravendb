@@ -12,13 +12,13 @@ import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import eventsCollector = require("common/eventsCollector");
 import changesApi = require("common/changesApi");
 
 /*
- * Base view model class that provides basic view model services, such as tracking the active resource and providing a means to add keyboard shortcuts.
+ * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
 
@@ -28,7 +28,7 @@ class viewModelBase {
 
     isBusy = ko.observable<boolean>(false);
 
-    protected resourcesManager = resourcesManager.default;
+    protected databasesManager = databasesManager.default;
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
@@ -67,7 +67,7 @@ class viewModelBase {
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
         this.downloader.reset();
 
-        this.resourcesManager.activateBasedOnCurrentUrl();
+        this.databasesManager.activateBasedOnCurrentUrl();
         return true;
     }
 

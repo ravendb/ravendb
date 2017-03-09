@@ -7,7 +7,7 @@ import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import serverSmugglingLocalStorage = require("common/storage/serverSmugglingLocalStorage");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import eventsCollector = require("common/eventsCollector");
 
 class serverSmuggling extends viewModelBase {
@@ -39,7 +39,7 @@ class serverSmuggling extends viewModelBase {
     constructor() {
         super();
 
-        var smi = resourcesManager.default.databases().map(d => new serverSmugglingItem(d));
+        var smi = databasesManager.default.databases().map(d => new serverSmugglingItem(d));
         this.databases(smi);
 
         this.hasDatabases = ko.computed(() => this.databases().length > 0);
@@ -147,7 +147,7 @@ class serverSmuggling extends viewModelBase {
             targetServer.username(savedValue.TargetServer.Username);
             targetServer.guessCredentialsType();
 
-            // since resources might change over time we have to apply saved changes carefully. 
+            // since database might change over time we have to apply saved changes carefully. 
             savedValue.Config.forEach(savedConfig => {
                 var item = self.databases().find(r => r.database.name === savedConfig.Name);
                 if (item) {

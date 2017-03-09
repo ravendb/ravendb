@@ -4,17 +4,17 @@ import database = require("models/resources/database");
 import backupDatabaseCommand = require("commands/maintenance/backupDatabaseCommand");
 import getResourceDrives = require("commands/resources/getResourceDrives");
 import accessHelper = require("viewmodels/shell/accessHelper");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 
 class resourceBackup {
-    resourcesManger = resourcesManager.default;
+    databasesManager = databasesManager.default;
 
     incremental = ko.observable<boolean>(false);
     resourceName = ko.observable<string>('');
     backupLocation = ko.observable<string>('');
     backupStatusMessages = ko.observableArray<backupMessageDto>();
     isBusy = ko.observable<boolean>(); 
-    resourcesNames: KnockoutComputed<string[]>;
+    databaseNames: KnockoutComputed<string[]>;
     fullTypeName: KnockoutComputed<string>;
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
@@ -28,7 +28,7 @@ class resourceBackup {
     }); 
 
     constructor(private qualifier: string, private resources: KnockoutObservableArray<database>) {
-        this.resourcesNames = ko.computed(() => resources().map((rs: database) => rs.name));
+        this.databaseNames = ko.computed(() => resources().map((rs: database) => rs.name));
 
         this.fullTypeName = ko.computed(() => {
             var rs = resources();
@@ -41,7 +41,7 @@ class resourceBackup {
 
         this.searchResults = ko.computed(() => {
             var newDatabaseName = this.resourceName();
-            return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
+            return this.databaseNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
         });
 
         this.nameCustomValidityError = ko.computed(() => {
@@ -91,9 +91,9 @@ class resourceBackup {
 
 class backupDatabase extends viewModelBase {
 
-    resourcesManager = resourcesManager.default;
+    databasesManager = databasesManager.default;
 
-    private dbBackupOptions = new resourceBackup(database.qualifier, this.resourcesManager.databases);
+    private dbBackupOptions = new resourceBackup(database.qualifier, this.databasesManager.databases);
     
     isForbidden = ko.observable<boolean>();
 
@@ -116,7 +116,7 @@ class backupDatabase extends viewModelBase {
         var backupOptions = this.dbBackupOptions;
         backupOptions.isBusy(true);
 
-        const dbTobackup = this.resourcesManager.getDatabaseByName(backupOptions.resourceName());
+        const dbTobackup = this.databasesManager.getDatabaseByName(backupOptions.resourceName());
         new backupDatabaseCommand(dbTobackup, backupOptions.backupLocation(), backupOptions.updateBackupStatus.bind(this.dbBackupOptions), backupOptions.incremental())
             .execute()
             .always(() => backupOptions.isBusy(false));

@@ -48,10 +48,6 @@ class database {
         this.errored(!!incomingCopy.LoadError);
     }
 
-    get qualifiedName() {
-        return this.qualifier + "/" + this.name;
-    }
-
     private attributeValue(attributes: any, bundleName: string) {
         for (var key in attributes){
             if (attributes.hasOwnProperty(key) && key.toLowerCase() === bundleName.toLowerCase()) {
@@ -73,6 +69,7 @@ class database {
         return false;
     }
 
+    //TODO: remove those props?
     get fullTypeName() {
         return "Database";
     }
@@ -88,8 +85,6 @@ class database {
     get type() {
         return database.type;
     }
-
- 
 }
 
 export = database;

@@ -6,8 +6,6 @@ class databaseCreationModel {
 
     name = ko.observable<string>("");
 
-    resourceType = "database";
-
     indexesPath = ko.observable<string>();
     incrementalBackup = ko.observable<boolean>();
 
@@ -60,7 +58,7 @@ class databaseCreationModel {
         });
     }
 
-    setupValidation(resourceDoesntExist: (name: string) => boolean) {
+    setupValidation(databaseDoesntExist: (name: string) => boolean) {
         const rg1 = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
         const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
 
@@ -73,18 +71,17 @@ class databaseCreationModel {
             maxLength: 230,
             validation: [
                 {
-                    validator: resourceDoesntExist,
-                    message: _.upperFirst(this.resourceType) + " already exists"
+                    validator: databaseDoesntExist,
+                    message: "Database already exists"
                 }, {
                     validator: (val: string) => rg1.test(val),
-                    message: `The {0} name can't contain any of the following characters: \\ / : * ? " < > |`,
-                    params: this.resourceType
+                    message: `The database name can't contain any of the following characters: \\ / : * ? " < > |`,
                 }, {
                     validator: (val: string) => !val.startsWith("."),
-                    message: `The ${this.resourceType} name can't start with a dot!`
+                    message: `The database name can't start with a dot!`
                 }, {
                     validator: (val: string) => !val.endsWith("."),
-                    message: `The ${this.resourceType} name can't end with a dot!`
+                    message: `The database name can't end with a dot!`
                 }, {
                     validator: (val: string) => !rg3.test(val),
                     message: `The name {0} is forbidden for use!`,

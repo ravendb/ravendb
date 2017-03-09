@@ -151,7 +151,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LicenseStatus));
 
             // database admin
-            scripter.AddType(typeof(ResourceDeleteResult));
+            scripter.AddType(typeof(DatabaseDeleteResult));
 
             // io metrics stats
             scripter.AddType(typeof(IOMetricsHistoryStats));

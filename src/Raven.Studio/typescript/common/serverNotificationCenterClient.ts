@@ -32,15 +32,15 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
 
         switch (actionType) {
             case "DatabaseChanged":
-                const resourceDto = actionDto as Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged;
-                this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(this.allDatabaseChangedHandlers(), resourceDto, () => true);
+                const databaseDto = actionDto as Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged;
+                this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(this.allDatabaseChangedHandlers(), databaseDto, () => true);
 
                 this.watchedDatabaseChanged.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(callbacks(), resourceDto, (event) => event.DatabaseName != null && event.DatabaseName === key);
+                    this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(callbacks(), databaseDto, (event) => event.DatabaseName != null && event.DatabaseName === key);
                 });
 
                 this.watchedDatabaseChangedPrefixes.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(callbacks(), resourceDto, (event) => event.DatabaseName != null && event.DatabaseName.startsWith(key));
+                    this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(callbacks(), databaseDto, (event) => event.DatabaseName != null && event.DatabaseName.startsWith(key));
                 });
                 break;
             default:
@@ -49,7 +49,7 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         }
     }
 
-    watchAllResourceChanges(onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => void) {
+    watchAllDatabaseChanges(onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => void) {
         const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(onChange);
 
         this.allDatabaseChangedHandlers.push(callback);

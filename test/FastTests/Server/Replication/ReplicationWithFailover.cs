@@ -39,7 +39,7 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                var result = master.Admin.Server.Send(new DisableResourceToggleOperation(master.DefaultDatabase, true));
+                var result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.DefaultDatabase, true));
                 Assert.True(result.Disabled);
                 Assert.Equal(master.DefaultDatabase, result.Name);
 

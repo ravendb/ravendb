@@ -6,7 +6,7 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import appUrl = require("common/appUrl");
 import monitorRestoreCommand = require("commands/maintenance/monitorRestoreCommand");
 import startDbRestoreCommand = require("commands/maintenance/startRestoreCommand");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import eventsCollector = require("common/eventsCollector");
 
 class resourceRestore {
@@ -58,9 +58,8 @@ class resourceRestore {
 }
 
 class restore extends viewModelBase {
-    private resourceManager = resourcesManager.default;
 
-    private dbRestoreOptions: resourceRestore = new resourceRestore(this, database.type, this.resourceManager.databases);
+    private dbRestoreOptions: resourceRestore = new resourceRestore(this, database.type, this.databasesManager.databases);
 
     disableReplicationDestinations = ko.observable<boolean>(false);
     generateNewDatabaseId = ko.observable<boolean>(false);

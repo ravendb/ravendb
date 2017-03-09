@@ -10,7 +10,7 @@ import togglePauseIndexingCommand = require("commands/database/index/togglePause
 import toggleDisableIndexingCommand = require("commands/database/index/toggleDisableIndexingCommand");
 import deleteDatabaseCommand = require("commands/resources/deleteDatabaseCommand");
 import loadDatabaseCommand = require("commands/resources/loadDatabaseCommand");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import changesContext = require("common/changesContext");
 
 import databasesInfo = require("models/resources/info/databasesInfo");
@@ -76,7 +76,7 @@ class databases extends viewModelBase {
         // we can't use createNotifications here, as it is called after *database changes API* is connected, but user
         // can enter this view and never select database
 
-        this.addNotification(this.changesContext.serverNotifications().watchDatabaseChangeStartingWith("db/", (e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.fetchDatabase(e)));
+        this.addNotification(this.changesContext.serverNotifications().watchAllDatabaseChanges((e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.fetchDatabase(e)));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabases()));
 
         return this.fetchDatabases();
@@ -96,16 +96,14 @@ class databases extends viewModelBase {
     }
 
     private fetchDatabase(e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
-        const qualiferAndName = databaseInfo.extractQualifierAndNameFromNotification(e.DatabaseName);
-
         switch (e.ChangeType) {
             case "Load":
             case "Put":
-                this.updateDatabaseInfo(qualiferAndName.qualifier, qualiferAndName.name);
+                this.updateDatabaseInfo(e.DatabaseName);
                 break;
 
             case "Delete":
-                const db = this.databases().sortedDatabases().find(rs => rs.qualifiedName === e.DatabaseName);
+                const db = this.databases().sortedDatabases().find(rs => rs.name === e.DatabaseName);
                 if (db) {
                     this.removeDatabase(db);
                 }
@@ -113,11 +111,11 @@ class databases extends viewModelBase {
         }
     }
 
-    private updateDatabaseInfo(qualifer: string, databaseName: string) {
+    private updateDatabaseInfo(databaseName: string) {
         new getDatabaseCommand(databaseName)
             .execute()
             .done((result: Raven.Client.Server.Operations.DatabaseInfo) => {
-                this.databases().updateDatabase(result, qualifer);
+                this.databases().updateDatabase(result);
                 this.filterDatabases();
             });
     }
@@ -139,7 +137,7 @@ class databases extends viewModelBase {
             db.filteredOut(!matches);
 
             if (!matches) {
-                this.selectedDatabases.remove(db.qualifiedName);
+                this.selectedDatabases.remove(db.name);
             }
         });
     }
@@ -151,7 +149,7 @@ class databases extends viewModelBase {
 
     private getSelectedDatabases() {
         const selected = this.selectedDatabases();
-        return this.databases().sortedDatabases().filter(x => _.includes(selected, x.qualifiedName));
+        return this.databases().sortedDatabases().filter(x => _.includes(selected, x.name));
     }
 
     toggleSelectAll(): void {
@@ -164,7 +162,7 @@ class databases extends viewModelBase {
 
             this.databases().sortedDatabases().forEach(db => {
                 if (!db.filteredOut()) {
-                    namesToSelect.push(db.qualifiedName);
+                    namesToSelect.push(db.name);
                 }
             });
 
@@ -192,7 +190,7 @@ class databases extends viewModelBase {
                         x.isBeingDeleted(true);
                         const asDatabase = x.asDatabase();
 
-                        // disconnect here to avoid race condition between resource deleted message
+                        // disconnect here to avoid race condition between database deleted message
                         // and websocket disconnection
                         changesContext.default.disconnectIfCurrent(asDatabase, "DatabaseDeleted");
                         return asDatabase;
@@ -200,7 +198,7 @@ class databases extends viewModelBase {
                                     
                     new deleteDatabaseCommand(dbsList, !confirmResult.keepFiles)
                                              .execute()                                            
-                                             .done((deletedDatabases: Array<Raven.Server.Web.System.ResourceDeleteResult>) => {
+                                             .done((deletedDatabases: Array<Raven.Server.Web.System.DatabaseDeleteResult>) => {
                                                     deletedDatabases.forEach(rs => this.onDatabaseDeleted(rs));                            
                                               });
                 }
@@ -209,10 +207,10 @@ class databases extends viewModelBase {
         app.showBootstrapDialog(confirmDeleteViewModel);
     }
 
-    private onDatabaseDeleted(deletedDatabaseResult: Raven.Server.Web.System.ResourceDeleteResult) {
+    private onDatabaseDeleted(deletedDatabaseResult: Raven.Server.Web.System.DatabaseDeleteResult) {
         const matchedDatabase = this.databases()
-            .sortedDatabases()           
-            .find(x => x.qualifiedName.toLowerCase() === deletedDatabaseResult.QualifiedName.toLowerCase());
+            .sortedDatabases()
+            .find(x => x.name.toLowerCase() === deletedDatabaseResult.Name.toLowerCase());
 
         // Databases will be removed from the the sortedDatabases in method removeDatabase through the global changes api flow..
         // So only enable the 'delete' button and display err msg if relevant                                
@@ -224,7 +222,7 @@ class databases extends viewModelBase {
 
     private removeDatabase(dbInfo: databaseInfo) {
         this.databases().sortedDatabases.remove(dbInfo);
-        this.selectedDatabases.remove(dbInfo.qualifiedName);
+        this.selectedDatabases.remove(dbInfo.name);
         messagePublisher.reportSuccess(`Database ${dbInfo.name} was successfully deleted`);
     }
 
@@ -287,7 +285,7 @@ class databases extends viewModelBase {
 
     private onDatabaseDisabled(result: disableDatabaseResult) {
         const dbs = this.databases().sortedDatabases();
-        const matchedDatabase = dbs.find(rs => rs.qualifiedName === result.QualifiedName);
+        const matchedDatabase = dbs.find(rs => rs.name === result.Name);
 
         if (matchedDatabase) {
             matchedDatabase.disabled(result.Disabled);
@@ -355,13 +353,13 @@ class databases extends viewModelBase {
     }
 
     activateDatabase(dbInfo: databaseInfo) {
-        let db = this.resourcesManager.getDatabaseByQualifiedName(dbInfo.qualifiedName);
+        let db = this.databasesManager.getDatabaseByName(dbInfo.name);
         if (!db || db.disabled())
             return;
 
         db.activate();
 
-        this.updateDatabaseInfo(db.qualifier, db.name);
+        this.updateDatabaseInfo(db.name);
     }
 
     createNewDatabase() {

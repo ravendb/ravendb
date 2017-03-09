@@ -61,7 +61,7 @@ interface confirmDialogResult {
 }
 
 interface disableDatabaseResult {
-    QualifiedName: string;
+    Name: string;
     Success: boolean;
     Reason: string;
     Disabled: boolean;

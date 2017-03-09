@@ -158,8 +158,7 @@ namespace Raven.Server.Documents
             {
                 var db = CreateDocumentsStorage(databaseName, config);
                 _serverStore.NotificationCenter.Add(
-                    DatabaseChanged.Create(Constants.Documents.Prefix + databaseName,
-                        ResourceChangeType.Load));
+                    DatabaseChanged.Create(databaseName, DatabaseChangeType.Load));
                 return db;
             }
             catch (Exception e)

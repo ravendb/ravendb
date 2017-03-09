@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.NotificationCenter.Notifications.Server
 {
-    public enum ResourceChangeType
+    public enum DatabaseChangeType
     {
         Load,
         Put,
