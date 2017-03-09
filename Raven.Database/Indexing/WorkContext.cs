@@ -659,6 +659,14 @@ namespace Raven.Database.Indexing
             }
         }
 
+        public bool IndexRemovalQueueContainsAnyFrom(IEnumerable<string> keys)
+        {
+            foreach (var key in keys)
+                if (recentlyDeleted.Contains(key))
+                    return true;
+            return false;
+        }
+
         public bool ShouldRemoveFromIndex(string key)
         {
             var shouldRemoveFromIndex = recentlyDeleted.Contains(key);
