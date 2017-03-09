@@ -57,7 +57,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        private Task DbInfo(string name)
+        private Task DbInfo(string dbName)
         {
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -65,7 +65,6 @@ namespace Raven.Server.Web.System
                 context.OpenReadTransaction();
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var dbName = RouteMatch.GetCapture();
                     var dbId = Constants.Documents.Prefix + dbName;
                     long etag;
                     using (var dbDoc = ServerStore.Read(context, dbId, out etag))
