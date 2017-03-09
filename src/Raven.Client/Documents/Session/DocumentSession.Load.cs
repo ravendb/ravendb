@@ -148,8 +148,6 @@ namespace Raven.Client.Documents.Session
 
         private GetDocumentCommand LoadInternal(string[] ids, string transformer, LoadTransformerOperation operation, Stream stream = null ,Action<ILoadConfiguration> configure = null)
         {
-            IncrementRequestCount();
-
             var configuration = new LoadConfiguration();
             configure?.Invoke(configuration);
 
@@ -233,8 +231,6 @@ namespace Raven.Client.Documents.Session
             int start = 0, int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
             string startAfter = null, string transformer = null)
         {
-            IncrementRequestCount();
-
             var configuration = new LoadConfiguration();
             configure?.Invoke(configuration);
 
