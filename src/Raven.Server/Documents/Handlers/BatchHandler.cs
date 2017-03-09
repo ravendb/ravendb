@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
     {
-       
+
         [RavenAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Handlers
                     }
                     catch (ConcurrencyException)
                     {
-                        HttpContext.Response.StatusCode = (int) HttpStatusCode.Conflict;
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
                         throw;
                     }
 
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Handlers
                                 mergedCmd.ModifiedCollections);
                     }
 
-                    HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                     using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
                     {
@@ -232,8 +232,7 @@ namespace Raven.Server.Documents.Handlers
                     switch (cmd.Method)
                     {
                         case BatchRequestParser.CommandType.PUT:
-                            var putResult = Database.DocumentsStorage.Put(context, cmd.Key, cmd.Etag,
-                                cmd.Document);
+                            var putResult = Database.DocumentsStorage.Put(context, cmd.Key, cmd.Etag, cmd.Document);
 
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
 
@@ -241,19 +240,26 @@ namespace Raven.Server.Documents.Handlers
                             cmd.Document.TryGet(Constants.Documents.Metadata.Key, out metadata);
                             LastEtag = putResult.Etag;
 
-                        
-                            metadata.Modifications = new DynamicJsonValue(metadata)
-                            {
-                                [Constants.Documents.Metadata.Etag] = putResult.Etag,
-                                [Constants.Documents.Metadata.Id] = putResult.Key
-                            };
                             ModifiedCollections?.Add(putResult.Collection.Name);
 
-                            Reply.Add(new DynamicJsonValue
+                            var changeVector = new DynamicJsonArray();
+                            if (putResult.ChangeVector != null)
                             {
+                                foreach (var entry in putResult.ChangeVector)
+                                    changeVector.Add(entry.ToJson());
+                            }
+
+                            var putReply = new DynamicJsonValue
+                            {
+                                [nameof(putResult.Key)] = putResult.Key,
+                                [nameof(putResult.Etag)] = putResult.Etag,
+                                [nameof(putResult.Collection)] = putResult.Collection.Name,
+                                [nameof(putResult.ChangeVector)] = changeVector,
                                 ["Method"] = "PUT",
                                 ["Metadata"] = metadata
-                            });
+                            };
+
+                            Reply.Add(putReply);
                             break;
                         case BatchRequestParser.CommandType.PATCH:
                             // TODO: Move this code out of the merged transaction

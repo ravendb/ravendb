@@ -881,7 +881,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             int size;
-            var ptr = result.Reader.Read((int) DocumentsTable.Etag, out size);
+            var ptr = result.Reader.Read((int)DocumentsTable.Etag, out size);
             return IPAddress.NetworkToHostOrder(*(long*)ptr);
         }
 
@@ -981,7 +981,7 @@ namespace Raven.Server.Documents
             {
                 StorageId = tvr.Id
             };
-            
+
             result.LoweredKey = TableValueToString(context, (int)ConflictsTable.LoweredKey, ref tvr);
             result.Key = TableValueToKey(context, (int)ConflictsTable.OriginalKey, ref tvr);
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictsTable.ChangeVector);
@@ -1167,8 +1167,8 @@ namespace Raven.Server.Documents
                     var ptr = table.DirectRead(doc.StorageId, out size);
                     var tvr = new TableValueReader(ptr, size);
 
-                    lowerKey = tvr.Read((int) DocumentsTable.LoweredKey, out lowerSize);
-                    keyPtr = tvr.Read((int) DocumentsTable.Key, out keySize);
+                    lowerKey = tvr.Read((int)DocumentsTable.LoweredKey, out lowerSize);
+                    keyPtr = tvr.Read((int)DocumentsTable.Key, out keySize);
 
                     etag = CreateTombstone(context,
                         lowerKey,
@@ -1428,7 +1428,7 @@ namespace Raven.Server.Documents
             long maxEtag = 0L;
             foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, startsWith: true))
             {
-                var etag = TableValueToEtag((int) ConflictsTable.Etag, ref tvr.Result.Reader);
+                var etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr.Result.Reader);
                 if (maxEtag < etag)
                     maxEtag = etag;
             }
@@ -1989,6 +1989,7 @@ namespace Raven.Server.Documents
             public string Key;
             public long Etag;
             public CollectionName Collection;
+            public ChangeVectorEntry[] ChangeVector;
         }
 
         public void DeleteWithoutCreatingTombstone(DocumentsOperationContext context, string collection, long storageId, bool isTombstone)
@@ -2159,7 +2160,7 @@ namespace Raven.Server.Documents
                             ThrowConcurrentException(key, expectedEtag, oldEtag);
 
                         int oldSize;
-                        var oldDoc = new BlittableJsonReaderObject(oldValue.Read((int) DocumentsTable.Data, out oldSize), oldSize, context);
+                        var oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);
                         var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
                         if (oldCollectionName != collectionName)
                             ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
@@ -2198,7 +2199,8 @@ namespace Raven.Server.Documents
             {
                 Etag = newEtag,
                 Key = key,
-                Collection = collectionName
+                Collection = collectionName,
+                ChangeVector = changeVector
             };
         }
 
@@ -2847,9 +2849,9 @@ namespace Raven.Server.Documents
         }
 
         private PutOperationResults UpdateDocumentForAttachmentChange(
-            DocumentsOperationContext context, 
-            string documentId, 
-            TableValueReader tvr, 
+            DocumentsOperationContext context,
+            string documentId,
+            TableValueReader tvr,
             long modifiedTicks)
         {
             // We can optimize this by copy just the document's data instead of the all tvr
