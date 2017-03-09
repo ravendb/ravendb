@@ -1,31 +1,34 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using Jint;
 using Jint.Native;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.SqlReplication
+namespace Raven.Server.Documents.ETL.Providers.SQL
 {
     internal class SqlReplicationPatchDocument : PatchDocument
     {
         private const int DefaultSize = 50;
 
         private readonly DocumentsOperationContext _context;
-        private readonly SqlReplicationScriptResult _scriptResult;
         private readonly SqlReplicationConfiguration _config;
-        private readonly string _documentKey;
+        private readonly PatchRequest _patchRequest;
+        private ToSqlItem _current;
 
-        public SqlReplicationPatchDocument(DocumentDatabase database, DocumentsOperationContext context, SqlReplicationScriptResult scriptResult, SqlReplicationConfiguration config, string documentKey)
+        public SqlReplicationPatchDocument(DocumentDatabase database, DocumentsOperationContext context, SqlReplicationConfiguration config)
             : base(database)
         {
             _context = context;
-            _scriptResult = scriptResult;
             _config = config;
-            _documentKey = documentKey;
+            _patchRequest = new PatchRequest { Script = _config.Script };
+            Tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlReplicationTables.Count);
         }
+
+        public readonly Dictionary<string, SqlTableWithRecords> Tables;
 
         protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
         {
@@ -45,9 +48,11 @@ namespace Raven.Server.Documents.SqlReplication
         {
             base.CustomizeEngine(engine, scope);
 
-            engine.SetValue("documentId", _documentKey);
+            Debug.Assert(_current != null);
+
+            engine.SetValue("documentId", _current);
             engine.SetValue("replicateTo", new Action<string, JsValue>((tableName, colsAsObject) => ReplicateToFunction(tableName, colsAsObject, scope)));
-            _scriptResult.Keys.Add(_documentKey);
+
             foreach (var sqlReplicationTable in _config.SqlReplicationTables)
             {
                 var current = sqlReplicationTable;
@@ -69,7 +74,6 @@ namespace Raven.Server.Documents.SqlReplication
             if (colsAsObject == null)
                 throw new ArgumentException("cols parameter is mandatory");
 
-            var itemToReplicates = _scriptResult.Data.GetOrAdd(tableName);
             var dynamicJsonValue = scope.ToBlittable(colsAsObject.AsObject());
             var blittableJsonReaderObject = _context.ReadObject(dynamicJsonValue, tableName);
             var columns = new List<SqlReplicationColumn>(blittableJsonReaderObject.Count);
@@ -85,11 +89,40 @@ namespace Raven.Server.Documents.SqlReplication
                     Type = prop.Token,
                 });
             }
-            itemToReplicates.Add(new ItemToReplicate
+
+            _current.Columns = columns;
+
+            GetOrAdd(tableName).Inserts.Add(_current);
+        }
+
+        public SqlTableWithRecords GetOrAdd(string tableName)
+        {
+            SqlTableWithRecords table;
+            if (Tables.TryGetValue(tableName, out table) == false)
             {
-                DocumentKey = _documentKey,
-                Columns = columns
-            });
+                Tables[tableName] =
+                    table = new SqlTableWithRecords(_config.SqlReplicationTables.Find(x => x.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            return table;
+        }
+
+        public void Transform(ToSqlItem item, DocumentsOperationContext context)
+        {
+            if (item.IsDelete)
+            {
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (int i = 0; i < _config.SqlReplicationTables.Count; i++)
+                {
+                    GetOrAdd(_config.SqlReplicationTables[i].TableName).Deletes.Add(item);
+                }
+
+                return;
+            }
+
+            _current = item;
+
+            Apply(context, _current.Document, _patchRequest);
         }
 
         private ValueTypeLengthTriple ToVarchar(string value, double? sizeAsDouble)

@@ -9,13 +9,14 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.SqlReplication
+namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
 {
     public class SqlReplicationHandler : DatabaseRequestHandler
     {
@@ -23,7 +24,7 @@ namespace Raven.Server.Documents.SqlReplication
         public Task GetStats()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.ReplicationUniqueName == name) as SqlReplication;
+            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.Name == name) as SqlEtl;
 
             if (replication == null)
             {
@@ -52,7 +53,7 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     writer.WriteStartArray();
                     bool first = true;
-                    foreach (var replication in Database.SqlReplicationLoader.Replications.Select(x => x as SqlReplication))
+                    foreach (var replication in Database.SqlReplicationLoader.Replications)
                     {
                         if (first == false)
                             writer.WriteComma();
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.SqlReplication
 
                         var json = new DynamicJsonValue
                         {
-                            ["Name"] = replication.ReplicationUniqueName,
+                            ["Name"] = replication.Name,
                             ["Statistics"] = replication.Statistics.ToBlittable(),
                             ["Metrics"] = replication.MetricsCountersManager.ToSqlReplicationMetricsData(),
                         };
@@ -124,7 +125,7 @@ namespace Raven.Server.Documents.SqlReplication
 
                 var dbDoc = context.ReadForMemory(RequestBodyStream(), "SimulateSqlReplicationResult");
                 var simulateSqlReplication = JsonDeserializationServer.SimulateSqlReplication(dbDoc);
-                var result = Database.SqlReplicationLoader.SimulateSqlReplicationSqlQueries(simulateSqlReplication, context);
+                var result = SqlEtl.SimulateSqlReplicationSqlQueries(simulateSqlReplication, Database, context);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -139,7 +140,7 @@ namespace Raven.Server.Documents.SqlReplication
         public Task PostResetSqlReplication()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.ReplicationUniqueName == name);
+            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.Name == name);
 
             if (replication == null)
             {

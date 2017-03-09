@@ -1,6 +1,6 @@
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.SqlReplication
+namespace Raven.Server.Documents.ETL.Providers.SQL
 {
     public class SqlReplicationColumn
     {

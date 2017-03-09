@@ -3,7 +3,7 @@ using System.Linq;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.SqlReplication
+namespace Raven.Server.Documents.ETL.Providers.SQL.Metrics
 {
     public class SqlReplicationMetricsCountersManager
     {

@@ -6,23 +6,24 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Raven.Client;
+using Raven.Server.Documents.ETL.Providers.SQL.Connections;
+using Raven.Server.Documents.SqlReplication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-namespace Raven.Server.Documents.SqlReplication
+namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
     public class RelationalDatabaseWriter : RelationalDatabaseWriterBase, IDisposable
     {
         private readonly Logger _logger;
 
+        private readonly SqlEtl _etl;
         private readonly DocumentDatabase _database;
-        private readonly DocumentsOperationContext _context;
         private readonly PredefinedSqlConnection _predefinedSqlConnection;
-        private readonly SqlReplication _sqlReplication;
 
         private readonly DbCommandBuilder _commandBuilder;
         private readonly DbProviderFactory _providerFactory;
@@ -33,17 +34,14 @@ namespace Raven.Server.Documents.SqlReplication
 
         private const int LongStatementWarnThresholdInMilliseconds = 3000;
 
-        bool hadErrors;
-
-        public RelationalDatabaseWriter(DocumentDatabase database, DocumentsOperationContext context, PredefinedSqlConnection predefinedSqlConnection, SqlReplication sqlReplication)
+        public RelationalDatabaseWriter(SqlEtl etl, PredefinedSqlConnection predefinedSqlConnection, DocumentDatabase database)
             : base(predefinedSqlConnection)
         {
+            _etl = etl;
             _database = database;
-            _context = context;
             _predefinedSqlConnection = predefinedSqlConnection;
-            _sqlReplication = sqlReplication;
             _logger = LoggingSource.Instance.GetLogger<RelationalDatabaseWriter>(_database.Name);
-            _providerFactory = GetDbProviderFactory(_sqlReplication.Configuration);
+            _providerFactory = GetDbProviderFactory(_etl.SqlConfiguration);
             _commandBuilder = _providerFactory.CreateCommandBuilder();
             _connection = _providerFactory.CreateConnection();
             _connection.ConnectionString = predefinedSqlConnection.ConnectionString;
@@ -55,7 +53,7 @@ namespace Raven.Server.Documents.SqlReplication
             catch (Exception e)
             {
                 database.NotificationCenter.Add(AlertRaised.Create(
-                    SqlReplication.AlertTitle,
+                    SqlEtl.SqlEtlTag,
                     $"Sql Replication could not open connection to {_connection.ConnectionString}",
                     AlertType.SqlReplication_ConnectionError,
                     NotificationSeverity.Error,
@@ -101,7 +99,7 @@ namespace Raven.Server.Documents.SqlReplication
                     _logger.Info(message, e);
 
                 _database.NotificationCenter.Add(AlertRaised.Create(
-                    SqlReplication.AlertTitle,
+                    SqlEtl.SqlEtlTag,
                     message,
                     AlertType.SqlReplication_ProviderError,
                     NotificationSeverity.Error,
@@ -118,21 +116,28 @@ namespace Raven.Server.Documents.SqlReplication
             _connection.Dispose();
         }
 
-        public bool Commit()
+        public void Commit()
         {
             _tx.Commit();
-            return true;
         }
 
-        private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, Action<DbCommand> commandCallback = null)
+        public void Rollback()
         {
+            _tx.Rollback();
+        }
+
+        private int InsertItems(string tableName, string pkName, List<ToSqlItem> toInsert, CancellationToken token, Action<DbCommand> commandCallback = null)
+        {
+            var inserted = 0;
+
             var sp = new Stopwatch();
-            foreach (var itemToReplicate in dataForTable)
+            foreach (var itemToReplicate in toInsert)
             {
                 sp.Restart();
+
                 using (var cmd = CreateCommand())
                 {
-                    _sqlReplication.CancellationToken.ThrowIfCancellationRequested();
+                    token.ThrowIfCancellationRequested();
 
                     var sb = new StringBuilder("INSERT INTO ")
                         .Append(GetTableNameString(tableName))
@@ -170,7 +175,7 @@ namespace Raven.Server.Documents.SqlReplication
                     sb.Length = sb.Length - 2;
                     sb.Append(")");
 
-                    if (IsSqlServerFactoryType && _sqlReplication.Configuration.ForceSqlServerQueryRecompile)
+                    if (IsSqlServerFactoryType && _etl.SqlConfiguration.ForceSqlServerQueryRecompile)
                     {
                         sb.Append(" OPTION(RECOMPILE)");
                     }
@@ -178,22 +183,20 @@ namespace Raven.Server.Documents.SqlReplication
                     var stmt = sb.ToString();
                     cmd.CommandText = stmt;
 
-                    if (commandCallback != null)
-                    {
-                        commandCallback(cmd);
-                    }
+                    commandCallback?.Invoke(cmd);
+
                     try
                     {
                         cmd.ExecuteNonQuery();
+                        inserted++;
                     }
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info(
-                                "Failure to replicate changes to relational database for: " + _sqlReplication.Configuration.Name + " (doc: " + itemToReplicate.DocumentKey + " ), will continue trying." +
+                                "Failure to replicate changes to relational database for: " + _etl.Name + " (doc: " + itemToReplicate.DocumentKey + " ), will continue trying." +
                                 Environment.NewLine + cmd.CommandText, e);
-                        _sqlReplication.Statistics.RecordWriteError(e, _database);
-                        hadErrors = true;
+                       _etl.Statistics.RecordWriteError(e);
                     }
                     finally
                     {
@@ -204,7 +207,7 @@ namespace Raven.Server.Documents.SqlReplication
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Insert took: {elapsedMilliseconds}ms, statement: {stmt}");
 
-                        var sqlReplicationTableMetrics = _sqlReplication.MetricsCountersManager.GetTableMetrics(tableName);
+                        var sqlReplicationTableMetrics = _etl.MetricsCountersManager.GetTableMetrics(tableName);
                         sqlReplicationTableMetrics.SqlReplicationInsertActionsMeter.Mark(1);
 
                         if (elapsedMilliseconds > LongStatementWarnThresholdInMilliseconds)
@@ -214,6 +217,8 @@ namespace Raven.Server.Documents.SqlReplication
                     }
                 }
             }
+
+            return inserted;
         }
 
         private DbCommand CreateCommand()
@@ -224,8 +229,8 @@ namespace Raven.Server.Documents.SqlReplication
             {
                 cmd.Transaction = _tx;
 
-                if (_sqlReplication.Configuration.CommandTimeout.HasValue)
-                    cmd.CommandTimeout = _sqlReplication.Configuration.CommandTimeout.Value;
+                if (_etl.SqlConfiguration.CommandTimeout.HasValue)
+                    cmd.CommandTimeout = _etl.SqlConfiguration.CommandTimeout.Value;
                 else if (_database.Configuration.SqlReplication.CommandTimeout.HasValue)
                     cmd.CommandTimeout = (int)_database.Configuration.SqlReplication.CommandTimeout.Value.AsTimeSpan.TotalSeconds;
 
@@ -238,16 +243,19 @@ namespace Raven.Server.Documents.SqlReplication
             }
         }
 
-        public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> documentKeys, Action<DbCommand> commandCallback = null)
+        public int DeleteItems(string tableName, string pkName, bool doNotParameterize, List<ToSqlItem> toDelete, CancellationToken token, Action<DbCommand> commandCallback = null)
         {
             const int maxParams = 1000;
+
+            var deleted = 0;
 
             var sp = new Stopwatch();
             using (var cmd = CreateCommand())
             {
                 sp.Start();
-                _sqlReplication.CancellationToken.ThrowIfCancellationRequested();
-                for (int i = 0; i < documentKeys.Count; i += maxParams)
+                token.ThrowIfCancellationRequested();
+
+                for (int i = 0; i < toDelete.Count; i += maxParams)
                 {
                     cmd.Parameters.Clear();
                     var sb = new StringBuilder("DELETE FROM ")
@@ -256,7 +264,7 @@ namespace Raven.Server.Documents.SqlReplication
                         .Append(_commandBuilder.QuoteIdentifier(pkName))
                         .Append(" IN (");
 
-                    for (int j = i; j < Math.Min(i + maxParams, documentKeys.Count); j++)
+                    for (int j = i; j < Math.Min(i + maxParams, toDelete.Count); j++)
                     {
                         if (i != j)
                             sb.Append(", ");
@@ -264,39 +272,37 @@ namespace Raven.Server.Documents.SqlReplication
                         {
                             var dbParameter = cmd.CreateParameter();
                             dbParameter.ParameterName = GetParameterName("p" + j);
-                            dbParameter.Value = documentKeys[j];
+                            dbParameter.Value = toDelete[j];
                             cmd.Parameters.Add(dbParameter);
                             sb.Append(dbParameter.ParameterName);
                         }
                         else
                         {
-                            sb.Append("'").Append(SanitizeSqlValue(documentKeys[j])).Append("'");
+                            sb.Append("'").Append(SanitizeSqlValue(toDelete[j].DocumentKey)).Append("'");
                         }
                     }
                     sb.Append(")");
 
-                    if (IsSqlServerFactoryType && _sqlReplication.Configuration.ForceSqlServerQueryRecompile)
+                    if (IsSqlServerFactoryType && _etl.SqlConfiguration.ForceSqlServerQueryRecompile)
                     {
                         sb.Append(" OPTION(RECOMPILE)");
                     }
                     var stmt = sb.ToString();
                     cmd.CommandText = stmt;
 
-                    if (commandCallback != null)
-                    {
-                        commandCallback(cmd);
-                    }
+                    commandCallback?.Invoke(cmd);
 
                     try
                     {
                         cmd.ExecuteNonQuery();
+                        deleted++;
                     }
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info("Failure to replicate changes to relational database for: " + _sqlReplication.Configuration.Name + ", will continue trying." + Environment.NewLine + cmd.CommandText, e);
-                        _sqlReplication.Statistics.RecordWriteError(e, _database);
-                        hadErrors = true;
+                            _logger.Info("Failure to replicate changes to relational database for: " + _etl.Name + ", will continue trying." + Environment.NewLine + cmd.CommandText, e);
+
+                        _etl.Statistics.RecordWriteError(e);
                     }
                     finally
                     {
@@ -307,7 +313,7 @@ namespace Raven.Server.Documents.SqlReplication
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Delete took: {elapsedMiliseconds}ms, statement: {stmt}");
 
-                        var sqlReplicationTableMetrics = _sqlReplication.MetricsCountersManager.GetTableMetrics(tableName);
+                        var sqlReplicationTableMetrics = _etl.MetricsCountersManager.GetTableMetrics(tableName);
                         sqlReplicationTableMetrics.SqlReplicationDeleteActionsMeter.Mark(1);
 
                         if (elapsedMiliseconds > LongStatementWarnThresholdInMilliseconds)
@@ -317,20 +323,22 @@ namespace Raven.Server.Documents.SqlReplication
                     }
                 }
             }
+
+            return deleted;
         }
 
         private void HandleSlowSql(long elapsedMiliseconds, string stmt)
         {
-            var message = $"[{_sqlReplication.Configuration.Name}] Slow SQL detected. Execution took: {elapsedMiliseconds}ms, statement: {stmt}";
+            var message = $"[{_etl.Name}] Slow SQL detected. Execution took: {elapsedMiliseconds}ms, statement: {stmt}";
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
 
-            _database.NotificationCenter.Add(AlertRaised.Create(SqlReplication.AlertTitle, message, AlertType.SqlReplication_SlowSql, NotificationSeverity.Warning));
+            _database.NotificationCenter.Add(AlertRaised.Create(_etl.Tag, message, AlertType.SqlReplication_SlowSql, NotificationSeverity.Warning));
         }
 
         private string GetTableNameString(string tableName)
         {
-            if (_sqlReplication.Configuration.QuoteTables)
+            if (_etl.SqlConfiguration.QuoteTables)
             {
                 return string.Join(".", tableName.Split('.').Select(_commandBuilder.QuoteIdentifier).ToArray());
             }
@@ -362,81 +370,29 @@ namespace Raven.Server.Documents.SqlReplication
             }
         }
 
-        public class TableQuerySummary
+        public SqlWriteStats Write(SqlTableWithRecords table, CancellationToken token, List<DbCommand> commands = null)
         {
-            public string TableName { get; set; }
-            public CommandData[] Commands { get; set; }
+            var stats = new SqlWriteStats();
 
+            var collectCommands = commands != null ? commands.Add : (Action<DbCommand>)null;
 
-            public class CommandData
+            if (table.InsertOnlyMode == false && table.Deletes.Count > 0)
             {
-                public string CommandText { get; set; }
-                public KeyValuePair<string, object>[] Params { get; set; }
+                stats.DeletedRecordsCount = DeleteItems(table.TableName, table.DocumentKeyColumn, _etl.SqlConfiguration.ParameterizeDeletesDisabled, table.Deletes, token, collectCommands);
             }
 
-            public static TableQuerySummary GenerateSummaryFromCommands(string tableName, IEnumerable<DbCommand> commands)
-            {
-                var tableQuerySummary = new TableQuerySummary();
-                tableQuerySummary.TableName = tableName;
-                tableQuerySummary.Commands =
-                    commands
-                        .Select(x => new CommandData()
-                        {
-                            CommandText = x.CommandText,
-                            Params = x.Parameters.Cast<DbParameter>().Select(y => new KeyValuePair<string, object>(y.ParameterName, y.Value)).ToArray()
-                        }).ToArray();
-
-                return tableQuerySummary;
-            }
-        }
-
-        public bool ExecuteScript(SqlReplicationScriptResult scriptResult)
-        {
-            foreach (var sqlReplicationTable in _sqlReplication.Configuration.SqlReplicationTables)
+            if (table.Inserts.Count > 0)
             {
                 // first, delete all the rows that might already exist there
-                if (sqlReplicationTable.InsertOnlyMode == false)
+                if (table.InsertOnlyMode == false)
                 {
-                    DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, _sqlReplication.Configuration.ParameterizeDeletesDisabled, scriptResult.Keys);
+                    DeleteItems(table.TableName, table.DocumentKeyColumn, _etl.SqlConfiguration.ParameterizeDeletesDisabled, table.Inserts, token, collectCommands);
                 }
 
-                List<ItemToReplicate> dataForTable;
-                if (scriptResult.Data.TryGetValue(sqlReplicationTable.TableName, out dataForTable))
-                {
-                    InsertItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable);
-                }
+                stats.InsertedRecordsCount = InsertItems(table.TableName, table.DocumentKeyColumn, table.Inserts, token, collectCommands);
             }
 
-            Commit();
-
-            return hadErrors == false;
-        }
-
-        public IEnumerable<TableQuerySummary> RolledBackExecute(SqlReplicationScriptResult scriptResult)
-        {
-            var identifiers = scriptResult.Data.SelectMany(x => x.Value).Select(x => x.DocumentKey).Distinct().ToList();
-
-            // first, delete all the rows that might already exist there
-            foreach (var sqlReplicationTable in _sqlReplication.Configuration.SqlReplicationTables)
-            {
-                var commands = new List<DbCommand>();
-                DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, _sqlReplication.Configuration.ParameterizeDeletesDisabled,
-                    identifiers, commands.Add);
-                yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName, commands);
-            }
-
-            foreach (var sqlReplicationTable in _sqlReplication.Configuration.SqlReplicationTables)
-            {
-                List<ItemToReplicate> dataForTable;
-                if (scriptResult.Data.TryGetValue(sqlReplicationTable.TableName, out dataForTable) == false)
-                    continue;
-                var commands = new List<DbCommand>();
-                InsertItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable, commands.Add);
-
-                yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName, commands);
-            }
-
-            _tx.Rollback();
+            return stats;
         }
 
         public static void SetParamValue(DbParameter colParam, SqlReplicationColumn column, List<Func<DbParameter, string, bool>> stringParsers)

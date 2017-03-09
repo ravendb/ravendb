@@ -1,6 +1,7 @@
 using System.Linq;
+using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 
-namespace Raven.Server.Documents.SqlReplication
+namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
     public class RelationalDatabaseWriterBase
     {

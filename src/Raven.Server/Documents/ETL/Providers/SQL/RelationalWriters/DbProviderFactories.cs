@@ -2,6 +2,8 @@ using System;
 using System.Data.Common;
 using System.Data.SqlClient;
 using Npgsql;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+
 namespace Raven.Server.Documents.SqlReplication
 {
     public class DbProviderFactories

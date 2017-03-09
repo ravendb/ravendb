@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.Documents;
-using Raven.Server.Documents.SqlReplication;
+using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 
