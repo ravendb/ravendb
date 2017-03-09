@@ -2,7 +2,6 @@
 using FastTests.Server.Documents.Versioning;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
-using Raven.Server.Config.Categories;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -13,118 +12,120 @@ namespace FastTests.Server.Replication
         [Fact]
         public async Task CanReplicateVersions()
         {
-            var company = new Company { Name = "Company Name" };
-            var company2 = new Company { Name = "Company Name2" };
+            var company = new Company {Name = "Company Name"};
+            var company2 = new Company {Name = "Company Name2"};
 
-            var master = GetDocumentStore();
-            var slave = GetDocumentStore();
-            
-            await VersioningHelper.SetupVersioning(master);
-            await VersioningHelper.SetupVersioning(slave);
-
-            SetupReplication(master, slave);
-
-            using (var session = master.OpenAsyncSession())
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
             {
-                await session.StoreAsync(company,"foo/bar");
-                await session.SaveChangesAsync();                
+                await VersioningHelper.SetupVersioning(master);
+                await VersioningHelper.SetupVersioning(slave);
+
+                SetupReplication(master, slave);
+
+                using (var session = master.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = master.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company2, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(WaitForDocument(slave, "foo/bar"));
+                Assert.Equal(2, WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 2));
             }
-
-            using (var session = master.OpenAsyncSession())
-            {
-                await session.StoreAsync(company2, "foo/bar");
-                await session.SaveChangesAsync();
-            }
-
-            Assert.True(WaitForDocument(slave, "foo/bar"));
-            Assert.Equal(2,WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 2));
-
         }
 
         [Fact]
         public async Task CreateVersionsAndReplicateThemAll()
         {
-            var company = new Company { Name = "Company Name" };
-            var company2 = new Company { Name = "Company Name2" };
-            var company3 = new Company { Name = "Company Name3" };
-            var company4 = new Company { Name = "Company Name4" };
+            var company = new Company {Name = "Company Name"};
+            var company2 = new Company {Name = "Company Name2"};
+            var company3 = new Company {Name = "Company Name3"};
+            var company4 = new Company {Name = "Company Name4"};
 
-            var master = GetDocumentStore();
-            var slave = GetDocumentStore();
-
-            await VersioningHelper.SetupVersioning(master);
-            await VersioningHelper.SetupVersioning(slave);
-
-            using (var session = master.OpenAsyncSession())
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
             {
-                await session.StoreAsync(company, "foo/bar");
-                await session.SaveChangesAsync();
+                await VersioningHelper.SetupVersioning(master);
+                await VersioningHelper.SetupVersioning(slave);
+
+                using (var session = master.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = master.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company2, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = master.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company3, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = master.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company4, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                SetupReplication(master, slave);
+
+                Assert.True(WaitForDocument(slave, "foo/bar"));
+                Assert.Equal(4, WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 4));
             }
-
-            using (var session = master.OpenAsyncSession())
-            {
-                await session.StoreAsync(company2, "foo/bar");
-                await session.SaveChangesAsync();
-            }
-
-            using (var session = master.OpenAsyncSession())
-            {
-                await session.StoreAsync(company3, "foo/bar");
-                await session.SaveChangesAsync();
-            }
-
-            using (var session = master.OpenAsyncSession())
-            {
-                await session.StoreAsync(company4, "foo/bar");
-                await session.SaveChangesAsync();
-            }
-
-            SetupReplication(master, slave);
-
-            Assert.True(WaitForDocument(slave, "foo/bar"));
-            Assert.Equal(4, WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 4));
         }
 
         [Fact]
         public async Task ReplicateVersionsIgnoringConflicts()
         {
-            var storeA = GetDocumentStore();
-            var storeB = GetDocumentStore();
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                await GenerateConflict(storeA, storeB);
 
-            await GenerateConflict(storeA, storeB);
+                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar")["foo/bar"].Count);
+                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
 
-            Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar")["foo/bar"].Count);
-            Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
-
-            Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
-            Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
+                Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
+                Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
+            }
         }
 
         [Fact]
         public async Task CreateConflictAndResolveItIncreaseTheVersion()
         {
-            
-            var storeA = GetDocumentStore();
-            var storeB = GetDocumentStore();
-
-            await GenerateConflict(storeA, storeB);
-            
-            Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
-            Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
-
-            Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
-            Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
-
-            SetupReplication(storeA, new ReplicationDocument
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
             {
-                DocumentConflictResolution = StraightforwardConflictResolution.ResolveToLatest
-            }, storeB);
+                await GenerateConflict(storeA, storeB);
 
-            Assert.True(WaitForDocument(storeA, "foo/bar"));
-            Assert.True(WaitForDocument(storeB, "foo/bar"));
+                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
+                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
 
-            Assert.Equal(3, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 3));
-            Assert.Equal(3, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 3));
+                Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
+                Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
+
+                SetupReplication(storeA, new ReplicationDocument
+                {
+                    DocumentConflictResolution = StraightforwardConflictResolution.ResolveToLatest
+                }, storeB);
+
+                Assert.True(WaitForDocument(storeA, "foo/bar"));
+                Assert.True(WaitForDocument(storeB, "foo/bar"));
+
+                Assert.Equal(3, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 3));
+                Assert.Equal(3, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 3));
+            }
         }
 
 
@@ -150,6 +151,37 @@ namespace FastTests.Server.Replication
 
             SetupReplication(storeA, storeB);
             SetupReplication(storeB, storeA);
+        }
+
+        [Fact]
+        public async Task UpdateTheSameRevisoinWhenGettingExistingRevision()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            using (var storeC = GetDocumentStore())
+            {
+                await VersioningHelper.SetupVersioning(storeA);
+                await VersioningHelper.SetupVersioning(storeB);
+                await VersioningHelper.SetupVersioning(storeC);
+
+                SetupReplication(storeA, storeB);
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Fitzchak"}, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.Equal(1, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 1));
+                Assert.Equal(1, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 1));
+                Assert.True(WaitForDocument(storeB, "foo/bar"));
+
+                SetupReplication(storeA, storeC);
+                SetupReplication(storeB, storeC);
+
+                Assert.Equal(2, WaitForValue(() => GetReplicationStats(storeC).IncomingStats.Count, 2));
+                Assert.Equal(1, WaitForValue(() => GetRevisions(storeC, "foo/bar").Count, 1));
+            }
         }
     }
 }
