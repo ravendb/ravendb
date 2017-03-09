@@ -1,7 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
-import resource = require("models/resources/resource");
 
 class recentError extends abstractNotification {
 

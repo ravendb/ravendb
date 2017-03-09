@@ -47,7 +47,7 @@ class statistics extends viewModelBase {
     }
 
     afterClientApiConnected(): void {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         this.addNotification(changesApi.watchAllDocs(e => this.refreshStatsObservable(new Date().getTime())));
         this.addNotification(changesApi.watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime())))
     }

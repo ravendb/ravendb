@@ -107,7 +107,7 @@ class transformers extends viewModelBase {
     }
 
     afterClientApiConnected(): void {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         this.addNotification(changesApi.watchAllTransformers((e) => this.processTransformerEvent(e)));
     }
 

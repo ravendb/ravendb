@@ -1,13 +1,13 @@
 import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 
-class disableResourceToggleConfirm extends confirmViewModelBase<confirmDialogResult> {
+class disableDatabaseToggleConfirm extends confirmViewModelBase<confirmDialogResult> {
 
     desiredAction = ko.observable<string>();
     deletionText: string;
     confirmDeletionText: string;
 
-    constructor(private resources: Array<resource>, private disable: boolean) {
+    constructor(private dbs: Array<database>, private disable: boolean) {
         super(null);
 
         this.deletionText = disable ? "You're disabling" : "You're enabling";
@@ -15,4 +15,4 @@ class disableResourceToggleConfirm extends confirmViewModelBase<confirmDialogRes
     }
 }
 
-export = disableResourceToggleConfirm;
+export = disableDatabaseToggleConfirm;

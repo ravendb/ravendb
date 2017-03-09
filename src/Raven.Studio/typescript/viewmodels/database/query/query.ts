@@ -486,7 +486,7 @@ class query extends viewModelBase {
 
             const queryCommand = new queryIndexCommand(database, 0, 25, this.criteria(), this.disableCache());
 
-            this.rawJsonUrl(appUrl.forResourceQuery(database) + queryCommand.getUrl());
+            this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCommand.getUrl());
             this.csvUrl(queryCommand.getCsvUrl());
 
             const resultsFetcher = (skip: number, take: number) => {
@@ -885,7 +885,7 @@ class query extends viewModelBase {
         eventsCollector.default.reportEvent("query", "export-csv");
 
         var db = this.activeDatabase();
-        var url = appUrl.forResourceQuery(db) + this.csvUrl();
+        var url = appUrl.forDatabaseQuery(db) + this.csvUrl();
         this.downloader.download(db, url);
     }
 

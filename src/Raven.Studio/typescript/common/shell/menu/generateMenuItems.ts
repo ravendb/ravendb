@@ -4,7 +4,6 @@ import appUrl = require("common/appUrl");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
-import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 
 import getManageServerMenuItem = require("common/shell/menu/items/manageServer");
@@ -18,14 +17,12 @@ import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
 export = generateMenuItems;
 
-function generateMenuItems(resource: resource) {
+function generateMenuItems(resource: database) {
     if (!resource) {
         return generateNoActiveResourceMenuItems();
-    } else if (resource instanceof database) {
-        return generateActiveDatabaseMenuItems();
-    } else {
-        throw new Error(`Menu items for resource of type ${ resource.fullTypeName } are not implemented.`);
-    }
+    } 
+
+    return generateActiveDatabaseMenuItems();
 }
 
 function aboutItem() {
@@ -50,7 +47,6 @@ function generateNoActiveResourceMenuItems() {
     ];
     
 }
-
 
 function generateActiveDatabaseMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();

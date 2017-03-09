@@ -1,7 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 
 class alert extends abstractNotification {
 
@@ -9,8 +9,8 @@ class alert extends abstractNotification {
     key = ko.observable<string>();
     details = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.INotificationDetails>();
 
-    constructor(resource: resource, dto: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
-        super(resource, dto);
+    constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
+        super(db, dto);
         this.updateWith(dto);
 
         this.hasDetails = ko.pureComputed(() => !!this.details());

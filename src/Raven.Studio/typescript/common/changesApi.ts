@@ -1,6 +1,6 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import changeSubscription = require("common/changeSubscription");
 import changesCallback = require("common/changesCallback");
 
@@ -10,8 +10,8 @@ import eventsWebSocketClient = require("common/eventsWebSocketClient");
 
 class changesApi extends eventsWebSocketClient<changesApiEventDto> {
 
-    constructor(rs: resource) {
-        super(rs);
+    constructor(db: database) {
+        super(db);
     }
 
     //TODO: private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
@@ -24,7 +24,7 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto> {
     private watchedIndexes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Client.Documents.Changes.IndexChange>>>();
 
     get connectionDescription() {
-        return this.rs.fullTypeName + " = " + this.rs.name;
+        return this.db.fullTypeName + " = " + this.db.name;
     }
 
     protected webSocketUrlFactory(token: singleAuthToken) {
@@ -34,7 +34,7 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto> {
 
     protected onOpen() {
         super.onOpen();
-        ko.postbox.publish(EVENTS.ChangesApi.Reconnected, this.rs);
+        ko.postbox.publish(EVENTS.ChangesApi.Reconnected, this.db);
     }
 
     protected onMessage(eventDto: changesApiEventDto) {

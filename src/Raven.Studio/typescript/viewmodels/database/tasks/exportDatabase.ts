@@ -198,7 +198,7 @@ class exportDatabase extends viewModelBase {
                 const url = endpoints.databases.smuggler.smugglerExport;
                 const authToken = (url.indexOf("?") === -1 ? "?" : "&") + "singleUseAuthToken=" + token.Token;
                 const operationPart = "&operationId=" + operationId;
-                $form.attr("action", appUrl.forResourceQuery(db) + url + authToken + operationPart);
+                $form.attr("action", appUrl.forDatabaseQuery(db) + url + authToken + operationPart);
                 $downloadOptions.val(JSON.stringify(args, (key, value) => {
                     if (key === "TransformScript" && value === "") {
                         return undefined;

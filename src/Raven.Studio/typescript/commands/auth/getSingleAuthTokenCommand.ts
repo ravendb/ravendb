@@ -1,10 +1,10 @@
 import commandBase = require("commands/commandBase");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class getSingleAuthTokenCommand extends commandBase {
 
-    constructor(private resource: resource, private checkIfMachineAdmin :boolean = false) {
+    constructor(private db: database, private checkIfMachineAdmin :boolean = false) {
         super();
     }
 
@@ -17,7 +17,7 @@ class getSingleAuthTokenCommand extends commandBase {
             };
         }
             
-        return this.query(endpoints.databases.singleAuthToken.singleAuthToken, args, this.resource);
+        return this.query(endpoints.databases.singleAuthToken.singleAuthToken, args, this.db);
     }
 }
 

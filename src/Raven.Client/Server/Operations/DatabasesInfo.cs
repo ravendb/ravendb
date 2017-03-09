@@ -5,13 +5,24 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Server.Operations
 {
-    public class ResourcesInfo
+    public class DatabasesInfo
     {
         public List<DatabaseInfo> Databases { get; set; }
+    }
+
+    public class BackupInfo
+    {
+        public DateTime LastIncrementalBackup { get; set; }
+
+        public DateTime LastFullBackup { get; set; }
+
+        public TimeSpan IncrementalBackupInterval { get; set; }
+
+        public TimeSpan FullBackupInterval { get; set; }
 
     }
 
-    public class ResourceInfo
+    public class DatabaseInfo
     {
         public string Name { get; set; }
         public bool Disabled { get; set; }
@@ -32,22 +43,6 @@ namespace Raven.Client.Server.Operations
 
         public List<string> Bundles { get; set; }
 
-    }
-
-    public class BackupInfo
-    {
-        public DateTime LastIncrementalBackup { get; set; }
-
-        public DateTime LastFullBackup { get; set; }
-
-        public TimeSpan IncrementalBackupInterval { get; set; }
-
-        public TimeSpan FullBackupInterval { get; set; }
-
-    }
-
-    public class DatabaseInfo : ResourceInfo
-    {
         public bool RejectClients { get; set; }
 
         public IndexRunningStatus IndexingStatus { get; set; }

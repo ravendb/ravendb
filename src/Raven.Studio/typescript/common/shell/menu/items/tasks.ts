@@ -1,4 +1,4 @@
-﻿import activeResourceTracker = require("common/shell/activeResourceTracker");
+﻿import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import appUrl = require("common/appUrl");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
@@ -6,7 +6,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 export = getTasksMenuItem;
 
 function getTasksMenuItem(appUrls: computedAppUrls) {
-    let activeDatabase = activeResourceTracker.default.database;
+    let activeDatabase = activeDatabaseTracker.default.database;
     var importDatabaseUrl = ko.computed(() => appUrl.forImportDatabase(activeDatabase()));
     var exportDatabaseUrl = ko.computed(() => appUrl.forExportDatabase(activeDatabase()));
     var sampleDataUrl = ko.computed(() => appUrl.forSampleData(activeDatabase()));

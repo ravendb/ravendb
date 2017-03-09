@@ -1,20 +1,18 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-import resourceInfo = require("models/resources/info/resourceInfo");
 import databaseInfo = require("models/resources/info/databaseInfo");
 
-class resourcesInfo {
+class databasesInfo {
 
-    sortedResources = ko.observableArray<resourceInfo>();
+    sortedResources = ko.observableArray<databaseInfo>();
 
     databasesCount: KnockoutComputed<number>;
 
-
-    constructor(dto: Raven.Client.Server.Operations.ResourcesInfo) {
+    constructor(dto: Raven.Client.Server.Operations.DatabasesInfo) {
 
         const databases = dto.Databases.map(db => new databaseInfo(db));
 
-        const resources = [...databases] as resourceInfo[];
+        const resources = [...databases];
         resources.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
         this.sortedResources(resources);
@@ -26,23 +24,14 @@ class resourcesInfo {
         return this.sortedResources().find(x => x.qualifiedName.toLowerCase() === qualifiedName.toLowerCase());
     }
 
-    updateResource(newResourceInfo: Raven.Client.Server.Operations.ResourceInfo, resourceType: string) {
-        let resourceToUpdate = this.getByQualifiedName(resourceType + "/" + newResourceInfo.Name);
+    updateDatabase(newDatabaseInfo: Raven.Client.Server.Operations.DatabaseInfo, resourceType: string) {
+        let resourceToUpdate = this.getByQualifiedName(resourceType + "/" + newDatabaseInfo.Name);
 
         if (resourceToUpdate) {
-            resourceToUpdate.update(newResourceInfo);
+            resourceToUpdate.update(newDatabaseInfo);
         } else { // new resource - create instance of it
-            let resourceToAdd: resourceInfo;
-            switch (resourceType) { //TODO: no need
-                case "db":
-
-                    let dto = newResourceInfo as Raven.Client.Server.Operations.DatabaseInfo;
-                    resourceToAdd = new databaseInfo(dto);
-                    break;
-
-                default:
-                    throw new Error("Unsupported resource type = " + resourceType);
-            }
+            let dto = newDatabaseInfo as Raven.Client.Server.Operations.DatabaseInfo;
+            let resourceToAdd = new databaseInfo(dto);
 
             let locationToInsert = _.sortedIndexBy(this.sortedResources(), resourceToAdd, function (item) { return item.name.toLowerCase() });
             this.sortedResources.splice(locationToInsert, 0, resourceToAdd);
@@ -57,4 +46,4 @@ class resourcesInfo {
     }
 }
 
-export = resourcesInfo;
+export = databasesInfo;

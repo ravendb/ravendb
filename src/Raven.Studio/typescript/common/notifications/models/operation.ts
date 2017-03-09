@@ -1,7 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 
 class operation extends abstractNotification {
 
@@ -14,8 +14,8 @@ class operation extends abstractNotification {
     isCompleted: KnockoutComputed<boolean>;
     isPercentageProgress: KnockoutComputed<boolean>;
 
-    constructor(resource: resource, dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
-        super(resource, dto);
+    constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
+        super(db, dto);
 
         this.operationId(dto.OperationId);
         this.updateWith(dto);

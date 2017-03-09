@@ -103,7 +103,7 @@ namespace Raven.Server.Web.System
                     var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     ServerStore.Write(context, dbId, newDoc2);
-                    ServerStore.NotificationCenter.AddAfterTransactionCommit(ResourceChanged.Create(dbId, ResourceChangeType.Put), tx);
+                    ServerStore.NotificationCenter.AddAfterTransactionCommit(DatabaseChanged.Create(dbId, ResourceChangeType.Put), tx);
 
                     databasesToUnload.Add(name);
 

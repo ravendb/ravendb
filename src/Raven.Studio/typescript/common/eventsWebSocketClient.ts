@@ -1,6 +1,6 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require("common/messagePublisher");
@@ -12,8 +12,8 @@ abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
 
     private sentMessages: chagesApiConfigureRequestDto[] = [];
    
-    protected constructor(protected rs: resource) {
-        super(rs);
+    protected constructor(protected db: database) {
+        super(db);
     }
 
     protected get autoReconnect() {

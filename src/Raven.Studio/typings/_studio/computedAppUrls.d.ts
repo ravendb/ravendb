@@ -5,7 +5,7 @@ interface computedAppUrls {
 
     hasApiKey: KnockoutComputed<string>;
 
-    resources: KnockoutComputed<string>;
+    databases: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
@@ -74,7 +74,7 @@ interface computedAppUrls {
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
-    resourcesManagement: KnockoutComputed<string>;
+    databasesManagement: KnockoutComputed<string>;
 
     subscriptions: KnockoutComputed<string>;
 }

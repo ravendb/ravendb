@@ -1,15 +1,15 @@
 import commandBase = require("commands/commandBase");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class getNextOperationId extends commandBase {
 
-    constructor(private rs: resource) {
+    constructor(private db: database) {
         super();
     }
 
     execute(): JQueryPromise<number> {
-        return this.query(endpoints.databases.operations.operationsNextOperationId, null, this.rs);
+        return this.query(endpoints.databases.operations.operationsNextOperationId, null, this.db);
     }
 }
 

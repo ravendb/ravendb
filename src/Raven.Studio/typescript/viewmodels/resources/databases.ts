@@ -2,30 +2,28 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
-import resource = require("models/resources/resource");
-import deleteResourceConfirm = require("viewmodels/resources/deleteResourceConfirm");
+import deleteDatabaseConfirm = require("viewmodels/resources/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/resources/createDatabase");
-import disableResourceToggleConfirm = require("viewmodels/resources/disableResourceToggleConfirm");
-import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
+import disableDatabaseToggleConfirm = require("viewmodels/resources/disableDatabaseToggleConfirm");
+import disableDatabaseToggleCommand = require("commands/resources/disableDatabaseToggleCommand");
 import togglePauseIndexingCommand = require("commands/database/index/togglePauseIndexingCommand");
 import toggleDisableIndexingCommand = require("commands/database/index/toggleDisableIndexingCommand");
-import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
-import loadResourceCommand = require("commands/resources/loadResourceCommand");
+import deleteDatabaseCommand = require("commands/resources/deleteDatabaseCommand");
+import loadDatabaseCommand = require("commands/resources/loadDatabaseCommand");
 import resourcesManager = require("common/shell/resourcesManager");
 import changesContext = require("common/changesContext");
 
-import resourcesInfo = require("models/resources/info/resourcesInfo");
-import getResourcesCommand = require("commands/resources/getResourcesCommand");
-import getResourceCommand = require("commands/resources/getResourceCommand");
-import resourceInfo = require("models/resources/info/resourceInfo");
+import databasesInfo = require("models/resources/info/databasesInfo");
+import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
+import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import database = require("models/resources/database");
 import EVENTS = require("common/constants/events");
 import messagePublisher = require("common/messagePublisher");
 
-class resources extends viewModelBase {
+class databases extends viewModelBase {
 
-    resources = ko.observable<resourcesInfo>();
+    databases = ko.observable<databasesInfo>();
 
     filters = {
         searchText: ko.observable<string>()
@@ -39,7 +37,7 @@ class resources extends viewModelBase {
     }
 
     private static compactView = ko.observable<boolean>(false);
-    compactView = resources.compactView;
+    compactView = databases.compactView;
 
     isGlobalAdmin = accessHelper.isGlobalAdmin;
     
@@ -57,7 +55,7 @@ class resources extends viewModelBase {
         filters.searchText.throttle(200).subscribe(() => this.filterResources());
 
         this.selectionState = ko.pureComputed<checkbox>(() => {
-            const resources = this.resources().sortedResources().filter(x => !x.filteredOut());
+            const resources = this.databases().sortedResources().filter(x => !x.filteredOut());
             var selectedCount = this.selectedResources().length;
             if (resources.length && selectedCount === resources.length)
                 return checkbox.Checked;
@@ -72,54 +70,54 @@ class resources extends viewModelBase {
         return true;
     }
 
-    activate(args: any): JQueryPromise<Raven.Client.Server.Operations.ResourcesInfo> {
+    activate(args: any): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
         super.activate(args);
 
         // we can't use createNotifications here, as it is called after *resource changes API* is connected, but user
         // can enter this view and never select resource
 
-        this.addNotification(this.changesContext.serverNotifications().watchResourceChangeStartingWith("db/", (e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) => this.fetchResource(e)));
-        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchResources()));
+        this.addNotification(this.changesContext.serverNotifications().watchDatabaseChangeStartingWith("db/", (e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.fetchResource(e)));
+        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabases()));
 
-        return this.fetchResources();
+        return this.fetchDatabases();
     }
 
     attached() {
         super.attached();
         this.updateHelpLink("Z8DC3Q");
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
-        this.updateUrl(appUrl.forResources());
+        this.updateUrl(appUrl.forDatabases());
     }
 
-    private fetchResources(): JQueryPromise<Raven.Client.Server.Operations.ResourcesInfo> {
-        return new getResourcesCommand()
+    private fetchDatabases(): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+        return new getDatabasesCommand()
             .execute()
-            .done(info => this.resources(new resourcesInfo(info)));
+            .done(info => this.databases(new databasesInfo(info)));
     }
 
-    private fetchResource(e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) {
-        const qualiferAndName = resourceInfo.extractQualifierAndNameFromNotification(e.ResourceName);
+    private fetchResource(e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
+        const qualiferAndName = databaseInfo.extractQualifierAndNameFromNotification(e.DatabaseName);
 
         switch (e.ChangeType) {
             case "Load":
             case "Put":
-                this.updateResourceInfo(qualiferAndName.qualifier, qualiferAndName.name);
+                this.updateDatabaseInfo(qualiferAndName.qualifier, qualiferAndName.name);
                 break;
 
             case "Delete":
-                const resource = this.resources().sortedResources().find(rs => rs.qualifiedName === e.ResourceName);
+                const resource = this.databases().sortedResources().find(rs => rs.qualifiedName === e.DatabaseName);
                 if (resource) {
-                    this.removeResource(resource);
+                    this.removeDatabase(resource);
                 }
                 break;
         }
     }
 
-    private updateResourceInfo(qualifer: string, resourceName: string) {
-        new getResourceCommand(qualifer, resourceName)
+    private updateDatabaseInfo(qualifer: string, resourceName: string) {
+        new getDatabaseCommand(resourceName)
             .execute()
-            .done((result: Raven.Client.Server.Operations.ResourceInfo) => {
-                this.resources().updateResource(result, qualifer);
+            .done((result: Raven.Client.Server.Operations.DatabaseInfo) => {
+                this.databases().updateDatabase(result, qualifer);
                 this.filterResources();
             });
     }
@@ -133,9 +131,9 @@ class resources extends viewModelBase {
             searchText = searchText.toLowerCase();
         }
 
-        const matchesFilters = (rs: resourceInfo) => !hasSearchText || rs.name.toLowerCase().indexOf(searchText) >= 0;
+        const matchesFilters = (rs: databaseInfo) => !hasSearchText || rs.name.toLowerCase().indexOf(searchText) >= 0;
 
-        const resources = this.resources();
+        const resources = this.databases();
         resources.sortedResources().forEach(resource => {
             const matches = matchesFilters(resource);
             resource.filteredOut(!matches);
@@ -146,17 +144,14 @@ class resources extends viewModelBase {
         });
     }
 
-    resourceUrl(rs: resourceInfo): string {
-        if (rs instanceof databaseInfo) {
-            const db = rs.asResource();
-            return appUrl.forDocuments(null, db);
-        }
-        return null;
+    resourceUrl(dbInfo: databaseInfo): string {
+        const db = dbInfo.asDatabase();
+        return appUrl.forDocuments(null, db);
     }
 
-    private getSelectedResources() {
+    private getSelectedDatabases() {
         const selected = this.selectedResources();
-        return this.resources().sortedResources().filter(x => _.includes(selected, x.qualifiedName));
+        return this.databases().sortedResources().filter(x => _.includes(selected, x.qualifiedName));
     }
 
     toggleSelectAll(): void {
@@ -167,7 +162,7 @@ class resources extends viewModelBase {
         } else {
             const namesToSelect = [] as Array<string>;
 
-            this.resources().sortedResources().forEach(resource => {
+            this.databases().sortedResources().forEach(resource => {
                 if (!resource.filteredOut()) {
                     namesToSelect.push(resource.qualifiedName);
                 }
@@ -177,33 +172,33 @@ class resources extends viewModelBase {
         }
     }
 
-    deleteResource(rs: resourceInfo) {
+    deleteResource(rs: databaseInfo) {
         this.deleteResources([rs]);
     }
 
     deleteSelectedResources() {
-       this.deleteResources(this.getSelectedResources());
+       this.deleteResources(this.getSelectedDatabases());
     }
 
-    private deleteResources(toDelete: resourceInfo[]) {
-        const confirmDeleteViewModel = new deleteResourceConfirm(toDelete);
+    private deleteResources(toDelete: databaseInfo[]) {
+        const confirmDeleteViewModel = new deleteDatabaseConfirm(toDelete);
 
         confirmDeleteViewModel
             .result
-            .done((confirmResult: deleteResourceConfirmResult) => {
+            .done((confirmResult: deleteDatabaseConfirmResult) => {
                 if (confirmResult.can) {   
 
                     const resourcesList = toDelete.map(x => {
                         x.isBeingDeleted(true);
-                        const asResource = x.asResource();
+                        const asDatabase = x.asDatabase();
 
                         // disconnect here to avoid race condition between resource deleted message
                         // and websocket disconnection
-                        changesContext.default.disconnectIfCurrent(asResource, "ResourceDeleted");
-                        return asResource;
+                        changesContext.default.disconnectIfCurrent(asDatabase, "DatabaseDeleted");
+                        return asDatabase;
                     });
                                     
-                    new deleteResourceCommand(resourcesList, !confirmResult.keepFiles)
+                    new deleteDatabaseCommand(resourcesList, !confirmResult.keepFiles)
                                              .execute()                                            
                                              .done((deletedResources: Array<Raven.Server.Web.System.ResourceDeleteResult>) => {
                                                     deletedResources.forEach(rs => this.onResourceDeleted(rs));                            
@@ -215,7 +210,7 @@ class resources extends viewModelBase {
     }
 
     private onResourceDeleted(deletedResourceResult: Raven.Server.Web.System.ResourceDeleteResult) {
-        const matchedResource = this.resources()
+        const matchedResource = this.databases()
             .sortedResources()           
             .find(x => x.qualifiedName.toLowerCase() === deletedResourceResult.QualifiedName.toLowerCase());
 
@@ -227,35 +222,35 @@ class resources extends viewModelBase {
         }        
     }
 
-    private removeResource(rsInfo: resourceInfo) {
-        this.resources().sortedResources.remove(rsInfo);
+    private removeDatabase(rsInfo: databaseInfo) {
+        this.databases().sortedResources.remove(rsInfo);
         this.selectedResources.remove(rsInfo.qualifiedName);
         messagePublisher.reportSuccess(`Resource ${rsInfo.name} was successfully deleted`);
     }
 
-    enableSelectedResources() {
-        this.toggleSelectedResources(true);
+    enableSelectedDatabases() {
+        this.toggleSelectedDatabases(true);
     }
 
-    disableSelectedResources() {
-        this.toggleSelectedResources(false);
+    disableSelectedDatabases() {
+        this.toggleSelectedDatabases(false);
     }
 
-    private toggleSelectedResources(enableAll: boolean) { 
-        const selectedResources = this.getSelectedResources().map(x => x.asResource());
+    private toggleSelectedDatabases(enableAll: boolean) {
+        const selectedDatabases = this.getSelectedDatabases().map(x => x.asDatabase());
 
-        if (_.every(selectedResources, x => x.disabled() !== enableAll)) {
+        if (_.every(selectedDatabases, x => x.disabled() !== enableAll)) {
             return;
         }
 
-        if (selectedResources.length > 0) {
-            const disableDatabaseToggleViewModel = new disableResourceToggleConfirm(selectedResources, !enableAll);
+        if (selectedDatabases.length > 0) {
+            const disableDatabaseToggleViewModel = new disableDatabaseToggleConfirm(selectedDatabases, !enableAll);
 
             disableDatabaseToggleViewModel.result.done(result => {
                 if (result.can) {
                     this.spinners.globalToggleDisable(true);
 
-                    new disableResourceToggleCommand(selectedResources, !enableAll)
+                    new disableDatabaseToggleCommand(selectedDatabases, !enableAll)
                         .execute()
                         .done(disableResult => {
                             disableResult.forEach(x => this.onResourceDisabled(x));
@@ -268,17 +263,17 @@ class resources extends viewModelBase {
         }
     }
 
-    toggleResource(rsInfo: resourceInfo) {
+    toggleResource(rsInfo: databaseInfo) {
         const disable = !rsInfo.disabled();
 
-        const rs = rsInfo.asResource();
-        const disableDatabaseToggleViewModel = new disableResourceToggleConfirm([rs], disable);
+        const rs = rsInfo.asDatabase();
+        const disableDatabaseToggleViewModel = new disableDatabaseToggleConfirm([rs], disable);
 
         disableDatabaseToggleViewModel.result.done(result => {
             if (result.can) {
                 rsInfo.inProgressAction(disable ? "Disabling..." : "Enabling...");
 
-                new disableResourceToggleCommand([rs], disable)
+                new disableDatabaseToggleCommand([rs], disable)
                     .execute()
                     .done(disableResult => {
                         disableResult.forEach(x => this.onResourceDisabled(x));
@@ -290,8 +285,8 @@ class resources extends viewModelBase {
         app.showBootstrapDialog(disableDatabaseToggleViewModel);
     }
 
-    private onResourceDisabled(result: disableResourceResult) {
-        const resources = this.resources().sortedResources();
+    private onResourceDisabled(result: disableDatabaseResult) {
+        const resources = this.databases().sortedResources();
         const matchedResource = resources.find(rs => rs.qualifiedName === result.QualifiedName);
 
         if (matchedResource) {
@@ -299,7 +294,7 @@ class resources extends viewModelBase {
 
             // If Enabling a resource (that is selected from the top) than we want it to be Online(Loaded)
             if (matchedResource.isCurrentlyActiveResource() && !matchedResource.disabled()) {
-                new loadResourceCommand(matchedResource.asResource())
+                new loadDatabaseCommand(matchedResource.asDatabase())
                     .execute();
             }
         }
@@ -334,7 +329,7 @@ class resources extends viewModelBase {
                 if (result.can) {
                     db.inProgressAction(pauseIndexing ? "Resuming..." : "Pausing...");
 
-                    new togglePauseIndexingCommand(pauseIndexing, db.asResource())
+                    new togglePauseIndexingCommand(pauseIndexing, db.asDatabase())
                         .execute()
                         .done(() => db.indexingPaused(!pauseIndexing))
                         .always(() => db.inProgressAction(null));
@@ -359,14 +354,14 @@ class resources extends viewModelBase {
         app.showBootstrapDialog(createDbView);
     }
 
-    activateResource(rsInfo: resourceInfo) {
+    activateResource(rsInfo: databaseInfo) {
         let resource = this.resourcesManager.getResourceByQualifiedName(rsInfo.qualifiedName);
         if (!resource || resource.disabled())
             return;
 
         resource.activate();
 
-        this.updateResourceInfo(resource.qualifier, resource.name);
+        this.updateDatabaseInfo(resource.qualifier, resource.name);
     }
 
     createNewResource() {
@@ -389,7 +384,4 @@ class resources extends viewModelBase {
     */
 }
 
-export = resources;
-
-
-
+export = databases;

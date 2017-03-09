@@ -43,7 +43,7 @@ class indexMergeSuggestions extends viewModelBase {
     }
 
     afterClientApiConnected(): void {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         this.addNotification(changesApi.watchAllIndexes(e => this.fetchIndexMergeSuggestions()));
     }
 

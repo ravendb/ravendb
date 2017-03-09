@@ -1,10 +1,10 @@
 import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
-import resourceInfo = require("models/resources/info/resourceInfo");
+import databaseInfo = require("models/resources/info/databaseInfo");
 
-class deleteResourceConfirm extends confirmViewModelBase<deleteResourceConfirmResult> {
+class deleteDatabaseConfirm extends confirmViewModelBase<deleteDatabaseConfirmResult> {
     private isKeepingFiles = ko.observable<boolean>(true);
 
-    constructor(private resourcesToDelete: Array<resourceInfo>) {
+    constructor(private dbsToDelete: Array<databaseInfo>) {
         super();
     }
 
@@ -22,7 +22,7 @@ class deleteResourceConfirm extends confirmViewModelBase<deleteResourceConfirmRe
         return $(".modal-footer:visible .btn-danger")[0] as HTMLElement;
     }
 
-    protected prepareResponse(can: boolean): deleteResourceConfirmResult {
+    protected prepareResponse(can: boolean): deleteDatabaseConfirmResult {
         return {
             can: can,
             keepFiles: this.isKeepingFiles()
@@ -31,4 +31,4 @@ class deleteResourceConfirm extends confirmViewModelBase<deleteResourceConfirmRe
 
 }
 
-export = deleteResourceConfirm;
+export = deleteDatabaseConfirm;

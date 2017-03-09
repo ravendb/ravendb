@@ -36,23 +36,21 @@ class mergedIndexesStorage {
         return mergedIndexesStorage.getStoragePrefixForDatabase(db.name) + "." + id;
     }
 
-    static onResourceDeleted(qualifer: string, name: string) {
-        if (qualifer === database.qualifier) {
-            const prefix = mergedIndexesStorage.getStoragePrefixForDatabase(name);
+    static onDatabaseDeleted(qualifer: string, name: string) {
+        const prefix = mergedIndexesStorage.getStoragePrefixForDatabase(name);
 
-            const keysToDelete = [] as string[];
+        const keysToDelete = [] as string[];
 
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(0);
-                if (key.startsWith(prefix)) {
-                    keysToDelete.push(key);
-                }
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(0);
+            if (key.startsWith(prefix)) {
+                keysToDelete.push(key);
             }
-
-            keysToDelete.forEach(key => {
-                localStorage.removeItem(key);
-            });
         }
+
+        keysToDelete.forEach(key => {
+            localStorage.removeItem(key);
+        });
     }
 
 }

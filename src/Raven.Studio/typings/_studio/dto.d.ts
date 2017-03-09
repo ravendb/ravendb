@@ -60,14 +60,14 @@ interface confirmDialogResult {
     can: boolean;
 }
 
-interface disableResourceResult {
+interface disableDatabaseResult {
     QualifiedName: string;
     Success: boolean;
     Reason: string;
     Disabled: boolean;
 }
 
-interface deleteResourceConfirmResult extends confirmDialogResult {
+interface deleteDatabaseConfirmResult extends confirmDialogResult {
     keepFiles: boolean;
 }
 
@@ -111,7 +111,7 @@ interface operationIdDto {
     OperationId: number;
 }
 
-interface resourceCreatedEventArgs {
+interface databaseCreatedEventArgs {
     qualifier: string;
     name: string;
 }
@@ -189,7 +189,7 @@ interface storedQueryDto extends queryDto {
     hash: number;
 }
 
-type resourceDisconnectionCause = "Error" | "ResourceDeleted" | "ResourceDisabled" | "ChangingResource";
+type databaseDisconnectionCause = "Error" | "DatabaseDeleted" | "DatabaseDisabled" | "ChangingDatabase";
 
 type querySortType = "Ascending" | "Descending" | "Range Ascending" | "Range Descending";
 

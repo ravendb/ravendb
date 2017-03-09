@@ -1,17 +1,16 @@
 ﻿import router = require("plugins/router");
 import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
-import resource = require("models/resources/resource");
-import resourceActivatedEventArgs = require("viewmodels/resources/resourceActivatedEventArgs");
+import databaseActivatedEventArgs = require("viewmodels/resources/databaseActivatedEventArgs");
 import changesContext = require("common/changesContext");
 import changesApi = require("common/changesApi");
 import changeSubscription = require("common/changeSubscription");
-import getResourcesCommand = require("commands/resources/getResourcesCommand");
-import getResourceCommand = require("commands/resources/getResourceCommand");
+import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
+import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
-import activeResourceTracker = require("common/shell/activeResourceTracker");
-import resourceInfo = require("models/resources/info/resourceInfo");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import databaseInfo = require("models/resources/info/databaseInfo");
 import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
 import recentPatchesStorage = require("common/storage/recentPatchesStorage");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
@@ -23,32 +22,25 @@ class resourcesManager {
 
     initialized = $.Deferred<void>();
 
-    activeResourceTracker = activeResourceTracker.default;
+    activeDatabaseTracker = activeDatabaseTracker.default;
     changesContext = changesContext.default;
 
-    private resourceToActivate = ko.observable<string>();
+    private databaseToActivate = ko.observable<string>();
 
-    resources = ko.observableArray<resource>([]);
+    databases = ko.observableArray<database>([]);
 
-    onResourceDeletedCallbacks = [
-        (q, n) => mergedIndexesStorage.onResourceDeleted(q, n),
-        (q, n) => recentPatchesStorage.onResourceDeleted(q, n),
-        (q, n) => recentQueriesStorage.onResourceDeleted(q, n),
-        (q, n) => starredDocumentsStorage.onResourceDeleted(q, n)
+    onDatabaseDeletedCallbacks = [
+        (q, n) => mergedIndexesStorage.onDatabaseDeleted(q, n),
+        (q, n) => recentPatchesStorage.onDatabaseDeleted(q, n),
+        (q, n) => recentQueriesStorage.onDatabaseDeleted(q, n),
+        (q, n) => starredDocumentsStorage.onDatabaseDeleted(q, n)
     ] as Array<(qualifier: string, name: string) => void>;
 
-    databases = ko.computed<database[]>(() => this.resources().filter(x => x instanceof database) as database[]);
-
     constructor() { 
-        ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (rs: resource) => this.reloadDataAfterReconnection(rs));
+        ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => this.reloadDataAfterReconnection(db));
 
-        ko.postbox.subscribe(EVENTS.Resource.Activate, ({ resource }: resourceActivatedEventArgs) => {
-            //TODO: 
-            if (resource instanceof database) {
-                return this.activateDatabase(resource as database);
-            }
-
-            throw new Error(`Invalid resource type ${resource.type}`);
+        ko.postbox.subscribe(EVENTS.Resource.Activate, ({ database }: databaseActivatedEventArgs) => {
+            return this.activateDatabase(database);
         });
     }
 
@@ -61,7 +53,7 @@ class resourcesManager {
             .find(x => name.toLowerCase() === x.name.toLowerCase());
     }
 
-    getResourceByQualifiedName(qualifiedName: string): resource {
+    getResourceByQualifiedName(qualifiedName: string): database {
         const dbPrefix = database.qualifier + "/";
 
         if (qualifiedName.startsWith(dbPrefix)) {
@@ -71,8 +63,8 @@ class resourcesManager {
         }
     }
 
-    init(): JQueryPromise<Raven.Client.Server.Operations.ResourcesInfo> {
-        return this.refreshResources()
+    init(): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+        return this.refreshDatabases()
             .done(() => {
                 this.activateBasedOnCurrentUrl();
                 router.activate();
@@ -81,14 +73,14 @@ class resourcesManager {
     }
 
     activateAfterCreation(rsQualifier: string, resourceName: string) {
-        this.resourceToActivate(rsQualifier + "/" + resourceName);
+        this.databaseToActivate(rsQualifier + "/" + resourceName);
     }
 
-    private refreshResources(): JQueryPromise<Raven.Client.Server.Operations.ResourcesInfo> {
-        return new getResourcesCommand()
+    private refreshDatabases(): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+        return new getDatabasesCommand()
             .execute()
             .done(result => {
-                this.updateResources(result);
+                this.updateDatabases(result);
             });
         //TODO: .fail(result => this.handleRavenConnectionFailure(result))
     }
@@ -97,25 +89,25 @@ class resourcesManager {
         const dbUrl = appUrl.getDatabaseNameFromUrl();
         if (dbUrl) {
             const db = this.getDatabaseByName(dbUrl);
-            this.activateIfDifferent(db, dbUrl, appUrl.forResources);
+            this.activateIfDifferent(db, dbUrl, appUrl.forDatabases);
         }
     }
 
-    private activateIfDifferent(rs: resource, rsName: string, urlIfNotFound: () => string) {
+    private activateIfDifferent(db: database, dbName: string, urlIfNotFound: () => string) {
         this.initialized.done(() => {
-            const currentActiveResource = this.activeResourceTracker.resource();
-            if (currentActiveResource != null && currentActiveResource.qualifiedName === rs.qualifiedName) {
+            const currentActiveDatabase = this.activeDatabaseTracker.database();
+            if (currentActiveDatabase != null && currentActiveDatabase.qualifiedName === db.qualifiedName) {
                 return;
             }
 
-            if (rs && !rs.disabled()) {
-                rs.activate(); //TODO: do we need this event right now?
-            } else if (rs) {
-                messagePublisher.reportError(`${rs.fullTypeName} '${rs.name}' is disabled!`,
-                    `You can't access any section of the ${rs.fullTypeName.toLowerCase()} while it's disabled.`);
+            if (db && !db.disabled()) {
+                db.activate(); //TODO: do we need this event right now?
+            } else if (db) {
+                messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is disabled!`,
+                    `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's disabled.`);
                 router.navigate(urlIfNotFound());
             } else {
-                messagePublisher.reportError("The resource " + rsName + " doesn't exist!");
+                messagePublisher.reportError("The database " + dbName + " doesn't exist!");
                 router.navigate(urlIfNotFound());
             }
         });
@@ -128,10 +120,10 @@ class resourcesManager {
     private activateDatabase(db: database) {
         //TODO: this.fecthStudioConfigForDatabase(db);
 
-        this.changesContext.changeResource(db);
+        this.changesContext.changeDatabase(db);
     }
 
-    private reloadDataAfterReconnection(rs: resource) {
+    private reloadDataAfterReconnection(db: database) {
         /* TODO:
         shell.fetchStudioConfig();
         this.fetchServerBuildVersion();
@@ -160,18 +152,18 @@ class resourcesManager {
             }*/
     }
 
-    private updateResources(incomingData: Raven.Client.Server.Operations.ResourcesInfo) {
-        this.deleteRemovedResources(incomingData);
+    private updateDatabases(incomingData: Raven.Client.Server.Operations.DatabasesInfo) {
+        this.deleteRemovedDatabases(incomingData);
 
         incomingData.Databases.forEach(dbInfo => {
-            this.updateResource(dbInfo, name => this.getDatabaseByName(name), database.qualifier);
+            this.updateDatabase(dbInfo, name => this.getDatabaseByName(name), database.qualifier);
         });
     }
 
-    private deleteRemovedResources(incomingData: Raven.Client.Server.Operations.ResourcesInfo) {
-        const existingResources = this.resources;
+    private deleteRemovedDatabases(incomingData: Raven.Client.Server.Operations.DatabasesInfo) {
+        const existingResources = this.databases;
 
-        const toDelete = [] as resource[];
+        const toDelete = [] as database[];
 
         this.databases().forEach(db => {
             const matchedDb = incomingData.Databases.find(x => x.Name.toLowerCase() === db.name.toLowerCase());
@@ -183,21 +175,21 @@ class resourcesManager {
         existingResources.removeAll(toDelete);
     }
 
-    private updateResource(incomingResource: Raven.Client.Server.Operations.ResourceInfo, existingResourceFinder: (name: string) => resource, resourceQualifer: string): resource {
-        const matchedExistingRs = existingResourceFinder(incomingResource.Name);
+    private updateDatabase(incomingDatabase: Raven.Client.Server.Operations.DatabaseInfo, existingResourceFinder: (name: string) => database, resourceQualifer: string): database {
+        const matchedExistingRs = existingResourceFinder(incomingDatabase.Name);
 
         if (matchedExistingRs) {
-            matchedExistingRs.updateUsing(incomingResource);
+            matchedExistingRs.updateUsing(incomingDatabase);
             return matchedExistingRs;
         } else {
-            const newResource = this.createResource(resourceQualifer, incomingResource);
-            let locationToInsert = _.sortedIndexBy(this.resources(), newResource, (item: resource) => item.qualifiedName);
-            this.resources.splice(locationToInsert, 0, newResource);
+            const newResource = this.createResource(resourceQualifer, incomingDatabase);
+            let locationToInsert = _.sortedIndexBy(this.databases(), newResource, (item: database) => item.qualifiedName);
+            this.databases.splice(locationToInsert, 0, newResource);
             return newResource;
         }
     }
 
-    private createResource(qualifer: string, resourceInfo: Raven.Client.Server.Operations.ResourceInfo): resource {
+    private createResource(qualifer: string, resourceInfo: Raven.Client.Server.Operations.DatabaseInfo): database {
         if (database.qualifier === qualifer) {
             return new database(resourceInfo as Raven.Client.Server.Operations.DatabaseInfo);
         }
@@ -209,52 +201,47 @@ class resourcesManager {
         const serverWideClient = changesContext.default.serverNotifications();
 
         return [
-            serverWideClient.watchResourceChangeStartingWith("db/", e => this.onResourceUpdateReceivedViaChangesApi(e)),
-            serverWideClient.watchReconnect(() => this.refreshResources())
+            serverWideClient.watchDatabaseChangeStartingWith("db/", e => this.onDatabaseUpdateReceivedViaChangesApi(e)),
+            serverWideClient.watchReconnect(() => this.refreshDatabases())
 
              //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
         ];
     }
 
-    private onResourceUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) {
-        let resource = this.getResourceByQualifiedName(event.ResourceName);
+    private onDatabaseUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
+        let resource = this.getResourceByQualifiedName(event.DatabaseName);
         if (event.ChangeType === "Delete" && resource) {
             
-            this.onResourceDeleted(resource);
+            this.onDatabaseDeleted(resource);
 
         } else if (event.ChangeType === "Put") {
-            const [prefix, name] = event.ResourceName.split("/", 2);
-            new getResourceCommand(prefix, name)
+            const [prefix, name] = event.DatabaseName.split("/", 2);
+            new getDatabaseCommand(name)
                 .execute()
-                .done((rsInfo: Raven.Client.Server.Operations.ResourceInfo) => {
+                .done((rsInfo: Raven.Client.Server.Operations.DatabaseInfo) => {
 
                     if (rsInfo.Disabled) {
-                        changesContext.default.disconnectIfCurrent(resource, "ResourceDisabled");
+                        changesContext.default.disconnectIfCurrent(resource, "DatabaseDisabled");
                     }
 
-                    //TODO: it supports db only for now!
-                    if (prefix !== database.qualifier) {
-                        throw new Error("we support db only for now!"); //TODO: delete me once we support more types
-                    }
+                    const updatedResource = this.updateDatabase(rsInfo, name => this.getDatabaseByName(name), database.qualifier);
 
-                    const updatedResource = this.updateResource(rsInfo, name => this.getDatabaseByName(name), database.qualifier);
+                    const toActivate = this.databaseToActivate();
 
-                    const toActivate = this.resourceToActivate();
-
-                    if (toActivate && toActivate === event.ResourceName) {
+                    if (toActivate && toActivate === event.DatabaseName) {
                         updatedResource.activate();
-                        this.resourceToActivate(null);
+                        this.databaseToActivate(null);
                     }
                 });
         }
     }
 
-    private onResourceDeleted(rs: resource) {
-        changesContext.default.disconnectIfCurrent(rs, "ResourceDeleted");
-        this.resources.remove(rs);
+    private onDatabaseDeleted(db: database) {
+        changesContext.default.disconnectIfCurrent(db, "DatabaseDeleted");
+        this.databases.remove(db);
 
-        this.onResourceDeletedCallbacks.forEach(callback => {
-            callback(rs.qualifier, rs.name);
+        this.onDatabaseDeletedCallbacks.forEach(callback => {
+            callback(db.qualifier, db.name);
         });
     }
    

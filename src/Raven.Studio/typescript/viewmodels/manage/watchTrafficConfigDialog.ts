@@ -1,11 +1,11 @@
 import app = require("durandal/app");
 import dialog = require("plugins/dialog");
-import resource = require("models/resources/resource");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import shell = require("viewmodels/shell");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import appUrl = require("common/appUrl");
 import resourcesManager = require("common/shell/resourcesManager");
+import database = require("models/resources/database");
 
 class watchTrafficConfigDialog extends dialogViewModelBase {
     private resourcesManager = resourcesManager.default;
@@ -16,17 +16,17 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     lastSearchedwatchedResourceName = ko.observable<string>();
     resourceAutocompletes = ko.observableArray<string>([]);
     maxEntries = ko.observable<number>(1000);
-    allResourcesNames: Array<string>;
+    allDatabasesNames: Array<string>;
     nameCustomValidityError: KnockoutComputed<string>;
     searchResults: KnockoutComputed<Array<string>>;
 
     constructor() {
         super();
-        this.allResourcesNames = this.resourcesManager.resources().map(x => x.name);
+        this.allDatabasesNames = this.resourcesManager.databases().map(x => x.name);
 
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
-            return this.allResourcesNames.filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
+            return this.allDatabasesNames.filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.nameCustomValidityError = ko.computed(() => {
@@ -38,7 +38,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
                 if (!newResourceName) {
                     errorMessage = "Resource name is required";
                 } else {
-                    var foundResource = this.allResourcesNames.find((name: string) => name === newResourceName);
+                    var foundResource = this.allDatabasesNames.find((name: string) => name === newResourceName);
                     if (!foundResource) {
                         errorMessage = "Resource name doesn't exist!";
                     }
@@ -63,7 +63,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
                 this.resourceAutocompletes.removeAll();
                 return;
             }
-            this.resourceAutocompletes(this.allResourcesNames.filter((name: string) => name.toLowerCase().indexOf(search.toLowerCase()) === 0));
+            this.resourceAutocompletes(this.allDatabasesNames.filter((name: string) => name.toLowerCase().indexOf(search.toLowerCase()) === 0));
         }
     }
     
@@ -76,11 +76,11 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     }
 
     confirmConfig() {
-        var tracedResource: resource;
+        var tracedResource: database;
         if (this.watchedResourceMode() === "SingleResourceView")
-            tracedResource = this.resourcesManager.resources().find((rs: resource) => rs.name === this.resourceName());
+            tracedResource = this.resourcesManager.databases().find((db: database) => db.name === this.resourceName());
 
-        var resourcePath = appUrl.forResourceQuery(tracedResource);
+        var resourcePath = appUrl.forDatabaseQuery(tracedResource);
         
         var getTokenTask = new getSingleAuthTokenCommand(tracedResource, this.watchedResourceMode() === "AdminView").execute();
 

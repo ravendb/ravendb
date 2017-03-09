@@ -11,17 +11,17 @@ import resourcesManager = require("common/shell/resourcesManager");
 import eventsCollector = require("common/eventsCollector");
 
 class serverSmuggling extends viewModelBase {
-    resources = ko.observableArray<serverSmugglingItem>([]);
-    selectedResources = ko.observableArray<serverSmugglingItem>();
+    databases = ko.observableArray<serverSmugglingItem>([]);
+    selectedDatabases = ko.observableArray<serverSmugglingItem>();
     targetServer = ko.observable<serverConnectionInfo>(new serverConnectionInfo());
 
     settingsAccess = new settingsAccessAuthorizer();
 
-    hasResources: KnockoutComputed<boolean>;
+    hasDatabases: KnockoutComputed<boolean>;
     noIncremental: KnockoutComputed<boolean>;
     noStripReplication: KnockoutComputed<boolean>;
     noDisableVersioning: KnockoutComputed<boolean>;
-    resourcesSelection: KnockoutComputed<checkbox>;
+    databasesSelection: KnockoutComputed<checkbox>;
     incrementalSelection: KnockoutComputed<checkbox>;
     stripReplicationSelection: KnockoutComputed<checkbox>;
     disableVersioningSelection: KnockoutComputed<checkbox>;
@@ -40,35 +40,35 @@ class serverSmuggling extends viewModelBase {
         super();
 
         var smi = resourcesManager.default.databases().map(d => new serverSmugglingItem(d));
-        this.resources(smi);
+        this.databases(smi);
 
-        this.hasResources = ko.computed(() => this.resources().length > 0);
+        this.hasDatabases = ko.computed(() => this.databases().length > 0);
 
-        this.noIncremental = ko.computed(() => this.selectedResources().length === 0);
+        this.noIncremental = ko.computed(() => this.selectedDatabases().length === 0);
 
         this.noStripReplication = ko.computed(() => {
-            var resources = this.selectedResources();
-            var replicationCount = resources.filter(x => x.hasReplicationBundle()).length;
-            return resources.length === 0 || replicationCount === 0;
+            var dbs = this.selectedDatabases();
+            var replicationCount = dbs.filter(x => x.hasReplicationBundle()).length;
+            return dbs.length === 0 || replicationCount === 0;
         });
 
         this.noDisableVersioning = ko.computed(() => {
-            var resources = this.selectedResources();
-            var versioningCount = resources.filter(x => x.hasVersioningBundle()).length;
-            return resources.length === 0 || versioningCount === 0;
+            var dbs = this.selectedDatabases();
+            var versioningCount = dbs.filter(x => x.hasVersioningBundle()).length;
+            return dbs.length === 0 || versioningCount === 0;
         });
 
-        this.resourcesSelection = ko.computed(() => {
-            var selectedResourcesCount = this.selectedResources().length;
-            if (selectedResourcesCount === this.resources().length)
+        this.databasesSelection = ko.computed(() => {
+            var selectedDatabasesCount = this.selectedDatabases().length;
+            if (selectedDatabasesCount === this.databases().length)
                 return checkbox.Checked;
-            if (selectedResourcesCount > 0)
+            if (selectedDatabasesCount > 0)
                 return checkbox.SomeChecked;
             return checkbox.UnChecked;
         });
 
         this.incrementalSelection = ko.computed(() => {
-            var resources = this.selectedResources();
+            var resources = this.selectedDatabases();
             if (resources.length === 0)
                 return checkbox.UnChecked;
 
@@ -81,12 +81,12 @@ class serverSmuggling extends viewModelBase {
         });
 
         this.stripReplicationSelection = ko.computed(() => {
-            var resources = this.selectedResources();
-            var replicationCount = resources.filter(x => x.stripReplicationInformation()).length;
-            if (resources.length === 0 || replicationCount === 0)
+            var dbs = this.selectedDatabases();
+            var replicationCount = dbs.filter(x => x.stripReplicationInformation()).length;
+            if (dbs.length === 0 || replicationCount === 0)
                 return checkbox.UnChecked;
 
-            var replicationBundleCount = resources.filter(x => x.hasReplicationBundle()).length;
+            var replicationBundleCount = dbs.filter(x => x.hasReplicationBundle()).length;
             if (replicationBundleCount === replicationCount)
                 return checkbox.Checked;
             if (replicationBundleCount > 0)
@@ -95,12 +95,12 @@ class serverSmuggling extends viewModelBase {
         });
 
         this.disableVersioningSelection = ko.computed(() => {
-            var resources = this.selectedResources();
-            var versioningCount = resources.filter(x => x.shouldDisableVersioningBundle()).length;
-            if (resources.length === 0 || versioningCount === 0)
+            var dbs = this.selectedDatabases();
+            var versioningCount = dbs.filter(x => x.shouldDisableVersioningBundle()).length;
+            if (dbs.length === 0 || versioningCount === 0)
                 return checkbox.UnChecked;
 
-            var versioningBundleCount = resources.filter(x => x.hasVersioningBundle()).length;
+            var versioningBundleCount = dbs.filter(x => x.hasVersioningBundle()).length;
             if (versioningBundleCount === versioningCount)
                 return checkbox.Checked;
             if (versioningBundleCount > 0)
@@ -110,7 +110,7 @@ class serverSmuggling extends viewModelBase {
 
         this.submitEnabled = ko.computed(() => {
             var progress = this.inProgress();
-            var selection = this.selectedResources().length > 0;
+            var selection = this.selectedDatabases().length > 0;
             var url = this.targetServer().url();
             return !progress && selection && !!url;
         });
@@ -149,9 +149,9 @@ class serverSmuggling extends viewModelBase {
 
             // since resources might change over time we have to apply saved changes carefully. 
             savedValue.Config.forEach(savedConfig => {
-                var item = self.resources().find(r => r.resource.name === savedConfig.Name);
+                var item = self.databases().find(r => r.resource.name === savedConfig.Name);
                 if (item) {
-                    self.selectedResources.push(item);
+                    self.selectedDatabases.push(item);
                     item.incremental(savedConfig.Incremental);
                     if (item.hasVersioningBundle()) {
                         item.shouldDisableVersioningBundle(savedConfig.ShouldDisableVersioningBundle);
@@ -165,15 +165,15 @@ class serverSmuggling extends viewModelBase {
     }
 
     toggleSelectAll() {
-        if (this.selectedResources().length > 0) {
-            this.selectedResources([]);
+        if (this.selectedDatabases().length > 0) {
+            this.selectedDatabases([]);
         } else {
-            this.selectedResources(this.resources().slice(0));
+            this.selectedDatabases(this.databases().slice(0));
         }
     }
 
     toggleSelectAllIncremental() {
-        var resources = this.selectedResources();
+        var resources = this.selectedDatabases();
         if (resources.length === 0)
             return;
 
@@ -184,7 +184,7 @@ class serverSmuggling extends viewModelBase {
     }
 
     toggleSelectAllStripReplication() {
-        var resources = this.selectedResources();
+        var resources = this.selectedDatabases();
         var replicationBundleCount = resources.filter(x => x.hasReplicationBundle()).length;
         if (resources.length === 0 || replicationBundleCount === 0)
             return;
@@ -198,7 +198,7 @@ class serverSmuggling extends viewModelBase {
     }
 
     toggleSelectAllDisableVersioning() {
-        var resources = this.selectedResources();
+        var resources = this.selectedDatabases();
         var versioningBundleCount = resources.filter(x => x.hasVersioningBundle()).length;
         if (resources.length === 0 || versioningBundleCount === 0)
             return;
@@ -212,7 +212,7 @@ class serverSmuggling extends viewModelBase {
     }
 
     isSelected(item: serverSmugglingItem) {
-        return this.selectedResources().indexOf(item) >= 0;
+        return this.selectedDatabases().indexOf(item) >= 0;
     }
 
     saveIntoLocalStorage() {
@@ -237,7 +237,7 @@ class serverSmuggling extends viewModelBase {
 
     private getJson(): serverSmugglingDto {
         var targetServer = this.targetServer().toDto();
-        var config = this.selectedResources().map(r => r.toDto());
+        var config = this.selectedDatabases().map(r => r.toDto());
         return {
             TargetServer: targetServer,
             Config: config

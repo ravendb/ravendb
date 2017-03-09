@@ -6,11 +6,11 @@ export = getResourcesMenuItem;
 
 function getResourcesMenuItem(appUrls: computedAppUrls) {
     return new leafMenuItem({
-        route: ["", "resources"],
+        route: ["", "databases"],
         title: "Resources",
-        moduleId: "viewmodels/resources/resources",
+        moduleId: "viewmodels/resources/databases",
         nav: true,
         css: 'icon-resources',
-        dynamicHash: appUrls.resourcesManagement
+        dynamicHash: appUrls.databasesManagement
     });
 }

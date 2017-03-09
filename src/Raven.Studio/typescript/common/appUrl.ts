@@ -1,8 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 import database = require("models/resources/database");
-import resource = require("models/resources/resource");
-import activeResource = require("common/shell/activeResourceTracker");
+import activeDatabase = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import collection = require("models/database/documents/collection");
 import messagePublisher = require("common/messagePublisher");
@@ -20,7 +19,7 @@ class appUrl {
 
     static baseUrl = appUrl.detectAppUrl();
 
-    private static currentDatabase = activeResource.default.database;
+    private static currentDatabase = activeDatabase.default.database;
     
     // Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
@@ -29,7 +28,7 @@ class appUrl {
 
         hasApiKey: ko.computed(() => appUrl.forHasApiKey()),
 
-        resources: ko.computed(() => appUrl.forResources()),
+        databases: ko.computed(() => appUrl.forDatabases()),
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
@@ -103,7 +102,7 @@ class appUrl {
 
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.pureComputed(() => router.navigationModel().find(m => m.isActive() && m.title === routeTitle) != null),
-        resourcesManagement: ko.computed(() => appUrl.forResources()),
+        databasesManagement: ko.computed(() => appUrl.forDatabases()),
 
     };
 
@@ -216,8 +215,8 @@ class appUrl {
         return "#admin/settings/studioConfig";
     }
 
-    static forResources(): string {
-        return "#resources";
+    static forDatabases(): string {
+        return "#databases";
     }
 
     static forAbout(): string {
@@ -234,7 +233,7 @@ class appUrl {
         return "#databases/edit?" + docIdUrlPart + databaseUrlPart;
     }
 
-    static forEditItem(itemId: string, rs: resource, itemIndex: number, collectionName?: string): string {
+    static forEditItem(itemId: string, rs: database, itemIndex: number, collectionName?: string): string {
         var urlPart = appUrl.getEncodedResourcePart(rs);
         var itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
 
@@ -243,7 +242,7 @@ class appUrl {
         return resourceTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
-    static forEditQueryItem(itemNumber: number, res: resource, index: string, query?: string, sort?:string): string {
+    static forEditQueryItem(itemNumber: number, res: database, index: string, query?: string, sort?:string): string {
         var databaseUrlPart = appUrl.getEncodedResourcePart(res);
         var indexUrlPart = "&index=" + index;
         var itemNumberUrlPart = "&item=" + itemNumber;
@@ -544,9 +543,9 @@ class appUrl {
         return "#databases/tasks?" + databasePart;
     }
 
-    static forResourceQuery(res: resource): string {
-        if (res && res instanceof database) {
-            return appUrl.baseUrl + "/databases/" + res.name;
+    static forDatabaseQuery(db: database): string {
+        if (db) {
+            return appUrl.baseUrl + "/databases/" + db.name;
         }
 
         return this.baseUrl;
@@ -584,7 +583,7 @@ class appUrl {
         }
 
         //TODO: we don't have Raven/DocumentsByEntityName anymore
-        return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
+        return appUrl.forDatabaseQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
     }
 
     static forSampleData(db: database): string {
@@ -652,7 +651,7 @@ class appUrl {
     /**
     * Gets the address for the current page but for the specified resource.
     */
-    static forCurrentPage(rs: resource) {
+    static forCurrentPage(rs: database) {
         const routerInstruction = router.activeInstruction();
         if (routerInstruction) {
 
@@ -668,7 +667,7 @@ class appUrl {
 
             if (currentResourceType && currentResourceQualifier !== rs.qualifier) {
                 // user changed resource type - navigate to resources page and preselect resource
-                return appUrl.forResources() + "?" + rs.type + "=" + encodeURIComponent(rs.name);
+                return appUrl.forDatabases() + "?" + rs.type + "=" + encodeURIComponent(rs.name);
             }
             const isDifferentResourceInAddress = !currentResourceName || currentResourceName !== rs.name.toLowerCase();
             if (isDifferentResourceInAddress) {
@@ -686,7 +685,7 @@ class appUrl {
         return appUrl.currentDbComputeds;
     }
 
-    private static getEncodedResourcePart(res?: resource) {
+    private static getEncodedResourcePart(res?: database) {
         if (!res)
             return "";
 
@@ -713,7 +712,7 @@ class appUrl {
 
                 const fragment = instruction.fragment;
                 const appUrls = appUrl.currentDbComputeds;
-                location.href = fragment.startsWith("admin/settings") ? appUrls.adminSettings() : appUrls.resourcesManagement();
+                location.href = fragment.startsWith("admin/settings") ? appUrls.adminSettings() : appUrls.databasesManagement();
             }
         });
     }

@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
-import resource = require("models/resources/resource");
 import startDbCompactCommand = require("commands/maintenance/startCompactCommand");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import resourcesManager = require("common/shell/resourcesManager");
@@ -19,8 +18,8 @@ class resourceCompact {
 
     keepDown = ko.observable<boolean>(false);
 
-    constructor(private parent: compact, private type: string, private resources: KnockoutComputed<resource[]>) {
-        this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
+    constructor(private parent: compact, private type: string, private resources: KnockoutObservableArray<database>) {
+        this.resourcesNames = ko.computed(() => resources().map((rs: database) => rs.name));
 
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
@@ -30,7 +29,7 @@ class resourceCompact {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newResourceName = this.resourceName();
-            var foundRs = this.resources().find((rs: resource) => newResourceName === rs.name);
+            var foundRs = this.resources().find((rs: database) => newResourceName === rs.name);
 
             if (!foundRs && newResourceName.length > 0) {
                 errorMessage = (this.type === database.type ? "Database" : "File system") + " name doesn't exist!";

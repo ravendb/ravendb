@@ -1,6 +1,6 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require("common/messagePublisher");
@@ -18,8 +18,8 @@ abstract class abstractWebSocketClient<T> {
 
     protected abstract get autoReconnect(): boolean;
    
-    protected constructor(protected rs: resource) {
-        this.resourcePath = appUrl.forResourceQuery(this.rs);
+    protected constructor(protected db: database) {
+        this.resourcePath = appUrl.forDatabaseQuery(this.db);
         this.connectToWebSocketTask = $.Deferred<void>();
 
         if ("WebSocket" in window) {
@@ -55,7 +55,7 @@ abstract class abstractWebSocketClient<T> {
             this.connectToWebSocketTask = $.Deferred<void>();
         }
 
-        new getSingleAuthTokenCommand(this.rs)
+        new getSingleAuthTokenCommand(this.db)
             .execute()
             .done((tokenObject: singleAuthToken) => {
                 action.call(this, tokenObject);
@@ -159,8 +159,8 @@ abstract class abstractWebSocketClient<T> {
         });
     }
 
-    getResource() {
-        return this.rs;
+    getDatabase() {
+        return this.db;
     }
 }
 

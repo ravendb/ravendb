@@ -1,6 +1,6 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import changeSubscription = require("common/changeSubscription");
 import changesCallback = require("common/changesCallback");
 import EVENTS = require("common/constants/events");
@@ -8,16 +8,16 @@ import endpoints = require("endpoints");
 
 import abstractNotificationCenterClient = require("common/abstractNotificationCenterClient");
 
-class resourceNotificationCenterClient extends abstractNotificationCenterClient {
+class databaseNotificationCenterClient extends abstractNotificationCenterClient {
 
-    constructor(rs: resource) {
-        super(rs);
+    constructor(db: database) {
+        super(db);
     }
 
     protected allDatabaseStatsChangedHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged>>();
 
     get connectionDescription() {
-        return "Notification Center Client: " + this.rs.qualifiedName;
+        return "Notification Center Client: " + this.db.qualifiedName;
     }
 
     protected onMessage(actionDto: Raven.Server.NotificationCenter.Notifications.Notification) {
@@ -51,5 +51,5 @@ class resourceNotificationCenterClient extends abstractNotificationCenterClient 
 
 }
 
-export = resourceNotificationCenterClient;
+export = databaseNotificationCenterClient;
 

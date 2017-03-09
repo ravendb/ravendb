@@ -7,10 +7,9 @@ import viewLocator = require("durandal/viewLocator");
 
 import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
-import activeResourceTracker = require("common/shell/activeResourceTracker");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import resourceSwitcher = require("common/shell/resourceSwitcher");
 import searchBox = require("common/shell/searchBox");
-import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 import license = require("models/auth/license");
@@ -80,7 +79,7 @@ class shell extends viewModelBase {
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
 
-    mainMenu = new menu(generateMenuItems(activeResourceTracker.default.resource()));
+    mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
     resourceSwitcher = new resourceSwitcher();
 
@@ -148,7 +147,7 @@ class shell extends viewModelBase {
             }
         });
 
-        $(window).resize(() => self.activeResource.valueHasMutated());
+        $(window).resize(() => self.activeDatabase.valueHasMutated());
 
         this.fetchClientBuildVersion();
         this.fetchServerBuildVersion();
@@ -177,13 +176,13 @@ class shell extends viewModelBase {
 
     private initializeShellComponents() {
         this.mainMenu.initialize();
-        let updateMenu = (resource: resource) => {
-            let items = generateMenuItems(resource);
+        let updateMenu = (db: database) => {
+            let items = generateMenuItems(db);
             this.mainMenu.update(items);
         };
 
-        updateMenu(activeResourceTracker.default.resource());
-        activeResourceTracker.default.resource.subscribe(updateMenu);
+        updateMenu(activeDatabaseTracker.default.database());
+        activeDatabaseTracker.default.database.subscribe(updateMenu);
 
         this.resourceSwitcher.initialize();
         this.searchBox.initialize();

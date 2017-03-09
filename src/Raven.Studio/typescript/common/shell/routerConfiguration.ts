@@ -2,7 +2,6 @@
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
-import resource = require("models/resources/resource");
 
 import getManageServerMenuItem = require("common/shell/menu/items/manageServer");
 import getResourcesMenuItem = require("common/shell/menu/items/resources");

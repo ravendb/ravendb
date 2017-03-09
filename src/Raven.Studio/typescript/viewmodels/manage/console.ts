@@ -1,6 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand");
@@ -44,7 +43,7 @@ class consoleJs extends viewModelBase {
 
 
         aceEditorBindingHandler.install();
-        this.resourcesNames = ko.computed(() => this.resourcesManager.databases().map((rs: resource) => rs.name));
+        this.resourcesNames = ko.computed(() => this.resourcesManager.databases().map((db: database) => db.name));
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
             return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);

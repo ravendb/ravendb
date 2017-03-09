@@ -83,7 +83,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AlertRaised));
             scripter.AddType(typeof(NotificationUpdated));
             scripter.AddType(typeof(OperationChanged));
-            scripter.AddType(typeof(ResourceChanged));
+            scripter.AddType(typeof(DatabaseChanged));
             scripter.AddType(typeof(DatabaseStatsChanged));
             scripter.AddType(typeof(PerformanceHint));
 
@@ -118,7 +118,7 @@ namespace TypingsGenerator
             // patch
             scripter.AddType(typeof(PatchRequest));
 
-            scripter.AddType(typeof(ResourcesInfo));
+            scripter.AddType(typeof(DatabasesInfo));
 
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerOptions));

@@ -94,7 +94,7 @@ namespace Raven.Server.Documents
                 {
                     databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                     {
-                        [nameof(ResourceInfo.Disabled)] = disabled,
+                        [nameof(DatabaseInfo.Disabled)] = disabled,
                         [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
                     };
 

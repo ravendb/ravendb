@@ -1,13 +1,13 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 
 class cssGenerator {
-    static getCssClass(entityName: string, colorMaps: resourceStyleMap[], rs: resource): string {
-        var resourceStyleMap = colorMaps.find((map: resourceStyleMap) => map.resourceName === rs.name);
+    static getCssClass(entityName: string, colorMaps: resourceStyleMap[], db: database): string {
+        var resourceStyleMap = colorMaps.find((map: resourceStyleMap) => map.resourceName === db.name);
         if (!resourceStyleMap) {
             resourceStyleMap = {
-                resourceName: rs.name,
+                resourceName: db.name,
                 styleMap: {}
             };
             colorMaps.push(resourceStyleMap);

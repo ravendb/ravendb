@@ -1,6 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import backupDatabaseCommand = require("commands/maintenance/backupDatabaseCommand");
 import getResourceDrives = require("commands/resources/getResourceDrives");
@@ -28,8 +27,8 @@ class resourceBackup {
         return resourceDrives.indexOf(location) !== -1;
     }); 
 
-    constructor(private qualifier: string, private resources: KnockoutComputed<resource[]>) {
-        this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
+    constructor(private qualifier: string, private resources: KnockoutObservableArray<database>) {
+        this.resourcesNames = ko.computed(() => resources().map((rs: database) => rs.name));
 
         this.fullTypeName = ko.computed(() => {
             var rs = resources();
@@ -48,7 +47,7 @@ class resourceBackup {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
             var newResourceName = this.resourceName();
-            var foundRs = this.resources().find((rs: resource) => newResourceName === rs.name && rs.qualifier === this.qualifier);
+            var foundRs = this.resources().find((rs: database) => newResourceName === rs.name && rs.qualifier === this.qualifier);
 
             if (!foundRs && newResourceName.length > 0) {
                 errorMessage = this.fullTypeName() + " name doesn't exist!";
@@ -58,7 +57,7 @@ class resourceBackup {
         });
 
         this.resourceName.throttle(200).subscribe((resource) => {
-            var foundRs = this.resources().find((rs: resource) => resource === rs.name && rs.qualifier === this.qualifier);
+            var foundRs = this.resources().find((rs: database) => resource === rs.name && rs.qualifier === this.qualifier);
             if (foundRs) {
                 new getResourceDrives(foundRs.name, foundRs.type.toString()).execute()
                     .done((drives: string[]) => {
