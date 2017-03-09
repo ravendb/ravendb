@@ -17,11 +17,15 @@ using DatabaseInfo = Raven.Client.Server.Operations.DatabaseInfo;
 
 namespace Raven.Server.Web.System
 {
-    public class ResourcesHandler : RequestHandler
+    public class DatabasesHandler : RequestHandler
     {
-        [RavenAction("/resources", "GET")]
-        public Task Resources()
+        [RavenAction("/databases", "GET")]
+        public Task Databases()
         {
+            var dbName = GetQueryStringValue("info");
+            if (dbName != null)
+                return DbInfo(dbName);
+
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             //TODO: fill all required information (see: RavenDB-5438) - return Raven.Client.Data.DatabasesInfo
@@ -53,30 +57,22 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/resource", "GET")]
-        public Task Resource()
+        public Task DbInfo(string name)
         {
-            var resourceName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    if (string.Equals(type, "db", StringComparison.OrdinalIgnoreCase))
+                    var dbName = RouteMatch.GetCapture();
+                    var dbId = Constants.Documents.Prefix + dbName;
+                    long etag;
+                    using (var dbDoc = ServerStore.Read(context, dbId, out etag))
                     {
-                        var dbId = Constants.Documents.Prefix + resourceName;
-                        long etag;
-                        using (var dbDoc = ServerStore.Read(context, dbId, out etag))
-                        {
-                            WriteDatabaseInfo(resourceName, dbDoc, context, writer);
-                            return Task.CompletedTask;
-                        }
+                        WriteDatabaseInfo(dbName, dbDoc, context, writer);
+                        return Task.CompletedTask;
                     }
-
-                    throw new ArgumentOutOfRangeException("type");
                 }
             }
         }

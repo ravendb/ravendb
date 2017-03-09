@@ -36,7 +36,7 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/resources?start={_start}&pageSize={_pageSize}&namesOnly=true";
+                url = $"{node.Url}/databases?start={_start}&pageSize={_pageSize}&namesOnly=true";
 
                 return new HttpRequestMessage
                 {
