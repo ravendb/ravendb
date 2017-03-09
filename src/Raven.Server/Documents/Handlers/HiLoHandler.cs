@@ -126,35 +126,35 @@ namespace Raven.Server.Documents.Handlers
 
                     if (hiloDocReader != null)
                     {
-                        hiloDocReader.TryGet("Max", out oldMax);
                         var prop = new BlittableJsonReaderObject.PropertyDetails();
-                        for (var i = 0; i < hiloDocReader.Count; i++)
+                        foreach (var propertyId in hiloDocReader.GetPropertiesByInsertionOrder())
                         {
-                            hiloDocReader.GetPropertyByIndex(0, ref prop);
+                            hiloDocReader.GetPropertyByIndex(propertyId, ref prop);
                             if (prop.Name == "Max")
+                            {
+                                oldMax = (long)prop.Value;
                                 continue;
+                            }
+
                             newDoc[prop.Name] = prop.Value;
                         }
                     }
-                }
 
+                    oldMax = Math.Max(oldMax, LastRangeMax);
+
+                    newDoc["Max"] = oldMax + Capacity;
+
+                    using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                        Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, freshHilo);
+
+                    OldMax = oldMax;
+                    Prefix = prefix;
+                }
                 finally
                 {
                     serverPrefixDocReader?.Dispose();
                     hiloDocReader?.Dispose();
                 }
-                oldMax = Math.Max(oldMax, LastRangeMax);
-
-                newDoc["Max"] = oldMax + Capacity;
-
-                using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentKey,
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                {
-                    Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, freshHilo);
-                }
-
-                OldMax = oldMax;
-                Prefix = prefix;
             }
         }
 

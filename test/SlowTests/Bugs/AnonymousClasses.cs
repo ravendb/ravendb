@@ -6,6 +6,7 @@
 
 using FastTests;
 using Microsoft.Extensions.Primitives;
+using Raven.Client;
 using Xunit;
 
 namespace SlowTests.Bugs
@@ -39,12 +40,14 @@ namespace SlowTests.Bugs
                 {
                     var entity = new { a = 1 };
                     s.Store(entity);
-                    s.SaveChanges();
 
                     var metadata = s.Advanced.GetMetadataFor(entity);
-
-                    
                     Assert.False(metadata.ContainsKey("@collection"));
+
+                    s.SaveChanges();
+
+                    metadata = s.Advanced.GetMetadataFor(entity);
+                    Assert.Equal("@empty", metadata.GetString("@collection"));
                 }
             }
         }

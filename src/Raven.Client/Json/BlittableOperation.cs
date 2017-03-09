@@ -53,6 +53,8 @@ namespace Raven.Client.Json
                 newBlittable.GetPropertyByIndex(propId, ref newProp);
 
                 if (newProp.Name.Equals(Constants.Documents.Metadata.LastModified) ||
+                    newProp.Name.Equals(Constants.Documents.Metadata.Collection) ||
+                    newProp.Name.Equals(Constants.Documents.Metadata.ChangeVector) ||
                     newProp.Name.Equals(Constants.Documents.Metadata.Etag) ||
                     newProp.Name.Equals(Constants.Documents.Metadata.Id))
                     continue;
