@@ -20,21 +20,21 @@ class databasesInfo {
         this.initObservables();
     }
 
-    getByQualifiedName(qualifiedName: string) {
-        return this.sortedDatabases().find(x => x.qualifiedName.toLowerCase() === qualifiedName.toLowerCase());
+    getByName(name: string) {
+        return this.sortedDatabases().find(x => x.name.toLowerCase() === name.toLowerCase());
     }
 
-    updateDatabase(newDatabaseInfo: Raven.Client.Server.Operations.DatabaseInfo, resourceType: string) {
-        let resourceToUpdate = this.getByQualifiedName(resourceType + "/" + newDatabaseInfo.Name);
+    updateDatabase(newDatabaseInfo: Raven.Client.Server.Operations.DatabaseInfo) {
+        let databaseToUpdate = this.getByName(newDatabaseInfo.Name);
 
-        if (resourceToUpdate) {
-            resourceToUpdate.update(newDatabaseInfo);
-        } else { // new resource - create instance of it
+        if (databaseToUpdate) {
+            databaseToUpdate.update(newDatabaseInfo);
+        } else { // new database - create instance of it
             let dto = newDatabaseInfo as Raven.Client.Server.Operations.DatabaseInfo;
-            let resourceToAdd = new databaseInfo(dto);
+            let databaseToAdd = new databaseInfo(dto);
 
-            let locationToInsert = _.sortedIndexBy(this.sortedDatabases(), resourceToAdd, function (item) { return item.name.toLowerCase() });
-            this.sortedDatabases.splice(locationToInsert, 0, resourceToAdd);
+            let locationToInsert = _.sortedIndexBy(this.sortedDatabases(), databaseToAdd, function (item) { return item.name.toLowerCase() });
+            this.sortedDatabases.splice(locationToInsert, 0, databaseToAdd);
         }
     }
 

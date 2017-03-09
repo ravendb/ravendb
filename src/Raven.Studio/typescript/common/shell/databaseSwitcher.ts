@@ -1,23 +1,23 @@
 ﻿
 import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import appUrl = require("common/appUrl");
 
 /*
     Events emitted through ko.postbox
-        * ResourceSwitcher.Show - when searchbox is opened
-        * ResourceSwitcher.Hide - when searchbox is hidden
-        * ResourceSwitcher.ItemSelected - item selected from resource switcher pane
+        * DatabaseSwitcher.Show - when searchbox is opened
+        * DatabaseSwitcher.Hide - when searchbox is hidden
+        * DatabaseSwitcher.ItemSelected - item selected from database switcher pane
 */
-class resourceSwitcher {
+class databaseSwitcher {
 
     private $selectDatabaseContainer: JQuery;
     private $selectDatabase: JQuery;
     private $filter: JQuery;
 
     private databases: KnockoutComputed<database[]>;
-    private resourcesManager = resourcesManager.default;
+    private databasesManager = databasesManager.default;
 
     private readonly hideHandler = (e: Event) => {
         if (this.shouldConsumeHideEvent(e)) {
@@ -31,7 +31,7 @@ class resourceSwitcher {
     constructor() {
         this.filteredDatabases = ko.computed(() => {
             const filter = this.filter();
-            const databases = this.resourcesManager.databases();
+            const databases = this.databasesManager.databases();
 
             if (!filter)
                 return databases;
@@ -45,9 +45,9 @@ class resourceSwitcher {
     }
 
     initialize() {
-        this.$selectDatabaseContainer = $('.resource-switcher-container');
-        this.$selectDatabase = $('.form-control.btn-toggle.resource-switcher');
-        this.$filter = $('.resource-switcher-container .database-filter');
+        this.$selectDatabaseContainer = $('.database-switcher-container');
+        this.$selectDatabase = $('.form-control.btn-toggle.database-switcher');
+        this.$filter = $('.database-switcher-container .database-filter');
 
         this.$selectDatabaseContainer.on('click', (e) => {
             e.stopPropagation();
@@ -69,7 +69,7 @@ class resourceSwitcher {
             e.stopPropagation();
             self.hide();
             let a: HTMLAnchorElement = this as HTMLAnchorElement;
-            ko.postbox.publish(EVENTS.ResourceSwitcher.ItemSelected, a.href);
+            ko.postbox.publish(EVENTS.DatabaseSwitcher.ItemSelected, a.href);
         });
     }
 
@@ -96,10 +96,10 @@ class resourceSwitcher {
     }
 
     private shouldConsumeHideEvent(e: Event) {
-        return $(e.target).parents(".resource-switcher-container").length === 0
-            && !$(e.target).hasClass(".resource-switcher");
+        return $(e.target).parents(".database-switcher-container").length === 0
+            && !$(e.target).hasClass(".database-switcher");
     }
 
 }
 
-export = resourceSwitcher;
+export = databaseSwitcher;

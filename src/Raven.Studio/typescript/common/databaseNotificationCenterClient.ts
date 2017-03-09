@@ -17,7 +17,7 @@ class databaseNotificationCenterClient extends abstractNotificationCenterClient 
     protected allDatabaseStatsChangedHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged>>();
 
     get connectionDescription() {
-        return "Notification Center Client: " + this.db.qualifiedName;
+        return "Notification Center Client: " + this.db.name;
     }
 
     protected onMessage(actionDto: Raven.Server.NotificationCenter.Notifications.Notification) {

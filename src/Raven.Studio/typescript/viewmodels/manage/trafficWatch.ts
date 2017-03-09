@@ -176,7 +176,7 @@ class trafficWatch extends viewModelBase {
                     tokenDeferred.resolve();
                 })
                 .fail((e) => {
-                    app.showBootstrapMessage("You are not authorized to trace this resource", "Authorization error");
+                    app.showBootstrapMessage("You are not authorized to trace this database", "Authorization error");
                 });
         } else {
             tokenDeferred.resolve();

@@ -1,6 +1,6 @@
 import utils = require("utils");
 
-var viewUnderTest = 'resources/resources';
+var viewUnderTest = 'resources/databases';
 
 describe(viewUnderTest, () => {
     utils.initTest();
@@ -10,7 +10,7 @@ describe(viewUnderTest, () => {
         utils.injector.require(["common/changesContext"],
             (changesContext: any) => {
 
-                utils.mockCommand('commands/resources/getResourcesCommand', () => getResourcesData());
+                utils.mockCommand('commands/resources/getDatabasesCommand', () => getDatabasesData());
 
                 changesContext.default.connectServerWideNotificationCenter();
 
@@ -20,7 +20,7 @@ describe(viewUnderTest, () => {
     });
 });
 
-function getResourcesData(): Raven.Client.Server.Operations.ResourcesInfo {
+function getDatabasesData(): Raven.Client.Server.Operations.DatabasesInfo {
     return {
         "Databases": [
             {
@@ -66,7 +66,6 @@ function getResourcesData(): Raven.Client.Server.Operations.ResourcesInfo {
                 "RejectClients": false,
                 "IndexingStatus": "Running"
             }
-        ],
-        FileSystems: []
+        ]
     };
 }

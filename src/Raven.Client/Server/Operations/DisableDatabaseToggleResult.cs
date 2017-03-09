@@ -8,7 +8,7 @@ namespace Raven.Client.Server.Operations
     /// <summary>
     /// The result of a disable or enable database
     /// </summary>
-    public class DisableResourceToggleResult
+    public class DisableDatabaseToggleResult
     {
         /// <summary>
         ///  If database disabled.

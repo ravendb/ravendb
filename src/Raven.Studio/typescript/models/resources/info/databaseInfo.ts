@@ -1,7 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 import database = require("models/resources/database");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
 
@@ -65,15 +65,11 @@ class databaseInfo {
     }
 
     asDatabase(): database {
-        return resourcesManager.default.getDatabaseByName(this.name);
+        return databasesManager.default.getDatabaseByName(this.name);
     }
 
     static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };
-    }
-
-    get qualifiedName() {
-        return this.qualifier + "/" + this.name;
     }
 
     static findLastBackupDate(dto: Raven.Client.Server.Operations.BackupInfo) {
@@ -164,7 +160,7 @@ class databaseInfo {
                 return false;
             }
 
-            return currentDatabase.qualifiedName === this.qualifiedName;
+            return currentDatabase.name === this.name;
         });
 
         this.isLoading = ko.pureComputed(() => {

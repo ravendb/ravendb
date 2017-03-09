@@ -72,12 +72,12 @@
                         </div>
                     </div>
                 </div>-->
-                <div class="resource-switcher-container" data-bind="with: resourceSwitcher">
-                    <div class="form-control btn-toggle resource-switcher">
+                <div class="database-switcher-container" data-bind="with: databaseSwitcher">
+                    <div class="form-control btn-toggle database-switcher">
                         <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
                     </div>
                     <div class="box-container">
-                        <div class="resource-filter-container">
+                        <div class="database-filter-container">
                             <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
                         </div>
                         <div class="scroller">

@@ -58,7 +58,7 @@ class changesContext {
 
     changeDatabase(db: database): void {
         const currentChanges = this.databaseChangesApi();
-        if (currentChanges && currentChanges.getDatabase().qualifiedName === db.qualifiedName) {
+        if (currentChanges && currentChanges.getDatabase().name === db.name) {
             // nothing to do - already connected to requested changes api
             return;
         }
@@ -118,7 +118,7 @@ class changesContext {
     disconnectIfCurrent(db: database, cause: databaseDisconnectionCause) {
         const currentChanges = this.databaseChangesApi();
 
-        if (currentChanges && currentChanges.getDatabase().qualifiedName === db.qualifiedName) {
+        if (currentChanges && currentChanges.getDatabase().name === db.name) {
             this.disconnect(cause);
         }
     }

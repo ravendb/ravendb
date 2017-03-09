@@ -170,7 +170,7 @@ namespace Raven.Server.Web.System
                         newEtag = hasEtagInRequest ? ServerStore.Write(context, dbId, dbDoc, etag) :
                                                      ServerStore.Write(context, dbId, dbDoc);
 
-                        ServerStore.NotificationCenter.AddAfterTransactionCommit(DatabaseChanged.Create(dbId, ResourceChangeType.Put), tx);
+                        ServerStore.NotificationCenter.AddAfterTransactionCommit(DatabaseChanged.Create(name, DatabaseChangeType.Put), tx);
 
                         tx.Commit();
                     }
@@ -217,9 +217,9 @@ namespace Raven.Server.Web.System
                     var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, ignoreDisabledDatabase: true);
                     if (configuration == null)
                     {
-                        results.Add(new ResourceDeleteResult
+                        results.Add(new DatabaseDeleteResult
                         {
-                            QualifiedName = "db/" + name,
+                            Name = name,
                             Deleted = false,
                             Reason = "database not found"
                         }.ToJson());
@@ -231,17 +231,17 @@ namespace Raven.Server.Web.System
                     {
                         DeleteDatabase(name, context, isHardDelete, configuration);
 
-                        results.Add(new ResourceDeleteResult
+                        results.Add(new DatabaseDeleteResult
                         {
-                            QualifiedName = "db/" + name,
+                            Name = name,
                             Deleted = true
                         }.ToJson());
                     }
                     catch (Exception ex)
                     {
-                        results.Add(new ResourceDeleteResult
+                        results.Add(new DatabaseDeleteResult
                         {
-                            QualifiedName = "db/" + name,
+                            Name = name,
                             Deleted = false,
                             Reason = ex.Message
                         }.ToJson());
@@ -269,7 +269,7 @@ namespace Raven.Server.Web.System
                 {
                     ServerStore.Delete(context, dbId);
                     ServerStore.NotificationCenter.AddAfterTransactionCommit(
-                        DatabaseChanged.Create(dbId, ResourceChangeType.Delete), tx);
+                        DatabaseChanged.Create(name, DatabaseChangeType.Delete), tx);
 
                     tx.Commit();
                 }
@@ -280,11 +280,114 @@ namespace Raven.Server.Web.System
 
             ServerStore.DatabaseInfoCache.Delete(name);
         }
+
+        [RavenAction("/admin/databases/disable", "POST", "/admin/databases/disable?name={resourceName:string|multiple}")]
+        public Task DisableDatabases()
+        {
+            ToggleDisableDatabases(disableRequested: true);
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/databases/enable", "POST", "/admin/databases/enable?name={resourceName:string|multiple}")]
+        public Task EnableDatabases()
+        {
+            ToggleDisableDatabases(disableRequested: false);
+
+            return Task.CompletedTask;
+        }
+
+        private void ToggleDisableDatabases(bool disableRequested)
+        {
+            var names = GetStringValuesQueryString("name");
+
+            var databasesToUnload = new List<string>();
+
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var name in names)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                    var dbId = Constants.Documents.Prefix + name;
+                    var dbDoc = ServerStore.Read(context, dbId);
+
+                    if (dbDoc == null)
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["Name"] = name,
+                            ["Success"] = false,
+                            ["Reason"] = "database not found",
+                        });
+                        continue;
+                    }
+
+                    object disabledValue;
+                    if (dbDoc.TryGetMember("Disabled", out disabledValue))
+                    {
+                        if ((bool)disabledValue == disableRequested)
+                        {
+                            var state = disableRequested ? "disabled" : "enabled";
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                ["Name"] = name,
+                                ["Success"] = false,
+                                ["Disabled"] = disableRequested,
+                                ["Reason"] = $"Database already {state}",
+                            });
+                            continue;
+                        }
+                    }
+
+                    dbDoc.Modifications = new DynamicJsonValue(dbDoc)
+                    {
+                        ["Disabled"] = disableRequested
+                    };
+
+                    var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    ServerStore.Write(context, dbId, newDoc2);
+                    ServerStore.NotificationCenter.AddAfterTransactionCommit(DatabaseChanged.Create(name, DatabaseChangeType.Put), tx);
+
+                    databasesToUnload.Add(name);
+
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["Name"] = name,
+                        ["Success"] = true,
+                        ["Disabled"] = disableRequested,
+                    });
+                }
+
+                tx.Commit();
+
+                writer.WriteEndArray();
+            }
+
+            foreach (var name in databasesToUnload)
+            {
+                /* Right now only database resource is supported */
+                ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
+                {
+                    // empty by design
+                });
+            }
+        }
     }
 
-    public class ResourceDeleteResult
+
+
+    public class DatabaseDeleteResult
     {
-        public string QualifiedName { get; set; }
+        public string Name { get; set; }
 
         public bool Deleted { get; set; }
 
@@ -294,7 +397,7 @@ namespace Raven.Server.Web.System
         {
             return new DynamicJsonValue
             {
-                [nameof(QualifiedName)] = QualifiedName,
+                [nameof(Name)] = Name,
                 [nameof(Deleted)] = Deleted,
                 [nameof(Reason)] = Reason
             };

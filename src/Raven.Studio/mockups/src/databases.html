@@ -1,19 +1,19 @@
 <!doctype html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
-{{> head title="Resources" }}
+{{> head title="Databases" }}
 <body>
     {{> spinner }} {{> topbar }} {{> menu }} {{> notification-center }}
 
     <div class="container-fluid content-container">
         <div class="content-container-margin">
-            <div class="resources">
+            <div class="databases">
                 <button class="btn btn-primary" data-toggle="modal" data-target="#newDatabase">test modal</button>
 
-                {{> resources/toolbar }}
+                {{> databases/toolbar }}
 
             <hr />
 
-                {{> resources/resource
+                {{> databases/database
                     name="db/Beers"
                     docs="33K"
                     indexes="94"
@@ -27,7 +27,7 @@
                     clientRejectionMode="true"
                 }}
 
-                {{> resources/resource
+                {{> databases/database
                     name="db/Cars"
                     size="1GB"
                     docs="4.5K"
@@ -41,7 +41,7 @@
                     alerts=3
                 }}
 
-                {{> resources/resource
+                {{> databases/database
                     name="db/Dinosaurs"
                     docs="200"
                     indexes="2"
@@ -54,7 +54,7 @@
                     backedUpClass="text-danger"
                 }}
 
-                {{> resources/resource
+                {{> databases/database
                     name="db/RavenDbBugs"
                     docs="0"
                     indexes="0"
@@ -69,7 +69,7 @@
                     errors="61"
                 }}
 
-                {{> resources/resource
+                {{> databaseses/database
                     name="db/WeirdLongLeggedBugsWithWingsAndDotsOnTheForehead"
 
                     type="database"

@@ -7,8 +7,8 @@
         </div>
     </div>
 </div>
-<div class="resources" data-bind="if: databases().sortedDatabases().length, css: { 'resources_compact': compactView() }">
-    <div class="resourcesToolbar toolbar clearfix">
+<div class="databases" data-bind="if: databases().sortedDatabases().length, css: { 'databases_compact': compactView() }">
+    <div class="databasesToolbar toolbar clearfix">
         <div class="form-inline">
             <div class="checkbox checkbox-primary checkbox-inline align-checkboxes">
                 <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
@@ -17,7 +17,7 @@
             <div class="input-group">
                 <input type="text" class="form-control" placeholder="Filter" accesskey="/" title="Filter databases (Alt+/)" data-bind="textInput: filters.searchText">    
             </div>
-            <div class="resourcesToolbar-actions">
+            <div class="databasesToolbar-actions">
                 <button class="btn btn-primary" data-bind="click: newDatabase">
                     <i class="icon-plus"></i>
                     <span>New database</span>
@@ -53,7 +53,7 @@
                     </div>
                 </div>
             </div>
-            <div class="toggle toggle-primary resourcesToolbar-toggleCompactView pull-right">
+            <div class="toggle toggle-primary databasesToolbar-toggleCompactView pull-right">
                 <input id="compactViewInput" name="compactView" class="styled" type="checkbox" data-bind="checked: $root.compactView" />
                 <label for="compactViewInput">
                     Compact View
@@ -63,16 +63,16 @@
     </div> 
     
     <div data-bind="foreach: databases().sortedDatabases">
-        <div class="panel resource" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel resource ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
+        <div class="panel database" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel database ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
             <div class="padding padding-sm">
                 <div data-bind="click: $root.activateDatabase, attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                 <div class="row">
                     <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
                         <div class="checkbox">
-                            <input type="checkbox" class="styled" data-bind="checked: $root.selectedDatabases, checkedValue: qualifiedName">
+                            <input type="checkbox" class="styled" data-bind="checked: $root.selectedDatabases, checkedValue: name">
                             <label></label>
                         </div>
-                        <h3 class="resource-name">
+                        <h3 class="database-name">
                             <i class="icon-database"></i>
                             <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase(), text: name"></span>
                             <a data-bind="attr: { title: name, href: $root.databaseUrl($data) }, text: name, visible: canNavigateToDatabase()" href="#"></a>

@@ -3,13 +3,13 @@ import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
 import startDbCompactCommand = require("commands/maintenance/startCompactCommand");
 import accessHelper = require("viewmodels/shell/accessHelper");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import eventsCollector = require("common/eventsCollector");
 
 class resourceCompact {
-    resourceName = ko.observable<string>('');
+    databaseName = ko.observable<string>('');
     
-    resourcesNames: KnockoutComputed<string[]>;
+    databasesNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
 
@@ -19,20 +19,20 @@ class resourceCompact {
     keepDown = ko.observable<boolean>(false);
 
     constructor(private parent: compact, private type: string, private resources: KnockoutObservableArray<database>) {
-        this.resourcesNames = ko.computed(() => resources().map((rs: database) => rs.name));
+        this.databasesNames = ko.computed(() => resources().map((rs: database) => rs.name));
 
         this.searchResults = ko.computed(() => {
-            var newResourceName = this.resourceName();
-            return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
+            var newResourceName = this.databaseName();
+            return this.databasesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
-            var newResourceName = this.resourceName();
-            var foundRs = this.resources().find((rs: database) => newResourceName === rs.name);
+            var newDatabaseName = this.databaseName();
+            var foundRs = this.resources().find((db: database) => newDatabaseName === db.name);
 
-            if (!foundRs && newResourceName.length > 0) {
-                errorMessage = (this.type === database.type ? "Database" : "File system") + " name doesn't exist!";
+            if (!foundRs && newDatabaseName.length > 0) {
+                errorMessage ="Database name doesn't exist!";
             }
 
             return errorMessage;
@@ -62,9 +62,9 @@ class resourceCompact {
 
 }
 class compact extends viewModelBase {
-    resourcesManager = resourcesManager.default;
+    databasesManager = databasesManager.default;
 
-    private dbCompactOptions: resourceCompact = new resourceCompact(this, database.type, this.resourcesManager.databases);
+    private dbCompactOptions: resourceCompact = new resourceCompact(this, database.type, this.databasesManager.databases);
 
     isBusy = ko.observable<boolean>();
     isForbidden = ko.observable<boolean>();
@@ -90,7 +90,7 @@ class compact extends viewModelBase {
         this.isBusy(true);
         var self = this;
 
-        new startDbCompactCommand(this.dbCompactOptions.resourceName(), self.dbCompactOptions.updateCompactStatus.bind(self.dbCompactOptions))
+        new startDbCompactCommand(this.dbCompactOptions.databaseName(), self.dbCompactOptions.updateCompactStatus.bind(self.dbCompactOptions))
             .execute();
     }
 

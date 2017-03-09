@@ -17,7 +17,7 @@ class activeDatabaseTracker {
     constructor() {
         ko.postbox.subscribe(EVENTS.Database.Activate, (e: databaseActivatedEventArgs) => {
 
-            // If the 'same' database was selected from the top resources selector dropdown, 
+            // If the 'same' database was selected from the top databases selector dropdown, 
             // then we want the knockout observable to be aware of it so that scrollling on page will occur
             if (e.database === this.database()) {
                 this.database(null);
