@@ -232,21 +232,30 @@ namespace Raven.Server.Documents.Handlers
                     switch (cmd.Method)
                     {
                         case BatchRequestParser.CommandType.PUT:
+
+                            BlittableJsonReaderObject metadata;
+                            if (cmd.Document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
+                            {
+                                cmd.Document.Modifications = new DynamicJsonValue(cmd.Document)
+                                {
+                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue()
+                                };
+                                cmd.Document = context.ReadObject(cmd.Document, cmd.Key);
+                                metadata = cmd.Document[Constants.Documents.Metadata.Key] as BlittableJsonReaderObject;
+                            }
+
                             var putResult = Database.DocumentsStorage.Put(context, cmd.Key, cmd.Etag,
                                 cmd.Document);
 
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
-
-                            BlittableJsonReaderObject metadata;
-                            cmd.Document.TryGet(Constants.Documents.Metadata.Key, out metadata);
                             LastEtag = putResult.Etag;
 
-                        
                             metadata.Modifications = new DynamicJsonValue(metadata)
                             {
                                 [Constants.Documents.Metadata.Etag] = putResult.Etag,
                                 [Constants.Documents.Metadata.Id] = putResult.Key
                             };
+
                             ModifiedCollections?.Add(putResult.Collection.Name);
 
                             Reply.Add(new DynamicJsonValue
