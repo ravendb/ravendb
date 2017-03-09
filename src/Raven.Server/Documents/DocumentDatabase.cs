@@ -384,19 +384,19 @@ namespace Raven.Server.Documents
             Size size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
             {
-                [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(BundleLoader.GetActiveBundles()),
-                [nameof(ResourceInfo.IsAdmin)] = true, //TODO: implement me!
-                [nameof(ResourceInfo.Name)] = Name,
-                [nameof(ResourceInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
-                [nameof(ResourceInfo.TotalSize)] = new DynamicJsonValue
+                [nameof(DatabaseInfo.Bundles)] = new DynamicJsonArray(BundleLoader.GetActiveBundles()),
+                [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
+                [nameof(DatabaseInfo.Name)] = Name,
+                [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
+                [nameof(DatabaseInfo.TotalSize)] = new DynamicJsonValue
                 {
                     [nameof(Size.HumaneSize)] = size.HumaneSize,
                     [nameof(Size.SizeInBytes)] = size.SizeInBytes
                 },
-                [nameof(ResourceInfo.Errors)] = IndexStore.GetIndexes().Sum(index => index.GetErrors().Count),
-                [nameof(ResourceInfo.Alerts)] = NotificationCenter.GetAlertCount(),
-                [nameof(ResourceInfo.UpTime)] = null, //it is shutting down
-                [nameof(ResourceInfo.BackupInfo)] = BundleLoader.GetBackupInfo(),
+                [nameof(DatabaseInfo.Errors)] = IndexStore.GetIndexes().Sum(index => index.GetErrors().Count),
+                [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
+                [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
+                [nameof(DatabaseInfo.BackupInfo)] = BundleLoader.GetBackupInfo(),
                 [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!

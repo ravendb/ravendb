@@ -252,7 +252,7 @@ class editDocument extends viewModelBase {
     }
 
     createDocumentChangeNotification(docId: string): changeSubscription {
-        return this.changesContext.resourceChangesApi().watchDocument(docId, (n: Raven.Client.Documents.Changes.DocumentChange) => this.onDocumentChange(n));
+        return this.changesContext.databaseChangesApi().watchDocument(docId, (n: Raven.Client.Documents.Changes.DocumentChange) => this.onDocumentChange(n));
     }
 
     onDocumentChange(n: Raven.Client.Documents.Changes.DocumentChange): void {

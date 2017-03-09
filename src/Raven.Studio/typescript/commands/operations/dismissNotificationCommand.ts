@@ -1,10 +1,10 @@
 import commandBase = require("commands/commandBase");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class dismissNotificationCommand extends commandBase {
 
-    constructor(private rs: resource, private notificationId: string, private forever: boolean = false) {
+    constructor(private db: database, private notificationId: string, private forever: boolean = false) {
         super();
     }
 
@@ -13,9 +13,9 @@ class dismissNotificationCommand extends commandBase {
             id: this.notificationId,
             forever: this.forever ? "true" : undefined
         };
-        const url = this.rs ? endpoints.databases.databaseNotificationCenter.notificationCenterDismiss : endpoints.global.serverNotificationCenter.notificationCenterDismiss;
+        const url = this.db ? endpoints.databases.databaseNotificationCenter.notificationCenterDismiss : endpoints.global.serverNotificationCenter.notificationCenterDismiss;
 
-        return this.post(url + this.urlEncodeArgs(args), null, this.rs, { dataType: undefined })
+        return this.post(url + this.urlEncodeArgs(args), null, this.db, { dataType: undefined })
             .fail((response: JQueryXHR) => this.reportError("Failed to dismiss action", response.responseText, response.statusText));
         
     }

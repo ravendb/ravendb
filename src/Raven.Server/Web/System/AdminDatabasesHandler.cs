@@ -170,7 +170,7 @@ namespace Raven.Server.Web.System
                         newEtag = hasEtagInRequest ? ServerStore.Write(context, dbId, dbDoc, etag) :
                                                      ServerStore.Write(context, dbId, dbDoc);
 
-                        ServerStore.NotificationCenter.AddAfterTransactionCommit(ResourceChanged.Create(dbId, ResourceChangeType.Put), tx);
+                        ServerStore.NotificationCenter.AddAfterTransactionCommit(DatabaseChanged.Create(dbId, ResourceChangeType.Put), tx);
 
                         tx.Commit();
                     }
@@ -269,7 +269,7 @@ namespace Raven.Server.Web.System
                 {
                     ServerStore.Delete(context, dbId);
                     ServerStore.NotificationCenter.AddAfterTransactionCommit(
-                        ResourceChanged.Create(dbId, ResourceChangeType.Delete), tx);
+                        DatabaseChanged.Create(dbId, ResourceChangeType.Delete), tx);
 
                     tx.Commit();
                 }

@@ -5,7 +5,7 @@
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
-            <a class="navbar-brand hidden-xs" href="#resources">RavenDB</a>
+            <a class="navbar-brand hidden-xs" href="#databases">RavenDB</a>
         </div>
         <div id="navbar">
             <ul class="nav navbar-nav navbar-right">
@@ -74,7 +74,7 @@
                 </div>-->
                 <div class="resource-switcher-container" data-bind="with: resourceSwitcher">
                     <div class="form-control btn-toggle resource-switcher">
-                        <span class="database" data-bind="text: $root.activeResource() ? $root.activeResource().name:''"></span>
+                        <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
                     </div>
                     <div class="box-container">
                         <div class="resource-filter-container">
@@ -82,7 +82,7 @@
                         </div>
                         <div class="scroller">
                             <section>
-                                <ul class="database-list" data-bind="foreach: filteredResources">
+                                <ul class="database-list" data-bind="foreach: filteredDatabases">
                                     <li>
                                         <a href="#" data-bind="click: $parent.selectResource.bind($parent)" class="database">
                                             <span data-bind="text: name"></span> 

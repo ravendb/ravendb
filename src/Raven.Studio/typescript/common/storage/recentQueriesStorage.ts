@@ -106,11 +106,9 @@ class recentQueriesStorage {
     }
 
 
-    static onResourceDeleted(qualifer: string, name: string) {
-        if (qualifer === database.qualifier) {
-            const localStorageName = recentQueriesStorage.getLocalStorageKey(name);
-            localStorage.removeItem(localStorageName);
-        }
+    static onDatabaseDeleted(qualifer: string, name: string) {
+        const localStorageName = recentQueriesStorage.getLocalStorageKey(name);
+        localStorage.removeItem(localStorageName);
     }
 
 }

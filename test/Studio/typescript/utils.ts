@@ -41,9 +41,9 @@ class Utils {
         factory = factory || (x => new x(Utils.databaseNamed("default")));
 
         return new Promise<void>((resolve, reject) => {
-            Utils.injector.require(["models/resources/database", "common/shell/activeResourceTracker"], (dbCtr: new () => any, resourceTracker: any) => {
+            Utils.injector.require(["models/resources/database", "common/shell/activeDatabaseTracker"], (dbCtr: new () => any, databaseTracker: any) => {
                 var dbInstance = factory(dbCtr);
-                resourceTracker.default.resource(dbInstance);
+                databaseTracker.default.resource(dbInstance);
                 resolve();
             }, reject);
         });

@@ -38,7 +38,7 @@ class conflicts extends viewModelBase {
     static gridSelector = "#conflictsGrid";
 
     afterClientApiConnected(): void {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         //TODO: this.addNotification changesApi.watchAllReplicationConflicts((e) => this.refreshConflictsObservable(new Date().getTime())) 
     }
 

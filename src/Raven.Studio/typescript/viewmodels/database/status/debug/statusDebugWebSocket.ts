@@ -44,7 +44,7 @@ class statusDebugWebSocket extends viewModelBase {
         
 
         var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        var url = wsProtocol + window.location.host + appUrl.forResourceQuery(this.activeDatabase()) + '/websocket/validate?' + connectionString;
+        var url = wsProtocol + window.location.host + appUrl.forDatabaseQuery(this.activeDatabase()) + '/websocket/validate?' + connectionString;
 
         this.appendLog("Connecting to web socket using url: " + url);
 

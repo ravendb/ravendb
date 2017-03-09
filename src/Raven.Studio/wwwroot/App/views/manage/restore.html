@@ -7,8 +7,6 @@
 <div role="tabpanel" data-bind="visible: isForbidden() == false">
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active"><a href="#restoreDb" aria-controls="restoreDb" role="tab" data-toggle="tab">Database</a></li>
-        <li role="presentation"><a href="#restoreFs" aria-controls="restoreFs" role="tab" data-toggle="tab">File System</a></li>
-        <li role="presentation" data-bind="visible: $root.has40Features"><a href="#restoreCs" aria-controls="restoreFs" role="tab" data-toggle="tab">Counter Storage</a></li>
     </ul>
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="restoreDb">
@@ -52,7 +50,7 @@
                             <div class="form-group">
                                 <label for="databaseName" class="col-sm-2 control-label">Database Name</label>
                                 <div class="col-sm-3">
-                                    <input data-bind="value: resourceName, disable: $parent.isBusy, customValidity: nameCustomValidityError" type="text" required class="form-control" id="databaseName" placeholder="Restored database name" autocomplete="off">
+                                    <input data-bind="value: databaseName, disable: $parent.isBusy, customValidity: nameCustomValidityError" type="text" required class="form-control" id="databaseName" placeholder="Restored database name" autocomplete="off">
                                 </div>
                             </div>
                             <div class="form-group">
@@ -88,117 +86,6 @@
                     </div>
                 </div>
                 
-            </form>
-        </div>
-        <div role="tabpanel" class="tab-pane" id="restoreFs">
-            <form class="form-horizontal" role="form" data-bind="submit: startFsRestore">
-                <div class="panel panel-default" data-bind="with: fsRestoreOptions">
-                    <div class="panel-heading panel-info">
-                        <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
-                            <i class="fa fa-cloud-download fa-fw" data-bind="visible: !$parent.isBusy()"></i>
-                            <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: $parent.isBusy"></i>
-                            <span>Restore Filesystem</span>
-                        </button>
-                        <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
-                    </div>
-                    <div class="panel-body">
-                        <div>
-                            <div class="form-group">
-                                <label for="backupLocation" class="col-sm-2 control-label">Backup Location</label>
-                                <div class="col-sm-5">
-                                    <input data-bind="value: backupLocation, disable: $parent.isBusy" type="text" required class="form-control" id="Text1" placeholder="C:&#92;path-to-your-backup-folder">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="filesystemLocation" class="col-sm-2 control-label">File System Location</label>
-                                <div class="col-sm-5">
-                                    <input data-bind="value: resourceLocation, disable: $parent.isBusy" type="text" class="form-control" id="filesystemLocation" placeholder="C:&#92;path-to-your-restored-file-system-folder">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="filesystemIndexesLocation" class="col-sm-2 control-label">Indexes Location</label>
-                                <div class="col-sm-5">
-                                    <input data-bind="value: indexesLocation, disable: $parent.isBusy" type="text" class="form-control" id="filesystemIndexesLocation" placeholder="(Optional) Path to location where indexes should be placed">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="filesystemJournalsLocation" class="col-sm-2 control-label">Logs Location</label>
-                                <div class="col-sm-5">
-                                    <input data-bind="value: journalsLocation, disable: $parent.isBusy" type="text" class="form-control" id="filesystemJournalsLocation" placeholder="(Optional) Path to location where logs/journals should be placed">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="filesystemName" class="col-sm-2 control-label">File System Name</label>
-                                <div class="col-sm-3">
-                                    <input data-bind="value: resourceName, disable: $parent.isBusy, customValidity: nameCustomValidityError" type="text" required class="form-control" id="filesystemName" placeholder="Restored file system name" autocomplete="off">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <div class="col-sm-offset-2 col-sm-5">
-                                    <div class="checkbox">
-                                        <input type="checkbox" class="styled" id="defrag_fs" data-bind="checked: defrag, disable: $parent.isBusy">
-                                        <label for="defrag_fs">Defrag</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bs-code-output" data-title="Log" data-bind="visible: restoreStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
-                            <pre>
-<!-- ko foreach: restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
-</pre>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <div role="tabpanel" class="tab-pane" id="restoreCs">
-            <form class="form-horizontal" role="form" data-bind="submit: startFsRestore">
-                <div class="panel panel-default" data-bind="with: fsRestoreOptions">
-                    <div class="panel-heading panel-info">
-                        <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
-                            <i class="fa fa-cloud-download fa-fw" data-bind="visible: !$parent.isBusy()"></i>
-                            <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: $parent.isBusy"></i>
-                            <span>Restore Counter Storage</span>
-                        </button>
-                        <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
-                    </div>
-                    <div class="panel-body">
-                        <div>
-                            <div class="form-group">
-                                <label for="backupLocation" class="col-sm-2 control-label">Backup Location</label>
-                                <div class="col-sm-5">
-                                    <input data-bind="value: backupLocation, disable: $parent.isBusy" type="text" required class="form-control" id="Text1" placeholder="C:&#92;path-to-your-backup-folder">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="filesystemLocation" class="col-sm-2 control-label">Counter Storage Location</label>
-                                <div class="col-sm-5">
-                                    <input data-bind="value: resourceLocation, disable: $parent.isBusy" type="text" class="form-control" id="filesystemLocation" placeholder="C:&#92;path-to-your-restored-counter-storage-folder">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="filesystemName" class="col-sm-2 control-label">Counter Storage Name</label>
-                                <div class="col-sm-3">
-                                    <input data-bind="value: resourceName, disable: $parent.isBusy, customValidity: nameCustomValidityError" type="text" required class="form-control" id="filesystemName" placeholder="Restored counter storage name" autocomplete="off">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <div class="col-sm-offset-2 col-sm-5">
-                                    <div class="checkbox">
-                                        <input type="checkbox" class="styled" id="defrag_cs" data-bind="checked: defrag, disable: $parent.isBusy">
-                                        <label for="defrag_cs">Defrag</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bs-code-output" data-title="Log" data-bind="visible: restoreStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
-                            <pre>
-<!-- ko foreach: restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
-</pre>
-                        </div>
-                    </div>
-                </div>
             </form>
         </div>
     </div>

@@ -15,6 +15,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
+    //TODO: review this
     public class AdminResourcesHandler : RequestHandler
     {
         [RavenAction("/admin/*/disable", "POST", "/admin/{resourceType:databases|fs|cs|ts}/disable?name={resourceName:string|multiple}")]
@@ -41,15 +42,6 @@ namespace Raven.Server.Web.System
             {
                 case Constants.Documents.UrlPrefix:
                     resourcePrefix = Constants.Documents.Prefix;
-                    break;
-                case Constants.Files.UrlPrefix:
-                    resourcePrefix = Constants.Files.Prefix;
-                    break;
-                case Constants.Counters.UrlPrefix:
-                    resourcePrefix = Constants.Counters.Prefix;
-                    break;
-                case Constants.TimeSeries.UrlPrefix:
-                    resourcePrefix = Constants.TimeSeries.Prefix;
                     break;
                 default:
                     throw new InvalidOperationException($"Resource type is not valid: '{resourceType}'");
@@ -111,7 +103,7 @@ namespace Raven.Server.Web.System
                     var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     ServerStore.Write(context, dbId, newDoc2);
-                    ServerStore.NotificationCenter.AddAfterTransactionCommit(ResourceChanged.Create(dbId, ResourceChangeType.Put), tx);
+                    ServerStore.NotificationCenter.AddAfterTransactionCommit(DatabaseChanged.Create(dbId, ResourceChangeType.Put), tx);
 
                     databasesToUnload.Add(name);
 

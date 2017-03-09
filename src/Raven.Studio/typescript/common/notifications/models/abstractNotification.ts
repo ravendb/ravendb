@@ -1,11 +1,11 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 import EVENTS = require("common/constants/events");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 
 abstract class abstractNotification {
 
-    resource: resource;
+    database: database;
 
     id: string;
     createdAt = ko.observable<moment.Moment>();
@@ -19,8 +19,8 @@ abstract class abstractNotification {
 
     cssClass: KnockoutComputed<string>;
 
-    constructor(rs: resource, dto: Raven.Server.NotificationCenter.Notifications.Notification) {
-        this.resource = rs;
+    constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.Notification) {
+        this.database = db;
         this.id = dto.Id;
         this.type = dto.Type;
 

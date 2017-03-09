@@ -2,7 +2,6 @@
 
 import messagePublisher = require("common/messagePublisher");
 import database = require("models/resources/database");
-import resource = require("models/resources/resource");
 import appUrl = require("common/appUrl");
 import oauthContext = require("common/oauthContext");
 import forge = require("forge");
@@ -29,8 +28,8 @@ class commandBase {
         return longWait ? 60000 : 9000;
     }
 
-    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
-        const ajax = this.ajax(relativeUrl, args, "GET", resource, options, timeToAlert);
+    query<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
+        const ajax = this.ajax(relativeUrl, args, "GET", db, options, timeToAlert);
         if (resultsSelector) {
             var task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
@@ -46,8 +45,8 @@ class commandBase {
         }
     }
 
-    protected head<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any, xhr: JQueryXHR) => T): JQueryPromise<T> {
-        var ajax = this.ajax(relativeUrl, args, "HEAD", resource);
+    protected head<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T): JQueryPromise<T> {
+        var ajax = this.ajax(relativeUrl, args, "HEAD", db);
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {
@@ -74,31 +73,31 @@ class commandBase {
         }
     }
 
-    protected put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PUT", resource, options, timeToAlert);
+    protected put(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PUT", db, options, timeToAlert);
     }
 
-    protected reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "RESET", resource, options);
+    protected reset(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "RESET", db, options);
     }
 
-    protected del<T>(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
-        return this.ajax(relativeUrl, args, "DELETE", resource, options, timeToAlert);
+    protected del<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
+        return this.ajax(relativeUrl, args, "DELETE", db, options, timeToAlert);
     }
 
-    protected post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "POST", resource, options, timeToAlert);
+    protected post(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "POST", db, options, timeToAlert);
     }
 
-    protected patch(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PATCH", resource, options);
+    protected patch(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PATCH", db, options);
     }
 
-    protected evalJs(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "EVAL", resource, options);
+    protected evalJs(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "EVAL", db, options);
     }
 
-    protected ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected ajax(relativeUrl: string, args: any, method: string, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         var originalArguments = arguments;
 
         const requestExecution = protractedCommandsDetector.instance.requestStarted(4000, timeToAlert);
@@ -115,7 +114,7 @@ class commandBase {
             "text/plain; charset=utf-8" :
             "application/json; charset=utf-8";
         var defaultOptions = {
-            url: appUrl.forResourceQuery(resource) + relativeUrl,
+            url: appUrl.forDatabaseQuery(db) + relativeUrl,
             data: args,
             dataType: "json",
             contentType: contentType, 

@@ -249,26 +249,5 @@ namespace Raven.Client
                 public const string ExpirationDate = "Raven-Expiration-Date";
             }
         }
-
-        public static class Files
-        {
-            public const string Prefix = "fs/";
-
-            public const string UrlPrefix = "fs";
-        }
-
-        public static class Counters
-        {
-            public const string Prefix = "cs/";
-
-            public const string UrlPrefix = "cs";
-        }
-
-        public static class TimeSeries
-        {
-            public const string Prefix = "ts/";
-
-            public const string UrlPrefix = "ts";
-        }
     }
 }

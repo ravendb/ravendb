@@ -1,39 +1,39 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
 import changesApi = require("common/changesApi");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import changeSubscription = require("common/changeSubscription");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
-import resourceNotificationCenterClient = require("common/resourceNotificationCenterClient");
+import databaseNotificationCenterClient = require("common/databaseNotificationCenterClient");
 import EVENTS = require("common/constants/events");
 
-import resourceDisconnectedEventArgs = require("viewmodels/resources/resourceDisconnectedEventArgs");
+import databaseDisconnectedEventArgs = require("viewmodels/resources/databaseDisconnectedEventArgs");
 import notificationCenter = require("common/notifications/notificationCenter");
 
 class changesContext {
     static default = new changesContext();
     
     serverNotifications = ko.observable<serverNotificationCenterClient>();
-    resourceNotifications = ko.observable<resourceNotificationCenterClient>();
+    databaseNotifications = ko.observable<databaseNotificationCenterClient>();
 
-    resourceChangesApi = ko.observable<changesApi>();
+    databaseChangesApi = ko.observable<changesApi>();
     afterChangesApiConnection = $.Deferred<changesApi>();
 
-    private globalResourceSubscriptions: changeSubscription[] = [];
+    private globalDatabaseSubscriptions: changeSubscription[] = [];
 
     constructor() {
         window.addEventListener("beforeunload", () => {
-            this.disconnectFromResourceChangesApi("ChangingResource");
+            this.disconnectFromDatabaseChangesApi("ChangingDatabase");
             this.serverNotifications().dispose();
 
-            if (this.resourceNotifications()) {
-                this.resourceNotifications().dispose();
+            if (this.databaseNotifications()) {
+                this.databaseNotifications().dispose();
             }
         });
 
-        this.resourceChangesApi.subscribe(newValue => {
+        this.databaseChangesApi.subscribe(newValue => {
             if (!newValue) {
                 if (this.afterChangesApiConnection.state() === "resolved") {
                     this.afterChangesApiConnection = $.Deferred<changesApi>();
@@ -56,79 +56,79 @@ class changesContext {
         return serverClient.connectToWebSocketTask;
     }
 
-    changeResource(rs: resource): void {
-        const currentChanges = this.resourceChangesApi();
-        if (currentChanges && currentChanges.getResource().qualifiedName === rs.qualifiedName) {
+    changeDatabase(db: database): void {
+        const currentChanges = this.databaseChangesApi();
+        if (currentChanges && currentChanges.getDatabase().qualifiedName === db.qualifiedName) {
             // nothing to do - already connected to requested changes api
             return;
         }
 
         if (currentChanges) {
-            this.disconnect("ChangingResource");
+            this.disconnect("ChangingDatabase");
         }
 
-        if (rs.disabled()) { //TODO: or not licensed
-            this.navigateToResourceSpecificPage(rs);
+        if (db.disabled()) { //TODO: or not licensed
+            this.navigateToResourceSpecificPage(db);
             return;
         }
 
-        const notificationsClient = new resourceNotificationCenterClient(rs);
+        const notificationsClient = new databaseNotificationCenterClient(db);
 
-        this.globalResourceSubscriptions.push(...notificationCenter.instance.configureForResource(notificationsClient));
+        this.globalDatabaseSubscriptions.push(...notificationCenter.instance.configureForDatabase(notificationsClient));
 
-        const newChanges = new changesApi(rs);
+        const newChanges = new changesApi(db);
         newChanges.connectToWebSocketTask.done(() => {
-            this.resourceChangesApi(newChanges);
-            this.navigateToResourceSpecificPage(rs);
+            this.databaseChangesApi(newChanges);
+            this.navigateToResourceSpecificPage(db);
         });
 
         
-        this.resourceNotifications(notificationsClient);
+        this.databaseNotifications(notificationsClient);
     }
 
-    private navigateToResourceSpecificPage(rs: resource) {
+    private navigateToResourceSpecificPage(db: database) {
         const locationHash = window.location.hash;
-        const isMainPage = locationHash === appUrl.forResources();
+        const isMainPage = locationHash === appUrl.forDatabases();
         if (!isMainPage) {
-            const updatedUrl = appUrl.forCurrentPage(rs);
+            const updatedUrl = appUrl.forCurrentPage(db);
             if (updatedUrl) {
                 router.navigate(updatedUrl);
             }
         }
     }
 
-    private disconnectFromResourceNotificationCenter() {
-        const currentClient = this.resourceNotifications();
+    private disconnectFromDatabaseNotificationCenter() {
+        const currentClient = this.databaseNotifications();
         if (currentClient) {
             currentClient.dispose();
-            this.resourceNotifications(null);
+            this.databaseNotifications(null);
         }
     }
 
-    private disconnectFromResourceChangesApi(cause: resourceDisconnectionCause) {
-        const currentChanges = this.resourceChangesApi();
+    private disconnectFromDatabaseChangesApi(cause: databaseDisconnectionCause) {
+        const currentChanges = this.databaseChangesApi();
         if (currentChanges) {
             currentChanges.dispose();
-            this.resourceChangesApi(null);
+            this.databaseChangesApi(null);
 
-            ko.postbox.publish(EVENTS.Resource.Disconnect, { resource: currentChanges.getResource(), cause: cause } as resourceDisconnectedEventArgs);
+            ko.postbox.publish(EVENTS.Resource.Disconnect, { database: currentChanges.getDatabase(), cause: cause } as databaseDisconnectedEventArgs);
         }
     }
 
-    disconnectIfCurrent(rs: resource, cause: resourceDisconnectionCause) {
-        const currentChanges = this.resourceChangesApi();
+    disconnectIfCurrent(db: database, cause: databaseDisconnectionCause) {
+        const currentChanges = this.databaseChangesApi();
 
-        if (currentChanges && currentChanges.getResource().qualifiedName === rs.qualifiedName) {
+        if (currentChanges && currentChanges.getDatabase().qualifiedName === db.qualifiedName) {
             this.disconnect(cause);
         }
     }
 
-    private disconnect(cause: resourceDisconnectionCause) {
-        this.globalResourceSubscriptions.forEach(x => x.off());
-        this.globalResourceSubscriptions = [];
+    private disconnect(cause: databaseDisconnectionCause) {
+        this.globalDatabaseSubscriptions.forEach(x => x.off());
+        this.globalDatabaseSubscriptions = [];
 
-        this.disconnectFromResourceChangesApi(cause);
-        this.disconnectFromResourceNotificationCenter();
+        this.disconnectFromDatabaseChangesApi(cause);
+        this.disconnectFromDatabaseNotificationCenter();
         notificationCenter.instance.resourceDisconnected();
     }
 }

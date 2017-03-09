@@ -1,5 +1,4 @@
 import shell = require("viewmodels/shell");
-import resource = require("models/resources/resource");
 import accessHelper = require("viewmodels/shell/accessHelper");
 
 class databaseAccess {

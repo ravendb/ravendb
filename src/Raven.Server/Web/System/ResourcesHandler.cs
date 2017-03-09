@@ -24,7 +24,7 @@ namespace Raven.Server.Web.System
         {
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
-            //TODO: fill all required information (see: RavenDB-5438) - return Raven.Client.Data.ResourcesInfo
+            //TODO: fill all required information (see: RavenDB-5438) - return Raven.Client.Data.DatabasesInfo
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
@@ -33,7 +33,7 @@ namespace Raven.Server.Web.System
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(nameof(ResourcesInfo.Databases));
+                    writer.WritePropertyName(nameof(DatabasesInfo.Databases));
                     writer.WriteArray(context, ServerStore.StartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize(int.MaxValue)), (w, c, dbDoc) =>
                     {
                         var databaseName = dbDoc.Key.Substring(Constants.Documents.Prefix.Length);
@@ -45,8 +45,6 @@ namespace Raven.Server.Web.System
 
                         WriteDatabaseInfo(databaseName, dbDoc.Data, context, w);
                     }); 
-
-                    //TODO: write fs, cs, ts
 
                     writer.WriteEndObject();
                 }
@@ -132,21 +130,21 @@ namespace Raven.Server.Web.System
 
             var doc = new DynamicJsonValue
             {
-                [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(GetBundles(db)),
-                [nameof(ResourceInfo.IsAdmin)] = true, //TODO: implement me!
-                [nameof(ResourceInfo.Name)] = databaseName,
-                [nameof(ResourceInfo.Disabled)] = disabled,
-                [nameof(ResourceInfo.TotalSize)] = new DynamicJsonValue
+                [nameof(DatabaseInfo.Bundles)] = new DynamicJsonArray(GetBundles(db)),
+                [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
+                [nameof(DatabaseInfo.Name)] = databaseName,
+                [nameof(DatabaseInfo.Disabled)] = disabled,
+                [nameof(DatabaseInfo.TotalSize)] = new DynamicJsonValue
                 {
                     [nameof(Size.HumaneSize)] = size.HumaneSize,
                     [nameof(Size.SizeInBytes)] = size.SizeInBytes
                 },
-                [nameof(ResourceInfo.Errors)] = online
+                [nameof(DatabaseInfo.Errors)] = online
                     ? db.IndexStore.GetIndexes().Sum(index => index.GetErrors().Count)
                     : 0,
-                [nameof(ResourceInfo.Alerts)] = online ? db.NotificationCenter.GetAlertCount() : 0,
-                [nameof(ResourceInfo.UpTime)] = online ? GetUptime(db).ToString() : null,
-                [nameof(ResourceInfo.BackupInfo)] = backupInfo,
+                [nameof(DatabaseInfo.Alerts)] = online ? db.NotificationCenter.GetAlertCount() : 0,
+                [nameof(DatabaseInfo.UpTime)] = online ? GetUptime(db).ToString() : null,
+                [nameof(DatabaseInfo.BackupInfo)] = backupInfo,
                 [nameof(DatabaseInfo.DocumentsCount)] = online
                     ? db.DocumentsStorage.GetNumberOfDocuments()
                     : 0,
@@ -164,8 +162,8 @@ namespace Raven.Server.Web.System
 
             var doc = new DynamicJsonValue
             {
-                [nameof(ResourceInfo.Name)] = databaseName,
-                [nameof(ResourceInfo.LoadError)] = exception.ExtractSingleInnerException().Message
+                [nameof(DatabaseInfo.Name)] = databaseName,
+                [nameof(DatabaseInfo.LoadError)] = exception.ExtractSingleInnerException().Message
             };
 
             context.Write(writer, doc);

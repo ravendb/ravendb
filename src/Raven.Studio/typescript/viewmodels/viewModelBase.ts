@@ -2,7 +2,7 @@
 
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
-import activeResourceTracker = require("common/shell/activeResourceTracker");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
@@ -22,11 +22,7 @@ import changesApi = require("common/changesApi");
 */
 class viewModelBase {
 
-    protected activeDatabase = activeResourceTracker.default.database;
-    protected activeFilesystem = activeResourceTracker.default.fileSystem;
-    protected activeCounterStorage = activeResourceTracker.default.counterStorage;
-    protected activeTimeSeries = activeResourceTracker.default.timeSeries;
-    protected activeResource = activeResourceTracker.default.resource;
+    protected activeDatabase = activeDatabaseTracker.default.database;
     
     downloader = new downloader();
 

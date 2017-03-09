@@ -24,7 +24,7 @@ class indexErrors extends viewModelBase {
     }
 
     afterClientApiConnected(): void {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         this.addNotification(changesApi.watchAllIndexes(() => this.fetchIndexErrors()));
     }
 

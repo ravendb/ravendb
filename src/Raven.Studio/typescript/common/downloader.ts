@@ -1,12 +1,12 @@
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require("common/messagePublisher"); 
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 
 class downloader {
     $downloadFrame = $("#downloadFrame");
 
-    download(rs: resource, url: string) {
-        new getSingleAuthTokenCommand(rs).execute().done((token: singleAuthToken) => {
+    download(db: database, url: string) {
+        new getSingleAuthTokenCommand(db).execute().done((token: singleAuthToken) => {
             var authToken = (url.indexOf("?") === -1 ? "?" : "&") + "singleUseAuthToken=" + token.Token;
             this.$downloadFrame.attr("src", url + authToken);
         }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get single auth token for download.", errorThrown));

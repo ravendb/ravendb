@@ -7,13 +7,11 @@ import viewLocator = require("durandal/viewLocator");
 
 import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
-import activeResourceTracker = require("common/shell/activeResourceTracker");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import resourceSwitcher = require("common/shell/resourceSwitcher");
 import searchBox = require("common/shell/searchBox");
-import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
-import uploadItem = require("models/filesystem/uploadItem");
 import license = require("models/auth/license");
 import topology = require("models/database/replication/topology");
 import environmentColor = require("models/resources/environmentColor");
@@ -23,10 +21,8 @@ import allRoutes = require("common/shell/routes");
 import registration = require("viewmodels/shell/registration");
 
 import appUrl = require("common/appUrl");
-import uploadQueueHelper = require("common/uploadQueueHelper");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
-import enableResizeBindingHandler = require("common/bindingHelpers/enableResizeBindingHandler");
 import helpBindingHandler = require("common/bindingHelpers/helpBindingHandler");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
@@ -83,7 +79,7 @@ class shell extends viewModelBase {
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
 
-    mainMenu = new menu(generateMenuItems(activeResourceTracker.default.resource()));
+    mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
     resourceSwitcher = new resourceSwitcher();
 
@@ -118,11 +114,9 @@ class shell extends viewModelBase {
         });
 
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-        enableResizeBindingHandler.install();
         helpBindingHandler.install();
 
         this.clientBuildVersion.subscribe(v =>
@@ -153,7 +147,7 @@ class shell extends viewModelBase {
             }
         });
 
-        $(window).resize(() => self.activeResource.valueHasMutated());
+        $(window).resize(() => self.activeDatabase.valueHasMutated());
 
         this.fetchClientBuildVersion();
         this.fetchServerBuildVersion();
@@ -182,13 +176,13 @@ class shell extends viewModelBase {
 
     private initializeShellComponents() {
         this.mainMenu.initialize();
-        let updateMenu = (resource: resource) => {
-            let items = generateMenuItems(resource);
+        let updateMenu = (db: database) => {
+            let items = generateMenuItems(db);
             this.mainMenu.update(items);
         };
 
-        updateMenu(activeResourceTracker.default.resource());
-        activeResourceTracker.default.resource.subscribe(updateMenu);
+        updateMenu(activeDatabaseTracker.default.database());
+        activeDatabaseTracker.default.database.subscribe(updateMenu);
 
         this.resourceSwitcher.initialize();
         this.searchBox.initialize();
@@ -363,12 +357,6 @@ class shell extends viewModelBase {
     showApiKeyDialog() {
         var dialog = new enterApiKey();
         return app.showBootstrapDialog(dialog).then(() => window.location.href = "#resources");
-    }
-
-    uploadStatusChanged(item: uploadItem) {
-        var queue: uploadItem[] = uploadQueueHelper.parseUploadQueue(window.localStorage[uploadQueueHelper.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
-        uploadQueueHelper.updateQueueStatus(item.id(), item.status(), queue);
-        uploadQueueHelper.updateLocalStorage(queue, item.filesystem);
     }
 
     showLicenseStatusDialog() {

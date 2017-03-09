@@ -330,10 +330,7 @@
         }
 
         .resource-switcher-container {
-            .counter,
-            .database,
-            .filesystem,
-            .timeseries {
+            .database {
                 &:before {
                     margin-right: 10px;
                     font-size: 20px;
@@ -347,30 +344,6 @@
                     .icon-style;
                     content: "\e926";
                     color: @brand-database-color;
-                }
-            }
-
-            .filesystem {
-                &:before {
-                    .icon-style;
-                    content: "\e926";
-                    color: @brand-filesystem-color;
-                }
-            }
-
-            .counter {
-                &:before {
-                    .icon-style;
-                    content: "\e926";
-                    color: @brand-counter-color;
-                }
-            }
-
-            .timeseries {
-                &:before {
-                    .icon-style;
-                    content: "\e926";
-                    color: @brand-timeseries-color;
                 }
             }
 

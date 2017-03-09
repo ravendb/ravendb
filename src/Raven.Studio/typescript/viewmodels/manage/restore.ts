@@ -4,11 +4,8 @@ import accessHelper = require("viewmodels/shell/accessHelper");
 import database = require("models/resources/database");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
-import resource = require("models/resources/resource");
-import filesystem = require("models/filesystem/filesystem");
 import monitorRestoreCommand = require("commands/maintenance/monitorRestoreCommand");
 import startDbRestoreCommand = require("commands/maintenance/startRestoreCommand");
-import startFsRestoreCommand = require("commands/filesystem/startRestoreCommand");
 import resourcesManager = require("common/shell/resourcesManager");
 import eventsCollector = require("common/eventsCollector");
 
@@ -25,11 +22,11 @@ class resourceRestore {
     
     keepDown = ko.observable<boolean>(false);
 
-    constructor(private parent: restore, private type: string, private resources: KnockoutComputed<resource[]>) {
+    constructor(private parent: restore, private type: string, private resources: KnockoutObservableArray<database>) {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage = "";
             var newResourceName = this.resourceName();
-            var foundDb = resources().find((rs: resource) => newResourceName === rs.name);
+            var foundDb = resources().find((rs: database) => newResourceName === rs.name);
 
             if (!!foundDb && newResourceName.length > 0) {
                 errorMessage = (this.type === database.type ? "Database" : "File System") + " name already exist!";
@@ -64,7 +61,6 @@ class restore extends viewModelBase {
     private resourceManager = resourcesManager.default;
 
     private dbRestoreOptions: resourceRestore = new resourceRestore(this, database.type, this.resourceManager.databases);
-    private fsRestoreOptions: resourceRestore = new resourceRestore(this, filesystem.type, this.resourceManager.fileSystems);
 
     disableReplicationDestinations = ko.observable<boolean>(false);
     generateNewDatabaseId = ko.observable<boolean>(false);
@@ -88,12 +84,10 @@ class restore extends viewModelBase {
                         this.anotherRestoreInProgres(true);
                         new monitorRestoreCommand($.Deferred(), s => {
                             self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions)(s);
-                            self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions)(s);
                         })
                             .execute()
                             .always(() => {
                                 $("#databaseRawLogsContainer").resize();
-                                $("#filesystemRawLogsContainer").resize();
                                 this.anotherRestoreInProgres(false);
                             });
 
@@ -134,23 +128,6 @@ class restore extends viewModelBase {
             .execute();
     }
 
-    startFsRestore() {
-        eventsCollector.default.reportEvent("fs", "restore");
-
-        this.isBusy(true);
-        var self = this;
-
-        var restoreFilesystemDto: filesystemRestoreRequestDto = {
-            BackupLocation: this.fsRestoreOptions.backupLocation(),
-            FilesystemLocation: this.fsRestoreOptions.resourceLocation(),
-            FilesystemName: this.fsRestoreOptions.resourceName(),
-            IndexesLocation: this.fsRestoreOptions.indexesLocation(),
-            JournalsLocation: this.fsRestoreOptions.journalsLocation()
-        };
-
-        new startFsRestoreCommand(this.fsRestoreOptions.defrag(), restoreFilesystemDto, self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions))
-            .execute();
-    }
 }
 
 export = restore;  

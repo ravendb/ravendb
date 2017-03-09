@@ -1,6 +1,6 @@
 ﻿
 import EVENTS = require("common/constants/events");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import resourcesManager = require("common/shell/resourcesManager");
 import appUrl = require("common/appUrl");
 
@@ -16,7 +16,7 @@ class resourceSwitcher {
     private $selectDatabase: JQuery;
     private $filter: JQuery;
 
-    private resources: KnockoutComputed<resource[]>;
+    private databases: KnockoutComputed<database[]>;
     private resourcesManager = resourcesManager.default;
 
     private readonly hideHandler = (e: Event) => {
@@ -26,21 +26,21 @@ class resourceSwitcher {
     };
 
     filter = ko.observable<string>();
-    filteredResources: KnockoutComputed<resource[]>;
+    filteredDatabases: KnockoutComputed<database[]>;
 
     constructor() {
-        this.filteredResources = ko.computed(() => {
+        this.filteredDatabases = ko.computed(() => {
             const filter = this.filter();
-            const resources = this.resourcesManager.resources();
+            const databases = this.resourcesManager.databases();
 
             if (!filter)
-                return resources;
+                return databases;
 
-            if (!resources) {
+            if (!databases) {
                 return [];
             }
 
-            return resources.filter(x => x.name.toLowerCase().includes(filter.toLowerCase()));
+            return databases.filter(x => x.name.toLowerCase().includes(filter.toLowerCase()));
         });
     }
 
@@ -73,7 +73,7 @@ class resourceSwitcher {
         });
     }
 
-    selectResource(rs: resource, $event: JQueryEventObject) {
+    selectResource(rs: database, $event: JQueryEventObject) {
         if ($event.ctrlKey) {
             window.open(appUrl.forDocumentsByDatabaseName(null, rs.name));
         } else {

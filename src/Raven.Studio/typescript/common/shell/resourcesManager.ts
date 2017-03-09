@@ -1,20 +1,16 @@
 ﻿import router = require("plugins/router");
 import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
-import resource = require("models/resources/resource");
-import filesystem = require("models/filesystem/filesystem");
-import counterStorage = require("models/counter/counterStorage");
-import timeSeries = require("models/timeSeries/timeSeries");
-import resourceActivatedEventArgs = require("viewmodels/resources/resourceActivatedEventArgs");
+import databaseActivatedEventArgs = require("viewmodels/resources/databaseActivatedEventArgs");
 import changesContext = require("common/changesContext");
 import changesApi = require("common/changesApi");
 import changeSubscription = require("common/changeSubscription");
-import getResourcesCommand = require("commands/resources/getResourcesCommand");
-import getResourceCommand = require("commands/resources/getResourceCommand");
+import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
+import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
-import activeResourceTracker = require("common/shell/activeResourceTracker");
-import resourceInfo = require("models/resources/info/resourceInfo");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import databaseInfo = require("models/resources/info/databaseInfo");
 import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
 import recentPatchesStorage = require("common/storage/recentPatchesStorage");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
@@ -26,40 +22,25 @@ class resourcesManager {
 
     initialized = $.Deferred<void>();
 
-    activeResourceTracker = activeResourceTracker.default;
+    activeDatabaseTracker = activeDatabaseTracker.default;
     changesContext = changesContext.default;
 
-    private resourceToActivate = ko.observable<string>();
+    private databaseToActivate = ko.observable<string>();
 
-    resources = ko.observableArray<resource>([]);
+    databases = ko.observableArray<database>([]);
 
-    onResourceDeletedCallbacks = [
-        (q, n) => mergedIndexesStorage.onResourceDeleted(q, n),
-        (q, n) => recentPatchesStorage.onResourceDeleted(q, n),
-        (q, n) => recentQueriesStorage.onResourceDeleted(q, n),
-        (q, n) => starredDocumentsStorage.onResourceDeleted(q, n)
+    onDatabaseDeletedCallbacks = [
+        (q, n) => mergedIndexesStorage.onDatabaseDeleted(q, n),
+        (q, n) => recentPatchesStorage.onDatabaseDeleted(q, n),
+        (q, n) => recentQueriesStorage.onDatabaseDeleted(q, n),
+        (q, n) => starredDocumentsStorage.onDatabaseDeleted(q, n)
     ] as Array<(qualifier: string, name: string) => void>;
 
-    databases = ko.computed<database[]>(() => this.resources().filter(x => x instanceof database) as database[]);
-    fileSystems = ko.computed<filesystem[]>(() => this.resources().filter(x => x instanceof filesystem) as filesystem[]);
-    counterStorages = ko.computed<counterStorage[]>(() => this.resources().filter(x => x instanceof counterStorage) as counterStorage[]);
-    timeSeries = ko.computed<timeSeries[]>(() => this.resources().filter(x => x instanceof timeSeries) as timeSeries[]);
-
     constructor() { 
-        ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (rs: resource) => this.reloadDataAfterReconnection(rs));
+        ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => this.reloadDataAfterReconnection(db));
 
-        ko.postbox.subscribe(EVENTS.Resource.Activate, ({ resource }: resourceActivatedEventArgs) => {
-            if (resource instanceof database) {
-                return this.activateDatabase(resource as database);
-            } else if (resource instanceof filesystem) {
-               return this.activateFileSystem(resource as filesystem);
-            } else if (resource instanceof counterStorage) {
-               //TODO:return this.activateCounterStorage(resource as counterStorage);
-            } else if (resource instanceof timeSeries) {
-               //TODO: return this.activateTimeSeries(resource as timeSeries);
-            }
-
-            throw new Error(`Invalid resource type ${resource.type}`);
+        ko.postbox.subscribe(EVENTS.Resource.Activate, ({ database }: databaseActivatedEventArgs) => {
+            return this.activateDatabase(database);
         });
     }
 
@@ -72,49 +53,18 @@ class resourcesManager {
             .find(x => name.toLowerCase() === x.name.toLowerCase());
     }
 
-    getFileSystemByName(name: string): filesystem {
-        if (!name) {
-            return null;
-        }
-        return this
-            .fileSystems()
-            .find(x => name.toLowerCase() === x.name.toLowerCase());
-    }
-
-    getCounterStorageByName(name: string): counterStorage {
-        if (!name) {
-            return null;
-        }
-        return this
-            .counterStorages()
-            .find(x => name.toLowerCase() === x.name.toLowerCase());
-    }
-
-    getTimeSeriesByName(name: string): timeSeries {
-        if (!name) {
-            return null;
-        }
-        return this
-            .timeSeries()
-            .find(x => name.toLowerCase() === x.name.toLowerCase());
-    }
-
-    getResourceByQualifiedName(qualifiedName: string): resource {
+    getResourceByQualifiedName(qualifiedName: string): database {
         const dbPrefix = database.qualifier + "/";
-        const fsPrefix = filesystem.qualifier + "/";
-        //TODO: support for cs, ts
 
         if (qualifiedName.startsWith(dbPrefix)) {
             return this.getDatabaseByName(qualifiedName.substring(dbPrefix.length));
-        } else if (qualifiedName.startsWith(fsPrefix)) {
-            return this.getFileSystemByName(qualifiedName.substring(fsPrefix.length));
         } else {
             throw new Error("Unable to find resource: " + qualifiedName);
         }
     }
 
-    init(): JQueryPromise<Raven.Client.Server.Operations.ResourcesInfo> {
-        return this.refreshResources()
+    init(): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+        return this.refreshDatabases()
             .done(() => {
                 this.activateBasedOnCurrentUrl();
                 router.activate();
@@ -123,53 +73,41 @@ class resourcesManager {
     }
 
     activateAfterCreation(rsQualifier: string, resourceName: string) {
-        this.resourceToActivate(rsQualifier + "/" + resourceName);
+        this.databaseToActivate(rsQualifier + "/" + resourceName);
     }
 
-    private refreshResources(): JQueryPromise<Raven.Client.Server.Operations.ResourcesInfo> {
-        return new getResourcesCommand()
+    private refreshDatabases(): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+        return new getDatabasesCommand()
             .execute()
             .done(result => {
-                this.updateResources(result);
+                this.updateDatabases(result);
             });
         //TODO: .fail(result => this.handleRavenConnectionFailure(result))
     }
 
     activateBasedOnCurrentUrl() {
         const dbUrl = appUrl.getDatabaseNameFromUrl();
-        const fsUrl = appUrl.getFileSystemNameFromUrl();
-        const csUrl = appUrl.getCounterStorageNameFromUrl();
-        const tsUrl = appUrl.getTimeSeriesNameFromUrl();
         if (dbUrl) {
             const db = this.getDatabaseByName(dbUrl);
-            this.activateIfDifferent(db, dbUrl, appUrl.forResources);
-        } else if (fsUrl) {
-            const fs = this.getFileSystemByName(fsUrl);
-            this.activateIfDifferent(fs, fsUrl, appUrl.forResources);
-        } else if (tsUrl) {
-            const ts = this.getTimeSeriesByName(tsUrl);
-            this.activateIfDifferent(ts, tsUrl, appUrl.forResources);
-        } else if (csUrl) {
-            const cs = this.getCounterStorageByName(csUrl);
-            this.activateIfDifferent(cs, csUrl, appUrl.forResources);
+            this.activateIfDifferent(db, dbUrl, appUrl.forDatabases);
         }
     }
 
-    private activateIfDifferent(rs: resource, rsName: string, urlIfNotFound: () => string) {
+    private activateIfDifferent(db: database, dbName: string, urlIfNotFound: () => string) {
         this.initialized.done(() => {
-            const currentActiveResource = this.activeResourceTracker.resource();
-            if (currentActiveResource != null && currentActiveResource.qualifiedName === rs.qualifiedName) {
+            const currentActiveDatabase = this.activeDatabaseTracker.database();
+            if (currentActiveDatabase != null && currentActiveDatabase.qualifiedName === db.qualifiedName) {
                 return;
             }
 
-            if (rs && !rs.disabled()) {
-                rs.activate(); //TODO: do we need this event right now?
-            } else if (rs) {
-                messagePublisher.reportError(`${rs.fullTypeName} '${rs.name}' is disabled!`,
-                    `You can't access any section of the ${rs.fullTypeName.toLowerCase()} while it's disabled.`);
+            if (db && !db.disabled()) {
+                db.activate(); //TODO: do we need this event right now?
+            } else if (db) {
+                messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is disabled!`,
+                    `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's disabled.`);
                 router.navigate(urlIfNotFound());
             } else {
-                messagePublisher.reportError("The resource " + rsName + " doesn't exist!");
+                messagePublisher.reportError("The database " + dbName + " doesn't exist!");
                 router.navigate(urlIfNotFound());
             }
         });
@@ -182,16 +120,10 @@ class resourcesManager {
     private activateDatabase(db: database) {
         //TODO: this.fecthStudioConfigForDatabase(db);
 
-        this.changesContext.changeResource(db);
+        this.changesContext.changeDatabase(db);
     }
 
-    private activateFileSystem(fs: filesystem) {
-        //TODO: ???? this.fecthStudioConfigForDatabase(new database(fs.name));
-
-        this.changesContext.changeResource(fs);
-    }
-
-    private reloadDataAfterReconnection(rs: resource) {
+    private reloadDataAfterReconnection(db: database) {
         /* TODO:
         shell.fetchStudioConfig();
         this.fetchServerBuildVersion();
@@ -220,23 +152,18 @@ class resourcesManager {
             }*/
     }
 
-    private updateResources(incomingData: Raven.Client.Server.Operations.ResourcesInfo) {
-        this.deleteRemovedResources(incomingData);
+    private updateDatabases(incomingData: Raven.Client.Server.Operations.DatabasesInfo) {
+        this.deleteRemovedDatabases(incomingData);
 
         incomingData.Databases.forEach(dbInfo => {
-            this.updateResource(dbInfo, name => this.getDatabaseByName(name), database.qualifier);
+            this.updateDatabase(dbInfo, name => this.getDatabaseByName(name), database.qualifier);
         });
-
-        /* TODO:
-        incomingData.FileSystems.forEach(fsInfo => {
-            this.updateResource(fsInfo, name => this.getFileSystemByName(name), filesystem.qualifier);
-        });*/
     }
 
-    private deleteRemovedResources(incomingData: Raven.Client.Server.Operations.ResourcesInfo) {
-        const existingResources = this.resources;
+    private deleteRemovedDatabases(incomingData: Raven.Client.Server.Operations.DatabasesInfo) {
+        const existingResources = this.databases;
 
-        const toDelete = [] as resource[];
+        const toDelete = [] as database[];
 
         this.databases().forEach(db => {
             const matchedDb = incomingData.Databases.find(x => x.Name.toLowerCase() === db.name.toLowerCase());
@@ -245,39 +172,27 @@ class resourcesManager {
             }
         });
 
-        /* TODO
-        this.fileSystems().forEach(fs => {
-            const matchedFs = incomingData.FileSystems.find(x => x.Name.toLowerCase() === fs.name.toLowerCase());
-            if (!matchedFs) {
-                toDelete.push(fs);
-            }
-        });*/
-
         existingResources.removeAll(toDelete);
     }
 
-    private updateResource(incomingResource: Raven.Client.Server.Operations.ResourceInfo, existingResourceFinder: (name: string) => resource, resourceQualifer: string): resource {
-        const matchedExistingRs = existingResourceFinder(incomingResource.Name);
+    private updateDatabase(incomingDatabase: Raven.Client.Server.Operations.DatabaseInfo, existingResourceFinder: (name: string) => database, resourceQualifer: string): database {
+        const matchedExistingRs = existingResourceFinder(incomingDatabase.Name);
 
         if (matchedExistingRs) {
-            matchedExistingRs.updateUsing(incomingResource);
+            matchedExistingRs.updateUsing(incomingDatabase);
             return matchedExistingRs;
         } else {
-            const newResource = this.createResource(resourceQualifer, incomingResource);
-            let locationToInsert = _.sortedIndexBy(this.resources(), newResource, (item: resource) => item.qualifiedName);
-            this.resources.splice(locationToInsert, 0, newResource);
+            const newResource = this.createResource(resourceQualifer, incomingDatabase);
+            let locationToInsert = _.sortedIndexBy(this.databases(), newResource, (item: database) => item.qualifiedName);
+            this.databases.splice(locationToInsert, 0, newResource);
             return newResource;
         }
     }
 
-    private createResource(qualifer: string, resourceInfo: Raven.Client.Server.Operations.ResourceInfo): resource {
+    private createResource(qualifer: string, resourceInfo: Raven.Client.Server.Operations.DatabaseInfo): database {
         if (database.qualifier === qualifer) {
             return new database(resourceInfo as Raven.Client.Server.Operations.DatabaseInfo);
-        } else if (filesystem.qualifier === qualifer) {
-            return new filesystem(resourceInfo as Raven.Client.Server.Operations.FileSystemInfo);
         }
-
-        //TODO: ts, cs
         throw new Error("Unhandled resource type: " + qualifer);
     }
 
@@ -286,75 +201,49 @@ class resourcesManager {
         const serverWideClient = changesContext.default.serverNotifications();
 
         return [
-            serverWideClient.watchResourceChangeStartingWith("db/", e => this.onResourceUpdateReceivedViaChangesApi(e)),
-            serverWideClient.watchReconnect(() => this.refreshResources())
+            serverWideClient.watchDatabaseChangeStartingWith("db/", e => this.onDatabaseUpdateReceivedViaChangesApi(e)),
+            serverWideClient.watchReconnect(() => this.refreshDatabases())
 
-            //TODO: fs, cs, ts
              //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
         ];
     }
 
-    private onResourceUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) {
-        let resource = this.getResourceByQualifiedName(event.ResourceName);
+    private onDatabaseUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
+        let resource = this.getResourceByQualifiedName(event.DatabaseName);
         if (event.ChangeType === "Delete" && resource) {
             
-            this.onResourceDeleted(resource);
+            this.onDatabaseDeleted(resource);
 
         } else if (event.ChangeType === "Put") {
-            const [prefix, name] = event.ResourceName.split("/", 2);
-            new getResourceCommand(prefix, name)
+            const [prefix, name] = event.DatabaseName.split("/", 2);
+            new getDatabaseCommand(name)
                 .execute()
-                .done((rsInfo: Raven.Client.Server.Operations.ResourceInfo) => {
+                .done((rsInfo: Raven.Client.Server.Operations.DatabaseInfo) => {
 
                     if (rsInfo.Disabled) {
-                        changesContext.default.disconnectIfCurrent(resource, "ResourceDisabled");
+                        changesContext.default.disconnectIfCurrent(resource, "DatabaseDisabled");
                     }
 
-                    //TODO: it supports db only for now!
-                    if (prefix !== database.qualifier) {
-                        throw new Error("we support db only for now!"); //TODO: delete me once we support more types
-                    }
+                    const updatedResource = this.updateDatabase(rsInfo, name => this.getDatabaseByName(name), database.qualifier);
 
-                    const updatedResource = this.updateResource(rsInfo, name => this.getDatabaseByName(name), database.qualifier);
+                    const toActivate = this.databaseToActivate();
 
-                    const toActivate = this.resourceToActivate();
-
-                    if (toActivate && toActivate === event.ResourceName) {
+                    if (toActivate && toActivate === event.DatabaseName) {
                         updatedResource.activate();
-                        this.resourceToActivate(null);
+                        this.databaseToActivate(null);
                     }
                 });
         }
     }
 
-    private onResourceDeleted(rs: resource) {
-        changesContext.default.disconnectIfCurrent(rs, "ResourceDeleted");
-        this.resources.remove(rs);
+    private onDatabaseDeleted(db: database) {
+        changesContext.default.disconnectIfCurrent(db, "DatabaseDeleted");
+        this.databases.remove(db);
 
-        this.onResourceDeletedCallbacks.forEach(callback => {
-            callback(rs.qualifier, rs.name);
+        this.onDatabaseDeletedCallbacks.forEach(callback => {
+            callback(db.qualifier, db.name);
         });
     }
-    
-    /*TODO
-    private activateCounterStorage(cs: counterStorage) {
-        var changesSubscriptionArray = () => [
-            changesContext.currentResourceChangesApi().watchAllCounters(() => this.fetchCsStats(cs)),
-            changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.fetchCsStats(cs))
-        ];
-        var isNotACounterStorage = this.isPreviousDifferentKind(TenantType.CounterStorage);
-        this.updateChangesApi(cs, isNotACounterStorage, () => this.fetchCsStats(cs), changesSubscriptionArray);
-    }
-
-    private activateTimeSeries(ts: timeSeries) {
-        var changesSubscriptionArray = () => [
-            changesContext.currentResourceChangesApi().watchAllTimeSeries(() => this.fetchTsStats(ts)),
-            changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.fetchTsStats(ts))
-        ];
-        var isNotATimeSeries = this.isPreviousDifferentKind(TenantType.TimeSeries);
-        this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTsStats(ts), changesSubscriptionArray);
-    }*/
-
    
 }
 
