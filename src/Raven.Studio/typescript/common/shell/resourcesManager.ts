@@ -39,7 +39,7 @@ class resourcesManager {
     constructor() { 
         ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => this.reloadDataAfterReconnection(db));
 
-        ko.postbox.subscribe(EVENTS.Resource.Activate, ({ database }: databaseActivatedEventArgs) => {
+        ko.postbox.subscribe(EVENTS.Database.Activate, ({ database }: databaseActivatedEventArgs) => {
             return this.activateDatabase(database);
         });
     }
@@ -53,7 +53,7 @@ class resourcesManager {
             .find(x => name.toLowerCase() === x.name.toLowerCase());
     }
 
-    getResourceByQualifiedName(qualifiedName: string): database {
+    getDatabaseByQualifiedName(qualifiedName: string): database {
         const dbPrefix = database.qualifier + "/";
 
         if (qualifiedName.startsWith(dbPrefix)) {
@@ -161,7 +161,7 @@ class resourcesManager {
     }
 
     private deleteRemovedDatabases(incomingData: Raven.Client.Server.Operations.DatabasesInfo) {
-        const existingResources = this.databases;
+        const existingDatabase = this.databases;
 
         const toDelete = [] as database[];
 
@@ -172,26 +172,26 @@ class resourcesManager {
             }
         });
 
-        existingResources.removeAll(toDelete);
+        existingDatabase.removeAll(toDelete);
     }
 
-    private updateDatabase(incomingDatabase: Raven.Client.Server.Operations.DatabaseInfo, existingResourceFinder: (name: string) => database, resourceQualifer: string): database {
-        const matchedExistingRs = existingResourceFinder(incomingDatabase.Name);
+    private updateDatabase(incomingDatabase: Raven.Client.Server.Operations.DatabaseInfo, existingDatabaseFinder: (name: string) => database, resourceQualifer: string): database {
+        const matchedExistingRs = existingDatabaseFinder(incomingDatabase.Name);
 
         if (matchedExistingRs) {
             matchedExistingRs.updateUsing(incomingDatabase);
             return matchedExistingRs;
         } else {
-            const newResource = this.createResource(resourceQualifer, incomingDatabase);
-            let locationToInsert = _.sortedIndexBy(this.databases(), newResource, (item: database) => item.qualifiedName);
-            this.databases.splice(locationToInsert, 0, newResource);
-            return newResource;
+            const newDatabase = this.createDatabase(resourceQualifer, incomingDatabase);
+            let locationToInsert = _.sortedIndexBy(this.databases(), newDatabase, (item: database) => item.qualifiedName);
+            this.databases.splice(locationToInsert, 0, newDatabase);
+            return newDatabase;
         }
     }
 
-    private createResource(qualifer: string, resourceInfo: Raven.Client.Server.Operations.DatabaseInfo): database {
+    private createDatabase(qualifer: string, databaseInfo: Raven.Client.Server.Operations.DatabaseInfo): database {
         if (database.qualifier === qualifer) {
-            return new database(resourceInfo as Raven.Client.Server.Operations.DatabaseInfo);
+            return new database(databaseInfo as Raven.Client.Server.Operations.DatabaseInfo);
         }
         throw new Error("Unhandled resource type: " + qualifer);
     }
@@ -209,10 +209,10 @@ class resourcesManager {
     }
 
     private onDatabaseUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
-        let resource = this.getResourceByQualifiedName(event.DatabaseName);
-        if (event.ChangeType === "Delete" && resource) {
+        let db = this.getDatabaseByQualifiedName(event.DatabaseName);
+        if (event.ChangeType === "Delete" && db) {
             
-            this.onDatabaseDeleted(resource);
+            this.onDatabaseDeleted(db);
 
         } else if (event.ChangeType === "Put") {
             const [prefix, name] = event.DatabaseName.split("/", 2);
@@ -221,15 +221,15 @@ class resourcesManager {
                 .done((rsInfo: Raven.Client.Server.Operations.DatabaseInfo) => {
 
                     if (rsInfo.Disabled) {
-                        changesContext.default.disconnectIfCurrent(resource, "DatabaseDisabled");
+                        changesContext.default.disconnectIfCurrent(db, "DatabaseDisabled");
                     }
 
-                    const updatedResource = this.updateDatabase(rsInfo, name => this.getDatabaseByName(name), database.qualifier);
+                    const updatedDatabase = this.updateDatabase(rsInfo, name => this.getDatabaseByName(name), database.qualifier);
 
                     const toActivate = this.databaseToActivate();
 
                     if (toActivate && toActivate === event.DatabaseName) {
-                        updatedResource.activate();
+                        updatedDatabase.activate();
                         this.databaseToActivate(null);
                     }
                 });

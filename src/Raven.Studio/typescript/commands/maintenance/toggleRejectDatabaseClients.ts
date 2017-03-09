@@ -2,9 +2,8 @@ import commandBase = require("commands/commandBase");
 
 class toggleRejectDatabaseClients extends commandBase {
     /**
-    * @param names - The array of resource names to toggle
+    * @param names - The array of database names to toggle
     * @param isSettingDisabled - Status of disabled to set
-    * @param resourceType - The resource type
     */
     constructor(private dbName: string, private rejectClientsEnabled: boolean) {
         super();

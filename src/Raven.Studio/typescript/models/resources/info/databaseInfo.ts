@@ -34,8 +34,8 @@ class databaseInfo {
     online: KnockoutComputed<boolean>;
     isLoading: KnockoutComputed<boolean>;
     hasLoadError: KnockoutComputed<boolean>;
-    canNavigateToResource: KnockoutComputed<boolean>;
-    isCurrentlyActiveResource: KnockoutComputed<boolean>;
+    canNavigateToDatabase: KnockoutComputed<boolean>;
+    isCurrentlyActiveDatabase: KnockoutComputed<boolean>;
 
     inProgressAction = ko.observable<string>();
 
@@ -150,14 +150,14 @@ class databaseInfo {
             return "Offline";
         });
 
-        this.canNavigateToResource = ko.pureComputed(() => {
+        this.canNavigateToDatabase = ko.pureComputed(() => {
             const hasLicense = this.licensed();
             const enabled = !this.disabled();
             const hasLoadError = this.hasLoadError();
             return hasLicense && enabled && !hasLoadError;
         });
 
-        this.isCurrentlyActiveResource = ko.pureComputed(() => {
+        this.isCurrentlyActiveDatabase = ko.pureComputed(() => {
             const currentDatabase = activeDatabaseTracker.default.database();
 
             if (!currentDatabase) {
@@ -168,7 +168,7 @@ class databaseInfo {
         });
 
         this.isLoading = ko.pureComputed(() => {
-            return this.isCurrentlyActiveResource() &&
+            return this.isCurrentlyActiveDatabase() &&
                 !this.online() &&
                 !this.disabled();
         });

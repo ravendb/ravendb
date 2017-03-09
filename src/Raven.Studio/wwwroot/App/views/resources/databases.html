@@ -1,4 +1,4 @@
-<div data-bind="if: databases().sortedResources().length === 0">
+<div data-bind="if: databases().sortedDatabases().length === 0">
     <div class="row">
         <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
             <i class="icon-xl icon-empty-set text-muted"></i>
@@ -7,7 +7,7 @@
         </div>
     </div>
 </div>
-<div class="resources" data-bind="if: databases().sortedResources().length, css: { 'resources_compact': compactView() }">
+<div class="resources" data-bind="if: databases().sortedDatabases().length, css: { 'resources_compact': compactView() }">
     <div class="resourcesToolbar toolbar clearfix">
         <div class="form-inline">
             <div class="checkbox checkbox-primary checkbox-inline align-checkboxes">
@@ -15,7 +15,7 @@
                 <label></label>
             </div>
             <div class="input-group">
-                <input type="text" class="form-control" placeholder="Filter" accesskey="/" title="Filter resources (Alt+/)" data-bind="textInput: filters.searchText">    
+                <input type="text" class="form-control" placeholder="Filter" accesskey="/" title="Filter databases (Alt+/)" data-bind="textInput: filters.searchText">    
             </div>
             <div class="resourcesToolbar-actions">
                 <button class="btn btn-primary" data-bind="click: newDatabase">
@@ -24,26 +24,26 @@
                 </button>
                 
                 <div class="btn-group-label" data-label="Selection" role="group">
-                    <button class="btn btn-danger" data-bind="visible: isGlobalAdmin(), enable: selectedResources().length, click: deleteSelectedResources">
+                    <button class="btn btn-danger" data-bind="visible: isGlobalAdmin(), enable: selectedDatabases().length, click: deleteSelectedDatabases">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
                     
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected resources"
-                                data-bind="enable: selectedResources().length && !spinners.globalToggleDisable(), css: { 'btn-spinner': spinners.globalToggleDisable() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected databases"
+                                data-bind="enable: selectedDatabases().length && !spinners.globalToggleDisable(), css: { 'btn-spinner': spinners.globalToggleDisable() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <i class="icon-play"></i><span>Set state...</span>
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li data-bind="click: enableSelectedResources">
+                            <li data-bind="click: enableSelectedDatabases">
                                 <a href="#" title="Enable">
                                     <i class="icon-unlock"></i>
                                     <span>Enable</span>
                                 </a>
                             </li>
-                            <li data-bind="click: disableSelectedResources">
+                            <li data-bind="click: disableSelectedDatabases">
                                 <a href="#" title="Disable">
                                     <i class="icon-lock"></i>
                                     <span>Disable</span>
@@ -62,25 +62,25 @@
         </div>
     </div> 
     
-    <div data-bind="foreach: resources().sortedResources">
-        <div class="panel resource" data-bind="scrollTo: isCurrentlyActiveResource(), visible: !filteredOut(), attr: { class: 'panel resource ' + badgeClass() + ' ' + (isCurrentlyActiveResource() ? 'active' : '') }">
+    <div data-bind="foreach: databases().sortedDatabases">
+        <div class="panel resource" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel resource ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
             <div class="padding padding-sm">
-                <div data-bind="click: $root.activateResource, attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                <div data-bind="click: $root.activateDatabase, attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                 <div class="row">
                     <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
                         <div class="checkbox">
-                            <input type="checkbox" class="styled" data-bind="checked: $root.selectedResources, checkedValue: qualifiedName">
+                            <input type="checkbox" class="styled" data-bind="checked: $root.selectedDatabases, checkedValue: qualifiedName">
                             <label></label>
                         </div>
                         <h3 class="resource-name">
                             <i class="icon-database"></i>
-                            <span title="Resource is disabled" data-bind="visible: !canNavigateToResource(), text: name"></span>
-                            <a data-bind="attr: { title: name, href: $root.resourceUrl($data) }, text: name, visible: canNavigateToResource()" href="#"></a>
+                            <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase(), text: name"></span>
+                            <a data-bind="attr: { title: name, href: $root.databaseUrl($data) }, text: name, visible: canNavigateToDatabase()" href="#"></a>
                         </h3>
                     </div>
 
                     <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" 
-                         data-bind="template: { name: hasLoadError() ? 'invalid-resource-properties-template': 'valid-resource-properties-template' }">
+                         data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }">
                     </div>
                     <div class="col-xs-12 col-sm-6 col-xl-3 actions-container">
                         <span data-bind="visible: isLoading">
@@ -91,7 +91,7 @@
                             <div class="btn-toolbar pull-right-sm" role="toolbar">
                                 <div class="btn-group">
                                     <button class="btn btn-default"
-                                            data-bind="click: $root.toggleResource, 
+                                            data-bind="click: $root.toggleDatabase, 
                                                        css: { 'btn-spinner': inProgressAction }, 
                                                        disable: isBeingDeleted() || inProgressAction()">
                                         <span data-bind="visible: inProgressAction(), text: inProgressAction()"></span>
@@ -136,7 +136,7 @@
                                         </li>
                                     </ul>
                                 </div>
-                                <button class="btn btn-danger" data-bind="click: $root.deleteResource, disable: isBeingDeleted"> 
+                                <button class="btn btn-danger" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted"> 
                                     <i class="icon-trash"></i>
                                     <span>Delete</span>
                                 </button>
@@ -149,14 +149,14 @@
     </div>
 </div>
 
-<script type="text/html" id="invalid-resource-properties-template">
+<script type="text/html" id="invalid-database-properties-template">
     <div class="text-danger">
         <i class="icon-exclamation"></i>
         <span data-bind="text: loadError"></span>
     </div>
 </script>
 
-<script type="text/html" id="valid-resource-properties-template">
+<script type="text/html" id="valid-database-properties-template">
     <div class="properties-item" data-bind="visible: totalSize">
         <div class="properties-value value-only">
             <div class="set-size">

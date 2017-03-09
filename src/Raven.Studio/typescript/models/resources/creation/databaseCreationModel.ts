@@ -6,9 +6,7 @@ class databaseCreationModel {
 
     name = ko.observable<string>("");
 
-    get resourceType() {
-        return "database";
-    } 
+    resourceType = "database";
 
     indexesPath = ko.observable<string>();
     incrementalBackup = ko.observable<boolean>();

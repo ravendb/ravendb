@@ -17,9 +17,9 @@ import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
 export = generateMenuItems;
 
-function generateMenuItems(resource: database) {
-    if (!resource) {
-        return generateNoActiveResourceMenuItems();
+function generateMenuItems(db: database) {
+    if (!db) {
+        return generateNoActiveDatabaseMenuItems();
     } 
 
     return generateActiveDatabaseMenuItems();
@@ -37,7 +37,7 @@ function aboutItem() {
     });
 }
 
-function generateNoActiveResourceMenuItems() {
+function generateNoActiveDatabaseMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();
     return [
         new separatorMenuItem('Server'),

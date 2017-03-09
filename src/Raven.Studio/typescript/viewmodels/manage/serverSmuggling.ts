@@ -68,12 +68,12 @@ class serverSmuggling extends viewModelBase {
         });
 
         this.incrementalSelection = ko.computed(() => {
-            var resources = this.selectedDatabases();
-            if (resources.length === 0)
+            var databases = this.selectedDatabases();
+            if (databases.length === 0)
                 return checkbox.UnChecked;
 
-            var incrementalCount = resources.filter(x => x.incremental()).length;
-            if (incrementalCount === resources.length)
+            var incrementalCount = databases.filter(x => x.incremental()).length;
+            if (incrementalCount === databases.length)
                 return checkbox.Checked;
             if (incrementalCount > 0)
                 return checkbox.SomeChecked;
@@ -149,7 +149,7 @@ class serverSmuggling extends viewModelBase {
 
             // since resources might change over time we have to apply saved changes carefully. 
             savedValue.Config.forEach(savedConfig => {
-                var item = self.databases().find(r => r.resource.name === savedConfig.Name);
+                var item = self.databases().find(r => r.database.name === savedConfig.Name);
                 if (item) {
                     self.selectedDatabases.push(item);
                     item.incremental(savedConfig.Incremental);
@@ -173,40 +173,40 @@ class serverSmuggling extends viewModelBase {
     }
 
     toggleSelectAllIncremental() {
-        var resources = this.selectedDatabases();
-        if (resources.length === 0)
+        var databases = this.selectedDatabases();
+        if (databases.length === 0)
             return;
 
-        var hasSelected = resources.filter(x => x.incremental()).length > 0;
-        for (var i = 0; i < resources.length; i++) {
-            resources[i].incremental(!hasSelected);
+        var hasSelected = databases.filter(x => x.incremental()).length > 0;
+        for (var i = 0; i < databases.length; i++) {
+            databases[i].incremental(!hasSelected);
         }
     }
 
     toggleSelectAllStripReplication() {
-        var resources = this.selectedDatabases();
-        var replicationBundleCount = resources.filter(x => x.hasReplicationBundle()).length;
-        if (resources.length === 0 || replicationBundleCount === 0)
+        var databases = this.selectedDatabases();
+        var replicationBundleCount = databases.filter(x => x.hasReplicationBundle()).length;
+        if (databases.length === 0 || replicationBundleCount === 0)
             return;
 
-        var hasSelected = resources.filter(x => x.stripReplicationInformation()).length > 0;
-        for (var i = 0; i < resources.length; i++) {
-            if (resources[i].hasReplicationBundle()) {
-                resources[i].stripReplicationInformation(!hasSelected);
+        var hasSelected = databases.filter(x => x.stripReplicationInformation()).length > 0;
+        for (var i = 0; i < databases.length; i++) {
+            if (databases[i].hasReplicationBundle()) {
+                databases[i].stripReplicationInformation(!hasSelected);
             }
         }
     }
 
     toggleSelectAllDisableVersioning() {
-        var resources = this.selectedDatabases();
-        var versioningBundleCount = resources.filter(x => x.hasVersioningBundle()).length;
-        if (resources.length === 0 || versioningBundleCount === 0)
+        var databases = this.selectedDatabases();
+        var versioningBundleCount = databases.filter(x => x.hasVersioningBundle()).length;
+        if (databases.length === 0 || versioningBundleCount === 0)
             return;
 
-        var hasSelected = resources.filter(x => x.shouldDisableVersioningBundle()).length > 0;
-        for (var i = 0; i < resources.length; i++) {
-            if (resources[i].hasVersioningBundle()) {
-                resources[i].shouldDisableVersioningBundle(!hasSelected);
+        var hasSelected = databases.filter(x => x.shouldDisableVersioningBundle()).length > 0;
+        for (var i = 0; i < databases.length; i++) {
+            if (databases[i].hasVersioningBundle()) {
+                databases[i].shouldDisableVersioningBundle(!hasSelected);
             }
         }
     }

@@ -12,10 +12,10 @@ class databasesInfo {
 
         const databases = dto.Databases.map(db => new databaseInfo(db));
 
-        const resources = [...databases];
-        resources.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+        const dbs = [...databases];
+        dbs.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
-        this.sortedDatabases(resources);
+        this.sortedDatabases(dbs);
 
         this.initObservables();
     }

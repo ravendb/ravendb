@@ -7,7 +7,7 @@ class disableDatabaseToggleConfirm extends confirmViewModelBase<confirmDialogRes
     deletionText: string;
     confirmDeletionText: string;
 
-    constructor(private dbs: Array<database>, private disable: boolean) {
+    constructor(private databases: Array<database>, private disable: boolean) {
         super(null);
 
         this.deletionText = disable ? "You're disabling" : "You're enabling";

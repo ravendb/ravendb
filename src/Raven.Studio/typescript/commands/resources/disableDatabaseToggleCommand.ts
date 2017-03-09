@@ -9,7 +9,7 @@ type rawDisableDatabaseResult = {
     Disabled: boolean;
 }
 
-class disableResourceToggleCommand extends commandBase {
+class disableDatabaseToggleCommand extends commandBase {
 
     constructor(private dbs: Array<database>, private disable: boolean) {
         super();
@@ -53,4 +53,4 @@ class disableResourceToggleCommand extends commandBase {
 
 }
 
-export = disableResourceToggleCommand;  
+export = disableDatabaseToggleCommand;  

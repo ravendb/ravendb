@@ -40,16 +40,16 @@ class resourceBackup {
         });
 
         this.searchResults = ko.computed(() => {
-            var newResourceName = this.resourceName();
-            return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
+            var newDatabaseName = this.resourceName();
+            return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
         });
 
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
-            var newResourceName = this.resourceName();
-            var foundRs = this.resources().find((rs: database) => newResourceName === rs.name && rs.qualifier === this.qualifier);
+            var newDatabaseName = this.resourceName();
+            var foundDb = this.resources().find((rs: database) => newDatabaseName === rs.name && rs.qualifier === this.qualifier);
 
-            if (!foundRs && newResourceName.length > 0) {
+            if (!foundDb && newDatabaseName.length > 0) {
                 errorMessage = this.fullTypeName() + " name doesn't exist!";
             }
 

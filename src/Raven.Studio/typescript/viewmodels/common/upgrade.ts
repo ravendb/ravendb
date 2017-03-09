@@ -16,7 +16,7 @@ class upgrade extends viewModelBase {
         super.attached();
         this.poolStats();
 
-        ko.postbox.subscribe(EVENTS.Resource.Activate, (e: databaseActivatedEventArgs) => {
+        ko.postbox.subscribe(EVENTS.Database.Activate, (e: databaseActivatedEventArgs) => {
             this.dbChanged(e.database); 
         });
     }

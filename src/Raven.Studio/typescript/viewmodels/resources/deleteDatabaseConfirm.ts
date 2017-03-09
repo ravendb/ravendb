@@ -4,7 +4,7 @@ import databaseInfo = require("models/resources/info/databaseInfo");
 class deleteDatabaseConfirm extends confirmViewModelBase<deleteDatabaseConfirmResult> {
     private isKeepingFiles = ko.observable<boolean>(true);
 
-    constructor(private dbsToDelete: Array<databaseInfo>) {
+    constructor(private databasesToDelete: Array<databaseInfo>) {
         super();
     }
 

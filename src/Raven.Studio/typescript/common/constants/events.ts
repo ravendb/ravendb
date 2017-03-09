@@ -14,9 +14,9 @@ const ChangesApi = {
     Reconnected: 'ChangesApi.Reconnected'
 }
 
-const Resource = {
-    Activate: 'Resource.Activate',
-    Disconnect: 'Resource.Disconnect'
+const Database = {
+    Activate: 'Database.Activate',
+    Disconnect: 'Database.Disconnect'
 };
 
 const NotificationCenter = {
@@ -27,7 +27,7 @@ export = {
     Menu,
     ResourceSwitcher,
     SearchBox,
-    Resource,
+    Database,
     ChangesApi,
     NotificationCenter
 };
