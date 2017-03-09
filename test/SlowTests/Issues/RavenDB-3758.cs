@@ -89,13 +89,13 @@ namespace SlowTests.Issues
                 }
                 WaitForIndexing(store);
 
-                new Orders_All_Changed().SideBySideExecute(store);
-                new Orders_All_Changed2().SideBySideExecute(store);
+                //new Orders_All_Changed().SideBySideExecute(store);
+                //new Orders_All_Changed2().SideBySideExecute(store);
             }
         }
 
         [Fact(Skip = "RavenDB-5919")]
-        public async Task Can_Overwrite_Side_By_Side_Index_Async()
+        public void Can_Overwrite_Side_By_Side_Index_Async()
         {
             using (var store = GetDocumentStore())
             {
@@ -115,8 +115,8 @@ namespace SlowTests.Issues
                 }
                 WaitForIndexing(store);
 
-                await new Orders_All_Changed().SideBySideExecuteAsync(store).ConfigureAwait(false);
-                await new Orders_All_Changed2().SideBySideExecuteAsync(store).ConfigureAwait(false);
+                //await new Orders_All_Changed().SideBySideExecuteAsync(store).ConfigureAwait(false);
+                //await new Orders_All_Changed2().SideBySideExecuteAsync(store).ConfigureAwait(false);
             }
         }
     }

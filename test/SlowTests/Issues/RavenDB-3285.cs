@@ -36,10 +36,6 @@ namespace SlowTests.Issues
                 store.Admin.Send(new SetIndexLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
                 indexDefinition = store.Admin.Send(new GetIndexOperation("IndexEmployee"));
                 Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode);
-
-                store.Admin.Send(new SetIndexLockOperation("IndexEmployee", IndexLockMode.SideBySide));
-                indexDefinition = store.Admin.Send(new GetIndexOperation("IndexEmployee"));
-                Assert.Equal(IndexLockMode.SideBySide, indexDefinition.LockMode);
             }
         }
 

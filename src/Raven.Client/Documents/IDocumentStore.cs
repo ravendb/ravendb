@@ -134,20 +134,6 @@ namespace Raven.Client.Documents
         IDocumentSession OpenSession(SessionOptions sessionOptions);
 
         /// <summary>
-        /// Executes the index creation in side-by-side mode.
-        /// </summary>
-        void SideBySideExecuteIndex(AbstractIndexCreationTask task, long? minimumEtagBeforeReplace = null);
-
-        /// <summary>
-        /// Executes the index creation in side-by-side mode.
-        /// </summary>
-        Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask task, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken));
-
-        void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> tasks, long? minimumEtagBeforeReplace = null);
-
-        Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
         /// Executes the index creation.
         /// </summary>
         void ExecuteIndex(AbstractIndexCreationTask task);

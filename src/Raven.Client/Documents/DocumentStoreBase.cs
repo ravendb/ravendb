@@ -82,22 +82,6 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Executes index creation in side-by-side mode.
-        /// </summary>
-        public virtual void SideBySideExecuteIndex(AbstractIndexCreationTask task, long? minimumEtagBeforeReplace = null)
-        {
-            AsyncHelpers.RunSync(() => SideBySideExecuteIndexAsync(task, minimumEtagBeforeReplace));
-        }
-
-        /// <summary>
-        /// Executes index creation in side-by-side mode.
-        /// </summary>
-        public virtual Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask task, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
-        {
-            return task.SideBySideExecuteAsync(this, Conventions, minimumEtagBeforeReplace, token);
-        }
-
-        /// <summary>
         /// Executes transformer creation
         /// </summary>
         public virtual void ExecuteTransformer(AbstractTransformerCreationTask task)
@@ -127,24 +111,6 @@ namespace Raven.Client.Documents
         public virtual Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, CancellationToken token = default(CancellationToken))
         {
             var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, Conventions);
-
-            return Admin.SendAsync(new PutIndexesOperation(indexesToAdd), token);
-        }
-
-        /// <summary>
-        /// Executes indexes creation in side-by-side mode.
-        /// </summary>
-        public virtual void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> tasks, long? minimumEtagBeforeReplace = null)
-        {
-            AsyncHelpers.RunSync(() => ExecuteIndexesAsync(tasks));
-        }
-
-        /// <summary>
-        /// Executes indexes creation in side-by-side mode.
-        /// </summary>
-        public virtual Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> tasks, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
-        {
-            var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, Conventions, minimumEtagBeforeReplace);
 
             return Admin.SendAsync(new PutIndexesOperation(indexesToAdd), token);
         }

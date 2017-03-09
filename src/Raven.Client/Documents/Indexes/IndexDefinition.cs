@@ -34,11 +34,6 @@ namespace Raven.Client.Documents.Indexes
         public string Name { get; set; }
 
         /// <summary>
-        /// Minimum etag before replacement
-        /// </summary>
-        public long? MinimumEtagBeforeReplace { get; set; }
-
-        /// <summary>
         /// Priority of an index
         /// </summary>
         public IndexPriority Priority { get; set; }
@@ -338,11 +333,6 @@ namespace Raven.Client.Documents.Indexes
         /// Whatever this is a temporary test only index
         /// </summary>
         public bool IsTestIndex { get; set; }
-
-        /// <summary>
-        /// Whatever this is a side by side index
-        /// </summary>
-        public bool IsSideBySideIndex { get; set; }
 
         /// <summary>
         /// If not null than each reduce result will be created as a document in the specified collection name.

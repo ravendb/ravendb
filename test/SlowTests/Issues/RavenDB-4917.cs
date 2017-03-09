@@ -20,7 +20,7 @@ namespace SlowTests.Issues
 
                 store.ExecuteIndex(new Customer_Index());
 
-                store.SideBySideExecuteIndex(new Customer_Index());
+                //store.SideBySideExecuteIndex(new Customer_Index());
 
                 Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
             }

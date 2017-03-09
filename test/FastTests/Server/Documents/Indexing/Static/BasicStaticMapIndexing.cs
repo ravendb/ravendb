@@ -195,7 +195,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             indexDefinition.Reduce = "c";
             indexDefinition.Type = IndexType.MapReduce;
             indexDefinition.IndexId = 3;
-            indexDefinition.IsSideBySideIndex = true;
             indexDefinition.Fields = new Dictionary<string, IndexFieldOptions>
             {
                 {"f1", new IndexFieldOptions

@@ -10,7 +10,6 @@ namespace Raven.Server.Extensions
         {
             var result = new DynamicJsonValue();
             result[nameof(IndexDefinition.IndexId)] = definition.IndexId;
-            result[nameof(IndexDefinition.IsSideBySideIndex)] = definition.IsSideBySideIndex;
             result[nameof(IndexDefinition.IsTestIndex)] = definition.IsTestIndex;
             result[nameof(IndexDefinition.LockMode)] = definition.LockMode.ToString();
             result[nameof(IndexDefinition.Priority)] = definition.Priority.ToString();
@@ -56,7 +55,6 @@ namespace Raven.Server.Extensions
                 settings[kvp.Key] = kvp.Value;
 
             result[nameof(IndexDefinition.Configuration)] = settings;
-            result[nameof(IndexDefinition.MinimumEtagBeforeReplace)] = definition.MinimumEtagBeforeReplace;
 
             return result;
         }

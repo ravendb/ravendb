@@ -841,10 +841,6 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.IsSideBySideIndex)));
-            writer.WriteBool(indexDefinition.IsSideBySideIndex);
-            writer.WriteComma();
-
             writer.WritePropertyName((nameof(indexDefinition.IsTestIndex)));
             writer.WriteBool(indexDefinition.IsTestIndex);
             writer.WriteComma();

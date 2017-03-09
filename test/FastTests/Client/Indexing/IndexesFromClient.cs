@@ -334,7 +334,6 @@ namespace FastTests.Client.Indexing
 
                 definition = await store.Admin.SendAsync(new GetIndexOperation(index.Name));
                 Assert.Equal(serverDefinition.Name, definition.Name);
-                Assert.Equal(serverDefinition.IsSideBySideIndex, definition.IsSideBySideIndex);
                 Assert.Equal(serverDefinition.IsTestIndex, definition.IsTestIndex);
                 Assert.Equal(serverDefinition.Reduce, definition.Reduce);
                 Assert.Equal((int)serverDefinition.Type, (int)definition.Type);
