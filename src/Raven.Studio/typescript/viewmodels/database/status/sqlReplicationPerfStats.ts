@@ -64,7 +64,7 @@ class sqlReplicationPerfStats extends viewModelBase {
     }
 
     afterClientApiConnected(): void {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         this.addNotification(changesApi.watchDocsStartingWith("Raven/SqlReplication/Status", e => this.processUpdate(e)));
     }
 

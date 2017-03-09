@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 import database = require("models/resources/database");
 
-class loadResourceCommand extends commandBase {
+class loadDatabaseCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -14,4 +14,4 @@ class loadResourceCommand extends commandBase {
     }
 }
 
-export = loadResourceCommand;
+export = loadDatabaseCommand;

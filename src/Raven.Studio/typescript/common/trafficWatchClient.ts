@@ -21,7 +21,7 @@ class trafficWatchClient {
     private commandBase = new commandBase();
     private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
 
-    constructor(private resourcePath: string, private token:string) {
+    constructor(private databasePath: string, private token:string) {
         this.connectionOpeningTask = $.Deferred();
         this.connectionClosingTask = $.Deferred();
         this.eventsId = idGenerator.generateId();
@@ -41,7 +41,7 @@ class trafficWatchClient {
         var connectionOpened: boolean = false;
 
         var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        this.webSocket = new WebSocket(wsProtocol + window.location.host + this.resourcePath + '/traffic-watch/websocket?' + connectionString);
+        this.webSocket = new WebSocket(wsProtocol + window.location.host + this.databasePath + '/traffic-watch/websocket?' + connectionString);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
@@ -55,7 +55,7 @@ class trafficWatchClient {
                 this.connectionClosingTask.resolve();
         }
         this.webSocket.onopen = () => {
-            console.log("Connected to WebSockets HTTP Trace for " + ((!!this.resourcePath) ? (this.resourcePath) : "admin"));
+            console.log("Connected to WebSockets HTTP Trace for " + ((!!this.databasePath) ? (this.databasePath) : "admin"));
             this.successfullyConnectedOnce = true;
             connectionOpened = true;
             this.connectionOpeningTask.resolve();
@@ -96,7 +96,7 @@ class trafficWatchClient {
     disconnect() {
         this.connectionOpeningTask.done(() => {
             if (this.webSocket && this.webSocket.readyState === this.readyStateOpen){
-                console.log("Disconnecting from WebSocket HTTP Trace for " + ((!!this.resourcePath) ? (this.resourcePath) : "admin"));
+                console.log("Disconnecting from WebSocket HTTP Trace for " + ((!!this.databasePath) ? (this.databasePath) : "admin"));
                 this.isCleanClose = true;
                 this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
             }

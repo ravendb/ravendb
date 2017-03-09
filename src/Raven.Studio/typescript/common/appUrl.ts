@@ -233,23 +233,23 @@ class appUrl {
         return "#databases/edit?" + docIdUrlPart + databaseUrlPart;
     }
 
-    static forEditItem(itemId: string, rs: database, itemIndex: number, collectionName?: string): string {
-        var urlPart = appUrl.getEncodedResourcePart(rs);
+    static forEditItem(itemId: string, db: database, itemIndex: number, collectionName?: string): string {
+        var urlPart = appUrl.getEncodedDbPart(db);
         var itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
 
         var pagedListInfo = collectionName && itemIndex != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + itemIndex : "";
-        var resourceTag = "#databases";       
-        return resourceTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
+        var databaseTag = "#databases";       
+        return databaseTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
     static forEditQueryItem(itemNumber: number, res: database, index: string, query?: string, sort?:string): string {
-        var databaseUrlPart = appUrl.getEncodedResourcePart(res);
+        var databaseUrlPart = appUrl.getEncodedDbPart(res);
         var indexUrlPart = "&index=" + index;
         var itemNumberUrlPart = "&item=" + itemNumber;
         var queryInfoUrlPart = query? "&query=" + encodeURIComponent(query): "";
         var sortInfoUrlPart = sort?"&sorts=" + sort:"";
-        var resourceTag = "#databases";
-        return resourceTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
+        var dbTag = "#databases";
+        return dbTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
     }
 
     static forNewDoc(db: database, collection: string = null): string {
@@ -620,8 +620,8 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs?id=" + docId;
     }
 
-    private static getResourceNameFromUrl(urlParamName: string) {
-        const indicator = urlParamName + "=";
+    static getDatabaseNameFromUrl(): string {
+        const indicator = "database=";
         const hash = window.location.hash;
         const index = hash.indexOf(indicator);
         if (index >= 0) {
@@ -630,15 +630,11 @@ class appUrl {
                 segmentEnd = hash.length;
             }
 
-            const resourceName = hash.substring(index + indicator.length, segmentEnd);
-            return decodeURIComponent(resourceName);
+            const databaseName = hash.substring(index + indicator.length, segmentEnd);
+            return decodeURIComponent(databaseName);
         } else {
             return null;
         } 
-    }
-
-    static getDatabaseNameFromUrl(): string {
-        return appUrl.getResourceNameFromUrl(database.type);
     }
 
     /**
@@ -649,7 +645,7 @@ class appUrl {
     }
 
     /**
-    * Gets the address for the current page but for the specified resource.
+    * Gets the address for the current page but for the specified database.
     */
     static forCurrentPage(rs: database) {
         const routerInstruction = router.activeInstruction();
@@ -657,7 +653,7 @@ class appUrl {
 
             let currentResourceName: string = null;
             let currentResourceType: string = null;
-            let currentResourceQualifier: string;
+            let currentResourceQualifier: string; 
             const dbInUrl = routerInstruction.queryParams[database.type];
             if (dbInUrl) {
                 currentResourceName = dbInUrl;
@@ -683,13 +679,6 @@ class appUrl {
 
     static forCurrentDatabase(): computedAppUrls {
         return appUrl.currentDbComputeds;
-    }
-
-    private static getEncodedResourcePart(res?: database) {
-        if (!res)
-            return "";
-
-        return appUrl.getEncodedDbPart(<database>res);
     }
 
     private static getEncodedDbPart(db?: database) {

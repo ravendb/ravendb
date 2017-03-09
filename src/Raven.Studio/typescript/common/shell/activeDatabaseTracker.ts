@@ -15,9 +15,9 @@ class activeDatabaseTracker {
     database: KnockoutObservable<database> = ko.observable<database>();
 
     constructor() {
-        ko.postbox.subscribe(EVENTS.Resource.Activate, (e: databaseActivatedEventArgs) => {
+        ko.postbox.subscribe(EVENTS.Database.Activate, (e: databaseActivatedEventArgs) => {
 
-            // If the 'same' resource was selected from the top resources selector dropdown, 
+            // If the 'same' database was selected from the top resources selector dropdown, 
             // then we want the knockout observable to be aware of it so that scrollling on page will occur
             if (e.database === this.database()) {
                 this.database(null);
@@ -26,7 +26,7 @@ class activeDatabaseTracker {
             this.database(e.database);
           });
 
-        ko.postbox.subscribe(EVENTS.Resource.Disconnect, (e: databaseDisconnectedEventArgs) => {
+        ko.postbox.subscribe(EVENTS.Database.Disconnect, (e: databaseDisconnectedEventArgs) => {
             if (e.database === this.database()) {
                 this.database(null);
             }

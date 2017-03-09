@@ -65,9 +65,9 @@ class notificationCenter {
     private initializeObservables() {
         this.allNotifications = ko.pureComputed(() => {
             const globalNotifications = this.globalNotifications();
-            const resourceNotifications = this.databaseNotifications();
+            const databaseNotifications = this.databaseNotifications();
 
-            const mergedNotifications = globalNotifications.concat(resourceNotifications);
+            const mergedNotifications = globalNotifications.concat(databaseNotifications);
 
             return _.sortBy(mergedNotifications, x => -1 * x.createdAt().unix());
         });
@@ -115,7 +115,7 @@ class notificationCenter {
         ];
     }
 
-    resourceDisconnected() {
+    databaseDisconnected() {
         this.databaseNotifications.removeAll();
     }
 

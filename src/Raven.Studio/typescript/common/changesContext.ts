@@ -111,7 +111,7 @@ class changesContext {
             currentChanges.dispose();
             this.databaseChangesApi(null);
 
-            ko.postbox.publish(EVENTS.Resource.Disconnect, { database: currentChanges.getDatabase(), cause: cause } as databaseDisconnectedEventArgs);
+            ko.postbox.publish(EVENTS.Database.Disconnect, { database: currentChanges.getDatabase(), cause: cause } as databaseDisconnectedEventArgs);
         }
     }
 
@@ -129,7 +129,7 @@ class changesContext {
 
         this.disconnectFromDatabaseChangesApi(cause);
         this.disconnectFromDatabaseNotificationCenter();
-        notificationCenter.instance.resourceDisconnected();
+        notificationCenter.instance.databaseDisconnected();
     }
 }
 

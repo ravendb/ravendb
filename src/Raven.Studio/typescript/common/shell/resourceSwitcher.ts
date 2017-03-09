@@ -73,7 +73,7 @@ class resourceSwitcher {
         });
     }
 
-    selectResource(rs: database, $event: JQueryEventObject) {
+    selectDatabase(rs: database, $event: JQueryEventObject) {
         if ($event.ctrlKey) {
             window.open(appUrl.forDocumentsByDatabaseName(null, rs.name));
         } else {

@@ -1,5 +1,5 @@
 <div class="modal-dialog" role="document" id="newDatabase" data-bind="css: { 'modal-lg': showWideDialog(), 'modal-sm': !showWideDialog() }">
-    <form data-bind="submit: createResource" autocomplete="off">
+    <form data-bind="submit: createDatabase" autocomplete="off">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" data-bind="click: close" class="close" data-dismiss="modal" aria-label="Close"><i aria-hidden="true" class="icon-cancel"></i></button>
@@ -8,14 +8,14 @@
             <div class="modal-body">
                 <div class="modal-settings-panel">
                     <div class="modal-settings-panel-main">
-                        <div class="form-group" data-bind="validationElement: resourceModel.name">
+                        <div class="form-group" data-bind="validationElement: databaseModel.name">
                             <h3>NAME</h3>
-                            <input type="text" id="resourceName" data-bind="textInput: resourceModel.name" autofocus class="form-control">
+                            <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control">
                         </div>
                         
                         <button type="button"
-                                data-bind="click: showAdvancedConfiguration, attr: { 'class': 'btn btn-block btn-toggle ' + (resourceModel.advancedValidationGroup.isValid() ? 'btn-info' : 'btn-danger')  }">
-                            <i data-bind="attr: { 'class': resourceModel.advancedValidationGroup.isValid() ? 'icon-settings' : 'icon-danger' }"></i><span>Advanced</span>
+                                data-bind="click: showAdvancedConfiguration, attr: { 'class': 'btn btn-block btn-toggle ' + (databaseModel.advancedValidationGroup.isValid() ? 'btn-info' : 'btn-danger')  }">
+                            <i data-bind="attr: { 'class': databaseModel.advancedValidationGroup.isValid() ? 'icon-settings' : 'icon-danger' }"></i><span>Advanced</span>
                         </button>
                     </div>
                     <div class="modal-settings-panel-slideout">
@@ -36,43 +36,43 @@
 
 <script type="text/html" id="create-db-advanced">
     <h3>ADVANCED</h3>
-    <div class="form-group row" data-bind="validationElement: resourceModel.dataPath">
+    <div class="form-group row" data-bind="validationElement: databaseModel.dataPath">
         <div class="col-md-4">
             <label class="control-label">Path</label>
         </div>
         <div class="col-md-8">
-            <input type="text" class="form-control" data-bind="textInput: resourceModel.dataPath, attr: { placeholder: '~/' + resourceModel.name() }" />
+            <input type="text" class="form-control" data-bind="textInput: databaseModel.dataPath, attr: { placeholder: '~/' + databaseModel.name() }" />
         </div>
     </div>
-    <div class="form-group row" data-bind="validationElement: resourceModel.journalsPath">
+    <div class="form-group row" data-bind="validationElement: databaseModel.journalsPath">
         <div class="col-md-4">
             <label class="control-label">Journals</label>
         </div>
         <div class="col-md-8">
-            <input type="text" class="form-control" data-bind="textInput: resourceModel.journalsPath, attr: { placeholder: '~/' + resourceModel.name() }" />
+            <input type="text" class="form-control" data-bind="textInput: databaseModel.journalsPath, attr: { placeholder: '~/' + databaseModel.name() }" />
         </div>
     </div>
-    <div class="form-group row" data-bind="validationElement: resourceModel.indexesPath">
+    <div class="form-group row" data-bind="validationElement: databaseModel.indexesPath">
         <div class="col-md-4">
             <label class="control-label">Indexes</label>
         </div>
         <div class="col-md-8">
-            <input type="text" class="form-control" data-bind="textInput: resourceModel.indexesPath, attr: { placeholder: indexesPathPlaceholder() }" />
+            <input type="text" class="form-control" data-bind="textInput: databaseModel.indexesPath, attr: { placeholder: indexesPathPlaceholder() }" />
         </div>
     </div>
-    <div class="form-group row" data-bind="validationElement: resourceModel.tempPath">
+    <div class="form-group row" data-bind="validationElement: databaseModel.tempPath">
         <div class="col-md-4">
             <label class="control-label">Temp</label>
         </div>
         <div class="col-md-8">
-            <input type="text" class="form-control" data-bind="textInput: resourceModel.tempPath, attr: { placeholder: '~/' + resourceModel.name() }" />
+            <input type="text" class="form-control" data-bind="textInput: databaseModel.tempPath, attr: { placeholder: '~/' + databaseModel.name() }" />
         </div>
     </div>
     <div class="checkbox">
-        <input id="check-incremental-backup" class="styled" type="checkbox" data-bind="checked: resourceModel.incrementalBackup">
+        <input id="check-incremental-backup" class="styled" type="checkbox" data-bind="checked: databaseModel.incrementalBackup">
         <label for="check-incremental-backup">Incremental Backup</label>
     </div>
-    <div data-bind="visible: resourceModel.incrementalBackup()">
+    <div data-bind="visible: databaseModel.incrementalBackup()">
         <div class="form-group row">
             <div class="col-md-4">
                 <label>Alert timeout</label>
@@ -80,11 +80,11 @@
             <div class="col-md-8">
                 <div class="btn-group btn-block">
                     <button type="button" class="btn btn-block dropdown-toggle" data-toggle="dropdown" title="Sets the span of time allowed before issuing an alert for missing backup (in hours).">
-                        <span data-bind="text: $root.pluralize(resourceModel.incrementalBackupSettings.alertTimeout(), 'hour', 'hours')"></span>
+                        <span data-bind="text: $root.pluralize(databaseModel.incrementalBackupSettings.alertTimeout(), 'hour', 'hours')"></span>
                         <span class="caret"></span>
                     </button>
-                    <ul class="dropdown-menu" role="menu" data-bind="foreach: resourceModel.alertTimeoutOptions">
-                        <li><a href="#" data-bind="text: $data, click: $root.resourceModel.setAlertTimeout.bind($root.resourceModel, $data)"></a></li>
+                    <ul class="dropdown-menu" role="menu" data-bind="foreach: databaseModel.alertTimeoutOptions">
+                        <li><a href="#" data-bind="text: $data, click: $root.databaseModel.setAlertTimeout.bind($root.databaseModel, $data)"></a></li>
                     </ul>
                 </div>
             </div>
@@ -96,11 +96,11 @@
             <div class="col-md-8">
                 <div class="btn-group btn-block">
                     <button type="button" class="btn btn-block dropdown-toggle" data-toggle="dropdown" title="Sets the span of time allowed before issuing multiple alerts on the same missed backup (in days).">
-                        <span data-bind="text: $root.pluralize(resourceModel.incrementalBackupSettings.alertRecurringTimeout(), 'day', 'days')"></span>
+                        <span data-bind="text: $root.pluralize(databaseModel.incrementalBackupSettings.alertRecurringTimeout(), 'day', 'days')"></span>
                         <span class="caret"></span>
                     </button>
-                    <ul class="dropdown-menu" role="menu" data-bind="foreach: resourceModel.alertRecurringTimeoutOptions">
-                        <li><a href="#" data-bind="text: $data, click: $root.resourceModel.setRecurringAlertTimeout.bind($root.resourceModel, $data)"></a></li>
+                    <ul class="dropdown-menu" role="menu" data-bind="foreach: databaseModel.alertRecurringTimeoutOptions">
+                        <li><a href="#" data-bind="text: $data, click: $root.databaseModel.setRecurringAlertTimeout.bind($root.databaseModel, $data)"></a></li>
                     </ul>
                 </div>
             </div>

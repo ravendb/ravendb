@@ -23,7 +23,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                 route: 'databases/status/storage',
                 moduleId: 'viewmodels/database/status/storage/statusStorageOnDisk',
                 title: 'On disk',
-                tooltip: "Shows disk usage for active resource",
+                tooltip: "Shows disk usage for active database",
                 nav: accessHelper.isGlobalAdmin(),
                 dynamicHash: appUrls.statusStorageOnDisk
             }),

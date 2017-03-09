@@ -30,7 +30,7 @@ class databases extends viewModelBase {
     }
 
     selectionState: KnockoutComputed<checkbox>;
-    selectedResources = ko.observableArray<string>([]);
+    selectedDatabases = ko.observableArray<string>([]);
 
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false)
@@ -55,9 +55,9 @@ class databases extends viewModelBase {
         filters.searchText.throttle(200).subscribe(() => this.filterDatabases());
 
         this.selectionState = ko.pureComputed<checkbox>(() => {
-            const resources = this.databases().sortedDatabases().filter(x => !x.filteredOut());
-            var selectedCount = this.selectedResources().length;
-            if (resources.length && selectedCount === resources.length)
+            const databases = this.databases().sortedDatabases().filter(x => !x.filteredOut());
+            var selectedCount = this.selectedDatabases().length;
+            if (databases.length && selectedCount === databases.length)
                 return checkbox.Checked;
             if (selectedCount > 0)
                 return checkbox.SomeChecked;
@@ -113,8 +113,8 @@ class databases extends viewModelBase {
         }
     }
 
-    private updateDatabaseInfo(qualifer: string, resourceName: string) {
-        new getDatabaseCommand(resourceName)
+    private updateDatabaseInfo(qualifer: string, databaseName: string) {
+        new getDatabaseCommand(databaseName)
             .execute()
             .done((result: Raven.Client.Server.Operations.DatabaseInfo) => {
                 this.databases().updateDatabase(result, qualifer);
@@ -133,54 +133,54 @@ class databases extends viewModelBase {
 
         const matchesFilters = (rs: databaseInfo) => !hasSearchText || rs.name.toLowerCase().indexOf(searchText) >= 0;
 
-        const resources = this.databases();
-        resources.sortedDatabases().forEach(resource => {
-            const matches = matchesFilters(resource);
-            resource.filteredOut(!matches);
+        const databases = this.databases();
+        databases.sortedDatabases().forEach(db => {
+            const matches = matchesFilters(db);
+            db.filteredOut(!matches);
 
             if (!matches) {
-                this.selectedResources.remove(resource.qualifiedName);
+                this.selectedDatabases.remove(db.qualifiedName);
             }
         });
     }
 
-    resourceUrl(dbInfo: databaseInfo): string {
+    databaseUrl(dbInfo: databaseInfo): string {
         const db = dbInfo.asDatabase();
         return appUrl.forDocuments(null, db);
     }
 
     private getSelectedDatabases() {
-        const selected = this.selectedResources();
+        const selected = this.selectedDatabases();
         return this.databases().sortedDatabases().filter(x => _.includes(selected, x.qualifiedName));
     }
 
     toggleSelectAll(): void {
-        const selectedCount = this.selectedResources().length;
+        const selectedCount = this.selectedDatabases().length;
 
         if (selectedCount > 0) {
-            this.selectedResources([]);
+            this.selectedDatabases([]);
         } else {
             const namesToSelect = [] as Array<string>;
 
-            this.databases().sortedDatabases().forEach(resource => {
-                if (!resource.filteredOut()) {
-                    namesToSelect.push(resource.qualifiedName);
+            this.databases().sortedDatabases().forEach(db => {
+                if (!db.filteredOut()) {
+                    namesToSelect.push(db.qualifiedName);
                 }
             });
 
-            this.selectedResources(namesToSelect);
+            this.selectedDatabases(namesToSelect);
         }
     }
 
     deleteDatabase(db: databaseInfo) {
-        this.deleteResources([db]);
+        this.deleteDatabases([db]);
     }
 
     deleteSelectedDatabases() {
-       this.deleteResources(this.getSelectedDatabases());
+       this.deleteDatabases(this.getSelectedDatabases());
     }
 
-    private deleteResources(toDelete: databaseInfo[]) {
+    private deleteDatabases(toDelete: databaseInfo[]) {
         const confirmDeleteViewModel = new deleteDatabaseConfirm(toDelete);
 
         confirmDeleteViewModel
@@ -188,7 +188,7 @@ class databases extends viewModelBase {
             .done((confirmResult: deleteDatabaseConfirmResult) => {
                 if (confirmResult.can) {   
 
-                    const resourcesList = toDelete.map(x => {
+                    const dbsList = toDelete.map(x => {
                         x.isBeingDeleted(true);
                         const asDatabase = x.asDatabase();
 
@@ -198,10 +198,10 @@ class databases extends viewModelBase {
                         return asDatabase;
                     });
                                     
-                    new deleteDatabaseCommand(resourcesList, !confirmResult.keepFiles)
+                    new deleteDatabaseCommand(dbsList, !confirmResult.keepFiles)
                                              .execute()                                            
-                                             .done((deletedResources: Array<Raven.Server.Web.System.ResourceDeleteResult>) => {
-                                                    deletedResources.forEach(rs => this.onResourceDeleted(rs));                            
+                                             .done((deletedDatabases: Array<Raven.Server.Web.System.ResourceDeleteResult>) => {
+                                                    deletedDatabases.forEach(rs => this.onDatabaseDeleted(rs));                            
                                               });
                 }
             });
@@ -209,23 +209,23 @@ class databases extends viewModelBase {
         app.showBootstrapDialog(confirmDeleteViewModel);
     }
 
-    private onResourceDeleted(deletedResourceResult: Raven.Server.Web.System.ResourceDeleteResult) {
-        const matchedResource = this.databases()
+    private onDatabaseDeleted(deletedDatabaseResult: Raven.Server.Web.System.ResourceDeleteResult) {
+        const matchedDatabase = this.databases()
             .sortedDatabases()           
-            .find(x => x.qualifiedName.toLowerCase() === deletedResourceResult.QualifiedName.toLowerCase());
+            .find(x => x.qualifiedName.toLowerCase() === deletedDatabaseResult.QualifiedName.toLowerCase());
 
-        // Resources will be removed from the the sortedResources in method removeResource through the global changes api flow..
+        // Databases will be removed from the the sortedDatabases in method removeDatabase through the global changes api flow..
         // So only enable the 'delete' button and display err msg if relevant                                
-        if (matchedResource && (deletedResourceResult.Reason)) {                           
-                matchedResource.isBeingDeleted(false);
-                messagePublisher.reportError(`Failed to delete ${matchedResource.name}, reason: ${deletedResourceResult.Reason}`);
+        if (matchedDatabase && (deletedDatabaseResult.Reason)) {                           
+                matchedDatabase.isBeingDeleted(false);
+                messagePublisher.reportError(`Failed to delete ${matchedDatabase.name}, reason: ${deletedDatabaseResult.Reason}`);
         }        
     }
 
-    private removeDatabase(rsInfo: databaseInfo) {
-        this.databases().sortedDatabases.remove(rsInfo);
-        this.selectedResources.remove(rsInfo.qualifiedName);
-        messagePublisher.reportSuccess(`Resource ${rsInfo.name} was successfully deleted`);
+    private removeDatabase(dbInfo: databaseInfo) {
+        this.databases().sortedDatabases.remove(dbInfo);
+        this.selectedDatabases.remove(dbInfo.qualifiedName);
+        messagePublisher.reportSuccess(`Database ${dbInfo.name} was successfully deleted`);
     }
 
     enableSelectedDatabases() {
@@ -292,8 +292,8 @@ class databases extends viewModelBase {
         if (matchedDatabase) {
             matchedDatabase.disabled(result.Disabled);
 
-            // If Enabling a resource (that is selected from the top) than we want it to be Online(Loaded)
-            if (matchedDatabase.isCurrentlyActiveResource() && !matchedDatabase.disabled()) {
+            // If Enabling a database (that is selected from the top) than we want it to be Online(Loaded)
+            if (matchedDatabase.isCurrentlyActiveDatabase() && !matchedDatabase.disabled()) {
                 new loadDatabaseCommand(matchedDatabase.asDatabase())
                     .execute();
             }
@@ -355,7 +355,7 @@ class databases extends viewModelBase {
     }
 
     activateDatabase(dbInfo: databaseInfo) {
-        let db = this.resourcesManager.getResourceByQualifiedName(dbInfo.qualifiedName);
+        let db = this.resourcesManager.getDatabaseByQualifiedName(dbInfo.qualifiedName);
         if (!db || db.disabled())
             return;
 

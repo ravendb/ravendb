@@ -30,7 +30,7 @@ class createDatabase extends dialogViewModelBase {
         }
     ];
 
-    resourceModel = new databaseCreationModel();
+    databaseModel = new databaseCreationModel();
 
     advancedConfigurationVisible = ko.observable<boolean>(false);
     showWideDialog: KnockoutComputed<boolean>;
@@ -52,10 +52,10 @@ class createDatabase extends dialogViewModelBase {
 
     protected initObservables() {
         this.showWideDialog = ko.pureComputed(() => this.advancedConfigurationVisible());
-        this.resourceModel.setupValidation((name: string) => !this.getResourceByName(name));
+        this.databaseModel.setupValidation((name: string) => !this.getResourceByName(name));
 
         this.indexesPathPlaceholder = ko.pureComputed(() => {
-            const name = this.resourceModel.name();
+            const name = this.databaseModel.name();
             return `~/${name || "{Database Name}"}/Indexes/`;
         });
 
@@ -71,16 +71,16 @@ class createDatabase extends dialogViewModelBase {
         return this.databaseBundles;
     }
 
-    createResource() {
+    createDatabase() {
         eventsCollector.default.reportEvent('resource', 'create');
 
-        const globalValid = this.isValid(this.resourceModel.globalValidationGroup);
-        const advancedValid = this.isValid(this.resourceModel.advancedValidationGroup);
+        const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
+        const advancedValid = this.isValid(this.databaseModel.advancedValidationGroup);
 
         const allValid = globalValid && advancedValid;
 
         if (allValid) {
-            this.createResourceInternal();
+            this.createDatabaseInternal();
         } else {
             if (!advancedValid && !this.advancedConfigurationVisible()) {
                 this.showAdvancedConfiguration();
@@ -97,8 +97,8 @@ class createDatabase extends dialogViewModelBase {
         return true;
     }
 
-    private createResourceInternal() {
-        const databaseDocument = this.resourceModel.toDto();
+    private createDatabaseInternal() {
+        const databaseDocument = this.databaseModel.toDto();
 
         resourcesManager.default.activateAfterCreation(database.qualifier, databaseDocument.Id);
 
@@ -110,7 +110,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     private isBundleActiveComputed(bundleName: string) {
-        return ko.pureComputed(() => _.includes(this.resourceModel.activeBundles(), bundleName));
+        return ko.pureComputed(() => _.includes(this.databaseModel.activeBundles(), bundleName));
     }
 
 }

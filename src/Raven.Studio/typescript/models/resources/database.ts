@@ -34,9 +34,9 @@ class database {
     }
 
     activate() {
-        ko.postbox.publish(EVENTS.Resource.Activate,
+        ko.postbox.publish(EVENTS.Database.Activate,
             {
-                resource: this
+                database: this
             });
     }
 
