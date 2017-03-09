@@ -28,6 +28,7 @@ namespace Raven.Server.Documents.Versioning
         private static readonly TableSchema DocsSchema;
 
         private readonly DocumentDatabase _database;
+        private readonly DocumentsStorage _documentsStorage;
         private readonly VersioningConfiguration _versioningConfiguration;
 
         // The documents schema is as follows
@@ -54,6 +55,7 @@ namespace Raven.Server.Documents.Versioning
         private VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
         {
             _database = database;
+            _documentsStorage = _database.DocumentsStorage;
             _versioningConfiguration = versioningConfiguration;
 
             _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
@@ -174,10 +176,14 @@ namespace Raven.Server.Documents.Versioning
         }
 
         public void PutFromDocument(DocumentsOperationContext context, string key,
-            BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector = null, VersioningConfigurationCollection configuration = null)
+            BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector, VersioningConfigurationCollection configuration = null)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-            PutInternal(context, key, document, table, changeVector);
+
+            byte* lowerKey;
+            int lowerKeySize;
+            PutInternal(context, key, document, table, changeVector, out lowerKey, out lowerKeySize);
+            _documentsStorage.RevisionAttachments(context, lowerKey, lowerKeySize, changeVector);
 
             if (configuration == null)
             {
@@ -188,32 +194,27 @@ namespace Raven.Server.Documents.Versioning
             Slice prefixSlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, key, out prefixSlice))
             {
-                // We delete the old revsions after we put the current one, 
-                // because in case that MaxRevisions is 3 or lower we may get a revsion document from replication
+                // We delete the old revisions after we put the current one, 
+                // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
                 // which is old. But becasue we put it first, we make sure to clean this document, becuase of the order to the revisions.
                 var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
                 DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
             }
         }
 
-        private void RevisionAttachments(DocumentsOperationContext context, string key, long etag)
-        {
-            // TODO: implement
-        }
-
         public void PutDirect(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-            PutInternal(context, key, document, table, changeVector);
+            byte* lowerKey;
+            int lowerKeySize;
+            PutInternal(context, key, document, table, changeVector, out lowerKey, out lowerKeySize);
         }
 
-        private void PutInternal(DocumentsOperationContext context, string key, BlittableJsonReaderObject document
-            , Table table, ChangeVectorEntry[] changeVector)
+        private void PutInternal(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, Table table, 
+            ChangeVectorEntry[] changeVector, out byte* lowerKey, out int lowerSize)
         {
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
-            byte* lowerKey;
-            int lowerSize;
             byte* keyPtr;
             int keySize;
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
@@ -363,12 +364,13 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        private static Document TableValueToDocument(JsonOperationContext context, ref TableValueReader tvr)
+        private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {
                 StorageId = tvr.Id
             };
+            result.LoweredKey = DocumentsStorage.TableValueToString(context, (int)Columns.LoweredKey, ref tvr);
             result.Key = DocumentsStorage.TableValueToKey(context, (int)Columns.Key, ref tvr);
             result.Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr);
 
@@ -384,6 +386,16 @@ namespace Raven.Server.Documents.Versioning
             }
 
             result.Flags = DocumentFlags.FromVersionStorage;
+
+            if ((result.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+            {
+                Slice prefixSlice;
+                using (_documentsStorage.GetAttachmentPrefix(context, result.LoweredKey.Buffer, result.LoweredKey.Size,
+                    DocumentsStorage.AttachmentType.Revision, result.ChangeVector, out prefixSlice))
+                {
+                    result.Attachments = _documentsStorage.GetAttachmentsForDocument(context, prefixSlice.Clone(context.Allocator));
+                }
+            }
 
             return result;
         }
