@@ -57,7 +57,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        public Task DbInfo(string name)
+        private Task DbInfo(string name)
         {
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
