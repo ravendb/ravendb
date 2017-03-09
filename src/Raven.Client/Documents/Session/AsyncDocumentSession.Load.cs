@@ -146,7 +146,6 @@ namespace Raven.Client.Documents.Session
         private async Task<GetDocumentCommand> LoadUsingTransformerInternalAsync(string[] ids, Stream stream, LoadTransformerOperation operation, string transformer,
             Action<ILoadConfiguration> configure = null, CancellationToken token = new CancellationToken())
         {
-            IncrementRequestCount();
             var configuration = new LoadConfiguration();
             configure?.Invoke(configuration);
 
@@ -215,8 +214,6 @@ namespace Raven.Client.Documents.Session
             int start = 0, int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
             string startAfter = null, string transformer = null, CancellationToken token = default(CancellationToken))
         {
-            IncrementRequestCount();
-
             var configuration = new LoadConfiguration();
             configure?.Invoke(configuration);
 
@@ -242,7 +239,6 @@ namespace Raven.Client.Documents.Session
         private async Task LoadAsyncInternal(string[] ids, Stream stream, LoadOperation operation,
             CancellationToken token = default(CancellationToken))
         {
-            IncrementRequestCount();
             operation.ByIds(ids);
 
             var command = operation.CreateRequest();
