@@ -127,8 +127,12 @@ namespace Raven.Database.Server.Controllers
             Etag lastEtag = null;
             var allIndexes = false;
             var modifiedCollections = new HashSet<string>();
+            var deletedIds = new HashSet<string>();
             foreach (var batchResult in results)
             {
+                if (batchResult.Method == "DELETE")
+                    deletedIds.Add(batchResult.Key);
+
                 if (batchResult.Etag == null || batchResult.Metadata == null)
                     continue;
 
@@ -143,7 +147,14 @@ namespace Raven.Database.Server.Controllers
             }
 
             if (lastEtag == null)
+            {
+                if (deletedIds.Count > 0)
+                {
+                    while (Database.WorkContext.IndexRemovalQueueContainsAnyFrom(deletedIds))
+                        await Task.Delay(100).ConfigureAwait(false);
+                }
                 return;
+            }
 
             var indexes = new List<Index>();
             foreach (var index in existingIndexes)
