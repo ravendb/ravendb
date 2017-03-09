@@ -2,9 +2,9 @@
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 
-export = getResourcesMenuItem;
+export = getDatabasesMenuItem;
 
-function getResourcesMenuItem(appUrls: computedAppUrls) {
+function getDatabasesMenuItem(appUrls: computedAppUrls) {
     return new leafMenuItem({
         route: ["", "databases"],
         title: "Resources",

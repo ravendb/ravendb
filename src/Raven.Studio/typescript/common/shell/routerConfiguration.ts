@@ -4,7 +4,7 @@ import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 
 import getManageServerMenuItem = require("common/shell/menu/items/manageServer");
-import getResourcesMenuItem = require("common/shell/menu/items/resources");
+import getDatabasesMenuItem = require("common/shell/menu/items/databases");
 import getStatsMenuItem = require("common/shell/menu/items/stats");
 import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getTasksMenuItem = require("common/shell/menu/items/tasks");
@@ -63,7 +63,7 @@ function generateAllMenuItems() {
         getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),
-        getResourcesMenuItem(appUrls),
+        getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
         new leafMenuItem({
             route: 'about',

@@ -4,7 +4,7 @@ import databaseInfo = require("models/resources/info/databaseInfo");
 
 class databasesInfo {
 
-    sortedResources = ko.observableArray<databaseInfo>();
+    sortedDatabases = ko.observableArray<databaseInfo>();
 
     databasesCount: KnockoutComputed<number>;
 
@@ -15,13 +15,13 @@ class databasesInfo {
         const resources = [...databases];
         resources.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
-        this.sortedResources(resources);
+        this.sortedDatabases(resources);
 
         this.initObservables();
     }
 
     getByQualifiedName(qualifiedName: string) {
-        return this.sortedResources().find(x => x.qualifiedName.toLowerCase() === qualifiedName.toLowerCase());
+        return this.sortedDatabases().find(x => x.qualifiedName.toLowerCase() === qualifiedName.toLowerCase());
     }
 
     updateDatabase(newDatabaseInfo: Raven.Client.Server.Operations.DatabaseInfo, resourceType: string) {
@@ -33,14 +33,14 @@ class databasesInfo {
             let dto = newDatabaseInfo as Raven.Client.Server.Operations.DatabaseInfo;
             let resourceToAdd = new databaseInfo(dto);
 
-            let locationToInsert = _.sortedIndexBy(this.sortedResources(), resourceToAdd, function (item) { return item.name.toLowerCase() });
-            this.sortedResources.splice(locationToInsert, 0, resourceToAdd);
+            let locationToInsert = _.sortedIndexBy(this.sortedDatabases(), resourceToAdd, function (item) { return item.name.toLowerCase() });
+            this.sortedDatabases.splice(locationToInsert, 0, resourceToAdd);
         }
     }
 
     private initObservables() {
         this.databasesCount = ko.pureComputed(() => this
-            .sortedResources()
+            .sortedDatabases()
             .filter(r => r instanceof databaseInfo)
             .length);
     }
