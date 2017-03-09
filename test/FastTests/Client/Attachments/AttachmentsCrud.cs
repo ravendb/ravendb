@@ -177,7 +177,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        [Fact(Skip = "Store deleted attachment in tombstones")]
+        [Fact]
         public async Task DeleteAttachments()
         {
             using (var store = GetDocumentStore())
@@ -243,7 +243,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        [Fact(Skip = "Store deleted attachment in tombstones")]
+        [Fact]
         public void PutAndDeleteAttachmentsWithTheSameStream_AlsoTestBigStreams()
         {
             using (var store = GetDocumentStore())

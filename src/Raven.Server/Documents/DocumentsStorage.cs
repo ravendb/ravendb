@@ -2859,7 +2859,6 @@ namespace Raven.Server.Documents
 
         private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 0)
         {
-            // TODO: Skip deleted attachments, which have the hash. Or use tombstones to store them.
             if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
             {
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
@@ -3172,8 +3171,6 @@ namespace Raven.Server.Documents
 
         private void DeleteAttachment(DocumentsOperationContext context, Slice keySlice, Slice lowerDocumentId, string documentId, string name, long? expectedEtag)
         {
-            var attachmenEtag = GenerateNextEtag();
-
             TableValueReader docTvr;
             var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out docTvr);
             if (hasDoc == false)
@@ -3207,31 +3204,19 @@ namespace Raven.Server.Documents
                 };
             }
 
-
-            int size;
-            var ptr = tvr.Read((int)AttachmentsTable.Hash, out size);
             Slice hashSlice;
-            using (Slice.From(context.Allocator, ptr, size, out hashSlice))
+            using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out hashSlice))
             {
-                var tbv = new TableValueBuilder
-                {
-                    {keySlice.Content.Ptr, keySlice.Size},
-                    Bits.SwapBytes(attachmenEtag),
-                    {null, 0},
-                    {null, 0},
-                    {hashSlice.Content.Ptr, hashSlice.Size},
-                };
-                // TODO: Delete and use tombstone. This way 1: we can know how much hashes are using the stream without iterating (using number of entires in the index)
-                // and 2: we do not version deletes
-                table.Update(tvr.Id, tbv);
+                DeleteAttachmentStream(context, hashSlice, expectedCount: 1);
 
-                DeleteAttachmentStream(context, hashSlice);
+                // TODO: Create a tombstone of the delete for replication
+                table.Delete(tvr.Id);
             }
 
             var putResult = UpdateDocumentAfterAttachmentChange(context, documentId, docTvr);
             context.Transaction.AddAfterCommitNotification(new AttachmentChange
             {
-                Etag = attachmenEtag,
+                Etag = putResult.Etag,
                 CollectionName = putResult.Collection.Name,
                 Key = documentId,
                 Name = name,
