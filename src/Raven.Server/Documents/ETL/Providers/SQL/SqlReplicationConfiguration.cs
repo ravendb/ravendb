@@ -1,29 +1,19 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.Server.Documents.SqlReplication
+namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlReplicationConfiguration
+    public class SqlReplicationConfiguration : EtlConfiguration
     {
         public SqlReplicationConfiguration()
         {
             SqlReplicationTables = new List<SqlReplicationTable>();
         }
-
-        public string Id { get; set; }
-
-        public string Name { get; set; }
-
-        public bool Disabled { get; set; }
-
+        
         public bool ParameterizeDeletesDisabled { get; set; }
 
         public bool ForceSqlServerQueryRecompile { get; set; }
 
         public bool QuoteTables { get; set; }
-
-        public string Collection { get; set; }
-
-        public string Script { get; set; }
 
         public string ConnectionStringName { get; set; }
 

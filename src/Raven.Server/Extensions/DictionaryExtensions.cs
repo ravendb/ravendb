@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Raven.Server.Documents.SqlReplication
+namespace Raven.Server.Extensions
 {
     public static class DictionaryExtensions
     {

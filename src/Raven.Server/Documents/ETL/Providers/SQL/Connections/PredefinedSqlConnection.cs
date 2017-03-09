@@ -1,4 +1,4 @@
-namespace Raven.Server.Documents.SqlReplication
+namespace Raven.Server.Documents.ETL.Providers.SQL.Connections
 {
     public class PredefinedSqlConnection
     {
