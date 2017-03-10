@@ -813,12 +813,18 @@ namespace Raven.Server.Json
             writer.WriteString((indexDefinition.Type.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.LockMode)));
-            writer.WriteString((indexDefinition.LockMode.ToString()));
+            writer.WritePropertyName(nameof(indexDefinition.LockMode));
+            if (indexDefinition.LockMode.HasValue)
+                writer.WriteString(indexDefinition.LockMode.ToString());
+            else
+                writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.Priority)));
-            writer.WriteString((indexDefinition.Priority.ToString()));
+            writer.WritePropertyName(nameof(indexDefinition.Priority));
+            if (indexDefinition.Priority.HasValue)
+                writer.WriteString(indexDefinition.Priority.ToString());
+            else
+                writer.WriteNull();
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(indexDefinition.OutputReduceToCollection)));

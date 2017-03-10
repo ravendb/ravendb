@@ -820,22 +820,36 @@ namespace Raven.Server.Documents.Indexes
                 if (lockTaken == false)
                     return false;
 
-                Index oldIndex, newIndex;
-                if (_indexes.TryGetByName(oldIndexName, out oldIndex) == false)
-                {
-                    //TODO - Efrat
-                }
-
+                Index newIndex;
                 if (_indexes.TryGetByName(newIndexName, out newIndex) == false)
                     return true;
 
+                Index oldIndex;
+                if (_indexes.TryGetByName(oldIndexName, out oldIndex))
+                {
+                    if (oldIndex.Type.IsStatic() && newIndex.Type.IsStatic())
+                    {
+                        var oldIndexDefinition = oldIndex.GetIndexDefinition();
+                        var newIndexDefinition = newIndex.Definition.GetOrCreateIndexDefinitionInternal();
+
+                        if (newIndex.Definition.LockMode == IndexLockMode.Unlock && newIndexDefinition.LockMode.HasValue == false && oldIndexDefinition.LockMode.HasValue)
+                            newIndex.SetLock(oldIndexDefinition.LockMode.Value);
+
+                        if (newIndex.Definition.Priority == IndexPriority.Normal && newIndexDefinition.Priority.HasValue == false && oldIndexDefinition.Priority.HasValue)
+                            newIndex.SetPriority(oldIndexDefinition.Priority.Value);
+                    }
+                }
+
                 _documentDatabase.IndexMetadataPersistence.OnIndexDeleted(newIndex);
 
-                _indexes.ReplaceIndexes(oldIndex, newIndex);
+                _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
                 newIndex.Rename(oldIndexName);
 
-                using (oldIndex.DrainRunningQueries())
-                    DeleteIndexInternal(oldIndex);
+                if (oldIndex != null)
+                {
+                    using (oldIndex.DrainRunningQueries())
+                        DeleteIndexInternal(oldIndex);
+                }
 
                 _documentDatabase.IndexMetadataPersistence.OnIndexCreated(newIndex);
 

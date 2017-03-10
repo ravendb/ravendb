@@ -66,6 +66,7 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public IndexPriority? Priority { get; set; }
 
+        public IndexLockMode? LockMode { get; set; }
 
         /// <summary>
         /// Provide a way to dynamically index values with runtime known values
@@ -187,6 +188,9 @@ namespace Raven.Client.Documents.Indexes
 
             var indexDefinition = CreateIndexDefinition();
             indexDefinition.Name = IndexName;
+
+            if (LockMode.HasValue)
+                indexDefinition.LockMode = LockMode.Value;
 
             if (Priority.HasValue)
                 indexDefinition.Priority = Priority.Value;

@@ -108,7 +108,12 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Gets or sets the index lock mode
         /// </summary>
-        public IndexLockMode LockMode { get; set; }
+        public IndexLockMode? LockMode { get; set; }
+
+        /// <summary>
+        /// Gets or sets the index lock mode
+        /// </summary>
+        public IndexPriority? Priority { get; set; }
 
         /// <summary>
         /// If not null than each reduce result will be created as a document in the specified collection name.
@@ -134,7 +139,6 @@ namespace Raven.Client.Documents.Indexes
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
-            LockMode = IndexLockMode.Unlock;
         }
 
         /// <summary>
@@ -157,6 +161,7 @@ namespace Raven.Client.Documents.Indexes
                     Name = _indexName,
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
                     LockMode = LockMode,
+                    Priority = Priority,
                     OutputReduceToCollection = OutputReduceToCollection
                 };
 
