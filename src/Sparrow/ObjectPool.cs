@@ -322,39 +322,39 @@ namespace Sparrow
 
     public interface IResetSupport<in T> where T : class
     {
-        void Reset(T builder);
+        void Reset(T value);
     }
 
     public struct NoResetSupport<T> : IResetSupport<T> where T : class
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Reset(T builder) {}
+        public void Reset(T value) {}
     }
 
     public struct DictionaryResetBehavior<T1, T2> : IResetSupport<Dictionary<T1, T2>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void IResetSupport<Dictionary<T1, T2>>.Reset(Dictionary<T1, T2> builder)
+        void IResetSupport<Dictionary<T1, T2>>.Reset(Dictionary<T1, T2> value)
         {
-            builder.Clear();
+            value.Clear();
         }
     }
 
     public struct HashSetResetBehavior<T1> : IResetSupport<HashSet<T1>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void IResetSupport<HashSet<T1>>.Reset(HashSet<T1> builder)
+        void IResetSupport<HashSet<T1>>.Reset(HashSet<T1> value)
         {
-            builder.Clear();
+            value.Clear();
         }
     }
 
     public struct ListResetBehavior<T1> : IResetSupport<List<T1>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void IResetSupport<List<T1>>.Reset(List<T1> builder)
+        void IResetSupport<List<T1>>.Reset(List<T1> value)
         {
-            builder.Clear();
+            value.Clear();
         }
     }
 

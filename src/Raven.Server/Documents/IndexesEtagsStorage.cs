@@ -257,10 +257,9 @@ namespace Raven.Server.Documents
 
                     var bitSwappedId = Bits.SwapBytes(indexIndexId);
 
-                    using (var scope = Table.BuilderPool.AllocateInContext())
+                    TableValueBuilder tvb;
+                    using (table.Allocate(out tvb))
                     {
-                        var tvb = scope.Value;
-
                         tvb.Add((byte*)&bitSwappedId, sizeof(int));
                         tvb.Add((byte*)&bitSwappedEtag, sizeof(long));
                         tvb.Add(indexNameAsSlice);

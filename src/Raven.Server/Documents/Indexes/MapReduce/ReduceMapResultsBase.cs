@@ -485,9 +485,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 var pageNumber = Bits.SwapBytes(modifiedPage);
                 var numberOfOutputs = result.Count;
 
-                using (var scope = Table.BuilderPool.AllocateInContext())
+                TableValueBuilder tvb;
+                using (table.Allocate(out tvb))
                 {
-                    var tvb = scope.Value;
                     tvb.Add(pageNumber);
                     tvb.Add(aggregatedEntries);
                     tvb.Add(numberOfOutputs);

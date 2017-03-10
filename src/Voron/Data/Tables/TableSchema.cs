@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Voron.Data.BTrees;
 using Voron.Data.RawData;
 using Voron.Impl;
@@ -35,6 +36,38 @@ namespace Voron.Data.Tables
 
         private readonly Dictionary<Slice, FixedSizeSchemaIndexDef> _fixedSizeIndexes =
             new Dictionary<Slice, FixedSizeSchemaIndexDef>(SliceComparer.Instance);
+
+        // since builders are only used in write transactions, we take advantage of that and cache them without needing
+        // to do any concurrency work, the tx write lock is already protecting us. This means that we can use cheaper
+        // collections without thread safety.
+        private readonly FastStack<TableValueBuilder> _cachedTableValueBuilders = new FastStack<TableValueBuilder>();
+
+        public struct ReturnTableValueBuilderToCache : IDisposable
+        {
+            private readonly TableSchema _schema;
+            private readonly TableValueBuilder _builder;
+
+            public ReturnTableValueBuilderToCache(TableSchema schema,TableValueBuilder builder)
+            {
+                Debug.Assert(schema != null);
+                Debug.Assert(builder != null);
+                _schema = schema;
+                _builder = builder;
+            }
+
+            public void Dispose()
+            {
+                _builder.Reset();
+                _schema._cachedTableValueBuilders.Push(_builder);
+            }
+        }
+
+        public ReturnTableValueBuilderToCache Allocate(Transaction tx, out TableValueBuilder builder)
+        {
+            Debug.Assert(tx.LowLevelTransaction.Flags == TransactionFlags.ReadWrite, "Must have a write transaction, which is locking");
+            builder = _cachedTableValueBuilders.Count != 0 ? _cachedTableValueBuilders.Pop() : new TableValueBuilder();
+            return new ReturnTableValueBuilderToCache(this, builder);
+        }
 
         static TableSchema()
         {

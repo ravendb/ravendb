@@ -14,8 +14,6 @@ namespace Voron.Data.Tables
 {
     public unsafe class Table : IDisposable
     {
-        public static ObjectPool<TableValueBuilder, TableValueBuilder.ResetBehavior> BuilderPool = new ObjectPool<TableValueBuilder, TableValueBuilder.ResetBehavior>(() => new TableValueBuilder());
-
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
         private readonly Tree _tableTree;
@@ -1145,6 +1143,11 @@ namespace Voron.Data.Tables
             // we need this so we'll not have to create a new allocation
             // of TableValueReader per value
             public TableValueReader Reader;
+        }
+
+        public TableSchema.ReturnTableValueBuilderToCache Allocate(out TableValueBuilder builder)
+        {
+            return _schema.Allocate(_tx, out builder);
         }
     }
 }

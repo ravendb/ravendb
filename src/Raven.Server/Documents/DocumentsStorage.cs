@@ -1864,9 +1864,9 @@ namespace Raven.Server.Documents
                 {
                     var lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data);
 
-                    using (var scope = Table.BuilderPool.AllocateInContext())
+                    TableValueBuilder tbv;
+                    using (conflictsTable.Allocate(out tbv))
                     {
-                        var tbv = scope.Value;
                         tbv.Add(lowerKey, lowerSize);
                         tbv.Add((byte*) pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tbv.Add(keyPtr, keySize);
@@ -2137,9 +2137,9 @@ namespace Raven.Server.Documents
                 {
                     var transactionMarker = context.GetTransactionMarker();
 
-                    using (var scope = Table.BuilderPool.AllocateInContext())
+                    TableValueBuilder tbv;
+                    using (table.Allocate(out tbv))
                     {
-                        var tbv = scope.Value;
                         tbv.Add(lowerKey, lowerSize);
                         tbv.Add(newEtagBigEndian);
                         tbv.Add(keyPtr, keySize);

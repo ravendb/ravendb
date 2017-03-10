@@ -10,15 +10,12 @@ namespace Voron.Data.Tables
 {
     public unsafe class TableValueBuilder : IEnumerable
     {
-        public struct ResetBehavior : IResetSupport<TableValueBuilder>
+        
+        public void Reset()
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Reset(TableValueBuilder builder)
-            {
-                builder._values.Clear();
-                builder._size = 0;
-                builder._elementSize = 1;                
-            }
+           _values.Clear();
+           _size = 0;
+           _elementSize = 1;
         }
 
         private readonly FastList<PtrSize> _values = new FastList<PtrSize>();
