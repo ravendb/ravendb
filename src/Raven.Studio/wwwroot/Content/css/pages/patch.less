@@ -1,5 +1,72 @@
 @controls-width: 130px;
 
+.loadPatchDropdown {
+    width: 1000px;
+    height: 500px;
+    max-width:calc(100vw  ~"-" @grid-gutter-width*2);
+    max-height:65vh;
+    display:flex;
+
+    .patch-preview-container, .patch-list-container {
+        flex-grow:1;
+        width:50%;
+        flex-shrink:0;
+        padding: @grid-gutter-width/4;
+    }
+
+    .patch-preview-container {
+        display:flex;
+        flex-direction:column;
+
+        .pre-container {
+            flex-grow:1;
+            background-color:@gray-darker;
+            overflow:auto;
+        }
+        pre {
+            overflow:auto;
+            background-color:@gray-darker !important;
+        }
+    }
+
+    .patch-list {
+        .absolute-fill;
+        overflow-y: auto;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        background-color:@gray-darker;
+
+        li {
+            display:flex;
+            align-items:center;
+
+            
+        }
+
+        a {
+            display:block;
+            padding: 2px 10px;
+            display:flex;
+            flex-grow:1;
+            align-items:center;
+
+            .name {
+                flex-grow:1;                
+            }
+
+            .modified {
+                font-size:11px;
+                color:@gray;
+            }
+
+            &:hover {
+                background-color:lighten(@gray-darker,3%);
+            }
+        }
+    }
+}
+
 .patch-settings {
     width: @controls-width;
 }

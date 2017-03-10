@@ -40,7 +40,8 @@ html {
 }
 
 body {
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 
     &.loading-active {
         overflow: hidden;
@@ -305,7 +306,7 @@ a {
 
 .flex-row {
     @media (min-width: @screen-sm) {
-        display: flex;
+        display: flex;        
 
         .flex-bottom {
             align-self: flex-end;
