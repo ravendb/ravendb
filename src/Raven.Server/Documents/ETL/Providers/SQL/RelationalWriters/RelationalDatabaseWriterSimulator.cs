@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         sb.Append(", ");
                     if (doNotParameterize == false)
                     {
-                        sb.Append(toSqlItems[j]);
+                        sb.Append(toSqlItems[j].DocumentKey);
                     }
                     else
                     {

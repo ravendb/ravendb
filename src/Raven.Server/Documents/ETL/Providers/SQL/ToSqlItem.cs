@@ -4,6 +4,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 {
     public class ToSqlItem : ExtractedItem
     {
+        public ToSqlItem(ToSqlItem item)
+        {
+            Etag = item.Etag;
+            DocumentKey = item.DocumentKey;
+            Document = item.Document;
+            IsDelete = item.IsDelete;
+        }
+
         public ToSqlItem(Document document)
         {
             Etag = document.Etag;
