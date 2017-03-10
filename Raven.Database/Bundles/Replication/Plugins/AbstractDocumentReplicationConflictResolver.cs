@@ -32,7 +32,7 @@ namespace Raven.Bundles.Replication.Plugins
             bool markerValue;
             if (ravenDeleteMarker != null && bool.TryParse(ravenDeleteMarker, out markerValue) && markerValue)
             {
-                existingDoc.Metadata.Add("Raven-Remove-Document-Marker", true);
+                existingDoc.Metadata["Raven-Remove-Document-Marker"] = true;
             }
 
             var docToSave = documentToSave;
