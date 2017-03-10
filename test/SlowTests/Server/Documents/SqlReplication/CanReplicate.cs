@@ -525,6 +525,7 @@ replicateToOrders(orderData);");
                     await commands.DeleteAsync("orders/1", null);
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
+
                 AssertCounts(0, 0, store);
             }
         }

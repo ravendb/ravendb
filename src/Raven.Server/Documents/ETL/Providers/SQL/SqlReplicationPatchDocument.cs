@@ -89,10 +89,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Type = prop.Token,
                 });
             }
-
-            _current.Columns = columns;
-
-            GetOrAdd(tableName).Inserts.Add(_current);
+            
+            GetOrAdd(tableName).Inserts.Add(new ToSqlItem(_current)
+            {
+                Columns = columns
+            });
         }
 
         public SqlTableWithRecords GetOrAdd(string tableName)

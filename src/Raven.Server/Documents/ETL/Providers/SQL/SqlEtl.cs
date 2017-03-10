@@ -51,6 +51,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 CancellationToken.ThrowIfCancellationRequested();
 
+                Statistics.LastProcessedEtag = toSqlItem.Etag; // TODO arek
+
                 try
                 {
                     patcher.Transform(toSqlItem, context);

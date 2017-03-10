@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         {
                             var dbParameter = cmd.CreateParameter();
                             dbParameter.ParameterName = GetParameterName("p" + j);
-                            dbParameter.Value = toDelete[j];
+                            dbParameter.Value = toDelete[j].DocumentKey;
                             cmd.Parameters.Add(dbParameter);
                             sb.Append(dbParameter.ParameterName);
                         }

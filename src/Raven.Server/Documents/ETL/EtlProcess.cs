@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.ETL
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context)
         {
             var documents = Database.DocumentsStorage.GetDocumentsFrom(context, _configuration.Collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
-            var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, _configuration.Name, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
+            var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, _configuration.Collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
 
             using (var documentsIt = documents.GetEnumerator())
             using (var tombstonesIt = tombstones.GetEnumerator())
@@ -93,12 +93,12 @@ namespace Raven.Server.Documents.ETL
                 Run();
             })
             {
-                Name = $"ETL process: {Name}",
+                Name = $"{Tag} process: {Name}",
                 IsBackground = true
             };
 
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Starting ETL process {GetType().Name}: '{Name}'.");
+                Logger.Info($"Starting {Tag} process: '{Name}'.");
 
             _thread.Start();
         }
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.ETL
                 return;
 
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Stopping ETL process {GetType().Name}: '{Name}'.");
+                Logger.Info($"Stopping {Tag} process: '{Name}'.");
 
             _cts.Cancel();
 
@@ -129,24 +129,28 @@ namespace Raven.Server.Documents.ETL
                 var startTime = Database.Time.GetUtcNow();
                 var duration = Stopwatch.StartNew();
 
-               
+
                 // TODO arek
                 //if (Statistics.SuspendUntil.HasValue && Statistics.SuspendUntil.Value > Database.Time.GetUtcNow())
                 //    return;
+
+                var didWork = false;
 
                 try
                 {
                     DocumentsOperationContext context;
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                    using (context.OpenReadTransaction())
                     {
-                        LoadLastProcessedEtag(context);
+                        using (context.OpenReadTransaction())
+                        {
+                            LoadLastProcessedEtag(context);
 
-                        var extracted = Extract(context);
+                            var extracted = Extract(context);
 
-                        var transformed = Transform(extracted, context);
+                            var transformed = Transform(extracted, context);
 
-                        var didWork = Load(transformed);
+                            didWork = Load(transformed);
+                        }
 
                         if (didWork)
                         {
@@ -159,6 +163,12 @@ namespace Raven.Server.Documents.ETL
                             continue;
                         }
                     }
+
+                    
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
                 }
                 finally
                 {
@@ -172,10 +182,14 @@ namespace Raven.Server.Documents.ETL
                     //    Duration = spRepTime.Elapsed,
                     //    Started = startTime
                     //});
-
+                    
                     // TODO arek
-                    var afterReplicationCompleted = Database.SqlReplicationLoader.AfterReplicationCompleted;
-                    afterReplicationCompleted?.Invoke(Statistics);
+
+                    if (didWork && CancellationToken.IsCancellationRequested == false)
+                    {
+                        var afterReplicationCompleted = Database.SqlReplicationLoader.AfterReplicationCompleted;
+                        afterReplicationCompleted?.Invoke(Statistics);
+                    }
                 }
 
                 try
