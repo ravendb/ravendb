@@ -62,7 +62,7 @@ namespace Sparrow.Json
         private int _size;
         public int Size => _size;
 
-        private int _length = -1;
+        private int _length;
         public int Length
         {
             get
@@ -680,6 +680,7 @@ namespace Sparrow.Json
             _size = size;
             _buffer = buffer;
             _string = str;
+            _length = -1;
         }
     }
 }
