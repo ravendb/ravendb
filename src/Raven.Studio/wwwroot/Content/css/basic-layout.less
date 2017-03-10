@@ -16,6 +16,26 @@
     bottom:0;
 }
 
+.flex-vertical {
+    display:flex;
+    flex-direction:column;
+
+    .flex-header {
+        position:relative;
+        margin-bottom:@grid-gutter-width/4;
+    }
+
+    .flex-content {
+        flex-grow:1;
+        position:relative;
+    }
+
+    .flex-footer {
+        position:relative;
+        margin-top:@grid-gutter-width/4;
+    }
+}
+
 .navbar {
     background-color: @gray-base;
     height: @navbar-height-xs;
@@ -494,7 +514,7 @@ body.show-top-alert {
     left: 0;
     padding-bottom: @grid-gutter-width / 2;
     padding-top: @grid-gutter-width / 2;
-    overflow-y: auto;
+    //overflow-y: auto;
     -webkit-transition: all @menu-transition-ease;
     -moz-transition: all @menu-transition-ease;
     -ms-transition: all @menu-transition-ease;
@@ -684,7 +704,7 @@ body.show-top-alert {
 
 //BASE MENU STYLES
 #main-menu {
-    position: absolute;
+    position: fixed;
     overflow-x: hidden;
     top: @navbar-height-xs;
     bottom: 0;
