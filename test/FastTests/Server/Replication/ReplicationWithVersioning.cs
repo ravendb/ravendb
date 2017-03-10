@@ -153,7 +153,7 @@ namespace FastTests.Server.Replication
             SetupReplication(storeB, storeA);
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6538 - This test is racy")]
         public async Task UpdateTheSameRevisoinWhenGettingExistingRevision()
         {
             using (var storeA = GetDocumentStore())
