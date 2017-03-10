@@ -152,6 +152,8 @@ namespace Raven.Server.Documents
 
         private static bool HasItemStartingWith(ConcurrentSet<string> set, string value)
         {
+            if (set.Count == 0)
+                return false;
             foreach (string item in set)
             {
                 if (value.StartsWith(item, StringComparison.OrdinalIgnoreCase))
@@ -162,6 +164,8 @@ namespace Raven.Server.Documents
 
         private static bool HasItemEqualsTo(ConcurrentSet<string> set, string value)
         {
+            if (set.Count == 0)
+                return false;
             foreach (string item in set)
             {
                 if (value.Equals(item, StringComparison.OrdinalIgnoreCase))
