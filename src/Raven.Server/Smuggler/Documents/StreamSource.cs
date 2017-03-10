@@ -128,7 +128,7 @@ namespace Raven.Server.Smuggler.Documents
                 var mem = _ctx.GetMemory(maxSizeOfEscapePos + state.StringSize);
                 _allocations.Add(mem);
                 Memory.Copy(mem.Address, state.StringBuffer, state.StringSize);
-                var lazyStringValueFromParserState = new LazyStringValue(null, mem.Address, state.StringSize, _ctx);
+                var lazyStringValueFromParserState = _ctx.AllocateStringValue(null, mem.Address, state.StringSize);
                 if (escapePositionsCount > 0)
                 {
                     lazyStringValueFromParserState.EscapePositions = state.EscapePositions.ToArray();
@@ -545,7 +545,7 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.String)
                 ThrowInvalidJson();
 
-            return new LazyStringValue(null, _state.StringBuffer, _state.StringSize, _context).ToString();
+            return _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize).ToString();
         }
 
         private static void ThrowInvalidJson()

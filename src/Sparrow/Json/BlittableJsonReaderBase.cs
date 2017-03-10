@@ -136,7 +136,7 @@ namespace Sparrow.Json
             byte offset;
             var size = ReadVariableSizeInt(pos, out offset);
 
-            return new LazyStringValue(null, _mem + pos + offset, size, _context);
+            return _context.AllocateStringValue(null, _mem + pos + offset, size);
         }
 
         public LazyCompressedStringValue ReadCompressStringLazily(int pos)

@@ -1058,6 +1058,8 @@ namespace Sparrow.Json
             if (data == null)
                 return;
 
+            data.NoCache = true;
+
             if (assertRemovals && data.Modifications?.Removals?.Count > 0)
                 throw new InvalidOperationException($"Modifications (removals) detected in '{id}'. JSON: {data}");
 

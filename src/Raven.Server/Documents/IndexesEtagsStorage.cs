@@ -592,7 +592,7 @@ namespace Raven.Server.Documents
             if (returnNullIfTombstone && metadata.Id == -1)
                 return null;
 
-            metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size, context).ToString();
+            metadata.Name = context.AllocateStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size).ToString();
 
             metadata.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)MetadataFields.ChangeVector);
             metadata.Type = (IndexEntryType)(*tvr.Read((int)MetadataFields.Type, out size));
@@ -609,7 +609,7 @@ namespace Raven.Server.Documents
 
             int size;
 
-            data.Name = new LazyStringValue(null, tvr.Read((int)ConflictFields.Name, out size), size, context).ToString();
+            data.Name = context.AllocateStringValue(null, tvr.Read((int)ConflictFields.Name, out size), size).ToString();
 
             data.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictFields.ChangeVector);
             data.Type = (IndexEntryType)(*tvr.Read((int)ConflictFields.Type, out size));

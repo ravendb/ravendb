@@ -1570,7 +1570,7 @@ namespace Raven.Server.Documents
                         return new DocumentConflict
                         {
                             ChangeVector = currentChangeVector,
-                            Key = new LazyStringValue(key, tvr.Result.Reader.Read((int)ConflictsTable.OriginalKey, out size), size, context),
+                            Key = context.AllocateStringValue(key, tvr.Result.Reader.Read((int)ConflictsTable.OriginalKey, out size), size),
                             StorageId = tvr.Result.Reader.Id,
                             //size == 0 --> this is a tombstone conflict
                             Doc = doc
@@ -3118,7 +3118,7 @@ namespace Raven.Server.Documents
         {
             int size;
             var ptr = tvr.Read(index, out size);
-            return new LazyStringValue(null, ptr, size, context);
+            return context.AllocateStringValue(null, ptr, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3129,7 +3129,7 @@ namespace Raven.Server.Documents
             byte offset;
             var ptr = tvr.Read(index, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
-            return new LazyStringValue(null, ptr + offset, size, context);
+            return context.AllocateStringValue(null, ptr + offset, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
