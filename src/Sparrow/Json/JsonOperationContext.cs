@@ -48,7 +48,7 @@ namespace Sparrow.Json
 
         private readonly FastDictionary<string, LazyStringValue, StringEqualityStructComparer> _fieldNames = new FastDictionary<string, LazyStringValue, StringEqualityStructComparer>(default(StringEqualityStructComparer));
 
-        private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>();
+        private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
         private int _numberOfAllocatedStringsValues;
 
         public unsafe LazyStringValue AllocateStringValue(string str, byte* ptr, int size)
@@ -63,8 +63,11 @@ namespace Sparrow.Json
             }
 
             var allocateStringValue = new LazyStringValue(str, ptr, size, this);
-            _allocateStringValues.Add(allocateStringValue);
-            _numberOfAllocatedStringsValues++;
+            if (_numberOfAllocatedStringsValues < 25 * 1000)
+            {
+                _allocateStringValues.Add(allocateStringValue);
+                _numberOfAllocatedStringsValues++;
+            }
             return allocateStringValue;
         }
 
