@@ -52,6 +52,8 @@ namespace SlowTests.Issues
 
                 store.Admin.Send(new PutIndexesOperation(definition));
 
+                WaitForIndexing(store);
+
                 Assert.Throws<RavenException>(() => index.Execute(store));
             }
         }
@@ -76,7 +78,10 @@ namespace SlowTests.Issues
                 {
                     Sort = SortOptions.Numeric
                 };
+
                 store.Admin.Send(new PutIndexesOperation(definition));
+
+                WaitForIndexing(store);
 
                 await Assert.ThrowsAsync<RavenException>(() => index.ExecuteAsync(store));
             }
