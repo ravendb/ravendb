@@ -1161,11 +1161,11 @@ namespace Voron.Data.Tables
 
             public ReturnTableValueBuilderToCache(Transaction tx)
             {
-                _tx = tx;
                 var environmentWriteTransactionPool = tx.LowLevelTransaction.Environment.WriteTransactionPool;
 #if DEBUG
+                _tx = tx;
                 Debug.Assert(tx.LowLevelTransaction.Flags == TransactionFlags.ReadWrite);
-                if(environmentWriteTransactionPool.BuilderUsages++ != 0)
+                if (environmentWriteTransactionPool.BuilderUsages++ != 0)
                     throw new InvalidOperationException("Cannot use a cached table value builder when it is already in use");
 #endif
                 _builder = environmentWriteTransactionPool.TableValueBuilder;
