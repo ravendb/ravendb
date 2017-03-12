@@ -2171,8 +2171,7 @@ namespace Raven.Server.Documents
 
                             table.Update(oldValue.Id, tbv);
                         }
-                    };
-                    
+                    }
                 }
 
                 if (collectionName.IsSystem == false)

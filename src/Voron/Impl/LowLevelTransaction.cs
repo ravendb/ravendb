@@ -10,6 +10,7 @@ using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
+using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
@@ -49,6 +50,11 @@ namespace Voron.Impl
 
         internal class WriteTransactionPool
         {
+#if DEBUG
+            public int BuilderUsages;
+#endif
+            public TableValueBuilder TableValueBuilder = new TableValueBuilder();
+
             public Dictionary<long, PageFromScratchBuffer> ScratchPagesTablePool = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
             public Dictionary<long, long> DirtyOverflowPagesPool = new Dictionary<long, long>(NumericEqualityComparer.Instance);
             public HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
@@ -58,6 +64,7 @@ namespace Voron.Impl
                 ScratchPagesTablePool.Clear();
                 DirtyOverflowPagesPool.Clear();
                 DirtyPagesPool.Clear();
+                TableValueBuilder.Reset();
             }
 
         }
