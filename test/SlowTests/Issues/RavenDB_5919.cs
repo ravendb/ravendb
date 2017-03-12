@@ -129,6 +129,27 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void ShouldNotRecreateReplacementIndexIfItIsTheSame()
+        {
+            using (var documentStore = GetDocumentStore())
+            {
+                new Entity_ById_V1().Execute(documentStore);
+
+                documentStore.Admin.Send(new StopIndexingOperation());
+
+                new Entity_ById_V2().Execute(documentStore);
+
+                var index1 = documentStore.Admin.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
+
+                new Entity_ById_V2().Execute(documentStore);
+
+                var index2 = documentStore.Admin.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
+
+                Assert.Equal(index1.IndexId, index2.IndexId);
+            }
+        }
+
+        [Fact]
         public void ChangingLockModeOrPriorityOnlyShouldNotResetIndex()
         {
             using (var store = GetDocumentStore())

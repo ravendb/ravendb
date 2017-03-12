@@ -146,18 +146,7 @@ namespace Raven.Server.Documents.Indexes
 
                     TryDeleteIndexIfExists(replacementIndexName);
 
-                    switch (definition.Type)
-                    {
-                        case IndexType.Map:
-                            MapIndex.Update(existingIndex, definition, _documentDatabase);
-                            break;
-                        case IndexType.MapReduce:
-                            MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
-                            break;
-                        default:
-                            throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
-                    }
-
+                    UpdateIndex(definition, existingIndex);
                     return existingIndex.IndexId;
                 }
 
@@ -171,9 +160,23 @@ namespace Raven.Server.Documents.Indexes
                     if (lockMode == IndexLockMode.LockedError)
                         throw new InvalidOperationException($"Can not overwrite locked index: {existingIndex.Name}");
 
-                    TryDeleteIndexIfExists(replacementIndexName);
-
                     definition.Name = replacementIndexName;
+
+                    existingIndex = GetIndex(replacementIndexName);
+                    if (existingIndex != null)
+                    {
+                        creationOptions = GetIndexCreationOptions(definition, existingIndex);
+                        if (creationOptions == IndexCreationOptions.Noop)
+                            return existingIndex.IndexId;
+
+                        if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
+                        {
+                            UpdateIndex(definition, existingIndex);
+                            return existingIndex.IndexId;
+                        }
+                    }
+
+                    TryDeleteIndexIfExists(replacementIndexName);
                 }
 
                 var indexId = _indexes.GetNextIndexId();
@@ -237,7 +240,7 @@ namespace Raven.Server.Documents.Indexes
                     if (lockMode == IndexLockMode.LockedError)
                         throw new InvalidOperationException($"Can not overwrite locked index: {existingIndex.Name}");
 
-                    throw new NotSupportedException();
+                    throw new NotSupportedException($"Can not update auto-index: {existingIndex.Name}");
                 }
 
                 var indexId = _indexes.GetNextIndexId();
@@ -276,6 +279,21 @@ namespace Raven.Server.Documents.Indexes
                 });
 
             return indexId;
+        }
+
+        private void UpdateIndex(IndexDefinition definition, Index existingIndex)
+        {
+            switch (definition.Type)
+            {
+                case IndexType.Map:
+                    MapIndex.Update(existingIndex, definition, _documentDatabase);
+                    break;
+                case IndexType.MapReduce:
+                    MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
+                    break;
+                default:
+                    throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
+            }
         }
 
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex)
