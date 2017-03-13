@@ -1,5 +1,4 @@
-﻿using Raven.Client.Extensions;
-using Raven.Client.Server;
+﻿using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Xunit;
 
@@ -12,14 +11,13 @@ namespace FastTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var longName = "LongDatabaseName_" + new string('z', 1000);
+                var longName = "LongDatabaseName_" + new string('z', 100);
 
                 var doc = MultiDatabase.CreateDatabaseDocument(longName);
 
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
                 try
                 {
-
                     store.DefaultDatabase = longName;
 
                     var db = GetDocumentDatabaseInstanceFor(store).Result;
@@ -29,10 +27,8 @@ namespace FastTests.Issues
                 finally
                 {
                     store.Admin.Server.Send(new DeleteDatabaseOperation(longName, true));
-
                 }
-
-            }           
+            }
         }
     }
 }

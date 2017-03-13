@@ -20,8 +20,11 @@ namespace Raven.Client.Server
 
         internal static void AssertValidName(string name)
         {
-            if (name == null)
+            if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
+
+            if (name.Length > Constants.Documents.MaxDatabaseNameLength)
+                throw new InvalidOperationException($"Name '{name}' exceeds {Constants.Documents.MaxDatabaseNameLength} characters.");
 
             if (name.Equals(Constants.Documents.SystemDatabase, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("<system> is not valid name. We don't have system database anymore.");
