@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -12,6 +13,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -329,6 +331,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessDocuments(SmugglerResult result, long buildVersion)
         {
+            var isPreV4Build = BuildVersion.IsPreV4(buildVersion);
+
             using (var actions = _destination.Documents())
             {
                 foreach (var doc in _source.GetDocuments(_options.CollectionsToExport, actions))
@@ -353,7 +357,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     var document = doc;
 
-                    if (CanSkipDocument(document, buildVersion))
+                    if (CanSkipDocument(document, isPreV4Build))
                     {
                         result.Documents.SkippedCount++;
                         continue;
@@ -393,9 +397,10 @@ namespace Raven.Server.Smuggler.Documents
             return result.Documents;
         }
 
-        private static bool CanSkipDocument(Document document, long buildVersion)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool CanSkipDocument(Document document, bool isPreV4Build)
         {
-            if (buildVersion == 40 || buildVersion >= 40000)
+            if (isPreV4Build)
                 return false;
 
             // skipping "Raven/Replication/DatabaseIdsCache" and

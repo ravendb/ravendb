@@ -25,7 +25,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
                 return indexDefinition;
             }
 
-            if (buildVersion >= 40000 && buildVersion <= 44999 || buildVersion == 40)
+            if (BuildVersion.IsV4(buildVersion))
             {
                 type = ReadIndexType(reader, out reader);
                 switch (type)

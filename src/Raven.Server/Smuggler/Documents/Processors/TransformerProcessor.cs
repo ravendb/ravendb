@@ -14,7 +14,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
             if (buildVersion == 0) // pre 4.0 support
                 return ReadLegacyTransformerDefinition(reader);
 
-            if (buildVersion >= 40000 && buildVersion <= 44999 || buildVersion == 40)
+            if (BuildVersion.IsV4(buildVersion))
                 return JsonDeserializationServer.TransformerDefinition(reader);
 
             throw new NotSupportedException($"We do not support importing transformers from '{buildVersion}' build.");
