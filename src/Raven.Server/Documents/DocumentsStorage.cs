@@ -914,9 +914,7 @@ namespace Raven.Server.Documents
             if (table == null)
                 return 0;
 
-            return table
-                    .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[DeletedEtagsSlice], etag)
-                    .Count();
+            return table.CountBackwardFrom(TombstonesSchema.FixedSizeIndexes[DeletedEtagsSlice], etag);
         }
 
         private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)

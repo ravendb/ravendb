@@ -915,6 +915,24 @@ namespace Voron.Data.Tables
             }
         }
 
+        public long CountBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
+        {
+            var fst = GetFixedSizeTree(index);
+
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(key) == false)
+                    return 0;
+
+                long count = 0;
+                do
+                {
+                    count++;
+                } while (it.MovePrev());
+                return count;
+            }
+        }
+
         private void GetTableValueReader(FixedSizeTree.IFixedSizeIterator it, out TableValueReader reader)
         {
             long id;
