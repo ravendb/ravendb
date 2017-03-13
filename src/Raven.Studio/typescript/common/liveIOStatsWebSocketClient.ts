@@ -1,9 +1,6 @@
 /// <reference path="../../typings/tsd.d.ts" />
-import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
-import messagePublisher = require("common/messagePublisher");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import d3 = require("d3");
 
 class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Documents.Handlers.IOMetricsResponse> {

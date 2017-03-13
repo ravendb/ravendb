@@ -1,8 +1,6 @@
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
 import monitorRestoreCommand = require("commands/maintenance/monitorRestoreCommand");
-import appUrl = require("common/appUrl");
 
 class startRestoreCommand extends commandBase {
     constructor(private defrag: boolean, private restoreRequest: databaseRestoreRequestDto, private updateRestoreStatus: (status: restoreStatusDto) => void) {

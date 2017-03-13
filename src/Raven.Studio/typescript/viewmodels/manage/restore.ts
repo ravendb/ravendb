@@ -1,12 +1,10 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require("viewmodels/shell");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import database = require("models/resources/database");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
 import monitorRestoreCommand = require("commands/maintenance/monitorRestoreCommand");
 import startDbRestoreCommand = require("commands/maintenance/startRestoreCommand");
-import databasesManager = require("common/shell/databasesManager");
 import eventsCollector = require("common/eventsCollector");
 
 class resourceRestore {

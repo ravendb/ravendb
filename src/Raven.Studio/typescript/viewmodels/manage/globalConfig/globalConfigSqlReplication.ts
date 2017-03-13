@@ -1,16 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import sqlReplicationConnections = require("models/database/sqlReplication/sqlReplicationConnections");
-import predefinedSqlConnection = require("models/database/sqlReplication/predefinedSqlConnection");
-import document = require("models/database/documents/document");
-import documentMetadata = require("models/database/documents/documentMetadata");
-import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
-import appUrl = require("common/appUrl");
-import messagePublisher = require("common/messagePublisher");
-import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
-import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
-import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
-import eventsCollector = require("common/eventsCollector");
 
 class globalConfigSqlReplication extends viewModelBase {
     /* TODO

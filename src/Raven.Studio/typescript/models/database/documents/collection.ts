@@ -1,5 +1,4 @@
 import database = require("models/resources/database");
-import cssGenerator = require("common/cssGenerator");
 import document = require("models/database/documents/document");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 

@@ -1,12 +1,5 @@
 ﻿import database = require("models/resources/database");
 
-import EVENTS = require("common/constants/events");
-import messagePublisher = require("common/messagePublisher");
-import changesApi = require("common/changesApi");
-import changesContext = require("common/changesContext");
-
-import killOperationCommand = require("commands/operations/killOperationCommand");
-
 class notificationCenterOperationsWatch {
 
     private db: database;

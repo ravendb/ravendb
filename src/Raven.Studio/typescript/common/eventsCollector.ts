@@ -1,6 +1,4 @@
-﻿import liveTestDetector = require("common/liveTestDetector");
-
-class eventsCollector {
+﻿class eventsCollector {
     static UACode = "UA-82335022-3"; //TODO @gregolsky liveTestDetector.isLiveTest() ? "UA-82335022-2" : "UA-82335022-1";
 
     static default = new eventsCollector();

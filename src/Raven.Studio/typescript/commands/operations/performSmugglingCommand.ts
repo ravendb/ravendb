@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import appUrl = require("common/appUrl");
- 
+
 class performSmugglingCommand extends commandBase {
 
     constructor(private migration: serverSmugglingDto, private db: database, private updateMigrationStatus: (status: serverSmugglingOperationStateDto) => void) { 

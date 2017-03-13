@@ -1,9 +1,4 @@
-import app = require("durandal/app");
-
 import viewModelBase = require("viewmodels/viewModelBase");
-
-import d3 = require('d3');
-
 import visualizerGraphGlobal = require("viewmodels/database/indexes/visualizer/visualizerGraphGlobal");
 import visualizerGraphDetails = require("viewmodels/database/indexes/visualizer/visualizerGraphDetails");
 

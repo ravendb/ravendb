@@ -1,4 +1,3 @@
-import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 

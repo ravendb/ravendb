@@ -1,14 +1,6 @@
-import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
-import EVENTS = require("common/constants/events");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import getPluginsInfoCommand = require("commands/database/debug/getPluginsInfoCommand");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
-import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
-import topology = require("models/database/replication/topology");
-import shell = require("viewmodels/shell");
 import databasesManager = require("common/shell/databasesManager");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
 

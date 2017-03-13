@@ -1,6 +1,5 @@
 ﻿import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
-import databaseActivatedEventArgs = require("viewmodels/resources/databaseActivatedEventArgs");
 import databaseDisconnectedEventArgs = require("viewmodels/resources/databaseDisconnectedEventArgs");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");

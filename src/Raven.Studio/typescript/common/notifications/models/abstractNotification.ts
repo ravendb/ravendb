@@ -1,6 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
-
-import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
 
 abstract class abstractNotification {

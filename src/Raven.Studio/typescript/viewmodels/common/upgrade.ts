@@ -1,6 +1,4 @@
-import EVENTS = require("common/constants/events");
 import viewModelBase = require("viewmodels/viewModelBase");
-import databaseActivatedEventArgs = require("viewmodels/resources/databaseActivatedEventArgs");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import router = require("plugins/router");
 import database = require("models/resources/database");

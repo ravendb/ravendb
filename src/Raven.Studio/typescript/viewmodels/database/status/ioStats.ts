@@ -1,6 +1,5 @@
 import d3 = require("d3");
 import rbush = require("rbush");
-import app = require("durandal/app");
 import generalUtils = require("common/generalUtils");
 import fileDownloader = require("common/fileDownloader");
 import viewModelBase = require("viewmodels/viewModelBase");

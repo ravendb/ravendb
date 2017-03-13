@@ -3,7 +3,6 @@ import getStorageReportCommand = require("commands/database/debug/getStorageRepo
 import getEnvironmentStorageReportCommand = require("commands/database/debug/getEnvironmentStorageReportCommand");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import generalUtils = require("common/generalUtils");
-import app = require("durandal/app");
 import storageReportItem = require("models/database/status/storageReportItem");
 import d3 = require("d3");
 

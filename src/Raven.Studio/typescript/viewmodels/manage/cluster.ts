@@ -18,7 +18,6 @@ import updateRaftClusterCommand = require("commands/database/cluster/updateRaftC
 import getClusterNodesStatusCommand = require("commands/database/cluster/getClusterNodesStatusCommand");
 import shell = require("viewmodels/shell");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
-import license = require("models/auth/license");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import changeNodeVotingModeCommand = require("commands/database/cluster/changeNodeVotingModeCommand");
 import eventsCollector = require("common/eventsCollector");

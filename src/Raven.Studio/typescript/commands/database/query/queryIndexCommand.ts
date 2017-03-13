@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
-import querySort = require("models/database/query/querySort");
 import endpoints = require("endpoints");
 import queryCriteria = require("models/database/query/queryCriteria");
 

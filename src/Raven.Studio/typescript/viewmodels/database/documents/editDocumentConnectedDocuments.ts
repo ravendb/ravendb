@@ -10,7 +10,6 @@ import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDo
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 
 import appUrl = require("common/appUrl");
-import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import documentHelpers = require("common/helpers/database/documentHelpers");
