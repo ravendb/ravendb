@@ -661,8 +661,6 @@ namespace Voron.Data.Tables
 
         private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value)
         {
-            var result = new TableValueHolder();
-
             try
             {
                 var fstIndex = GetFixedSizeTree(tree, value, 0);
@@ -671,6 +669,7 @@ namespace Voron.Data.Tables
                     if (it.Seek(long.MinValue) == false)
                         yield break;
 
+                    var result = new TableValueHolder();
                     do
                     {
                         ReadById(it.CurrentKey, out result.Reader);
@@ -776,7 +775,6 @@ namespace Voron.Data.Tables
         {
             var isStartAfter = startAfter.Equals(Slices.Empty) == false;
 
-            var result = new TableValueHolder();
             var pk = _schema.Key;
             var tree = GetTree(pk);
             using (var it = tree.Iterate(false))
@@ -793,6 +791,7 @@ namespace Voron.Data.Tables
                 if (it.Skip(skip) == false)
                     yield break;
 
+                var result = new TableValueHolder();
                 do
                 {
                     GetTableValueReader(it, out result.Reader);
@@ -804,7 +803,6 @@ namespace Voron.Data.Tables
 
         public IEnumerable<TableValueHolder> SeekByPrimaryKey(Slice value, int skip)
         {
-            var result = new TableValueHolder();
             var pk = _schema.Key;
             var tree = GetTree(pk);
             using (var it = tree.Iterate(false))
@@ -815,6 +813,7 @@ namespace Voron.Data.Tables
                 if (it.Skip(skip) == false)
                     yield break;
 
+                var result = new TableValueHolder();
                 do
                 {
                     GetTableValueReader(it, out result.Reader);
@@ -845,7 +844,6 @@ namespace Voron.Data.Tables
 
         public IEnumerable<TableValueHolder> SeekForwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key, int skip)
         {
-            var result = new TableValueHolder();
             var fst = GetFixedSizeTree(index);
 
             using (var it = fst.Iterate())
@@ -856,6 +854,7 @@ namespace Voron.Data.Tables
                 if (it.Skip(skip) == false)
                     yield break;
 
+                var result = new TableValueHolder();
                 do
                 {
                     GetTableValueReader(it, out result.Reader);
@@ -882,7 +881,6 @@ namespace Voron.Data.Tables
         public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index)
         {
             var fst = GetFixedSizeTree(index);
-
             using (var it = fst.Iterate())
             {
                 if (it.SeekToLast() == false)
@@ -899,14 +897,13 @@ namespace Voron.Data.Tables
 
         public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
         {
-            var result = new TableValueHolder();
             var fst = GetFixedSizeTree(index);
-
             using (var it = fst.Iterate())
             {
                 if (it.Seek(key) == false)
                     yield break;
 
+                var result = new TableValueHolder();
                 do
                 {
                     GetTableValueReader(it, out result.Reader);
