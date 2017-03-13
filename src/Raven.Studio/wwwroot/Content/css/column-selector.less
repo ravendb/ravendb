@@ -56,7 +56,7 @@
                 padding: 0;
             }
 
-            & > a {
+            a {
                 padding: 5px 10px;
                 color: @gray-light;
                 transition: opacity .1s;
@@ -90,7 +90,7 @@
             &:hover {
                 background-color: lighten(@gray-darker,3%);
 
-                & > a {
+                a {
                     opacity: 1;                    
                 }
             }
@@ -113,7 +113,8 @@
         }
 
         .error-message {
-                margin-top:@grid-gutter-width/4;
+            margin-top:@grid-gutter-width/4;
+            margin-bottom:@grid-gutter-width/4;
         }
 
         hr {

@@ -28,6 +28,8 @@ class columnItem {
 }
 
 class customColumnForm {
+    formVisible = ko.observable<boolean>(false);
+
     header = ko.observable<string>();
     expression = ko.observable<string>();
 
@@ -39,6 +41,10 @@ class customColumnForm {
     reset() {
         this.header("");
         this.expression("");
+    }
+
+    edit(columnToEdit: columnItem) {
+        console.log("edit");
     }
 }
 
@@ -85,6 +91,18 @@ class columnsSelector<T> {
 
         this.customColumnForm.reset();
         this.applyColumns();
+    }
+
+    showAddCustomColumnForm() {
+        this.customColumnForm.formVisible(true);
+    }
+
+    removeColumn(col: columnItem) {
+        this.columnLayout.remove(col);
+    }
+
+    editColumn(columnToEdit: columnItem) {
+        this.customColumnForm.edit(columnToEdit);
     }
 
     useDefaults() {

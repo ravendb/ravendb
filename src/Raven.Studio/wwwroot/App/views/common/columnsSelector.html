@@ -1,21 +1,68 @@
-<div class="row row-sm margin-bottom">
-    <div class="col-xs-12">
-        
-        <ul data-bind="foreach: columnLayout">
+<div class="columns-list-container flex-vertical">
+    <div class="flex-header">
+        <div class="checkbox">
+            <input id="select_all" class="styled" type="checkbox">
+            <label for="select_all">
+                Select All
+            </label>
+        </div>
+    </div>
+    <div class="flex-content">
+        <ul class="column-list scroll" data-bind="foreach: columnLayout">
             <li data-bind="visible: visibileInSelector">
-                <span data-bind="text: virtualColumn().header"></span> 
-                <input type="checkbox" data-bind="checked: visible" />
+                <div class="column-name">
+                    <div class="checkbox">
+                        <input id="checkbox2" class="styled" type="checkbox" data-bind="checked: visible">
+                        <label for="checkbox2" data-bind="text: virtualColumn().header"></label>
+                    </div>
+                </div>
+                <div data-bind="visible: editable()">
+                    <a href="#" class="column-edit" data-bind="click: $parent.editColumn.bind($parent, $data)"><i class="icon-edit"></i></a>
+                    <a href="#" class="column-remove" data-bind="click: $parent.removeColumn.bind($parent, $data)"><i class="icon-trash"></i></a>
+                    <a href="#" class="column-rearrange"><i class="icon-menu"></i></a>
+                </div>
+                <div data-bind="visible: !editable()">
+                    <a href="#" class="column-edit disabled" data-toggle="tooltip" data-placement="bottom" title="Unavailable on default column"><i class="icon-edit disabled"></i></a>
+                    <a href="#" class="column-remove disabled" data-toggle="tooltip" data-placement="bottom" title="Unavailable on default column"><i class="icon-trash disabled"></i></a>
+                    <a href="#" class="column-rearrange"><i class="icon-menu"></i></a>
+                </div>
             </li>
         </ul>
     </div>
+    <div class="flex-footer">
+        <div class="column-add-new active" data-bind="visible: customColumnForm.formVisible">
+            <div class="error-message bg-danger padding padding-sm">
+                Can't add, syntax error:<br />
+                <strong>"Unexpected token"</strong>
+            </div>
+
+            <div class="form">
+                <div class="binding">
+                    <input class="form-control input-sm" data-bind="textInput: customColumnForm.expression"  placeholder="Binding" />
+                </div>
+                <div class="alias">
+                    <input class="form-control input-sm" data-bind="textInput: customColumnForm.header" placeholder="Alias" />
+                </div>
+                <div>
+                    <button class="btn btn-success btn-sm" data-bind="click: addCustomColumn">
+                        <i class="icon-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            
+            <hr />
+        </div>
+
+        <div class="clearfix">
+            <div class="pull-left">
+                <button class="btn btn-sm">Set as default</button>
+                <button class="btn btn-primary btn-sm" data-bind="click: showAddCustomColumnForm"><i class="icon-plus"></i> <span>Add custom column</span></button>
+            </div>
+            <div class="pull-right">
+                <button class="btn btn-sm close-panel">Close</button>
+                <button class="btn btn-success btn-sm close-panel" data-bind="click: applyColumns"><i class="icon-save"></i> <span>Apply</span></button>
+            </div>
+        </div>
+    </div>
 </div>
-
-
-<input type="text" data-bind="textInput: customColumnForm.header" placeholder="Header" />
-
-<input type="text" data-bind="textInput: customColumnForm.expression" placeholder="Expression"/>
-
-<button class="btn btn-default" data-bind="click: addCustomColumn">Add custom</button>
-
-<button class="btn btn-default pull-right" data-bind="click: useDefaults">Use defaults</button>
-<button class="btn btn-success pull-right close-panel" data-bind="click: applyColumns"><i class="icon-check"></i> <span>Apply</span></button>
