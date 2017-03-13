@@ -16,6 +16,10 @@
     bottom:0;
 }
 
+.scroll {
+    overflow-y:auto;
+}
+
 .flex-vertical {
     display:flex;
     flex-direction:column;
@@ -596,7 +600,7 @@ body.show-top-alert {
 
 
 #notification-center {
-    position: absolute;
+    position: fixed;
     width: @menu-width;
     top: @navbar-height-xs;
     overflow-y: auto;

@@ -36,6 +36,22 @@
     &+span {
         margin-left: 9px;
     }
+
+    &.disabled {
+        opacity:.5;
+        color:@gray;
+
+        &:before, &:after {
+            
+        }
+        &:after {
+            content: "\e9a2";
+            position:absolute;
+            left: -4px;
+            top: 1px;
+            font-size: 24px;
+        }
+    }
 }
 
 .icon-lg {
@@ -357,6 +373,10 @@
 
 .icon-logo:before {
     content: "\e99a";
+}
+
+.icon-disabled:before {
+  content: "\e9a2";
 }
 
 .icon-play2:before {
