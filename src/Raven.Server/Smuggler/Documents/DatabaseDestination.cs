@@ -253,6 +253,7 @@ namespace Raven.Server.Smuggler.Documents
             public bool IsDisposed => _isDisposed;
 
             private readonly DocumentsOperationContext _context;
+            private const string PreV4RevisionsDocumentKey = "/revisions/";
 
             public MergedBatchPutCommand(DocumentDatabase database, long buildVersion, Logger log)
             {
@@ -289,7 +290,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (_database.BundleLoader.VersioningStorage == null)
                             ThrowVersioningDisabled();
 
-                        var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
+                        var endIndex = key.IndexOf(PreV4RevisionsDocumentKey, StringComparison.OrdinalIgnoreCase);
                         var newKey = key.Substring(0, endIndex);
 
                         // ReSharper disable once PossibleNullReferenceException
@@ -312,7 +313,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 // the flag isn't being used, but we remove the 'Revision' value anyway
                 document.Flags &= ~DocumentFlags.Revision;
-                return key.Contains("/revisions/");
+                return key.Contains(PreV4RevisionsDocumentKey);
             }
 
             private static void ThrowVersioningDisabled()
