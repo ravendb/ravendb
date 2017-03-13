@@ -522,7 +522,7 @@ namespace Raven.Server.Documents
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], long.MaxValue))
+            foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice]))
             {
                 if (start > 0)
                 {
@@ -548,7 +548,7 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue))
+            foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice]))
             {
                 if (start > 0)
                 {
@@ -873,10 +873,7 @@ namespace Raven.Server.Documents
             if (table == null)
                 return 0;
 
-            var result = table
-                        .SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue)
-                        .FirstOrDefault();
-
+            var result = table.ReadLast(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice]);
             if (result == null)
                 return 0;
 
@@ -898,10 +895,7 @@ namespace Raven.Server.Documents
             if (table == null)
                 return 0;
 
-            var result = table
-                .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue)
-                .FirstOrDefault();
-
+            var result = table.ReadLast(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice]);
             if (result == null)
                 return 0;
 
