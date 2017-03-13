@@ -10,6 +10,7 @@ namespace Raven.Server.Rachis
     {
         private readonly RachisConsensus _engine;
         private readonly Candidate _candidate;
+        private readonly string _tag;
         private readonly string _url;
         private readonly string _apiKey;
         public string Status;
@@ -18,10 +19,11 @@ namespace Raven.Server.Rachis
         public long TrialElectionWonAtTerm { get; set; }
         public long ReadlElectionWonAtTerm { get; set; }
 
-        public CandidateAmbassador(RachisConsensus engine, Candidate candidate, string url, string apiKey)
+        public CandidateAmbassador(RachisConsensus engine, Candidate candidate, string tag, string url, string apiKey)
         {
             _engine = engine;
             _candidate = candidate;
+            _tag = tag;
             _url = url;
             _apiKey = apiKey;
             Status = "Started";
@@ -32,7 +34,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(Run)
             {
-                Name = "Candidate Ambasaddor for " + (new Uri(_engine.Url).Fragment ?? _engine.Url) + " > " + (new Uri(_url).Fragment ?? _url),
+                Name = $"Candidate Ambasaddor for {_engine.Tag} > {_tag}",
                 IsBackground = true
             };
             _thread.Start();
@@ -81,7 +83,7 @@ namespace Raven.Server.Rachis
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        using (var connection = new RemoteConnection(_url, _engine.Url, _conenctToPeer))
+                        using (var connection = new RemoteConnection(_tag, _engine.Tag, _conenctToPeer))
                         {
                             _engine.AppendStateDisposable(_candidate, connection);
                             while (_candidate.Running)
@@ -114,7 +116,7 @@ namespace Raven.Server.Rachis
                                     {
                                         connection.Send(context, new RequestVote
                                         {
-                                            Source = _engine.Url,
+                                            Source = _engine.Tag,
                                             Term = currentElectionTerm,
                                             IsForcedElection = false,
                                             IsTrialElection = true,
@@ -147,7 +149,7 @@ namespace Raven.Server.Rachis
 
                                     connection.Send(context, new RequestVote
                                     {
-                                        Source = _engine.Url,
+                                        Source = _engine.Tag,
                                         Term = currentElectionTerm,
                                         IsForcedElection = _candidate.IsForcedElection,
                                         IsTrialElection = false,

@@ -58,9 +58,9 @@ namespace Raven.Server.Rachis
 
                     foreach (var voter in clusterTopology.Voters)
                     {
-                        if (voter == _engine.Url)
+                        if (voter.Key == _engine.Tag)
                             continue; // we already voted for ourselves
-                        var candidateAmbassador = new CandidateAmbassador(_engine, this, voter, clusterTopology.ApiKey);
+                        var candidateAmbassador = new CandidateAmbassador(_engine, this, voter.Key, voter.Value, clusterTopology.ApiKey);
                         _voters.Add(candidateAmbassador);
                         try
                         {
@@ -162,7 +162,7 @@ namespace Raven.Server.Rachis
             {
                 ElectionTerm = _engine.CurrentTerm + 1;
 
-                _engine.CastVoteInTerm(context, ElectionTerm, _engine.Url);
+                _engine.CastVoteInTerm(context, ElectionTerm, _engine.Tag);
 
                 RunRealElectionAtTerm = ElectionTerm;
 
@@ -190,7 +190,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(Run)
             {
-                Name = "Candidate for - " + (new Uri(_engine.Url).Fragment ?? _engine.Url),
+                Name = "Candidate for - " + _engine.Tag,
                 IsBackground = true
             };
             _thread.Start();

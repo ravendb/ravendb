@@ -81,7 +81,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
-        public Task Put()
+        public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
@@ -107,7 +107,7 @@ namespace Raven.Server.Web.System
                             ["Message"] = errorMessage
                         });
                 }
-                return Task.CompletedTask;
+                return ;
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -136,7 +136,7 @@ namespace Raven.Server.Web.System
                                     ["Message"] = errorMessage
                                 });
                         }
-                        return Task.CompletedTask;
+                        return ;
                     }
                 }
 
@@ -163,22 +163,23 @@ namespace Raven.Server.Web.System
 
                 long? newEtag = null;
 
+                //TODO: Etag
+                await ServerStore.TEMP_WriteDbAsync(context, dbId, dbDoc);
+
                 ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
                 {
-                    using (var tx = context.OpenWriteTransaction())
-                    {
-                        newEtag = hasEtagInRequest ? ServerStore.Write(context, dbId, dbDoc, etag) :
-                                                     ServerStore.Write(context, dbId, dbDoc);
+                    //newEtag = hasEtagInRequest ? ServerStore.Write(context, dbId, dbDoc, etag) :
+                    //                             ServerStore.Write(context, dbId, dbDoc);
 
-                        ServerStore.NotificationCenter.AddAfterTransactionCommit(DatabaseChanged.Create(name, DatabaseChangeType.Put), tx);
-
-                        tx.Commit();
-                    }
+                    ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
                 });
                 
                 object disabled;
                 if (online && (dbDoc.TryGetMember("Disabled", out disabled) == false || (bool)disabled == false))
-                    ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+                {
+                    var task = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+                    GC.KeepAlive(task);
+                }
               
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -193,7 +194,7 @@ namespace Raven.Server.Web.System
                 }
 
             }
-            return Task.CompletedTask;
+            return ;
         }
 
         [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
@@ -282,22 +283,18 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases/disable", "POST", "/admin/databases/disable?name={resourceName:string|multiple}")]
-        public Task DisableDatabases()
+        public async Task DisableDatabases()
         {
-            ToggleDisableDatabases(disableRequested: true);
-
-            return Task.CompletedTask;
+            await ToggleDisableDatabases(disableRequested: true);
         }
 
         [RavenAction("/admin/databases/enable", "POST", "/admin/databases/enable?name={resourceName:string|multiple}")]
-        public Task EnableDatabases()
+        public async Task EnableDatabases()
         {
-            ToggleDisableDatabases(disableRequested: false);
-
-            return Task.CompletedTask;
+            await ToggleDisableDatabases(disableRequested: false);
         }
 
-        private void ToggleDisableDatabases(bool disableRequested)
+        private async Task ToggleDisableDatabases(bool disableRequested)
         {
             var names = GetStringValuesQueryString("name");
 
@@ -306,7 +303,6 @@ namespace Raven.Server.Web.System
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (var tx = context.OpenWriteTransaction())
             {
                 writer.WriteStartArray();
                 var first = true;
@@ -354,8 +350,8 @@ namespace Raven.Server.Web.System
 
                     var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    ServerStore.Write(context, dbId, newDoc2);
-                    ServerStore.NotificationCenter.AddAfterTransactionCommit(DatabaseChanged.Create(name, DatabaseChangeType.Put), tx);
+                    await ServerStore.TEMP_WriteDbAsync(context, dbId, newDoc2);
+                    ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
                     databasesToUnload.Add(name);
 
@@ -366,8 +362,6 @@ namespace Raven.Server.Web.System
                         ["Disabled"] = disableRequested,
                     });
                 }
-
-                tx.Commit();
 
                 writer.WriteEndArray();
             }

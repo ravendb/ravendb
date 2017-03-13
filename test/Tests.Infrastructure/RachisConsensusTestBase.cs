@@ -6,7 +6,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using NetTopologySuite.IO;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
@@ -96,15 +95,16 @@ namespace Tests.Infrastructure
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
-            var ch = (char)(65 + (_count++));
-            var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/#" + ch;
+            var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port;
 
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
-            if (bootstrap)
-                RachisConsensus.Bootstarp(server, url);
+        
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
-            var rachis = new RachisConsensus<CountingStateMachine>(server, url, seed);
-            rachis.Initialize();
+            var rachis = new RachisConsensus<CountingStateMachine>(seed);
+            rachis.Initialize(new StorageEnvironment(server));
+            if (bootstrap)
+                rachis.Bootstarp(url);
+            rachis.Url = url;
             _listeners.Add(tcpListener);
             RachisConsensuses.Add(rachis);
             var task = AcceptConnection(tcpListener, rachis);
@@ -249,7 +249,7 @@ namespace Tests.Infrastructure
                 return read.Reader.ReadLittleEndianInt64();
             }
 
-            protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd)
+            protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
             {
                 int val;
                 string name;

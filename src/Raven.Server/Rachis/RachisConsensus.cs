@@ -23,7 +23,7 @@ namespace Raven.Server.Rachis
     public class RachisConsensus<TStateMachine> : RachisConsensus
         where TStateMachine : RachisStateMachine, new()
     {
-        public RachisConsensus(StorageEnvironmentOptions options, string url, int? seed = null) : base(options, url, seed)
+        public RachisConsensus(int? seed = null) : base(seed)
         {
         }
 
@@ -42,9 +42,9 @@ namespace Raven.Server.Rachis
             base.Dispose();
         }
 
-        public override void Apply(TransactionOperationContext context, long uptoInclusive)
+        public override void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader)
         {
-            StateMachine.Apply(context, uptoInclusive);
+            StateMachine.Apply(context, uptoInclusive, leader);
         }
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
@@ -81,18 +81,18 @@ namespace Raven.Server.Rachis
         public TimeoutEvent Timeout { get; private set; }
         public string LastStateChangeReason => _lastStateChangeReason;
 
-        private readonly StorageEnvironmentOptions _options;
-        private readonly string _url;
+        private string _tag;
         public TransactionContextPool ContextPool { get; private set; }
         private StorageEnvironment _persistentState;
-        internal readonly Logger Log;
+        internal Logger Log;
 
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
 
         public long CurrentTerm { get; private set; }
-        public string Url => _url;
-        public string TempPath => _options.TempPath;
+        public string Tag => _tag;
+
+        public string Url;
 
         private static readonly Slice GlobalStateSlice;
         private static readonly Slice CurrentTermSlice;
@@ -100,6 +100,8 @@ namespace Raven.Server.Rachis
         private static readonly Slice LastCommitSlice;
         private static readonly Slice LastTruncatedSlice;
         private static readonly Slice TopologySlice;
+        private static readonly Slice TagSlice;
+
 
 
         internal static readonly Slice EntriesSlice;
@@ -108,6 +110,7 @@ namespace Raven.Server.Rachis
         static RachisConsensus()
         {
             Slice.From(StorageEnvironment.LabelsContext, "GlobalState", out GlobalStateSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Tag", out TagSlice);
 
             Slice.From(StorageEnvironment.LabelsContext, "CurrentTerm", out CurrentTermSlice);
             Slice.From(StorageEnvironment.LabelsContext, "VotedFor", out VotedForSlice);
@@ -142,19 +145,17 @@ namespace Raven.Server.Rachis
         private int? _seed;
         private string _lastStateChangeReason;
 
-        protected RachisConsensus(StorageEnvironmentOptions options, string url, int? seed = null)
+        protected RachisConsensus(int? seed = null)
         {
             _seed = seed;
-            _options = options;
-            _url = url;
-            Log = LoggingSource.Instance.GetLogger<RachisConsensus>(options.BasePath);
         }
 
-        public unsafe void Initialize()
+        public unsafe void Initialize(StorageEnvironment env)
         {
             try
             {
-                _persistentState = new StorageEnvironment(_options);
+                _persistentState = env;
+
                 ContextPool = new TransactionContextPool(_persistentState);
 
                 ClusterTopology topology;
@@ -162,9 +163,15 @@ namespace Raven.Server.Rachis
                 using (ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenWriteTransaction())
                 {
+                    var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
+
+                    var readResult = state.Read(TagSlice);
+                    _tag = readResult == null ? "?" : readResult.Reader.ToStringValue();
+
+                    Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
+
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
-                    var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
                     var read = state.Read(CurrentTermSlice);
                     if (read == null || read.Reader.Length != sizeof(long))
                     {
@@ -189,21 +196,21 @@ namespace Raven.Server.Rachis
                 // an admin needs to let us know that it is fine, either
                 // by explicit bootstraping or by connecting us to a cluster
                 if (topology.TopologyId == null ||
-                    topology.Voters.Contains(_url) == false)
+                    topology.Voters.ContainsKey(_tag) == false)
                 {
                     CurrentState = State.Passive;
                     return;
                 }
 
                 CurrentState = State.Follower;
-                if (topology.Voters.Length == 1)
+                if (topology.Voters.Count == 1)
                 {
                     var electionTerm = CurrentTerm + 1;
                     using (ContextPool.AllocateOperationContext(out context))
                     using (var tx = context.OpenWriteTransaction())
                     {
 
-                        CastVoteInTerm(context, electionTerm, Url);
+                        CastVoteInTerm(context, electionTerm, Tag);
 
                         tx.Commit();
                     }
@@ -233,9 +240,9 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForTopology(Leader.TopologyModification modification,string nodeUrl = null)
+        public async Task WaitForTopology(Leader.TopologyModification modification,string nodeTag = null)
         {
-            var url = nodeUrl ?? _url;
+            var tag = nodeTag ?? _tag;
             while (true)
             {
                 var task = _topologyChanged.Task;
@@ -247,21 +254,21 @@ namespace Raven.Server.Rachis
                     switch (modification)
                     {
                         case Leader.TopologyModification.Voter:
-                            if (clusterTopology.Voters.Contains(url))
+                            if (clusterTopology.Voters.ContainsKey(tag))
                                 return;
                             break;
                         case Leader.TopologyModification.Promotable:
-                            if (clusterTopology.Promotables.Contains(url))
+                            if (clusterTopology.Promotables.ContainsKey(tag))
                                 return;
                             break;
                         case Leader.TopologyModification.NonVoter:
-                            if (clusterTopology.NonVotingMembers.Contains(url))
+                            if (clusterTopology.NonVotingMembers.ContainsKey(tag))
                                 return;
                             break;
                         case Leader.TopologyModification.Remove:
-                            if (clusterTopology.Voters.Contains(url) == false &&
-                                clusterTopology.Promotables.Contains(url) == false &&
-                                clusterTopology.NonVotingMembers.Contains(url) == false)
+                            if (clusterTopology.Voters.ContainsKey(tag) == false &&
+                                clusterTopology.Promotables.ContainsKey(tag) == false &&
+                                clusterTopology.NonVotingMembers.ContainsKey(tag) == false)
                                 return;
                             break;
                         default:
@@ -384,7 +391,7 @@ namespace Raven.Server.Rachis
             {
                 var clusterTopology = GetTopology(context);
                 if (clusterTopology.TopologyId == null ||
-                    clusterTopology.Voters.Contains(_url) == false)
+                    clusterTopology.Voters.ContainsKey(_tag) == false)
                 {
                     if (Log.IsInfoEnabled)
                     {
@@ -409,7 +416,14 @@ namespace Raven.Server.Rachis
         public void DeleteTopology(TransactionOperationContext context)
         {
             var topology = GetTopology(context);
-            var newTopology = new ClusterTopology(topology.TopologyId, null, new string[0], new string[0], new string[0]);
+            var newTopology = new ClusterTopology(
+                topology.TopologyId,
+                null,
+                new Dictionary<string, string>(),
+                new Dictionary<string, string>(),
+                new Dictionary<string, string>(),
+                topology.LastNodeId
+            );
             SetTopology(context, newTopology);
         }
 
@@ -419,7 +433,16 @@ namespace Raven.Server.Rachis
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(TopologySlice);
             if (read == null)
-                return new ClusterTopology(null, null, new string[0], new string[0], new string[0]);
+            {
+                return new ClusterTopology(
+                    null,
+                    null,
+                    new Dictionary<string, string>(),
+                    new Dictionary<string, string>(),
+                    new Dictionary<string, string>(),
+                    ""
+                );
+            }
 
             var json = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
             return JsonDeserializationRachis<ClusterTopology>.Deserialize(json);
@@ -452,9 +475,18 @@ namespace Raven.Server.Rachis
             {
                 [nameof(ClusterTopology.TopologyId)] = topology.TopologyId,
                 [nameof(ClusterTopology.ApiKey)] = topology.ApiKey,
-                [nameof(ClusterTopology.Voters)] = new DynamicJsonArray(topology.Voters),
-                [nameof(ClusterTopology.Promotables)] = new DynamicJsonArray(topology.Promotables),
-                [nameof(ClusterTopology.NonVotingMembers)] = new DynamicJsonArray(topology.NonVotingMembers),
+                [nameof(ClusterTopology.Voters)] = new DynamicJsonArray(topology.Voters.Select(x=>new DynamicJsonValue
+                {
+                    [x.Key] = x.Value
+                })),
+                [nameof(ClusterTopology.Promotables)] = new DynamicJsonArray(topology.Promotables.Select(x => new DynamicJsonValue
+                {
+                    [x.Key] = x.Value
+                })),
+                [nameof(ClusterTopology.NonVotingMembers)] = new DynamicJsonArray(topology.NonVotingMembers.Select(x => new DynamicJsonValue
+                {
+                    [x.Key] = x.Value
+                })),
             };
 
             var topologyJson = context.ReadObject(djv, "topology");
@@ -491,7 +523,7 @@ namespace Raven.Server.Rachis
 
         public string GetDebugInformation()
         {
-            return _url;
+            return _tag;
         }
 
         /// <summary>
@@ -503,7 +535,7 @@ namespace Raven.Server.Rachis
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(_url, tcpClient.GetStream());
+                remoteConnection = new RemoteConnection(_tag, tcpClient.GetStream());
                 try
                 {
                     RachisHello initialMessage;
@@ -1056,8 +1088,6 @@ namespace Raven.Server.Rachis
             OnDispose?.Invoke(this, EventArgs.Empty);
             ThreadPool.QueueUserWorkItem(_ => _topologyChanged.TrySetCanceled());
             ContextPool?.Dispose();
-            _persistentState?.Dispose();
-            _options?.Dispose();
         }
 
         public Stream ConenctToPeer(string url, string apiKey)
@@ -1075,60 +1105,64 @@ namespace Raven.Server.Rachis
             return tcpClient.GetStream();
         }
 
-        public static void Bootstarp(StorageEnvironmentOptions options, string self)
+        public void Bootstarp(string selfUrl)
         {
-            var old = options.OwnsPagers;
-            options.OwnsPagers = false;
-            try
+            using (var tx = _persistentState.WriteTransaction())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
-                using (var env = new StorageEnvironment(options))
+                _tag = "A";
+
+
+                Slice str;
+                using (Slice.From(tx.Allocator, _tag,out str))
                 {
-                    using (var tx = env.WriteTransaction())
-                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                    {
-                        var topology = new ClusterTopology(Guid.NewGuid().ToString(),
-                            null,
-                            new string[] {self},
-                            new string[0],
-                            new string[0]);
-
-                        SetTopology(null, tx, ctx, topology);
-
-                        tx.Commit();
-                    }
+                    var state = tx.CreateTree(GlobalStateSlice);
+                    state.Add(TagSlice, str);
                 }
-            }
-            finally
-            {
-                options.OwnsPagers = old;
+
+                var topology = new ClusterTopology(
+                    Guid.NewGuid().ToString(),
+                    null,
+                    new Dictionary<string, string>
+                    {
+                        [_tag] = selfUrl
+                    },
+                    new Dictionary<string, string>(),
+                    new Dictionary<string, string>(),
+                    "A"
+                );
+
+                SetTopology(null, tx, ctx, topology);
+
+                tx.Commit();
             }
         }
 
-        public Task AddToClusterAsync(string node)
+        public Task AddToClusterAsync(string url)
         {
-            return ModifyTopologyAsync(node, Leader.TopologyModification.Promotable,true);
+            return ModifyTopologyAsync(null, url, Leader.TopologyModification.Promotable, true);
         }
     
-        public Task RemoveFromClusterAsync(string node)
+        public Task RemoveFromClusterAsync(string nodeTag)
         {
-            return ModifyTopologyAsync(node, Leader.TopologyModification.Remove);
+            return ModifyTopologyAsync(nodeTag, null, Leader.TopologyModification.Remove);
         }
 
-        private async Task ModifyTopologyAsync(string newNode, Leader.TopologyModification modification,bool validateNotInTopology = false)
+        private async Task ModifyTopologyAsync(string nodeTag, string nodeUrl, Leader.TopologyModification modification, bool validateNotInTopology = false)
         {
             var leader = _currentLeader;
             if (leader == null)
                 throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
             Task task;
-            while (leader.TryModifyTopology(newNode, modification, out task, validateNotInTopology) == false)
+            while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, validateNotInTopology) == false)
                 await task;
 
             await task;
         }
 
-        private volatile string _leaderUrl;
-        public string LeaderUrl
+        private volatile string _leaderTag;
+        public string LeaderTag
         {
             get
             {
@@ -1139,23 +1173,22 @@ namespace Raven.Server.Rachis
                     case State.Candidate:
                         return "<me, I hope?>";
                     case State.Follower:
-                        return _leaderUrl;
+                        return _leaderTag;
                     case State.LeaderElect:
-                        return Url;
                     case State.Leader:
-                        return Url;
+                        return _tag;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
             }
             internal set
             {
-                _leaderUrl = value;
+                _leaderTag = value;
             }
         }
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
-        public abstract void Apply(TransactionOperationContext context, long uptoInclusive);
+        public abstract void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader);
 
         public abstract void SnapshotInstalled(TransactionOperationContext context);
     }

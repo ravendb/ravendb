@@ -11,28 +11,26 @@ namespace Raven.Server.Rachis
 {
     public class RemoteConnection : IDisposable
     {
-        private readonly string _dest;
+        private readonly string _destTag;
         private string _src;
         private readonly Stream _stream;
         private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
         private Logger _log;
-        private string _fullSource;
 
         public string Source => _src;
-        public string FullSource => _fullSource;
+
         public RemoteConnection(string dest, Stream stream)
         {
-            _dest = new Uri(dest).Fragment ?? dest;
+            _destTag = dest;
             _stream = stream;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
         }
 
         public RemoteConnection(string dest, string src, Stream stream)
         {
-            _dest = new Uri(dest).Fragment ?? dest;
-            _src = new Uri(src).Fragment ?? src;
-            _fullSource = src;
-            _log = LoggingSource.Instance.GetLogger<RemoteConnection>(_src + " > " + _dest);
+            _destTag =dest;
+            _src = src;
+            _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{_src} > {_destTag}");
             _stream = stream;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
         }
@@ -328,19 +326,15 @@ namespace Raven.Server.Rachis
                 json.BlittableValidation();
                 ValidateMessage(nameof(RachisHello), json);
                 var rachisHello = JsonDeserializationRachis<RachisHello>.Deserialize(json);
-                _src = 
-                    new Uri(rachisHello.DebugSourceIdentifier).Fragment ??
-                    rachisHello.DebugSourceIdentifier ?? 
-                    "unknown";
-                _fullSource = rachisHello.DebugSourceIdentifier ?? null;
-                _log = LoggingSource.Instance.GetLogger<RemoteConnection>(_src + " > " + _dest);
+                _src = rachisHello.DebugSourceIdentifier ?? "unknown";
+                _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{_src} > {_destTag}");
                 return rachisHello;
             }
         }
 
         public override string ToString()
         {
-            return _src + " > " + _dest;
+            return $"{_src} > {_destTag}";
         }
 
         private static void ValidateMessage(string expectedType, BlittableJsonReaderObject json)

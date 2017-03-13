@@ -18,7 +18,7 @@ namespace Raven.Server.Rachis
             ContextPoolForReadOnlyOperations = _parent.ContextPool;
         }
 
-        public void Apply(TransactionOperationContext context, long uptoInclusive)
+        public void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -33,14 +33,14 @@ namespace Raven.Server.Rachis
                 if(flags != RachisEntryFlags.StateMachineCommand)
                     continue;
 
-                Apply(context, cmd);
+                Apply(context, cmd, index, leader);
             }
             var term = _parent.GetTermForKnownExisting(context, uptoInclusive);
 
             _parent.SetLastCommitIndex(context, uptoInclusive, term);
         }
 
-        protected abstract void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd);
+        protected abstract void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader);
 
         public void Dispose()
         {

@@ -20,6 +20,7 @@ namespace Raven.Server.Rachis
         private readonly RachisConsensus _engine;
         private readonly Leader _leader;
         private ManualResetEvent _wakeLeader;
+        private readonly string _tag;
         private readonly string _url;
         private readonly string _apiKey;
 
@@ -32,7 +33,7 @@ namespace Raven.Server.Rachis
         private Thread _thread;
         private RemoteConnection _connection;
 
-        public string Url => _url;
+        public string Tag => _tag;
 
         public long FollowerMatchIndex => Interlocked.Read(ref _followerMatchIndex);
 
@@ -40,6 +41,7 @@ namespace Raven.Server.Rachis
         public DateTime LastSendToFollower => new DateTime(Interlocked.Read(ref _lastSendToFollower));
         public string LastSendMsg => _lastSentMsg;
         public bool ForceElectionsNow { get; set; }
+        public string Url => _url;
 
         private void UpdateLastSend(string msg)
         {
@@ -54,11 +56,12 @@ namespace Raven.Server.Rachis
             _wakeLeader.Set();
         }
 
-        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string url, string apiKey)
+        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, string apiKey)
         {
             _engine = engine;
             _leader = leader;
             _wakeLeader = wakeLeader;
+            _tag = tag;
             _url = url;
             _apiKey = apiKey;
             Status = "Started";
@@ -92,14 +95,14 @@ namespace Raven.Server.Rachis
                             Status = "Failed - " + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info("Failed to connect to remote follower: " + _url, e);
+                                _engine.Log.Info($"Failed to connect to remote follower: {_tag} {_url}", e);
                             }
                             // wait a bit
                             _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        _connection = new RemoteConnection(_url, _engine.Url, stream);
+                        _connection = new RemoteConnection(_tag, _engine.Tag, stream);
                         using (_connection)
                         {
                             _engine.AppendStateDisposable(_leader, _connection);
@@ -191,7 +194,7 @@ namespace Raven.Server.Rachis
                         Status = "Failed - " + e.Message;
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info("Failed to talk to remote follower: " + _url, e);
+                            _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                         }
                         _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
                     }
@@ -220,7 +223,7 @@ namespace Raven.Server.Rachis
                 Status = "Failed - " + e.Message;
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to remote follower: " + _url, e);
+                    _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                 }
             }
         }
@@ -505,7 +508,7 @@ namespace Raven.Server.Rachis
                     }
 
                     if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Rejected)
-                        throw new InvalidOperationException("Failed to get acceptable status from " + _url + " because " + llr.Message);
+                        throw new InvalidOperationException("Failed to get acceptable status from " + _tag + " because " + llr.Message);
 
                     UpdateLastMatchFromFollower(0);
 
@@ -541,7 +544,7 @@ namespace Raven.Server.Rachis
             _thread = new Thread(Run)
             {
                 Name =
-                    $"Follower Ambassador for {(new Uri(_engine.Url).Fragment ?? _engine.Url)} > {(new Uri(_url).Fragment ?? _url)} in term {_engine.CurrentTerm}",
+                    $"Follower Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentTerm}",
                 IsBackground = true
             };
             _thread.Start();

@@ -68,9 +68,9 @@ namespace Raven.Server.Rachis
                                         }
 
                                         var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(lastTopology);
-                                        if (topology.Voters.Contains(_engine.Url) ||
-                                            topology.Promotables.Contains(_engine.Url) ||
-                                            topology.NonVotingMembers.Contains(_engine.Url))
+                                        if (topology.Voters.ContainsKey(_engine.Tag) ||
+                                            topology.Promotables.ContainsKey(_engine.Tag) ||
+                                            topology.NonVotingMembers.ContainsKey(_engine.Tag))
                                         {
                                             RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction,
                                                 lastTopology);
@@ -94,7 +94,7 @@ namespace Raven.Server.Rachis
 
                             if (lastEntryIndexToCommit > lastAppliedIndex)
                             {
-                                _engine.Apply(context, lastEntryIndexToCommit);
+                                _engine.Apply(context, lastEntryIndexToCommit, null);
                             }
 
                             lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastEntryIndexToCommit);
@@ -460,7 +460,7 @@ namespace Raven.Server.Rachis
             var engineCurrentTerm = _engine.CurrentTerm;
             _engine.SetNewState(RachisConsensus.State.Follower, this, engineCurrentTerm,
                 $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
-            _engine.LeaderUrl = _connection.FullSource;
+            _engine.LeaderTag = _connection.Source;
             _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
 
             _thread = new Thread(Run)
@@ -510,7 +510,7 @@ namespace Raven.Server.Rachis
                         }
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info("Failed to talk to leader: " + _engine.Url, e);
+                            _engine.Log.Info("Failed to talk to leader: " + _engine.Tag, e);
                         }
                     }
                 }
@@ -519,7 +519,7 @@ namespace Raven.Server.Rachis
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to dispose follower when talking leader: " + _engine.Url, e);
+                    _engine.Log.Info("Failed to dispose follower when talking leader: " + _engine.Tag, e);
                 }
             }
         }

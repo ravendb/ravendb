@@ -53,7 +53,7 @@ namespace SlowTests.Server.Rachis
             var leaderUrl = new HashSet<string>();
             foreach (var consensus in RachisConsensuses)
             {
-                leaderUrl.Add(consensus.LeaderUrl);
+                leaderUrl.Add(consensus.LeaderTag);
             }
             Assert.True(leaderUrl.Count == 1, "Not all nodes agree on the leader");
             foreach (var invalidCommand in invalidCommands)

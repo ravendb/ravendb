@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -24,8 +25,15 @@ namespace Raven.Server.Rachis
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>();
 
-        private readonly ConcurrentDictionary<long, Tuple<long, TaskCompletionSource<long>>> _entries =
-            new ConcurrentDictionary<long, Tuple<long, TaskCompletionSource<long>>>();
+        private readonly ConcurrentDictionary<long, CommandState> _entries =
+            new ConcurrentDictionary<long, CommandState>();
+
+        private class CommandState
+        {
+            public long CommandIndex;
+            public TaskCompletionSource<long> TaskCompletionSource;
+            public Action<TaskCompletionSource<long>> OnNotify;
+        }
 
         private int _hasNewTopology;
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
@@ -77,7 +85,7 @@ namespace Raven.Server.Rachis
             _thread = new Thread(Run)
             {
                 Name =
-                    $"Consensus Leader - {(new Uri(_engine.Url).Fragment ?? _engine.Url)} in term {_engine.CurrentTerm}",
+                    $"Consensus Leader - {_engine.Tag} in term {_engine.CurrentTerm}",
                 IsBackground = true
             };
             _thread.Start();
@@ -107,20 +115,20 @@ namespace Raven.Server.Rachis
 
             foreach (var voter in clusterTopology.Voters)
             {
-                if (voter == _engine.Url)
+                if (voter.Key == _engine.Tag)
                     continue; // we obviously won't be applying to ourselves
 
                 FollowerAmbassador existingInstance;
-                if (old.TryGetValue(voter, out existingInstance))
+                if (old.TryGetValue(voter.Key, out existingInstance))
                 {
                     existingInstance.UpdateLeaderWake(_voterResponded);
-                    _voters.Add(voter, existingInstance);
-                    old.Remove(voter);
+                    _voters.Add(voter.Key, existingInstance);
+                    old.Remove(voter.Key);
                     continue; // already here
                 }
 
-                var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter, clusterTopology.ApiKey);
-                _voters.Add(voter, ambasaddor);
+                var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, clusterTopology.ApiKey);
+                _voters.Add(voter.Key, ambasaddor);
                 _engine.AppendStateDisposable(this, ambasaddor);
                 ambasaddor.Start();
             }
@@ -128,16 +136,16 @@ namespace Raven.Server.Rachis
             foreach (var promotable in clusterTopology.Promotables)
             {
                 FollowerAmbassador existingInstance;
-                if (old.TryGetValue(promotable, out existingInstance))
+                if (old.TryGetValue(promotable.Key, out existingInstance))
                 {
                     existingInstance.UpdateLeaderWake(_promotableUpdated);
-                    _promotables.Add(promotable, existingInstance);
-                    old.Remove(promotable);
+                    _promotables.Add(promotable.Key, existingInstance);
+                    old.Remove(promotable.Key);
                     continue; // already here
                 }
 
-                var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable, clusterTopology.ApiKey);
-                _promotables.Add(promotable, ambasaddor);
+                var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, clusterTopology.ApiKey);
+                _promotables.Add(promotable.Key, ambasaddor);
                 _engine.AppendStateDisposable(this, ambasaddor);
                 ambasaddor.Start();
             }
@@ -145,16 +153,16 @@ namespace Raven.Server.Rachis
             foreach (var nonVoter in clusterTopology.NonVotingMembers)
             {
                 FollowerAmbassador existingInstance;
-                if (_nonVoters.TryGetValue(nonVoter, out existingInstance))
+                if (_nonVoters.TryGetValue(nonVoter.Key, out existingInstance))
                 {
                     existingInstance.UpdateLeaderWake(_noop);
 
-                    _nonVoters.Add(nonVoter, existingInstance);
-                    old.Remove(nonVoter);
+                    _nonVoters.Add(nonVoter.Key, existingInstance);
+                    old.Remove(nonVoter.Key);
                     continue; // already here
                 }
-                var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter, clusterTopology.ApiKey);
-                _nonVoters.Add(nonVoter, ambasaddor);
+                var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, clusterTopology.ApiKey);
+                _nonVoters.Add(nonVoter.Key, ambasaddor);
                 _engine.AppendStateDisposable(this, ambasaddor);
                 ambasaddor.Start();
             }
@@ -272,7 +280,7 @@ namespace Raven.Server.Rachis
                 var sinceLastSend = (long) (now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
                 var lastMsg = followerAmbassador.LastSendMsg;
                 sb.AppendLine(
-                    $"{followerAmbassador.Url}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status}");
+                    $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status}");
             }
 
             throw new TimeoutException(
@@ -320,7 +328,7 @@ namespace Raven.Server.Rachis
 
                 _lastCommit = maxIndexOnQuorum;
 
-                _engine.Apply(context, maxIndexOnQuorum);
+                _engine.Apply(context, maxIndexOnQuorum, this);
 
                 _lastCommit = maxIndexOnQuorum;
 
@@ -332,13 +340,18 @@ namespace Raven.Server.Rachis
                 if (kvp.Key > _lastCommit)
                     continue;
 
-                Tuple<long, TaskCompletionSource<long>> value;
+                CommandState value;
                 if (_entries.TryRemove(kvp.Key, out value))
                 {
                     ThreadPool.QueueUserWorkItem(o =>
                     {
-                        var tuple = (Tuple<long, TaskCompletionSource<long>>)o;
-                        tuple.Item2.TrySetResult(tuple.Item1);
+                        var tuple = (CommandState)o;
+                        if (tuple.OnNotify != null)
+                        {
+                            tuple.OnNotify(tuple.TaskCompletionSource);
+                            return;
+                        }
+                        tuple.TaskCompletionSource.TrySetResult(tuple.CommandIndex);
                     }, value);
                 }
             }
@@ -452,7 +465,7 @@ namespace Raven.Server.Rachis
                     continue;
 
                 Task task;
-                TryModifyTopology(ambasaddor.Key, TopologyModification.Voter, out task);
+                TryModifyTopology(ambasaddor.Key, ambasaddor.Value.Url, TopologyModification.Voter, out task);
 
                 _promotableUpdated.Set();
                 break;
@@ -472,7 +485,11 @@ namespace Raven.Server.Rachis
                 context.Transaction.Commit();
             }
             var tcs = new TaskCompletionSource<long>();
-            _entries[index] = Tuple.Create(index, tcs);
+            _entries[index] = new CommandState
+            {
+                CommandIndex = index,
+                TaskCompletionSource = tcs
+            };
 
             _newEntry.Set();
             return tcs.Task;
@@ -493,11 +510,11 @@ namespace Raven.Server.Rachis
                 {
                     if (te == null)
                     {
-                        entry.Value.Item2.TrySetCanceled();
+                        entry.Value.TaskCompletionSource.TrySetCanceled();
                     }
                     else
                     {
-                        entry.Value.Item2.TrySetException(te);
+                        entry.Value.TaskCompletionSource.TrySetException(te);
                     }
                 }
             });
@@ -541,7 +558,7 @@ namespace Raven.Server.Rachis
             Remove
         }
 
-        public bool TryModifyTopology(string node, TopologyModification modification, out Task task, bool validateNotInTopology = false)
+        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false)
         {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -555,56 +572,69 @@ namespace Raven.Server.Rachis
                 }
 
                 var clusterTopology = _engine.GetTopology(context);
-                if (validateNotInTopology && clusterTopology.Contains(node))
+
+                if (nodeTag == null)
                 {
-                    throw new InvalidOperationException($"Was requested to modify the topology for node={node} " +
+                    nodeTag = GenerateNodeTag(clusterTopology);
+                }
+
+
+                if (validateNotInTopology && clusterTopology.Contains(nodeTag))
+                {
+                    throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
                                                         $"with validation that it is not contained by the topology but current topology contains it.");
                 }
+
+                var newVotes = new Dictionary<string, string>(clusterTopology.Voters);
+                newVotes.Remove(nodeTag);
+                var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
+                newPromotables.Remove(nodeTag);
+                var newNonVotes = new Dictionary<string, string>(clusterTopology.NonVotingMembers);
+                newNonVotes.Remove(nodeTag);
+
+                var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new [] {nodeTag}).Max();
 
                 switch (modification)
                 {
                     case TopologyModification.Voter:
-                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Concat(new[] { node }).OrderBy(x=>x).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
-                        );
+                        Debug.Assert(nodeUrl != null);
+                        newVotes[nodeTag] = nodeUrl;
                         break;
                     case TopologyModification.Promotable:
-                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.Promotables.Concat(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
-                        );
+                        Debug.Assert(nodeUrl != null);
+                        newPromotables[nodeTag] = nodeUrl;
                         break;
                     case TopologyModification.NonVoter:
-                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.NonVotingMembers.Concat(new[] { node }).OrderBy(x => x).ToArray()
-                        );
+                        Debug.Assert(nodeUrl != null);
+                        newNonVotes[nodeTag] = nodeUrl;
                         break;
                     case TopologyModification.Remove:
-                        if (clusterTopology.Contains(node) == false)
+                        if (clusterTopology.Contains(nodeTag) == false)
                         {
-                            throw new InvalidOperationException($"Was requested to remove node={node} from the topology " +
+                            throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
                                                         $"but it is not contained by the topology.");
                         }
-                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
-                        );
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
                 }
 
+                clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
+                      newVotes,
+                      newPromotables,
+                      newPromotables,
+                      highestNodeId
+                  );
+
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
                 var tcs = new TaskCompletionSource<long>();
-                _entries[index] =Tuple.Create(index, tcs);
+                _entries[index] =new CommandState
+                {
+                    TaskCompletionSource = tcs,
+                    CommandIndex = index
+                };
                 _topologyModification = task = tcs.Task.ContinueWith(_ =>
                 {
                     Interlocked.Exchange(ref _topologyModification, null);
@@ -616,6 +646,31 @@ namespace Raven.Server.Rachis
             _newEntry.Set();
 
             return true;
+        }
+
+        private static string GenerateNodeTag(ClusterTopology clusterTopology)
+        {
+            if (clusterTopology.LastNodeId.Length == 0)
+            {
+                return "A";
+            }
+
+            if (clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1 > 'Z')
+            {
+                return clusterTopology.LastNodeId + "A";
+            }
+
+            var lastChar = (char)(clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1);
+            return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
+        }
+
+        public void SetStateOf(long index, Action<TaskCompletionSource<long>> onNotify)
+        {
+            CommandState value;
+            if (_entries.TryGetValue(index, out value))
+            {
+                value.OnNotify = onNotify;
+            }
         }
     }
 }
