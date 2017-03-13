@@ -15,6 +15,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -812,12 +813,18 @@ namespace Raven.Server.Json
             writer.WriteString((indexDefinition.Type.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.LockMode)));
-            writer.WriteString((indexDefinition.LockMode.ToString()));
+            writer.WritePropertyName(nameof(indexDefinition.LockMode));
+            if (indexDefinition.LockMode.HasValue)
+                writer.WriteString(indexDefinition.LockMode.ToString());
+            else
+                writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.Priority)));
-            writer.WriteString((indexDefinition.Priority.ToString()));
+            writer.WritePropertyName(nameof(indexDefinition.Priority));
+            if (indexDefinition.Priority.HasValue)
+                writer.WriteString(indexDefinition.Priority.ToString());
+            else
+                writer.WriteNull();
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(indexDefinition.OutputReduceToCollection)));
@@ -838,10 +845,6 @@ namespace Raven.Server.Json
                 writer.WriteString(kvp.Value);
             }
             writer.WriteEndObject();
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(indexDefinition.IsSideBySideIndex)));
-            writer.WriteBool(indexDefinition.IsSideBySideIndex);
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(indexDefinition.IsTestIndex)));
@@ -1235,6 +1238,8 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
+        private static readonly StringSegment MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
+
         public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
             if (_buffers == null)
@@ -1242,7 +1247,7 @@ namespace Raven.Server.Json
 
             writer.WriteStartObject();
 
-            var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
+            var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
             bool first = true;
             BlittableJsonReaderObject metadata = null;
             var size = document.Data.GetPropertiesByInsertionOrder(_buffers);

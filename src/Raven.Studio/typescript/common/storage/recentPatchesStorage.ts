@@ -73,11 +73,9 @@ class recentPatchesStorage {
         return recentPatchesFromLocalStorage;
     }
 
-    static onResourceDeleted(qualifer: string, name: string) {
-        if (qualifer === database.qualifier) {
-            const localStorageName = recentPatchesStorage.getLocalStorageKey(name);
-            localStorage.removeItem(localStorageName);
-        }
+    static onDatabaseDeleted(qualifer: string, name: string) {
+        const localStorageName = recentPatchesStorage.getLocalStorageKey(name);
+        localStorage.removeItem(localStorageName);
     }
 
 }

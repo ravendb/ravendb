@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Json;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Session.Operations
 {
@@ -52,19 +53,37 @@ namespace Raven.Client.Documents.Session.Operations
                 if (_session.DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
                     continue;
 
-                string key;
                 long? etag;
-                BlittableJsonReaderObject metadata;
-                if (batchResult.TryGet("Metadata", out metadata))
-                    documentInfo.Metadata = metadata;
-                if (metadata.TryGet(Constants.Documents.Metadata.Etag, out etag))
-                    documentInfo.ETag = etag;
-                if (metadata.TryGet(Constants.Documents.Metadata.Id, out key))
-                {
-                    documentInfo.Id = key;
-                    _session.DocumentsById.Add(documentInfo);
-                    _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, key);
-                }
+                if (batchResult.TryGet("Etag", out etag) == false || etag == null)
+                    throw new InvalidOperationException("PUT response is invalid. Etag is missing.");
+
+                string key;
+                if (batchResult.TryGet("Key", out key) == false || key == null)
+                    throw new InvalidOperationException("PUT response is invalid. Key is missing.");
+
+                string collection;
+                if (batchResult.TryGet("Collection", out collection) == false || collection == null)
+                    throw new InvalidOperationException("PUT response is invalid. Collection is missing.");
+
+                BlittableJsonReaderArray changeVectorArray;
+                if (batchResult.TryGet("ChangeVector", out changeVectorArray) == false || changeVectorArray == null)
+                    throw new InvalidOperationException("PUT response is invalid. ChangeVector is missing.");
+
+                if (documentInfo.Metadata.Modifications == null)
+                    documentInfo.Metadata.Modifications = new DynamicJsonValue();
+
+                documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Id] = key;
+                documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Etag] = etag;
+                documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Collection] = collection;
+                documentInfo.Metadata.Modifications[Constants.Documents.Metadata.ChangeVector] = changeVectorArray;
+
+                documentInfo.Id = key;
+                documentInfo.ETag = etag;
+                documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, key);
+                documentInfo.MetadataInstance = null;
+
+                _session.DocumentsById.Add(documentInfo);
+                _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, key);
 
                 var afterStoreEventArgs = new AfterStoreEventArgs(_session, documentInfo.Id, documentInfo.Entity);
                 _session.OnAfterStoreInvoke(afterStoreEventArgs);

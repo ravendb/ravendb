@@ -15,7 +15,7 @@ namespace Sparrow.Json.Parsing
             if (state.CurrentTokenType != JsonParserToken.String)
                 ThrowInvalidJson();
 
-            return new LazyStringValue(null, state.StringBuffer, state.StringSize, context).ToString();
+            return context.AllocateStringValue(null, state.StringBuffer, state.StringSize).ToString();
         }
 
         public static bool Read(Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)

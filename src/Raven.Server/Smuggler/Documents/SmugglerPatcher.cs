@@ -76,12 +76,12 @@ namespace Raven.Server.Smuggler.Documents
 
             public override string PutDocument(string key, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
             {
-                throw new NotSupportedException("LoadDocument is not supported.");
+                throw new NotSupportedException("PutDocument is not supported.");
             }
 
             public override void DeleteDocument(string documentKey)
             {
-                throw new NotSupportedException("LoadDocument is not supported.");
+                throw new NotSupportedException("DeleteDocument is not supported.");
             }
         }
     }

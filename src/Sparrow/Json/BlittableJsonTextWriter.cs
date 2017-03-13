@@ -404,6 +404,15 @@ namespace Sparrow.Json
             _buffer[_pos++] = Colon;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WritePropertyName(StringSegment prop)
+        {
+            var lazyProp = _context.GetLazyStringForFieldWithCaching(prop);
+            WriteString(lazyProp);
+            EnsureBuffer(1);
+            _buffer[_pos++] = Colon;
+        }
+
         public void WriteInteger(long val)
         {
             if (val == 0)

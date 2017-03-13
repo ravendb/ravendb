@@ -48,7 +48,28 @@ namespace Sparrow.Json
 
         private readonly FastDictionary<string, LazyStringValue, StringEqualityStructComparer> _fieldNames = new FastDictionary<string, LazyStringValue, StringEqualityStructComparer>(default(StringEqualityStructComparer));
 
+        private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
+        private int _numberOfAllocatedStringsValues;
 
+        public unsafe LazyStringValue AllocateStringValue(string str, byte* ptr, int size)
+        {
+            if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
+            {
+                var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
+                lazyStringValue.Renew(str,ptr, size);
+                lazyStringValue.AllocatedMemoryData = null;
+                lazyStringValue.IsDisposed = false;
+                return lazyStringValue;
+            }
+
+            var allocateStringValue = new LazyStringValue(str, ptr, size, this);
+            if (_numberOfAllocatedStringsValues < 25 * 1000)
+            {
+                _allocateStringValues.Add(allocateStringValue);
+                _numberOfAllocatedStringsValues++;
+            }
+            return allocateStringValue;
+        }
 
         private bool _disposed;
 
@@ -270,6 +291,22 @@ namespace Sparrow.Json
             _disposed = true;
         }
 
+        public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
+        {
+            LazyStringValue value;
+
+            var field = key.Value;
+            if (!_fieldNames.TryGetValue(field, out value))
+            {                
+                value = GetLazyString(key, longLived: true);
+                _fieldNames[field] = value;
+            }
+
+            //sanity check, in case the 'value' is manually disposed outside of this function
+            Debug.Assert(value.IsDisposed == false);
+            return value;
+        }
+
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
             LazyStringValue value;
@@ -311,10 +348,8 @@ namespace Sparrow.Json
                 state.FindEscapePositionsIn(address, actualSize, escapePositionsSize);
 
                 state.WriteEscapePositionsTo(address + actualSize);
-                var result = new LazyStringValue(field, address, actualSize, this)
-                {
-                    AllocatedMemoryData = memory
-                };
+                LazyStringValue result = longLived == false ? AllocateStringValue(field, address, actualSize) : new LazyStringValue(field, address, actualSize, this);
+                result.AllocatedMemoryData = memory;
 
                 if (state.EscapePositions.Count > 0)
                 {
@@ -594,6 +629,7 @@ namespace Sparrow.Json
             }
             _objectJsonParser.Reset(null);
             _arenaAllocator.ResetArena();
+            _numberOfAllocatedStringsValues = 0;
             _generation = _generation + 1;
         }
 
@@ -660,7 +696,7 @@ namespace Sparrow.Json
                     writer.WriteComma();
                 first = false;
 
-                var lazyStringValue = new LazyStringValue(null, state.StringBuffer, state.StringSize, this);
+                var lazyStringValue = AllocateStringValue(null, state.StringBuffer, state.StringSize);
                 writer.WritePropertyName(lazyStringValue);
 
                 if (parser.Read() == false)
@@ -693,11 +729,11 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        writer.WriteString(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
+                        writer.WriteString(AllocateStringValue(null, state.StringBuffer, state.StringSize));
                     }
                     break;
                 case JsonParserToken.Float:
-                    writer.WriteDouble(new LazyDoubleValue(new LazyStringValue(null, state.StringBuffer, state.StringSize, this)));
+                    writer.WriteDouble(new LazyDoubleValue(AllocateStringValue(null, state.StringBuffer, state.StringSize)));
                     break;
                 case JsonParserToken.Integer:
                     writer.WriteInteger(state.Long);

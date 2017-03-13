@@ -1,5 +1,4 @@
-﻿import resource = require("models/resources/resource");
-import database = require("models/resources/database");
+﻿import database = require("models/resources/database");
 
 import EVENTS = require("common/constants/events");
 import messagePublisher = require("common/messagePublisher");
@@ -10,13 +9,13 @@ import killOperationCommand = require("commands/operations/killOperationCommand"
 
 class notificationCenterOperationsWatch {
 
-    private resource: resource;
+    private db: database;
 
     private operations = new Map<number, JQueryDeferred<Raven.Client.Documents.Operations.IOperationResult>>();
     private watchedProgresses = new Map<number, Array<(progress: Raven.Client.Documents.Operations.IOperationProgress) => void>>();
 
-    configureFor(resource: resource) {
-        this.resource = resource;
+    configureFor(db: database) {
+        this.db = db;
         this.operations.clear();
         this.watchedProgresses.clear();
     }

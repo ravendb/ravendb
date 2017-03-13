@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.Static;
+using Sparrow;
 using Sparrow.Json;
 using Voron;
 
@@ -34,11 +35,22 @@ namespace Raven.Server.Documents
         public const string EmptyCollection = "@empty";
         public const string SystemCollection = "@system";
 
+        public static readonly StringSegment EmptyCollectionSegment;
+        public static readonly StringSegment MetadataKeySegment;
+        public static readonly StringSegment MetadataCollectionSegment;
+
         private readonly string _documents;
         private readonly string _tombstones;
 
         public readonly string Name;
         public readonly bool IsSystem;
+
+        static CollectionName()
+        {
+            EmptyCollectionSegment = new StringSegment(EmptyCollection);
+            MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
+            MetadataCollectionSegment = new StringSegment(Constants.Documents.Metadata.Collection);
+        }
 
         public CollectionName(string name)
         {
@@ -143,10 +155,29 @@ namespace Raven.Server.Documents
 
             return true;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsSystemCollectionName(string key)
+        {
+            if (key.Length < 6)
+                return false;
+
+            // case insensitive 'Raven/' match without doing allocations
+
+            if ( key[5] != '/' ||
+                (key[0] != 'R' && key[0] != 'r') ||
+                (key[1] != 'A' && key[1] != 'a') ||
+                (key[2] != 'V' && key[2] != 'v') ||
+                (key[3] != 'E' && key[3] != 'e') ||
+                (key[4] != 'N' && key[4] != 'n'))
+                return false;
+
+            return true;
+        }
         
         public static string GetCollectionName(string key, BlittableJsonReaderObject document)
         {
-            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+            if (key != null && IsSystemCollectionName(key))
                 return SystemCollection;
 
             return GetCollectionName(document);
@@ -157,7 +188,7 @@ namespace Raven.Server.Documents
             dynamic dynamicDocument = document;
             string key = dynamicDocument.Id;
 
-            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+            if (key != null && IsSystemCollectionName(key))
                 return SystemCollection;
 
             return GetCollectionName(document.BlittableJson);
@@ -167,10 +198,10 @@ namespace Raven.Server.Documents
         {
             BlittableJsonReaderObject metadata;
             LazyStringValue collectionName;
-            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Collection, out collectionName) == false)
+            if (document.TryGet(MetadataKeySegment, out metadata) == false ||
+                metadata.TryGet(MetadataCollectionSegment, out collectionName) == false)
             {
-                return context.GetLazyStringForFieldWithCaching(EmptyCollection);
+                return context.GetLazyStringForFieldWithCaching(EmptyCollectionSegment);
             }
             return collectionName;
         }
@@ -185,8 +216,7 @@ namespace Raven.Server.Documents
 
             document.NoCache = true;
 
-            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Collection, out collectionName) == false)
+            if (document.TryGet(MetadataKeySegment, out metadata) == false || metadata.TryGet(MetadataCollectionSegment, out collectionName) == false)
             {
                 collectionName = EmptyCollection;
             }

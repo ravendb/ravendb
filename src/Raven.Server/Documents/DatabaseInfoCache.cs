@@ -55,9 +55,7 @@ namespace Raven.Server.Documents
 
 
                 using (var id = context.GetLazyString(databaseName.ToLowerInvariant()))
-                using (
-                    var json = context.ReadObject(databaseInfo, "DatabaseInfo",
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using ( var json = context.ReadObject(databaseInfo, "DatabaseInfo", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var tvb = new TableValueBuilder
                     {
@@ -94,7 +92,7 @@ namespace Raven.Server.Documents
                 {
                     databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                     {
-                        [nameof(ResourceInfo.Disabled)] = disabled,
+                        [nameof(DatabaseInfo.Disabled)] = disabled,
                         [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
                     };
 

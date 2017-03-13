@@ -15,6 +15,8 @@ namespace Sparrow.Json
         private UsageMode _mode;
         private WriteToken _writeToken;
 
+        private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
+
 
         /// <summary>
         /// Allows incrementally building json document
@@ -46,7 +48,7 @@ namespace Sparrow.Json
                 State = ContinuationState.ReadArrayDocument
             };
 
-            var fakeFieldName = _context.GetLazyStringForFieldWithCaching("_");
+            var fakeFieldName = _context.GetLazyStringForFieldWithCaching(UnderscoreSegment);
             var prop = _context.CachedProperties.GetProperty(fakeFieldName);
             currentState.CurrentProperty = prop;
             currentState.MaxPropertyId = prop.PropertyId;

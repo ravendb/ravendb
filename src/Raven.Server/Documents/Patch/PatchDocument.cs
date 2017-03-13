@@ -23,12 +23,12 @@ namespace Raven.Server.Documents.Patch
         protected static Logger _logger;
         private const int MaxRecursionDepth = 128;
         private readonly int _maxSteps;
-        private readonly int _additionalStepsPerSize;
+        protected readonly int _additionalStepsPerSize;
         private readonly bool _allowScriptsToAdjustNumberOfSteps;
 
         private static readonly ScriptsCache ScriptsCache = new ScriptsCache();
 
-        private readonly DocumentDatabase _database;
+        protected readonly DocumentDatabase _database;
 
         public PatchDocument(DocumentDatabase database)
         {
@@ -166,6 +166,15 @@ namespace Raven.Server.Documents.Patch
             return result;
         }
 
+        protected PatcherOperationScope GenerateDefaultOperationScope(DocumentsOperationContext context, bool debugMode)
+        {
+            return new PatcherOperationScope(_database, context, debugMode)
+            {
+                AdditionalStepsPerSize = _additionalStepsPerSize,
+                MaxSteps = _maxSteps
+            };
+        }
+
         public struct SingleScriptRun
         {
             private readonly PatchDocument _parent;
@@ -173,15 +182,11 @@ namespace Raven.Server.Documents.Patch
             public Engine JintEngine;
             public PatcherOperationScope Scope;
 
-            public SingleScriptRun(PatchDocument parent, DocumentsOperationContext context, PatchRequest patch, bool debugMode)
+            public SingleScriptRun(PatchDocument parent, DocumentsOperationContext context, PatchRequest patch, bool debugMode, PatcherOperationScope externalScope = null)
             {
                 _parent = parent;
                 _patch = patch;
-                Scope = new PatcherOperationScope(parent._database, context, debugMode)
-                {
-                    AdditionalStepsPerSize = parent._additionalStepsPerSize,
-                    MaxSteps = parent._maxSteps
-                };
+                Scope = externalScope ?? parent.GenerateDefaultOperationScope(context, debugMode);
 
                 try
                 {
@@ -248,9 +253,9 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, PatchRequest patch, bool debugMode)
+        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, PatchRequest patch, bool debugMode, PatcherOperationScope externalScope = null)
         {
-            var run = new SingleScriptRun(this, context, patch, debugMode);
+            var run = new SingleScriptRun(this, context, patch, debugMode,externalScope);
             try
             {
                 run.Prepare(document?.Data?.Size ?? 0);

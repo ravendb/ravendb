@@ -1,18 +1,15 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
-import resource = require("models/resources/resource");
-import filesystem = require("models/filesystem/filesystem");
 import startDbCompactCommand = require("commands/maintenance/startCompactCommand");
-import startFsCompactCommand = require("commands/filesystem/startCompactCommand");
 import accessHelper = require("viewmodels/shell/accessHelper");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import eventsCollector = require("common/eventsCollector");
 
 class resourceCompact {
-    resourceName = ko.observable<string>('');
+    databaseName = ko.observable<string>('');
     
-    resourcesNames: KnockoutComputed<string[]>;
+    databasesNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
 
@@ -21,21 +18,21 @@ class resourceCompact {
 
     keepDown = ko.observable<boolean>(false);
 
-    constructor(private parent: compact, private type: string, private resources: KnockoutComputed<resource[]>) {
-        this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
+    constructor(private parent: compact, private type: string, private resources: KnockoutObservableArray<database>) {
+        this.databasesNames = ko.computed(() => resources().map((rs: database) => rs.name));
 
         this.searchResults = ko.computed(() => {
-            var newResourceName = this.resourceName();
-            return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
+            var newResourceName = this.databaseName();
+            return this.databasesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
-            var newResourceName = this.resourceName();
-            var foundRs = this.resources().find((rs: resource) => newResourceName === rs.name);
+            var newDatabaseName = this.databaseName();
+            var foundRs = this.resources().find((db: database) => newDatabaseName === db.name);
 
-            if (!foundRs && newResourceName.length > 0) {
-                errorMessage = (this.type === database.type ? "Database" : "File system") + " name doesn't exist!";
+            if (!foundRs && newDatabaseName.length > 0) {
+                errorMessage ="Database name doesn't exist!";
             }
 
             return errorMessage;
@@ -65,10 +62,9 @@ class resourceCompact {
 
 }
 class compact extends viewModelBase {
-    resourcesManager = resourcesManager.default;
+    databasesManager = databasesManager.default;
 
-    private dbCompactOptions: resourceCompact = new resourceCompact(this, database.type, this.resourcesManager.databases);
-    private fsCompactOptions: resourceCompact = new resourceCompact(this, filesystem.type, this.resourcesManager.fileSystems);
+    private dbCompactOptions: resourceCompact = new resourceCompact(this, database.type, this.databasesManager.databases);
 
     isBusy = ko.observable<boolean>();
     isForbidden = ko.observable<boolean>();
@@ -86,7 +82,6 @@ class compact extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         $('form :input[name="databaseName"]').on("keypress", (e) => e.which !== 13);
-        $('form :input[name="filesystemName"]').on("keypress", (e) => e.which !== 13);
     }
 
     startDbCompact() {
@@ -95,19 +90,10 @@ class compact extends viewModelBase {
         this.isBusy(true);
         var self = this;
 
-        new startDbCompactCommand(this.dbCompactOptions.resourceName(), self.dbCompactOptions.updateCompactStatus.bind(self.dbCompactOptions))
+        new startDbCompactCommand(this.dbCompactOptions.databaseName(), self.dbCompactOptions.updateCompactStatus.bind(self.dbCompactOptions))
             .execute();
     }
 
-    startFsCompact() {
-        eventsCollector.default.reportEvent("fs", "compact");
-
-        this.isBusy(true);
-        var self = this;
-
-        new startFsCompactCommand(this.fsCompactOptions.resourceName(), self.fsCompactOptions.updateCompactStatus.bind(self.fsCompactOptions))
-            .execute();
-    }
 }
 
 export = compact;

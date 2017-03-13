@@ -126,7 +126,7 @@ class documents extends viewModelBase {
         return this.fetchCollectionsStats(db).done(results => {
             this.collectionsLoaded(results, db);
 
-            const dbStatsSubscription = changesContext.default.resourceNotifications()
+            const dbStatsSubscription = changesContext.default.databaseNotifications()
                 .watchAllDatabaseStatsChanged(event => this.tracker.onDatabaseStatsChanged(event));
             this.addNotification(dbStatsSubscription);
         });
@@ -257,7 +257,7 @@ class documents extends viewModelBase {
                         this.spinners.delete(true);
 
                         deleteCollectionDialog.operationIdTask.done((operationId: operationIdDto) => {
-                            notificationCenter.instance.resourceOperationsWatch.monitorOperation(operationId.OperationId)
+                            notificationCenter.instance.databseOperationsWatch.monitorOperation(operationId.OperationId)
                                 .done(() => {
                                     if (excludedIds.length === 0) {
                                         messagePublisher.reportSuccess(`Deleted collection ${this.tracker.currentCollection().name}`);

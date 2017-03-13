@@ -149,6 +149,31 @@ namespace Raven.Server.Documents
             Interlocked.Decrement(ref _watchAllTransformers);
         }
 
+
+        private static bool HasItemStartingWith(ConcurrentSet<string> set, string value)
+        {
+            if (set.Count == 0)
+                return false;
+            foreach (string item in set)
+            {
+                if (value.StartsWith(item, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool HasItemEqualsTo(ConcurrentSet<string> set, string value)
+        {
+            if (set.Count == 0)
+                return false;
+            foreach (string item in set)
+            {
+                if (value.Equals(item, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
         public void SendDocumentChanges(DocumentChange change)
         {
             // this is a precaution, in order to overcome an observed race condition between change client disconnection and raising changes
@@ -166,24 +191,21 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            var hasPrefix = change.Key != null && _matchingDocumentPrefixes
-                .Any(x => change.Key.StartsWith(x, StringComparison.OrdinalIgnoreCase));
+            var hasPrefix = change.Key != null && HasItemStartingWith(_matchingDocumentPrefixes, change.Key);
             if (hasPrefix)
             {
                 Send(change);
                 return;
             }
 
-            var hasCollection = change.CollectionName != null && _matchingDocumentsInCollection
-                .Any(x => string.Equals(x, change.CollectionName, StringComparison.OrdinalIgnoreCase));
+            var hasCollection = change.CollectionName != null && HasItemEqualsTo(_matchingDocumentsInCollection, change.CollectionName);
             if (hasCollection)
             {
                 Send(change);
                 return;
             }
 
-            var hasType = change.TypeName != null && _matchingDocumentsOfType
-                .Any(x => string.Equals(x, change.TypeName, StringComparison.OrdinalIgnoreCase));
+            var hasType = change.TypeName != null && HasItemEqualsTo(_matchingDocumentsOfType, change.TypeName);
             if (hasType)
             {
                 Send(change);

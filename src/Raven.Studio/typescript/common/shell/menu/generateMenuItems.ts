@@ -4,11 +4,10 @@ import appUrl = require("common/appUrl");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
-import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 
 import getManageServerMenuItem = require("common/shell/menu/items/manageServer");
-import getResourcesMenuItem = require("common/shell/menu/items/resources");
+import getDatabasesMenuItem = require("common/shell/menu/items/databases");
 import getStatsMenuItem = require("common/shell/menu/items/stats");
 import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getTasksMenuItem = require("common/shell/menu/items/tasks");
@@ -18,14 +17,12 @@ import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
 export = generateMenuItems;
 
-function generateMenuItems(resource: resource) {
-    if (!resource) {
-        return generateNoActiveResourceMenuItems();
-    } else if (resource instanceof database) {
-        return generateActiveDatabaseMenuItems();
-    } else {
-        throw new Error(`Menu items for resource of type ${ resource.fullTypeName } are not implemented.`);
-    }
+function generateMenuItems(db: database) {
+    if (!db) {
+        return generateNoActiveDatabaseMenuItems();
+    } 
+
+    return generateActiveDatabaseMenuItems();
 }
 
 function aboutItem() {
@@ -40,17 +37,16 @@ function aboutItem() {
     });
 }
 
-function generateNoActiveResourceMenuItems() {
+function generateNoActiveDatabaseMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();
     return [
         new separatorMenuItem('Server'),
-        getResourcesMenuItem(appUrls),
+        getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
         aboutItem()
     ];
     
 }
-
 
 function generateActiveDatabaseMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();
@@ -63,7 +59,7 @@ function generateActiveDatabaseMenuItems() {
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),
         new separatorMenuItem('Server'),
-        getResourcesMenuItem(appUrls),
+        getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
         aboutItem()
     ];

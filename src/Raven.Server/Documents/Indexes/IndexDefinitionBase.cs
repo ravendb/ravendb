@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexDefinition ConvertToIndexDefinition(Index index)
         {
-            var indexDefinition = CreateIndexDefinition() ?? new IndexDefinition();
+            var indexDefinition = GetOrCreateIndexDefinitionInternal() ?? new IndexDefinition();
             indexDefinition.Name = index.Name;
             indexDefinition.IndexId = index.IndexId;
             indexDefinition.Type = index.Type;
@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Indexes
             return indexDefinition;
         }
 
-        protected abstract IndexDefinition CreateIndexDefinition();
+        protected internal abstract IndexDefinition GetOrCreateIndexDefinitionInternal();
 
         public bool ContainsField(string field)
         {

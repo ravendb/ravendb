@@ -1144,5 +1144,44 @@ namespace Voron.Data.Tables
             // of TableValueReader per value
             public TableValueReader Reader;
         }
+
+        public ReturnTableValueBuilderToCache Allocate(out TableValueBuilder builder)
+        {
+            var builderToCache = new ReturnTableValueBuilderToCache(_tx);
+            builder = builderToCache.Builder;
+            return builderToCache;
+        }
+
+        public struct ReturnTableValueBuilderToCache : IDisposable
+        {
+#if DEBUG
+            private readonly Transaction _tx;
+#endif
+            private readonly TableValueBuilder _builder;
+
+            public ReturnTableValueBuilderToCache(Transaction tx)
+            {
+                var environmentWriteTransactionPool = tx.LowLevelTransaction.Environment.WriteTransactionPool;
+#if DEBUG
+                _tx = tx;
+                Debug.Assert(tx.LowLevelTransaction.Flags == TransactionFlags.ReadWrite);
+                if (environmentWriteTransactionPool.BuilderUsages++ != 0)
+                    throw new InvalidOperationException("Cannot use a cached table value builder when it is already in use");
+#endif
+                _builder = environmentWriteTransactionPool.TableValueBuilder;
+            }
+
+            public TableValueBuilder Builder => _builder;
+
+            public void Dispose()
+            {
+                _builder.Reset();
+#if DEBUG
+                Debug.Assert(_tx.LowLevelTransaction.IsDisposed == false);
+                if (_tx.LowLevelTransaction.Environment.WriteTransactionPool.BuilderUsages-- != 1)
+                    throw new InvalidOperationException("Cannot use a cached table value builder when it is already removed");
+#endif
+            }
+        }
     }
 }

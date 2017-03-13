@@ -144,7 +144,7 @@ namespace Raven.Traffic
                     var connectMessage = new DynamicJsonValue
                     {
                         ["Id"] = id,
-                        ["ResourceName"] = resourceName,
+                        ["DatabaseName"] = resourceName,
                         ["Timeout"] = timeout
                     };
 

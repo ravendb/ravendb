@@ -36,7 +36,7 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/resources?start={_start}&pageSize={_pageSize}&namesOnly=true";
+                url = $"{node.Url}/databases?start={_start}&pageSize={_pageSize}&namesOnly=true";
 
                 return new HttpRequestMessage
                 {
@@ -50,7 +50,7 @@ namespace Raven.Client.Server.Operations
                     ThrowInvalidResponse();
 
                 BlittableJsonReaderArray names;
-                if (response.TryGet(nameof(ResourcesInfo.Databases), out names) == false)
+                if (response.TryGet(nameof(DatabasesInfo.Databases), out names) == false)
                     ThrowInvalidResponse();
 
                 var result = new string[names.Length];

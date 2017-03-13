@@ -235,8 +235,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 foreach (var bulkInsertDoc in docsToWrite)
                 {
-                    var reader = new BlittableJsonReaderObject(bulkInsertDoc.Pointer, bulkInsertDoc.Used,
-                        context);
+                    var reader = new BlittableJsonReaderObject(bulkInsertDoc.Pointer, bulkInsertDoc.Used, context);
                     reader.BlittableValidation();
 
                     string docKey;

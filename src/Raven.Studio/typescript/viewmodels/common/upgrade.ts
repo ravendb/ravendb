@@ -1,6 +1,6 @@
 import EVENTS = require("common/constants/events");
 import viewModelBase = require("viewmodels/viewModelBase");
-import resourceActivatedEventArgs = require("viewmodels/resources/resourceActivatedEventArgs");
+import databaseActivatedEventArgs = require("viewmodels/resources/databaseActivatedEventArgs");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import router = require("plugins/router");
 import database = require("models/resources/database");
@@ -16,10 +16,8 @@ class upgrade extends viewModelBase {
         super.attached();
         this.poolStats();
 
-        ko.postbox.subscribe(EVENTS.Resource.Activate, (e: resourceActivatedEventArgs) => {
-            if (e.resource instanceof database) {
-                this.dbChanged(e.resource as database); 
-            }
+        ko.postbox.subscribe(EVENTS.Database.Activate, (e: databaseActivatedEventArgs) => {
+            this.dbChanged(e.database); 
         });
     }
 

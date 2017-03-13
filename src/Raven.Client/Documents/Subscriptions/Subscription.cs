@@ -34,6 +34,8 @@ namespace Raven.Client.Documents.Subscriptions
 
     public delegate void AfterAcknowledgment();
 
+    public delegate void SubscriptionConnectionInterrupted(Exception ex, bool willReconnect);
+
     public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
     {
         private readonly Logger _logger;
@@ -50,6 +52,49 @@ namespace Raven.Client.Documents.Subscriptions
         private Task _subscriptionTask;
         private Stream _stream;
         private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
+        private TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
+
+        /// <summary>
+        ///     It indicates if the subscription is in errored state because one of subscribers threw an exception.
+        /// </summary>
+        public bool IsErroredBecauseOfSubscriber { get; private set; }
+
+        /// <summary>
+        ///     The last exception thrown by one of subscribers.
+        /// </summary>
+        public Exception LastSubscriberException { get; private set; }
+
+        /// <summary>
+        /// Task that will be completed when the subscription connection will close and self dispose, or errorous if subscription connection is entirely interrupted
+        /// </summary>
+        public Task SubscriptionLifetimeTask { private set; get; }
+
+        /// <summary>
+        ///     It determines if the subscription connection is closed.
+        /// </summary>
+        public bool IsConnectionClosed { get; private set; }
+        
+        /// <summary>
+        /// Called before received batch starts to be proccessed by subscribers
+        /// </summary>
+        public event BeforeBatch BeforeBatch = delegate { };
+
+        /// <summary>
+        /// Called after received batch finished being proccessed by subscribers
+        /// </summary>
+        public event AfterBatch AfterBatch = delegate { };
+
+        /// <summary>
+        /// Called before subscription progress is being stored to the DB
+        /// </summary>
+        public event BeforeAcknowledgment BeforeAcknowledgment = delegate { };
+
+        /// <summary>
+        /// Called when subscription connection is interrupted. The error passed will describe the reason for the interruption. 
+        /// </summary>
+        public event SubscriptionConnectionInterrupted SubscriptionConnectionInterrupted = delegate { };
+        
+        
 
         internal Subscription(SubscriptionConnectionOptions options, IDocumentStore documentStore,
             DocumentConventions conventions, string dbName)
@@ -66,6 +111,8 @@ namespace Raven.Client.Documents.Subscriptions
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions,
                 entity => { throw new InvalidOperationException("Shouldn't be generating new ids here"); });
+
+            SubscriptionLifetimeTask = taskCompletionSource.Task;
         }
 
         ~Subscription()
@@ -82,20 +129,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        /// <summary>
-        ///     It indicates if the subscription is in errored state because one of subscribers threw an exception.
-        /// </summary>
-        public bool IsErroredBecauseOfSubscriber { get; private set; }
-
-        /// <summary>
-        ///     The last exception thrown by one of subscribers.
-        /// </summary>
-        public Exception LastSubscriberException { get; private set; }
-
-        /// <summary>
-        ///     It determines if the subscription connection is closed.
-        /// </summary>
-        public bool IsConnectionClosed { get; private set; }
+        
 
         public void Dispose()
         {
@@ -111,7 +145,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 if (_disposed)
                     return;
-
+                
                 _disposed = true;
                 _proccessingCts.Cancel();
                 _disposedTask.TrySetResult(null); // notify the subscription task that we are done
@@ -131,6 +165,11 @@ namespace Raven.Client.Documents.Subscriptions
                 CloseTcpClient(); // we disconnect immediately, freeing the subscription task
 
                 OnCompletedNotification();
+
+                if (taskCompletionSource.Task.IsCanceled == false && taskCompletionSource.Task.IsCompleted == false && taskCompletionSource.Task.IsFaulted == false)
+                {
+                    taskCompletionSource.TrySetResult(true);
+                }
             }
             catch (Exception ex)
             {
@@ -153,22 +192,13 @@ namespace Raven.Client.Documents.Subscriptions
             // we cannot remove subscriptions dynamically, once we added, it is done
             return new DisposableAction(() => { });
         }
-
-        public event BeforeBatch BeforeBatch = delegate { };
-        public event AfterBatch AfterBatch = delegate { };
-        public event BeforeAcknowledgment BeforeAcknowledgment = delegate { };
-
+        
         /// <summary>
         /// allows the user to define stuff that happens after the confirm was recieved from the server (this way we know we won't
         /// get those documents again)
         /// </summary>
         public event AfterAcknowledgment AfterAcknowledgment = delegate { };
-
-        public void Start()
-        {
-            AsyncHelpers.RunSync(StartAsync);
-        }
-
+        
         public Task StartAsync()
         {
             if (_started)
@@ -205,67 +235,50 @@ namespace Raven.Client.Documents.Subscriptions
 
             JsonOperationContext context;
             var requestExecuter = _store.GetRequestExecuter(_dbName ?? _store.DefaultDatabase);
-            requestExecuter.ContextPool.AllocateOperationContext(out context);
 
-            await requestExecuter.ExecuteAsync(command, context).ConfigureAwait(false);
-            var apiToken = await requestExecuter.GetAuthenticationToken(context, command.RequestedNode);
-            var uri = new Uri(command.Result.Url);
-
-            await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
-
-            _tcpClient.NoDelay = true;
-            _tcpClient.SendBufferSize = 32 * 1024;
-            _tcpClient.ReceiveBufferSize = 4096;
-            _stream = _tcpClient.GetStream();
-            _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result);
-
-            var header = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
-                Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                DatabaseName = _dbName ?? _store.DefaultDatabase,
-                AuthorizationToken = apiToken
-            }));
+                await requestExecuter.ExecuteAsync(command, context).ConfigureAwait(false);
+                var apiToken = await requestExecuter.GetAuthenticationToken(context, command.RequestedNode);
+                var uri = new Uri(command.Result.Url);
 
-            var options = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_options));
+                await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
 
-            await _stream.WriteAsync(header, 0, header.Length);
-            await _stream.FlushAsync();
-            //Reading reply from server
-            using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
-            {
-                var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
-                switch (reply.Status)
+                _tcpClient.NoDelay = true;
+                _tcpClient.SendBufferSize = 32 * 1024;
+                _tcpClient.ReceiveBufferSize = 4096;
+                _stream = _tcpClient.GetStream();
+                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result);
+
+                var header = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
                 {
-                    case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
-                        throw AuthorizationException.Forbidden(_store.Url);
-                    case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                        break;
-                    default:
-                        throw AuthorizationException.Unauthorized(reply.Status, _dbName);
-                }
-            }
-            await _stream.WriteAsync(options, 0, options.Length);
+                    Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
+                    DatabaseName = _dbName ?? _store.DefaultDatabase,
+                    AuthorizationToken = apiToken
+                }));
 
-            await _stream.FlushAsync();
-            return _stream;
-        }
+                    var options = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_options));
 
-        private void InformSubscribersOnError(Exception ex)
-        {
-            foreach (var subscriber in _subscribers)
-            {
-                try
+                await _stream.WriteAsync(header, 0, header.Length);
+                await _stream.FlushAsync();
+                //Reading reply from server
+                using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
                 {
-                    subscriber.OnError(ex);
-                }
-                catch (Exception)
-                {
-                    if (_logger.IsInfoEnabled)
+                    var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
+                    switch (reply.Status)
                     {
-                        _logger.Info(
-                            $"Subscription #{_options.SubscriptionId}. Subscriber threw an exception while proccessing OnError ", ex);
+                        case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
+                            throw AuthorizationException.Forbidden(_store.Url);
+                        case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
+                            break;
+                        default:
+                            throw AuthorizationException.Unauthorized(reply.Status, _dbName);
                     }
                 }
+                await _stream.WriteAsync(options, 0, options.Length);
+
+                await _stream.FlushAsync();
+                return _stream;
             }
         }
 
@@ -373,8 +386,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
             catch (Exception ex)
             {
-                if (_proccessingCts.Token.IsCancellationRequested == false)
-                    InformSubscribersOnError(ex);
+                SubscriptionConnectionInterrupted(ex, true);
                 throw;
             }
         }
@@ -507,6 +519,8 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         IsErroredBecauseOfSubscriber = true;
                         LastSubscriberException = ex;
+                        SubscriptionConnectionInterrupted(ex, false);
+                        taskCompletionSource.TrySetException(ex);
 
                         try
                         {
@@ -516,6 +530,7 @@ namespace Raven.Client.Documents.Subscriptions
                         {
                             // can happen if a subscriber doesn't have an onError handler - just ignore it
                         }
+
                         break;
                     }
                 }
@@ -570,6 +585,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     if (_proccessingCts.Token.IsCancellationRequested)
                     {
+                        SubscriptionConnectionInterrupted(ex, true);
                         return;
                     }
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -581,15 +597,16 @@ namespace Raven.Client.Documents.Subscriptions
                             $"Subscription #{_options.SubscriptionId}. Pulling task threw the following exception", ex);
                     }
 
-
-                    if (await TryHandleRejectedConnection(ex, false).ConfigureAwait(false))
+                    if (await TryHandleRejectedConnectionOrDispose(ex, false).ConfigureAwait(false))
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Subscription #{_options.SubscriptionId}");
                         return;
                     }
+                    
                     await Task.Delay(_options.TimeToWaitBeforeConnectionRetryMilliseconds);
                 }
+
             }
             if (_proccessingCts.Token.IsCancellationRequested)
                 return;
@@ -611,7 +628,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async Task<bool> TryHandleRejectedConnection(Exception ex, bool reopenTried)
+        private async Task<bool> TryHandleRejectedConnectionOrDispose(Exception ex, bool reopenTried)
         {
             if (ex is SubscriptionInUseException || // another client has connected to the subscription
                 ex is SubscriptionDoesNotExistException || // subscription has been deleted meanwhile
@@ -619,8 +636,8 @@ namespace Raven.Client.Documents.Subscriptions
             // someone forced us to drop the connection by calling Subscriptions.Release
             {
                 IsConnectionClosed = true;
-
-                InformSubscribersOnError(ex);
+                taskCompletionSource.TrySetException(ex);
+                SubscriptionConnectionInterrupted(ex, false);
 
                 await DisposeAsync().ConfigureAwait(false);
 
@@ -675,6 +692,11 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                 }
             }
+        }
+
+        public void Start()
+        {
+            AsyncHelpers.RunSync(StartAsync);
         }
     }
 }

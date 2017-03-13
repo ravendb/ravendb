@@ -328,7 +328,7 @@ class indexes extends viewModelBase {
     }
 
     protected afterClientApiConnected() {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         this.addNotification(changesApi.watchAllIndexes(e => this.processIndexEvent(e)));
         this.addNotification(changesApi.watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent()));
     }

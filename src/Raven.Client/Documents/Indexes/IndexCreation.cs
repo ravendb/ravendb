@@ -12,12 +12,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Compilation;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Sparrow.Logging;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -94,70 +92,7 @@ namespace Raven.Client.Documents.Indexes
                 throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
         }
 
-        /// <summary>
-        /// Creates the indexes found in the specified assembly in side-by-side mode.
-        /// </summary>
-        public static void SideBySideCreateIndexes(Assembly assemblyToScan, IDocumentStore store, DocumentConventions conventions = null, long? minimumEtagBeforeReplace = null)
-        {
-            AsyncHelpers.RunSync(() => SideBySideCreateIndexesAsync(assemblyToScan, store, conventions, minimumEtagBeforeReplace));
-        }
-
-        /// <summary>
-        /// Creates the indexes found in the specified assembly in side-by-side mode.
-        /// </summary>
-        public static Task SideBySideCreateIndexesAsync(Assembly assemblyToScan, IDocumentStore store, DocumentConventions conventions = null, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
-        {
-            var indexes = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan);
-            var transformers = GetAllInstancesOfType<AbstractTransformerCreationTask>(assemblyToScan);
-
-            return SideBySideCreateIndexesAsync(indexes, transformers, store, conventions, minimumEtagBeforeReplace, token);
-        }
-
-        public static void SideBySideCreateIndexes(IEnumerable<AbstractIndexCreationTask> indexes, IEnumerable<AbstractTransformerCreationTask> transformers, IDocumentStore store, DocumentConventions conventions = null, long? minimumEtagBeforeReplace = null)
-        {
-            AsyncHelpers.RunSync(() => SideBySideCreateIndexesAsync(indexes, transformers, store, conventions, minimumEtagBeforeReplace));
-        }
-
-        public static async Task SideBySideCreateIndexesAsync(IEnumerable<AbstractIndexCreationTask> indexes, IEnumerable<AbstractTransformerCreationTask> transformers, IDocumentStore store, DocumentConventions conventions = null, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
-        {
-            var indexesList = indexes?.ToList() ?? new List<AbstractIndexCreationTask>();
-            var transformersList = transformers?.ToList() ?? new List<AbstractTransformerCreationTask>();
-
-            if (conventions == null)
-                conventions = store.Conventions;
-
-            var indexCompilationExceptions = new List<IndexCompilationException>();
-            try
-            {
-                var indexesToAdd = CreateIndexesToAdd(indexesList, conventions, minimumEtagBeforeReplace);
-                await store.Admin.SendAsync(new PutIndexesOperation(indexesToAdd), token).ConfigureAwait(false);
-            }
-            // For old servers that don't have the new endpoint for executing multiple indexes
-            catch (Exception)
-            {
-                foreach (var task in indexesList)
-                {
-                    try
-                    {
-                        await task.SideBySideExecuteAsync(store, conventions, minimumEtagBeforeReplace, token).ConfigureAwait(false);
-                    }
-                    catch (IndexCompilationException e)
-                    {
-                        indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile side by side index name = " + task.IndexName, e));
-                    }
-                }
-            }
-
-            foreach (var task in transformersList)
-                await task.ExecuteAsync(store, conventions, token).ConfigureAwait(false);
-
-            if (indexCompilationExceptions.Any())
-                throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
-        }
-
-        internal static IndexDefinition[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks,
-            DocumentConventions conventions,
-            long? minimumEtagBeforeReplace = null)
+        internal static IndexDefinition[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConventions conventions)
         {
             var indexesToAdd = indexCreationTasks
                 .Select(x =>
@@ -165,7 +100,6 @@ namespace Raven.Client.Documents.Indexes
                     x.Conventions = conventions;
                     var definition = x.CreateIndexDefinition();
                     definition.Name = x.IndexName;
-                    definition.MinimumEtagBeforeReplace = minimumEtagBeforeReplace;
                     definition.Priority = x.Priority ?? IndexPriority.Normal;
                     return definition;
                 })

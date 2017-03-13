@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             PersistGroupByFields(context, writer);
         }
 
-        protected override IndexDefinition CreateIndexDefinition()
+        protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
             var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
             var reduce = $"{Collections.First()}:[{string.Join(";", GroupByFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted},Operation:{x.Value.MapReduceOperation}>"))}]";

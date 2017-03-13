@@ -1,25 +1,20 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import resource = require("models/resources/resource");
 import database = require("models/resources/database");
-import filesystem = require("models/filesystem/filesystem");
-import counterStorage = require("models/counter/counterStorage");
 import backupDatabaseCommand = require("commands/maintenance/backupDatabaseCommand");
-import backupFilesystemCommand = require("commands/filesystem/backupFilesystemCommand");
-import backupCounterStorageCommand = require("commands/counter/backupCounterStorageCommand");
 import getResourceDrives = require("commands/resources/getResourceDrives");
 import accessHelper = require("viewmodels/shell/accessHelper");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 
 class resourceBackup {
-    resourcesManger = resourcesManager.default;
+    databasesManager = databasesManager.default;
 
     incremental = ko.observable<boolean>(false);
     resourceName = ko.observable<string>('');
     backupLocation = ko.observable<string>('');
     backupStatusMessages = ko.observableArray<backupMessageDto>();
     isBusy = ko.observable<boolean>(); 
-    resourcesNames: KnockoutComputed<string[]>;
+    databaseNames: KnockoutComputed<string[]>;
     fullTypeName: KnockoutComputed<string>;
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
@@ -32,8 +27,8 @@ class resourceBackup {
         return resourceDrives.indexOf(location) !== -1;
     }); 
 
-    constructor(private qualifier: string, private resources: KnockoutComputed<resource[]>) {
-        this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
+    constructor(private qualifier: string, private resources: KnockoutObservableArray<database>) {
+        this.databaseNames = ko.computed(() => resources().map((rs: database) => rs.name));
 
         this.fullTypeName = ko.computed(() => {
             var rs = resources();
@@ -45,16 +40,16 @@ class resourceBackup {
         });
 
         this.searchResults = ko.computed(() => {
-            var newResourceName = this.resourceName();
-            return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
+            var newDatabaseName = this.resourceName();
+            return this.databaseNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
         });
 
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
-            var newResourceName = this.resourceName();
-            var foundRs = this.resources().find((rs: resource) => newResourceName === rs.name && rs.qualifier === this.qualifier);
+            var newDatabaseName = this.resourceName();
+            var foundDb = this.resources().find((rs: database) => newDatabaseName === rs.name && rs.qualifier === this.qualifier);
 
-            if (!foundRs && newResourceName.length > 0) {
+            if (!foundDb && newDatabaseName.length > 0) {
                 errorMessage = this.fullTypeName() + " name doesn't exist!";
             }
 
@@ -62,7 +57,7 @@ class resourceBackup {
         });
 
         this.resourceName.throttle(200).subscribe((resource) => {
-            var foundRs = this.resources().find((rs: resource) => resource === rs.name && rs.qualifier === this.qualifier);
+            var foundRs = this.resources().find((rs: database) => resource === rs.name && rs.qualifier === this.qualifier);
             if (foundRs) {
                 new getResourceDrives(foundRs.name, foundRs.type.toString()).execute()
                     .done((drives: string[]) => {
@@ -96,11 +91,9 @@ class resourceBackup {
 
 class backupDatabase extends viewModelBase {
 
-    resourcesManager = resourcesManager.default;
+    databasesManager = databasesManager.default;
 
-    private dbBackupOptions = new resourceBackup(database.qualifier, this.resourcesManager.databases);
-    private fsBackupOptions = new resourceBackup(filesystem.qualifier, this.resourcesManager.fileSystems);
-    private csBackupOptions = new resourceBackup(counterStorage.qualifier, this.resourcesManager.counterStorages);
+    private dbBackupOptions = new resourceBackup(database.qualifier, this.databasesManager.databases);
     
     isForbidden = ko.observable<boolean>();
 
@@ -117,35 +110,14 @@ class backupDatabase extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         $('form :input[name="databaseName"]').on("keypress", (e) => e.which !== 13);
-        $('form :input[name="filesystemName"]').on("keypress", (e) => e.which !== 13);
     }
 
     startDbBackup() {
         var backupOptions = this.dbBackupOptions;
         backupOptions.isBusy(true);
 
-        const dbTobackup = this.resourcesManager.getDatabaseByName(backupOptions.resourceName());
+        const dbTobackup = this.databasesManager.getDatabaseByName(backupOptions.resourceName());
         new backupDatabaseCommand(dbTobackup, backupOptions.backupLocation(), backupOptions.updateBackupStatus.bind(this.dbBackupOptions), backupOptions.incremental())
-            .execute()
-            .always(() => backupOptions.isBusy(false));
-    }
-
-    startFsBackup() {
-        var backupOptions = this.fsBackupOptions;
-        backupOptions.isBusy(true);
-
-        const fsToBackup = this.resourcesManager.getFileSystemByName(backupOptions.resourceName());
-        new backupFilesystemCommand(fsToBackup, backupOptions.backupLocation(), backupOptions.updateBackupStatus.bind(this.fsBackupOptions), backupOptions.incremental())
-            .execute()
-            .always(() => backupOptions.isBusy(false));
-    }
-
-    startCsBackup() {
-        var backupOptions = this.csBackupOptions;
-        backupOptions.isBusy(true);
-
-        const csToBackup = this.resourcesManager.getCounterStorageByName(backupOptions.resourceName());
-        new backupCounterStorageCommand(csToBackup, backupOptions.backupLocation(), backupOptions.updateBackupStatus.bind(this.csBackupOptions), backupOptions.incremental())
             .execute()
             .always(() => backupOptions.isBusy(false));
     }

@@ -1,5 +1,4 @@
-﻿import resource = require("models/resources/resource");
-import app = require("durandal/app");
+﻿import app = require("durandal/app");
 import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
 
@@ -9,7 +8,7 @@ import performanceHint = require("common/notifications/models/performanceHint");
 import recentError = require("common/notifications/models/recentError");
 import operation = require("common/notifications/models/operation");
 
-import resourceNotificationCenterClient = require("common/resourceNotificationCenterClient");
+import databaseNotificationCenterClient = require("common/databaseNotificationCenterClient");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
 import changeSubscription = require("common/changeSubscription");
 import notificationCenterOperationsWatch = require("common/notifications/notificationCenterOperationsWatch");
@@ -38,10 +37,10 @@ class notificationCenter {
     showNotifications = ko.observable<boolean>(false);
 
     globalNotifications = ko.observableArray<abstractNotification>();
-    resourceNotifications = ko.observableArray<abstractNotification>();
+    databaseNotifications = ko.observableArray<abstractNotification>();
 
     globalOperationsWatch = new notificationCenterOperationsWatch();
-    resourceOperationsWatch = new notificationCenterOperationsWatch();
+    databseOperationsWatch = new notificationCenterOperationsWatch();
 
     allNotifications: KnockoutComputed<abstractNotification[]>;
 
@@ -66,9 +65,9 @@ class notificationCenter {
     private initializeObservables() {
         this.allNotifications = ko.pureComputed(() => {
             const globalNotifications = this.globalNotifications();
-            const resourceNotifications = this.resourceNotifications();
+            const databaseNotifications = this.databaseNotifications();
 
-            const mergedNotifications = globalNotifications.concat(resourceNotifications);
+            const mergedNotifications = globalNotifications.concat(databaseNotifications);
 
             return _.sortBy(mergedNotifications, x => -1 * x.createdAt().unix());
         });
@@ -104,20 +103,20 @@ class notificationCenter {
         serverWideClient.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.globalNotifications, null));
     }
 
-    configureForResource(client: resourceNotificationCenterClient): changeSubscription[] {
-        const rs = client.getResource();
-        this.resourceOperationsWatch.configureFor(rs);
+    configureForDatabase(client: databaseNotificationCenterClient): changeSubscription[] {
+        const db = client.getDatabase();
+        this.databseOperationsWatch.configureFor(db);
 
         return [
-            client.watchAllAlerts(e => this.onAlertReceived(e, this.resourceNotifications, rs)),
-            client.watchAllPerformanceHints(e => this.onPerformanceHintReceived(e, this.resourceNotifications, rs)),
-            client.watchAllOperations(e => this.onOperationChangeReceived(e, this.resourceNotifications, rs)),
-            client.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.resourceNotifications, rs))
+            client.watchAllAlerts(e => this.onAlertReceived(e, this.databaseNotifications, db)),
+            client.watchAllPerformanceHints(e => this.onPerformanceHintReceived(e, this.databaseNotifications, db)),
+            client.watchAllOperations(e => this.onOperationChangeReceived(e, this.databaseNotifications, db)),
+            client.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.databaseNotifications, db))
         ];
     }
 
-    resourceDisconnected() {
-        this.resourceNotifications.removeAll();
+    databaseDisconnected() {
+        this.databaseNotifications.removeAll();
     }
 
     private onRecentError(error: recentError) {
@@ -125,34 +124,34 @@ class notificationCenter {
     }
 
     private onPerformanceHintReceived(performanceHintDto: Raven.Server.NotificationCenter.Notifications.PerformanceHint, notificationsContainer: KnockoutObservableArray<abstractNotification>,
-        resource: resource) {
+        database: database) {
         const existingHint = notificationsContainer().find(x => x.id === performanceHintDto.Id) as performanceHint;
         if (existingHint) {
             existingHint.updateWith(performanceHintDto);
         } else {
-            const hintObject = new performanceHint(resource, performanceHintDto);
+            const hintObject = new performanceHint(database, performanceHintDto);
             notificationsContainer.push(hintObject);
         }
     }
 
     private onAlertReceived(alertDto: Raven.Server.NotificationCenter.Notifications.AlertRaised, notificationsContainer: KnockoutObservableArray<abstractNotification>,
-        resource: resource) {
+        database: database) {
         const existingAlert = notificationsContainer().find(x => x.id === alertDto.Id) as alert;
         if (existingAlert) {
             existingAlert.updateWith(alertDto);
         } else {
-            const alertObject = new alert(resource, alertDto);
+            const alertObject = new alert(database, alertDto);
             notificationsContainer.push(alertObject);
         }
     }
 
     private onOperationChangeReceived(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,
-        resource: resource) {
+        database: database) {
         const existingOperation = notificationsContainer().find(x => x.id === operationDto.Id) as operation;
         if (existingOperation) {
             existingOperation.updateWith(operationDto);
         } else {
-            const operationChangedObject = new operation(resource, operationDto);
+            const operationChangedObject = new operation(database, operationDto);
             notificationsContainer.push(operationChangedObject);
         }
 
@@ -161,11 +160,11 @@ class notificationCenter {
             this.spinners.kill.remove(operationDto.Id);
         }
 
-        this.getOperationsWatch(resource).onOperationChange(operationDto);
+        this.getOperationsWatch(database).onOperationChange(operationDto);
     }
 
     private onNotificationUpdated(notificationUpdatedDto: Raven.Server.NotificationCenter.Notifications.NotificationUpdated, notificationsContainer: KnockoutObservableArray<abstractNotification>,
-        resource: resource) {
+        database: database) {
 
         const existingOperation = notificationsContainer().find(x => x.id === notificationUpdatedDto.NotificationId) as operation;
         if (existingOperation) {
@@ -173,16 +172,16 @@ class notificationCenter {
         }
     }
 
-    private getOperationsWatch(rs: resource) {
-        return rs ? this.resourceOperationsWatch : this.globalOperationsWatch;
+    private getOperationsWatch(db: database) {
+        return db ? this.databseOperationsWatch : this.globalOperationsWatch;
     }
 
     monitorOperation<TProgress extends Raven.Client.Documents.Operations.IOperationProgress,
-        TResult extends Raven.Client.Documents.Operations.IOperationResult>(rs: resource,
+        TResult extends Raven.Client.Documents.Operations.IOperationResult>(db: database,
         operationId: number,
         onProgress: (progress: TProgress) => void = null): JQueryPromise<TResult> {
 
-        return this.getOperationsWatch(rs).monitorOperation(operationId, onProgress);
+        return this.getOperationsWatch(db).monitorOperation(operationId, onProgress);
     }
 
     postpone(notification: abstractNotification, timeInSeconds: number) {
@@ -190,7 +189,7 @@ class notificationCenter {
 
         this.spinners.postpone.push(notificationId);
 
-        new postponeNotificationCommand(notification.resource, notificationId, timeInSeconds)
+        new postponeNotificationCommand(notification.database, notificationId, timeInSeconds)
             .execute()
             .always(() => this.spinners.postpone.remove(notificationId))
             .done(() => this.removeNotificationFromNotificationCenter(notification));
@@ -208,7 +207,7 @@ class notificationCenter {
 
             this.spinners.dismiss.push(notificationId);
 
-            new dismissNotificationCommand(notification.resource, notificationId, shouldDismissForever)
+            new dismissNotificationCommand(notification.database, notificationId, shouldDismissForever)
                 .execute()
                 .always(() => this.spinners.dismiss.remove(notificationId))
                 .done(() => this.removeNotificationFromNotificationCenter(notification));
@@ -217,7 +216,7 @@ class notificationCenter {
 
     private removeNotificationFromNotificationCenter(notification: abstractNotification) {
         this.globalNotifications.remove(notification);
-        this.resourceNotifications.remove(notification);
+        this.databaseNotifications.remove(notification);
     }
 
     killOperation(operationToKill: operation) {
@@ -225,7 +224,7 @@ class notificationCenter {
 
         this.spinners.kill.push(notificationId);
 
-        new killOperationCommand(operationToKill.resource as database, operationToKill.operationId())
+        new killOperationCommand(operationToKill.database, operationToKill.operationId())
             .execute()
             .fail(() => {
                 // we don't call remove in always since killOperationCommand only delivers kill signal and doesn't wait for actual kill
@@ -233,22 +232,22 @@ class notificationCenter {
             });
     }
 
-    openDetailsForOperationById(rs: resource, operationId: number): void {
-        const existingNotification = this.getOperationById(rs, operationId);
+    openDetailsForOperationById(db: database, operationId: number): void {
+        const existingNotification = this.getOperationById(db, operationId);
         if (existingNotification) {
             this.openDetails(existingNotification);
         } else {
             const showDialog = _.once(() => {
                 // at this point operation have to exist
-                this.openDetails(this.getOperationById(rs, operationId));
+                this.openDetails(this.getOperationById(db, operationId));
             });
 
-            this.monitorOperation(rs, operationId, () => showDialog());
+            this.monitorOperation(db, operationId, () => showDialog());
         }
     }
 
-    private getOperationById(rs: resource, operationId: number) {
-        const notificationsArray = rs ? this.resourceNotifications() : this.globalNotifications();
+    private getOperationById(db: database, operationId: number) {
+        const notificationsArray = db ? this.databaseNotifications() : this.globalNotifications();
         return notificationsArray.find(x => x instanceof operation && x.operationId() === operationId);
     }
 

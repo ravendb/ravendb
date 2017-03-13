@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Voron.Data.BTrees;
 using Voron.Data.RawData;
 using Voron.Impl;
@@ -230,7 +231,7 @@ namespace Voron.Data.Tables
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
-                Debug.Assert(totalSize == sizeof(long));
+                Debug.Assert(totalSize == sizeof(long), $"{totalSize} == sizeof(long) - {Name}");
                 return Bits.SwapBytes(*(long*) ptr);
             }
 

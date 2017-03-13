@@ -1,4 +1,4 @@
-﻿import activeResourceTracker = require("common/shell/activeResourceTracker");
+﻿import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
@@ -6,7 +6,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 export = getStatsMenuItem;
 
 function getStatsMenuItem(appUrls: computedAppUrls) {
-    let activeDatabase = activeResourceTracker.default.database;
+    let activeDatabase = activeDatabaseTracker.default.database;
     var items: menuItem[] = [
         new leafMenuItem({
             route: 'databases/status/storage/report',
@@ -23,7 +23,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                 route: 'databases/status/storage',
                 moduleId: 'viewmodels/database/status/storage/statusStorageOnDisk',
                 title: 'On disk',
-                tooltip: "Shows disk usage for active resource",
+                tooltip: "Shows disk usage for active database",
                 nav: accessHelper.isGlobalAdmin(),
                 dynamicHash: appUrls.statusStorageOnDisk
             }),

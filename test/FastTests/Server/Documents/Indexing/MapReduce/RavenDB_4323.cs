@@ -234,7 +234,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
     public class RavenDB_4323_Replication : ReplicationTestsBase, IDocumentTombstoneAware
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6533 - racy")]
         public async Task ReduceOutputShouldNotBeReplicated()
         {
             var date = new DateTime(2017,2,14);

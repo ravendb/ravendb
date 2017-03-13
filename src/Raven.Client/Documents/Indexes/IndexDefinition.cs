@@ -20,7 +20,6 @@ namespace Raven.Client.Documents.Indexes
         public IndexDefinition()
         {
             _configuration = new IndexConfiguration();
-            Priority = IndexPriority.Normal;
         }
 
         /// <summary>
@@ -34,14 +33,9 @@ namespace Raven.Client.Documents.Indexes
         public string Name { get; set; }
 
         /// <summary>
-        /// Minimum etag before replacement
-        /// </summary>
-        public long? MinimumEtagBeforeReplace { get; set; }
-
-        /// <summary>
         /// Priority of an index
         /// </summary>
-        public IndexPriority Priority { get; set; }
+        public IndexPriority? Priority { get; set; }
 
         /// <summary>
         /// Index lock mode:
@@ -49,7 +43,7 @@ namespace Raven.Client.Documents.Indexes
         /// <para>- LockedIgnore - all index definition changes will be ignored, only log entry will be created</para>
         /// <para>- LockedError - all index definition changes will raise exception</para>
         /// </summary>
-        public IndexLockMode LockMode { get; set; }
+        public IndexLockMode? LockMode { get; set; }
 
         /// <summary>
         /// All the map functions for this index
@@ -124,10 +118,28 @@ namespace Raven.Client.Documents.Indexes
                 result |= IndexDefinitionCompareDifferences.Reduce;
 
             if (LockMode != other.LockMode)
-                result |= IndexDefinitionCompareDifferences.LockMode;
+            {
+                if ((LockMode == null && other.LockMode == IndexLockMode.Unlock) || (LockMode == IndexLockMode.Unlock && other.LockMode == null))
+                {
+                    // same
+                }
+                else
+                {
+                    result |= IndexDefinitionCompareDifferences.LockMode;
+                }
+            }
 
             if (Priority != other.Priority)
-                result |= IndexDefinitionCompareDifferences.Priority;
+            {
+                if ((Priority == null && other.Priority == IndexPriority.Normal) || (Priority == IndexPriority.Normal && other.Priority == null))
+                {
+                    // same
+                }
+                else
+                {
+                    result |= IndexDefinitionCompareDifferences.Priority;
+                }
+            }
 
             return result;
         }
@@ -340,11 +352,6 @@ namespace Raven.Client.Documents.Indexes
         public bool IsTestIndex { get; set; }
 
         /// <summary>
-        /// Whatever this is a side by side index
-        /// </summary>
-        public bool IsSideBySideIndex { get; set; }
-
-        /// <summary>
         /// If not null than each reduce result will be created as a document in the specified collection name.
         /// </summary>
         public string OutputReduceToCollection { get; set; }
@@ -352,6 +359,53 @@ namespace Raven.Client.Documents.Indexes
         public override string ToString()
         {
             return Name;
+        }
+
+        internal IndexDefinition Clone()
+        {
+            Dictionary<string, IndexFieldOptions> fields = null;
+            if (_fields != null)
+            {
+                fields = new Dictionary<string, IndexFieldOptions>();
+
+                foreach (var kvp in _fields)
+                {
+                    var value = kvp.Value;
+                    if (value == null)
+                        continue;
+
+                    fields[kvp.Key] = new IndexFieldOptions
+                    {
+                        Indexing = value.Indexing,
+                        Analyzer = value.Analyzer,
+                        Sort = value.Sort,
+                        Spatial = value.Spatial,
+                        Storage = value.Storage,
+                        Suggestions = value.Suggestions,
+                        TermVector = value.TermVector
+                    };
+                }
+            }
+
+            var definition = new IndexDefinition
+            {
+                LockMode = LockMode,
+                Fields = fields,
+                Name = Name,
+                Type = Type,
+                Priority = Priority,
+                IndexId = IndexId,
+                Reduce = Reduce,
+                Maps = new HashSet<string>(Maps),
+                Configuration = new IndexConfiguration(),
+                IsTestIndex = IsTestIndex,
+                OutputReduceToCollection = OutputReduceToCollection
+            };
+
+            foreach (var kvp in _configuration)
+                definition.Configuration[kvp.Key] = kvp.Value;
+
+            return definition;
         }
     }
 

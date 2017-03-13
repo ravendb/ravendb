@@ -171,7 +171,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 if (state.CurrentTokenType != JsonParserToken.String)
                     ThrowInvalidResponse();
 
-                var property = new LazyStringValue(null, state.StringBuffer, state.StringSize, context).ToString();
+                var property = context.AllocateStringValue(null, state.StringBuffer, state.StringSize).ToString();
                 switch (property)
                 {
                     case nameof(GetResponse.Result):

@@ -15,7 +15,7 @@ class getDatabaseStatsCommand extends commandBase {
     }
 
     getQueryUrl(): string {
-        return appUrl.forResourceQuery(this.db) + this.getQueryUrlFragment();
+        return appUrl.forDatabaseQuery(this.db) + this.getQueryUrlFragment();
     }
 
     private getQueryUrlFragment(): string {

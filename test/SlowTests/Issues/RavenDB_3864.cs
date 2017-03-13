@@ -37,26 +37,6 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void can_use_conventions_with_create_side_by_side_indexes_container()
-        {
-            using (var store = GetDocumentStore())
-            {
-                IndexCreation.SideBySideCreateIndexes(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() }, null, store, _conventions);
-                Assert.True(TestFailed.Value == false);
-            }
-        }
-
-        [Fact]
-        public async Task can_use_conventions_with_create_side_by_side_indexes_async_container()
-        {
-            using (var store = GetDocumentStore())
-            {
-                await IndexCreation.SideBySideCreateIndexesAsync(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() }, null, store, _conventions);
-                Assert.True(TestFailed.Value == false);
-            }
-        }
-
-        [Fact]
         public void can_use_conventions_with_create_indexes()
         {
             using (var store = GetDocumentStore())

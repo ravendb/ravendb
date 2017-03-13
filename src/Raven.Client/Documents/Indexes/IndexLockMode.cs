@@ -4,7 +4,6 @@ namespace Raven.Client.Documents.Indexes
     {
         Unlock,
         LockedIgnore,
-        LockedError,
-        SideBySide
+        LockedError
     }
 }

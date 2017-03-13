@@ -1,12 +1,10 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-import resourceCreationModel = require("models/resources/creation/resourceCreationModel");
 import configuration = require("configuration");
 
-class databaseCreationModel extends resourceCreationModel {
-    get resourceType() {
-        return "database";
-    } 
+class databaseCreationModel {
+
+    name = ko.observable<string>("");
 
     indexesPath = ko.observable<string>();
     incrementalBackup = ko.observable<boolean>();
@@ -19,6 +17,12 @@ class databaseCreationModel extends resourceCreationModel {
     alertTimeoutOptions = [4, 8, 12, 24, 48, 72];
     alertRecurringTimeoutOptions = [1, 2, 4, 7, 14];
 
+    dataPath = ko.observable<string>();
+    journalsPath = ko.observable<string>();
+    tempPath = ko.observable<string>();
+
+    activeBundles = ko.observableArray<string>([]);
+
     advancedValidationGroup = ko.validatedObservable({
         dataPath: this.dataPath,
         journalsPath: this.journalsPath,
@@ -26,8 +30,64 @@ class databaseCreationModel extends resourceCreationModel {
         indexesPath: this.indexesPath
     });
 
-    setupValidation(resourceDoesntExist: (name: string) => boolean) {
-        super.setupValidation(resourceDoesntExist);
+    globalValidationGroup = ko.validatedObservable({
+        name: this.name
+    });
+
+    protected setupPathValidation(observable: KnockoutObservable<string>, name: string) {
+        const maxLength = 248;
+
+        const rg1 = /^[^*?"<>\|]*$/; // forbidden characters * ? " < > |
+        const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+
+        observable.extend({
+            maxLength: {
+                params: maxLength,
+                message: `Path name for '${name}' can't exceed ${maxLength} characters!`
+            },
+            validation: [{
+                validator: (val: string) => rg1.test(val),
+                message: `{0} path can't contain any of the following characters: * ? " < > |`,
+                params: name
+            },
+            {
+                validator: (val: string) => !rg3.test(val),
+                message: `The name {0} is forbidden for use!`,
+                params: this.name
+            }]
+        });
+    }
+
+    setupValidation(databaseDoesntExist: (name: string) => boolean) {
+        const rg1 = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
+        const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+
+        this.setupPathValidation(this.dataPath, "Data");
+        this.setupPathValidation(this.tempPath, "Temp");
+        this.setupPathValidation(this.journalsPath, "Journals");
+
+        this.name.extend({
+            required: true,
+            maxLength: 230,
+            validation: [
+                {
+                    validator: databaseDoesntExist,
+                    message: "Database already exists"
+                }, {
+                    validator: (val: string) => rg1.test(val),
+                    message: `The database name can't contain any of the following characters: \\ / : * ? " < > |`,
+                }, {
+                    validator: (val: string) => !val.startsWith("."),
+                    message: `The database name can't start with a dot!`
+                }, {
+                    validator: (val: string) => !val.endsWith("."),
+                    message: `The database name can't end with a dot!`
+                }, {
+                    validator: (val: string) => !rg3.test(val),
+                    message: `The name {0} is forbidden for use!`,
+                    params: this.name
+                }]
+        });
 
         this.setupPathValidation(this.indexesPath, "Indexes");
     }

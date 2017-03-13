@@ -257,15 +257,19 @@ namespace Raven.Server.Documents
 
                     var bitSwappedId = Bits.SwapBytes(indexIndexId);
 
-                    table.Set(new TableValueBuilder
-                        {
-                            {(byte*) &bitSwappedId, sizeof(int)},
-                            {(byte*) &bitSwappedEtag, sizeof(long)},
-                            indexNameAsSlice,
-                            {(byte*) &type, sizeof(byte)},
-                            {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVectorForWrite.Length},
-                            {(byte*) &isConflicted, sizeof(bool)}
-                        });
+                    TableValueBuilder tvb;
+                    using (table.Allocate(out tvb))
+                    {
+                        tvb.Add((byte*)&bitSwappedId, sizeof(int));
+                        tvb.Add((byte*)&bitSwappedEtag, sizeof(long));
+                        tvb.Add(indexNameAsSlice);
+                        tvb.Add((byte*)&type, sizeof(byte));
+                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVectorForWrite.Length);
+                        tvb.Add((byte*)&isConflicted, sizeof(bool));
+
+                        table.Set(tvb);
+                    }
+                        
                 }
             }
 
@@ -592,7 +596,7 @@ namespace Raven.Server.Documents
             if (returnNullIfTombstone && metadata.Id == -1)
                 return null;
 
-            metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size, context).ToString();
+            metadata.Name = context.AllocateStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size).ToString();
 
             metadata.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)MetadataFields.ChangeVector);
             metadata.Type = (IndexEntryType)(*tvr.Read((int)MetadataFields.Type, out size));
@@ -609,7 +613,7 @@ namespace Raven.Server.Documents
 
             int size;
 
-            data.Name = new LazyStringValue(null, tvr.Read((int)ConflictFields.Name, out size), size, context).ToString();
+            data.Name = context.AllocateStringValue(null, tvr.Read((int)ConflictFields.Name, out size), size).ToString();
 
             data.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictFields.ChangeVector);
             data.Type = (IndexEntryType)(*tvr.Read((int)ConflictFields.Type, out size));

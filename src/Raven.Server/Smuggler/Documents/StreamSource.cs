@@ -21,6 +21,7 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class StreamSource : ISmugglerSource
     {
+        private static readonly StringSegment MetadataCollectionSegment = new StringSegment(Constants.Documents.Metadata.Collection );
         private readonly Stream _stream;
         private readonly JsonOperationContext _context;
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
@@ -128,7 +129,7 @@ namespace Raven.Server.Smuggler.Documents
                 var mem = _ctx.GetMemory(maxSizeOfEscapePos + state.StringSize);
                 _allocations.Add(mem);
                 Memory.Copy(mem.Address, state.StringBuffer, state.StringSize);
-                var lazyStringValueFromParserState = new LazyStringValue(null, mem.Address, state.StringSize, _ctx);
+                var lazyStringValueFromParserState = _ctx.AllocateStringValue(null, mem.Address, state.StringSize);
                 if (escapePositionsCount > 0)
                 {
                     lazyStringValueFromParserState.EscapePositions = state.EscapePositions.ToArray();
@@ -281,7 +282,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (*(long*)state.StringBuffer == 7945807069737017682 &&
                                *(long*)(state.StringBuffer + sizeof(long)) == 7881666780093245812)
                             {
-                                var collection = _ctx.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection);
+                                var collection = _ctx.GetLazyStringForFieldWithCaching(MetadataCollectionSegment);
                                 state.StringBuffer = collection.AllocatedMemoryData.Address;
                                 state.StringSize = collection.Size;
                             }
@@ -545,7 +546,7 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.String)
                 ThrowInvalidJson();
 
-            return new LazyStringValue(null, _state.StringBuffer, _state.StringSize, _context).ToString();
+            return _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize).ToString();
         }
 
         private static void ThrowInvalidJson()

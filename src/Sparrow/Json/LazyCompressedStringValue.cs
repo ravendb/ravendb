@@ -19,7 +19,7 @@ namespace Sparrow.Json
         {
             var allocatedUncompressedData = DecompressToAllocatedMemoryData();
 
-            var lazyStringValue = new LazyStringValue(null, allocatedUncompressedData.Address, UncompressedSize, _context);
+            var lazyStringValue = _context.AllocateStringValue(null, allocatedUncompressedData.Address, UncompressedSize);
 
             lazyStringValue.AllocatedMemoryData = allocatedUncompressedData;
             return lazyStringValue;

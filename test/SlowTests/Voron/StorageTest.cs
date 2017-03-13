@@ -193,9 +193,9 @@ namespace SlowTests.Voron
             return Tuple.Create(item1, item2);
         }
 
-        public class SkipWhen32BitsEnvironment : FactAttribute
+        public class TheoryAndSkipWhen32BitsEnvironment : TheoryAttribute
         {
-            public SkipWhen32BitsEnvironment()
+            public TheoryAndSkipWhen32BitsEnvironment()
             {
                 var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
 

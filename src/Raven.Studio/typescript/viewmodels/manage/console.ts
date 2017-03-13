@@ -1,6 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand");
@@ -10,7 +9,7 @@ import eventsCollector = require("common/eventsCollector");
 class consoleJs extends viewModelBase {
     resourceName = ko.observable<string>('');
     isBusy = ko.observable<boolean>();
-    resourcesNames: KnockoutComputed<string[]>;
+    databasesNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
     responseText = ko.observable<string>();
@@ -44,16 +43,16 @@ class consoleJs extends viewModelBase {
 
 
         aceEditorBindingHandler.install();
-        this.resourcesNames = ko.computed(() => this.resourcesManager.databases().map((rs: resource) => rs.name));
+        this.databasesNames = ko.computed(() => this.databasesManager.databases().map((db: database) => db.name));
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
-            return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
+            return this.databasesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newResourceName = this.resourceName();
-            const foundRs = this.resourcesManager.getDatabaseByName(newResourceName);
+            const foundRs = this.databasesManager.getDatabaseByName(newResourceName);
 
             if (!foundRs && newResourceName.length > 0) {
                 errorMessage = "Database name doesn't exist!";
@@ -72,7 +71,6 @@ class consoleJs extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         $('form :input[name="databaseName"]').on("keypress",(e) => e.which != 13);
-        $('form :input[name="filesystemName"]').on("keypress",(e) => e.which != 13);
     }
 
     executeJs() {

@@ -25,7 +25,7 @@ class dataExplorationCommand extends commandBase {
         var requestWithCsvDownload: any = this.request;
         requestWithCsvDownload.download = "true";
         requestWithCsvDownload.format = "excel";
-        return appUrl.forResourceQuery(this.db) + "/streams/exploration/" + this.urlEncodeArgs(requestWithCsvDownload);//TODO: use endpoints
+        return appUrl.forDatabaseQuery(this.db) + "/streams/exploration/" + this.urlEncodeArgs(requestWithCsvDownload);//TODO: use endpoints
     }
 }
 

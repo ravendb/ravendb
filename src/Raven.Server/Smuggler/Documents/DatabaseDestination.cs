@@ -270,10 +270,10 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (var document in Documents)
                 {
                     var key = document.Key;
-             
+
                     if (IsRevision)
                     {
-                            _database.BundleLoader.VersioningStorage.PutDirect(context, key, document.Data,document.ChangeVector);
+                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, document.Data, document.ChangeVector);
                     }
                     else if (_buildVersion < 40000 && key.Contains("/revisions/"))
                     {

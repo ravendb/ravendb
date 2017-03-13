@@ -248,7 +248,7 @@ namespace Voron.Data.BTrees
             decompressedPage.RemoveNode(decompressedPage.LastSearchPosition);
         }
 
-        private void DeleteOnCompressedPage(TreePage page, Slice keyToDelete, Func<Slice, TreeCursor> cursorConstructor)
+        private void DeleteOnCompressedPage(TreePage page, Slice keyToDelete, ref TreeCursorConstructor cursorConstructor)
         {
             var tombstoneNodeSize = page.GetRequiredSpace(keyToDelete, 0);
 
@@ -276,7 +276,7 @@ namespace Voron.Data.BTrees
 
                 RemoveLeafNode(decompressed);
 
-                using (var cursor = cursorConstructor(keyToDelete))
+                using (var cursor = cursorConstructor.Build(keyToDelete))
                 {
                     var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
                     var changedPage = (TreePage)decompressed;
@@ -308,9 +308,8 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                Func<Slice, TreeCursor> cursor;
-
-                var page = SearchForPage(key, true, out cursor, out node, addToRecentlyFoundPages: false);
+                TreeCursorConstructor _;
+                var page = SearchForPage(key, true, out _, out node, addToRecentlyFoundPages: false);
 
                 if (page.IsCompressed)
                 {
