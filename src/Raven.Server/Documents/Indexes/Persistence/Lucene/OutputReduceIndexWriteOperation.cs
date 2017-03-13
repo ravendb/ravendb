@@ -30,10 +30,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override void Commit(IndexingStatsScope stats)
         {
-            var enqueue = DocumentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
-            base.Commit(stats);
             try
             {
+                var enqueue = DocumentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
+                base.Commit(stats);
                 using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
                     enqueue.Wait();
             }
