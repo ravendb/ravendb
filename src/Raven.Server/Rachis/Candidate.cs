@@ -56,7 +56,7 @@ namespace Raven.Server.Rachis
                         CastVoteForSelf();
                     }
 
-                    foreach (var voter in clusterTopology.Voters)
+                    foreach (var voter in clusterTopology.Members)
                     {
                         if (voter.Key == _engine.Tag)
                             continue; // we already voted for ourselves

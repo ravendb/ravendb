@@ -5,19 +5,19 @@ namespace Raven.Server.Rachis
 {
     public class ClusterTopology
     {
-        public ClusterTopology(string topologyId, string apiKey, Dictionary<string, string> voters, Dictionary<string, string> promotables, Dictionary<string, string> nonVotingMembers, string lastNodeId)
+        public ClusterTopology(string topologyId, string apiKey, Dictionary<string, string> members, Dictionary<string, string> promotables, Dictionary<string, string> watchers, string lastNodeId)
         {
             TopologyId = topologyId;
             ApiKey = apiKey;
-            Voters = voters;
+            Members = members;
             Promotables = promotables;
-            NonVotingMembers = nonVotingMembers;
+            Watchers = watchers;
             LastNodeId = lastNodeId;
         }
 
         public bool Contains(string node)
         {
-            return Voters.ContainsKey(node) || Promotables.ContainsKey(node) || NonVotingMembers.ContainsKey(node);
+            return Members.ContainsKey(node) || Promotables.ContainsKey(node) || Watchers.ContainsKey(node);
         }
 
         public ClusterTopology()
@@ -29,8 +29,8 @@ namespace Raven.Server.Rachis
         public readonly string LastNodeId;
         public readonly string TopologyId;
         public readonly string ApiKey;
-        public readonly Dictionary<string,string> Voters;
+        public readonly Dictionary<string,string> Members;
         public readonly Dictionary<string,string> Promotables;
-        public readonly Dictionary<string,string> NonVotingMembers;
+        public readonly Dictionary<string,string> Watchers;
     }
 }

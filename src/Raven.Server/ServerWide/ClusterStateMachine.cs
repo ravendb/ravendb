@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
+using Org.BouncyCastle.Math.EC.Multiplier;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
-using Raven.Server.Config.Settings;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -53,12 +55,19 @@ namespace Raven.Server.ServerWide
             if (cmd.TryGet("Type", out type) == false)
                 return;
 
-
             switch (type)
             {
                 case nameof(AddDatabaseCommand):
                     AddDatabase(context, cmd, index, leader);
                     break;
+                case nameof(DeleteDatabaseCommand):
+                    DeleteDatabase(context, cmd, index, leader);
+                    break;
+
+                case nameof(RemoveNodeFromDatabaseCommand):
+                    RemoveNodeFromDatabase(context, cmd, index, leader);
+                    break;
+
                 case nameof(DeleteValueCommand):
                     DeleteValue(context, cmd, index, leader);
                     break;
@@ -75,7 +84,120 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void TEMP_DeleteValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            var remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
+            Slice loweredKey;
+            Slice key;
+            var databaseName = remove.DatabaseName;
+            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out loweredKey))
+            using (Slice.From(context.Allocator, "db/" + databaseName, out key))
+            {
+                TableValueReader reader;
+                if (items.ReadByKey(loweredKey, out reader) == false)
+                {
+                    NotifyLeaderAboutError(index, leader, $"The database {databaseName} does not exists");
+                    return;
+                }
+                int size;
+                var doc = new BlittableJsonReaderObject(reader.Read(2, out size), size, context);
+
+                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+
+                BlittableJsonReaderObject topology;
+                if (doc.TryGet(nameof(DatabaseRecord.Topology), out topology) == false)
+                {
+                    items.DeleteByKey(loweredKey);
+                    return;
+                }
+
+                databaseRecord.Topology.Members.Remove(remove.NodeTag);
+                databaseRecord.Topology.Promotables.Remove(remove.NodeTag);
+                databaseRecord.Topology.Watchers.Remove(remove.NodeTag);
+
+                if (databaseRecord.Topology.Members.Count == 0 &&
+                    databaseRecord.Topology.Promotables.Count == 0 &&
+                    databaseRecord.Topology.Watchers.Count == 0)
+                {
+                    items.DeleteByKey(loweredKey);
+                    return;
+                }
+
+                var entityToBlittable = new EntityToBlittable(null);
+                var updated = entityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
+
+                TableValueBuilder builder;
+                using (items.Allocate(out builder))
+                {
+                    builder.Add(loweredKey);
+                    builder.Add(key);
+                    builder.Add(updated.BasePointer, updated.Size);
+                    builder.Add(index);
+
+                    items.Set(builder);
+                }
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+                {
+                    Task.Run(() =>
+                    {
+                        DatabaseChanged?.Invoke(this, databaseName);
+                    });
+                };
+            }
+        }
+
+        private unsafe void DeleteDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            var delDb = JsonDeserializationCluster.DeleteDatabaseCommand(cmd);
+            Slice loweredKey;
+            Slice key;
+            var databaseName = delDb.DatabaseName;
+            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out loweredKey))
+            using (Slice.From(context.Allocator, "db/" + databaseName, out key))
+            {
+                TableValueReader reader;
+                if (items.ReadByKey(loweredKey, out reader) == false)
+                {
+                    NotifyLeaderAboutError(index, leader, $"The database {databaseName} does not exists");
+                    return;
+                }
+
+                int size;
+                var doc = new BlittableJsonReaderObject(reader.Read(2, out size), size, context);
+
+                doc.Modifications = new DynamicJsonValue(doc)
+                {
+                    [nameof(DatabaseRecord.DeletionInProgress)] = true
+                };
+
+                using (var updated = context.ReadObject(doc, databaseName))
+                {
+                    TableValueBuilder builder;
+                    using (items.Allocate(out builder))
+                    {
+                        builder.Add(loweredKey);
+                        builder.Add(key);
+                        builder.Add(updated.BasePointer, updated.Size);
+                        builder.Add(index);
+
+                        items.Set(builder);
+                    }
+                }
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+                {
+                    Task.Run(() =>
+                    {
+                        DatabaseChanged?.Invoke(this, databaseName);
+                    });
+                };
+            }
+        }
+
+        private void TEMP_DeleteValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
@@ -84,13 +206,22 @@ namespace Raven.Server.ServerWide
             {
                 items.DeleteByKey(str);
             }
+
+
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+            {
+                Task.Run(() =>
+                {
+                    DatabaseChanged?.Invoke(this, delCmd.Name.Replace("db/", ""));
+                });
+            };
         }
 
-        private static unsafe void TEMP_PutValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe void TEMP_PutValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var setDb = JsonDeserializationCluster.TEMP_SetDatabaseCommand(cmd);
-           
+
             TableValueBuilder builder;
             Slice valueName, valueNameLowered;
             using (items.Allocate(out builder))
@@ -125,6 +256,14 @@ namespace Raven.Server.ServerWide
                 builder.Add(index);
 
                 items.Set(builder);
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+                {
+                    Task.Run(() =>
+                    {
+                        DatabaseChanged?.Invoke(this, setDb.Name.Replace("db/", ""));
+                    });
+                };
             }
         }
 
@@ -170,7 +309,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private  unsafe void AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe void AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var addDb = JsonDeserializationCluster.AddDatabaseCommand(cmd);
@@ -327,6 +466,11 @@ namespace Raven.Server.ServerWide
         public DatabaseTopology Topology;
     }
 
+    public class DeleteDatabaseCommand
+    {
+        public string DatabaseName;
+    }
+
     public class TEMP_SetDatabaseCommand
     {
         public string Name;
@@ -342,9 +486,22 @@ namespace Raven.Server.ServerWide
 
     public class DatabaseTopology
     {
-        public string[] Members;
-        public string[] Promotables;
-        public string[] Watchers;
+        public List<string> Members = new List<string>();
+        public List<string> Promotables = new List<string>();
+        public List<string> Watchers = new List<string>();
+
+        public bool RelevantFor(string nodeTag)
+        {
+            return Members.Contains(nodeTag) ||
+                   Promotables.Contains(nodeTag) ||
+                   Watchers.Contains(nodeTag);
+        }
+    }
+
+    public class RemoveNodeFromDatabaseCommand
+    {
+        public string DatabaseName;
+        public string NodeTag;
     }
 
     public class DatabaseRecord
@@ -372,7 +529,12 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, DeleteValueCommand> DeleteValueCommand = GenerateJsonDeserializationRoutine<DeleteValueCommand>();
 
+        public static readonly Func<BlittableJsonReaderObject, DeleteDatabaseCommand> DeleteDatabaseCommand = GenerateJsonDeserializationRoutine<DeleteDatabaseCommand>();
+
         public static readonly Func<BlittableJsonReaderObject, AddDatabaseCommand> AddDatabaseCommand = GenerateJsonDeserializationRoutine<AddDatabaseCommand>();
+
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
+
+        public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
     }
 }

@@ -196,14 +196,14 @@ namespace Raven.Server.Rachis
                 // an admin needs to let us know that it is fine, either
                 // by explicit bootstraping or by connecting us to a cluster
                 if (topology.TopologyId == null ||
-                    topology.Voters.ContainsKey(_tag) == false)
+                    topology.Members.ContainsKey(_tag) == false)
                 {
                     CurrentState = State.Passive;
                     return;
                 }
 
                 CurrentState = State.Follower;
-                if (topology.Voters.Count == 1)
+                if (topology.Members.Count == 1)
                     SwitchToSingleLeader();
                 else
                     Timeout.Start(SwitchToCandidateStateOnTimeout);
@@ -257,7 +257,7 @@ namespace Raven.Server.Rachis
                     switch (modification)
                     {
                         case Leader.TopologyModification.Voter:
-                            if (clusterTopology.Voters.ContainsKey(tag))
+                            if (clusterTopology.Members.ContainsKey(tag))
                                 return;
                             break;
                         case Leader.TopologyModification.Promotable:
@@ -265,13 +265,13 @@ namespace Raven.Server.Rachis
                                 return;
                             break;
                         case Leader.TopologyModification.NonVoter:
-                            if (clusterTopology.NonVotingMembers.ContainsKey(tag))
+                            if (clusterTopology.Watchers.ContainsKey(tag))
                                 return;
                             break;
                         case Leader.TopologyModification.Remove:
-                            if (clusterTopology.Voters.ContainsKey(tag) == false &&
+                            if (clusterTopology.Members.ContainsKey(tag) == false &&
                                 clusterTopology.Promotables.ContainsKey(tag) == false &&
-                                clusterTopology.NonVotingMembers.ContainsKey(tag) == false)
+                                clusterTopology.Watchers.ContainsKey(tag) == false)
                                 return;
                             break;
                         default:
@@ -394,7 +394,7 @@ namespace Raven.Server.Rachis
             {
                 var clusterTopology = GetTopology(context);
                 if (clusterTopology.TopologyId == null ||
-                    clusterTopology.Voters.ContainsKey(_tag) == false)
+                    clusterTopology.Members.ContainsKey(_tag) == false)
                 {
                     if (Log.IsInfoEnabled)
                     {
@@ -478,9 +478,9 @@ namespace Raven.Server.Rachis
             {
                 [nameof(ClusterTopology.TopologyId)] = topology.TopologyId,
                 [nameof(ClusterTopology.ApiKey)] = topology.ApiKey,
-                [nameof(ClusterTopology.Voters)] = ToDynamicJsonValue(topology.Voters),
+                [nameof(ClusterTopology.Members)] = ToDynamicJsonValue(topology.Members),
                 [nameof(ClusterTopology.Promotables)] = ToDynamicJsonValue(topology.Promotables),
-                [nameof(ClusterTopology.NonVotingMembers)] = ToDynamicJsonValue(topology.NonVotingMembers),
+                [nameof(ClusterTopology.Watchers)] = ToDynamicJsonValue(topology.Watchers),
             };
 
             var topologyJson = context.ReadObject(djv, "topology");

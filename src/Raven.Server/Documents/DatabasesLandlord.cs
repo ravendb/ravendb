@@ -18,6 +18,7 @@ using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Logging;
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents
             _serverStore.Cluster.DatabaseChanged += ClusterOnDatabaseChanged;
         }
 
-        private void ClusterOnDatabaseChanged(object sender, string changedDatabase)
+        private void ClusterOnDatabaseChanged(object sender, string dbName)
         {
             // response to changed database.
             // if disabled, unload
@@ -54,23 +55,44 @@ namespace Raven.Server.Documents
             using (_serverStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
-                var doc = _serverStore.Cluster.Read(context, "db/" + changedDatabase.ToLowerInvariant());
+                var doc = _serverStore.Cluster.Read(context, "db/" + dbName.ToLowerInvariant());
                 if (doc == null)
                 {
                     // was removed, need to make sure that it isn't loaded 
-                    UnloadDatabase(changedDatabase, null);
+                    UnloadDatabase(dbName, null);
                     return;
                 }
 
                 var record = JsonDeserializationCluster.DatabaseRecord(doc);
-                if (record.Disabled)
+
+                if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
+                    return;
+
+                if (record.DeletionInProgress)
                 {
-                    UnloadDatabase(changedDatabase, null);
+                    UnloadDatabase(dbName, null);
+
+                    var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true);
+                    DatabaseHelper.DeleteDatabaseFiles(configuration);
+
+                    _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
+
+                    _serverStore.SendToLeaderAsync(new RemoveNodeFromDatabaseCommand
+                    {
+                        DatabaseName = dbName,
+                        NodeTag = _serverStore.NodeTag
+                    }).Wait();
+
                     return;
                 }
 
+                if (record.Disabled)
+                {
+                    UnloadDatabase(dbName, null);
+                    return;
+                }
                 Task<DocumentDatabase> task;
-                if (DatabasesCache.TryGetValue(changedDatabase, out task) == false)
+                if (DatabasesCache.TryGetValue(dbName, out task) == false)
                     return;
 
                 if (task.IsCanceled || task.IsFaulted)
@@ -78,12 +100,12 @@ namespace Raven.Server.Documents
 
                 if (task.IsCompleted)
                 {
-                    NotifyDatabaseAboutStateChange(changedDatabase, task);
+                    NotifyDatabaseAboutStateChange(dbName, task);
                     return;
                 }
                 task.ContinueWith(done =>
                 {
-                    NotifyDatabaseAboutStateChange(changedDatabase, done);
+                    NotifyDatabaseAboutStateChange(dbName, done);
                 });
             }
 
