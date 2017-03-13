@@ -313,7 +313,8 @@ namespace Raven.Server.Smuggler.Documents
                             break;
                         case 17: //Raven-Entity-Name --> @collection
                             if (*(long*)state.StringBuffer != 7945807069737017682 ||
-                                *(long*)(state.StringBuffer + sizeof(long)) != 7881666780093245812)
+                                *(long*)(state.StringBuffer + sizeof(long)) != 7881666780093245812 ||
+                                state.StringBuffer[16] != (byte)'e')
                                 return true;
 
                             var collection = _ctx.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection);
