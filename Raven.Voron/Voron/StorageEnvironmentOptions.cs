@@ -314,14 +314,38 @@ namespace Voron
             {
                 var name = JournalName(journalNumber);
                 var path = Path.Combine(_journalPath, name);
-                if (File.Exists(path) == false)
+
+                var fileInfo = new FileInfo(path);
+                if (fileInfo.Exists == false)
                     throw new InvalidOperationException("No such journal " + path);
+                if (fileInfo.Length < InitialLogFileSize)
+                {
+                    EnsureMinimumSize(fileInfo, path);
+                }
+
                 if (RunningOnPosix)
                     return new PosixMemoryMapPager(path);
                 var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead, 
                     options:Win32NativeFileAttributes.SequentialScan);
                 win32MemoryMapPager.TryPrefetchingWholeFile();
                 return win32MemoryMapPager;
+            }
+        }
+
+        private void EnsureMinimumSize(FileInfo fileInfo, string path)
+        {
+            try
+            {
+                using (var stream = fileInfo.Open(FileMode.OpenOrCreate))
+                {
+                    stream.SetLength(InitialLogFileSize);
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    "Journal file " + path + " could not be opened because it's size is too small and we couldn't increase it",
+                    e);
             }
         }
 
