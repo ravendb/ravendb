@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
@@ -10,12 +10,10 @@ using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Size = Raven.Server.Config.Settings.Size;
 
@@ -255,7 +253,6 @@ namespace Raven.Server.Smuggler.Documents
             public bool IsDisposed => _isDisposed;
 
             private readonly DocumentsOperationContext _context;
-            private const string OldRavenDocumentRevisionStatusKey = "Raven-Document-Revision-Status";
 
             public MergedBatchPutCommand(DocumentDatabase database, long buildVersion, Logger log)
             {
@@ -286,32 +283,36 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    // handle old revisions
-                    string ravenRevisionStatus;
-                    BlittableJsonReaderObject metadata;
-                    if (_isPreV4Build && key.Contains("/revisions/") &&
-                        document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata) &&
-                        metadata.TryGet(OldRavenDocumentRevisionStatusKey, out ravenRevisionStatus) &&
-                        ravenRevisionStatus == "Historical")
+                    if (IsPreV4Revision(key, document))
                     {
+                        // handle old revisions
                         if (_database.BundleLoader.VersioningStorage == null)
                             ThrowVersioningDisabled();
 
                         var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
                         var newKey = key.Substring(0, endIndex);
 
-                        if (metadata.Modifications == null)
-                            metadata.Modifications = new DynamicJsonValue(metadata);
-                        metadata.Modifications.Remove(OldRavenDocumentRevisionStatusKey);
-
-                        var modified = Context.ReadObject(document.Data, document.Key);
                         // ReSharper disable once PossibleNullReferenceException
-                        _database.BundleLoader.VersioningStorage.PutDirect(context, newKey, modified, document.ChangeVector);
+                        _database.BundleLoader.VersioningStorage.PutDirect(context, newKey, document.Data, document.ChangeVector);
                         continue;
                     }
 
                     _database.DocumentsStorage.Put(context, key, null, document.Data);
                 }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private bool IsPreV4Revision(string key, Document document)
+            {
+                if (_isPreV4Build == false)
+                    return false;
+
+                if ((document.Flags & DocumentFlags.Revision) != DocumentFlags.Revision)
+                    return false;
+
+                // the flag isn't being used, but we remove the 'Revision' value anyway
+                document.Flags &= ~DocumentFlags.Revision;
+                return key.Contains("/revisions/");
             }
 
             private static void ThrowVersioningDisabled()
