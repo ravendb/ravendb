@@ -91,7 +91,6 @@ namespace Raven.Server.Web.System
         {
             // TODO: Redirect to leader
 
-
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             TransactionOperationContext context;
@@ -118,6 +117,8 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
+                context.OpenReadTransaction();
+
                 var dbId = Constants.Documents.Prefix + name;
 
                 var etag = GetLongFromHeaders("ETag");
@@ -126,7 +127,7 @@ namespace Raven.Server.Web.System
 
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(dbDoc);
 
-                var factor = Math.Max(1, GetIntValueQueryString("replication-factor") ?? 0);
+                var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
 
                 if ((databaseRecord.Topology?.Members?.Count ?? 0) == 0)
                 {
@@ -168,10 +169,12 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}")]
+        [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
         public async Task DeleteQueryString()
         {
             var names = GetStringValuesQueryString("name");
+
+            var hardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
 
             var tasks = new List<Task>();
 
@@ -180,7 +183,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var name in names)
                 {
-                    tasks.Add(ServerStore.DeleteDatabaseAsync(context, name));
+                    tasks.Add(ServerStore.DeleteDatabaseAsync(context, name, hardDelete));
                 }
 
                 await Task.WhenAll(tasks);

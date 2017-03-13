@@ -170,7 +170,10 @@ namespace Raven.Server.ServerWide
 
                 doc.Modifications = new DynamicJsonValue(doc)
                 {
-                    [nameof(DatabaseRecord.DeletionInProgress)] = true
+                    [nameof(DatabaseRecord.DeletionInProgress)] =
+                        delDb.HardDelete
+                            ? DeletionInProgressStatus.HardDelete
+                            : DeletionInProgressStatus.SoftDelete
                 };
 
                 using (var updated = context.ReadObject(doc, databaseName))
@@ -469,6 +472,7 @@ namespace Raven.Server.ServerWide
     public class DeleteDatabaseCommand
     {
         public string DatabaseName;
+        public bool HardDelete;
     }
 
     public class TEMP_SetDatabaseCommand
@@ -510,7 +514,7 @@ namespace Raven.Server.ServerWide
 
         public bool Disabled;
 
-        public bool DeletionInProgress;
+        public DeletionInProgressStatus DeletionInProgress;
 
         public string DataDirectory;
 
@@ -519,6 +523,15 @@ namespace Raven.Server.ServerWide
         public IndexDefinition[] Indexes;
 
         public TransformerDefinition[] Transformers;
+
+        public Dictionary<string, string> Settings;
+    }
+
+    public enum DeletionInProgressStatus
+    {
+        No,
+        SoftDelete,
+        HardDelete
     }
 
     public class JsonDeserializationCluster : JsonDeserializationBase

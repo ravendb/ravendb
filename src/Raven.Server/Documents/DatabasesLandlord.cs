@@ -21,6 +21,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -67,20 +68,28 @@ namespace Raven.Server.Documents
                 if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
                     return;
 
-                if (record.DeletionInProgress)
+                if (record.DeletionInProgress != DeletionInProgressStatus.No)
                 {
                     UnloadDatabase(dbName, null);
 
-                    var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true);
-                    DatabaseHelper.DeleteDatabaseFiles(configuration);
+                    if (record.DeletionInProgress == DeletionInProgressStatus.HardDelete)
+                    {
+                        var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true);
+                        DatabaseHelper.DeleteDatabaseFiles(configuration);
+                    }
 
                     _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
-
-                    _serverStore.SendToLeaderAsync(new RemoveNodeFromDatabaseCommand
+                    
+                    //TODO: This is BAD BAD BAD thing to do since this is called on startup
+                    using (var cmd = context.ReadObject(new DynamicJsonValue
                     {
-                        DatabaseName = dbName,
-                        NodeTag = _serverStore.NodeTag
-                    }).Wait();
+                        ["Type"] = nameof(RemoveNodeFromDatabaseCommand),
+                        [nameof(RemoveNodeFromDatabaseCommand.DatabaseName)] = dbName,
+                        [nameof(RemoveNodeFromDatabaseCommand.NodeTag)] = _serverStore.NodeTag
+                    }, "remove-node"))
+                    {
+                        _serverStore.SendToLeaderAsync(cmd).Wait();
+                    }
 
                     return;
                 }
@@ -324,77 +333,46 @@ namespace Raven.Server.Documents
                 throw new ArgumentNullException(nameof(databaseName),
                     "Database name cannot be <system>. Using of <system> database indicates outdated code that was targeted RavenDB 3.5.");
 
-            var document = GetDatabaseDocument(databaseName, ignoreDisabledDatabase);
-            if (document == null)
-                return null;
 
-            return CreateConfiguration(databaseName, document, RavenConfiguration.GetKey(x => x.Core.DataDirectory));
-        }
-
-        protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseDocument document, string folderPropName)
-        {
-            var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, databaseName, ResourceType.Database);
-
-            foreach (var setting in document.Settings)
-                config.SetSetting(setting.Key, setting.Value);
-            Unprotect(document);
-
-            foreach (var securedSetting in document.SecuredSettings)
-                config.SetSetting(securedSetting.Key, securedSetting.Value);
-
-            config.Initialize();
-            config.CopyParentSettings(_serverStore.Configuration);
-            return config;
-        }
-
-        public void Unprotect(DatabaseDocument databaseDocument)
-        {
-            if (databaseDocument.SecuredSettings == null)
-            {
-                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                return;
-            }
-
-            foreach (var prop in databaseDocument.SecuredSettings.ToList())
-            {
-                if (prop.Value == null)
-                    continue;
-                var bytes = Convert.FromBase64String(prop.Value);
-                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-                try
-                {
-                    /*var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
-                    databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);*/
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
-                    databaseDocument.SecuredSettings[prop.Key] = Constants.Documents.Encryption.DataCouldNotBeDecrypted;
-                }
-            }
-        }
-
-        private DatabaseDocument GetDatabaseDocument(StringSegment databaseName, bool ignoreDisabledDatabase = false)
-        {
-            // We allocate the context here because it should be relatively rare operation
             TransactionOperationContext context;
             using (_serverStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
 
-                var dbId = Constants.Documents.Prefix + databaseName;
-                var jsonReaderObject = _serverStore.Cluster.Read(context, dbId);
-                if (jsonReaderObject == null)
+                var doc = _serverStore.Cluster.Read(context, "db/" + databaseName.Value.ToLowerInvariant());
+                if (doc == null)
                     return null;
 
-                var document = JsonDeserializationClient.DatabaseDocument(jsonReaderObject);
+                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
 
-                if (document.Disabled && !ignoreDisabledDatabase)
-                    throw new DatabaseDisabledException("The database has been disabled.");
+                if (databaseRecord.Disabled)
+                    throw new DatabaseDisabledException(databaseName + " has been disabled");
 
-                return document;
+                if(databaseRecord.DeletionInProgress != DeletionInProgressStatus.No)
+                    throw new DatabaseDisabledException(databaseName + " is currently being deleted");
+
+                if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false)
+                    // TODO: need to handle this properly
+                    throw new InvalidOperationException(databaseName + " is not relevant for " + _serverStore.NodeTag);
+                return CreateConfiguration(databaseName, databaseRecord);
+
             }
+
+        }
+
+        protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseRecord record)
+        {
+            var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, databaseName, ResourceType.Database);
+
+            foreach (var setting in record.Settings)
+                config.SetSetting(setting.Key, setting.Value);
+
+            config.Initialize();
+
+            config.CopyParentSettings(_serverStore.Configuration);
+
+
+            return config;
         }
 
         public DateTime LastWork(DocumentDatabase resource)

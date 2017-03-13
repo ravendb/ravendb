@@ -140,6 +140,8 @@ namespace Raven.Server.ServerWide
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
+                context.OpenReadTransaction();
+
                 foreach (var db in _engine.StateMachine.ItemsStartingWith(context, "db/", 0, int.MaxValue))
                 {
                     DatabasesLandlord.ClusterOnDatabaseChanged(this, db.Item1);
@@ -147,40 +149,21 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task DeleteDatabaseAsync(JsonOperationContext context, string db)
+        public async Task DeleteDatabaseAsync(JsonOperationContext context, string db, bool hardDelete)
         {
-            if (_engine.CurrentState != RachisConsensus.State.Leader && _engine.CurrentState != RachisConsensus.State.LeaderElect)
-            {
-                await SendToLeaderAsync(new DeleteDatabaseCommand
-                {
-                    DatabaseName = db
-                });
-                return;
-            }
-
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(DeleteDatabaseCommand),
                 [nameof(DeleteDatabaseCommand.DatabaseName)] = db,
+                [nameof(DeleteDatabaseCommand.HardDelete)] = hardDelete,
             }, "del-cmd"))
             {
-                await _engine.PutAsync(putCmd);
+                await PutAsync(putCmd);
             }
         }
 
         public async Task PutValueInClusterAsync(JsonOperationContext context, string key, BlittableJsonReaderObject val)
         {
-            if (_engine.CurrentState != RachisConsensus.State.Leader && _engine.CurrentState != RachisConsensus.State.LeaderElect)
-            {
-                await SendToLeaderAsync(new PutValueCommand
-                {
-                    Name = key,
-                    Value = val
-                });
-                return;
-            }
-
-
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(PutValueCommand),
@@ -188,28 +171,19 @@ namespace Raven.Server.ServerWide
                 [nameof(PutValueCommand.Value)] = val,
             }, "put-cmd"))
             {
-                await _engine.PutAsync(putCmd);
+                await PutAsync(putCmd);
             }
         }
 
         public async Task DeleteValueInClusterAsync(JsonOperationContext context, string key)
         {
-            if (_engine.CurrentState != RachisConsensus.State.Leader && _engine.CurrentState != RachisConsensus.State.LeaderElect)
-            {
-                await SendToLeaderAsync(new DeleteValueCommand
-                {
-                    Name = key,
-                });
-                return;
-            }
-
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(DeleteValueCommand),
                 [nameof(DeleteValueCommand.Name)] = key,
             }, "delete-cmd"))
             {
-                await _engine.PutAsync(putCmd);
+                await PutAsync(putCmd);
             }
         }
 
@@ -353,9 +327,20 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public Task SendToLeaderAsync(object o)
+        private Task PutAsync(BlittableJsonReaderObject cmd)
         {
-            throw new NotImplementedException();
+            if (_engine.CurrentState != RachisConsensus.State.Leader && _engine.CurrentState != RachisConsensus.State.LeaderElect)
+            {
+                return SendToLeaderAsync(cmd);
+            }
+
+            return _engine.PutAsync(cmd);
+        }
+
+        public Task SendToLeaderAsync(BlittableJsonReaderObject cmd)
+        {
+            //TODO: actually implement this
+            return _engine.PutAsync(cmd);
         }
     }
 }
