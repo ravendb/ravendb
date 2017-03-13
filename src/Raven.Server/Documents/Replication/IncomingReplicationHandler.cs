@@ -62,6 +62,10 @@ namespace Raven.Server.Documents.Replication
 
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+
+            var replicationDoc = _parent.ReplicationDocument;
+            var scripts = _parent.ScriptConflictResolversCache;
+            _conflictManager = new ConflictManager(_database, replicationDoc, scripts);
         }
 
         public void Start()
@@ -666,12 +670,7 @@ namespace Raven.Server.Documents.Replication
                     _log.Info(
                         $"Replication connection {FromToString}: received {replicatedDocsCount:#,#;;0} documents with size {totalSize / 1024:#,#;;0} kb to database in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
-                var replicationCommand = new MergedDocumentReplicationCommand(this)
-                {
-                    Buffer = buffer,
-                    TotalSize = totalSize,
-                    LastEtag = lastEtag
-                };
+                var replicationCommand = new MergedDocumentReplicationCommand(this, buffer, totalSize, lastEtag);
                 _database.TxMerger.Enqueue(replicationCommand).Wait();
 
                 sw.Stop();
@@ -781,6 +780,7 @@ namespace Raven.Server.Documents.Replication
         private long _lastDocumentEtag;
         private long _lastIndexOrTransformerEtag;
         private readonly TcpConnectionOptions _connectionOptions;
+        private readonly ConflictManager _conflictManager;
 
         public struct ReplicationDocumentsPositions
         {
@@ -935,67 +935,61 @@ namespace Raven.Server.Documents.Replication
         
         public unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly Logger _log;
+            private readonly IncomingReplicationHandler _incoming;
 
-            private readonly DocumentDatabase _database;
-            private readonly IEnumerable<ReplicationDocumentsPositions> _replicatedDocs;
             private ChangeVectorEntry[] _changeVector = new ChangeVectorEntry[0];
-            private readonly ConflictManager _conflictManager;
 
-            private readonly string _sourceDatabaseId;
-            public long LastEtag;
-            public byte* Buffer;
-            public int TotalSize;
-            
-            public MergedDocumentReplicationCommand(IncomingReplicationHandler incoming)
+            private long _lastEtag;
+            private byte* _buffer;
+            private int _totalSize;
+          
+            public MergedDocumentReplicationCommand(IncomingReplicationHandler incoming, byte* buffer, int totalSize, long lastEtag)
             {
-                _database = incoming._database;
-                _replicatedDocs = incoming._replicatedDocs;
-                _sourceDatabaseId = incoming.ConnectionInfo.SourceDatabaseId;
-                var replicationDoc = incoming._parent.ReplicationDocument;
-                var scripts = incoming._parent.ScriptConflictResolversCache;
-                _conflictManager = new ConflictManager(_database, replicationDoc, scripts);
-                _log = LoggingSource.Instance.GetLogger<MergedDocumentReplicationCommand>(_database.Name);
+                _incoming = incoming;
+                _buffer = buffer;
+                _totalSize = totalSize;
+                _lastEtag = lastEtag;
             }
 
             public override void Execute(DocumentsOperationContext context)
             {
                 var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
-                foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(context))
+                var database = _incoming._database;
+                foreach (var changeVectorEntry in database.DocumentsStorage.GetDatabaseChangeVector(context))
                 {
                     maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
                 }
 
-                foreach (var docPosition in _replicatedDocs)
+                foreach (var docPosition in _incoming._replicatedDocs)
                 {
                     context.TransactionMarkerOffset = docPosition.TransactionMarker;
                     BlittableJsonReaderObject document = null;
                     try
                     {
-                        ReadChangeVector(docPosition, Buffer, maxReceivedChangeVectorByDatabase);
+                        ReadChangeVector(docPosition, _buffer, maxReceivedChangeVectorByDatabase);
                         if (docPosition.DocumentSize >= 0) //no need to load document data for tombstones
                             // document size == -1 --> doc is a tombstone
                         {
-                            if (docPosition.Position + docPosition.DocumentSize > TotalSize)
-                                ThrowInvalidSize(TotalSize, docPosition);
+                            if (docPosition.Position + docPosition.DocumentSize > _totalSize)
+                                ThrowInvalidSize(_totalSize, docPosition);
 
                             //if something throws at this point, this means something is really wrong and we should stop receiving documents.
                             //the other side will receive negative ack and will retry sending again.
                             document = new BlittableJsonReaderObject(
-                                Buffer + docPosition.Position + (docPosition.ChangeVectorCount*sizeof(ChangeVectorEntry)),
+                                _buffer + docPosition.Position + (docPosition.ChangeVectorCount*sizeof(ChangeVectorEntry)),
                                 docPosition.DocumentSize, context);
                             document.BlittableValidation();
                         }
 
                         if ((docPosition.Flags & DocumentFlags.FromVersionStorage) == DocumentFlags.FromVersionStorage)
                         {
-                            if (_database.BundleLoader.VersioningStorage == null)
+                            if (database.BundleLoader.VersioningStorage == null)
                             {
-                                if (_log.IsOperationsEnabled)
-                                    _log.Operations("Versioing storage is disabled but the node got a versioned document from replication.");
+                                if (_incoming._log.IsOperationsEnabled)
+                                    _incoming._log.Operations("Versioing storage is disabled but the node got a versioned document from replication.");
                                 continue;
                             }
-                            _database.BundleLoader.VersioningStorage.PutFromDocument(context, docPosition.Id, document, _changeVector);
+                            database.BundleLoader.VersioningStorage.PutFromDocument(context, docPosition.Id, document, _changeVector);
                             continue;
                         }
 
@@ -1007,22 +1001,22 @@ namespace Raven.Server.Documents.Replication
                             case ReplicationUtils.ConflictStatus.Update:
                                 if (document != null)
                                 {
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info(
+                                    if (_incoming._log.IsInfoEnabled)
+                                        _incoming._log.Info(
                                             $"Conflict check resolved to Update operation, doing PUT on doc = {docPosition.Id}, with change vector = {_changeVector.Format()}");
-                                    _database.DocumentsStorage.Put(context, docPosition.Id, null, document,
+                                    database.DocumentsStorage.Put(context, docPosition.Id, null, document,
                                         docPosition.LastModifiedTicks,
                                         _changeVector, DocumentFlags.FromReplication);
                                 }
                                 else
                                 {
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info(
+                                    if (_incoming._log.IsInfoEnabled)
+                                        _incoming._log.Info(
                                             $"Conflict check resolved to Update operation, writing tombstone for doc = {docPosition.Id}, with change vector = {_changeVector.Format()}");
                                     Slice keySlice;
                                     using (DocumentKeyWorker.GetSliceFromKey(context, docPosition.Id, out keySlice))
                                     {
-                                        _database.DocumentsStorage.Delete(
+                                        database.DocumentsStorage.Delete(
                                             context, keySlice, docPosition.Id, null,
                                             docPosition.LastModifiedTicks,
                                             _changeVector,
@@ -1031,14 +1025,14 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 break;
                             case ReplicationUtils.ConflictStatus.Conflict:
-                                if (_log.IsInfoEnabled)
-                                    _log.Info(
+                                if (_incoming._log.IsInfoEnabled)
+                                    _incoming._log.Info(
                                         $"Conflict check resolved to Conflict operation, resolving conflict for doc = {docPosition.Id}, with change vector = {_changeVector.Format()}");
-                                _conflictManager.HandleConflictForDocument(context, docPosition, document, _changeVector, conflictingVector);
+                                _incoming._conflictManager.HandleConflictForDocument(context, docPosition, document, _changeVector, conflictingVector);
                                 break;
                             case ReplicationUtils.ConflictStatus.AlreadyMerged:
-                                if (_log.IsInfoEnabled)
-                                    _log.Info(
+                                if (_incoming._log.IsInfoEnabled)
+                                    _incoming._log.Info(
                                         $"Conflict check resolved to AlreadyMerged operation, nothing to do for doc = {docPosition.Id}, with change vector = {_changeVector.Format()}");
                                 //nothing to do
                                 break;
@@ -1052,10 +1046,10 @@ namespace Raven.Server.Documents.Replication
                         document?.Dispose();
                     }
                 }
-                _database.DocumentsStorage.SetDatabaseChangeVector(context,
+                database.DocumentsStorage.SetDatabaseChangeVector(context,
                     maxReceivedChangeVectorByDatabase);
-                _database.DocumentsStorage.SetLastReplicateEtagFrom(context, _sourceDatabaseId,
-                    LastEtag);
+                database.DocumentsStorage.SetLastReplicateEtagFrom(context, _incoming.ConnectionInfo.SourceDatabaseId,
+                    _lastEtag);
             }
 
             private void ReadChangeVector(ReplicationDocumentsPositions doc, 
