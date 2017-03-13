@@ -46,6 +46,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     NotificationSeverity.Error,
                     key: _indexName,
                     details: new ExceptionDetails(e)));
+                throw;
             }
         }
 
