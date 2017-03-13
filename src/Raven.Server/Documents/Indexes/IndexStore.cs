@@ -845,6 +845,8 @@ namespace Raven.Server.Documents.Indexes
                 Index oldIndex;
                 if (_indexes.TryGetByName(oldIndexName, out oldIndex))
                 {
+                    oldIndexName = oldIndex.Name;
+
                     if (oldIndex.Type.IsStatic() && newIndex.Type.IsStatic())
                     {
                         var oldIndexDefinition = oldIndex.GetIndexDefinition();
