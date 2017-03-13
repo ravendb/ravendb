@@ -3,22 +3,17 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
 
+using System;
+using FastTests;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3744
+    public class RavenDB_3744 : NoDisposalNeeded
     {
-        public class Employee
+        private class Employee
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -38,7 +33,7 @@ namespace Raven.Tests.Issues
             var rangeFieldsEx = Assert.Throws<InvalidOperationException>(() => Facet<Employee>.Parse(x => x.Salary < 5 && x.Salary > 8 && x.Salary > 60));
             Assert.Equal("Expressions on both sides of \"&&\" must point to range field. Ex. x => x.Age > 18 && x.Age < 99", rangeFieldsEx.Message);
 
-            var differentFieldsEx = Assert.Throws<InvalidOperationException>(() => Facet<Employee>.Parse(x => x.Salary < 5 && x.Age > 15 ));
+            var differentFieldsEx = Assert.Throws<InvalidOperationException>(() => Facet<Employee>.Parse(x => x.Salary < 5 && x.Age > 15));
             Assert.Equal("Different range fields were detected: \"Salary\" and \"Age\"", differentFieldsEx.Message);
 
             var invalidOperatorsInChainEx = Assert.Throws<InvalidOperationException>(() => Facet<Employee>.Parse(x => x.Salary == 5 && x.Salary == 9));
@@ -48,17 +43,16 @@ namespace Raven.Tests.Issues
             Assert.Equal("Invalid range: 15..5", invalidRange1Ex.Message);
 
             var parsedRange1 = Facet<Employee>.Parse(x => x.Salary >= 5 && x.Salary <= 15);
-            Assert.Equal("{Dx5 TO Dx15}", parsedRange1);
+            Assert.Equal("{5 TO 15}", parsedRange1);
 
             var invalidRange2Ex = Assert.Throws<InvalidOperationException>(() => Facet<Employee>.Parse(x => x.Salary >= 15 && x.Salary <= 5));
             Assert.Equal("Invalid range: 15..5", invalidRange2Ex.Message);
 
             var parsedRange2 = Facet<Employee>.Parse(x => x.Salary <= 15 && x.Salary >= 5);
-            Assert.Equal("{Dx5 TO Dx15}", parsedRange2);
+            Assert.Equal("{5 TO 15}", parsedRange2);
 
-            var parsedRange3 = Facet<Employee>.Parse(x => x.Salary >= 5 && x.Salary <= 5);
-            Assert.Equal("{Dx5 TO Dx5}", parsedRange3);
+            var parsedRange3 = Facet<Employee>.Parse(x => x.Salary >= 5.1m && x.Salary <= 5.1m);
+            Assert.Equal("{5.1 TO 5.1}", parsedRange3);
         }
-
     }
 }

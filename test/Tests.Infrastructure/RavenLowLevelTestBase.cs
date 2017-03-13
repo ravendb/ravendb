@@ -41,13 +41,13 @@ namespace FastTests
 
             var configuration = new RavenConfiguration(name, ResourceType.Database);
             configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory), int.MaxValue.ToString());
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), dataDirectory);
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), runInMemory.ToString());
             configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true;
 
             modifyConfiguration?.Invoke(configuration);
+            
             configuration.Initialize();
-
-            configuration.Core.RunInMemory = runInMemory;
-            configuration.Core.DataDirectory = new PathSetting(dataDirectory);
 
             var documentDatabase = new DocumentDatabase(name, configuration, null);
             documentDatabase.Initialize();
