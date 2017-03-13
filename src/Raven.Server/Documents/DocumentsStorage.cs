@@ -1923,15 +1923,15 @@ namespace Raven.Server.Documents
                     var conflicts = GetConflictsFor(context, loweredKeySlice);
                     foreach (var conflict in conflicts)
                     {
-                        var conflictStatus = IncomingReplicationHandler.GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
+                        var conflictStatus = ReplicationUtils.GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
                         switch (conflictStatus)
                         {
-                            case IncomingReplicationHandler.ConflictStatus.Update:
+                            case ReplicationUtils.ConflictStatus.Update:
                                 DeleteConflictsFor(context, conflict.ChangeVector); // delete this, it has been subsumed
                                 break;
-                            case IncomingReplicationHandler.ConflictStatus.Conflict:
+                            case ReplicationUtils.ConflictStatus.Conflict:
                                 break; // we'll add this conflict if no one else also includes it
-                            case IncomingReplicationHandler.ConflictStatus.AlreadyMerged:
+                            case ReplicationUtils.ConflictStatus.AlreadyMerged:
                                 return; // we already have a conflict that includes this version
                             default:
                                 throw new ArgumentOutOfRangeException("Invalid conflict status " + conflictStatus);

@@ -24,6 +24,100 @@ namespace Raven.Server.Utils
 {
     internal static class ReplicationUtils
     {
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string key, ChangeVectorEntry[] remote, out ChangeVectorEntry[] conflictingVector)
+        {
+            //tombstones also can be a conflict entry
+            conflictingVector = null;
+            var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, key);
+            if (conflicts.Count > 0)
+            {
+                foreach (var existingConflict in conflicts)
+                {
+                    if (GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictStatus.Conflict)
+                    {
+                        conflictingVector = existingConflict.ChangeVector;
+                        return ConflictStatus.Conflict;
+                    }
+                }
+                // this document will resolve the conflicts when putted
+                return ConflictStatus.Update;
+            }
+
+            var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, key);
+            ChangeVectorEntry[] local;
+
+            if (result.Item1 != null)
+                local = result.Item1.ChangeVector;
+            else if (result.Item2 != null)
+                local = result.Item2.ChangeVector;
+            else
+                return ConflictStatus.Update; //document with 'key' doesnt exist locally, so just do PUT
+
+
+            var status = GetConflictStatus(remote, local);
+            if (status == ConflictStatus.Conflict)
+            {
+                conflictingVector = local;
+            }
+
+            return status;
+        }
+
+        public static ConflictStatus GetConflictStatus(ChangeVectorEntry[] remote, ChangeVectorEntry[] local)
+        {
+            if (local == null)
+                return ConflictStatus.Update;
+
+            //any missing entries from a change vector are assumed to have zero value
+            var remoteHasLargerEntries = local.Length < remote.Length;
+            var localHasLargerEntries = remote.Length < local.Length;
+
+            int remoteEntriesTakenIntoAccount = 0;
+            for (int index = 0; index < local.Length; index++)
+            {
+                if (remote.Length < index && remote[index].DbId == local[index].DbId)
+                {
+                    remoteHasLargerEntries |= remote[index].Etag > local[index].Etag;
+                    localHasLargerEntries |= local[index].Etag > remote[index].Etag;
+                    remoteEntriesTakenIntoAccount++;
+                }
+                else
+                {
+                    var updated = false;
+                    for (var remoteIndex = 0; remoteIndex < remote.Length; remoteIndex++)
+                    {
+                        if (remote[remoteIndex].DbId == local[index].DbId)
+                        {
+                            remoteHasLargerEntries |= remote[remoteIndex].Etag > local[index].Etag;
+                            localHasLargerEntries |= local[index].Etag > remote[remoteIndex].Etag;
+                            remoteEntriesTakenIntoAccount++;
+                            updated = true;
+                        }
+                    }
+
+                    if (!updated)
+                        localHasLargerEntries = true;
+                }
+            }
+            remoteHasLargerEntries |= remoteEntriesTakenIntoAccount < remote.Length;
+
+            if (remoteHasLargerEntries && localHasLargerEntries)
+                return ConflictStatus.Conflict;
+
+            if (remoteHasLargerEntries == false && localHasLargerEntries == false)
+                return ConflictStatus.AlreadyMerged; // change vectors identical
+
+            return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
+        }
+
+        public enum ConflictStatus
+        {
+            Update,
+            Conflict,
+            AlreadyMerged
+        }
+
+
         public static NodeTopologyInfo GetLocalTopology(
             DocumentDatabase database,
             ReplicationDocument replicationDocument)
