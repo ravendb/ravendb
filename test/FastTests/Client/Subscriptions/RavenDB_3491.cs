@@ -42,6 +42,7 @@ namespace FastTests.Client.Subscriptions
 
                     using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(id)))
                     {
+
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();

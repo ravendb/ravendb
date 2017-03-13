@@ -10,9 +10,13 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            using (var a = new FastTests.Issues.RavenDB_5610())
+            for (int i = 0; i < 10; i++)
             {
-                a.WillUpdate();
+                Console.WriteLine(i);
+                using (var a = new SlowTests.Issues.RavenDB934())
+                {
+                    a.HighLevelExportsByDocPrefixRemote();
+                }
             }
         }
     }

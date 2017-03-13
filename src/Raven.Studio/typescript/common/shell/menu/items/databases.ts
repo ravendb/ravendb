@@ -1,6 +1,4 @@
-﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
-import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
-import leafMenuItem = require("common/shell/menu/leafMenuItem");
+﻿import leafMenuItem = require("common/shell/menu/leafMenuItem");
 
 export = getDatabasesMenuItem;
 

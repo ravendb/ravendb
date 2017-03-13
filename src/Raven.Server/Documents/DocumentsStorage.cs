@@ -958,11 +958,11 @@ namespace Raven.Server.Documents
         {
             var result = new Document
             {
-                StorageId = tvr.Id
+                StorageId = tvr.Id,
+                LoweredKey = TableValueToString(context, (int)DocumentsTable.LoweredKey, ref tvr),
+                Key = TableValueToKey(context, (int)DocumentsTable.Key, ref tvr),
+                Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr)
             };
-            result.LoweredKey = TableValueToString(context, (int)DocumentsTable.LoweredKey, ref tvr);
-            result.Key = TableValueToKey(context, (int)DocumentsTable.Key, ref tvr);
-            result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
 
             int size;
             result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out size), size, context);
@@ -979,14 +979,14 @@ namespace Raven.Server.Documents
         {
             var result = new DocumentConflict
             {
-                StorageId = tvr.Id
+                StorageId = tvr.Id,
+                LoweredKey = TableValueToString(context, (int)ConflictsTable.LoweredKey, ref tvr),
+                Key = TableValueToKey(context, (int)ConflictsTable.OriginalKey, ref tvr),
+                ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictsTable.ChangeVector),
+                Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
+                Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr)
             };
 
-            result.LoweredKey = TableValueToString(context, (int)ConflictsTable.LoweredKey, ref tvr);
-            result.Key = TableValueToKey(context, (int)ConflictsTable.OriginalKey, ref tvr);
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictsTable.ChangeVector);
-            result.Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr);
-            result.Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr);
 
             int size;
             var read = tvr.Read((int)ConflictsTable.Data, out size);
@@ -1570,7 +1570,7 @@ namespace Raven.Server.Documents
                         return new DocumentConflict
                         {
                             ChangeVector = currentChangeVector,
-                            Key = new LazyStringValue(key, tvr.Result.Reader.Read((int)ConflictsTable.OriginalKey, out size), size, context),
+                            Key = context.AllocateStringValue(key, tvr.Result.Reader.Read((int)ConflictsTable.OriginalKey, out size), size),
                             StorageId = tvr.Result.Reader.Id,
                             //size == 0 --> this is a tombstone conflict
                             Doc = doc
@@ -1845,7 +1845,7 @@ namespace Raven.Server.Documents
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Adding conflict to {key} (Incoming change vector {incomingChangeVector.Format()})");
             var tx = context.Transaction.InnerTransaction;
-            var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
+            var conflictsTable = tx.OpenTable(ConflictsSchema, "Conflicts");
 
             CollectionName collectionName;
 
@@ -1863,16 +1863,21 @@ namespace Raven.Server.Documents
                 fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
                 {
                     var lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data);
-                    conflictsTable.Set(new TableValueBuilder
+
+                    TableValueBuilder tbv;
+                    using (conflictsTable.Allocate(out tbv))
                     {
-                        {lowerKey, lowerSize},
-                        {(byte*) pChangeVector, existingDoc.ChangeVector.Length*sizeof(ChangeVectorEntry)},
-                        {keyPtr, keySize},
-                        {existingDoc.Data.BasePointer, existingDoc.Data.Size},
-                        Bits.SwapBytes(GenerateNextEtag()),
-                        {lazyCollectionName.Buffer, lazyCollectionName.Size},
-                        existingDoc.LastModified.Ticks
-                    });
+                        tbv.Add(lowerKey, lowerSize);
+                        tbv.Add((byte*) pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
+                        tbv.Add(keyPtr, keySize);
+                        tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
+                        tbv.Add(Bits.SwapBytes(GenerateNextEtag()));
+                        tbv.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
+                        tbv.Add(existingDoc.LastModified.Ticks);
+
+                        conflictsTable.Set(tbv);
+                    }
+
                     Interlocked.Increment(ref _conflictCount);
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
@@ -1923,15 +1928,15 @@ namespace Raven.Server.Documents
                     var conflicts = GetConflictsFor(context, loweredKeySlice);
                     foreach (var conflict in conflicts)
                     {
-                        var conflictStatus = IncomingReplicationHandler.GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
+                        var conflictStatus = ReplicationUtils.GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
                         switch (conflictStatus)
                         {
-                            case IncomingReplicationHandler.ConflictStatus.Update:
+                            case ReplicationUtils.ConflictStatus.Update:
                                 DeleteConflictsFor(context, conflict.ChangeVector); // delete this, it has been subsumed
                                 break;
-                            case IncomingReplicationHandler.ConflictStatus.Conflict:
+                            case ReplicationUtils.ConflictStatus.Conflict:
                                 break; // we'll add this conflict if no one else also includes it
-                            case IncomingReplicationHandler.ConflictStatus.AlreadyMerged:
+                            case ReplicationUtils.ConflictStatus.AlreadyMerged:
                                 return; // we already have a conflict that includes this version
                             default:
                                 throw new ArgumentOutOfRangeException("Invalid conflict status " + conflictStatus);
@@ -2036,6 +2041,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             bool knownNewKey = false;
+            bool fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
             if (string.IsNullOrWhiteSpace(key))
             {
                 key = Guid.NewGuid().ToString();
@@ -2077,8 +2083,6 @@ namespace Raven.Server.Documents
 
                     ThrowConcurrencyExceptionOnConflict(expectedEtag, currentMaxConflictEtag);
                 }
-
-                var fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
                 if (fromReplication)
                 {
                     DeleteConflictsFor(context, key);
@@ -2132,40 +2136,41 @@ namespace Raven.Server.Documents
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
                     var transactionMarker = context.GetTransactionMarker();
-                    var tbv = new TableValueBuilder
-                    {
-                        {lowerKey, lowerSize},
-                        newEtagBigEndian,
-                        {keyPtr, keySize},
-                        {document.BasePointer, document.Size},
-                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
-                        modifiedTicks,
-                        (int)flags,
-                        transactionMarker
-                    };
 
-                    if (oldValue.Pointer == null)
+                    TableValueBuilder tbv;
+                    using (table.Allocate(out tbv))
                     {
-                        if (expectedEtag != null && expectedEtag != 0)
+                        tbv.Add(lowerKey, lowerSize);
+                        tbv.Add(newEtagBigEndian);
+                        tbv.Add(keyPtr, keySize);
+                        tbv.Add(document.BasePointer, document.Size);
+                        tbv.Add((byte*) pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                        tbv.Add(modifiedTicks);
+                        tbv.Add((int) flags);
+                        tbv.Add(transactionMarker);
+
+                        if (oldValue.Pointer == null)
                         {
-                            ThrowConcurrentExceptionOnMissingDoc(key, expectedEtag.Value);
+                            if (expectedEtag != null && expectedEtag != 0)
+                            {
+                                ThrowConcurrentExceptionOnMissingDoc(key, expectedEtag.Value);
+                            }
+                            table.Insert(tbv);
                         }
-                        table.Insert(tbv);
-                    }
-                    else
-                    {
-                        var oldEtag = TableValueToEtag(1, ref oldValue);
-                        //TODO
-                        if (expectedEtag != null && oldEtag != expectedEtag)
-                            ThrowConcurrentException(key, expectedEtag, oldEtag);
+                        else
+                        {
+                            var oldEtag = TableValueToEtag(1, ref oldValue);
+                            if (expectedEtag != null && oldEtag != expectedEtag)
+                                ThrowConcurrentException(key, expectedEtag, oldEtag);
 
-                        int oldSize;
-                        var oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);
-                        var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
-                        if (oldCollectionName != collectionName)
-                            ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
+                            int oldSize;
+                            var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
+                            var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
+                            if (oldCollectionName != collectionName)
+                                ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
 
-                        table.Update(oldValue.Id, tbv);
+                            table.Update(oldValue.Id, tbv);
+                        }
                     }
                 }
 
@@ -3118,7 +3123,7 @@ namespace Raven.Server.Documents
         {
             int size;
             var ptr = tvr.Read(index, out size);
-            return new LazyStringValue(null, ptr, size, context);
+            return context.AllocateStringValue(null, ptr, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3129,7 +3134,7 @@ namespace Raven.Server.Documents
             byte offset;
             var ptr = tvr.Read(index, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
-            return new LazyStringValue(null, ptr + offset, size, context);
+            return context.AllocateStringValue(null, ptr + offset, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

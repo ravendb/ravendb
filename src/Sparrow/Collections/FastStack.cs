@@ -49,16 +49,20 @@ namespace Sparrow.Collections
             _array = new T[capacity];
         }
 
-        public int Count
-        {
-            get { return _size; }
-        }
+        public int Count => _size;
 
         // Removes all Objects from the Stack.
         public void Clear()
         {
             Array.Clear(_array, 0, _size);
 
+            _size = 0;
+            _version++;
+        }
+
+        // Removes all Objects from the Stack.
+        public void WeakClear()
+        {
             _size = 0;
             _version++;
         }
@@ -86,7 +90,25 @@ namespace Sparrow.Collections
             int dstIndex = arrayIndex + _size;
             for (int i = 0; i < _size; i++)
                 array[--dstIndex] = _array[srcIndex++];
-        }        
+        }
+
+        public void CopyTo(FastStack<T> srcStack)
+        {
+            Debug.Assert(srcStack._array != _array);
+           
+            int srcSize = srcStack._size;
+            int dstIndex = this._size;
+            if (dstIndex + srcSize > _array.Length)
+            {
+                Array.Resize(ref _array, dstIndex + srcSize + 4 * DefaultCapacity);
+            }
+
+            var srcArray = srcStack._array;
+            var destArray = _array;
+            int srcIndex = 0;
+            for (int i = 0; i < srcSize; i++)
+                destArray[dstIndex++] = srcArray[srcIndex++];
+        }
 
         // Returns an IEnumerator for this Stack.
         public Enumerator GetEnumerator()

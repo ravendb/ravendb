@@ -26,7 +26,6 @@ namespace Sparrow.Json
 
         private FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> _objectsPathCache;
         private FastDictionary<int, object, NumericEqualityStructComparer> _objectsPathCacheByIndex;
-        public string _allocation;
 
         public override string ToString()
         {
@@ -524,7 +523,7 @@ namespace Sparrow.Json
                 return -1;
 
             int min = 0, max = _propCount - 1;
-            var comparer = _context.GetLazyStringForFieldWithCaching(name.Value);
+            var comparer = _context.GetLazyStringForFieldWithCaching(name);
 
             int mid = comparer.LastFoundAt ?? (min + max) / 2;
             if (mid > max)
@@ -778,8 +777,7 @@ namespace Sparrow.Json
                 throw new InvalidDataException("Root metadata not valid");
         }
 
-        private int PropertiesNamesValidation(int numberOfProps, int propsOffsetList, int propsNamesOffsetSize,
-            int currentSize)
+        private int PropertiesNamesValidation(int numberOfProps, int propsOffsetList, int propsNamesOffsetSize, int currentSize)
         {
             var blittableSize = currentSize;
             var offsetCounter = 0;
@@ -938,8 +936,7 @@ namespace Sparrow.Json
                     case BlittableJsonToken.EmbeddedBlittable:
                         byte offsetLen;
                         stringLength = ReadVariableSizeInt(propValueOffset, out offsetLen);
-                        var blittableJsonReaderObject = new BlittableJsonReaderObject(
-                            _mem + propValueOffset + offsetLen, stringLength, _context);
+                        var blittableJsonReaderObject = new BlittableJsonReaderObject(_mem + propValueOffset + offsetLen, stringLength, _context);
                         blittableJsonReaderObject.BlittableValidation();
                         break;
                     default:
@@ -1057,6 +1054,8 @@ namespace Sparrow.Json
 
             if (data == null)
                 return;
+
+            data.NoCache = true;
 
             if (assertRemovals && data.Modifications?.Removals?.Count > 0)
                 throw new InvalidOperationException($"Modifications (removals) detected in '{id}'. JSON: {data}");

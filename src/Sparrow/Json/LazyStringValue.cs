@@ -55,14 +55,14 @@ namespace Sparrow.Json
         private readonly JsonOperationContext _context;
         private string _string;
 
-        private readonly byte* _buffer;
+        private byte* _buffer;
         public byte this[int index] => Buffer[index];
         public byte* Buffer => _buffer;
 
-        private readonly int _size;
+        private int _size;
         public int Size => _size;
 
-        private int _length = -1;
+        private int _length;
         public int Length
         {
             get
@@ -86,12 +86,9 @@ namespace Sparrow.Json
 
         public LazyStringValue(string str, byte* buffer, int size, JsonOperationContext context)
         {
-            Debug.Assert(size >= 0);
             Debug.Assert(context != null);
-            _size = size;
             _context = context;
-            _buffer = buffer;
-            _string = str;
+            Renew(str, buffer, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -248,7 +245,7 @@ namespace Sparrow.Json
             throw new NotSupportedException($"Cannot compare LazyStringValue to object of type {obj.GetType().Name}");
         }
 
-        public bool IsDisposed { get; private set; }
+        public bool IsDisposed;
 
         private void ThrowAlreadyDisposed()
         {
@@ -675,6 +672,15 @@ namespace Sparrow.Json
                 Array.Reverse(_lazyStringTempBuffer, 0, chars);
                 return new string(_lazyStringTempBuffer, 0, chars);
             }    
+        }
+
+        public void Renew(string str, byte* buffer, int size)
+        {
+            Debug.Assert(size >= 0);
+            _size = size;
+            _buffer = buffer;
+            _string = str;
+            _length = -1;
         }
     }
 }

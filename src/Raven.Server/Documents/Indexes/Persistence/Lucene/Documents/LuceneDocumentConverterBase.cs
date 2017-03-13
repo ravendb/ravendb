@@ -619,7 +619,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return false;
             }
 
-            dblAsString = new LazyStringValue(null, ldv.Inner.Buffer, index + 1, context);
+            dblAsString = context.AllocateStringValue(null, ldv.Inner.Buffer, index + 1);
             return true;
         }
 

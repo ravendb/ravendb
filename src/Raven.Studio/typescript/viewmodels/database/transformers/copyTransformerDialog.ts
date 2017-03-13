@@ -1,12 +1,7 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import transformer = require("models/database/index/transformer");
 import database = require("models/resources/database");
 import getSingleTransformerCommand = require("commands/database/transformers/getSingleTransformerCommand");
-import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");
-import router = require("plugins/router");
-import appUrl = require("common/appUrl");
-import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class copyTransformerDialog extends dialogViewModelBase {

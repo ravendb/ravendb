@@ -3,7 +3,6 @@
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
-import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
@@ -73,17 +72,10 @@ class documentBasedColumnsProvider {
     }
 
     private findColumnNames(results: pagedResult<document>, limit: number): string[] {
-        const propertySet = {};
         const uniquePropertyNames = new Set<string>();
 
-        results
-            .items
+        results.items
             .map(i => _.keys(i).forEach(key => uniquePropertyNames.add(key)));
-
-        const hasIds = _.some(results.items, x => x.__metadata && x.__metadata.id);
-        if (!hasIds) {
-            uniquePropertyNames.delete("__metadata");
-        }
 
         const columnNames = Array.from(uniquePropertyNames);
 

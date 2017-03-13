@@ -1,10 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import d3 = require("d3");
-import appUrl = require("common/appUrl");
-import listDiskPerformanceRunsCommand = require("commands/maintenance/listDiskPerformanceRunsCommand");
-import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
-import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class diskIoViewer extends viewModelBase {
     /*

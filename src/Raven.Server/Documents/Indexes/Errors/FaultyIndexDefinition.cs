@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
 
-        protected override IndexDefinition CreateIndexDefinition()
+        protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }

@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.Handlers
         private static unsafe void ThrowInvalidProperty(JsonParserState state, JsonOperationContext ctx)
         {
             throw new InvalidOperationException("Invalid property name: " +
-                                                new LazyStringValue(null, state.StringBuffer, state.StringSize, ctx));
+                                                ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize));
         }
 
         private static void ThrowUnexpectedToken(JsonParserToken jsonParserToken, JsonParserState state)

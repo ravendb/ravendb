@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Server.Utils.Metrics;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Subscriptions
 {
     public class SubscriptionConnectionStats:IDisposable
     {

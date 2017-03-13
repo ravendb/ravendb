@@ -11,6 +11,8 @@ namespace Sparrow.Json
 {
     public class BlittableJsonDocumentBuilder : IDisposable
     {
+        private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
+
         protected readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
 
         protected readonly JsonOperationContext _context;
@@ -157,7 +159,7 @@ namespace Sparrow.Json
                             return false;
                         }
 
-                        var fakeFieldName = _context.GetLazyStringForFieldWithCaching("_");
+                        var fakeFieldName = _context.GetLazyStringForFieldWithCaching(UnderscoreSegment);
                         var prop = _context.CachedProperties.GetProperty(fakeFieldName);
                         currentState.CurrentProperty = prop;
                         currentState.MaxPropertyId = prop.PropertyId;
@@ -456,7 +458,7 @@ namespace Sparrow.Json
 
         private unsafe LazyStringValue CreateLazyStringValueFromParserState()
         {
-            var lazyStringValueFromParserState = new LazyStringValue(null, _state.StringBuffer, _state.StringSize, _context);
+            var lazyStringValueFromParserState = _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize);
 
             if (_state.EscapePositions.Count > 0)
             {

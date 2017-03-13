@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
@@ -43,6 +44,7 @@ namespace Raven.Server.Web.Studio
             using (context.OpenReadTransaction())
             {
                 Document[] documents;
+                HashSet<LazyStringValue> availableColumns;
                 long totalResults;
                 long etag;
                 HashSet<string> propertiesToSend;
@@ -69,15 +71,18 @@ namespace Raven.Server.Web.Studio
                 HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
 
+
                 if (string.IsNullOrEmpty(collection))
                 {
                     documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize).ToArray();
+                    availableColumns = ExtractColumnNames(documents, context);
                     propertiesToSend = bindings.Count > 0 ? new HashSet<string>(bindings) : new HashSet<string>();
                 }
                 else
                 {
                     documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, collection, start, pageSize).ToArray();
-                    propertiesToSend = bindings.Count > 0 ? new HashSet<string>(bindings) : new HashSet<string>(SampleColumnNames(documents, context).Select(x => x.ToString()));
+                    availableColumns = ExtractColumnNames(documents, context);
+                    propertiesToSend = bindings.Count > 0 ? new HashSet<string>(bindings) : availableColumns.Take(ColumnsSamplingLimit).Select(x => x.ToString()).ToHashSet();
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -108,6 +113,11 @@ namespace Raven.Server.Web.Studio
 
                     writer.WritePropertyName("TotalResults");
                     writer.WriteInteger(totalResults);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("AvailableColumns");
+                    writer.WriteArray(availableColumns);
 
                     writer.WriteEndObject();
                 }
@@ -235,7 +245,7 @@ namespace Raven.Server.Web.Studio
             }
         }
         
-        private static HashSet<LazyStringValue> SampleColumnNames(Document[] documents, DocumentsOperationContext context)
+        private static HashSet<LazyStringValue> ExtractColumnNames(Document[] documents, DocumentsOperationContext context)
         {
             if (_buffers == null)
                 _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
@@ -244,7 +254,6 @@ namespace Raven.Server.Web.Studio
 
             foreach (var document in documents)
             {
-                var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
                 var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
 
@@ -252,14 +261,15 @@ namespace Raven.Server.Web.Studio
                 {
                     document.Data.GetPropertyByIndex(_buffers.Properties[i], ref prop);
                     var propName = prop.Name;
-                    if (!metadataField.Equals(propName) && !columns.Contains(propName))
+                    if (!columns.Contains(propName))
                     {
                         columns.Add(prop.Name);
-                        if (columns.Count == ColumnsSamplingLimit)
-                            return columns;
                     }
                 }
             }
+
+            var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
+            columns.Remove(metadataField);
 
             return columns;
         }

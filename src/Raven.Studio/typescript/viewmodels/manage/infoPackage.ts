@@ -1,13 +1,4 @@
-import app = require("durandal/app");
-import messagePublisher = require("common/messagePublisher");
-import appUrl = require("common/appUrl");
-import svgDownloader = require("common/svgDownloader");
-import fileDownloader = require("common/fileDownloader");
-import getInfoPackage = require('commands/database/debug/getInfoPackage');
 import viewModelBase = require("viewmodels/viewModelBase");
-import infoPackageImport = require("viewmodels/manage/infoPackageImport");
-import shell = require("viewmodels/shell");
-import eventsCollector = require("common/eventsCollector");
 
 const enum parserState {
   pid,

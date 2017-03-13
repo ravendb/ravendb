@@ -1,8 +1,10 @@
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Xunit;
 
@@ -68,7 +70,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-5919")]
+        [Fact]
         public void Can_Overwrite_Side_By_Side_Index()
         {
             using (var store = GetDocumentStore())
@@ -89,12 +91,23 @@ namespace SlowTests.Issues
                 }
                 WaitForIndexing(store);
 
-                new Orders_All_Changed().SideBySideExecute(store);
-                new Orders_All_Changed2().SideBySideExecute(store);
+                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+
+                store.Admin.Send(new StopIndexingOperation());
+
+                new Orders_All_Changed().Execute(store);
+                new Orders_All_Changed2().Execute(store);
+
+                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+
+                var indexes = store.Admin.Send(new GetIndexesOperation(0, 10));
+                var index = indexes.Single(x => x.Name == $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{new Orders_All().IndexName}");
+
+                Assert.Equal(4, index.Fields.Count);
             }
         }
 
-        [Fact(Skip = "RavenDB-5919")]
+        [Fact]
         public async Task Can_Overwrite_Side_By_Side_Index_Async()
         {
             using (var store = GetDocumentStore())
@@ -115,8 +128,19 @@ namespace SlowTests.Issues
                 }
                 WaitForIndexing(store);
 
-                await new Orders_All_Changed().SideBySideExecuteAsync(store).ConfigureAwait(false);
-                await new Orders_All_Changed2().SideBySideExecuteAsync(store).ConfigureAwait(false);
+                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+
+                store.Admin.Send(new StopIndexingOperation());
+
+                await new Orders_All_Changed().ExecuteAsync(store);
+                await new Orders_All_Changed2().ExecuteAsync(store);
+
+                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+
+                var indexes = store.Admin.Send(new GetIndexesOperation(0, 10));
+                var index = indexes.Single(x => x.Name == $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{new Orders_All().IndexName}");
+
+                Assert.Equal(4, index.Fields.Count);
             }
         }
     }

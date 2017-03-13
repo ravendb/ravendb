@@ -73,11 +73,11 @@ class databaseSwitcher {
         });
     }
 
-    selectDatabase(rs: database, $event: JQueryEventObject) {
+    selectDatabase(db: database, $event: JQueryEventObject) {
         if ($event.ctrlKey) {
-            window.open(appUrl.forDocumentsByDatabaseName(null, rs.name));
+            window.open(appUrl.forDocumentsByDatabaseName(null, db.name));
         } else {
-            rs.activate();
+            this.databasesManager.activate(db);
             this.hide();
         }
     }

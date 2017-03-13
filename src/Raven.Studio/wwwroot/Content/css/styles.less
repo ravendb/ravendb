@@ -8,6 +8,7 @@
 @import "prerelease.less";
 @import "basic-layout.less";
 @import "virtual-grid.less";
+@import "column-selector.less";
 
 /*
     Available animations (add "classname;" inside your class)
@@ -39,8 +40,10 @@ html {
     height: 100%;
 }
 
+
 body {
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 
     &.loading-active {
         overflow: hidden;
@@ -305,7 +308,7 @@ a {
 
 .flex-row {
     @media (min-width: @screen-sm) {
-        display: flex;
+        display: flex;        
 
         .flex-bottom {
             align-self: flex-end;
@@ -687,7 +690,7 @@ input[type=file] + .form-control {
 }
 
 .processing-spinner {
-    position: absolute;
+    position: fixed;
     bottom: -10px;
     right: -10px;
     width: 130px;

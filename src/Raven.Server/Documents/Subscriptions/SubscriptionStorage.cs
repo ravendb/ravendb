@@ -10,16 +10,16 @@ using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Sparrow;
-using Sparrow.Logging;
-using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Subscriptions
 {
     // todo: implement functionality for limiting amount of opened subscriptions
     public class SubscriptionStorage : IDisposable
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents
         public SubscriptionState OpenSubscription(SubscriptionConnection connection)
         {
             var subscriptionState = _subscriptionStates.GetOrAdd(connection.SubscriptionId,
-                _ => new SubscriptionState());
+                _ => new SubscriptionState(this));
             return subscriptionState;
         }
 
@@ -200,27 +200,22 @@ namespace Raven.Server.Documents
 
         public unsafe void DeleteSubscription(long id)
         {
-            SubscriptionState subscriptionState;
-            if (_subscriptionStates.TryRemove(id, out subscriptionState))
-            {
-                subscriptionState.EndConnection();
-                subscriptionState.Dispose();
-            }
-
+            DropSubscriptionConnection(id, "Deleted");
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.WriteTransaction(transactionPersistentContext))
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
 
-                long subscriptionId = id;
+                var subscriptionId = Bits.SwapBytes(id);
                 TableValueReader subscription;
                 Slice subsriptionSlice;
                 using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subsriptionSlice))
                 {
                     if (table.ReadByKey(subsriptionSlice, out subscription) == false)
                         return;
+
+                    table.DeleteByKey(subsriptionSlice);
                 }
-                table.Delete(subscription.Id);
 
                 tx.Commit();
 
@@ -231,18 +226,18 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool DropSubscriptionConnection(long subscriptionId)
+        public bool DropSubscriptionConnection(long subscriptionId, string reason)
         {
             SubscriptionState subscriptionState;
             if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState) == false)
                 return false;
 
-            subscriptionState.Connection.ConnectionException = new SubscriptionClosedException("Closed by request");
-            subscriptionState.RegisterRejectedConnection(subscriptionState.Connection, new SubscriptionClosedException("Closed by request"));
+            subscriptionState.Connection.ConnectionException = new SubscriptionClosedException(reason);
+            subscriptionState.RegisterRejectedConnection(subscriptionState.Connection, new SubscriptionClosedException(reason));
             subscriptionState.Connection.CancellationTokenSource.Cancel();
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Subscription with id {subscriptionId} connection was dropped");
+                _logger.Info($"Subscription with id {subscriptionId} connection was dropped. Reason: {reason}");
 
             return true;
         }

@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import adminSettings = require("viewmodels/manage/adminSettings");
-import license = require("models/auth/license");
 
 class globalConfig extends viewModelBase {
 

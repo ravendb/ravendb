@@ -52,11 +52,11 @@ namespace FastTests.Issues
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"C:\Deployment");
             
             server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.TempPath), @"C:\temp");
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), @"F:\Journals");
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), @"C:\Journals");
 
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StoragePath), @"E:\Indexes");
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StoragePath), @"C:\Indexes");
             server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.TempPath), @"C:\indexes-temp");
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath), @"F:\Indexes-Journals");
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath), @"C:\Indexes-Journals");
 
             server.Initialize();
 
@@ -67,11 +67,11 @@ namespace FastTests.Issues
             Assert.Equal(new PathSetting(@"C:\Deployment\Databases\Foo").FullPath, database.Core.DataDirectory.FullPath);
 
             Assert.Equal(new PathSetting(@"C:\temp\Databases\Foo").FullPath, database.Storage.TempPath.FullPath);
-            Assert.Equal(new PathSetting(@"F:\Journals\Databases\Foo").FullPath, database.Storage.JournalsStoragePath.FullPath);
+            Assert.Equal(new PathSetting(@"C:\Journals\Databases\Foo").FullPath, database.Storage.JournalsStoragePath.FullPath);
 
-            Assert.Equal(new PathSetting(@"E:\Indexes\Databases\Foo").FullPath, database.Indexing.StoragePath.FullPath);
+            Assert.Equal(new PathSetting(@"C:\Indexes\Databases\Foo").FullPath, database.Indexing.StoragePath.FullPath);
             Assert.Equal(new PathSetting(@"C:\indexes-temp\Databases\Foo").FullPath, database.Indexing.TempPath.FullPath);
-            Assert.Equal(new PathSetting(@"F:\Indexes-Journals\Databases\Foo").FullPath, database.Indexing.JournalsStoragePath.FullPath);
+            Assert.Equal(new PathSetting(@"C:\Indexes-Journals\Databases\Foo").FullPath, database.Indexing.JournalsStoragePath.FullPath);
         }
 
         [Fact]
@@ -82,11 +82,11 @@ namespace FastTests.Issues
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"C:\Deployment");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.TempPath), @"C:\temp");
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), @"F:\Journals");
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), @"C:\Journals");
 
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StoragePath), @"E:\Indexes");
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StoragePath), @"C:\Indexes");
             server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.TempPath), @"C:\indexes-temp");
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath), @"F:\Indexes-Journals");
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath), @"C:\Indexes-Journals");
 
             server.Initialize();
 
@@ -95,22 +95,22 @@ namespace FastTests.Issues
             database.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"C:\MyDatabase");
 
             database.SetSetting(RavenConfiguration.GetKey(x => x.Storage.TempPath), @"C:\my-temp-path");
-            database.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), @"F:\MyJournals");
+            database.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), @"C:\MyJournals");
 
-            database.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StoragePath), @"E:\MyIndexes");
+            database.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StoragePath), @"C:\MyIndexes");
             database.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.TempPath), @"C:\my-indexes-temp");
-            database.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath), @"F:\My-Indexes-Journals");
+            database.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath), @"C:\My-Indexes-Journals");
 
             database.Initialize();
 
             Assert.Equal(new PathSetting(@"C:\MyDatabase").FullPath, database.Core.DataDirectory.FullPath);
 
             Assert.Equal(new PathSetting(@"C:\my-temp-path").FullPath, database.Storage.TempPath.FullPath);
-            Assert.Equal(new PathSetting(@"F:\MyJournals").FullPath, database.Storage.JournalsStoragePath.FullPath);
+            Assert.Equal(new PathSetting(@"C:\MyJournals").FullPath, database.Storage.JournalsStoragePath.FullPath);
 
-            Assert.Equal(new PathSetting(@"E:\MyIndexes").FullPath, database.Indexing.StoragePath.FullPath);
+            Assert.Equal(new PathSetting(@"C:\MyIndexes").FullPath, database.Indexing.StoragePath.FullPath);
             Assert.Equal(new PathSetting(@"C:\my-indexes-temp").FullPath, database.Indexing.TempPath.FullPath);
-            Assert.Equal(new PathSetting(@"F:\My-Indexes-Journals").FullPath, database.Indexing.JournalsStoragePath.FullPath);
+            Assert.Equal(new PathSetting(@"C:\My-Indexes-Journals").FullPath, database.Indexing.JournalsStoragePath.FullPath);
         }
 
         [Fact]

@@ -66,6 +66,7 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public IndexPriority? Priority { get; set; }
 
+        public IndexLockMode? LockMode { get; set; }
 
         /// <summary>
         /// Provide a way to dynamically index values with runtime known values
@@ -161,32 +162,11 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
-        /// Executes the index creation against the specified document store in side-by-side mode.
-        /// </summary>
-        /// <param name="store"></param>
-        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
-        public void SideBySideExecute(IDocumentStore store, long? minimumEtagBeforeReplace = null)
-        {
-            store.SideBySideExecuteIndex(this, minimumEtagBeforeReplace);
-        }
-
-        /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>
         public void Execute(IDocumentStore store)
         {
             store.ExecuteIndex(this);
-        }
-
-        /// <summary>
-        /// Executes the index creation using in side-by-side mode.
-        /// </summary>
-        /// <param name="store"></param>
-        /// <param name="conventions"></param>
-        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
-        public virtual void SideBySideExecute(IDocumentStore store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
-        {
-            PutIndex(store, conventions, minimumEtagBeforeReplace);
         }
 
         /// <summary>
@@ -197,31 +177,25 @@ namespace Raven.Client.Documents.Indexes
             PutIndex(store, conventions);
         }
 
-        private void PutIndex(IDocumentStore store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null)
+        private void PutIndex(IDocumentStore store, DocumentConventions conventions)
         {
-            AsyncHelpers.RunSync(() => PutIndexAsync(store, conventions, minimumEtagBeforeReplace));
+            AsyncHelpers.RunSync(() => PutIndexAsync(store, conventions));
         }
 
-        private Task PutIndexAsync(IDocumentStore store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
+        private Task PutIndexAsync(IDocumentStore store, DocumentConventions conventions, CancellationToken token = default(CancellationToken))
         {
             Conventions = conventions;
 
             var indexDefinition = CreateIndexDefinition();
-            indexDefinition.MinimumEtagBeforeReplace = minimumEtagBeforeReplace;
             indexDefinition.Name = IndexName;
+
+            if (LockMode.HasValue)
+                indexDefinition.LockMode = LockMode.Value;
 
             if (Priority.HasValue)
                 indexDefinition.Priority = Priority.Value;
 
             return store.Admin.SendAsync(new PutIndexesOperation(indexDefinition), token);
-        }
-
-        /// <summary>
-        /// Executes the index creation against the specified document store in side-by-side mode.
-        /// </summary>
-        public Task SideBySideExecuteAsync(IDocumentStore store, long? minimumEtagBeforeReplace = null)
-        {
-            return store.SideBySideExecuteIndexAsync(this, minimumEtagBeforeReplace);
         }
 
         /// <summary>
@@ -232,17 +206,12 @@ namespace Raven.Client.Documents.Indexes
             return store.ExecuteIndexAsync(this);
         }
 
-        public virtual Task SideBySideExecuteAsync(IDocumentStore store, DocumentConventions conventions, long? minimumEtagBeforeReplace = null, CancellationToken token = default(CancellationToken))
-        {
-            return PutIndexAsync(store, conventions, minimumEtagBeforeReplace, token);
-        }
-
         /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>
         public virtual Task ExecuteAsync(IDocumentStore store, DocumentConventions conventions, CancellationToken token = default(CancellationToken))
         {
-            return PutIndexAsync(store, conventions, minimumEtagBeforeReplace: null, token: token);
+            return PutIndexAsync(store, conventions, token: token);
         }
     }
 

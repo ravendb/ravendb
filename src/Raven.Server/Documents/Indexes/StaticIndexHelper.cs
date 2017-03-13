@@ -12,33 +12,12 @@ namespace Raven.Server.Documents.Indexes
     {
         public static bool CanReplace(MapIndex index, bool isStale, DocumentDatabase database, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
-            return CanReplace(index, isStale, index.Definition.IndexDefinition.MinimumEtagBeforeReplace, database, databaseContext, indexContext);
+            return isStale == false;
         }
 
         public static bool CanReplace(MapReduceIndex index, bool isStale, DocumentDatabase database, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
-            return CanReplace(index, isStale, index.Definition.IndexDefinition.MinimumEtagBeforeReplace, database, databaseContext, indexContext);
-        }
-
-        private static bool CanReplace(Index index, bool isStale, long? minimumEtagBeforeReplace, DocumentDatabase database, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
-        {
-            if (minimumEtagBeforeReplace == null)
-                return isStale == false;
-
-            foreach (var collection in index.Collections)
-            {
-                var lastProcessedDocEtag = index._indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
-                if (lastProcessedDocEtag < minimumEtagBeforeReplace.Value)
-                {
-                    var maxCollectionEtag = database.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
-                    if (maxCollectionEtag == lastProcessedDocEtag)
-                        continue;
-
-                    return false;
-                }
-            }
-
-            return true;
+            return isStale == false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

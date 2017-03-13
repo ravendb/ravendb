@@ -1,10 +1,11 @@
 ﻿import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
-import databaseActivatedEventArgs = require("viewmodels/resources/databaseActivatedEventArgs");
 import databaseDisconnectedEventArgs = require("viewmodels/resources/databaseDisconnectedEventArgs");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
+import databaseSettings = require("common/settings/databaseSettings");
+import studioSettings = require("common/settings/studioSettings");
 
 export = activeDatabaseTracker;
 
@@ -14,18 +15,9 @@ class activeDatabaseTracker {
 
     database: KnockoutObservable<database> = ko.observable<database>();
 
+    settings: KnockoutObservable<databaseSettings> = ko.observable<databaseSettings>();
+
     constructor() {
-        ko.postbox.subscribe(EVENTS.Database.Activate, (e: databaseActivatedEventArgs) => {
-
-            // If the 'same' database was selected from the top databases selector dropdown, 
-            // then we want the knockout observable to be aware of it so that scrollling on page will occur
-            if (e.database === this.database()) {
-                this.database(null);
-            }
-            // Set the active database
-            this.database(e.database);
-          });
-
         ko.postbox.subscribe(EVENTS.Database.Disconnect, (e: databaseDisconnectedEventArgs) => {
             if (e.database === this.database()) {
                 this.database(null);
@@ -43,6 +35,28 @@ class activeDatabaseTracker {
                 }
             }
         });
+    }
+
+    onActivation(db: database): JQueryPromise<void> {
+        const task = $.Deferred<void>();
+
+        // If the 'same' database was selected from the top databases selector dropdown, 
+        // then we want the knockout observable to be aware of it so that scrollling on page will occur
+        if (db === this.database()) {
+            this.database(null);
+        }
+
+        studioSettings.forDatabase(db)
+            .done((settings) => {
+
+                this.settings(settings);
+                // Set the active database
+                this.database(db);
+                task.resolve();
+            })
+            .fail(() => task.reject());
+
+        return task;
     }
 
     private onDatabasesPage() {

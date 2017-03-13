@@ -29,8 +29,6 @@ import genUtils = require("common/generalUtils");
 import queryCriteria = require("models/database/query/queryCriteria");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
-import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-
 type indexInfo = {
     name: string;
     isMapReduce: boolean;

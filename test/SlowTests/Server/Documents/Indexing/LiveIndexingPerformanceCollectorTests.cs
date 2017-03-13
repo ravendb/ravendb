@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -105,9 +106,11 @@ namespace SlowTests.Server.Documents.Indexing
 
                 WaitForIndexing(store);
 
+                var dequeueCount = 0;
 
                 var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(5));
                 Assert.True(tuple.Item1);
+                dequeueCount++;
                 var usersStats = tuple.Item2[0];
 
                 while (true)
@@ -115,7 +118,9 @@ namespace SlowTests.Server.Documents.Indexing
                     if (usersStats.Performance.Select(x => x.InputCount).Sum() == 2)
                         break;
 
-                    tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(5));
+                    tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(10));
+                    dequeueCount++;
+
                     if (tuple.Item1 == false)
                         break;
                     Assert.Equal(1, tuple.Item2.Count);
@@ -123,7 +128,7 @@ namespace SlowTests.Server.Documents.Indexing
                 }
                 Assert.Equal("Users/ByName", usersStats.IndexName);
 
-                Assert.Equal(2, usersStats.Performance.Select(x => x.InputCount).Sum());
+                Assert.True(usersStats.Performance.Select(x => x.InputCount).Sum() == 2, $"Can\'t find indexing performance stats, after {dequeueCount} tries");
             }
         }
     }

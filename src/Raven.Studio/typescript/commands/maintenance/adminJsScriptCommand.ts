@@ -1,6 +1,4 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
-import appUrl = require("common/appUrl");
 
 class adminJsScriptCommand extends commandBase {
     constructor(private script: string, private targetDatabase:string) {

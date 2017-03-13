@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Sparrow;
+using Sparrow.Collections;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Debugging;
@@ -36,7 +37,7 @@ namespace Voron.Data.Fixed
         private readonly bool _isPageLocatorOwned;
 
         private RootObjectType? _type;
-        private Stack<FixedSizeTreePage> _cursor;
+        private FastStack<FixedSizeTreePage> _cursor;
         private int _changes;
 
         public LowLevelTransaction Llt => _tx;
@@ -372,9 +373,9 @@ namespace Voron.Data.Fixed
             var header = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
             var page = GetReadOnlyPage(header->RootPageNumber);
             if (_cursor == null)
-                _cursor = new Stack<FixedSizeTreePage>();
+                _cursor = new FastStack<FixedSizeTreePage>();
             else
-                _cursor.Clear();
+                _cursor.WeakClear();
 
             while (page.IsLeaf == false)
             {

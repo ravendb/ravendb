@@ -1,7 +1,6 @@
 import app = require("durandal/app");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import shell = require("viewmodels/shell");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import appUrl = require("common/appUrl");
 import databasesManager = require("common/shell/databasesManager");

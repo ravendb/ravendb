@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import collectionsStats = require("models/database/documents/collectionsStats");
-import collection = require("models/database/documents/collection");
 import endpoints = require("endpoints");
 
 class getCollectionsStatsCommand extends commandBase {

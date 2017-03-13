@@ -26,6 +26,10 @@ interface resultsWithTotalCountDto<T> extends resultsDto<T> {
     TotalResults: number;
 }
 
+interface resultsWithCountAndAvailableColumns<T> extends resultsWithTotalCountDto<T> {
+    AvailableColumns: string[];
+}
+
 
 interface documentDto extends metadataAwareDto {
     [key: string]: any;
@@ -231,7 +235,7 @@ interface subscriptionResponseItemDto {
 interface subscriptionConnectionInfoDto {
     ClientUri: string;
     ConnectionException: string;
-    Stats: Raven.Server.Documents.SubscriptionConnectionStats;
+    Stats: Raven.Server.Documents.Subscriptions.SubscriptionConnectionStats;
     Options: Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions;
 }
 
@@ -245,4 +249,8 @@ interface pagedResult<T> {
     totalResultCount: number;
     resultEtag?: string;
     additionalResultInfo?: any; 
+}
+
+interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
+    availableColumns: string[];
 }

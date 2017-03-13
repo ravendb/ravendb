@@ -1,8 +1,4 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
-
-import license = require("models/auth/license");
-import EVENTS = require("common/constants/events");
-
 class database {
     static readonly type = "database";
     static readonly qualifier = "db";
@@ -31,13 +27,6 @@ class database {
         });*/
         const dbName = dbInfo.Name;
         
-    }
-
-    activate() {
-        ko.postbox.publish(EVENTS.Database.Activate,
-            {
-                database: this
-            });
     }
 
     updateUsing(incomingCopy: Raven.Client.Server.Operations.DatabaseInfo) {

@@ -2,7 +2,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getHotSpareInformation = require("commands/licensing/GetHotSpareInformation");
 import testHotSpareCommand = require("commands/licensing/testHotSpareCommand");
 import activateHotSpareCommand = require("commands/licensing/activateHotSpareCommand");
-import shell = require("viewmodels/shell");
 import eventsCollector = require("common/eventsCollector");
 
 class hotSpare extends viewModelBase {

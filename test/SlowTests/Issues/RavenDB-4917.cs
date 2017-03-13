@@ -9,20 +9,19 @@ namespace SlowTests.Issues
 {
     public class RavenDB_4917 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-5919")]
+        [Fact]
         public void side_by_side_doesnt_create_new_index()
         {
             using (var store = GetDocumentStore())
             {
-                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+                Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
 
                 store.Admin.Send(new StopIndexingOperation());
 
                 store.ExecuteIndex(new Customer_Index());
+                store.ExecuteIndex(new Customer_Index()); // potential side-by-side
 
-                store.SideBySideExecuteIndex(new Customer_Index());
-
-                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
             }
         }
 

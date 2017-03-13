@@ -146,18 +146,7 @@ namespace Raven.Server.Documents.Indexes
 
                     TryDeleteIndexIfExists(replacementIndexName);
 
-                    switch (definition.Type)
-                    {
-                        case IndexType.Map:
-                            MapIndex.Update(existingIndex, definition, _documentDatabase);
-                            break;
-                        case IndexType.MapReduce:
-                            MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
-                            break;
-                        default:
-                            throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
-                    }
-
+                    UpdateIndex(definition, existingIndex);
                     return existingIndex.IndexId;
                 }
 
@@ -171,9 +160,23 @@ namespace Raven.Server.Documents.Indexes
                     if (lockMode == IndexLockMode.LockedError)
                         throw new InvalidOperationException($"Can not overwrite locked index: {existingIndex.Name}");
 
-                    TryDeleteIndexIfExists(replacementIndexName);
-
                     definition.Name = replacementIndexName;
+
+                    existingIndex = GetIndex(replacementIndexName);
+                    if (existingIndex != null)
+                    {
+                        creationOptions = GetIndexCreationOptions(definition, existingIndex);
+                        if (creationOptions == IndexCreationOptions.Noop)
+                            return existingIndex.IndexId;
+
+                        if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
+                        {
+                            UpdateIndex(definition, existingIndex);
+                            return existingIndex.IndexId;
+                        }
+                    }
+
+                    TryDeleteIndexIfExists(replacementIndexName);
                 }
 
                 var indexId = _indexes.GetNextIndexId();
@@ -237,7 +240,7 @@ namespace Raven.Server.Documents.Indexes
                     if (lockMode == IndexLockMode.LockedError)
                         throw new InvalidOperationException($"Can not overwrite locked index: {existingIndex.Name}");
 
-                    throw new NotSupportedException();
+                    throw new NotSupportedException($"Can not update auto-index: {existingIndex.Name}");
                 }
 
                 var indexId = _indexes.GetNextIndexId();
@@ -276,6 +279,21 @@ namespace Raven.Server.Documents.Indexes
                 });
 
             return indexId;
+        }
+
+        private void UpdateIndex(IndexDefinition definition, Index existingIndex)
+        {
+            switch (definition.Type)
+            {
+                case IndexType.Map:
+                    MapIndex.Update(existingIndex, definition, _documentDatabase);
+                    break;
+                case IndexType.MapReduce:
+                    MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
+                    break;
+                default:
+                    throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
+            }
         }
 
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex)
@@ -820,22 +838,38 @@ namespace Raven.Server.Documents.Indexes
                 if (lockTaken == false)
                     return false;
 
-                Index oldIndex, newIndex;
-                if (_indexes.TryGetByName(oldIndexName, out oldIndex) == false)
-                {
-                    //TODO - Efrat
-                }
-
+                Index newIndex;
                 if (_indexes.TryGetByName(newIndexName, out newIndex) == false)
                     return true;
 
+                Index oldIndex;
+                if (_indexes.TryGetByName(oldIndexName, out oldIndex))
+                {
+                    oldIndexName = oldIndex.Name;
+
+                    if (oldIndex.Type.IsStatic() && newIndex.Type.IsStatic())
+                    {
+                        var oldIndexDefinition = oldIndex.GetIndexDefinition();
+                        var newIndexDefinition = newIndex.Definition.GetOrCreateIndexDefinitionInternal();
+
+                        if (newIndex.Definition.LockMode == IndexLockMode.Unlock && newIndexDefinition.LockMode.HasValue == false && oldIndexDefinition.LockMode.HasValue)
+                            newIndex.SetLock(oldIndexDefinition.LockMode.Value);
+
+                        if (newIndex.Definition.Priority == IndexPriority.Normal && newIndexDefinition.Priority.HasValue == false && oldIndexDefinition.Priority.HasValue)
+                            newIndex.SetPriority(oldIndexDefinition.Priority.Value);
+                    }
+                }
+
                 _documentDatabase.IndexMetadataPersistence.OnIndexDeleted(newIndex);
 
-                _indexes.ReplaceIndexes(oldIndex, newIndex);
+                _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
                 newIndex.Rename(oldIndexName);
 
-                using (oldIndex.DrainRunningQueries())
-                    DeleteIndexInternal(oldIndex);
+                if (oldIndex != null)
+                {
+                    using (oldIndex.DrainRunningQueries())
+                        DeleteIndexInternal(oldIndex);
+                }
 
                 _documentDatabase.IndexMetadataPersistence.OnIndexCreated(newIndex);
 

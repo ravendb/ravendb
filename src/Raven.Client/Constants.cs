@@ -80,6 +80,8 @@ namespace Raven.Client
 
             public const string SystemDatabase = "<system>";
 
+            public const int MaxDatabaseNameLength = 128;
+
             public class Metadata
             {
                 private Metadata()

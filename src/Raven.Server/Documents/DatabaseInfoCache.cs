@@ -55,9 +55,7 @@ namespace Raven.Server.Documents
 
 
                 using (var id = context.GetLazyString(databaseName.ToLowerInvariant()))
-                using (
-                    var json = context.ReadObject(databaseInfo, "DatabaseInfo",
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using ( var json = context.ReadObject(databaseInfo, "DatabaseInfo", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var tvb = new TableValueBuilder
                     {

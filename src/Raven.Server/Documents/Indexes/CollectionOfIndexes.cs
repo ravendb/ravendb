@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 using Sparrow.Collections;
@@ -31,13 +32,18 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void ReplaceIndexes(Index oldIndex, Index newIndex)
+        public void ReplaceIndex(string name, Index oldIndex, Index newIndex)
         {
-            //WIP
-            _indexesByName.AddOrUpdate(oldIndex.Name, oldIndex, (key, oldValue) => newIndex);
+            Debug.Assert(oldIndex == null || string.Equals(name, oldIndex.Name, StringComparison.OrdinalIgnoreCase));
+
+            _indexesByName.AddOrUpdate(name, oldIndex, (key, oldValue) => newIndex);
 
             Index _;
             _indexesByName.TryRemove(newIndex.Name, out _);
+
+            if (oldIndex == null)
+                return;
+
             foreach (var collection in oldIndex.Definition.Collections)
             {
                 ConcurrentSet<Index> indexes;

@@ -198,13 +198,13 @@ namespace Raven.Server.Documents.Indexes
                     error.Timestamp = new DateTime(IPAddress.NetworkToHostOrder(*(long*)ptr), DateTimeKind.Utc);
 
                     ptr = tvr.Result.Reader.Read(1, out size);
-                    error.Document = new LazyStringValue(null, ptr, size, context);
+                    error.Document = context.AllocateStringValue(null, ptr, size);
 
                     ptr = tvr.Result.Reader.Read(2, out size);
-                    error.Action = new LazyStringValue(null, ptr, size, context);
+                    error.Action = context.AllocateStringValue(null, ptr, size);
 
                     ptr = tvr.Result.Reader.Read(3, out size);
-                    error.Error = new LazyStringValue(null, ptr, size, context);
+                    error.Error = context.AllocateStringValue(null, ptr, size);
 
                     errors.Add(error);
                 }

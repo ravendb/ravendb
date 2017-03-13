@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             PersistMapFields(context, writer);
         }
 
-        protected override IndexDefinition CreateIndexDefinition()
+        protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
             var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
 

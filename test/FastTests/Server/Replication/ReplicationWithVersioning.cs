@@ -168,19 +168,26 @@ namespace FastTests.Server.Replication
 
                 using (var session = storeA.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, "foo/bar");
+                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
                     await session.SaveChangesAsync();
                 }
 
-                Assert.Equal(1, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 1));
-                Assert.Equal(1, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 1));
-                Assert.True(WaitForDocument(storeB, "foo/bar"));
+                Assert.Equal(1, WaitForValue(() => GetRevisions(storeA, "users/1").Count, 1));
+                Assert.Equal(1, WaitForValue(() => GetRevisions(storeB, "users/1").Count, 1));
+                Assert.True(WaitForDocument(storeB, "users/1"));
 
                 SetupReplication(storeA, storeC);
                 SetupReplication(storeB, storeC);
 
-                Assert.Equal(2, WaitForValue(() => GetReplicationStats(storeC).IncomingStats.Count, 2));
-                Assert.Equal(1, WaitForValue(() => GetRevisions(storeC, "foo/bar").Count, 1));
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Marker" }, "marker");
+                    await session.SaveChangesAsync();
+                }
+                Assert.True(WaitForDocument(storeC, "marker"));
+                Assert.True(WaitForDocument(storeB, "marker"));
+
+                Assert.Equal(1, WaitForValue(() => GetRevisions(storeC, "users/1").Count, 1));
             }
         }
     }

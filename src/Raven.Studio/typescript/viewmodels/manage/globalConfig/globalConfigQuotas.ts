@@ -4,7 +4,6 @@ import saveGlobalSettingsCommand = require("commands/database/globalConfig/saveG
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
-import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import eventsCollector = require("common/eventsCollector");
 

@@ -80,10 +80,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public int PageCount
-        {
-            get { return Pages.Count; }
-        }
+        public int PageCount => Pages.Count;
 
         public void Push(TreePage p)
         {

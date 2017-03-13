@@ -4,11 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
@@ -42,7 +40,6 @@ namespace SlowTests.Issues
                 store.Admin.Send(new SetIndexLockOperation(index.IndexName, IndexLockMode.LockedError));
 
                 index.Execute(store);
-                index.SideBySideExecute(store);
 
                 store.Admin.Send(new SetIndexLockOperation(index.IndexName, IndexLockMode.Unlock));
 
@@ -55,8 +52,9 @@ namespace SlowTests.Issues
 
                 store.Admin.Send(new PutIndexesOperation(definition));
 
+                WaitForIndexing(store);
+
                 Assert.Throws<RavenException>(() => index.Execute(store));
-                Assert.Throws<RavenException>(() => index.SideBySideExecute(store));
             }
         }
 
@@ -71,7 +69,6 @@ namespace SlowTests.Issues
                 store.Admin.Send(new SetIndexLockOperation(index.IndexName, IndexLockMode.LockedError));
 
                 await index.ExecuteAsync(store).ConfigureAwait(false);
-                await index.SideBySideExecuteAsync(store).ConfigureAwait(false);
 
                 store.Admin.Send(new SetIndexLockOperation(index.IndexName, IndexLockMode.Unlock));
 
@@ -81,10 +78,12 @@ namespace SlowTests.Issues
                 {
                     Sort = SortOptions.Numeric
                 };
+
                 store.Admin.Send(new PutIndexesOperation(definition));
 
+                WaitForIndexing(store);
+
                 await Assert.ThrowsAsync<RavenException>(() => index.ExecuteAsync(store));
-                await Assert.ThrowsAsync<RavenException>(() => index.SideBySideExecuteAsync(store));
             }
         }
     }

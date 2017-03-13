@@ -1,19 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import replicationsSetup = require("models/database/replication/replicationsSetup");
-import replicationDestination = require("models/database/replication/replicationDestination");
-import collection = require("models/database/documents/collection");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getReplicationsCommand = require("commands/database/replication/getReplicationsCommand");
-import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
-import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import replicateIndexesCommand = require("commands/database/replication/replicateIndexesCommand");
-import replicateTransformersCommand = require("commands/database/replication/replicateTransformersCommand");
-import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
-import collectionsStats = require("models/database/documents/collectionsStats");
-import appUrl = require("common/appUrl");
-import database = require("models/resources/database");
-import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
-import eventsCollector = require("common/eventsCollector");
 
 class etl extends viewModelBase {
     /*TODO

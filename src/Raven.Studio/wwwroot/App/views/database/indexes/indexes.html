@@ -81,12 +81,6 @@
                                         <span>Lock</span>
                                     </a>
                                 </li>
-                                <li data-bind="click: lockSideBySideSelectedIndexes">
-                                    <a href="#" title="Lock (Side by Side) selected indexes">
-                                        <i class="icon-lock-sidebyside"></i>
-                                        <span>Lock (Side by Side)</span>
-                                    </a>
-                                </li>
                                 <li data-bind="click: lockErrorSelectedIndexes">
                                     <a href="#" title="Lock (Error) selected indexes">
                                         <i class="icon-lock-error"></i>
@@ -288,9 +282,6 @@
             <span data-bind="visible: lockMode() === 'Unlock'">
                 <i class="icon-unlock"></i><span>Unlocked</span>
             </span>
-            <span data-bind="visible: lockMode() === 'SideBySide'">
-                <i class="icon-lock-sidebyside"></i><span>Locked (side-by-side)</span>
-            </span>
             <span data-bind="visible: lockMode() === 'LockedIgnore'">
                 <i class="icon-lock"></i><span>Locked</span>
             </span>
@@ -311,12 +302,6 @@
                 <a href="#" data-bind="click: $root.lockIndex" title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
                     <i class="icon-lock"></i>
                     <span>Lock</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" data-bind="click: $root.lockSideBySide" title="Side-by-side: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored. Index be can only updated via side-by-side index.">
-                    <i class="icon-lock-sidebyside"></i>
-                    <span>Lock (Side by Side)</span>
                 </a>
             </li>
             <li>

@@ -13,7 +13,7 @@ class getDocumentsPreviewCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResult<document>> {
+    execute(): JQueryPromise<pagedResultWithAvailableColumns<document>> {
         const args = {
             collection: this.collectionName,
             start: this.skip,
@@ -21,38 +21,44 @@ class getDocumentsPreviewCommand extends commandBase {
             binding: this.bindings
         };
 
-        const resultsSelector = (dto: resultsWithTotalCountDto<documentDto>, xhr: JQueryXHR) => {
+        const resultsSelector = (dto: resultsWithCountAndAvailableColumns<documentDto>, xhr: JQueryXHR) => {
+
+            dto.AvailableColumns.push("__metadata");
+
             return {
                 items: dto.Results.map(x => this.mapToDocument(x)),
                 totalResultCount: dto.TotalResults,
-                resultEtag: this.extractEtag(xhr)
-            } as pagedResult<document>;
+                resultEtag: this.extractEtag(xhr),
+                availableColumns: dto.AvailableColumns
+            } as pagedResultWithAvailableColumns<document>;
         };
-        const url = endpoints.databases.studioCollections.studioCollectionsPreview;
-        return this.query(url, args, this.database, resultsSelector);
+        const url = endpoints.databases.studioCollections.studioCollectionsPreview + this.urlEncodeArgs(args);
+        return this.query(url, null, this.database, resultsSelector);
     }
 
     private mapToDocument(docDto: documentDto) {
         const doc = new document(docDto);
 
-        const metadata = doc.__metadata;
+        const metadata = doc.__metadata as any;
 
-        const objectStubs = (metadata as any)[getDocumentsPreviewCommand.ObjectStubsKey] as string[];
+        const objectStubs = metadata[getDocumentsPreviewCommand.ObjectStubsKey] as string[];
         if (objectStubs) {
             objectStubs.forEach(stub => (doc as any)[stub] = {});
         }
 
-        const arrayStubs = (metadata as any)[getDocumentsPreviewCommand.ArrayStubsKey] as string[];
+        const arrayStubs = metadata[getDocumentsPreviewCommand.ArrayStubsKey] as string[];
         if (arrayStubs) {
             arrayStubs.forEach(stub => (doc as any)[stub] = []);
         }
 
-        const trimmedValues = (metadata as any)[getDocumentsPreviewCommand.TrimmedValueKey] as string[];
+        const trimmedValues = metadata[getDocumentsPreviewCommand.TrimmedValueKey] as string[];
         if (trimmedValues) {
             trimmedValues.forEach(trimmedKey => {
                 (doc as any)[trimmedKey] += "...";
             });
         }
+
+        // we don't delete $o, $a, $t from document as it is used to detect if we display fake value
 
         return doc;
     }

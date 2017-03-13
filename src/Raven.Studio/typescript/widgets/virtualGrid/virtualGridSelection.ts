@@ -1,7 +1,4 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
-
-import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-
 type selectionMode = "inclusive" | "exclusive";
 
 interface virtualGridSelection<T> {

@@ -8,14 +8,16 @@ using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Sparrow;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Subscriptions
 {
     public class SubscriptionState:IDisposable
     {
+        private readonly SubscriptionStorage _storage;
         private readonly AsyncManualResetEvent _connectionInUse = new AsyncManualResetEvent();
 
-        public SubscriptionState()
+        public SubscriptionState(SubscriptionStorage storage)
         {
+            _storage = storage;
             _connectionInUse.Set();
         }
 
@@ -57,16 +59,17 @@ namespace Raven.Server.Documents
                                     $"Subscription {incomingConnection.SubscriptionId} is occupied by a ForceAndKeep connection, connectionId cannot be opened");
 
                             if (_currentConnection != null)
-                                _currentConnection.ConnectionException = new SubscriptionClosedException("Closed by Takeover");
+                                _storage.DropSubscriptionConnection(_currentConnection.SubscriptionId,
+                                    "Closed by TakeOver");
 
-                            _currentConnection?.CancellationTokenSource.Cancel();
-                        
                             throw new TimeoutException();
 
                         case SubscriptionOpeningStrategy.ForceAndKeep:
-                            _currentConnection.ConnectionException = new SubscriptionClosedException("Closed by ForceAndKeep");
-                            _currentConnection?.CancellationTokenSource.Cancel();
-                        
+
+                            if (_currentConnection != null)
+                                _storage.DropSubscriptionConnection(_currentConnection.SubscriptionId,
+                                    "Closed by ForceAndKeep");
+
                             throw new TimeoutException();
                         default:
                             throw new InvalidOperationException("Unknown subscription open strategy: " +
