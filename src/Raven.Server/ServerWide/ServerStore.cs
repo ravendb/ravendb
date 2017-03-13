@@ -76,9 +76,15 @@ namespace Raven.Server.ServerWide
         public TransactionContextPool ContextPool;
 
         public ClusterStateMachine Cluster => _engine.StateMachine;
+        public string NodeTag => _engine.Tag;
 
         private Timer _timer;
         private RachisConsensus<ClusterStateMachine> _engine;
+
+        public ClusterTopology GetClusterTopology(TransactionOperationContext context)
+        {
+            return _engine.GetTopology(context);
+        }
 
         public void Initialize()
         {
@@ -123,16 +129,58 @@ namespace Raven.Server.ServerWide
             _engine = new RachisConsensus<ClusterStateMachine>();
             _engine.Initialize(_env);
 
+            _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
+
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
             LicenseStorage.Initialize(_env, ContextPool);
             NotificationCenter.Initialize();
+
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                foreach (var db in _engine.StateMachine.ItemsStartingWith(context, "db/", 0, int.MaxValue))
+                {
+                    DatabasesLandlord.ClusterOnDatabaseChanged(this, db.Item1);
+                }
+            }
+        }
+
+        public async Task DeleteDatabaseAsync(JsonOperationContext context, string db)
+        {
+            if (_engine.CurrentState != RachisConsensus.State.Leader && _engine.CurrentState != RachisConsensus.State.LeaderElect)
+            {
+                await SendToLeaderAsync(new DeleteDatabaseCommand
+                {
+                    DatabaseName = db
+                });
+                return;
+            }
+
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(DeleteDatabaseCommand),
+                [nameof(DeleteDatabaseCommand.DatabaseName)] = db,
+            }, "del-cmd"))
+            {
+                await _engine.PutAsync(putCmd);
+            }
         }
 
         public async Task PutValueInClusterAsync(JsonOperationContext context, string key, BlittableJsonReaderObject val)
         {
-            //TODO: redirect to leader
+            if (_engine.CurrentState != RachisConsensus.State.Leader && _engine.CurrentState != RachisConsensus.State.LeaderElect)
+            {
+                await SendToLeaderAsync(new PutValueCommand
+                {
+                    Name = key,
+                    Value = val
+                });
+                return;
+            }
+
+
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(PutValueCommand),
@@ -146,7 +194,15 @@ namespace Raven.Server.ServerWide
 
         public async Task DeleteValueInClusterAsync(JsonOperationContext context, string key)
         {
-            //TODO: redirect to leader
+            if (_engine.CurrentState != RachisConsensus.State.Leader && _engine.CurrentState != RachisConsensus.State.LeaderElect)
+            {
+                await SendToLeaderAsync(new DeleteValueCommand
+                {
+                    Name = key,
+                });
+                return;
+            }
+
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(DeleteValueCommand),
@@ -203,7 +259,7 @@ namespace Raven.Server.ServerWide
         {
             try
             {
-                foreach (var db in DatabasesLandlord.ResourcesStoresCache)
+                foreach (var db in DatabasesLandlord.DatabasesCache)
                 {
                     try
                     {
@@ -236,7 +292,7 @@ namespace Raven.Server.ServerWide
                     {
                         // intentionally inside the loop, so we get better concurrency overall
                         // since shutting down a database can take a while
-                        DatabasesLandlord.UnloadResource(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.Core.RunInMemory);
+                        DatabasesLandlord.UnloadDatabase(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.Core.RunInMemory);
                     }
 
                 }
@@ -295,6 +351,11 @@ namespace Raven.Server.ServerWide
             {
                 _engine.Bootstarp(_ravenServer.WebUrls[0]);
             }
+        }
+
+        public Task SendToLeaderAsync(object o)
+        {
+            throw new NotImplementedException();
         }
     }
 }

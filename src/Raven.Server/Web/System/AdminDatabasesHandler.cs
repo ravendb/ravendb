@@ -6,18 +6,23 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Platform.Win32;
 
 namespace Raven.Server.Web.System
 {
@@ -35,7 +40,7 @@ namespace Raven.Server.Web.System
 
                 var dbId = Constants.Documents.Prefix + name;
                 long etag;
-                using(context.OpenReadTransaction())
+                using (context.OpenReadTransaction())
                 using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out etag))
                 {
                     if (dbDoc == null)
@@ -84,6 +89,9 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
         public async Task Put()
         {
+            // TODO: Redirect to leader
+
+
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             TransactionOperationContext context;
@@ -116,6 +124,32 @@ namespace Raven.Server.Web.System
 
                 var dbDoc = context.ReadForDisk(RequestBodyStream(), dbId);
 
+                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(dbDoc);
+
+                var factor = Math.Max(1, GetIntValueQueryString("replication-factor") ?? 0);
+
+                if ((databaseRecord.Topology?.Members?.Count ?? 0) == 0)
+                {
+                    databaseRecord.Topology = new DatabaseTopology();
+
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+
+                    var allNodes = clusterTopology.Members.Keys
+                        .Concat(clusterTopology.Promotables.Keys)
+                        .Concat(clusterTopology.Watchers.Keys)
+                        .ToArray();
+
+                    var offset = new Random().Next();
+
+                    for (int i = 0; i < Math.Min(allNodes.Length, factor); i++)
+                    {
+                        var selectedNode = allNodes[(i + offset) % allNodes.Length];
+                        databaseRecord.Topology.Members.Add(selectedNode);
+                    }
+                    var entityToBlittable = new EntityToBlittable(null);
+                    dbDoc = entityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
+                }
+
                 var newEtag = await ServerStore.TEMP_WriteDbAsync(context, dbId, dbDoc, etag);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
@@ -134,91 +168,25 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
-        public Task DeleteQueryString()
+        [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}")]
+        public async Task DeleteQueryString()
         {
             var names = GetStringValuesQueryString("name");
 
-            return DeleteDatabases(names);
+            var tasks = new List<Task>();
+
+            JsonOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                foreach (var name in names)
+                {
+                    tasks.Add(ServerStore.DeleteDatabaseAsync(context, name));
+                }
+
+                await Task.WhenAll(tasks);
+            }
         }
 
-        private Task DeleteDatabases(StringValues names)
-        {
-            throw new NotSupportedException();
-            //var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
-
-            //TransactionOperationContext context;
-            //using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            //{
-            //    var results = new List<DynamicJsonValue>();
-            //    foreach (var name in names)
-            //    {
-            //        var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, ignoreDisabledDatabase: true);
-            //        if (configuration == null)
-            //        {
-            //            results.Add(new DatabaseDeleteResult
-            //            {
-            //                Name = name,
-            //                Deleted = false,
-            //                Reason = "database not found"
-            //            }.ToJson());
-
-            //            continue;
-            //        }
-
-            //        try
-            //        {
-            //            DeleteDatabase(name, context, isHardDelete, configuration);
-
-            //            results.Add(new DatabaseDeleteResult
-            //            {
-            //                Name = name,
-            //                Deleted = true
-            //            }.ToJson());
-            //        }
-            //        catch (Exception ex)
-            //        {
-            //            results.Add(new DatabaseDeleteResult
-            //            {
-            //                Name = name,
-            //                Deleted = false,
-            //                Reason = ex.Message
-            //            }.ToJson());
-            //        }
-            //    }
-
-            //    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            //    {
-            //        writer.WriteArray(context, results, (w, c, result) =>
-            //        {
-            //            c.Write(w, result);
-            //        });
-            //    }
-            //}
-
-            //return Task.CompletedTask;
-        }
-
-        private void DeleteDatabase(string name, TransactionOperationContext context, bool isHardDelete, RavenConfiguration configuration)
-        {
-            //ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
-            //{
-            //    var dbId = Constants.Documents.Prefix + name;
-            //    using (var tx = context.OpenWriteTransaction())
-            //    {
-            //        //ServerStore.Delete(context, dbId);
-            //        ServerStore.NotificationCenter.AddAfterTransactionCommit(
-            //            DatabaseChanged.Create(name, DatabaseChangeType.Delete), tx);
-
-            //        tx.Commit();
-            //    }
-
-            //    if (isHardDelete)
-            //        DatabaseHelper.DeleteDatabaseFiles(configuration);
-            //});
-
-            //ServerStore.DatabaseInfoCache.Delete(name);
-        }
 
         [RavenAction("/admin/databases/disable", "POST", "/admin/databases/disable?name={resourceName:string|multiple}")]
         public async Task DisableDatabases()

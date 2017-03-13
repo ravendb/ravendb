@@ -84,7 +84,7 @@ namespace Raven.Server.Web.System
 
             Task<DocumentDatabase> dbTask;
             var online =
-                ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(databaseName, out dbTask) &&
+                ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out dbTask) &&
                 dbTask != null && dbTask.IsCompleted;
 
             if (dbTask != null && dbTask.IsFaulted)

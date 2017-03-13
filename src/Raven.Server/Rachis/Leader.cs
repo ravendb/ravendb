@@ -113,7 +113,7 @@ namespace Raven.Server.Rachis
                 peers.Clear();
             }
 
-            foreach (var voter in clusterTopology.Voters)
+            foreach (var voter in clusterTopology.Members)
             {
                 if (voter.Key == _engine.Tag)
                     continue; // we obviously won't be applying to ourselves
@@ -150,7 +150,7 @@ namespace Raven.Server.Rachis
                 ambasaddor.Start();
             }
 
-            foreach (var nonVoter in clusterTopology.NonVotingMembers)
+            foreach (var nonVoter in clusterTopology.Watchers)
             {
                 FollowerAmbassador existingInstance;
                 if (_nonVoters.TryGetValue(nonVoter.Key, out existingInstance))
@@ -585,11 +585,11 @@ namespace Raven.Server.Rachis
                                                         $"with validation that it is not contained by the topology but current topology contains it.");
                 }
 
-                var newVotes = new Dictionary<string, string>(clusterTopology.Voters);
+                var newVotes = new Dictionary<string, string>(clusterTopology.Members);
                 newVotes.Remove(nodeTag);
                 var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
                 newPromotables.Remove(nodeTag);
-                var newNonVotes = new Dictionary<string, string>(clusterTopology.NonVotingMembers);
+                var newNonVotes = new Dictionary<string, string>(clusterTopology.Watchers);
                 newNonVotes.Remove(nodeTag);
 
                 var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new [] {nodeTag}).Max();
