@@ -9,7 +9,7 @@ class getDocumentsPreviewCommand extends commandBase {
     static readonly ArrayStubsKey = "$a";
     static readonly TrimmedValueKey = "$t";
 
-    constructor(private database: database, private skip: number, private take: number, private collectionName?: string, private bindings?: string[]) {
+    constructor(private database: database, private skip: number, private take: number, private collectionName?: string, private previewBindings?: string[], private fullBindings?: string[]) {
         super();
     }
 
@@ -18,7 +18,8 @@ class getDocumentsPreviewCommand extends commandBase {
             collection: this.collectionName,
             start: this.skip,
             pageSize: this.take,
-            binding: this.bindings
+            binding: this.previewBindings,
+            fullBinding: this.fullBindings
         };
 
         const resultsSelector = (dto: resultsWithCountAndAvailableColumns<documentDto>, xhr: JQueryXHR) => {

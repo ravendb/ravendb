@@ -148,9 +148,9 @@ class documents extends viewModelBase {
         this.tracker.setCurrentAsNotDirty();
     }
 
-    fetchDocs(skip: number, take: number, columns: string[]): JQueryPromise<pagedResultWithAvailableColumns<any>> {
+    fetchDocs(skip: number, take: number, previewColumns: string[], fullColumns: string[]): JQueryPromise<pagedResultWithAvailableColumns<any>> {
         this.isLoading(true);
-        return this.tracker.currentCollection().fetchDocuments(skip, take, columns)
+        return this.tracker.currentCollection().fetchDocuments(skip, take, previewColumns, fullColumns)
             .always(() => this.isLoading(false));
     }
 
@@ -166,7 +166,7 @@ class documents extends viewModelBase {
 
         grid.headerVisible(true);
 
-        this.columnsSelector(new columnsSelector<document>(grid, (s, t, c) => this.fetchDocs(s, t, c), (w, r) => {
+        this.columnsSelector(new columnsSelector<document>(grid, (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols), (w, r) => {
             if (this.tracker.currentCollection().isAllDocuments) {
                 return [
                     new checkedColumn(true),
@@ -188,9 +188,12 @@ class documents extends viewModelBase {
 
         this.columnPreview.install(".documents-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
-                this.fullDocumentsProvider.resolvePropertyValue(doc, column.valueAccessor, (v: any) => {
+                this.fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
                     const json = JSON.stringify(v, null, 4);
                     const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    onValue(html);
+                }, error => {
+                    const html = Prism.highlight("Unable to generate column preview: " + error.toString(), (Prism.languages as any).javascript);
                     onValue(html);
                 });
             }

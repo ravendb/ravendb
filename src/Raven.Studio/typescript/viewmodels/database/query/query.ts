@@ -361,7 +361,7 @@ class query extends viewModelBase {
 
         this.columnPreview.install("virtual-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
-                const value = _.isString(column.valueAccessor) ? (doc as any)[column.valueAccessor] : column.valueAccessor(doc);
+                const value = column.getCellValue(doc);
                 const json = JSON.stringify(value, null, 4);
                 const html = Prism.highlight(json, (Prism.languages as any).javascript);
                 onValue(html);
