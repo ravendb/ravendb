@@ -76,6 +76,11 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             }
         }
 
+        public class Marker
+        {
+            public string Name { get; set; }
+        }
+
         public class Invoice
         {
             public string Id { get; set; }
@@ -234,10 +239,10 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
     public class RavenDB_4323_Replication : ReplicationTestsBase, IDocumentTombstoneAware
     {
-        [Fact(Skip = "RavenDB-6533 - racy")]
+        [Fact]
         public async Task ReduceOutputShouldNotBeReplicated()
         {
-            var date = new DateTime(2017,2,14);
+            var date = new DateTime(2017, 2, 14);
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
@@ -257,28 +262,31 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new RavenDB_4323.Invoice { Amount = 1, IssuedAt = date.AddYears(30) }, "marker");
+                    await session.StoreAsync(new RavenDB_4323.Marker { Name = "Marker" }, "marker");
                     await session.SaveChangesAsync();
                 }
 
                 Assert.True(WaitForDocument(store2, "marker"));
 
-                var collectionStatistics = await store2.Admin.SendAsync(new GetCollectionStatisticsOperation());
-                Assert.Equal(2, collectionStatistics.Collections.Count);
+                var collectionStatistics = await store1.Admin.SendAsync(new GetCollectionStatisticsOperation());
+                Assert.Equal(8, collectionStatistics.Collections["DailyInvoices"]);
+                Assert.Equal(30, collectionStatistics.Collections["Invoices"]);
+
+                collectionStatistics = await store2.Admin.SendAsync(new GetCollectionStatisticsOperation());
+                Assert.Equal(30, collectionStatistics.Collections["Invoices"]);
                 Assert.False(collectionStatistics.Collections.ContainsKey("DailyInvoices"));
-                Assert.True(collectionStatistics.Collections.ContainsKey("Invoices"));
                 Assert.Equal(32, collectionStatistics.CountOfDocuments);
 
+                // Check that we do not replicate tombstones of aritifical documents
                 var database = await GetDocumentDatabaseInstanceFor(store1);
                 var database2 = await GetDocumentDatabaseInstanceFor(store2);
                 database.DocumentTombstoneCleaner.Subscribe(this);
                 database2.DocumentTombstoneCleaner.Subscribe(this);
-                // Check that we do not replicate tombstones of aritifical documents
 
                 await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"));
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new RavenDB_4323.Invoice { Amount = 1, IssuedAt = date.AddYears(31) }, "marker2");
+                    await session.StoreAsync(new RavenDB_4323.Marker { Name = "Marker 2" }, "marker2");
                     await session.SaveChangesAsync();
                 }
                 WaitForIndexing(store1);
@@ -287,17 +295,17 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 using (context.OpenReadTransaction())
                 {
-                    var dailyInvoicesTombstones = database.DocumentsStorage.GetTombstonesFrom(context, "DailyInvoices", 0, 0, 128).ToList();
-                    Assert.Equal(9, dailyInvoicesTombstones.Count);
+                    var dailyInvoicesTombstones = database.DocumentsStorage.GetTombstonesFrom(context, "DailyInvoices", 0, 0, 128).Count();
+                    Assert.Equal(8, dailyInvoicesTombstones);
                 }
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database2))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var dailyInvoicesTombstones = database.DocumentsStorage.GetTombstonesFrom(context, "DailyInvoices", 0, 0, 128).ToList();
-                    Assert.Equal(0, dailyInvoicesTombstones.Count);
+                    var dailyInvoicesTombstones = database.DocumentsStorage.GetTombstonesFrom(context, "DailyInvoices", 0, 0, 128).Count();
+                    Assert.Equal(0, dailyInvoicesTombstones);
                     var collections = database.DocumentsStorage.GetTombstoneCollections(tx.InnerTransaction).ToList();
-                    Assert.Equal(2, collections.Count);
+                    Assert.Equal(3, collections.Count);
                     Assert.DoesNotContain("DailyInvoices", collections, StringComparer.OrdinalIgnoreCase);
                 }
             }
