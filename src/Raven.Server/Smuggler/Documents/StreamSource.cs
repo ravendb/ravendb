@@ -120,6 +120,8 @@ namespace Raven.Server.Smuggler.Documents
 
             private readonly List<AllocatedMemoryData> _allocations = new List<AllocatedMemoryData>();
 
+            private const string HistoricalRevisionState = "Historical";
+
             private unsafe LazyStringValue CreateLazyStringValueFromParserState(JsonParserState state)
             {
                 int escapePositionsCount = state.EscapePositions.Count;
@@ -217,7 +219,7 @@ namespace Raven.Server.Smuggler.Documents
                             ThrowInvalidEtagType(state);
 
                         var revisionState = CreateLazyStringValueFromParserState(state);
-                        if (revisionState == "Historical")
+                        if (revisionState == HistoricalRevisionState)
                             Flags |= DocumentFlags.Revision;
                         break;
                     case State.ReadingId:
@@ -452,7 +454,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (isRevisionStatusProperty)
                             {
                                 var revisionState = CreateLazyStringValueFromParserState(state);
-                                if (revisionState == "Historical")
+                                if (revisionState == HistoricalRevisionState)
                                     Flags |= DocumentFlags.Revision;
                             }
 
@@ -521,6 +523,7 @@ namespace Raven.Server.Smuggler.Documents
                     return;
                 }
                 Id = null;
+                Flags = DocumentFlags.None;
                 _depth = 0;
                 _state = State.None;
                 _readingMetadataObject = false;
