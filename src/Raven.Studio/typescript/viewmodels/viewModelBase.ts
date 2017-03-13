@@ -67,8 +67,7 @@ class viewModelBase {
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
         this.downloader.reset();
 
-        this.databasesManager.activateBasedOnCurrentUrl();
-        return true;
+        return this.databasesManager.activateBasedOnCurrentUrl();
     }
 
     activate(args: any, isShell = false) {

@@ -357,7 +357,7 @@ class databases extends viewModelBase {
         if (!db || db.disabled())
             return;
 
-        db.activate();
+        this.databasesManager.activate(db);
 
         this.updateDatabaseInfo(db.name);
     }

@@ -30,13 +30,13 @@ class collection {
         return this.db;
     }
 
-    fetchDocuments(skip: number, take: number): JQueryPromise<pagedResult<document>> {
+    fetchDocuments(skip: number, take: number, columns?: string[]): JQueryPromise<pagedResultWithAvailableColumns<document>> {
         if (this.isAllDocuments) {
-            return new getDocumentsPreviewCommand(this.db, skip, take)
-                .execute(); //TODO:bindings
+            return new getDocumentsPreviewCommand(this.db, skip, take, undefined, columns)
+                .execute();
         } else {
-            return new getDocumentsPreviewCommand(this.db, skip, take, this.name)
-                .execute(); //TODO: bindings
+            return new getDocumentsPreviewCommand(this.db, skip, take, this.name, columns)
+                .execute();
         }
     }
 

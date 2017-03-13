@@ -156,21 +156,28 @@ class extensions {
             init: (element) => {
                 $(element).on('click', e => {
                     const $target = $(e.target);
-                    const $button = $target.closest(".dropdown-toggle");
-                    const $dropdown = $button.next(".dropdown-menu");
-                    if ($dropdown.length && $dropdown[0] !== element) {
-                        if (!$button.is(":disabled")) {
-                            const $parent = $dropdown.parent();
-                            $parent.toggleClass('open');
-                        }
-                    } else {
-                        // close any child dropdown
-                        $(".dropdown", element).each((idx, elem) => {
-                            $(elem).removeClass('open');
-                        });
-                    }
 
-                    e.stopPropagation();
+                    const clickedOnClose = !!$target.closest(".close-panel").length;
+                    if (clickedOnClose) {
+                        const $dropdownParent = $target.closest(".dropdown-menu").parent();
+                        $dropdownParent.removeClass('open');
+                    } else {
+                        const $button = $target.closest(".dropdown-toggle");
+                        const $dropdown = $button.next(".dropdown-menu");
+                        if ($dropdown.length && $dropdown[0] !== element) {
+                            if (!$button.is(":disabled")) {
+                                const $parent = $dropdown.parent();
+                                $parent.toggleClass('open');
+                            }
+                        } else {
+                            // close any child dropdown
+                            $(".dropdown", element).each((idx, elem) => {
+                                $(elem).removeClass('open');
+                            });
+                        }
+
+                        e.stopPropagation();
+                    }
                 });
             }
         }
