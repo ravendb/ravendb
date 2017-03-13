@@ -32,7 +32,6 @@ class indexDefinition {
     maps = ko.observableArray<mapItem>();
     reduce = ko.observable<string>();
     isTestIndex = ko.observable<boolean>(false);
-    isSideBySideIndex = ko.observable<boolean>(false);
     fields = ko.observableArray<indexFieldOptions>();
     defaultFieldOptions = ko.observable<indexFieldOptions>();
 
@@ -57,7 +56,6 @@ class indexDefinition {
         this.maps(dto.Maps.map(x => new mapItem(x)));
         this.reduce(dto.Reduce);
         this.isTestIndex(dto.IsTestIndex);
-        this.isSideBySideIndex(dto.IsSideBySideIndex);
         this.outputReduceToCollection(dto.OutputReduceToCollection);
         this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto, indexFieldOptions.defaultFieldOptions())));
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
@@ -166,7 +164,6 @@ class indexDefinition {
             Priority: this.priority(),
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
-            IsSideBySideIndex: false, //TODO side by side
             IsTestIndex: false, //TODO: test indexes
             OutputReduceToCollection: this.outputReduceToCollection()
         }
@@ -220,7 +217,6 @@ class indexDefinition {
             Reduce: undefined,
             Priority: "Normal",
             Configuration: null,
-            IsSideBySideIndex: false,
             IsTestIndex: false,
             Type: "Map",
             OutputReduceToCollection: null

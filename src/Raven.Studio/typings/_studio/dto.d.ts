@@ -235,7 +235,7 @@ interface subscriptionResponseItemDto {
 interface subscriptionConnectionInfoDto {
     ClientUri: string;
     ConnectionException: string;
-    Stats: Raven.Server.Documents.SubscriptionConnectionStats;
+    Stats: Raven.Server.Documents.Subscriptions.SubscriptionConnectionStats;
     Options: Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions;
 }
 
