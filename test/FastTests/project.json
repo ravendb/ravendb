@@ -43,6 +43,7 @@
 
   "dependencies": {
     "dotnet-test-xunit": "2.2.0-preview2-build1029",
+    "Microsoft.Extensions.DependencyModel": "1.0.0-*",
     "Sparrow": "4.0.0-*",
     "Microsoft.NETCore.App": "1.1.0",
     "Raven.Client": "4.0.0-*",
