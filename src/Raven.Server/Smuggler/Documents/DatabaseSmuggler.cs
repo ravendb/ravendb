@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Smuggler.Documents.Data;
@@ -60,7 +61,7 @@ namespace Raven.Server.Smuggler.Documents
                 var currentType = _source.GetNextType();
                 while (currentType != DatabaseItemType.None)
                 {
-                    ProcessType(currentType, result);
+                    ProcessType(currentType, result, buildVersion);
 
                     currentType = _source.GetNextType();
                 }
@@ -69,7 +70,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private void ProcessType(DatabaseItemType type, SmugglerResult result)
+        private void ProcessType(DatabaseItemType type, SmugglerResult result, long buildVersion)
         {
             if ((_options.OperateOnTypes & type) != type)
             {
@@ -84,7 +85,7 @@ namespace Raven.Server.Smuggler.Documents
             switch (type)
             {
                 case DatabaseItemType.Documents:
-                    counts = ProcessDocuments(result);
+                    counts = ProcessDocuments(result, buildVersion);
                     break;
                 case DatabaseItemType.RevisionDocuments:
                     counts = ProcessRevisionDocuments(result);
@@ -326,7 +327,7 @@ namespace Raven.Server.Smuggler.Documents
             return result.RevisionDocuments;
         }
 
-        private SmugglerProgressBase.Counts ProcessDocuments(SmugglerResult result)
+        private SmugglerProgressBase.Counts ProcessDocuments(SmugglerResult result, long buildVersion)
         {
             using (var actions = _destination.Documents())
             {
@@ -351,6 +352,12 @@ namespace Raven.Server.Smuggler.Documents
                         ThrowInvalidData();
 
                     var document = doc;
+
+                    if (CanSkipDocument(document, buildVersion))
+                    {
+                        result.Documents.SkippedCount++;
+                        continue;
+                    }
 
                     if (_options.IncludeExpired == false && document.Expired(_time.GetUtcNow()))
                     {
@@ -384,6 +391,20 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.Documents;
+        }
+
+        private static bool CanSkipDocument(Document document, long buildVersion)
+        {
+            if (buildVersion == 40 || buildVersion >= 40000)
+                return false;
+
+            // skipping "Raven/Replication/DatabaseIdsCache" and
+            // "Raven/Replication/Sources/{GUID}"
+            if (document.Key.Size != 34 && document.Key.Size != 62)
+                return false;
+
+            return document.Key == "Raven/Replication/DatabaseIdsCache" ||
+                   document.Key.StartsWith("Raven/Replication/Sources/");
         }
 
         private static void ThrowInvalidData()
