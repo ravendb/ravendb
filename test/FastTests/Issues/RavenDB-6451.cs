@@ -14,6 +14,32 @@ namespace FastTests.Issues
 {
     public class RavenDB_6451
     {
+        private HashSet<Assembly> _assemblies = new HashSet<Assembly>();
+
+        private IEnumerable<Assembly> GetAssemblies(Assembly assemblyToScan)
+        {
+            if (_assemblies.Add(assemblyToScan) == false)
+                yield break;
+
+            yield return assemblyToScan;
+
+            foreach (var referencedAssembly in assemblyToScan.GetReferencedAssemblies())
+            {
+                Assembly assembly;
+                try
+                {
+                    assembly = Assembly.Load(referencedAssembly);
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+
+                foreach (var asm in GetAssemblies(assembly))
+                    yield return asm;
+            }
+        }
+
         [Fact]
         public void Exceptions_should_not_have_blittable_and_pointer_fields()
         {
@@ -23,21 +49,16 @@ namespace FastTests.Issues
             Assert.True(HasInvalidProperties(typeof(ClassWithBlittable)));
             Assert.True(HasInvalidProperties(typeof(ClassWithNestedClassWithBlittable)));
 
-            var referenceAssemblies = GetRuntimeNonMicrosoftAssemblies();
+            var referenceAssemblies = GetAssemblies(GetType().GetTypeInfo().Assembly);
             var exceptionTypes =
                 (from type in referenceAssemblies.SelectMany(x => x.ExportedTypes)
-                    where typeof(Exception).IsAssignableFrom(type) &&
-                          (type.Namespace.StartsWith("Raven") ||
-                           type.Namespace.StartsWith("Voron") ||
-                           type.Namespace.StartsWith("Sparrow"))
+                    where typeof(Exception).IsAssignableFrom(type)
                     select type).ToArray();
 
             foreach (var t in exceptionTypes)
             {
                 try
                 {
-                    if(t == typeof(DocumentConflictException))
-                        Debugger.Break();
                     Assert.False(HasInvalidProperties(t), $"The type {t.FullName} should not have pointer or BlittableXXX properties");
                 }
                 catch (Exception e)
@@ -92,31 +113,6 @@ namespace FastTests.Issues
             }
             return false;
         }
-
-        //slightly modified version from to http://www.michael-whelan.net/replacing-appdomain-in-dotnet-core/
-        public static IEnumerable<Assembly> GetRuntimeNonMicrosoftAssemblies()
-        {
-            var assemblies = new List<Assembly>();
-            var dependencies = DependencyContext.Default.RuntimeLibraries;
-            foreach (var library in dependencies)
-            {
-                if (library.Name.StartsWith("Microsoft") ||
-                    library.Name.StartsWith("NuGet") ||
-                    library.Name.StartsWith("System"))
-                    continue;
-                try
-                {
-                    var assembly = Assembly.Load(new AssemblyName(library.Name));
-                    assemblies.Add(assembly);
-                }
-                catch (FileNotFoundException)
-                {
-                    //if assembly is not found --> it is not directly referenced
-                }
-            }
-            return assemblies;
-        }
-
 
         public unsafe class ClassWithPointer
         {
