@@ -474,7 +474,7 @@ namespace Voron
                 return new Win32MemoryMapPager(filename);
             }
 
-            public override IVirtualPager OpenJournalPager(long journalNumber)
+            public override IVirtualPager OpenJournalPager(long journalNumber) 
             {
                 var name = JournalName(journalNumber);
                 IJournalWriter value;
