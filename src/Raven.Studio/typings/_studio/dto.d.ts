@@ -26,6 +26,10 @@ interface resultsWithTotalCountDto<T> extends resultsDto<T> {
     TotalResults: number;
 }
 
+interface resultsWithCountAndAvailableColumns<T> extends resultsWithTotalCountDto<T> {
+    AvailableColumns: string[];
+}
+
 
 interface documentDto extends metadataAwareDto {
     [key: string]: any;
@@ -245,4 +249,8 @@ interface pagedResult<T> {
     totalResultCount: number;
     resultEtag?: string;
     additionalResultInfo?: any; 
+}
+
+interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
+    availableColumns: string[];
 }

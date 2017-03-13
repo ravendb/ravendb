@@ -213,7 +213,7 @@
                                 </div>
                             </div>
 
-                            <button class="btn btn-success pull-right" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
+                            <button class="btn btn-success pull-right close-panel" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
                         </ul>
                     </div>
                     <!-- TODO: csv enabled for: isStaticIndexSelected -->
@@ -221,15 +221,16 @@
                     <button class="btn btn-default statistics" data-bind="click: openQueryStats">
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>
-
+                    
+                    
                     <div class="btn-group dropdown-right">
-                        <button class="btn btn-default btn-sm dropdown-toggle btn-prerelease" disabled="disabled" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <button class="btn btn-default btn-sm dropdown-toggle" type="button"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <i class="icon-table"></i><span>Display</span>
                             <span class="caret"></span>
                         </button>
-                        <div class="dropdown-menu settings-menu">
-                            TODO:
-                        </div>
+                        <ul class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true, with: $root.columnsSelector">
+                            <div data-bind="compose: 'common/columnsSelector.html'"></div>
+                        </ul>
                     </div>
                 </div>
             </div>

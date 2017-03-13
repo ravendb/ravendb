@@ -34,6 +34,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import columnsSelector = require("common/helpers/columnsSelector");
 
 type indexItem = {
     name: string;
@@ -89,6 +90,8 @@ class query extends viewModelBase {
     isRangeFilter: KnockoutComputed<boolean>;
     isInFilter: KnockoutComputed<boolean>;
     isStringFilter: KnockoutComputed<boolean>;
+
+    columnsSelector = ko.observable<columnsSelector<document>>();
 
     uiTransformer = ko.observable<string>(); // represents UI value, which might not be yet applied to criteria 
     uiTransformerParameters = ko.observableArray<queryTransformerParameter>(); // represents UI value, which might not be yet applied to criteria 
@@ -350,8 +353,13 @@ class query extends viewModelBase {
             enableInlinePreview: true
         });
 
+        this.columnsSelector(new columnsSelector(grid,
+            (s, t, c) => this.fetcher()(s, t),
+            (w, r) => documentsProvider.findColumns(w, r), (results: pagedResult<document>) => [])); //TODO: extract columns
+
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetcher()(s, t), (w, r) => documentsProvider.findColumns(w, r));
+
+        this.columnsSelector().initGrid();
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
@@ -426,6 +434,11 @@ class query extends viewModelBase {
         this.resetFilterSettings();
         this.uiTransformer(null);
         this.uiTransformerParameters([]);
+
+        if (this.columnsSelector()) {
+            this.columnsSelector().reset();    
+        }
+        
         this.runQuery();
 
         const indexQuery = query.getIndexUrlPartFromIndexName(indexName);

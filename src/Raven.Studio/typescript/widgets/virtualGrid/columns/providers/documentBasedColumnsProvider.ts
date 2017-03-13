@@ -73,17 +73,10 @@ class documentBasedColumnsProvider {
     }
 
     private findColumnNames(results: pagedResult<document>, limit: number): string[] {
-        const propertySet = {};
         const uniquePropertyNames = new Set<string>();
 
-        results
-            .items
+        results.items
             .map(i => _.keys(i).forEach(key => uniquePropertyNames.add(key)));
-
-        const hasIds = _.some(results.items, x => x.__metadata && x.__metadata.id);
-        if (!hasIds) {
-            uniquePropertyNames.delete("__metadata");
-        }
 
         const columnNames = Array.from(uniquePropertyNames);
 

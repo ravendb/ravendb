@@ -1,0 +1,14 @@
+<div class="row row-sm margin-bottom">
+    <div class="col-xs-12">
+        
+        <ul data-bind="foreach: columnLayout">
+            <li data-bind="visible: visibileInSelector">
+                <span data-bind="text: virtualColumn().header"></span> 
+                <input type="checkbox" data-bind="checked: visible" />
+            </li>
+        </ul>
+    </div>
+</div>
+
+<button class="btn btn-default pull-right" data-bind="click: useDefaults">Use defaults</button>
+<button class="btn btn-success pull-right close-panel" data-bind="click: applyColumns"><i class="icon-check"></i> <span>Apply</span></button>

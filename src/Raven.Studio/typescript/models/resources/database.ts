@@ -33,13 +33,6 @@ class database {
         
     }
 
-    activate() {
-        ko.postbox.publish(EVENTS.Database.Activate,
-            {
-                database: this
-            });
-    }
-
     updateUsing(incomingCopy: Raven.Client.Server.Operations.DatabaseInfo) {
         this.isAdminCurrentTenant(incomingCopy.IsAdmin);
         this.activeBundles(incomingCopy.Bundles);

@@ -55,9 +55,16 @@
                     <button type="button" class="btn btn-prerelease" disabled="disabled"  data-toggle="button">
                         <span class="icon-export"></span> <span>Export</span>
                     </button>
-                    <button type="button" class="btn btn-prerelease" disabled="disabled" data-toggle="button">
-                        <span class="icon-table"></span> <span>Display</span>
+                </div>
+                
+                <div class="btn-group dropdown-right">
+                    <button class="btn btn-default btn-sm dropdown-toggle" type="button"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <i class="icon-table"></i><span>Display</span>
+                        <span class="caret"></span>
                     </button>
+                    <ul class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true, with: $root.columnsSelector">
+                        <div data-bind="compose: 'common/columnsSelector.html'"></div>
+                    </ul>
                 </div>
                 
             </div>
