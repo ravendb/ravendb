@@ -141,8 +141,7 @@ namespace Raven.Server.ServerWide
                 using (var tx = _env.ReadTransaction())
                 {
                     var table = tx.OpenTable(_itemsSchema, "Items");
-                    var itemsFromBackwards = table.SeekBackwardFrom(_itemsSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
-                    var reader = itemsFromBackwards.FirstOrDefault();
+                    var reader = table.ReadLast(_itemsSchema.FixedSizeIndexes[EtagIndexName]);
                     if (reader == null)
                         _lastEtag = 0;
                     else
@@ -171,9 +170,7 @@ namespace Raven.Server.ServerWide
         public long ReadLastEtag(TransactionOperationContext ctx)
         {
             var table = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-            var itemsFromBackwards = table.SeekBackwardFrom(_itemsSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
-            var reader = itemsFromBackwards.FirstOrDefault();
-
+            var reader = table.ReadLast(_itemsSchema.FixedSizeIndexes[EtagIndexName]);
             if (reader == null)
                 return 0;
 

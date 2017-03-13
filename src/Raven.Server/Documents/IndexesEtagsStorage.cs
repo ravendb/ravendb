@@ -639,13 +639,12 @@ namespace Raven.Server.Documents
             if (table.NumberOfEntries == 0)
                 return 0;
 
-            var result = table.SeekBackwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
-            var tvr = result.FirstOrDefault();
-            if (tvr == null)
+            var result = table.ReadLast(IndexesTableSchema.FixedSizeIndexes[EtagIndexName]);
+            if (result == null)
                 return 0;
 
             int size;
-            return Bits.SwapBytes(*(long*)tvr.Reader.Read((int)MetadataFields.Etag, out size));
+            return Bits.SwapBytes(*(long*)result.Reader.Read((int)MetadataFields.Etag, out size));
         }
 
         private void DeleteIndexMetadataForRemovedIndexesAndTransformers(Transaction tx, TransactionOperationContext context, IndexStore indexStore,

@@ -864,6 +864,39 @@ namespace Voron.Data.Tables
             }
         }
 
+        public TableValueHolder ReadLast(TableSchema.FixedSizeSchemaIndexDef index)
+        {
+            var fst = GetFixedSizeTree(index);
+
+            using (var it = fst.Iterate())
+            {
+                if (it.SeekToLast() == false)
+                    return null;
+
+                var result = new TableValueHolder();
+                GetTableValueReader(it, out result.Reader);
+                return result;
+            }
+        }
+
+        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index)
+        {
+            var fst = GetFixedSizeTree(index);
+
+            using (var it = fst.Iterate())
+            {
+                if (it.SeekToLast() == false)
+                    yield break;
+
+                var result = new TableValueHolder();
+                do
+                {
+                    GetTableValueReader(it, out result.Reader);
+                    yield return result;
+                } while (it.MovePrev());
+            }
+        }
+
         public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
         {
             var result = new TableValueHolder();
@@ -871,7 +904,7 @@ namespace Voron.Data.Tables
 
             using (var it = fst.Iterate())
             {
-                if (it.Seek(key) == false && it.SeekToLast() == false)
+                if (it.Seek(key) == false)
                     yield break;
 
                 do
