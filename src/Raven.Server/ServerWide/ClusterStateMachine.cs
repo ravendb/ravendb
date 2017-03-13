@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -88,15 +89,36 @@ namespace Raven.Server.ServerWide
         private static unsafe void TEMP_PutValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var putVal = JsonDeserializationCluster.PutValueCommand(cmd);
+            var setDb = JsonDeserializationCluster.TEMP_SetDatabaseCommand(cmd);
            
             TableValueBuilder builder;
             Slice valueName, valueNameLowered;
             using (items.Allocate(out builder))
-            using (Slice.From(context.Allocator, putVal.Name, out valueName))
-            using (Slice.From(context.Allocator, putVal.Name.ToLowerInvariant(), out valueNameLowered))
-            using (var rec = context.ReadObject(putVal.Value, "inner-val"))
+            using (Slice.From(context.Allocator, setDb.Name, out valueName))
+            using (Slice.From(context.Allocator, setDb.Name.ToLowerInvariant(), out valueNameLowered))
+            using (var rec = context.ReadObject(setDb.Value, "inner-val"))
             {
+                if (setDb.Etag != null)
+                {
+                    TableValueReader reader;
+                    if (items.ReadByKey(valueNameLowered, out reader) == false && setDb.Etag != 0)
+                    {
+                        NotifyLeaderAboutError(index, leader, "Concurrency violation, the database " + setDb.Name + " does not exists, but had a non zero etag");
+                        return;
+                    }
+
+                    int size;
+                    var actualEtag = *(long*)reader.Read(3, out size);
+                    Debug.Assert(size == sizeof(long));
+
+                    if (actualEtag != setDb.Etag.Value)
+                    {
+                        NotifyLeaderAboutError(index, leader,
+                            "Concurrency violation, the database " + setDb.Name + " has etag " + actualEtag + " but was expecting " + setDb.Etag);
+                        return;
+                    }
+                }
+
                 builder.Add(valueNameLowered);
                 builder.Add(valueName);
                 builder.Add(rec.BasePointer, rec.Size);
@@ -218,6 +240,7 @@ namespace Raven.Server.ServerWide
 
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
         {
+            base.Initialize(parent, context);
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
         }
 
@@ -251,7 +274,13 @@ namespace Raven.Server.ServerWide
             return Tuple.Create(key, doc);
         }
 
-        public unsafe BlittableJsonReaderObject Read(TransactionOperationContext context, string name)
+        public BlittableJsonReaderObject Read(TransactionOperationContext context, string name)
+        {
+            long etag;
+            return Read(context, name, out etag);
+        }
+
+        public unsafe BlittableJsonReaderObject Read(TransactionOperationContext context, string name, out long etag)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -261,11 +290,17 @@ namespace Raven.Server.ServerWide
             {
                 TableValueReader reader;
                 if (items.ReadByKey(key, out reader) == false)
+                {
+                    etag = 0;
                     return null;
+                }
 
                 int size;
                 var ptr = reader.Read(2, out size);
                 var doc = new BlittableJsonReaderObject(ptr, size, context);
+
+                etag = *(long*)reader.Read(3, out size);
+                Debug.Assert(size == sizeof(long));
 
                 return doc;
             }
@@ -296,6 +331,7 @@ namespace Raven.Server.ServerWide
     {
         public string Name;
         public BlittableJsonReaderObject Value;
+        public long? Etag;
     }
 
     public class TEMP_DelDatabaseCommand
@@ -319,7 +355,7 @@ namespace Raven.Server.ServerWide
 
         public bool DeletionInProgress;
 
-        public PathSetting DataDirectory;
+        public string DataDirectory;
 
         public DatabaseTopology Topology;
 
@@ -330,6 +366,8 @@ namespace Raven.Server.ServerWide
 
     public class JsonDeserializationCluster : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, TEMP_SetDatabaseCommand> TEMP_SetDatabaseCommand = GenerateJsonDeserializationRoutine<TEMP_SetDatabaseCommand>();
+
         public static readonly Func<BlittableJsonReaderObject, PutValueCommand> PutValueCommand = GenerateJsonDeserializationRoutine<PutValueCommand>();
 
         public static readonly Func<BlittableJsonReaderObject, DeleteValueCommand> DeleteValueCommand = GenerateJsonDeserializationRoutine<DeleteValueCommand>();

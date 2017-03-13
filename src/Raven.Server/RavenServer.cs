@@ -64,7 +64,7 @@ namespace Raven.Server
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
 
-            ServerStore = new ServerStore(Configuration);
+            ServerStore = new ServerStore(Configuration, this);
             Metrics = new MetricsCountersManager();
             ServerMaintenanceTimer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 

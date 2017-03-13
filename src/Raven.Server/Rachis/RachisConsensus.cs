@@ -204,18 +204,7 @@ namespace Raven.Server.Rachis
 
                 CurrentState = State.Follower;
                 if (topology.Voters.Count == 1)
-                {
-                    var electionTerm = CurrentTerm + 1;
-                    using (ContextPool.AllocateOperationContext(out context))
-                    using (var tx = context.OpenWriteTransaction())
-                    {
-
-                        CastVoteInTerm(context, electionTerm, Tag);
-
-                        tx.Commit();
-                    }
-                    SwitchToLeaderState(electionTerm, "I'm the only one in the cluster, so I'm the leader");
-                }
+                    SwitchToSingleLeader();
                 else
                     Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
@@ -224,6 +213,20 @@ namespace Raven.Server.Rachis
                 Dispose();
                 throw;
             }
+        }
+
+        private void SwitchToSingleLeader()
+        {
+            TransactionOperationContext context;
+            var electionTerm = CurrentTerm + 1;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                CastVoteInTerm(context, electionTerm, Tag);
+
+                tx.Commit();
+            }
+            SwitchToLeaderState(electionTerm, "I'm the only one in the cluster, so I'm the leader");
         }
 
         protected abstract void InitializeState(TransactionOperationContext context);
@@ -475,18 +478,9 @@ namespace Raven.Server.Rachis
             {
                 [nameof(ClusterTopology.TopologyId)] = topology.TopologyId,
                 [nameof(ClusterTopology.ApiKey)] = topology.ApiKey,
-                [nameof(ClusterTopology.Voters)] = new DynamicJsonArray(topology.Voters.Select(x=>new DynamicJsonValue
-                {
-                    [x.Key] = x.Value
-                })),
-                [nameof(ClusterTopology.Promotables)] = new DynamicJsonArray(topology.Promotables.Select(x => new DynamicJsonValue
-                {
-                    [x.Key] = x.Value
-                })),
-                [nameof(ClusterTopology.NonVotingMembers)] = new DynamicJsonArray(topology.NonVotingMembers.Select(x => new DynamicJsonValue
-                {
-                    [x.Key] = x.Value
-                })),
+                [nameof(ClusterTopology.Voters)] = ToDynamicJsonValue(topology.Voters),
+                [nameof(ClusterTopology.Promotables)] = ToDynamicJsonValue(topology.Promotables),
+                [nameof(ClusterTopology.NonVotingMembers)] = ToDynamicJsonValue(topology.NonVotingMembers),
             };
 
             var topologyJson = context.ReadObject(djv, "topology");
@@ -494,6 +488,16 @@ namespace Raven.Server.Rachis
             SetTopology(engine, tx, topologyJson);
 
             return topologyJson;
+        }
+
+        private static DynamicJsonValue ToDynamicJsonValue(Dictionary<string, string> dictionary)
+        {
+            var djv = new DynamicJsonValue();
+            foreach (var kvp in dictionary)
+            {
+                djv[kvp.Key] = kvp.Value;
+            }
+            return djv;
         }
 
         public static unsafe void SetTopology(RachisConsensus engine, Transaction tx,
@@ -1092,13 +1096,6 @@ namespace Raven.Server.Rachis
 
         public Stream ConenctToPeer(string url, string apiKey)
         {
-            //var serverUrl = new UriBuilder(url)
-            //{
-            //    Fragment = null // remove debug info
-            //}.Uri.ToString();
-
-            //var tcpInfo = ReplicationUtils.GetTcpInfo(serverUrl, null, apiKey);
-
             var tcpInfo = new Uri(url);
             var tcpClient = new TcpClient();
             tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port).Wait();
@@ -1107,9 +1104,15 @@ namespace Raven.Server.Rachis
 
         public void Bootstarp(string selfUrl)
         {
+            if (selfUrl == null)
+                throw new ArgumentNullException(nameof(selfUrl));
+
             using (var tx = _persistentState.WriteTransaction())
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
+                if (CurrentState != State.Passive)
+                    return;
+
                 _tag = "A";
 
 
@@ -1136,6 +1139,8 @@ namespace Raven.Server.Rachis
 
                 tx.Commit();
             }
+
+            SwitchToSingleLeader();
         }
 
         public Task AddToClusterAsync(string url)

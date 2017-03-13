@@ -67,7 +67,7 @@ namespace Raven.Server.Web.System
                 {
                     var dbId = Constants.Documents.Prefix + dbName;
                     long etag;
-                    using (var dbDoc = ServerStore.Read(context, dbId, out etag))
+                    using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out etag))
                     {
                         WriteDatabaseInfo(dbName, dbDoc, context, writer);
                         return Task.CompletedTask;

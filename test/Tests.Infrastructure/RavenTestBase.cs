@@ -87,7 +87,7 @@ namespace FastTests
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
                     context.OpenReadTransaction();
-                if (Server.ServerStore.Read(context, Constants.Documents.Prefix + name) != null)
+                    if (Server.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
                         throw new InvalidOperationException($"Database '{name}' already exists");
                 }
 
@@ -100,7 +100,7 @@ namespace FastTests
                 ModifyStore(store);
                 store.Initialize();
 
-            store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
                 store.AfterDispose += (sender, args) =>
                 {
                     if (CreatedStores.TryRemove(store) == false)
@@ -111,10 +111,10 @@ namespace FastTests
                         var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
                         if (databaseTask != null && databaseTask.IsCompleted == false)
                             databaseTask.Wait();
-                                // if we are disposing store before database had chance to load then we need to wait
+                        // if we are disposing store before database had chance to load then we need to wait
 
                         Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-                    store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                        store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
                     }
                 };
                 CreatedStores.Add(store);

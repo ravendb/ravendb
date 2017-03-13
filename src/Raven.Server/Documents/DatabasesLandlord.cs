@@ -294,7 +294,7 @@ namespace Raven.Server.Documents
                 context.OpenReadTransaction();
 
                 var dbId = Constants.Documents.Prefix + databaseName;
-                var jsonReaderObject = _serverStore.Read(context, dbId);
+                var jsonReaderObject = _serverStore.Cluster.Read(context, dbId);
                 if (jsonReaderObject == null)
                     return null;
 

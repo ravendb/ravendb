@@ -46,19 +46,14 @@ namespace Raven.Server.Web.Authentication
         }
 
         [RavenAction("/admin/api-keys", "DELETE", "/admin/api-keys?name={api-key-name:string}")]
-        public Task Delete()
+        public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             TransactionOperationContext ctx;
             using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
             {
-                using (var tx = ctx.OpenWriteTransaction())
-                {
-                    ServerStore.Delete(ctx, Constants.ApiKeys.Prefix + name);
-
-                    tx.Commit();
-                }
+                await ServerStore.DeleteValueInClusterAsync(ctx, Constants.ApiKeys.Prefix + name);
 
                 AccessToken value;
                 if (Server.AccessTokensByName.TryRemove(name, out value))
@@ -66,7 +61,7 @@ namespace Raven.Server.Web.Authentication
                     Server.AccessTokensById.TryRemove(value.Token, out value);
                 }
 
-                return NoContent();
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
         }
 
@@ -92,7 +87,7 @@ namespace Raven.Server.Web.Authentication
                     else
                     {
                         var key = Constants.ApiKeys.Prefix + name;
-                        var apiKey = ServerStore.Read(context, key);
+                        var apiKey = ServerStore.Cluster.Read(context, key);
                         if (apiKey == null)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

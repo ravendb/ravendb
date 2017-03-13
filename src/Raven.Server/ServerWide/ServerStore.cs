@@ -43,6 +43,7 @@ namespace Raven.Server.ServerWide
 
 
         public readonly RavenConfiguration Configuration;
+        private readonly RavenServer _ravenServer;
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly NotificationCenter.NotificationCenter NotificationCenter;
 
@@ -50,12 +51,13 @@ namespace Raven.Server.ServerWide
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
-        public ServerStore(RavenConfiguration configuration)
+        public ServerStore(RavenConfiguration configuration, RavenServer ravenServer)
         {
             var resourceName = "ServerStore";
 
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             Configuration = configuration;
+            _ravenServer = ravenServer;
             _logger = LoggingSource.Instance.GetLogger<ServerStore>(resourceName);
             DatabasesLandlord = new DatabasesLandlord(this);
 
@@ -153,22 +155,6 @@ namespace Raven.Server.ServerWide
             {
                 await _engine.PutAsync(putCmd);
             }
-        }
-
-        public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id, out long etag)
-        {
-           throw new NotImplementedException();
-        }
-
-
-        public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Delete(TransactionOperationContext ctx, string id)
-        {
-            throw new NotImplementedException();
         }
 
         public void Dispose()
@@ -289,16 +275,25 @@ namespace Raven.Server.ServerWide
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
-        public async Task TEMP_WriteDbAsync(TransactionOperationContext context, string dbId, BlittableJsonReaderObject dbDoc)
+        public async Task<long> TEMP_WriteDbAsync(TransactionOperationContext context, string dbId, BlittableJsonReaderObject dbDoc, long? etag)
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(TEMP_SetDatabaseCommand),
                 [nameof(TEMP_SetDatabaseCommand.Name)] = dbId,
                 [nameof(TEMP_SetDatabaseCommand.Value)] = dbDoc,
+                [nameof(TEMP_SetDatabaseCommand.Etag)] = etag,
             }, "put-cmd"))
             {
-                await _engine.PutAsync(putCmd);
+                return await _engine.PutAsync(putCmd);
+            }
+        }
+
+        public void EnsureNotPassive()
+        {
+            if (_engine.CurrentState == RachisConsensus.State.Passive)
+            {
+                _engine.Bootstarp(_ravenServer.WebUrls[0]);
             }
         }
     }
