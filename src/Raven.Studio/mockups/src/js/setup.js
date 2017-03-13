@@ -20,6 +20,7 @@
     }
 
     function initMockups() {
+
         var $mainMenu = $('#main-menu');
         var $selectDatabaseContainer = $('.resource-switcher-container');
         var $searchContainer = $('.search-container');
@@ -31,6 +32,10 @@
 
         $selectDatabaseContainer.removeClass('active');
         $searchContainer.removeClass('active');
+
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        })
 
         function triggerGlobal(evntName, ...args) {
             $(window).trigger(evntName, args);
