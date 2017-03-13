@@ -1,7 +1,6 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 import appUrl = require("common/appUrl");
-import messagePublisher = require("common/messagePublisher");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import app = require("durandal/app");
@@ -15,7 +14,6 @@ import downloader = require("common/downloader");
 import databasesManager = require("common/shell/databasesManager");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import eventsCollector = require("common/eventsCollector");
-import changesApi = require("common/changesApi");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.

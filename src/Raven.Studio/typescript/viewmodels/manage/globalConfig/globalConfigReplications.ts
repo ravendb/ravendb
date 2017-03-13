@@ -1,20 +1,4 @@
-import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-import replicationsSetup = require("models/database/replication/replicationsSetup");
-import replicationConfig = require("models/database/replication/replicationConfig")
-import replicationDestination = require("models/database/replication/replicationDestination");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getGlobalConfigReplicationsCommand = require("commands/database/globalConfig/getGlobalConfigReplicationsCommand");
-import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
-import getAutomaticConflictResolutionDocumentCommand = require("commands/database/replication/getAutomaticConflictResolutionDocumentCommand");
-import saveAutomaticConflictResolutionDocumentCommand = require("commands/database/replication/saveAutomaticConflictResolutionDocumentCommand");
-import appUrl = require("common/appUrl");
-import messagePublisher = require("common/messagePublisher");
-import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
-import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
-import shell = require("viewmodels/shell");
-import database = require("models/resources/database");
-import eventsCollector = require("common/eventsCollector");
 
 class globalConfigReplications extends viewModelBase {
 

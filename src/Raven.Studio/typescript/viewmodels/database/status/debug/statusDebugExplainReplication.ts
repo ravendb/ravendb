@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import extensions = require("common/extensions");
 import getReplicationsCommand = require('commands/database/replication/getReplicationsCommand');
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import explainReplicationCommand = require("commands/database/replication/explainReplicationCommand");
 import eventsCollector = require("common/eventsCollector");
 

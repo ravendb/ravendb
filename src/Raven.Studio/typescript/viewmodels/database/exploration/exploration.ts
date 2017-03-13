@@ -4,8 +4,6 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import appUrl = require("common/appUrl");
 import dataExplorationRequest = require("models/database/query/dataExplorationRequest");
 import dataExplorationCommand = require("commands/database/query/dataExplorationCommand");
-import document = require("models/database/documents/document");
-import messagePublisher = require("common/messagePublisher");
 import collectionsStats = require("models/database/documents/collectionsStats");
 
 import eventsCollector = require("common/eventsCollector");

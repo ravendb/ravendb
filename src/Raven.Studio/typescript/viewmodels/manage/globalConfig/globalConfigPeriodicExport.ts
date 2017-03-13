@@ -1,16 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getPeriodicExportSetupCommand = require("commands/database/documents/getPeriodicExportSetupCommand");
-import savePeriodicExportSetupCommand = require("commands/maintenance/savePeriodicExportSetupCommand");
-import document = require("models/database/documents/document");
-import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
-import periodicExportSetup = require("models/database/documents/periodicExportSetup");
-import appUrl = require("common/appUrl");
-import database = require("models/resources/database");
-import getEffectiveSettingsCommand = require("commands/database/globalConfig/getEffectiveSettingsCommand");
-import saveGlobalSettingsCommand = require("commands/database/globalConfig/saveGlobalSettingsCommand");
-import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
-import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
-import eventsCollector = require("common/eventsCollector");
 
 class globalConfigPeriodicExport extends viewModelBase {
     /* TODO

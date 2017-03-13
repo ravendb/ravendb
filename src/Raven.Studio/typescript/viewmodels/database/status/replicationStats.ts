@@ -1,15 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getReplicationStatsCommand = require("commands/database/replication/getReplicationStatsCommand");
-import moment = require("moment");
-import generalUtils = require("common/generalUtils");
-import svgDownloader = require("common/svgDownloader");
-import fileDownloader = require("common/fileDownloader");
-import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
-import getReplicationTopology = require("commands/database/replication/getReplicationTopology");
-import getReplicationPerfStatsCommand = require("commands/database/debug/getReplicationPerfStatsCommand");
-import getDocumentsLeftToReplicate = require("commands/database/replication/getDocumentsLeftToReplicate");
-import d3 = require("d3");
-import eventsCollector = require("common/eventsCollector");
 
 class replicationStats extends viewModelBase {
     /*

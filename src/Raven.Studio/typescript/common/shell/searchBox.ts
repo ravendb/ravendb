@@ -1,7 +1,4 @@
-﻿
-import EVENTS = require("common/constants/events");
-
-/*
+﻿/*
     Events emitted through ko.postbox
         * SearchBox.Show - when searchbox is opened
         * SearchBox.Hide - when searchbox is hidden

@@ -4,7 +4,6 @@ import forceLicenseUpdate = require("commands/auth/forceLicenseUpdate");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import app = require("durandal/app");
 import license = require("models/auth/license");
-import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
 import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import eventsCollector = require("common/eventsCollector");

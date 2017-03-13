@@ -5,7 +5,6 @@ import saveTransformerLockModeCommand = require("commands/database/transformers/
 import appUrl = require("common/appUrl");
 import deleteTransformerConfirm = require("viewmodels/database/transformers/deleteTransformerConfirm");
 import app = require("durandal/app");
-import changeSubscription = require("common/changeSubscription");
 import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
 

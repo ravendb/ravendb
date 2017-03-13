@@ -1,8 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import changesContext = require("common/changesContext");
 import moment = require("moment");
-import changeSubscription = require("common/changeSubscription");
 import tableNavigationTrait = require("common/tableNavigationTrait");
 
 class indexErrors extends viewModelBase {

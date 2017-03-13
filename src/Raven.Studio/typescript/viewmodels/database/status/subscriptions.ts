@@ -1,5 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/resources/database");
 import getSubscriptionsCommand = require("commands/database/subscriptions/getSubscriptionsCommand");
 import generalUtils = require("common/generalUtils");
 

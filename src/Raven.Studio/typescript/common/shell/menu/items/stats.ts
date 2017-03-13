@@ -1,5 +1,4 @@
 ﻿import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import accessHelper = require("viewmodels/shell/accessHelper");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 

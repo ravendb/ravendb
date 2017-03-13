@@ -1,8 +1,5 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import moment = require("moment");
-import genUtils = require("common/generalUtils");
-
 type attributeItem = {
     displayName: string;
     value: string;

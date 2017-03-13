@@ -1,12 +1,4 @@
-import document = require("models/database/documents/document");
-import dialog = require("plugins/dialog");
-import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
-import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
-import autoCompleterSupport = require("common/autoCompleterSupport");
-import messagePublisher = require("common/messagePublisher");
-import eventsCollector = require("common/eventsCollector");
 
 class selectColumns extends dialogViewModelBase {
 /* TODO:

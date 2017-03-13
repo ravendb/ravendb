@@ -1,13 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
-import appUrl = require("common/appUrl");
-import performanceTestRequest = require("models/database/debug/performanceTestRequest");
-import performanceTestResultWrapped = require("models/database/debug/performanceTestResultWrapped");
-import ioTestCommand = require("commands/database/debug/ioTestCommand");
-import d3 = require('d3');
-import shell = require("viewmodels/shell");
-import eventsCollector = require("common/eventsCollector");
 
 class ioTest extends viewModelBase {
     /*

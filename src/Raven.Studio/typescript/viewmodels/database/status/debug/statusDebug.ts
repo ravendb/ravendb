@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import status = require("viewmodels/database/status/status");
-import shell = require('viewmodels/shell');
 import accessHelper = require("viewmodels/shell/accessHelper");
 
 class statusDebug extends viewModelBase {

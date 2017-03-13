@@ -1,6 +1,4 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
-
-import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 
 /**

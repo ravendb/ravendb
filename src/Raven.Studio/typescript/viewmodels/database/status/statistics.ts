@@ -1,10 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
-import shell = require("viewmodels/shell");
-import changesContext = require("common/changesContext");
-import changeSubscription = require('common/changeSubscription');
-import optional = require("common/optional");
 import appUrl = require("common/appUrl");
 
 import statsModel = require("models/database/stats/statistics");

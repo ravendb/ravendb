@@ -1,8 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import sqlReplication = require("models/database/sqlReplication/sqlReplication");
-import endpoints = require("endpoints");
-
 
 class simulateSqlReplicationCommand extends  commandBase{
     

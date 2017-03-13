@@ -1,5 +1,4 @@
 import app = require("durandal/app");
-import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
@@ -15,17 +14,12 @@ import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
-import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
 import document = require("models/database/documents/document");
-import selectColumns = require("viewmodels/common/selectColumns");
-import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
 import transformerType = require("models/database/index/transformer");
-import getIndexSuggestionsCommand = require("commands/database/index/getIndexSuggestionsCommand");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
-import showDataDialog = require("viewmodels/common/showDataDialog");
 import queryCriteria = require("models/database/query/queryCriteria");
 import queryTransformerParameter = require("models/database/query/queryTransformerParameter");
 

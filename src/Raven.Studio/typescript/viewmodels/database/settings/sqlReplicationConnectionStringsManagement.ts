@@ -6,9 +6,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import appUrl = require("common/appUrl");
 import getSqlReplicationConnectionsCommand = require("commands/database/sqlReplication/getSqlReplicationConnectionsCommand");
-import messagePublisher = require("common/messagePublisher");
-import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
-import sqlReplication = require("models/database/sqlReplication/sqlReplication");
 import eventsCollector = require("common/eventsCollector");
 
 class sqlReplicationConnectionStringsManagement extends viewModelBase{

@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import appUrl = require("common/appUrl");
 
 class ioTestCommand extends commandBase {
 

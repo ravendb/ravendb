@@ -3,7 +3,6 @@
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
-import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");

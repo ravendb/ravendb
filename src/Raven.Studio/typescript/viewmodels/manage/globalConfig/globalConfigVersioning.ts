@@ -1,12 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import versioningEntry = require("models/database/documents/versioningEntry");
-import appUrl = require("common/appUrl");
-import getVersioningsCommand = require("commands/database/documents/getVersioningsCommand");
-import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
-import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
-import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
-import database = require("models/resources/database");
-
 
 class globalConfigVersioning extends viewModelBase {
     /* TODO:

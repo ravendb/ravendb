@@ -1,7 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
-import genUtils = require("common/generalUtils");
-
 class queryTransformerParameter {
     name: string;
     hasDefault: boolean;

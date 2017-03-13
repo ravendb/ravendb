@@ -1,8 +1,4 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
-
-import license = require("models/auth/license");
-import EVENTS = require("common/constants/events");
-
 class database {
     static readonly type = "database";
     static readonly qualifier = "db";
