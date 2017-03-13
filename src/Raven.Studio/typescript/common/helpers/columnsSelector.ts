@@ -4,6 +4,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
+import customColumn = require("widgets/virtualGrid/columns/customColumn");
 
 class columnItem {
 
@@ -26,14 +27,31 @@ class columnItem {
     }
 }
 
+class customColumnForm {
+    header = ko.observable<string>();
+    expression = ko.observable<string>();
+
+    asCustomColumn<T>(width: string): customColumn<T> {
+        const functionBody = 'return (' + this.expression() + ");";
+        return new customColumn(functionBody, this.header(), width);
+    }
+
+    reset() {
+        this.header("");
+        this.expression("");
+    }
+}
+
 class columnsSelector<T> {
 
+    static readonly defaultWidth = "200px";
+
     private readonly grid: virtualGridController<T>;
-    private readonly fetcher: (skip: number, take: number, columns: string[]) => JQueryPromise<pagedResult<T>>;
+    private readonly fetcher: (skip: number, take: number, previewColumns: string[], fullColumns: string[]) => JQueryPromise<pagedResult<T>>;
     private readonly defaultColumnsProvider: (containerWidth: number, results: pagedResult<T>) => virtualColumn[];
     private readonly availableColumnsProvider: (results: pagedResult<T>) => string[];
 
-    constructor(grid: virtualGridController<T>, fetcher: (skip: number, take: number, columns: string[]) => JQueryPromise<pagedResult<T>>,
+    constructor(grid: virtualGridController<T>, fetcher: (skip: number, take: number, previewColumns: string[], fullColumns: string[]) => JQueryPromise<pagedResult<T>>,
         defaultColumnsProvider: (containerWidth: number, results: pagedResult<T>) => virtualColumn[],
         availableColumnsProvider: (results: pagedResult<T>) => string[]) {
         this.grid = grid;
@@ -42,6 +60,7 @@ class columnsSelector<T> {
         this.availableColumnsProvider = availableColumnsProvider;
     }
 
+    customColumnForm = new customColumnForm();
     columnLayout = ko.observableArray<columnItem>();
 
     private customLayout = ko.observable<boolean>(false);
@@ -56,6 +75,18 @@ class columnsSelector<T> {
         this.grid.reset(true);
     }
 
+    addCustomColumn() {
+        //TODO: validate form
+
+        const newColumn = this.customColumnForm.asCustomColumn(columnsSelector.defaultWidth);
+        const newColumnItem = new columnItem(newColumn, true);
+        newColumnItem.visible(true);
+        this.columnLayout.push(newColumnItem);
+
+        this.customColumnForm.reset();
+        this.applyColumns();
+    }
+
     useDefaults() {
         this.reset();
         this.grid.reset(true);
@@ -64,7 +95,9 @@ class columnsSelector<T> {
     private onFetch(skip: number, take: number): JQueryPromise<pagedResult<T>> {
         const fetchTask = $.Deferred<pagedResult<T>>();
 
-        this.fetcher(skip, take, this.findColumnsToFetch())
+        const cols = this.findColumnsToFetch();
+
+        this.fetcher(skip, take, cols.preview, cols.full)
             .done((result) => {
                 const allColumns = this.availableColumnsProvider(result);
                 this.registerKnownColumns(allColumns);
@@ -81,7 +114,7 @@ class columnsSelector<T> {
 
             const existingColumn = this.columnLayout().find(x => x.virtualColumn().header === name);
             if (!existingColumn) {
-                const virtColumn = new textColumn(name, name, "200px"); //TODO: use factory?
+                const virtColumn = new textColumn(name, name, columnsSelector.defaultWidth);
                 this.columnLayout.push(new columnItem(virtColumn, false));
             }
         }
@@ -119,24 +152,39 @@ class columnsSelector<T> {
         });
     }
 
-    private findColumnsToFetch(): string[] { //TODO: is this class right location?
+    private findColumnsToFetch(): { full: string[], preview: string[] } {
         if (this.customLayout()) {
-            const toFetch = [] as string[];
-
-            //TODO: introduce isSimpleBinding property on columnItem and filter using this
+            const fullColumns = [] as string[];
+            const previewColumns = [] as string[];
 
             this.columnLayout().forEach(item => {
-                if (item.visible() && item.virtualColumn() instanceof textColumn) {
-                    const text = item.virtualColumn() as textColumn<T>;
-                    if (_.isString(text.valueAccessor)) {
-                        toFetch.push(text.valueAccessor);
+                if (item.visible()) {
+                    if (item.virtualColumn() instanceof textColumn) {
+                        const text = item.virtualColumn() as textColumn<T>;
+                        if (_.isString(text.valueAccessor)) {
+                            previewColumns.push(text.valueAccessor);
+                        }
+                    }
+
+                    if (item.virtualColumn() instanceof customColumn) {
+                        const customCol = item.virtualColumn() as customColumn<T>;
+                        fullColumns.push(...customCol.tryGuessRequiredProperties());
                     }
                 }
             });
 
-            return toFetch;
+            const full = _.uniq(fullColumns);
+            const preview = _.without(_.uniq(previewColumns), ...full);
+
+            return {
+                full: full,
+                preview: preview
+            };
         } else {
-            return undefined;
+            return {
+                full: undefined,
+                preview: undefined
+            };
         }
     }
 
