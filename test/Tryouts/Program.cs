@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Tryouts
 {
@@ -10,14 +11,13 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 10; i++)
+            Parallel.For(0, 100, i =>
             {
-                Console.WriteLine(i);
-                using (var a = new SlowTests.Issues.RavenDB934())
+                using (var a = new FastTests.Client.LoadIntoStream())
                 {
-                    a.HighLevelExportsByDocPrefixRemote();
+                    a.CanLoadByIdsIntoStreamUsingTransformer();
                 }
-            }
+            });
         }
     }
 }
