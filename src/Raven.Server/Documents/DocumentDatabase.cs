@@ -486,6 +486,11 @@ namespace Raven.Server.Documents
         {
             BackupMethods.Incremental.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
         }
+
+        public void StateChanged()
+        {
+            
+        }
     }
 
     public class StorageEnvironmentWithType
