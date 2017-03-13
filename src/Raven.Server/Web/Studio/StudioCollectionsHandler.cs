@@ -141,7 +141,7 @@ namespace Raven.Server.Web.Studio
             var objectsStubs = new HashSet<LazyStringValue>();
             var arraysStubs = new HashSet<LazyStringValue>();
             var trimmedValue = new HashSet<LazyStringValue>();
-            
+
             var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
@@ -184,17 +184,13 @@ namespace Raven.Server.Web.Studio
             if (first == false)
                 writer.WriteComma();
 
-
-            metadata.Modifications = new DynamicJsonValue
+            var newMetadata = new DynamicJsonValue(metadata)
             {
                 [ObjectStubsKey] = new DynamicJsonArray(objectsStubs),
                 [ArrayStubsKey] = new DynamicJsonArray(arraysStubs),
                 [TrimmedValueKey] = new DynamicJsonArray(trimmedValue)
             };
-
-            metadata = context.ReadObject(metadata, document.Key);
-
-            writer.WriteMetadata(document, metadata);
+            writer.WriteMetadata(document, context.ReadObject(newMetadata, document.Key));
 
             writer.WriteEndObject();
         }
