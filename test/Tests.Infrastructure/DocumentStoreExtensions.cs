@@ -10,7 +10,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -154,7 +153,7 @@ namespace FastTests
                 await RequestExecutor.ExecuteAsync(command, Context);
 
                 return command.Result;
-            }          
+            }
 
             public GetConflictsResult.Conflict[] GetConflictsFor(string id)
             {
@@ -255,7 +254,12 @@ namespace FastTests
                 return AsyncHelpers.RunSync(() => RawDeleteJsonAsync<TResult>(url, payload));
             }
 
-            public async Task<TResult> RawGetJsonAsync<TResult>(string url) 
+            public void ExecuteJson(string url, HttpMethod method, object payload)
+            {
+                AsyncHelpers.RunSync(() => ExecuteJsonAsync(url, method, payload));
+            }
+
+            public async Task<TResult> RawGetJsonAsync<TResult>(string url)
                 where TResult : BlittableJsonReaderBase
             {
                 var command = new GetJsonCommand<TResult>(url);
@@ -277,6 +281,20 @@ namespace FastTests
                     await RequestExecutor.ExecuteAsync(command, Context);
 
                     return command.Result;
+                }
+            }
+
+            public async Task ExecuteJsonAsync(string url, HttpMethod method, object payload)
+            {
+                using (var session = _store.OpenSession())
+                {
+                    BlittableJsonReaderObject payloadJson = null;
+                    if (payload != null)
+                        payloadJson = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
+
+                    var command = new JsonCommandWithPayload<BlittableJsonReaderObject>(url, Context, method, payloadJson);
+
+                    await RequestExecutor.ExecuteAsync(command, Context);
                 }
             }
 
@@ -343,7 +361,7 @@ namespace FastTests
                         throw new ArgumentNullException(nameof(url));
 
                     if (url.StartsWith("/") == false)
-                        url += $"/{url}";
+                        url = $"/{url}";
 
                     _url = url;
                     _context = context;
@@ -365,7 +383,8 @@ namespace FastTests
                         Method = _method,
                         Content = new BlittableJsonContent(stream =>
                         {
-                            _context.Write(stream, _payload);
+                            if (_payload != null)
+                                _context.Write(stream, _payload);
                         })
                     };
 

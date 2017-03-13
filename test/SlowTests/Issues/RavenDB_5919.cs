@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Net.Http;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -146,6 +147,30 @@ namespace SlowTests.Issues
                 var index2 = documentStore.Admin.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
 
                 Assert.Equal(index1.IndexId, index2.IndexId);
+            }
+        }
+
+        [Fact]
+        public void ShouldBeAbleToForceReplacement()
+        {
+            using (var documentStore = GetDocumentStore())
+            {
+                new Entity_ById_V1().Execute(documentStore);
+
+                documentStore.Admin.Send(new StopIndexingOperation());
+
+                new Entity_ById_V2().Execute(documentStore);
+
+                var stats = documentStore.Admin.Send(new GetStatisticsOperation());
+                Assert.Equal(2, stats.CountOfIndexes);
+
+                using (var commands = documentStore.Commands())
+                {
+                    commands.ExecuteJson($"indexes/replace?name={new Entity_ById_V2().IndexName}", HttpMethod.Post, null);
+                }
+
+                stats = documentStore.Admin.Send(new GetStatisticsOperation());
+                Assert.Equal(1, stats.CountOfIndexes);
             }
         }
 
