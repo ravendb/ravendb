@@ -277,6 +277,22 @@ namespace Raven.Server.Smuggler.Documents
                                     ThrowInvalidMetadataProperty(state);
                             }
                             break;
+                        case 15: //Raven-Read-Only
+                            if (*(long*)state.StringBuffer == 7300947898092904786 &&
+                                *(int*)(state.StringBuffer + sizeof(long)) == 1328374881 &&
+                                *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 27758 &&
+                                state.StringBuffer[14] == (byte)'y')
+                            {
+                                if (reader.Read() == false)
+                                {
+                                    _state = State.IgnoreProperty;
+                                    return false;
+                                }
+                                if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                                    state.CurrentTokenType == JsonParserToken.StartObject)
+                                    ThrowInvalidMetadataProperty(state);
+                            }
+                            break;
                         case 17: //Raven-Entity-Name --> @collection
                             if (*(long*)state.StringBuffer == 7945807069737017682 &&
                                *(long*)(state.StringBuffer + sizeof(long)) == 7881666780093245812)
@@ -372,6 +388,24 @@ namespace Raven.Server.Smuggler.Documents
                                     ThrowInvalidMetadataProperty(state);
                             }
                             break;
+                        case 30: //Raven-Document-Parent-Revision
+                            return true;
+                            /*if (*(long*)state.StringBuffer == 8017583188798234962 &&
+                               *(long*)(state.StringBuffer + sizeof(long)) == 5777401914483111267 &&
+                               *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 7300947924012593761 &&
+                               *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) == 1769171318 &&
+                               *(short*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long) + sizeof(int)) == 28271)
+                            {
+                                if (reader.Read() == false)
+                                {
+                                    _state = State.IgnoreProperty;
+                                    return false;
+                                }
+                                if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                                    state.CurrentTokenType == JsonParserToken.StartObject)
+                                    ThrowInvalidMetadataProperty(state);
+                            }
+                            break;*/
                         case 32: //Raven-Replication-Merged-History
                             if (*(long*)state.StringBuffer == 7300947898092904786 &&
                                *(long*)(state.StringBuffer + sizeof(long)) == 8028075772393122928 &&
