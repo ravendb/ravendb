@@ -1,5 +1,4 @@
 import app = require("durandal/app");
-import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
@@ -15,17 +14,12 @@ import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
-import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
 import document = require("models/database/documents/document");
-import selectColumns = require("viewmodels/common/selectColumns");
-import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
 import transformerType = require("models/database/index/transformer");
-import getIndexSuggestionsCommand = require("commands/database/index/getIndexSuggestionsCommand");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
-import showDataDialog = require("viewmodels/common/showDataDialog");
 import queryCriteria = require("models/database/query/queryCriteria");
 import queryTransformerParameter = require("models/database/query/queryTransformerParameter");
 
@@ -34,6 +28,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import columnsSelector = require("common/helpers/columnsSelector");
 
 type indexItem = {
     name: string;
@@ -89,6 +84,8 @@ class query extends viewModelBase {
     isRangeFilter: KnockoutComputed<boolean>;
     isInFilter: KnockoutComputed<boolean>;
     isStringFilter: KnockoutComputed<boolean>;
+
+    columnsSelector = ko.observable<columnsSelector<document>>();
 
     uiTransformer = ko.observable<string>(); // represents UI value, which might not be yet applied to criteria 
     uiTransformerParameters = ko.observableArray<queryTransformerParameter>(); // represents UI value, which might not be yet applied to criteria 
@@ -350,8 +347,13 @@ class query extends viewModelBase {
             enableInlinePreview: true
         });
 
+        this.columnsSelector(new columnsSelector(grid,
+            (s, t, c) => this.fetcher()(s, t),
+            (w, r) => documentsProvider.findColumns(w, r), (results: pagedResult<document>) => [])); //TODO: extract columns
+
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetcher()(s, t), (w, r) => documentsProvider.findColumns(w, r));
+
+        this.columnsSelector().initGrid();
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
@@ -426,6 +428,11 @@ class query extends viewModelBase {
         this.resetFilterSettings();
         this.uiTransformer(null);
         this.uiTransformerParameters([]);
+
+        if (this.columnsSelector()) {
+            this.columnsSelector().reset();    
+        }
+        
         this.runQuery();
 
         const indexQuery = query.getIndexUrlPartFromIndexName(indexName);

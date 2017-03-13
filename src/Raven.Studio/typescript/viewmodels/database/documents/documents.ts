@@ -1,13 +1,9 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import EVENTS = require("common/constants/events");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
-import selectColumns = require("viewmodels/common/selectColumns");
-import selectCsvColumnsDialog = require("viewmodels/common/selectCsvColumns");
-import showDataDialog = require("viewmodels/common/showDataDialog");
 import messagePublisher = require("common/messagePublisher");
 import copyDocuments = require("viewmodels/database/documents/copyDocuments");
 import copyDocumentIds = require("viewmodels/database/documents/copyDocumentIds");
@@ -21,17 +17,11 @@ import changesContext = require("common/changesContext");
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
-import changeSubscription = require("common/changeSubscription");
 import collectionsStats = require("models/database/documents/collectionsStats");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
-
-import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
-import generateClassCommand = require("commands/database/documents/generateClassCommand");
 import getDocumentsWithMetadataCommand = require("commands/database/documents/getDocumentsWithMetadataCommand");
 
 import eventsCollector = require("common/eventsCollector");
-
-import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
@@ -39,6 +29,7 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import columnsSelector = require("common/helpers/columnsSelector");
 
 class documents extends viewModelBase {
 
@@ -59,6 +50,7 @@ class documents extends viewModelBase {
     private collectionToSelectName: string;
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
+    columnsSelector = ko.observable<columnsSelector<document>>();
 
     private fullDocumentsProvider: documentPropertyProvider;
 
@@ -151,13 +143,14 @@ class documents extends viewModelBase {
 
     refresh() {
         eventsCollector.default.reportEvent("documents", "refresh");
+        this.columnsSelector().reset();
         this.gridController().reset(true);
         this.tracker.setCurrentAsNotDirty();
     }
 
-    fetchDocs(skip: number, take: number): JQueryPromise<pagedResult<any>> {
+    fetchDocs(skip: number, take: number, columns: string[]): JQueryPromise<pagedResultWithAvailableColumns<any>> {
         this.isLoading(true);
-        return this.tracker.currentCollection().fetchDocuments(skip, take)
+        return this.tracker.currentCollection().fetchDocuments(skip, take, columns)
             .always(() => this.isLoading(false));
     }
 
@@ -166,13 +159,14 @@ class documents extends viewModelBase {
 
         this.setupDisableReasons();
 
-        const grid = this.gridController();
-
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.tracker.getCollectionNames(),
             { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true });
 
+        const grid = this.gridController();
+
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetchDocs(s, t), (w, r) => {
+
+        this.columnsSelector(new columnsSelector<document>(grid, (s, t, c) => this.fetchDocs(s, t, c), (w, r) => {
             if (this.tracker.currentCollection().isAllDocuments) {
                 return [
                     new checkedColumn(true),
@@ -184,7 +178,9 @@ class documents extends viewModelBase {
             } else {
                 return documentsProvider.findColumns(w, r);
             }
-        });
+        }, (results: pagedResultWithAvailableColumns<document>) => results.availableColumns));
+
+        this.columnsSelector().initGrid();
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
@@ -203,6 +199,7 @@ class documents extends viewModelBase {
 
     private onCollectionSelected(newCollection: collection) {
         this.updateUrl(appUrl.forDocuments(newCollection.name, this.activeDatabase()));
+        this.columnsSelector().reset();
         this.gridController().reset();
         this.tracker.setCurrentAsNotDirty();
     }
@@ -233,7 +230,6 @@ class documents extends viewModelBase {
         }
 
         if (selection.mode === "inclusive") {
-            const idsToDelete = selection.included.map(x => x.getId());
             const deleteDocsDialog = new deleteDocuments(selection.included, this.activeDatabase());
 
             app.showBootstrapDialog(deleteDocsDialog)
@@ -300,7 +296,7 @@ class documents extends viewModelBase {
                 const copyDialog = new copyDocuments(results);
                 app.showBootstrapDialog(copyDialog);
             })
-            .always(() => this.spinners.copy(false))
+            .always(() => this.spinners.copy(false));
     }
 
     copySelectedDocIds() {

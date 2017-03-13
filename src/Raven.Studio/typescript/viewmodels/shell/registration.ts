@@ -1,6 +1,5 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import app = require("durandal/app");
-import shell = require("viewmodels/shell");
 import dialog = require("plugins/dialog");
 
 import licenseRegistrationCommand = require("commands/licensing/licenseRegistrationCommand");

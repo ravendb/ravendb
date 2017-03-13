@@ -1,6 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
-
-import document = require("models/database/documents/document");
 import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");

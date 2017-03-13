@@ -1,16 +1,13 @@
 ﻿import router = require("plugins/router");
 import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
-import databaseActivatedEventArgs = require("viewmodels/resources/databaseActivatedEventArgs");
 import changesContext = require("common/changesContext");
-import changesApi = require("common/changesApi");
 import changeSubscription = require("common/changeSubscription");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import databaseInfo = require("models/resources/info/databaseInfo");
 import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
 import recentPatchesStorage = require("common/storage/recentPatchesStorage");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
@@ -38,10 +35,6 @@ class databasesManager {
 
     constructor() { 
         ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => this.reloadDataAfterReconnection(db));
-
-        ko.postbox.subscribe(EVENTS.Database.Activate, ({ database }: databaseActivatedEventArgs) => {
-            return this.activateDatabase(database);
-        });
     }
 
     getDatabaseByName(name: string): database {
@@ -75,23 +68,29 @@ class databasesManager {
         //TODO: .fail(result => this.handleRavenConnectionFailure(result))
     }
 
-    activateBasedOnCurrentUrl() {
+    activateBasedOnCurrentUrl(): JQueryPromise<canActivateResultDto> | boolean {
         const dbUrl = appUrl.getDatabaseNameFromUrl();
         if (dbUrl) {
             const db = this.getDatabaseByName(dbUrl);
-            this.activateIfDifferent(db, dbUrl, appUrl.forDatabases);
+            return this.activateIfDifferent(db, dbUrl, appUrl.forDatabases);
         }
+        return true;
     }
 
-    private activateIfDifferent(db: database, dbName: string, urlIfNotFound: () => string) {
+    private activateIfDifferent(db: database, dbName: string, urlIfNotFound: () => string): JQueryPromise<canActivateResultDto> {
+        const task = $.Deferred<canActivateResultDto>();
+
         this.initialized.done(() => {
             const currentActiveDatabase = this.activeDatabaseTracker.database();
             if (currentActiveDatabase != null && currentActiveDatabase.name === db.name) {
-                return;
+                task.resolve({ can: true });
             }
 
             if (db && !db.disabled()) {
-                db.activate(); //TODO: do we need this event right now?
+                this.activate(db)
+                    .done(() => task.resolve({ can: true }))
+                    .fail(() => task.reject());
+
             } else if (db) {
                 messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is disabled!`,
                     `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's disabled.`);
@@ -101,16 +100,18 @@ class databasesManager {
                 router.navigate(urlIfNotFound());
             }
         });
+
+        return task;
     }
 
     private fetchStudioConfigForDatabase(db: database) {
         //TODO: fetch hot spare and studio config 
     }
 
-    private activateDatabase(db: database) {
-        //TODO: this.fecthStudioConfigForDatabase(db);
-
+    activate(db: database): JQueryPromise<void> {
         this.changesContext.changeDatabase(db);
+
+        return this.activeDatabaseTracker.onActivation(db);
     }
 
     private reloadDataAfterReconnection(db: database) {
@@ -215,7 +216,7 @@ class databasesManager {
                     const toActivate = this.databaseToActivate();
 
                     if (toActivate && toActivate === event.DatabaseName) {
-                        updatedDatabase.activate();
+                        this.activate(updatedDatabase);
                         this.databaseToActivate(null);
                     }
                 });

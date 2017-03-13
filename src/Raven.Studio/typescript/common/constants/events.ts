@@ -15,7 +15,6 @@ const ChangesApi = {
 }
 
 const Database = {
-    Activate: 'Database.Activate',
     Disconnect: 'Database.Disconnect'
 };
 

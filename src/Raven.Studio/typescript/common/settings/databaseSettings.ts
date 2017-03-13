@@ -13,13 +13,13 @@ class databaseSettings extends abstractSettings {
     }
 
     get storageKey() {
-        //TODO: register for disposal
+        //TODO: register for disposal, after db is deleted
         return storageKeyProvider.storageKeyFor("settings." + this.db.name);
     }
 
     protected fetchConfigDocument(): JQueryPromise<any> {
         //TODO:
-        return $.Deferred<any>(undefined);
+        return $.Deferred<any>().resolve(undefined);
     }
 
     protected saveConfigDocument(settingsToSave: any): JQueryPromise<void> {

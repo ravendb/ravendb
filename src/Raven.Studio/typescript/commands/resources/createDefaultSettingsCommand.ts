@@ -1,13 +1,8 @@
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
-import versioningEntry = require("models/database/documents/versioningEntry");
-
 import commandBase = require("commands/commandBase");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSettingsCommand");
-import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
-import getEffectiveVersioningsCommand = require("commands/database/globalConfig/getEffectiveVersioningsCommand");
-import configurationDocument = require("models/database/globalConfig/configurationDocument");
 import getConfigurationSettingsCommand = require("commands/database/globalConfig/getConfigurationSettingsCommand");
 import configurationSettings = require("models/database/globalConfig/configurationSettings");
 

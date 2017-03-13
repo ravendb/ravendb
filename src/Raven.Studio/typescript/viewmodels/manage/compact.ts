@@ -1,5 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
 import startDbCompactCommand = require("commands/maintenance/startCompactCommand");
 import accessHelper = require("viewmodels/shell/accessHelper");

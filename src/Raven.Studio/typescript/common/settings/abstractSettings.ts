@@ -35,6 +35,7 @@ abstract class abstractSettings {
         this.fetchConfigDocument()
             .done((remoteSettings) => {
                 this.readSettings(remoteSettings, localSettings);
+                loadTask.resolve(this);
             })
             .fail(() => loadTask.reject());
 
@@ -44,6 +45,8 @@ abstract class abstractSettings {
     save(): JQueryPromise<void> {
         const localSettings = {} as any;
         const remoteSettings = {} as any;
+
+        //TODO: what about concurrent updates?
 
         this.writeSettings(remoteSettings, localSettings);
 

@@ -1,6 +1,4 @@
-import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getIdentitiesCommand = require("commands/database/debug/getIdentitiesCommand");
 
 class statusDebugIdentities extends viewModelBase {
 

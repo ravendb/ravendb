@@ -11,7 +11,6 @@ import getServerPrefixForHiLoCommand = require("commands/database/documents/getS
 import replicateAllIndexesCommand = require("commands/database/replication/replicateAllIndexesCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import replicateAllTransformersCommand = require("commands/database/replication/replicateAllTransformersCommand");
-import deleteLocalReplicationsSetupCommand = require("commands/database/globalConfig/deleteLocalReplicationsSetupCommand");
 import replicateIndexesCommand = require("commands/database/replication/replicateIndexesCommand");
 import replicateTransformersCommand = require("commands/database/replication/replicateTransformersCommand");
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");

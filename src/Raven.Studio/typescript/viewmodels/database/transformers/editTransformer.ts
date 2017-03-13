@@ -14,7 +14,6 @@ import eventsCollector = require("common/eventsCollector");
 import renameTransformerCommand = require("commands/database/transformers/renameTransformerCommand");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
-import database = require("models/resources/database");
 
 class editTransformer extends viewModelBase {
 

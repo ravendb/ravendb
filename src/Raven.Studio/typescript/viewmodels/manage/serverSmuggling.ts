@@ -1,5 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require("viewmodels/shell");
 import serverSmugglingItem = require("models/resources/serverSmugglingItem");
 import serverConnectionInfo = require("models/database/cluster/serverConnectionInfo");
 import performSmugglingCommand = require("commands/operations/performSmugglingCommand");

@@ -2,14 +2,9 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import conflictVersion = require("models/database/replication/conflictVersion");
-
-import changesContext = require("common/changesContext");
-
-import getConflictsCommand = require("commands/database/replication/getConflictsCommand");
 import getReplicationSourcesCommand = require("commands/database/replication/getReplicationSourcesCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import getSingleTransformerCommand = require("commands/database/transformers/getSingleTransformerCommand");
-import changeSubscription = require('common/changeSubscription');
 import conflictsResolveCommand = require("commands/database/replication/conflictsResolveCommand");
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
 import eventsCollector = require("common/eventsCollector");

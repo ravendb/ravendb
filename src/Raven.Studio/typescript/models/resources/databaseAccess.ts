@@ -1,6 +1,3 @@
-import shell = require("viewmodels/shell");
-import accessHelper = require("viewmodels/shell/accessHelper");
-
 class databaseAccess {
 
     admin = ko.observable<boolean>();

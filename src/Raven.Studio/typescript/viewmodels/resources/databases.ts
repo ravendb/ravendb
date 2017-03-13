@@ -10,15 +10,12 @@ import togglePauseIndexingCommand = require("commands/database/index/togglePause
 import toggleDisableIndexingCommand = require("commands/database/index/toggleDisableIndexingCommand");
 import deleteDatabaseCommand = require("commands/resources/deleteDatabaseCommand");
 import loadDatabaseCommand = require("commands/resources/loadDatabaseCommand");
-import databasesManager = require("common/shell/databasesManager");
 import changesContext = require("common/changesContext");
 
 import databasesInfo = require("models/resources/info/databasesInfo");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
-import database = require("models/resources/database");
-import EVENTS = require("common/constants/events");
 import messagePublisher = require("common/messagePublisher");
 
 class databases extends viewModelBase {
@@ -357,7 +354,7 @@ class databases extends viewModelBase {
         if (!db || db.disabled())
             return;
 
-        db.activate();
+        this.databasesManager.activate(db);
 
         this.updateDatabaseInfo(db.name);
     }

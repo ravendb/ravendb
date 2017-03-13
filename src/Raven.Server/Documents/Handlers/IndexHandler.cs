@@ -73,23 +73,29 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        [RavenAction("/databases/*/indexes/replace", "PUT")]
+        [RavenAction("/databases/*/indexes/replace", "POST")]
         public Task Replace()
         {
-            //WIP - Efrat
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                return NoContent();
-            while (true)
+            var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+
+            var oldIndex = Database.IndexStore.GetIndex(name);
+            var newIndex = Database.IndexStore.GetIndex(replacementName);
+
+            if (oldIndex == null && newIndex == null)
+                throw new IndexDoesNotExistException($"Could not find '{name}' and '{replacementName}' indexes.");
+
+            if (newIndex == null)
+                throw new IndexDoesNotExistException($"Could not find side-by-side index for '{name}'.");
+
+            while (Database.DatabaseShutdown.IsCancellationRequested == false)
             {
-                if (Database.IndexStore.TryReplaceIndexes(name, Constants.Documents.Indexing.SideBySideIndexNamePrefix + name))
+                if (Database.IndexStore.TryReplaceIndexes(name, newIndex.Name))
                     break;
             }
 
             return Task.CompletedTask;
         }
-
 
         [RavenAction("/databases/*/indexes/source", "GET")]
         public Task Source()

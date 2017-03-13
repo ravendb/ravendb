@@ -3,8 +3,6 @@
 import database = require("models/resources/database");
 import changeSubscription = require("common/changeSubscription");
 import changesCallback = require("common/changesCallback");
-import EVENTS = require("common/constants/events");
-
 import eventsWebSocketClient = require("common/eventsWebSocketClient");
 
 abstract class abstractNotificationCenterClient extends eventsWebSocketClient<Raven.Server.NotificationCenter.Notifications.Notification> {

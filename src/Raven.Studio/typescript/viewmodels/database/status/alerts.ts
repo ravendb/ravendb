@@ -1,9 +1,6 @@
-import router = require("plugins/router"); 
 import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
-import appUrl = require("common/appUrl");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
-import tableNavigationTrait = require("common/tableNavigationTrait");
 import eventsCollector = require("common/eventsCollector");
 
 class alerts extends viewModelBase {

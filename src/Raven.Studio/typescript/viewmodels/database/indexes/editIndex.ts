@@ -1,6 +1,5 @@
 import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
-import index = require("models/database/index/index");
 import document = require("models/database/documents/document");
 import indexDefinition = require("models/database/index/indexDefinition");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
@@ -10,24 +9,10 @@ import jsonUtil = require("common/jsonUtil");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
-import app = require("durandal/app");
 import indexAceAutoCompleteProvider = require("models/database/index/indexAceAutoCompleteProvider");
-import autoCompleterSupport = require("common/autoCompleterSupport");
-import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
-import indexMergeSuggestion = require("models/database/index/indexMergeSuggestion");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
-import replaceIndexDialog = require("viewmodels/database/indexes/replaceIndexDialog");
-import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
-import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
 import renameIndexCommand = require("commands/database/index/renameIndexCommand");
-import deleteIndexCommand = require("commands/database/index/deleteIndexCommand");
-import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
-import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
-import getCSharpIndexDefinitionCommand = require("commands/database/index/getCSharpIndexDefinitionCommand");
-import showDataDialog = require("viewmodels/common/showDataDialog");
-import formatIndexCommand = require("commands/database/index/formatIndexCommand");
-import renameOrDuplicateIndexDialog = require("viewmodels/database/indexes/renameOrDuplicateIndexDialog");
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexFieldsFromMapCommand");
 import configurationItem = require("models/database/index/configurationItem");
@@ -36,7 +21,6 @@ import configuration = require("configuration");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import eventsCollector = require("common/eventsCollector");
-import database = require("models/resources/database");
 
 class editIndex extends viewModelBase { 
 

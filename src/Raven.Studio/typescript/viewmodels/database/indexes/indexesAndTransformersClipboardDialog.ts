@@ -1,12 +1,8 @@
-import transformerDefinition = require("models/database/index/transformer");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
 import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
-import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
-import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");
-import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 

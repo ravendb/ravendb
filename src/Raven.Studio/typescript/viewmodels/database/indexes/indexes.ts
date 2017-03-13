@@ -3,7 +3,6 @@ import index = require("models/database/index/index");
 import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/database/index/saveIndexLockModeCommand");
 import app = require("durandal/app");
-import changeSubscription = require("common/changeSubscription");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
@@ -54,10 +53,10 @@ class indexes extends viewModelBase {
         this.bindToCurrentInstance(
             "lowPriority", "highPriority", "normalPriority",
             "resetIndex", "deleteIndex",
-            "unlockIndex", "lockIndex", "lockErrorIndex", "lockSideBySide",
+            "unlockIndex", "lockIndex", "lockErrorIndex",
             "enableIndex", "disableIndex", "disableSelectedIndexes", "enableSelectedIndexes",
             "pauseSelectedIndexes", "resumeSelectedIndexes",
-            "unlockSelectedIndexes", "lockSelectedIndexes", "lockSideBySideSelectedIndexes", "lockErrorSelectedIndexes",
+            "unlockSelectedIndexes", "lockSelectedIndexes", "lockErrorSelectedIndexes",
             "deleteSelectedIndexes", "startIndexing", "stopIndexing", "resumeIndexing", "pauseUntilRestart", "toggleSelectAll"
         );
 
@@ -278,11 +277,6 @@ class indexes extends viewModelBase {
         this.updateIndexLockMode(i, "LockedError","Locked (Error)");
     }
 
-    lockSideBySide(i: index) {
-        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "SideBySide");
-        this.updateIndexLockMode(i, "SideBySide","Locked (Side by Side)");
-    }
-
     private updateIndexLockMode(i: index, newLockMode: Raven.Client.Documents.Indexes.IndexLockMode, lockModeStrForTitle: string) {
         if (i.lockMode() !== newLockMode) {
             this.spinners.localLockChanges.push(i.name);
@@ -364,10 +358,6 @@ class indexes extends viewModelBase {
 
     lockSelectedIndexes() {
         this.setLockModeSelectedIndexes("LockedIgnore", "Lock");
-    }
-
-    lockSideBySideSelectedIndexes() {
-        this.setLockModeSelectedIndexes("SideBySide", "Lock (Side By Side)");
     }
 
     lockErrorSelectedIndexes() {
