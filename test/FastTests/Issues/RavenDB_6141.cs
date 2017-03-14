@@ -13,6 +13,7 @@ namespace FastTests.Issues
         public void Default_database_path_settings()
         {
             var config = new RavenConfiguration("foo", ResourceType.Database);
+            config.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             config.Initialize();
 
@@ -48,6 +49,7 @@ namespace FastTests.Issues
         public void Inherits_server_settings_and_appends_resource_specific_suffix_paths()
         {
             var server = new RavenConfiguration(null, ResourceType.Server);
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"C:\Deployment");
             
@@ -78,6 +80,7 @@ namespace FastTests.Issues
         public void Resource_specific_paths_do_not_require_any_suffixes()
         {
             var server = new RavenConfiguration(null, ResourceType.Server);
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"C:\Deployment");
 
@@ -117,6 +120,7 @@ namespace FastTests.Issues
         public void Should_handle_APPDRIVE_properly_if_specified()
         {
             var server = new RavenConfiguration(null, ResourceType.Server);
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"APPDRIVE:\RavenData");
 
@@ -138,6 +142,7 @@ namespace FastTests.Issues
         public void Should_create_data_in_directory_specified_at_server_level()
         {
             var server = new RavenConfiguration(null, ResourceType.Server);
+            server.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"C:\RavenData");
 
