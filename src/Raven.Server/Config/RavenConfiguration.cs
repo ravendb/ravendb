@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
@@ -229,6 +228,9 @@ namespace Raven.Server.Config
 
         private void CheckDirectoryPermissions()
         {
+            if (Core.RunInMemory)
+                return;
+
             Dictionary<string, KeyValuePair<string, string>> results = null;
             foreach (var configurationProperty in typeof(RavenConfiguration).GetProperties(BindingFlags.Instance | BindingFlags.Public))
             {
