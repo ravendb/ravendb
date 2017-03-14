@@ -30,10 +30,9 @@ namespace Raven.Server.Smuggler.Documents
         private UnmanagedJsonParser _parser;
         private DatabaseItemType? _currentType;
 
-        private DatabaseSmugglerOptions _options;
         private SmugglerResult _result;
 
-        private long _buildVersion;
+        private BuildVersionType _buildVersionType;
 
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
 
@@ -45,7 +44,6 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
         {
-            _options = options;
             _result = result;
             _returnBuffer = _context.GetManagedBuffer(out _buffer);
             _state = new JsonParserState();
@@ -57,7 +55,8 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
                 ThrowInvalidJson();
 
-            _buildVersion = buildVersion = ReadBuildVersion();
+            buildVersion = ReadBuildVersion();
+            _buildVersionType = BuildVersion.Type(buildVersion);
 
             return new DisposableAction(() =>
             {
@@ -569,7 +568,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        indexDefinition = IndexProcessor.ReadIndexDefinition(reader, _buildVersion, out type);
+                        indexDefinition = IndexProcessor.ReadIndexDefinition(reader, _buildVersionType, out type);
                     }
                     catch (Exception e)
                     {
@@ -598,7 +597,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        transformerDefinition = TransformerProcessor.ReadTransformerDefinition(reader, _buildVersion);
+                        transformerDefinition = TransformerProcessor.ReadTransformerDefinition(reader, _buildVersionType);
                     }
                     catch (Exception e)
                     {
