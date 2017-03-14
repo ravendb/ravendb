@@ -237,7 +237,7 @@ namespace FastTests.Client.Attachments
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 using (context.OpenReadTransaction())
                 {
-                    database.DocumentsStorage.AssertNoAttachmentsForDocument(context, "users/1");
+                    database.DocumentsStorage.AttachmentsStorage.AssertNoAttachmentsForDocument(context, "users/1");
                 }
                 Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
             }

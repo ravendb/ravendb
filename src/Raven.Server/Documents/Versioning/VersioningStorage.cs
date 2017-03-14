@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Versioning
 
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
-                _documentsStorage.RevisionAttachments(context, lowerKey, lowerKeySize, changeVector);
+                _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerKey, lowerKeySize, changeVector);
             }
 
             if (configuration == null)
@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Versioning
                     maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
                     if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     {
-                        _documentsStorage.DeleteRevisionAttachments(context, revision);
+                        _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision);
                     }
                 });
             _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
@@ -404,10 +404,10 @@ namespace Raven.Server.Documents.Versioning
             if ((result.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
                 Slice prefixSlice;
-                using (_documentsStorage.GetAttachmentPrefix(context, result.LoweredKey.Buffer, result.LoweredKey.Size,
-                    DocumentsStorage.AttachmentType.Revision, result.ChangeVector, out prefixSlice))
+                using (_documentsStorage.AttachmentsStorage.GetAttachmentPrefix(context, result.LoweredKey.Buffer, result.LoweredKey.Size,
+                    AttachmentsStorage.AttachmentType.Revision, result.ChangeVector, out prefixSlice))
                 {
-                    result.Attachments = _documentsStorage.GetAttachmentsForDocument(context, prefixSlice.Clone(context.Allocator));
+                    result.Attachments = _documentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice.Clone(context.Allocator));
                 }
             }
 

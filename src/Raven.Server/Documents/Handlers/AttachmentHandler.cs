@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var attachment = Database.DocumentsStorage.GetAttachment(context, documentId, name);
+                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name);
                 if (attachment == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    Result = Database.DocumentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, ExpectedEtag, Stream);
+                    Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, ExpectedEtag, Stream);
                 }
                 catch (ConcurrencyException e)
                 {
@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    Database.DocumentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedEtag);
+                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedEtag);
                 }
                 catch (ConcurrencyException e)
                 {
