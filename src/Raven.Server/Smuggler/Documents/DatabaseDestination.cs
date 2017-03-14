@@ -22,9 +22,9 @@ namespace Raven.Server.Smuggler.Documents
     public class DatabaseDestination : ISmugglerDestination
     {
         private readonly DocumentDatabase _database;
-        private long _buildVersion;
 
         private Logger _log;
+        private BuildVersionType _buildType;
 
         public DatabaseDestination(DocumentDatabase database)
         {
@@ -34,18 +34,18 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, long buildVersion)
         {
-            _buildVersion = buildVersion;
+            _buildType = BuildVersion.Type(buildVersion);
             return null;
         }
 
         public IDocumentActions Documents()
         {
-            return new DatabaseDocumentActions(_database, _buildVersion, isRevision: false, log: _log);
+            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, log: _log);
         }
 
         public IDocumentActions RevisionDocuments()
         {
-            return new DatabaseDocumentActions(_database, _buildVersion, isRevision: true, log: _log);
+            return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log);
         }
 
         public IIdentityActions Identities()
@@ -109,7 +109,7 @@ namespace Raven.Server.Smuggler.Documents
         private class DatabaseDocumentActions : IDocumentActions
         {
             private readonly DocumentDatabase _database;
-            private readonly long _buildVersion;
+            private readonly BuildVersionType _buildType;
             private readonly bool _isRevision;
             private readonly Logger _log;
             private MergedBatchPutCommand _command;
@@ -118,17 +118,17 @@ namespace Raven.Server.Smuggler.Documents
 
             private readonly Size _enqueueThreshold;
 
-            public DatabaseDocumentActions(DocumentDatabase database, long buildVersion, bool isRevision, Logger log)
+            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, bool isRevision, Logger log)
             {
                 _database = database;
-                _buildVersion = buildVersion;
+                _buildType = buildType;
                 _isRevision = isRevision;
                 _log = log;
                 _enqueueThreshold = new Size(
                     (sizeof(int) == IntPtr.Size || database.Configuration.Storage.ForceUsing32BitsPager) ? 2 : 32,
                     SizeUnit.Megabytes);
 
-                _command = new MergedBatchPutCommand(database, buildVersion, log)
+                _command = new MergedBatchPutCommand(database, buildType, log)
                 {
                     IsRevision = isRevision
                 };
@@ -170,7 +170,7 @@ namespace Raven.Server.Smuggler.Documents
                 _prevCommand = _command;
                 _prevCommandTask = _database.TxMerger.Enqueue(_command);
 
-                _command = new MergedBatchPutCommand(_database, _buildVersion, _log)
+                _command = new MergedBatchPutCommand(_database, _buildType, _log)
                 {
                     IsRevision = _isRevision,
                 };
@@ -241,7 +241,7 @@ namespace Raven.Server.Smuggler.Documents
             public bool IsRevision;
 
             private readonly DocumentDatabase _database;
-            private readonly bool _isPreV4Build;
+            private readonly BuildVersionType _buildType;
             private readonly Logger _log;
 
             public Size TotalSize = new Size(0, SizeUnit.Bytes);
@@ -255,10 +255,10 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentsOperationContext _context;
             private const string PreV4RevisionsDocumentKey = "/revisions/";
 
-            public MergedBatchPutCommand(DocumentDatabase database, long buildVersion, Logger log)
+            public MergedBatchPutCommand(DocumentDatabase database, BuildVersionType buildType, Logger log)
             {
                 _database = database;
-                _isPreV4Build = BuildVersion.IsPreV4(buildVersion);
+                _buildType = buildType;
                 _log = log;
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
@@ -305,7 +305,7 @@ namespace Raven.Server.Smuggler.Documents
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private bool IsPreV4Revision(string key, Document document)
             {
-                if (_isPreV4Build == false)
+                if (_buildType == BuildVersionType.V3 == false)
                     return false;
 
                 if ((document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) != NonPersistentDocumentFlags.LegacyRevision)

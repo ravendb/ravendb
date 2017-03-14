@@ -60,10 +60,11 @@ namespace Raven.Server.Smuggler.Documents
             using (_source.Initialize(_options, result, out buildVersion))
             using (_destination.Initialize(_options, result, buildVersion))
             {
+                var buildType = BuildVersion.Type(buildVersion);
                 var currentType = _source.GetNextType();
                 while (currentType != DatabaseItemType.None)
                 {
-                    ProcessType(currentType, result, buildVersion);
+                    ProcessType(currentType, result, buildType);
 
                     currentType = _source.GetNextType();
                 }
@@ -72,7 +73,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private void ProcessType(DatabaseItemType type, SmugglerResult result, long buildVersion)
+        private void ProcessType(DatabaseItemType type, SmugglerResult result, BuildVersionType buildType)
         {
             if ((_options.OperateOnTypes & type) != type)
             {
@@ -87,7 +88,7 @@ namespace Raven.Server.Smuggler.Documents
             switch (type)
             {
                 case DatabaseItemType.Documents:
-                    counts = ProcessDocuments(result, buildVersion);
+                    counts = ProcessDocuments(result, buildType);
                     break;
                 case DatabaseItemType.RevisionDocuments:
                     counts = ProcessRevisionDocuments(result);
@@ -329,10 +330,8 @@ namespace Raven.Server.Smuggler.Documents
             return result.RevisionDocuments;
         }
 
-        private SmugglerProgressBase.Counts ProcessDocuments(SmugglerResult result, long buildVersion)
+        private SmugglerProgressBase.Counts ProcessDocuments(SmugglerResult result, BuildVersionType buildType)
         {
-            var isPreV4Build = BuildVersion.IsPreV4(buildVersion);
-
             using (var actions = _destination.Documents())
             {
                 foreach (var doc in _source.GetDocuments(_options.CollectionsToExport, actions))
@@ -357,7 +356,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     var document = doc;
 
-                    if (CanSkipDocument(document, isPreV4Build))
+                    if (CanSkipDocument(document, buildType))
                     {
                         result.Documents.SkippedCount++;
                         continue;
@@ -398,9 +397,9 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool CanSkipDocument(Document document, bool isPreV4Build)
+        private static bool CanSkipDocument(Document document, BuildVersionType buildType)
         {
-            if (isPreV4Build == false)
+            if (buildType == BuildVersionType.V3 == false)
                 return false;
 
             // skipping "Raven/Replication/DatabaseIdsCache" and

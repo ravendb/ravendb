@@ -491,7 +491,7 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
-                TransformerProcessor.Import(definition, _database, ServerVersion.Build);
+                TransformerProcessor.Import(definition, _database, ServerVersion.BuildType);
             }
             catch (ArgumentException e)
             {
@@ -536,7 +536,7 @@ namespace Raven.Server.Documents.Replication
             _database.IndexStore.TryDeleteIndexIfExists(item.Name);
             try
             {
-                IndexProcessor.Import(definition, _database, ServerVersion.Build, false);               
+                IndexProcessor.Import(definition, _database, ServerVersion.BuildType, false);
             }
             catch (ArgumentException e)
             {
