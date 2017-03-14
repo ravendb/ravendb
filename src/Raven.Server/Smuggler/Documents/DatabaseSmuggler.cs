@@ -400,7 +400,7 @@ namespace Raven.Server.Smuggler.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool CanSkipDocument(Document document, bool isPreV4Build)
         {
-            if (isPreV4Build)
+            if (isPreV4Build == false)
                 return false;
 
             // skipping "Raven/Replication/DatabaseIdsCache" and
