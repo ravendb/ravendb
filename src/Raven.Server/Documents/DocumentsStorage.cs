@@ -3015,18 +3015,21 @@ namespace Raven.Server.Documents
             Conflict = 3
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReleaseMemory GetAttachmentKey(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize,
             byte* lowerName, int lowerNameSize, AttachmentType type, ChangeVectorEntry[] changeVector, out Slice keySlice)
         {
             return GetAttachmentKeyInternal(context, lowerKey, lowerKeySize, lowerName, lowerNameSize, false, type, changeVector, out keySlice);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReleaseMemory GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize,
             AttachmentType type, ChangeVectorEntry[] changeVector, out Slice prefixSlice)
         {
             return GetAttachmentKeyInternal(context, lowerKey, lowerKeySize, null, 0, false, type, changeVector, out prefixSlice);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ReleaseMemory GetAttachmentKeyInternal(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize,
             byte* lowerName, int lowerNameSize, bool isPrefix, AttachmentType type, ChangeVectorEntry[] changeVector, out Slice keySlice)
         {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
@@ -303,22 +304,24 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-            var prefixKeyMem = default(ByteString);
-            try
+            Slice prefixSlice;
+            using (GetKeyPrefix(context, loweredKey, out prefixSlice))
             {
-                prefixKeyMem = context.Allocator.Allocate(loweredKey.Size + 1);
-                loweredKey.CopyTo(0, prefixKeyMem.Ptr, 0, loweredKey.Size);
-                prefixKeyMem.Ptr[loweredKey.Size] = (byte)30; // the record separator                
-                var prefixSlice = new Slice(SliceOptions.Key, prefixKeyMem);
-
                 DeleteRevisions(context, table, prefixSlice, long.MaxValue);
                 DeleteCountOfRevisions(context, prefixSlice);
             }
-            finally
-            {
-                if (prefixKeyMem.HasValue)
-                    context.Allocator.Release(ref prefixKeyMem);
-            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ReleaseMemory GetKeyPrefix(DocumentsOperationContext context, Slice loweredKey, out Slice prefixSlice)
+        {
+            var keyMem = context.Allocator.Allocate(loweredKey.Size + 1);
+
+            loweredKey.CopyTo(0, keyMem.Ptr, 0, loweredKey.Size);
+            keyMem.Ptr[loweredKey.Size] = RecordSeperator;
+
+            prefixSlice = new Slice(SliceOptions.Key, keyMem);
+            return new ReleaseMemory(keyMem, context);
         }
 
         public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string key, int start, int take)
