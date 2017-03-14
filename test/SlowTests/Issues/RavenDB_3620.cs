@@ -3,24 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Net.Http;
-using System.Threading.Tasks;
-
-using Raven.Abstractions.Replication;
-using Raven.Client.Connection;
-using Raven.Client.Document;
-using Raven.Client.Metrics;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_3620 : IDisposable
     {
-        private HttpClient client = new HttpClient();
+        private readonly HttpClient _client = new HttpClient();
 
         [Fact]
         public void VerifyLicenseRelatedLinks()
@@ -43,18 +35,18 @@ namespace Raven.Tests.Issues
             VerifyLink("https://groups.google.com/forum/#!forum/ravendb");
             VerifyLink("http://ravendb.net/support");
             VerifyLink("http://ravendb.net/support/supportrequest");
-            
+
         }
 
         private void VerifyLink(string url)
         {
-            var response = client.GetAsync(url).Result;
+            var response = _client.GetAsync(url).Result;
             Assert.True(response.IsSuccessStatusCode);
         }
 
         public void Dispose()
         {
-            client.Dispose();
+            _client.Dispose();
         }
     }
 }

@@ -1,28 +1,26 @@
 using System.Linq;
-
-using Raven.Abstractions.Indexing;
-
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Session;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3646 : RavenTest
+    public class RavenDB_3646 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-5988")]
         public void QueryWithCustomize()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 StoreData(store);
                 store.ExecuteIndex(new Events_SpatialIndex());
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var rq = session.Query<Events_SpatialIndex.ReduceResult, Events_SpatialIndex>()
                         .Statistics(out stats)
                         .Customize(
@@ -37,22 +35,23 @@ namespace Raven.Tests.Issues
                             t++;
                         }
                     }
+
                     Assert.Equal(300, t);
                 }
             }
-
         }
-        [Fact]
+
+        [Fact(Skip = "RavenDB-5988")]
         public void QueryWithoutCustomize()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 StoreData(store);
                 store.ExecuteIndex(new Events_SpatialIndex());
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var rq = session.Query<Events_SpatialIndex.ReduceResult, Events_SpatialIndex>()
                         .Statistics(out stats);
 
@@ -69,7 +68,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Events_SpatialIndex : AbstractIndexCreationTask<Event, Events_SpatialIndex.ReduceResult>
+        private class Events_SpatialIndex : AbstractIndexCreationTask<Event, Events_SpatialIndex.ReduceResult>
         {
             public class ReduceResult
             {
@@ -78,23 +77,23 @@ namespace Raven.Tests.Issues
 
             public Events_SpatialIndex()
             {
-                this.Map = events => from e in events
-                                     select new
-                                     {
-                                         Name = e.Name,
-                                         __ = SpatialGenerate("Coordinates", e.Latitude, e.Longitude)
-                                     };
+                Map = events => from e in events
+                                select new
+                                {
+                                    Name = e.Name,
+                                    __ = SpatialGenerate("Coordinates", e.Latitude, e.Longitude)
+                                };
             }
         }
 
-        public class Event
+        private class Event
         {
             public string Name { get; set; }
             public double Latitude { get; set; }
             public double Longitude { get; set; }
         }
 
-        public void StoreData(IDocumentStore store)
+        private void StoreData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -102,7 +101,6 @@ namespace Raven.Tests.Issues
                     session.Store(new Event { Name = "e1" + i, Latitude = 1, Longitude = 1 });
                 session.SaveChanges();
             }
-
         }
     }
 }
