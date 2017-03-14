@@ -43,8 +43,8 @@ namespace Raven.Server.Documents
             _serverStore = serverStore;
             _resourceSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentResourceLoads);
             _concurrentResourceLoadTimeout = _serverStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
-            _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");
-        }
+            _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");            
+        }	
 
         public void ClusterOnDatabaseChanged(object sender, string dbName)
         {
@@ -373,6 +373,34 @@ namespace Raven.Server.Documents
 
 
             return config;
+        }
+
+        public void Unprotect(DatabaseDocument databaseDocument)
+        {
+            if (databaseDocument.SecuredSettings == null)
+            {
+                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return;
+            }
+
+            foreach (var prop in databaseDocument.SecuredSettings.ToList())
+            {
+                if (prop.Value == null)
+                    continue;
+                var bytes = Convert.FromBase64String(prop.Value);
+                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+                try
+                {
+                    /*var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
+                    databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);*/
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
+                    databaseDocument.SecuredSettings[prop.Key] = Constants.Documents.Encryption.DataCouldNotBeDecrypted;
+                }
+            }
         }
 
         public DateTime LastWork(DocumentDatabase resource)

@@ -77,6 +77,7 @@ namespace Raven.Server.Documents
             ConfigurationStorage = new ConfigurationStorage(this);
             NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
+            _serverStore = serverStore;
         }
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
@@ -215,7 +216,7 @@ namespace Raven.Server.Documents
             SqlReplicationLoader.Initialize();
 
             DocumentTombstoneCleaner.Initialize();
-            BundleLoader = new BundleLoader(this);
+            BundleLoader = new BundleLoader(this,_serverStore);
 
             try
             {
@@ -377,6 +378,8 @@ namespace Raven.Server.Documents
         }
 
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
+        private ServerStore _serverStore;
+
         public DynamicJsonValue GenerateDatabaseInfo()
         {
             var envs = GetAllStoragesEnvironment();

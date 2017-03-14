@@ -1,18 +1,24 @@
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Versioning;
+using Sparrow.Json;
+using Xunit;
 
 namespace FastTests.Server.Documents.Versioning
 {
     public class VersioningHelper
     {
-        public static async Task SetupVersioning(DocumentStore store)
+        public static async Task SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore,string database)
         {
-            using (var session = store.OpenAsyncSession())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                await session.StoreAsync(new VersioningConfiguration
+                var versioningDoc = new VersioningConfiguration
                 {
                     Default = new VersioningConfigurationCollection
                     {
@@ -36,10 +42,10 @@ namespace FastTests.Server.Documents.Versioning
                             Active = false,
                         },
                     }
-                }, Constants.Documents.Versioning.ConfigurationKey);
-
-                await session.SaveChangesAsync();
-            }
+                };
+                var entityToBlittable = new EntityToBlittable(null);
+                await serverStore.PutEditVersioningCommandAsync(context, database, entityToBlittable.ConvertEntityToBlittable(versioningDoc, DocumentConventions.Default, context));                               
+            }           
         }
     }
 }

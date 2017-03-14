@@ -177,13 +177,29 @@ namespace Raven.Server.ServerWide
 
         public async Task DeleteValueInClusterAsync(JsonOperationContext context, string key)
         {
+            //TODO: redirect to leader
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(DeleteValueCommand),
                 [nameof(DeleteValueCommand.Name)] = key,
             }, "delete-cmd"))
             {
-                await PutAsync(putCmd);
+                await _engine.PutAsync(putCmd);
+            }
+        }
+
+        public async Task PutEditVersioningCommandAsync(JsonOperationContext context, string databaseName, BlittableJsonReaderObject val)
+        {
+            //TODO: redirect to leader
+            using (var editVersioningCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(EditVersioningCommand),
+                [nameof(EditVersioningCommand.Configuration)] = val,
+                [nameof(EditVersioningCommand.Name)] = databaseName,
+            }, "edit-versioning-cmd"))
+            {
+                var index = await _engine.PutAsync(editVersioningCmd);
+                await Cluster.WaitForIndexNotification(index);
             }
         }
 

@@ -1,15 +1,19 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Org.BouncyCastle.Math.EC.Multiplier;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
+using Raven.Server.Documents.Versioning;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -47,6 +51,22 @@ namespace Raven.Server.ServerWide
             });
         }
 
+        private readonly AsyncManualResetEvent _notifiedListeners = new AsyncManualResetEvent();
+        private long _lastNotified;
+
+
+        public async Task WaitForIndexNotification(long index)
+        {
+            var task = _notifiedListeners.WaitAsync();
+
+            while (index > Volatile.Read(ref _lastNotified))
+            {
+                await task;
+
+                task = _notifiedListeners.WaitAsync();
+            }
+        }
+
         public event EventHandler<string> DatabaseChanged;
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
@@ -54,6 +74,7 @@ namespace Raven.Server.ServerWide
             string type;
             if (cmd.TryGet("Type", out type) == false)
                 return;
+
 
             switch (type)
             {
@@ -70,6 +91,9 @@ namespace Raven.Server.ServerWide
 
                 case nameof(DeleteValueCommand):
                     DeleteValue(context, cmd, index, leader);
+                    break;
+                case nameof(EditVersioningCommand):
+                    EditVersioning(context, cmd, index, leader);
                     break;
                 case nameof(PutValueCommand):
                     PutValue(context, cmd, index, leader);
@@ -352,15 +376,75 @@ namespace Raven.Server.ServerWide
 
                     items.Set(builder);
 
-                    context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
-                    {
-                        Task.Run(() =>
-                        {
-                            DatabaseChanged?.Invoke(this, databaseName);
-                        });
-                    };
+                    NotifyDatabaseChanged(context, databaseName, index);
                 }
             }
+        }
+
+        private void NotifyDatabaseChanged(TransactionOperationContext context, string databaseName, long index)
+        {
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+            {
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        DatabaseChanged?.Invoke(this, databaseName);
+                    }
+                    finally
+                    {
+                        var lastNotified = _lastNotified;
+                        while (lastNotified < index)
+                        {
+                            var result = Interlocked.CompareExchange(ref _lastNotified, index, lastNotified);
+                            if (result == lastNotified)
+                                break;
+                            lastNotified = result;
+                        }
+                        _notifiedListeners.Set();
+                    }
+                });
+            };
+        }
+
+        private unsafe void EditVersioning(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            var editVersioning = JsonDeserializationCluster.EditVersioningCommand(cmd);
+            var databaseName = editVersioning.Name;
+            var dbKey = "db/" + databaseName;
+
+            long etag;
+            Slice valueName;
+            Slice valueNameLowered;
+            using (Slice.From(context.Allocator, dbKey, out valueName))
+            using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out valueNameLowered))
+            {                
+                var doc = ReadInternal(context, out etag, valueNameLowered);
+                if (doc == null)
+                {
+                    NotifyLeaderAboutError(index, leader, $"Cannot edit versioning on {databaseName} because it does not exists");
+                    return;
+                }
+                var record = JsonDeserializationCluster.DatabaseRecord(doc);
+
+                record.VersioningConfiguration = editVersioning.Configuration;
+
+                var entityToBlittable = new EntityToBlittable(null);
+                var updated = entityToBlittable.ConvertEntityToBlittable(record, DocumentConventions.Default, context);
+
+
+                TableValueBuilder builder;
+                using (items.Allocate(out builder))
+                {
+                    builder.Add(valueNameLowered);
+                    builder.Add(valueName);
+                    builder.Add(updated.BasePointer, updated.Size);
+                    builder.Add(index);
+                    items.Set(builder);
+                }                
+            }
+            NotifyDatabaseChanged(context, databaseName, index);
         }
 
         private static void NotifyLeaderAboutError(long index, Leader leader, string msg)
@@ -422,30 +506,35 @@ namespace Raven.Server.ServerWide
             return Read(context, name, out etag);
         }
 
-        public unsafe BlittableJsonReaderObject Read(TransactionOperationContext context, string name, out long etag)
-        {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+        public BlittableJsonReaderObject Read(TransactionOperationContext context, string name, out long etag)
+        {            
 
             var dbKey = name.ToLowerInvariant();
             Slice key;
             using (Slice.From(context.Allocator, dbKey, out key))
             {
-                TableValueReader reader;
-                if (items.ReadByKey(key, out reader) == false)
-                {
-                    etag = 0;
-                    return null;
-                }
-
-                int size;
-                var ptr = reader.Read(2, out size);
-                var doc = new BlittableJsonReaderObject(ptr, size, context);
-
-                etag = *(long*)reader.Read(3, out size);
-                Debug.Assert(size == sizeof(long));
-
-                return doc;
+                return ReadInternal(context, out etag, key);
             }
+        }
+
+        private static unsafe BlittableJsonReaderObject ReadInternal(TransactionOperationContext context, out long etag, Slice key)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            TableValueReader reader;
+            if (items.ReadByKey(key, out reader) == false)
+            {
+                etag = 0;
+                return null;
+            }
+
+            int size;
+            var ptr = reader.Read(2, out size);
+            var doc = new BlittableJsonReaderObject(ptr, size, context);
+
+            etag = *(long*)reader.Read(3, out size);
+            Debug.Assert(size == sizeof(long));
+
+            return doc;
         }
     }
 
@@ -460,6 +549,12 @@ namespace Raven.Server.ServerWide
         public string Name;
     }
 
+    public class EditVersioningCommand
+    {
+        public string Name;
+        public VersioningConfiguration Configuration;
+    }
+
     public class AddDatabaseCommand
     {
         public string DatabaseName;
@@ -467,8 +562,10 @@ namespace Raven.Server.ServerWide
         public string DataDirectory;
 
         public DatabaseTopology Topology;
-    }
 
+        public VersioningConfiguration VersioningConfiguration;
+	}
+	
     public class DeleteDatabaseCommand
     {
         public string DatabaseName;
@@ -525,6 +622,8 @@ namespace Raven.Server.ServerWide
         public TransformerDefinition[] Transformers;
 
         public Dictionary<string, string> Settings;
+		
+		public VersioningConfiguration VersioningConfiguration;
     }
 
     public enum DeletionInProgressStatus
@@ -545,9 +644,9 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, DeleteDatabaseCommand> DeleteDatabaseCommand = GenerateJsonDeserializationRoutine<DeleteDatabaseCommand>();
 
         public static readonly Func<BlittableJsonReaderObject, AddDatabaseCommand> AddDatabaseCommand = GenerateJsonDeserializationRoutine<AddDatabaseCommand>();
-
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
-
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
+		
+		public static readonly Func<BlittableJsonReaderObject, EditVersioningCommand> EditVersioningCommand = GenerateJsonDeserializationRoutine<EditVersioningCommand>();
     }
 }

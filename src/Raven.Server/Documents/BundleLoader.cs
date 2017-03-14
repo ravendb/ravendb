@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using Jint.Parser.Ast;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Server.Operations;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -22,12 +24,21 @@ namespace Raven.Server.Documents
         public ExpiredDocumentsCleaner ExpiredDocumentsCleaner;
         public PeriodicExportRunner PeriodicExportRunner;
 
-        public BundleLoader(DocumentDatabase database)
+        public BundleLoader(DocumentDatabase database, ServerStore serverStore)
         {
             _database = database;
+            _serverStore = serverStore;
+            _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
             _database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
             _logger = LoggingSource.Instance.GetLogger<BundleLoader>(_database.Name);
             InitializeBundles();
+        }
+
+        private void HandleDatabaseRecordChange(object sender, string changedDatabase)
+        {
+            if (changedDatabase.ToLowerInvariant() != _database.Name.ToLowerInvariant())
+                return;
+            VersioningStorage = VersioningStorage.LoadConfigurations(_database, _serverStore, VersioningStorage);
         }
 
         /// <summary>
@@ -35,18 +46,12 @@ namespace Raven.Server.Documents
         /// </summary>
         public void InitializeBundles()
         {
+			//TODO: read database document and init all bundles from it
+            VersioningStorage = VersioningStorage.LoadConfigurations(_database, _serverStore, VersioningStorage);
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
-                context.OpenReadTransaction();
-                var versioningConfiguration = _database.DocumentsStorage.Get(context,
-                    Constants.Documents.Versioning.ConfigurationKey);
-                if (versioningConfiguration != null)
-                {
-                    VersioningStorage = VersioningStorage.LoadConfigurations(_database);
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Versioning configuration enabled");
-                }
+                context.OpenReadTransaction();                
 
                 var expirationConfiguration = _database.DocumentsStorage.Get(context,
                     Constants.Documents.Expiration.ConfigurationKey);
@@ -73,14 +78,7 @@ namespace Raven.Server.Documents
         public void HandleSystemDocumentChange(DocumentChange change)
         {
             var key = change.Key;
-            if (key.Equals(Constants.Documents.Versioning.ConfigurationKey, StringComparison.OrdinalIgnoreCase))
-            {
-                VersioningStorage = VersioningStorage.LoadConfigurations(_database);
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Versioning configuration was {(VersioningStorage != null ? "disabled" : "enabled")}");
-            }
-            else if (key.Equals(Constants.Documents.Expiration.ConfigurationKey, StringComparison.OrdinalIgnoreCase))
+            if (key.Equals(Constants.Documents.Expiration.ConfigurationKey, StringComparison.OrdinalIgnoreCase))
             {
                 ExpiredDocumentsCleaner?.Dispose();
                 ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database);
@@ -117,10 +115,12 @@ namespace Raven.Server.Documents
             {typeof(PeriodicExportRunner), "PeriodicExport"}
         };
 
+        private ServerStore _serverStore;
+
         public void Dispose()
         {
             _database.Changes.OnSystemDocumentChange -= HandleSystemDocumentChange;
-
+            _serverStore.Cluster.DatabaseChanged -= HandleDatabaseRecordChange;
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(BundleLoader)}");
             exceptionAggregator.Execute(() =>
             {
