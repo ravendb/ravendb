@@ -2,17 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Database.Config;
-using Raven.Tests.Helpers;
+using System.Threading;
+using FastTests;
+using Lucene.Net.Search;
+using Raven.Client.Documents.Indexes;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_3501 : RavenTestBase
     {
+        private static readonly int InitialMaxClauseCount = BooleanQuery.MaxClauseCount;
+
         private const int MaxClauseCountInTest = 2048;
+
+        private static int _numberOfTestsToDispose;
 
         private class Student
         {
@@ -38,23 +42,22 @@ namespace Raven.Tests.Issues
             }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
-        {
-            configuration.MaxClauseCount = MaxClauseCountInTest + 1;
-        }
-
         [Fact]
         public void Too_much_clauses_should_throw_proper_exception()
         {
-            using (var store = NewRemoteDocumentStore())
+            Interlocked.Increment(ref _numberOfTestsToDispose);
+
+            using (var store = GetDocumentStore())
             {
+                BooleanQuery.MaxClauseCount = MaxClauseCountInTest;
+
                 var list = new List<string>();
                 using (var session = store.OpenSession())
                 {
                     for (var i = 0; i < MaxClauseCountInTest + 5; i++)
                     {
                         list.Add(i.ToString(CultureInfo.InvariantCulture));
-                        session.Store(new Student {Email = "student@" + i});
+                        session.Store(new Student { Email = "student@" + i });
                     }
                     session.SaveChanges();
                 }
@@ -64,7 +67,7 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var queryString = String.Join(",", list);
+                    var queryString = string.Join(",", list);
                     queryString = string.Format(@"@in<EmailDomain>:({0})", queryString);
 
                     var query = session.Advanced.DocumentQuery<Student, Students_ByEmailDomain>()
@@ -81,8 +84,12 @@ namespace Raven.Tests.Issues
         [InlineData(MaxClauseCountInTest)]
         public void In_Query_should_respect_MaxClauseCount_setting(int numberOfInItems)
         {
-            using (var store = NewRemoteDocumentStore())
+            Interlocked.Increment(ref _numberOfTestsToDispose);
+
+            using (var store = GetDocumentStore())
             {
+                BooleanQuery.MaxClauseCount = MaxClauseCountInTest;
+
                 var list = new List<string>();
                 using (var session = store.OpenSession())
                 {
@@ -90,7 +97,7 @@ namespace Raven.Tests.Issues
                     {
                         list.Add(i.ToString(CultureInfo.InvariantCulture));
 
-                        session.Store(new Student {Email = "student@" + i});
+                        session.Store(new Student { Email = "student@" + i });
                     }
                     session.SaveChanges();
                 }
@@ -100,16 +107,26 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var queryString = String.Join(",", list);
+                    var queryString = string.Join(",", list);
                     queryString = string.Format(@"@in<EmailDomain>:({0})", queryString);
 
                     var query = session.Advanced.DocumentQuery<Student, Students_ByEmailDomain>()
-                                                .Where(queryString);
+                        .Where(queryString)
+                        .Take(128);
+
                     var value = query.Lazily().Value;
-                    
+
                     Assert.Equal(128, value.Count());
                 }
             }
+        }
+
+        public override void Dispose()
+        {
+            if (Interlocked.Decrement(ref _numberOfTestsToDispose) <= 0)
+                BooleanQuery.MaxClauseCount = InitialMaxClauseCount;
+
+            base.Dispose();
         }
     }
 }

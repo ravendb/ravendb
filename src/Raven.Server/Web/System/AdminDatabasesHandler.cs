@@ -10,6 +10,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -39,7 +40,7 @@ namespace Raven.Server.Web.System
                 {
                     if (dbDoc == null)
                     {
-                        HttpContext.Response.StatusCode = (int) HttpStatusCode.NotFound;
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
 
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
@@ -92,23 +93,8 @@ namespace Raven.Server.Web.System
 
             TransactionOperationContext context;
             string errorMessage;
-            if (
-                ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath,
-                    out errorMessage) == false)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                using(ServerStore.ContextPool.AllocateOperationContext(out context))
-                using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
-                {
-                    context.Write(writer,
-                        new DynamicJsonValue
-                        {
-                            ["Type"] = "Error",
-                            ["Message"] = errorMessage
-                        });
-                }
-                return Task.CompletedTask;
-            }
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                throw new BadRequestException(errorMessage);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
@@ -121,26 +107,21 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 {
                     var existingDatabase = ServerStore.Read(context, dbId);
-                    if (
-                        DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etagAsString,
-                            out errorMessage) == false)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-
-                        using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
-                        {
-                            context.Write(writer,
-                                new DynamicJsonValue
-                                {
-                                    ["Type"] = "Error",
-                                    ["Message"] = errorMessage
-                                });
-                        }
-                        return Task.CompletedTask;
-                    }
+                    if (DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etagAsString, out errorMessage) == false)
+                        throw new BadRequestException(errorMessage);
                 }
 
-                var dbDoc = context.ReadForDisk(RequestBodyStream(), dbId);
+                var json = context.ReadForDisk(RequestBodyStream(), dbId);
+                var document = JsonDeserializationServer.DatabaseDocument(json);
+
+                try
+                {
+                    DatabaseHelper.Validate(name, document);
+                }
+                catch (Exception e)
+                {
+                    throw new BadRequestException("Database document validation failed.", e);
+                }
 
                 //TODO: Fix this
                 //int size;
@@ -167,19 +148,19 @@ namespace Raven.Server.Web.System
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        newEtag = hasEtagInRequest ? ServerStore.Write(context, dbId, dbDoc, etag) :
-                                                     ServerStore.Write(context, dbId, dbDoc);
+                        newEtag = hasEtagInRequest ? ServerStore.Write(context, dbId, json, etag) :
+                                                     ServerStore.Write(context, dbId, json);
 
                         ServerStore.NotificationCenter.AddAfterTransactionCommit(DatabaseChanged.Create(name, DatabaseChangeType.Put), tx);
 
                         tx.Commit();
                     }
                 });
-                
+
                 object disabled;
-                if (online && (dbDoc.TryGetMember("Disabled", out disabled) == false || (bool)disabled == false))
+                if (online && (json.TryGetMember("Disabled", out disabled) == false || (bool)disabled == false))
                     ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
-              
+
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
