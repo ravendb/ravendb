@@ -13,9 +13,9 @@ namespace Tryouts
             for (int i = 0; i < 10; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new SlowTests.Issues.RavenDB934())
+                using (var a = new SlowTests.Blittable.BlittableJsonWriterTests.ManualBuilderTestsSlow())
                 {
-                    a.HighLevelExportsByDocPrefixRemote();
+                    a.BigAmountOfPreperties(short.MaxValue);
                 }
             }
         }

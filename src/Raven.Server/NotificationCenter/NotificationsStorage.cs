@@ -115,15 +115,16 @@ namespace Raven.Server.NotificationCenter
                 ? Bits.SwapBytes(postponedUntil.Value.Ticks)
                 : _postponeDateNotSpecified;
 
-            var tvb = new TableValueBuilder
-                {
-                    {id.Buffer, id.Size},
-                    {(byte*)&createdAtTicks, sizeof(long)},
-                    {(byte*)&postponedUntilTicks, sizeof(long)},
-                    {action.BasePointer, action.Size}
-                };
+            TableValueBuilder tvb;
+            using (table.Allocate(out tvb))
+            {
+                tvb.Add(id.Buffer, id.Size);
+                tvb.Add((byte*)&createdAtTicks, sizeof(long));
+                tvb.Add((byte*)&postponedUntilTicks, sizeof(long));
+                tvb.Add(action.BasePointer, action.Size);
 
-            table.Set(tvb);
+                table.Set(tvb);
+            }
         }
 
         internal static bool TryReadDate(BlittableJsonReaderObject action, string fieldName, out DateTime date)

@@ -185,14 +185,16 @@ namespace Raven.Server.Documents
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
                     byte byteAsType = (byte)type;
-                    conflictsTable.Set(new TableValueBuilder
+                    TableValueBuilder tableValueBuilder;
+                    using (conflictsTable.Allocate(out tableValueBuilder))
                     {
-                        indexNameAsSlice,
-                        {&bitSwappedEtag, sizeof(long)},
-                        {&byteAsType, sizeof(byte)},
-                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
-                        {definition.BasePointer, definition.Size}
-                    });
+                        tableValueBuilder.Add(indexNameAsSlice);
+                        tableValueBuilder.Add(&bitSwappedEtag, sizeof(long));
+                        tableValueBuilder.Add(&byteAsType, sizeof(byte));
+                        tableValueBuilder.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                        tableValueBuilder.Add(definition.BasePointer, definition.Size);
+                        conflictsTable.Set(tableValueBuilder);
+                    }
                 }
             }
         }
@@ -639,13 +641,12 @@ namespace Raven.Server.Documents
             if (table.NumberOfEntries == 0)
                 return 0;
 
-            var result = table.SeekBackwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
-            var tvr = result.FirstOrDefault();
-            if (tvr == null)
+            var result = table.ReadLast(IndexesTableSchema.FixedSizeIndexes[EtagIndexName]);
+            if (result == null)
                 return 0;
 
             int size;
-            return Bits.SwapBytes(*(long*)tvr.Reader.Read((int)MetadataFields.Etag, out size));
+            return Bits.SwapBytes(*(long*)result.Reader.Read((int)MetadataFields.Etag, out size));
         }
 
         private void DeleteIndexMetadataForRemovedIndexesAndTransformers(Transaction tx, TransactionOperationContext context, IndexStore indexStore,

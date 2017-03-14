@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json.Parsing;
@@ -34,18 +35,19 @@ namespace Sparrow.Json
             private readonly FastList<FastList<T>> _cache = new FastList<FastList<T>>();
             private int _index = 0;
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public FastList<T> Allocate()
             {
-                if (_index == _cache.Count)
-                {
-                    var n = new FastList<T>();
-                    _cache.Add(n);
-                    _index++;
-                    return n;
-                }
-                return _cache[_index++];
+                if (_index != _cache.Count)
+                    return _cache[_index++];
+
+                var n = new FastList<T>();
+                _cache.Add(n);
+                _index++;
+                return n;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Reset()
             {
                 for (var i = 0; i < _index; i++)
@@ -454,16 +456,14 @@ namespace Sparrow.Json
             public int ValuePos;
             public BlittableJsonToken WrittenToken;
         }
-
-
+        
         private unsafe LazyStringValue CreateLazyStringValueFromParserState()
         {
             var lazyStringValueFromParserState = _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize);
+            if (_state.EscapePositions.Count <= 0)
+                return lazyStringValueFromParserState;
 
-            if (_state.EscapePositions.Count > 0)
-            {
-                lazyStringValueFromParserState.EscapePositions = _state.EscapePositions.ToArray();
-            }
+            lazyStringValueFromParserState.EscapePositions = _state.EscapePositions.ToArray();
             return lazyStringValueFromParserState;
         }
 

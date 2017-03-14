@@ -234,20 +234,25 @@ namespace Sparrow.Json
             return sizeof(int);
         }
 
+        [ThreadStatic] private static int[] _propertyArrayOffset;
+
         public int WritePropertyNames(int rootOffset)
         {
             var cachedProperties = _context.CachedProperties;
 
             // Write the property names and register their positions
-            var propertyArrayOffset = new int[cachedProperties.PropertiesDiscovered];
+            if (_propertyArrayOffset == null || _propertyArrayOffset.Length < cachedProperties.PropertiesDiscovered)
+            {
+                _propertyArrayOffset = new int[Bits.NextPowerOf2(cachedProperties.PropertiesDiscovered)];
+            }
 
             unsafe
             {
                 BlittableJsonToken _;
-                for (var index = 0; index < propertyArrayOffset.Length; index++)
+                for (var index = 0; index < cachedProperties.PropertiesDiscovered; index++)
                 {
                     var str = _context.GetLazyStringForFieldWithCaching(cachedProperties.GetProperty(index));
-                    propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions, out _, UsageMode.None, null);
+                    _propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions, out _, UsageMode.None, null);
                 }
             }
 
@@ -263,9 +268,9 @@ namespace Sparrow.Json
 
             // Write property names offsets
             // PERF: Using for to avoid the cost of the enumerator.
-            for (int i = 0; i < propertyArrayOffset.Length; i++)
+            for (int i = 0; i < cachedProperties.PropertiesDiscovered; i++)
             {
-                int offset = propertyArrayOffset[i];
+                int offset = _propertyArrayOffset[i];
                 WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
             }
 

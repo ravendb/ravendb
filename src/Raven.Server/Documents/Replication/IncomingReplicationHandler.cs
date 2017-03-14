@@ -989,7 +989,7 @@ namespace Raven.Server.Documents.Replication
                                     _incoming._log.Operations("Versioing storage is disabled but the node got a versioned document from replication.");
                                 continue;
                             }
-                            database.BundleLoader.VersioningStorage.PutFromDocument(context, docPosition.Id, document, _changeVector);
+                            database.BundleLoader.VersioningStorage.PutFromDocument(context, docPosition.Id, document, docPosition.Flags, _changeVector);
                             continue;
                         }
 

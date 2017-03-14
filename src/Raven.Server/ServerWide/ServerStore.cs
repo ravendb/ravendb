@@ -141,8 +141,7 @@ namespace Raven.Server.ServerWide
                 using (var tx = _env.ReadTransaction())
                 {
                     var table = tx.OpenTable(_itemsSchema, "Items");
-                    var itemsFromBackwards = table.SeekBackwardFrom(_itemsSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
-                    var reader = itemsFromBackwards.FirstOrDefault();
+                    var reader = table.ReadLast(_itemsSchema.FixedSizeIndexes[EtagIndexName]);
                     if (reader == null)
                         _lastEtag = 0;
                     else
@@ -171,9 +170,7 @@ namespace Raven.Server.ServerWide
         public long ReadLastEtag(TransactionOperationContext ctx)
         {
             var table = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-            var itemsFromBackwards = table.SeekBackwardFrom(_itemsSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
-            var reader = itemsFromBackwards.FirstOrDefault();
-
+            var reader = table.ReadLast(_itemsSchema.FixedSizeIndexes[EtagIndexName]);
             if (reader == null)
                 return 0;
 
@@ -256,7 +253,7 @@ namespace Raven.Server.ServerWide
             Slice loweredPrefix;
             using (Slice.From(ctx.Allocator, prefix.ToLowerInvariant(), out loweredPrefix))
             {
-                foreach (var result in items.SeekByPrimaryKeyStartingWith(loweredPrefix, Slices.Empty, start))
+                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, start))
                 {
                     if (take-- <= 0)
                         yield break;

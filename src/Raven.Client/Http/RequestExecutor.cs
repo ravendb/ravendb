@@ -227,16 +227,6 @@ namespace Raven.Client.Http
                     }
 
                     sp.Stop();
-               
-                    switch (response.StatusCode)
-                    {
-                        case HttpStatusCode.GatewayTimeout:
-                        case HttpStatusCode.RequestTimeout:
-                        case HttpStatusCode.BadGateway:
-                        case HttpStatusCode.ServiceUnavailable:
-                            await HandleServerDown(choosenNode, context, command, null);
-                            return;
-                    }
                 }
                 catch (HttpRequestException e) // server down, network down
                 {
@@ -342,6 +332,8 @@ namespace Raven.Client.Http
                     return true;
                 case HttpStatusCode.Forbidden:
                     throw AuthorizationException.Forbidden(url);
+                case HttpStatusCode.GatewayTimeout:
+                case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
                     await HandleServerDown(choosenNode, context, command, null).ConfigureAwait(false);

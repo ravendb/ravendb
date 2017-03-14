@@ -10,6 +10,10 @@ namespace Voron.Data.Tables
 {
     public unsafe class TableValueBuilder : IEnumerable
     {
+        public TableValueBuilder()
+        {
+            
+        }
         
         public void Reset()
         {
