@@ -1,24 +1,23 @@
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_3543 : RavenTestBase
     {
-        public class Lead
+        private class Lead
         {
             public Status Status { get; set; }
         }
 
-        public class Status
+        private class Status
         {
             public int Value { get; set; }
         }
 
-        public class Leads_Index : AbstractIndexCreationTask<Lead>
+        private class Leads_Index : AbstractIndexCreationTask<Lead>
         {
 
             public Leads_Index()
@@ -30,12 +29,12 @@ namespace Raven.Tests.Issues
                                   Status_Value = doc.Status.Value,
                               };
             }
-        }		
+        }
 
         [Fact]
         public void SortHints_should_be_recorde_at_most_once_for_each_field()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Leads_Index().Execute(store);
 

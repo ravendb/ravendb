@@ -3,21 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3525 : RavenTest
+    public class RavenDB_3525 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-5988")]
         public void WithinRadiusOf_NamedSpatialField()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -35,7 +34,7 @@ namespace Raven.Tests.Issues
                     WaitForIndexing(store);
 
                     var namedLuceneQuery = session.Advanced
-                        .LuceneQuery<ClassWithLocation, NamedSpatialFieldIndex>()
+                        .DocumentQuery<ClassWithLocation, NamedSpatialFieldIndex>()
                         .WithinRadiusOf("Location", 1.0, 10.0, 11.0)
                         .WaitForNonStaleResults()
                         .ToList();
@@ -43,7 +42,7 @@ namespace Raven.Tests.Issues
                     Assert.Single(namedLuceneQuery);
 
                     var linqQueryWithSpatial = session.Query<ClassWithLocation, NamedSpatialFieldIndex>()
-                        .Spatial(x => x.Location, x => x.WithinRadiusOf(1.0, 11.0, 10.0))
+                        .Spatial(x => x.Location, x => x.WithinRadius(1.0, 10.0, 11.0))
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
