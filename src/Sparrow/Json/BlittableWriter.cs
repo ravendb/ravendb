@@ -62,13 +62,6 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteValue(byte* p, int size) // blittable
-        {
-            _position += WriteVariableSizeInt(size);
-            _unmanagedWriteBuffer.Write(p, size);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(long value)
         {
             var startPos = _position;
@@ -239,20 +232,26 @@ namespace Sparrow.Json
         public int WritePropertyNames(int rootOffset)
         {
             var cachedProperties = _context.CachedProperties;
+            int propertiesDiscovered = cachedProperties.PropertiesDiscovered;
 
             // Write the property names and register their positions
-            if (_propertyArrayOffset == null || _propertyArrayOffset.Length < cachedProperties.PropertiesDiscovered)
+            if (_propertyArrayOffset == null || _propertyArrayOffset.Length < propertiesDiscovered)
             {
-                _propertyArrayOffset = new int[Bits.NextPowerOf2(cachedProperties.PropertiesDiscovered)];
+                _propertyArrayOffset = new int[Bits.NextPowerOf2(propertiesDiscovered)];
             }
 
             unsafe
             {
-                BlittableJsonToken _;
-                for (var index = 0; index < cachedProperties.PropertiesDiscovered; index++)
+                for (var index = 0; index < propertiesDiscovered; index++)
                 {
                     var str = _context.GetLazyStringForFieldWithCaching(cachedProperties.GetProperty(index));
-                    _propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions, out _, UsageMode.None, null);
+                    if (str.EscapePositions == null || str.EscapePositions.Length == 0)
+                    {
+                        _propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size);
+                        continue;
+                    }
+                        
+                    _propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions);
                 }
             }
 
@@ -268,7 +267,7 @@ namespace Sparrow.Json
 
             // Write property names offsets
             // PERF: Using for to avoid the cost of the enumerator.
-            for (int i = 0; i < cachedProperties.PropertiesDiscovered; i++)
+            for (int i = 0; i < propertiesDiscovered; i++)
             {
                 int offset = _propertyArrayOffset[i];
                 WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
@@ -535,6 +534,46 @@ namespace Sparrow.Json
 
             // PERF: Use indexer to avoid the allocation and overhead of the foreach. 
             int count = escapePositions.Count;
+            for (int i = 0; i < count; i++)
+                _position += WriteVariableSizeInt(escapePositions[i]);
+
+            return startPos;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe int WriteValue(byte* buffer, int size)
+        {
+            int startPos = _position;
+
+            int writtenBytes = WriteVariableSizeInt(size);
+            _unmanagedWriteBuffer.Write(buffer, size);
+            writtenBytes += size;
+            writtenBytes += WriteVariableSizeInt(0);
+
+            _position += writtenBytes;
+
+            return startPos;
+        }
+
+        public unsafe int WriteValue(byte* buffer, int size, int[] escapePositions)
+        {
+            var startPos = _position;
+            _position += WriteVariableSizeInt(size);
+            _unmanagedWriteBuffer.Write(buffer, size);
+            _position += size;
+
+            if (escapePositions == null || escapePositions.Length == 0)
+            {
+                _position += WriteVariableSizeInt(0);
+                return startPos;
+            }
+
+            // we write the number of the escape sequences required
+            // and then we write the distance to the _next_ escape sequence
+            _position += WriteVariableSizeInt(escapePositions.Length);
+
+            // PERF: Use indexer to avoid the allocation and overhead of the foreach. 
+            int count = escapePositions.Length;
             for (int i = 0; i < count; i++)
                 _position += WriteVariableSizeInt(escapePositions[i]);
 
