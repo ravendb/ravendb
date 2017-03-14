@@ -375,20 +375,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             var stats = new SqlWriteStats();
 
             var collectCommands = commands != null ? commands.Add : (Action<DbCommand>)null;
-
+            
             if (table.InsertOnlyMode == false && table.Deletes.Count > 0)
             {
+                // first, delete all the rows that might already exist there
                 stats.DeletedRecordsCount = DeleteItems(table.TableName, table.DocumentKeyColumn, _etl.SqlConfiguration.ParameterizeDeletesDisabled, table.Deletes, token, collectCommands);
             }
 
             if (table.Inserts.Count > 0)
             {
-                // first, delete all the rows that might already exist there
-                if (table.InsertOnlyMode == false)
-                {
-                    DeleteItems(table.TableName, table.DocumentKeyColumn, _etl.SqlConfiguration.ParameterizeDeletesDisabled, table.Inserts, token, collectCommands);
-                }
-
                 stats.InsertedRecordsCount = InsertItems(table.TableName, table.DocumentKeyColumn, table.Inserts, token, collectCommands);
             }
 
