@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
-using Raven.Client.Util.Sockets;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -32,7 +31,7 @@ namespace Raven.Client.Http.OAuth
         {
             var uri = new Uri(url.ToWebSocketPath());
 
-            using (var webSocket = new RavenClientWebSocket())
+            using (var webSocket = new ClientWebSocket())
             {
                 try
                 {
@@ -103,7 +102,7 @@ namespace Raven.Client.Http.OAuth
             }
         }
 
-        private async Task Send(RavenClientWebSocket webSocket, JsonOperationContext context, string command, string commandParameter)
+        private async Task Send(ClientWebSocket webSocket, JsonOperationContext context, string command, string commandParameter)
         {
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Sending WebSocket Authentication Command {command} - {commandParameter}");
@@ -170,7 +169,7 @@ namespace Raven.Client.Http.OAuth
             return apiKeyParts;
         }
 
-        private async Task<BlittableJsonReaderObject> Receive(RavenClientWebSocket webSocket, JsonOperationContext context)
+        private async Task<BlittableJsonReaderObject> Receive(ClientWebSocket webSocket, JsonOperationContext context)
         {
             BlittableJsonDocumentBuilder builder = null;
             try
