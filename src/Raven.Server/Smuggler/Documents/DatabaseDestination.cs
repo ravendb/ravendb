@@ -298,7 +298,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    _database.DocumentsStorage.Put(context, key, null, document.Data);
+                    _database.DocumentsStorage.Put(context, key, null, document.Data, flags: document.Flags);
                 }
             }
 
@@ -308,11 +308,9 @@ namespace Raven.Server.Smuggler.Documents
                 if (_isPreV4Build == false)
                     return false;
 
-                if ((document.Flags & DocumentFlags.Revision) != DocumentFlags.Revision)
+                if (document.IsLegacyRevision == false)
                     return false;
 
-                // the flag isn't being used, but we remove the 'Revision' value anyway
-                document.Flags &= ~DocumentFlags.Revision;
                 return key.Contains(PreV4RevisionsDocumentKey);
             }
 

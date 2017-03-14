@@ -117,11 +117,14 @@ namespace Raven.Server.Smuggler.Documents
 
             public DocumentFlags Flags;
 
+            public bool IsLegacyRevision;
+
             private JsonOperationContext _ctx;
 
             private readonly List<AllocatedMemoryData> _allocations = new List<AllocatedMemoryData>();
 
             private const string HistoricalRevisionState = "Historical";
+            private const string VersionedDocumentState = "Current";
 
             private unsafe LazyStringValue CreateLazyStringValueFromParserState(JsonParserState state)
             {
@@ -219,9 +222,15 @@ namespace Raven.Server.Smuggler.Documents
                             state.CurrentTokenType != JsonParserToken.Integer)
                             ThrowInvalidEtagType(state);
 
-                        var revisionState = CreateLazyStringValueFromParserState(state);
-                        if (revisionState == HistoricalRevisionState)
-                            Flags |= DocumentFlags.Revision;
+                        switch (CreateLazyStringValueFromParserState(state))
+                        {
+                            case VersionedDocumentState:
+                                Flags |= DocumentFlags.Versioned;
+                                break;
+                            case HistoricalRevisionState:
+                                IsLegacyRevision = true;
+                                break;
+                        }
                         break;
                     case State.ReadingId:
                         if (reader.Read() == false)
@@ -454,9 +463,15 @@ namespace Raven.Server.Smuggler.Documents
 
                             if (isRevisionStatusProperty)
                             {
-                                var revisionState = CreateLazyStringValueFromParserState(state);
-                                if (revisionState == HistoricalRevisionState)
-                                    Flags |= DocumentFlags.Revision;
+                                switch (CreateLazyStringValueFromParserState(state))
+                                {
+                                    case VersionedDocumentState:
+                                        Flags |= DocumentFlags.Versioned;
+                                        break;
+                                    case HistoricalRevisionState:
+                                        IsLegacyRevision = true;
+                                        break;
+                                }
                             }
 
                             break;
@@ -766,7 +781,8 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         Data = blittableJsonReaderObject,
                         Key = modifier.Id,
-                        Flags = modifier.Flags
+                        Flags = modifier.Flags,
+                        IsLegacyRevision = modifier.IsLegacyRevision
                     };
                 }
             }

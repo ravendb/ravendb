@@ -28,6 +28,8 @@ namespace Raven.Server.Documents
         public short TransactionMarker;
         public IEnumerable<Attachment> Attachments;
 
+        public bool IsLegacyRevision;
+
         public unsafe ulong DataHash
         {
             get
