@@ -157,8 +157,7 @@ namespace Raven.Server.Web.System
                     }
                 });
 
-                object disabled;
-                if (online && (json.TryGetMember("Disabled", out disabled) == false || (bool)disabled == false))
+                if (online && document.Disabled == false)
                     ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -170,10 +169,9 @@ namespace Raven.Server.Web.System
                         ["ETag"] = newEtag,
                         ["Key"] = dbId
                     });
-                    writer.Flush();
                 }
-
             }
+
             return Task.CompletedTask;
         }
 
