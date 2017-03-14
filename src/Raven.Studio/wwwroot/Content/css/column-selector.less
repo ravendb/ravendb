@@ -60,17 +60,11 @@
                 padding: 5px 10px;
                 color: @gray-light;
                 transition: opacity .1s;
-                
-                
+                display: inline-block;
 
                 &:hover {
                     background-color:@gray-dark;
                     color:@gray-lighter;
-                }
-            }
-            .column-edit, .column-remove {
-                @media (min-width:@screen-sm) {
-                    opacity: 0;
                 }
             }
 
@@ -89,10 +83,6 @@
 
             &:hover {
                 background-color: lighten(@gray-darker,3%);
-
-                a {
-                    opacity: 1;                    
-                }
             }
         }
     }

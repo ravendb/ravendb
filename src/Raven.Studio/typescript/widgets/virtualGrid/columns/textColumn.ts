@@ -17,7 +17,7 @@ class textColumn<T> implements virtualColumn {
 
     getCellValue(item: T) {
         return _.isFunction(this.valueAccessor)
-            ? this.valueAccessor(item)
+            ? this.valueAccessor.bind(item)(item) // item is available as this, as well as first argument
             : (item as any)[this.valueAccessor as string];
     }
 

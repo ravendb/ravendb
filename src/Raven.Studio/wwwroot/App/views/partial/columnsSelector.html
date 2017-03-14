@@ -1,7 +1,7 @@
 <div class="columns-list-container flex-vertical">
     <div class="flex-header">
         <div class="checkbox">
-            <input id="select_all" class="styled" type="checkbox">
+            <input type="checkbox" id="select_all" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
             <label for="select_all">
                 Select All
             </label>
@@ -9,43 +9,45 @@
     </div>
     <div class="flex-content">
         <ul class="column-list scroll" data-bind="foreach: columnLayout">
-            <li data-bind="visible: visibileInSelector">
+            <li data-bind="visible: visibleInSelector, css: { editable: editable() }">
                 <div class="column-name">
                     <div class="checkbox">
-                        <input id="checkbox2" class="styled" type="checkbox" data-bind="checked: visible">
-                        <label for="checkbox2" data-bind="text: virtualColumn().header"></label>
+                        <input class="styled" type="checkbox" data-bind="checked: visible">
+                        <label data-bind="text: virtualColumn().header"></label>
                     </div>
                 </div>
                 <div data-bind="visible: editable()">
                     <a href="#" class="column-edit" data-bind="click: $parent.editColumn.bind($parent, $data)"><i class="icon-edit"></i></a>
                     <a href="#" class="column-remove" data-bind="click: $parent.removeColumn.bind($parent, $data)"><i class="icon-trash"></i></a>
-                    <a href="#" class="column-rearrange"><i class="icon-menu"></i></a>
+                    <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
                 </div>
                 <div data-bind="visible: !editable()">
-                    <a href="#" class="column-edit disabled" data-toggle="tooltip" data-placement="bottom" title="Unavailable on default column"><i class="icon-edit disabled"></i></a>
-                    <a href="#" class="column-remove disabled" data-toggle="tooltip" data-placement="bottom" title="Unavailable on default column"><i class="icon-trash disabled"></i></a>
-                    <a href="#" class="column-rearrange"><i class="icon-menu"></i></a>
+                    <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
                 </div>
             </li>
         </ul>
     </div>
     <div class="flex-footer">
-        <div class="column-add-new active" data-bind="visible: customColumnForm.formVisible">
-            <div class="error-message bg-danger padding padding-sm">
-                Can't add, syntax error:<br />
-                <strong>"Unexpected token"</strong>
+        <div class="column-add-new active" data-bind="visible: customColumnForm.formVisible, validationOptions: { insertMessages: false }">
+            <div class="error-message bg-danger padding padding-sm" data-bind="visible: customColumnForm.parseError">
+                Binding parse error:<br />
+                <strong data-bind="text: customColumnForm.parseError"></strong>
             </div>
 
             <div class="form">
-                <div class="binding">
-                    <input class="form-control input-sm" data-bind="textInput: customColumnForm.expression"  placeholder="Binding" />
+                <div class="binding" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
+                    <input class="form-control input-sm" id="custom_column_binding" data-toggle="tooltip" title="Enter binding expression. Ex. this.ShipTo.City" 
+                           data-bind="textInput: customColumnForm.expression"  placeholder="Binding" />
                 </div>
                 <div class="alias">
                     <input class="form-control input-sm" data-bind="textInput: customColumnForm.header" placeholder="Alias" />
                 </div>
                 <div>
                     <button class="btn btn-success btn-sm" data-bind="click: addCustomColumn">
-                        <i class="icon-plus"></i>
+                        <i class="icon-check"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" data-bind="click: cancelEditMode">
+                        <i class="icon-cancel"></i>
                     </button>
                 </div>
             </div>
@@ -56,7 +58,7 @@
 
         <div class="clearfix">
             <div class="pull-left">
-                <button class="btn btn-sm">Set as default</button>
+                <button class="btn btn-sm btn-prerelease">Set as default</button>
                 <button class="btn btn-primary btn-sm" data-bind="click: showAddCustomColumnForm"><i class="icon-plus"></i> <span>Add custom column</span></button>
             </div>
             <div class="pull-right">
