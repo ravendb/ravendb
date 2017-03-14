@@ -59,7 +59,8 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Data = newDocument,
                     Key = document.Key,
-                    IsLegacyRevision = document.IsLegacyRevision
+                    Flags = document.Flags,
+                    NonPersistentFlags = document.NonPersistentFlags
                 };
             }
         }

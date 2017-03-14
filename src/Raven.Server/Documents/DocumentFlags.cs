@@ -19,4 +19,12 @@ namespace Raven.Server.Documents
 
         HasAttachments = 0x100
     }
+
+    [Flags]
+    public enum NonPersistentDocumentFlags
+    {
+        None = 0,
+
+        LegacyRevision = 0x1
+    }
 }

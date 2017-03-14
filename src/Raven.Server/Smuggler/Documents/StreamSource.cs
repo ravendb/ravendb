@@ -117,7 +117,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public DocumentFlags Flags;
 
-            public bool IsLegacyRevision;
+            public NonPersistentDocumentFlags NonPersistentFlags;
 
             private JsonOperationContext _ctx;
 
@@ -228,7 +228,7 @@ namespace Raven.Server.Smuggler.Documents
                                 Flags |= DocumentFlags.Versioned;
                                 break;
                             case HistoricalRevisionState:
-                                IsLegacyRevision = true;
+                                NonPersistentFlags |= NonPersistentDocumentFlags.LegacyRevision;
                                 break;
                         }
                         break;
@@ -469,7 +469,7 @@ namespace Raven.Server.Smuggler.Documents
                                         Flags |= DocumentFlags.Versioned;
                                         break;
                                     case HistoricalRevisionState:
-                                        IsLegacyRevision = true;
+                                        NonPersistentFlags |= NonPersistentDocumentFlags.LegacyRevision;
                                         break;
                                 }
                             }
@@ -782,7 +782,7 @@ namespace Raven.Server.Smuggler.Documents
                         Data = blittableJsonReaderObject,
                         Key = modifier.Id,
                         Flags = modifier.Flags,
-                        IsLegacyRevision = modifier.IsLegacyRevision
+                        NonPersistentFlags = modifier.NonPersistentFlags
                     };
                 }
             }

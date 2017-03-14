@@ -308,7 +308,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_isPreV4Build == false)
                     return false;
 
-                if (document.IsLegacyRevision == false)
+                if ((document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) != NonPersistentDocumentFlags.LegacyRevision)
                     return false;
 
                 return key.Contains(PreV4RevisionsDocumentKey);
