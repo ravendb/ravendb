@@ -20,8 +20,11 @@ namespace Sparrow.Json
         private readonly JsonOperationContext _context;
         private TWriter _unmanagedWriteBuffer;
         private AllocatedMemoryData _compressionBuffer;
-        private AllocatedMemoryData _innerBuffer;
+        private AllocatedMemoryData _innerBuffer;        
         private int _position;
+
+        private int _propertiesBufferMaxLength;
+        private AllocatedMemoryData _propertiesBuffer;
 
         public int Position => _position;
 
@@ -53,19 +56,16 @@ namespace Sparrow.Json
             _context = context;
             _unmanagedWriteBuffer = writer;
             _innerBuffer = _context.GetMemory(32);
+            _propertiesBufferMaxLength = 32;
+            _propertiesBuffer = context.GetMemory(32 * sizeof(int));
         }
 
         public BlittableWriter(JsonOperationContext context)
         {
             _context = context;
             _innerBuffer = _context.GetMemory(32);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteValue(byte* p, int size) // blittable
-        {
-            _position += WriteVariableSizeInt(size);
-            _unmanagedWriteBuffer.Write(p, size);
+            _propertiesBufferMaxLength = 32;
+            _propertiesBuffer = context.GetMemory(32 * sizeof(int));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -145,6 +145,11 @@ namespace Sparrow.Json
                 _context.ReturnMemory(_innerBuffer);
                 _innerBuffer = null;
             }
+            if (_propertiesBuffer != null)
+            {
+                _context.ReturnMemory(_propertiesBuffer);
+                _propertiesBuffer = null;
+            }
         }
 
         public void ResetAndRenew()
@@ -153,6 +158,8 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream();
             _position = 0;
             _innerBuffer = _context.GetMemory(32);
+            _propertiesBufferMaxLength = 32;
+            _propertiesBuffer = _context.GetMemory(32 * sizeof(int));
         }
 
         public WriteToken WriteObjectMetadata(FastList<PropertyTag> properties, long firstWrite, int maxPropId)
@@ -239,37 +246,50 @@ namespace Sparrow.Json
             var cachedProperties = _context.CachedProperties;
 
             // Write the property names and register their positions
-            var propertyArrayOffset = new int[cachedProperties.PropertiesDiscovered];
+            if (cachedProperties.PropertiesDiscovered > _propertiesBufferMaxLength)
+            {
+                // PERF: Shouldnt happen, almost ever. 
+                _propertiesBufferMaxLength *= 2;
+                _propertiesBuffer = _context.GetMemory(_propertiesBufferMaxLength * sizeof(int));
+            }
 
             unsafe
             {
-                BlittableJsonToken _;
-                for (var index = 0; index < propertyArrayOffset.Length; index++)
+                int propertyArrayOffsetLength = cachedProperties.PropertiesDiscovered;
+
+                int* propertyArrayOffset = (int*)_propertiesBuffer.Address;
+                for (var index = 0; index < propertyArrayOffsetLength; index++)
                 {
                     var str = _context.GetLazyStringForFieldWithCaching(cachedProperties.GetProperty(index));
-                    propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions, out _, UsageMode.None, null);
+                    if (str.EscapePositions == null || str.EscapePositions.Length == 0)
+                    {
+                        // PERF: This one will inline and should be the common case. 
+                        propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size);
+                        continue; // PERF: Force the jump here. 
+                    }
+
+                    propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions);
                 }
+
+                // Register the position of the properties offsets start
+                var propertiesStart = _position;
+
+                // Find the minimal space to store the offsets (byte,short,int) and raise the appropriate flag in the properties metadata
+                BlittableJsonToken propertiesSizeMetadata = 0;
+                var propertyNamesOffset = _position - rootOffset;
+                var propertyArrayOffsetValueByteSize = SetOffsetSizeFlag(ref propertiesSizeMetadata, propertyNamesOffset);
+
+                WriteNumber((int)propertiesSizeMetadata, sizeof(byte));
+
+                // Write property names offsets
+                // PERF: Using for to avoid the cost of the enumerator.
+                for (int i = 0; i < propertyArrayOffsetLength; i++)
+                {
+                    WriteNumber(propertiesStart - propertyArrayOffset[i], propertyArrayOffsetValueByteSize);
+                }
+
+                return propertiesStart;
             }
-
-            // Register the position of the properties offsets start
-            var propertiesStart = _position;
-
-            // Find the minimal space to store the offsets (byte,short,int) and raise the appropriate flag in the properties metadata
-            BlittableJsonToken propertiesSizeMetadata = 0;
-            var propertyNamesOffset = _position - rootOffset;
-            var propertyArrayOffsetValueByteSize = SetOffsetSizeFlag(ref propertiesSizeMetadata, propertyNamesOffset);
-
-            WriteNumber((int)propertiesSizeMetadata, sizeof(byte));
-
-            // Write property names offsets
-            // PERF: Using for to avoid the cost of the enumerator.
-            for (int i = 0; i < propertyArrayOffset.Length; i++)
-            {
-                int offset = propertyArrayOffset[i];
-                WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
-            }
-
-            return propertiesStart;
         }
 
         public void WriteDocumentMetadata(int rootOffset, BlittableJsonToken documentToken)
@@ -536,6 +556,46 @@ namespace Sparrow.Json
             return startPos;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe int WriteValue(byte* buffer, int size)
+        {
+            int startPos = _position;
+
+            int writtenBytes = WriteVariableSizeInt(size);            
+            _unmanagedWriteBuffer.Write(buffer, size);
+            writtenBytes += size;
+            writtenBytes += WriteVariableSizeInt(0);
+
+            _position += writtenBytes;
+
+            return startPos;
+        }
+
+        public unsafe int WriteValue(byte* buffer, int size, int[] escapePositions)
+        {
+            var startPos = _position;
+            _position += WriteVariableSizeInt(size);
+            _unmanagedWriteBuffer.Write(buffer, size);
+            _position += size;
+
+            if (escapePositions == null || escapePositions.Length == 0)
+            {
+                _position += WriteVariableSizeInt(0);
+                return startPos;
+            }
+
+            // we write the number of the escape sequences required
+            // and then we write the distance to the _next_ escape sequence
+            _position += WriteVariableSizeInt(escapePositions.Length);
+
+            // PERF: Use indexer to avoid the allocation and overhead of the foreach. 
+            int count = escapePositions.Length;
+            for (int i = 0; i < count; i++)
+                _position += WriteVariableSizeInt(escapePositions[i]);
+
+            return startPos;
+        }
+
         public unsafe int WriteValue(byte* buffer, int size, int[] escapePositions, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
         {
             var startPos = _position;
@@ -573,14 +633,12 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe int TryCompressValue(ref byte* buffer, int size, ref BlittableJsonToken token, UsageMode mode,
-            int? initialCompressedSize, int maxGoodCompressionSize)
+        private unsafe int TryCompressValue(ref byte* buffer, int size, ref BlittableJsonToken token, UsageMode mode, int? initialCompressedSize, int maxGoodCompressionSize)
         {
             bool shouldCompress = initialCompressedSize.HasValue ||
-                                  (((mode & UsageMode.CompressStrings) == UsageMode.CompressStrings) && (size > 128))
-                                  ||
+                                  (((mode & UsageMode.CompressStrings) == UsageMode.CompressStrings) && (size > 128)) || 
                                   ((mode & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings) && (size <= 128);
-
+            
             if (shouldCompress)
             {
                 int compressedSize;
