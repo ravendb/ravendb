@@ -274,8 +274,7 @@ namespace Raven.Server.Documents.Versioning
                 numberOfRevisionsToDelete,
                 deleted =>
                 {
-                    int size;
-                    var etag = Bits.SwapBytes(*(long*)deleted.Reader.Read(2, out size));
+                    var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref deleted.Reader);
                     maxEtagDeleted = Math.Max(maxEtagDeleted, etag);
                 });
             _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
