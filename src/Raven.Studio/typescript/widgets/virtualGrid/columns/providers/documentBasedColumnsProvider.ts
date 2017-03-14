@@ -71,13 +71,17 @@ class documentBasedColumnsProvider {
         app.showBootstrapDialog(new tempStatDialog(doc));
     }
 
-    private findColumnNames(results: pagedResult<document>, limit: number): string[] {
+    static extractUniquePropertyNames(results: pagedResult<document>) {
         const uniquePropertyNames = new Set<string>();
 
         results.items
             .map(i => _.keys(i).forEach(key => uniquePropertyNames.add(key)));
 
-        const columnNames = Array.from(uniquePropertyNames);
+        return Array.from(uniquePropertyNames);
+    }
+
+    private findColumnNames(results: pagedResult<document>, limit: number): string[] {
+        const columnNames = documentBasedColumnsProvider.extractUniquePropertyNames(results);
 
         if (columnNames.length > limit) {
             columnNames.length = limit;

@@ -14,7 +14,7 @@ class columnItem {
 
     virtualColumn = ko.observable<virtualColumn>();
 
-    visibileInSelector = ko.pureComputed(() => {
+    visibleInSelector = ko.pureComputed(() => {
         const column = this.virtualColumn();
         const isMetadata = column.header === "__metadata";
         const isActionColumn = column instanceof actionColumn;
@@ -33,18 +33,83 @@ class customColumnForm {
     header = ko.observable<string>();
     expression = ko.observable<string>();
 
-    asCustomColumn<T>(width: string): customColumn<T> {
-        const functionBody = 'return (' + this.expression() + ");";
-        return new customColumn(functionBody, this.header(), width);
+    parseError: KnockoutComputed<string>;
+
+    validationGroup: KnockoutValidationGroup = ko.validatedObservable({
+        header: this.header,
+        expression: this.expression
+    });
+
+    private editedItem = ko.observable<columnItem>();
+
+    constructor() {
+        this.initValidation();
+
+        this.parseError = ko.pureComputed(() => {
+            const exp = this.expression();
+            if (exp) {
+                return this.tryParse(exp);
+            }
+            return null;
+        });
+    }
+
+    private tryParse(val: string): string {
+        try {
+            // ReSharper disable once WrongExpressionStatement
+            new Function('return (' + val + ")");
+            return null;
+        } catch (e) {
+            return (e as Error).message;
+        }
+    }
+
+    private initValidation() {
+        this.header.extend({
+            required: true
+        });
+
+        this.expression.extend({
+            required: true
+        });
+
+        this.expression.extend({
+            validation: [{
+                validator: (val: string) => !this.tryParse(val),
+                message: "Unable to parse binding expression."
+            }]
+        });
+    }
+
+    asColumnItem(): columnItem {
+        const editedItem = this.editedItem();
+        if (editedItem) {
+            editedItem.virtualColumn().header = this.header();
+            (editedItem.virtualColumn() as customColumn<any>).setJsCode(this.expression());
+            return editedItem;
+        } else {
+            const newColumn = new customColumn(this.expression(), this.header(), columnsSelector.defaultWidth);
+            const newColumnItem = new columnItem(newColumn, true);
+            newColumnItem.visible(true);
+            return newColumnItem;
+        }
     }
 
     reset() {
         this.header("");
         this.expression("");
+        this.editedItem(null);
+        this.formVisible(false);
     }
 
     edit(columnToEdit: columnItem) {
-        console.log("edit");
+        this.formVisible(true);
+        this.editedItem(columnToEdit);
+
+        const column = columnToEdit.virtualColumn() as customColumn<any>;
+
+        this.header(column.header);
+        this.expression(column.jsCode);
     }
 }
 
@@ -52,28 +117,77 @@ class columnsSelector<T> {
 
     static readonly defaultWidth = "200px";
 
-    private readonly grid: virtualGridController<T>;
-    private readonly fetcher: (skip: number, take: number, previewColumns: string[], fullColumns: string[]) => JQueryPromise<pagedResult<T>>;
-    private readonly defaultColumnsProvider: (containerWidth: number, results: pagedResult<T>) => virtualColumn[];
-    private readonly availableColumnsProvider: (results: pagedResult<T>) => string[];
+    private grid: virtualGridController<T>;
+    private fetcher: (skip: number, take: number, previewColumns: string[], fullColumns: string[]) => JQueryPromise<pagedResult<T>>;
+    private defaultColumnsProvider: (containerWidth: number, results: pagedResult<T>) => virtualColumn[];
+    private availableColumnsProvider: (results: pagedResult<T>) => string[];
+    private customLayout = ko.observable<boolean>(false);
 
-    constructor(grid: virtualGridController<T>, fetcher: (skip: number, take: number, previewColumns: string[], fullColumns: string[]) => JQueryPromise<pagedResult<T>>,
+    customColumnForm = new customColumnForm();
+    columnLayout = ko.observableArray<columnItem>();
+    selectionState: KnockoutComputed<checkbox>;
+
+    constructor() {
+        this.initObservables();
+    }
+
+    private initObservables() {
+        this.selectionState = ko.pureComputed<checkbox>(() => {
+            const allVisibleColumns = this.columnLayout().filter(x => x.visibleInSelector());
+            const checkedCount = allVisibleColumns.filter(x => x.visible()).length;
+
+            if (allVisibleColumns.length && checkedCount === allVisibleColumns.length)
+                return checkbox.Checked;
+
+            return  checkedCount > 0 ? checkbox.SomeChecked : checkbox.UnChecked;
+        });
+    }
+
+    init(grid: virtualGridController<T>, fetcher: (skip: number, take: number, previewColumns: string[], fullColumns: string[]) => JQueryPromise<pagedResult<T>>,
         defaultColumnsProvider: (containerWidth: number, results: pagedResult<T>) => virtualColumn[],
         availableColumnsProvider: (results: pagedResult<T>) => string[]) {
         this.grid = grid;
         this.fetcher = fetcher;
         this.defaultColumnsProvider = defaultColumnsProvider;
         this.availableColumnsProvider = availableColumnsProvider;
+
+        //TODO: restore custom colums (if any)
+
+        this.grid.init((s, t) => this.onFetch(s, t), (w, r) => this.provideColumns(w, r));
     }
 
-    customColumnForm = new customColumnForm();
-    columnLayout = ko.observableArray<columnItem>();
+    compositionComplete() {
+        this.registerSortable();
+        $("#custom_column_binding").tooltip({
+            trigger: 'focus'
+        });
+    }
 
-    private customLayout = ko.observable<boolean>(false);
+    private registerSortable() {
+        const list = $(".columns-list-container .column-list")[0];
 
-    initGrid() {
-        //TODO: if we have custom columns applied init with custom
-        this.grid.init((s, t) => this.onFetch(s, t), (w, r) => this.provideColumns(w, r));
+        // ReSharper disable once WrongExpressionStatement
+        new Sortable(list,
+        {
+            handle: ".column-rearrange",
+            onEnd: (event: { oldIndex: number, newIndex: number }) => {
+                const layout = this.columnLayout();
+                layout.splice(event.newIndex, 0, layout.splice(event.oldIndex, 1)[0]);
+                this.columnLayout(layout);
+            }
+        });
+    }
+
+    toggleSelectAll(): void {
+        const allVisibleColumns = this.columnLayout().filter(x => x.visibleInSelector());
+
+        const selectedCount = allVisibleColumns.filter(x => x.visible()).length;
+
+        if (selectedCount > 0) {
+            allVisibleColumns.forEach(x => x.visible(false));
+        } else {
+            allVisibleColumns.forEach(x => x.visible(true));
+        }
     }
 
     applyColumns() {
@@ -82,19 +196,33 @@ class columnsSelector<T> {
     }
 
     addCustomColumn() {
-        //TODO: validate form
+        if (this.customColumnForm.validationGroup.isValid()) {
+            const item = this.customColumnForm.asColumnItem();
 
-        const newColumn = this.customColumnForm.asCustomColumn(columnsSelector.defaultWidth);
-        const newColumnItem = new columnItem(newColumn, true);
-        newColumnItem.visible(true);
-        this.columnLayout.push(newColumnItem);
+            if (!_.includes(this.columnLayout(), item)) {
+                this.columnLayout.push(item);
+            }
 
+            // sync header name
+            item.virtualColumn.valueHasMutated();
+
+            this.customColumnForm.reset();
+            this.applyColumns();
+        }
+    }
+
+    cancelEditMode() {
         this.customColumnForm.reset();
-        this.applyColumns();
     }
 
     showAddCustomColumnForm() {
-        this.customColumnForm.formVisible(true);
+        if (this.customColumnForm.formVisible()) {
+            // if form is open assume user wants to submit form
+            this.addCustomColumn();
+        } else {
+            this.customColumnForm.reset();
+            this.customColumnForm.formVisible(true);            
+        }
     }
 
     removeColumn(col: columnItem) {
@@ -108,6 +236,11 @@ class columnsSelector<T> {
     useDefaults() {
         this.reset();
         this.grid.reset(true);
+    }
+
+    reset() {
+        this.customLayout(false);
+        this.columnLayout.removeAll();
     }
 
     private onFetch(skip: number, take: number): JQueryPromise<pagedResult<T>> {
@@ -204,11 +337,6 @@ class columnsSelector<T> {
                 preview: undefined
             };
         }
-    }
-
-    reset() {
-        this.customLayout(false);
-        this.columnLayout.removeAll();
     }
 
     saveAsDefault(contextName: string) {
