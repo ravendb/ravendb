@@ -273,18 +273,18 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (IsRevision)
                     {
-                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, document.Data, document.ChangeVector);
+                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, document.Data, document.Flags, document.ChangeVector);
                     }
                     else if (_buildVersion < 40000 && key.Contains("/revisions/"))
                     {
                         var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
                         var newKey = key.Substring(0, endIndex);
 
-                        _database.BundleLoader.VersioningStorage.PutDirect(context, newKey, document.Data, document.ChangeVector);
+                        _database.BundleLoader.VersioningStorage.PutDirect(context, newKey, document.Data, document.Flags, document.ChangeVector);
                     }
                     else
                     {
-                        _database.DocumentsStorage.Put(context, key, null, document.Data);
+                        _database.DocumentsStorage.Put(context, key, null, document.Data, flags: document.Flags);
                     }
                 }
             }

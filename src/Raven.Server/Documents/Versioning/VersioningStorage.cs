@@ -47,7 +47,8 @@ namespace Raven.Server.Documents.Versioning
             RecoredSeparator1 = 2,
             Etag = 3, // etag to keep the insertion order
             Key = 4,
-            Document = 5
+            Document = 5,
+            Flags = 6,
         }
 
         public const byte RecordSeperator = 30;
@@ -176,15 +177,17 @@ namespace Raven.Server.Documents.Versioning
             return configuration.Active;
         }
 
-        public void PutFromDocument(DocumentsOperationContext context, string key,
-            BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector, VersioningConfigurationCollection configuration = null)
+        public void PutFromDocument(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
+            DocumentFlags flags, ChangeVectorEntry[] changeVector, VersioningConfigurationCollection configuration = null)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
 
             byte* lowerKey;
             int lowerKeySize;
-            PutInternal(context, key, document, table, changeVector, out lowerKey, out lowerKeySize);
-            _documentsStorage.RevisionAttachments(context, lowerKey, lowerKeySize, changeVector);
+            PutInternal(context, key, document, flags, table, changeVector, out lowerKey, out lowerKeySize);
+
+            if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                _documentsStorage.RevisionAttachments(context, lowerKey, lowerKeySize, changeVector);
 
             if (configuration == null)
             {
@@ -203,18 +206,21 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public void PutDirect(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector)
+        public void PutDirect(DocumentsOperationContext context, string key, BlittableJsonReaderObject document,
+            DocumentFlags flags, ChangeVectorEntry[] changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
             byte* lowerKey;
             int lowerKeySize;
-            PutInternal(context, key, document, table, changeVector, out lowerKey, out lowerKeySize);
+            PutInternal(context, key, document, flags, table, changeVector, out lowerKey, out lowerKeySize);
         }
 
-        private void PutInternal(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, Table table, 
-            ChangeVectorEntry[] changeVector, out byte* lowerKey, out int lowerSize)
+        private void PutInternal(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
+            DocumentFlags flags, Table table, ChangeVectorEntry[] changeVector, out byte* lowerKey, out int lowerSize)
         {
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
+
+            flags |= DocumentFlags.FromVersionStorage;
 
             byte* keyPtr;
             int keySize;
@@ -240,12 +246,13 @@ namespace Raven.Server.Documents.Versioning
             {
                 var tbv = new TableValueBuilder
                 {
-                    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
+                    {(byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length},
                     {lowerKey, lowerSize},
                     RecordSeperator,
                     Bits.SwapBytes(newEtag),
                     {keyPtr, keySize},
-                    {data.BasePointer, data.Size}
+                    {data.BasePointer, data.Size},
+                    (int)flags
                 };
                 table.Set(tbv);
             }
@@ -387,8 +394,7 @@ namespace Raven.Server.Documents.Versioning
                 result.ChangeVector[i] = ((ChangeVectorEntry*)ptr)[i];
             }
 
-            result.Flags = DocumentFlags.FromVersionStorage;
-
+            result.Flags = *(DocumentFlags*)tvr.Read((int)Columns.Flags, out size);
             if ((result.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
                 Slice prefixSlice;

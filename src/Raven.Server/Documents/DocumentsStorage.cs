@@ -2120,7 +2120,7 @@ namespace Raven.Server.Documents
                         if (version)
                         {
                             flags |= DocumentFlags.Versioned;
-                            _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, changeVector, configuration);
+                            _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, configuration);
                         }
                     }
                 }
