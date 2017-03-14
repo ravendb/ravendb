@@ -110,18 +110,17 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public void Transform(ToSqlItem item, DocumentsOperationContext context)
         {
-            if (item.IsDelete)
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (int i = 0; i < _config.SqlReplicationTables.Count; i++)
             {
-                // ReSharper disable once ForCanBeConvertedToForeach
-                for (int i = 0; i < _config.SqlReplicationTables.Count; i++)
-                {
-                    GetOrAdd(_config.SqlReplicationTables[i].TableName).Deletes.Add(item);
-                }
-
-                return;
+                // first, delete all the rows that might already exist there
+                GetOrAdd(_config.SqlReplicationTables[i].TableName).Deletes.Add(item);
             }
 
-            _current = item;
+            if (item.IsDelete)
+                return;
+
+           _current = item;
 
             Apply(context, _current.Document, _patchRequest);
         }
