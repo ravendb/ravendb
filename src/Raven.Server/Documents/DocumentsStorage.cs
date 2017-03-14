@@ -492,7 +492,7 @@ namespace Raven.Server.Documents
             using (DocumentKeyWorker.GetSliceFromKey(context, idPrefix, out prefixSlice))
             using (isStartAfter ? (IDisposable)DocumentKeyWorker.GetSliceFromKey(context, startAfterId, out startAfterSlice) : null)
             {
-                foreach (var result in table.SeekByPrimaryKeyStartingWith(prefixSlice, startAfterSlice, 0))
+                foreach (var result in table.SeekByPrimaryKeyPrefix(prefixSlice, startAfterSlice, 0))
                 {
                     var document = TableValueToDocument(context, ref result.Reader);
                     string documentKey = document.Key;
@@ -1180,7 +1180,11 @@ namespace Raven.Server.Documents
                     }
                     table.Delete(doc.StorageId);
 
-                    DeleteAttachmentsOfDocument(context, loweredKey);
+                    Slice prefixSlice;
+                    using (GetAttachmentPrefix(context, loweredKey.Content.Ptr, loweredKey.Size, AttachmentType.Document, null, out prefixSlice))
+                    {
+                        DeleteAttachmentsOfDocument(context, loweredKey);
+                    }
                 }
             }
 
@@ -1211,11 +1215,9 @@ namespace Raven.Server.Documents
             throw new InvalidDataException($"we can't have conflicts and local document/tombstone with the key {loweredKey}");
         }
 
-        private void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice loweredDocumentId)
+        private void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice prefixSlice)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            Slice prefixSlice;
-            using (GetAttachmentPrefix(context, loweredDocumentId.Content.Ptr, loweredDocumentId.Size, AttachmentType.Document, null, out prefixSlice))
             {
                 table.DeleteByPrimaryKeyPrefix(prefixSlice, before =>
                 {
@@ -1227,6 +1229,16 @@ namespace Raven.Server.Documents
                         DeleteAttachmentStream(context, hashSlice, expectedCount: 1);
                     }
                 });
+            }
+        }
+
+        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision)
+        {
+            Slice prefixSlice;
+            using (GetAttachmentPrefix(context, revision.LoweredKey.Buffer, revision.LoweredKey.Size,
+                AttachmentType.Revision, revision.ChangeVector, out prefixSlice))
+            {
+                DeleteAttachmentsOfDocument(context, prefixSlice);
             }
         }
 
@@ -2817,7 +2829,7 @@ namespace Raven.Server.Documents
             using (GetAttachmentPrefix(context, lowerKey, lowerKeySize, AttachmentType.Document, null, out prefixSlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                foreach (var sr in table.SeekByPrimaryKeyStartingWith(prefixSlice, Slices.Empty, 0))
+                foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
                     PutRevisionAttachment(context, lowerKey, lowerKeySize, changeVector, ref sr.Reader);
                 }
@@ -2907,7 +2919,7 @@ namespace Raven.Server.Documents
         public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, Slice prefixSlice)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            foreach (var sr in table.SeekByPrimaryKeyStartingWith(prefixSlice, Slices.Empty, 0))
+            foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
             {
                 var attachment = TableValueToAttachment(context, ref sr.Reader);
                 if (attachment == null)
@@ -2938,7 +2950,7 @@ namespace Raven.Server.Documents
             Slice prefixSlice;
             using (GetAttachmentPrefix(context, lowerDocumentId, lowerDocumentIdSize, AttachmentType.Document, null, out prefixSlice))
             {
-                foreach (var sr in table.SeekByPrimaryKeyStartingWith(prefixSlice, Slices.Empty, 0))
+                foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
                     var attachment = TableValueToAttachment(context, ref sr.Reader);
                     throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");
@@ -3002,7 +3014,7 @@ namespace Raven.Server.Documents
         // Conflict key: {lowerDocumentId|c|lowerName}
         // Revision key: {lowerDocumentId|r|changeVector|lowerName}
         // 
-        // We'll solve conflicts using the hash value in the table value reader. No need to put it also in the key.
+        // TODO: We'll solve conflicts using the hash value in the table value reader. No need to put it also in the key.
         //
         // Document prefix: {lowerDocumentId|d|}
         // Conflict prefix: {lowerDocumentId|c|}
@@ -3171,7 +3183,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void DeleteAttachment(DocumentsOperationContext context, Slice keySlice, Slice lowerDocumentId, string documentId, string name, long? expectedEtag)
+        private void DeleteAttachment(DocumentsOperationContext context, Slice keySlice, Slice lowerDocumentId, 
+            string documentId, string name, long? expectedEtag)
         {
             TableValueReader docTvr;
             var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out docTvr);
@@ -3192,7 +3205,7 @@ namespace Raven.Server.Documents
                 if (expectedEtag != null)
                     throw new ConcurrencyException($"Attachment {name} of document {documentId} does not exist, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
 
-                // this basically mean that we tried to delete attachment that doesn't exist.
+                // this basically means that we tried to delete attachment that doesn't exist.
                 return;
             }
 

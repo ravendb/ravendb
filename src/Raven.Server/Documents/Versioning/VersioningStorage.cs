@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Versioning
         {
             ChangeVector = 0,
             LoweredKey = 1,
-            RecoredSeparator1 = 2,
+            RecoredSeparator = 2,
             Etag = 3, // etag to keep the insertion order
             Key = 4,
             Document = 5,
@@ -187,7 +187,9 @@ namespace Raven.Server.Documents.Versioning
             PutInternal(context, key, document, flags, table, changeVector, out lowerKey, out lowerKeySize);
 
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+            {
                 _documentsStorage.RevisionAttachments(context, lowerKey, lowerKeySize, changeVector);
+            }
 
             if (configuration == null)
             {
@@ -281,8 +283,12 @@ namespace Raven.Server.Documents.Versioning
                 numberOfRevisionsToDelete,
                 deleted =>
                 {
-                    var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref deleted.Reader);
-                    maxEtagDeleted = Math.Max(maxEtagDeleted, etag);
+                    var revision = TableValueToDocument(context, ref deleted.Reader);
+                    maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
+                    if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                    {
+                        _documentsStorage.DeleteRevisionAttachments(context, revision);
+                    }
                 });
             _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
             return deletedRevisionsCount;

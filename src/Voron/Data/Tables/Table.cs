@@ -771,7 +771,7 @@ namespace Voron.Data.Tables
             return fstIndex.NumberOfEntries;
         }
 
-        public IEnumerable<TableValueHolder> SeekByPrimaryKeyStartingWith(Slice requiredPrefix, Slice startAfter, int skip)
+        public IEnumerable<TableValueHolder> SeekByPrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, int skip)
         {
             var isStartAfter = startAfter.Equals(Slices.Empty) == false;
 
