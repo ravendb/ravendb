@@ -128,7 +128,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact(Skip = "RavenDB-5986")]
+        [Fact]
         public async Task SubscriptionWaitStrategy()
         {
             using (var store = GetDocumentStore())
@@ -183,11 +183,8 @@ namespace FastTests.Client.Subscriptions
                         {
                             waitingSubscriptionList.Add(x);
                         });
-                        var taskStarted = waitingSubscription.StartAsync();
-                        var completed = await Task.WhenAny(taskStarted, Task.Delay(60000));
 
-
-                        Assert.False(completed == taskStarted);
+                        var startAsync = waitingSubscription.StartAsync();
 
                         Assert.True(await ackSentAmre.WaitAsync(TimeSpan.FromSeconds(50)));
 
@@ -198,7 +195,7 @@ namespace FastTests.Client.Subscriptions
                         // wait until we know that connection was established
                         for (var i = 0; i < 5; i++)
                         {
-                            Assert.True(waitingSubscriptionList.TryTake(out thing, 1000));
+                            Assert.True(waitingSubscriptionList.TryTake(out thing, 3000));
                         }
 
                         Assert.False(waitingSubscriptionList.TryTake(out thing, 50));
