@@ -17,7 +17,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Sparrow.Logging;
-using Raven.Client.Util.Sockets;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -55,7 +54,7 @@ namespace Raven.Traffic
         }
 
 
-        private async Task<BlittableJsonReaderObject> Receive(RavenClientWebSocket webSocket,
+        private async Task<BlittableJsonReaderObject> Receive(ClientWebSocket webSocket,
             JsonOperationContext context)
         {
             BlittableJsonDocumentBuilder builder = null;
@@ -122,7 +121,7 @@ namespace Raven.Traffic
         private async Task RecordRequests(TrafficToolConfiguration config, IDocumentStore store)
         {
             var id = Guid.NewGuid().ToString();
-            using (var client = new RavenClientWebSocket())
+            using (var client = new ClientWebSocket())
             {
                 var url = store.Url + "/traffic-watch/websockets";
                 var uri = new Uri(url.ToWebSocketPath());
