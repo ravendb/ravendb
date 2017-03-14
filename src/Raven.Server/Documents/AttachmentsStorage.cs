@@ -136,40 +136,41 @@ namespace Raven.Server.Documents
             using (Slice.From(context.Allocator, hash, out hashSlice)) // Hash is a base64 string, so this is a special case that we do not need to escape
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                var tbv = new TableValueBuilder
+                TableValueBuilder tbv;
+                using (table.Allocate(out tbv))
                 {
-                    {keySlice.Content.Ptr, keySlice.Size},
-                    Bits.SwapBytes(attachmenEtag),
-                    {namePtr, nameSize},
-                    {contentTypeSlice.Content.Ptr, contentTypeSlice.Size},
-                    {hashSlice.Content.Ptr, hashSlice.Size},
-                };
+                    tbv.Add(keySlice.Content.Ptr, keySlice.Size);
+                    tbv.Add(Bits.SwapBytes(attachmenEtag));
+                    tbv.Add(namePtr, nameSize);
+                    tbv.Add(contentTypeSlice.Content.Ptr, contentTypeSlice.Size);
+                    tbv.Add(hashSlice.Content.Ptr, hashSlice.Size);
 
-                TableValueReader oldValue;
-                if (table.ReadByKey(keySlice, out oldValue))
-                {
-                    // TODO: Support overwrite
-                    throw new NotImplementedException("Cannot overwrite an exisitng attachment.");
-
-                    /*
-                    var oldEtag = TableValueToEtag(context, 1, ref oldValue);
-                    if (expectedEtag != null && oldEtag != expectedEtag)
-                        throw new ConcurrencyException($"Attachment {name} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-                        {
-                            ActualETag = oldEtag,
-                            ExpectedETag = expectedEtag ?? -1
-                        };
-
-                    table.Update(oldValue.Id, tbv);*/
-                }
-                else
-                {
-                    if (expectedEtag.HasValue && expectedEtag.Value != 0)
+                    TableValueReader oldValue;
+                    if (table.ReadByKey(keySlice, out oldValue))
                     {
-                        ThrowConcurrentExceptionOnMissingAttacment(documentId, name, expectedEtag.Value);
-                    }
+                        // TODO: Support overwrite
+                        throw new NotImplementedException("Cannot overwrite an exisitng attachment.");
 
-                    table.Insert(tbv);
+                        /*
+                        var oldEtag = TableValueToEtag(context, 1, ref oldValue);
+                        if (expectedEtag != null && oldEtag != expectedEtag)
+                            throw new ConcurrencyException($"Attachment {name} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                            {
+                                ActualETag = oldEtag,
+                                ExpectedETag = expectedEtag ?? -1
+                            };
+
+                        table.Update(oldValue.Id, tbv);*/
+                    }
+                    else
+                    {
+                        if (expectedEtag.HasValue && expectedEtag.Value != 0)
+                        {
+                            ThrowConcurrentExceptionOnMissingAttacment(documentId, name, expectedEtag.Value);
+                        }
+
+                        table.Insert(tbv);
+                    }
                 }
 
                 PutAttachmentStream(context, keySlice, hashSlice, stream);
@@ -226,16 +227,17 @@ namespace Raven.Server.Documents
             using (GetAttachmentKey(context, lowerKey, lowerKeySize, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Revision, changeVector, out keySlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                int size;
-                var tbv = new TableValueBuilder
+                TableValueBuilder tbv;
+                using (table.Allocate(out tbv))
                 {
-                    {keySlice.Content.Ptr, keySlice.Size},
-                    Bits.SwapBytes(attachmenEtag),
-                    {name.Buffer, name.Size},
-                    {tvr.Read((int)AttachmentsTable.ContentType, out size), size},
-                    {tvr.Read((int)AttachmentsTable.Hash, out size), size},
-                };
-                table.Set(tbv);
+                    tbv.Add(keySlice.Content.Ptr, keySlice.Size);
+                    tbv.Add(Bits.SwapBytes(attachmenEtag));
+                    tbv.Add(name.Buffer, name.Size);
+                    int size;
+                    tbv.Add(tvr.Read((int)AttachmentsTable.ContentType, out size), size);
+                    tbv.Add(tvr.Read((int)AttachmentsTable.Hash, out size), size);
+                    table.Set(tbv);
+                }
             }
         }
 
@@ -396,7 +398,6 @@ namespace Raven.Server.Documents
             return GetAttachmentKeyInternal(context, lowerKey, lowerKeySize, null, 0, false, type, changeVector, out prefixSlice);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ReleaseMemory GetAttachmentKeyInternal(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize,
             byte* lowerName, int lowerNameSize, bool isPrefix, AttachmentType type, ChangeVectorEntry[] changeVector, out Slice keySlice)
         {

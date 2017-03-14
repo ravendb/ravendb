@@ -63,13 +63,14 @@ namespace Raven.Server.Commercial
                 using (var json = context.ReadObject(firstServerStartDate, "DatabaseInfo",
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var tvb = new TableValueBuilder
+                    TableValueBuilder tvb;
+                    using (table.Allocate(out tvb))
                     {
-                        {id.Buffer, id.Size},
-                        {json.BasePointer, json.Size}
-                    };
+                        tvb.Add(id.Buffer, id.Size);
+                        tvb.Add(json.BasePointer, json.Size);
 
-                    table.Set(tvb);
+                        table.Set(tvb);
+                    }
                 }
                 tx.Commit();
             }
@@ -123,13 +124,14 @@ namespace Raven.Server.Commercial
                 using (var json = context.ReadObject(license.ToJson(), LicenseStoargeKey,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var tvb = new TableValueBuilder
+                    TableValueBuilder tvb;
+                    using (table.Allocate(out tvb))
                     {
-                        {id.Buffer, id.Size},
-                        {json.BasePointer, json.Size}
-                    };
+                        tvb.Add(id.Buffer, id.Size);
+                        tvb.Add(json.BasePointer, json.Size);
 
-                    table.Set(tvb);
+                        table.Set(tvb);
+                    }
                 }
                 tx.Commit();
             }

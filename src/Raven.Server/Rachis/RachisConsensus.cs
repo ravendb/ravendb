@@ -601,14 +601,15 @@ namespace Raven.Server.Rachis
                 GetLastTruncated(context, out lastIndex, out lastIndexTerm);
             }
             lastIndex += 1;
-            var tvb = new TableValueBuilder
+            TableValueBuilder tvb;
+            using (table.Allocate(out tvb))
             {
-                Bits.SwapBytes(lastIndex),
-                CurrentTerm,
-                {cmd.BasePointer, cmd.Size},
-                (int) flags
-            };
-            table.Insert(tvb);
+                tvb.Add(Bits.SwapBytes(lastIndex));
+                tvb.Add(CurrentTerm);
+                tvb.Add(cmd.BasePointer, cmd.Size);
+                tvb.Add((int)flags);
+                table.Insert(tvb);
+            }
 
             return lastIndex;
         }
@@ -731,13 +732,15 @@ namespace Raven.Server.Rachis
                     }
 
                     var nested = context.ReadObject(entry.Entry, "entry");
-                    table.Insert(new TableValueBuilder
+                    TableValueBuilder tableValueBuilder;
+                    using (table.Allocate(out tableValueBuilder))
                     {
-                        reversedEntryIndex,
-                        entry.Term,
-                        {nested.BasePointer, nested.Size},
-                        (int) entry.Flags
-                    });
+                        tableValueBuilder.Add(reversedEntryIndex);
+                        tableValueBuilder.Add(entry.Term);
+                        tableValueBuilder.Add(nested.BasePointer, nested.Size);
+                        tableValueBuilder.Add((int)entry.Flags);
+                        table.Insert(tableValueBuilder);
+                    }
                     if (entry.Flags == RachisEntryFlags.Topology)
                     {
                         lastTopology?.Dispose();

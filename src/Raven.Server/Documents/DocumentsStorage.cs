@@ -1315,23 +1315,25 @@ namespace Raven.Server.Documents
                 {
                     var transactionMarker = context.GetTransactionMarker();
                     var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
-                    var tbv = new TableValueBuilder
-                    {
-                        {lowerKey, lowerSize},
-                        {(byte*) &newEtagBigEndian, sizeof(long)},
-                        {(byte*) &documentEtagBigEndian, sizeof(long)},
-                        {keyPtr, keySize},
-                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
-                        collectionSlice,
-                        (int)flags,
-                        transactionMarker,
-                        modifiedTicks
-                    };
 
                     var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                         collectionName.GetTableName(CollectionTableType.Tombstones));
+                    TableValueBuilder tbv;
+                    using (table.Allocate(out tbv))
+                    {
+                        tbv.Add(lowerKey, lowerSize);
+                        tbv.Add((byte*)&newEtagBigEndian, sizeof(long));
+                        tbv.Add((byte*)&documentEtagBigEndian, sizeof(long));
+                        tbv.Add(keyPtr, keySize);
+                        tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                        tbv.Add(collectionSlice);
+                        tbv.Add((int)flags);
+                        tbv.Add(transactionMarker);
+                        tbv.Add(modifiedTicks);
 
-                    table.Insert(tbv);
+
+                        table.Insert(tbv);
+                    }
                 }
             }
             return newEtag;
@@ -1786,7 +1788,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tbv))
                     {
                         tbv.Add(lowerKey, lowerSize);
-                        tbv.Add((byte*) pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
+                        tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tbv.Add(keyPtr, keySize);
                         tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
                         tbv.Add(Bits.SwapBytes(GenerateNextEtag()));
@@ -1814,16 +1816,18 @@ namespace Raven.Server.Documents
 
                 fixed (ChangeVectorEntry* pChangeVector = existingTombstone.ChangeVector)
                 {
-                    conflictsTable.Set(new TableValueBuilder
+                    TableValueBuilder tableValueBuilder;
+                    using (conflictsTable.Allocate(out tableValueBuilder))
                     {
-                        {lowerKey, lowerSize},
-                        {(byte*) pChangeVector, existingTombstone.ChangeVector.Length*sizeof(ChangeVectorEntry)},
-                        {keyPtr, keySize},
-                        {null, 0},
-                        Bits.SwapBytes(GenerateNextEtag()),
-                        {existingTombstone.Collection.Buffer, existingTombstone.Collection.Size},
-                        existingTombstone.LastModified.Ticks
-                    });
+                        tableValueBuilder.Add(lowerKey, lowerSize);
+                        tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
+                        tableValueBuilder.Add(keyPtr, keySize);
+                        tableValueBuilder.Add(null, 0);
+                        tableValueBuilder.Add(Bits.SwapBytes(GenerateNextEtag()));
+                        tableValueBuilder.Add(existingTombstone.Collection.Buffer, existingTombstone.Collection.Size);
+                        tableValueBuilder.Add(existingTombstone.LastModified.Ticks);
+                        conflictsTable.Set(tableValueBuilder);
+                    }
                     Interlocked.Increment(ref _conflictCount);
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
@@ -1880,19 +1884,20 @@ namespace Raven.Server.Documents
 
                 using (lazyCollectionName)
                 {
-                    var tvb = new TableValueBuilder
+                    TableValueBuilder tvb;
+                    using (conflictsTable.Allocate(out tvb))
                     {
-                        {lowerKey, lowerSize},
-                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*incomingChangeVector.Length},
-                        {keyPtr, keySize},
-                        {doc, docSize},
-                        Bits.SwapBytes(GenerateNextEtag()),
-                        {lazyCollectionName.Buffer, lazyCollectionName.Size},
-                        docPositions.LastModifiedTicks
-                    };
+                        tvb.Add(lowerKey, lowerSize);
+                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
+                        tvb.Add(keyPtr, keySize);
+                        tvb.Add(doc, docSize);
+                        tvb.Add(Bits.SwapBytes(GenerateNextEtag()));
+                        tvb.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
+                        tvb.Add(docPositions.LastModifiedTicks);
 
-                    Interlocked.Increment(ref _conflictCount);
-                    conflictsTable.Set(tvb);
+                        Interlocked.Increment(ref _conflictCount);
+                        conflictsTable.Set(tvb);
+                    }
                 }
 
             }
@@ -2051,6 +2056,26 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                if (oldValue.Pointer == null)
+                {
+                    if (expectedEtag != null && expectedEtag != 0)
+                    {
+                        ThrowConcurrentExceptionOnMissingDoc(key, expectedEtag.Value);
+                    }
+                }
+                else
+                {
+                    var oldEtag = TableValueToEtag(1, ref oldValue);
+                    if (expectedEtag != null && oldEtag != expectedEtag)
+                        ThrowConcurrentException(key, expectedEtag, oldEtag);
+
+                    int oldSize;
+                    var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
+                    var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
+                    if (oldCollectionName != collectionName)
+                        ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
+                }
+
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
                     var transactionMarker = context.GetTransactionMarker();
@@ -2062,31 +2087,17 @@ namespace Raven.Server.Documents
                         tbv.Add(newEtagBigEndian);
                         tbv.Add(keyPtr, keySize);
                         tbv.Add(document.BasePointer, document.Size);
-                        tbv.Add((byte*) pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                        tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
                         tbv.Add(modifiedTicks);
-                        tbv.Add((int) flags);
+                        tbv.Add((int)flags);
                         tbv.Add(transactionMarker);
 
                         if (oldValue.Pointer == null)
                         {
-                            if (expectedEtag != null && expectedEtag != 0)
-                            {
-                                ThrowConcurrentExceptionOnMissingDoc(key, expectedEtag.Value);
-                            }
                             table.Insert(tbv);
                         }
                         else
                         {
-                            var oldEtag = TableValueToEtag(1, ref oldValue);
-                            if (expectedEtag != null && oldEtag != expectedEtag)
-                                ThrowConcurrentException(key, expectedEtag, oldEtag);
-
-                            int oldSize;
-                            var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
-                            var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
-                            if (oldCollectionName != collectionName)
-                                ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
-
                             table.Update(oldValue.Id, tbv);
                         }
                     }
@@ -2582,11 +2593,12 @@ namespace Raven.Server.Documents
             Slice collectionSlice;
             using (Slice.From(context.Allocator, collectionName, out collectionSlice))
             {
-                var tvr = new TableValueBuilder
+                TableValueBuilder tvr;
+                using (collections.Allocate(out tvr))
                 {
-                    collectionSlice
-                };
-                collections.Set(tvr);
+                    tvr.Add(collectionSlice);
+                    collections.Set(tvr);
+                }
 
                 DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
                 TombstonesSchema.Create(context.Transaction.InnerTransaction,

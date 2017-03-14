@@ -185,14 +185,16 @@ namespace Raven.Server.Documents
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
                     byte byteAsType = (byte)type;
-                    conflictsTable.Set(new TableValueBuilder
+                    TableValueBuilder tableValueBuilder;
+                    using (conflictsTable.Allocate(out tableValueBuilder))
                     {
-                        indexNameAsSlice,
-                        {&bitSwappedEtag, sizeof(long)},
-                        {&byteAsType, sizeof(byte)},
-                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
-                        {definition.BasePointer, definition.Size}
-                    });
+                        tableValueBuilder.Add(indexNameAsSlice);
+                        tableValueBuilder.Add(&bitSwappedEtag, sizeof(long));
+                        tableValueBuilder.Add(&byteAsType, sizeof(byte));
+                        tableValueBuilder.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                        tableValueBuilder.Add(definition.BasePointer, definition.Size);
+                        conflictsTable.Set(tableValueBuilder);
+                    }
                 }
             }
         }

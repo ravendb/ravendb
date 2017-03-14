@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Versioning
         {
             ChangeVector = 0,
             LoweredKey = 1,
-            RecoredSeparator = 2,
+            RecordSeparator = 2,
             Etag = 3, // etag to keep the insertion order
             Key = 4,
             Document = 5,
@@ -246,17 +246,18 @@ namespace Raven.Server.Documents.Versioning
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
-                var tbv = new TableValueBuilder
+                TableValueBuilder tbv;
+                using (table.Allocate(out tbv))
                 {
-                    {(byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length},
-                    {lowerKey, lowerSize},
-                    RecordSeperator,
-                    Bits.SwapBytes(newEtag),
-                    {keyPtr, keySize},
-                    {data.BasePointer, data.Size},
-                    (int)flags
-                };
-                table.Set(tbv);
+                    tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                    tbv.Add(lowerKey, lowerSize);
+                    tbv.Add(RecordSeperator);
+                    tbv.Add(Bits.SwapBytes(newEtag));
+                    tbv.Add(keyPtr, keySize);
+                    tbv.Add(data.BasePointer, data.Size);
+                    tbv.Add((int)flags);
+                    table.Set(tbv);
+                }
             }
         }
 
