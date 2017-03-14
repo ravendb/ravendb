@@ -11,10 +11,11 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
+using AsyncFriendlyStackTrace;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Raven.Client.Documents.Commands.MultiGet;
+using Raven.Client.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -73,7 +74,7 @@ namespace Raven.Server.Documents.Handlers
                         if (routeInformation == null)
                         {
                             writer.WritePropertyName(statusProperty);
-                            writer.WriteInteger(400);
+                            writer.WriteInteger((int)HttpStatusCode.BadRequest);
                             writer.WritePropertyName(resultProperty);
                             context.Write(writer, new DynamicJsonValue
                             {
@@ -139,21 +140,55 @@ namespace Raven.Server.Documents.Handlers
                         }
 
                         var bytesWrittenBeforeRequest = responseStream.BytesWritten;
-                        await requestHandler(new RequestHandlerContext
+                        int statusCode;
+                        try
                         {
-                            Database = Database,
-                            RavenServer = Server,
-                            RouteMatch = localMatch,
-                            HttpContext = httpContext,
-                            AllowResponseCompression = false
-                        });
+                            await requestHandler(new RequestHandlerContext
+                            {
+                                Database = Database,
+                                RavenServer = Server,
+                                RouteMatch = localMatch,
+                                HttpContext = httpContext,
+                                AllowResponseCompression = false
+                            });
 
-                        if (bytesWrittenBeforeRequest == responseStream.BytesWritten)
-                            writer.WriteNull();
+                            if (bytesWrittenBeforeRequest == responseStream.BytesWritten)
+                                writer.WriteNull();
 
-                        var statusCode = httpContext.Response.StatusCode == 0
-                            ? (int)HttpStatusCode.OK
-                            : httpContext.Response.StatusCode;
+                            statusCode = httpContext.Response.StatusCode == 0
+                                ? (int)HttpStatusCode.OK
+                                : httpContext.Response.StatusCode;
+                        }
+                        catch (Exception e)
+                        {
+                            if (bytesWrittenBeforeRequest != responseStream.BytesWritten)
+                                throw;
+
+                            statusCode = (int)HttpStatusCode.InternalServerError;
+
+                            var djv = new DynamicJsonValue
+                            {
+                                [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{url}{query}",
+                                [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
+                                [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message
+                            };
+
+                            string errorString;
+
+                            try
+                            {
+                                errorString = e.ToAsyncString();
+                            }
+                            catch (Exception)
+                            {
+                                errorString = e.ToString();
+                            }
+
+                            djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = errorString;
+
+                            using (var json = context.ReadObject(djv, "exception"))
+                                writer.WriteObject(json);
+                        }
 
                         writer.WriteComma();
                         writer.WritePropertyName(statusProperty);

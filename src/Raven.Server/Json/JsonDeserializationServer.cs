@@ -5,6 +5,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Expiration;
@@ -81,6 +82,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, License> License = GenerateJsonDeserializationRoutine<License>();
 
         public static readonly Func<BlittableJsonReaderObject, UserRegistrationInfo> UserRegistrationInfo = GenerateJsonDeserializationRoutine<UserRegistrationInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, DatabaseDocument> DatabaseDocument = GenerateJsonDeserializationRoutine<DatabaseDocument>();
 
     }
 }

@@ -173,6 +173,8 @@ namespace Raven.Server.Config
             Encryption.UseFips = serverConfiguration.Encryption.UseFips;
 
             Storage.ForceUsing32BitsPager = serverConfiguration.Storage.ForceUsing32BitsPager;
+
+            Queries.MaxClauseCount = serverConfiguration.Queries.MaxClauseCount;
         }
 
         public void SetSetting(string key, string value)
