@@ -76,6 +76,7 @@ namespace Raven.Server.Documents
             Collection = 5,
             LastModified = 6,
         }
+
         private enum TombstoneTable
         {
             LoweredKey = 0,
@@ -1450,8 +1451,6 @@ namespace Raven.Server.Documents
             }
         }
 
-
-
         public DocumentConflict GetConflictForChangeVector(
             DocumentsOperationContext context,
             string key,
@@ -1665,7 +1664,6 @@ namespace Raven.Server.Documents
             LazyStringValue collection,
             bool hasLocalTombstone)
         {
-
             if (ValidatedResolveByScriptInput(scriptResolver, conflicts, collection) == false)
             {
                 return false;
@@ -1943,7 +1941,8 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
             ChangeVectorEntry[] changeVector = null,
-            DocumentFlags flags = DocumentFlags.None)
+            DocumentFlags flags = DocumentFlags.None,
+            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
             if (context.Transaction == null)
             {
@@ -2046,7 +2045,12 @@ namespace Raven.Server.Documents
                     if (_documentDatabase.BundleLoader.VersioningStorage != null)
                     {
                         VersioningConfigurationCollection configuration;
-                        var version = _documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, document, out configuration);
+                        var version = _documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(
+                            collectionName, 
+                            nonPersistentFlags,
+                            () => oldValue.Pointer == null ? null : TableValueToDocument(context, ref oldValue),
+                            document,
+                            out configuration);
                         if (version)
                         {
                             flags |= DocumentFlags.Versioned;
