@@ -2,11 +2,11 @@
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlReplicationConfiguration : EtlConfiguration
+    public class SqlEtlConfiguration : EtlConfiguration
     {
-        public SqlReplicationConfiguration()
+        public SqlEtlConfiguration()
         {
-            SqlReplicationTables = new List<SqlReplicationTable>();
+            SqlTables = new List<SqlEtlTable>();
         }
         
         public bool ParameterizeDeletesDisabled { get; set; }
@@ -19,16 +19,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public int? CommandTimeout { get; set; }
 
-        public List<SqlReplicationTable> SqlReplicationTables { get; set; }
+        public List<SqlEtlTable> SqlTables { get; set; }
     }
 
-    public class SqlReplicationTable
+    public class SqlEtlTable
     {
         public string TableName { get; set; }
         public string DocumentKeyColumn { get; set; }
         public bool InsertOnlyMode { get; set; }
 
-        protected bool Equals(SqlReplicationTable other)
+        protected bool Equals(SqlEtlTable other)
         {
             return string.Equals(TableName, other.TableName) && 
                 string.Equals(DocumentKeyColumn, other.DocumentKeyColumn);
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((SqlReplicationTable)obj);
+            return Equals((SqlEtlTable)obj);
         }
 
         public override int GetHashCode()

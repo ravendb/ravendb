@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.ETL
 
             LastAlert = AlertRaised.Create(_processType,
                 $"[{_name}] Could not parse script",
-                AlertType.SqlReplication_ScriptError,
+                AlertType.SqlEtl_ScriptError,
                 NotificationSeverity.Error,
                 key: _name,
                 details: new MessageDetails
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.ETL
 
             LastAlert = AlertRaised.Create(_processType,
                 $"[{_name}] Transformation script failed",
-                AlertType.SqlReplication_Error,
+                AlertType.SqlEtl_Error,
                 NotificationSeverity.Error,
                 key: _name,
                 details: new ExceptionDetails(e));
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.ETL
 
             LastAlert = AlertRaised.Create(_processType,
                 $"[{_name}] Script error hit ratio too high. Could not tolerate script error ratio and stopped current replication cycle",
-                AlertType.SqlReplication_ScriptErrorRatio,
+                AlertType.SqlEtl_ScriptErrorRatio,
                 NotificationSeverity.Error,
                 key: _name,
                 details: new ExceptionDetails(e));
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.ETL
 
             LastAlert = AlertRaised.Create(_processType,
                 $"[{_name}] Write error: {e.Message}",
-                AlertType.SqlReplication_Error,
+                AlertType.SqlEtl_Error,
                 NotificationSeverity.Error,
                 key: _name, details: new ExceptionDetails(e));
 
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.ETL
 
             LastAlert = AlertRaised.Create(_processType,
                 $"[{_name}] Write error hit ratio too high. Could not tolerate write error ratio and stopped current replication cycle",
-                AlertType.SqlReplication_WriteErrorRatio,
+                AlertType.SqlEtl_WriteErrorRatio,
                 NotificationSeverity.Error,
                 key: _name,
                 details: new ExceptionDetails(e));

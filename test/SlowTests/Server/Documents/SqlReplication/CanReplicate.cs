@@ -695,16 +695,16 @@ var nameArr = this.StepName.split('.');");
                         }
                     }
                 });
-                await session.StoreAsync(new SqlReplicationConfiguration
+                await session.StoreAsync(new SqlEtlConfiguration
                 {
                     Id = Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix + "OrdersAndLines",
                     Name = "OrdersAndLines",
                     ConnectionStringName = "Ci1",
                     Collection = "Orders",
-                    SqlReplicationTables =
+                    SqlTables =
                     {
-                        new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
-                        new SqlReplicationTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
+                        new SqlEtlTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
+                        new SqlEtlTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
                     },
                     Script = script
                 });

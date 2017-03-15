@@ -32,6 +32,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public string DocumentKey { get; private set; } // TODO arek - LazyStringValue
 
-        public List<SqlReplicationColumn> Columns { get; set; }
+        public List<SqlColumn> Columns { get; set; }
     }
 }

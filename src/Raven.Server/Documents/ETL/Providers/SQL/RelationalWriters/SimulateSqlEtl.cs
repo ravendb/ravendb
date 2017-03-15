@@ -1,9 +1,9 @@
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
-    public class SimulateSqlReplication
+    public class SimulateSqlEtl
     {
         /// <summary>
-        /// Document Id to simulate replication on
+        /// Document Id to simulate SQL ETL on
         /// </summary>
         public string DocumentId;
         /// <summary>
@@ -13,6 +13,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         /// <summary>
         /// Sql Replication Script
         /// </summary>
-        public SqlReplicationConfiguration Configuration;
+        public SqlEtlConfiguration Configuration;
     }
 }

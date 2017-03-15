@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlReplicationStatus
+    public class SqlEtlStatus
     {
         public string Name { get; set; } 
 

@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
                         {
                             ["Name"] = replication.Name,
                             ["Statistics"] = replication.Statistics.ToBlittable(),
-                            ["Metrics"] = replication.MetricsCountersManager.ToSqlReplicationMetricsData(),
+                            ["Metrics"] = replication.MetricsCountersManager.ToSqlEtlMetricsData(),
                         };
                         context.Write(writer, json);
                     }
@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
 
                 var dbDoc = context.ReadForMemory(RequestBodyStream(), "SimulateSqlReplicationResult");
                 var simulateSqlReplication = JsonDeserializationServer.SimulateSqlReplication(dbDoc);
-                var result = SqlEtl.SimulateSqlReplicationSqlQueries(simulateSqlReplication, Database, context);
+                var result = SqlEtl.SimulateSqlEtl(simulateSqlReplication, Database, context);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

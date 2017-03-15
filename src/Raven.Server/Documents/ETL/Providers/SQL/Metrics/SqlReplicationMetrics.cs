@@ -3,25 +3,25 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Metrics
 {
-    public class SqlReplicationTableMetrics
+    public class SqlEtlTableMetrics
     {
         public readonly string TableName;
-        public readonly MeterMetric SqlReplicationDeleteActionsMeter;
-        public readonly MeterMetric SqlReplicationInsertActionsMeter;
+        public readonly MeterMetric DeleteActionsMeter;
+        public readonly MeterMetric InsertActionsMeter;
 
-        public SqlReplicationTableMetrics(string tableName)
+        public SqlEtlTableMetrics(string tableName)
         {
             TableName = tableName;
-            SqlReplicationDeleteActionsMeter = new MeterMetric();
-            SqlReplicationInsertActionsMeter = new MeterMetric();
+            DeleteActionsMeter = new MeterMetric();
+            InsertActionsMeter = new MeterMetric();
         }
 
-        public DynamicJsonValue ToSqlReplicationTableMetricsDataDictionary()
+        public DynamicJsonValue ToSqlEtlTableMetricsDataDictionary()
         {
             return new DynamicJsonValue
             {
-                ["Delete Actions Meter"] = SqlReplicationDeleteActionsMeter.CreateMeterData(),
-                ["Insert Actions Meter"] = SqlReplicationInsertActionsMeter.CreateMeterData(),
+                ["Delete Actions Meter"] = DeleteActionsMeter.CreateMeterData(),
+                ["Insert Actions Meter"] = InsertActionsMeter.CreateMeterData(),
             };
         }
     }

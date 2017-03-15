@@ -22,13 +22,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
     {
         public const string SqlEtlTag = "SQL ETL";
 
-        public SqlReplicationConfiguration SqlConfiguration { get; }
+        public SqlEtlConfiguration SqlConfiguration { get; }
 
         private PredefinedSqlConnection _predefinedSqlConnection;
 
-        public readonly SqlReplicationMetricsCountersManager MetricsCountersManager = new SqlReplicationMetricsCountersManager();
+        public readonly SqlEtlMetricsCountersManager MetricsCountersManager = new SqlEtlMetricsCountersManager();
 
-        public SqlEtl(DocumentDatabase database, SqlReplicationConfiguration configuration) : base(database, configuration, SqlEtlTag)
+        public SqlEtl(DocumentDatabase database, SqlEtlConfiguration configuration) : base(database, configuration, SqlEtlTag)
         {
             SqlConfiguration = configuration;
         }
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public override IEnumerable<SqlTableWithRecords> Transform(IEnumerable<ToSqlItem> items, DocumentsOperationContext context)
         {
-            var patcher = new SqlReplicationPatchDocument(Database, context, SqlConfiguration);
+            var patcher = new SqlPatchDocument(Database, context, SqlConfiguration);
 
             foreach (var toSqlItem in items)
             {
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return true; // TODO
         }
 
-        public bool PrepareSqlReplicationConfig(BlittableJsonReaderObject connections, bool writeToLog = true)
+        public bool PrepareSqlEtlConfig(BlittableJsonReaderObject connections, bool writeToLog = true)
         {
             if (string.IsNullOrWhiteSpace(SqlConfiguration.ConnectionStringName) == false)
             {
@@ -177,8 +177,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 }
 
                 var message =
-                    $"Could not find connection string named '{SqlConfiguration.ConnectionStringName}' for sql replication config: " +
-                    $"{SqlConfiguration.Name}, ignoring sql replication setting.";
+                    $"Could not find connection string named '{SqlConfiguration.ConnectionStringName}' for SQL ETL config: " +
+                    $"{SqlConfiguration.Name}, ignoring SQL ETL setting.";
 
                 if (writeToLog)
                 {
@@ -186,13 +186,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                         Logger.Info(message);
                 }
 
-                Statistics.LastAlert = AlertRaised.Create(Tag, message, AlertType.SqlReplication_ConnectionStringMissing, NotificationSeverity.Error);
+                Statistics.LastAlert = AlertRaised.Create(Tag, message, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
 
                 return false;
             }
 
             var emptyConnectionStringMsg =
-                $"Connection string name cannot be empty for sql replication config: {SqlConfiguration.Name}, ignoring sql replication setting.";
+                $"Connection string name cannot be empty for SQL ETL config: {SqlConfiguration.Name}, ignoring SQL ETL setting.";
 
             if (writeToLog)
             {
@@ -200,22 +200,22 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Logger.Info(emptyConnectionStringMsg);
             }
 
-            Statistics.LastAlert = AlertRaised.Create(Tag, emptyConnectionStringMsg, AlertType.SqlReplication_ConnectionStringMissing, NotificationSeverity.Error);
+            Statistics.LastAlert = AlertRaised.Create(Tag, emptyConnectionStringMsg, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
 
             return false;
         }
 
         protected override void LoadLastProcessedEtag(DocumentsOperationContext context)
         {
-            var sqlReplicationStatus = Database.DocumentsStorage.Get(context, Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + Name);
-            if (sqlReplicationStatus == null)
+            var sqlEtlStatus = Database.DocumentsStorage.Get(context, Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + Name);
+            if (sqlEtlStatus == null)
             {
                 Statistics.LastProcessedEtag = 0;
             }
             else
             {
-                var replicationStatus = JsonDeserializationServer.SqlReplicationStatus(sqlReplicationStatus.Data);
-                Statistics.LastProcessedEtag = replicationStatus.LastProcessedEtag;
+                var etlStatus = JsonDeserializationServer.SqlEtlStatus(sqlEtlStatus.Data);
+                Statistics.LastProcessedEtag = etlStatus.LastProcessedEtag;
             }
         }
 
@@ -224,8 +224,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             var key = Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + Name;
             var document = context.ReadObject(new DynamicJsonValue
             {
-                [nameof(SqlReplicationStatus.Name)] = Name,
-                [nameof(SqlReplicationStatus.LastProcessedEtag)] = Statistics.LastProcessedEtag
+                [nameof(SqlEtlStatus.Name)] = Name,
+                [nameof(SqlEtlStatus.LastProcessedEtag)] = Statistics.LastProcessedEtag
             }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
             Database.DocumentsStorage.Put(context, key, null, document);
@@ -236,18 +236,18 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (string.IsNullOrWhiteSpace(SqlConfiguration.Name) == false)
                 return true;
 
-            var message = $"Could not find name for sql replication document {SqlConfiguration.Name}, ignoring";
+            var message = $"Could not find name for SQL ETL document {SqlConfiguration.Name}, ignoring";
 
             if (Logger.IsInfoEnabled)
                 Logger.Info(message);
 
-            Statistics.LastAlert = AlertRaised.Create(Tag, message, AlertType.SqlReplication_ConnectionStringMissing, NotificationSeverity.Error);
+            Statistics.LastAlert = AlertRaised.Create(Tag, message, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
             return false;
         }
 
-        public DynamicJsonValue Simulate(SimulateSqlReplication simulateSqlReplication, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
+        public DynamicJsonValue Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
         {
-            if (simulateSqlReplication.PerformRolledBackTransaction)
+            if (simulateSqlEtl.PerformRolledBackTransaction)
             {
                 var summaries = new List<TableQuerySummary>();
 
@@ -295,16 +295,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
-        public static DynamicJsonValue SimulateSqlReplicationSqlQueries(SimulateSqlReplication simulateSqlReplication, DocumentDatabase database, DocumentsOperationContext context)
+        public static DynamicJsonValue SimulateSqlEtl(SimulateSqlEtl simulateSqlEtl, DocumentDatabase database, DocumentsOperationContext context)
         {
             try
             {
-                var document = database.DocumentsStorage.Get(context, simulateSqlReplication.DocumentId);
+                var document = database.DocumentsStorage.Get(context, simulateSqlEtl.DocumentId);
 
-                using (var etl = new SqlEtl(database, simulateSqlReplication.Configuration))
+                using (var etl = new SqlEtl(database, simulateSqlEtl.Configuration))
                 {
                     // TODO arek
-                    //if (etl.PrepareSqlReplicationConfig(_connections, false) == false)
+                    //if (etl.PrepareSqlEtlConfig(_connections, false) == false)
                     //{
                     //    return new DynamicJsonValue
                     //    {
@@ -314,7 +314,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                     var transformed = etl.Transform(new[] { new ToSqlItem(document) }, context);
 
-                    return etl.Simulate(simulateSqlReplication, context, transformed);
+                    return etl.Simulate(simulateSqlEtl, context, transformed);
                 }
             }
             catch (Exception e)
@@ -323,10 +323,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 {
                     ["LastAlert"] =
                     AlertRaised.Create("SQL ETL",
-                        $"Last SQL replication operation for {simulateSqlReplication.Configuration.Name} was failed",
-                        AlertType.SqlReplication_Error,
+                        $"Last SQL ETL operation for {simulateSqlEtl.Configuration.Name} was failed",
+                        AlertType.SqlEtl_Error,
                         NotificationSeverity.Error,
-                        key: simulateSqlReplication.Configuration.Name,
+                        key: simulateSqlEtl.Configuration.Name,
                         details: new ExceptionDetails(e)).ToJson()
                 };
             }

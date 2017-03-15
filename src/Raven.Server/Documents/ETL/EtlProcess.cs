@@ -175,8 +175,8 @@ namespace Raven.Server.Documents.ETL
                     duration.Stop();
 
                     // TODO arek
-                    //MetricsCountersManager.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
-                    //MetricsCountersManager.UpdateReplicationPerformance(new SqlReplicationPerformanceStats
+                    //MetricsCountersManager.BatchSizeMeter.Mark(countOfReplicatedItems);
+                    //MetricsCountersManager.UpdateReplicationPerformance(new SqlEtlPerformanceStats
                     //{
                     //    BatchSize = countOfReplicatedItems,
                     //    Duration = spRepTime.Elapsed,

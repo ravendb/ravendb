@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlReplicationPerformanceStats
+    public class SqlEtlPerformanceStats
     {
         public int BatchSize { get; set; }
         public TimeSpan Duration { get; set; }
@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return $"BatchSize: {BatchSize}, Started: {Started}, Duration: {Duration}";
         }
 
-        protected bool Equals(SqlReplicationPerformanceStats other)
+        protected bool Equals(SqlEtlPerformanceStats other)
         {
             return BatchSize == other.BatchSize && Duration.Equals(other.Duration) && Started.Equals(other.Started);
         }
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((SqlReplicationPerformanceStats)obj);
+            return Equals((SqlEtlPerformanceStats)obj);
         }
 
         public override int GetHashCode()
