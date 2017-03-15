@@ -21,7 +21,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     loadConnections():JQueryPromise<any> {
         return new getSqlReplicationConnectionsCommand(this.activeDatabase())
             .execute()
-            .done((repSetup: Raven.Server.Documents.SqlReplication.SqlConnections) => {
+            .done((repSetup: Raven.Server.Documents.ETL.Providers.SQL.Connections.SqlConnections) => {
 
                 this.connections(new sqlReplicationConnections(repSetup));
                 if (this.connections().predefinedConnections().length > 0) {
