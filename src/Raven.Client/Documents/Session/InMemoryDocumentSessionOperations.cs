@@ -971,15 +971,6 @@ more responsive application.
             _deferedCommands.AddRange(commands);
         }
 
-        /// <summary>
-        /// Version this entity when it is saved.  Use when Versioning bundle configured to ExcludeUnlessExplicit.
-        /// </summary>
-        /// <param name="entity">The entity.</param>
-        public void ExplicitlyVersion(object entity)
-        {
-            GetMetadataFor(entity)[Constants.Documents.Versioning.EnableVersioning] = "true";
-        }
-
         private void Dispose(bool isDisposing)
         {
             if (isDisposing)

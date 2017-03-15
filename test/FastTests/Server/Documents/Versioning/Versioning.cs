@@ -151,7 +151,7 @@ namespace FastTests.Server.Documents.Versioning
         }
 
         [Fact]
-        public async Task WillCreateRevisionIfExplicitlyRequested()
+        public async Task WillCreateRevision()
         {
             var product = new Product { Description = "A fine document db", Quantity = 5 };
             using (var store = GetDocumentStore())
@@ -166,7 +166,6 @@ namespace FastTests.Server.Documents.Versioning
                 {
                     product.Description = "desc 2";
                     await session.StoreAsync(product);
-                    session.Advanced.ExplicitlyVersion(product);
                     await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenAsyncSession())
