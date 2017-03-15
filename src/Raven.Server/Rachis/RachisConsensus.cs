@@ -353,7 +353,7 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction()) // using write tx just for the lock here
             {
-                if (_disposables.Count > 0 && ReferenceEquals(_disposables[0], parentState) == false)
+                if (_disposables.Count == 0 || ReferenceEquals(_disposables[0], parentState) == false)
                     throw new ConcurrencyException(
                         "Could not set the disposeOnStateChange because by the time we did it the parent state has changed");
                 _disposables.Add(disposeOnStateChange);
