@@ -1,4 +1,5 @@
-<div class="transformers">
+<div class="transformers flex-vertical absolute-fill">
+    <div class="flex-header">
     <div data-bind="if: transformersGroups().length === 0">
         <div class="row">
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
@@ -8,6 +9,9 @@
             </div>
         </div>
     </div>
+    </div>
+
+    <div class="flex-content scroll">
     <div class="clearfix toolbar" data-bind="if: transformersGroups().length">
         <div class="pull-left">
             <div class="form-inline">
@@ -96,6 +100,7 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 </div>
 

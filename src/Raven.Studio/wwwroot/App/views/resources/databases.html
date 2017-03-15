@@ -7,9 +7,11 @@
         </div>
     </div>
 </div>
-<div class="databases" data-bind="if: databases().sortedDatabases().length, css: { 'databases_compact': compactView() }">
+<div class="databases flex-vertical absolute-fill" data-bind="if: databases().sortedDatabases().length, css: { 'databases_compact': compactView() }">
+    <div class="flex-header">
     <div class="databasesToolbar toolbar clearfix">
         <div class="form-inline">
+            <div class="flex-header">
             <div class="checkbox checkbox-primary checkbox-inline align-checkboxes">
                 <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
                 <label></label>
@@ -61,7 +63,10 @@
             </div>
         </div>
     </div> 
-    
+    </div>
+    </div>
+
+    <div class="flex-content scroll">
     <div data-bind="foreach: databases().sortedDatabases">
         <div class="panel database" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel database ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
             <div class="padding padding-sm">
@@ -145,6 +150,7 @@
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     </div>
 </div>
