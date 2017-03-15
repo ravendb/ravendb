@@ -591,14 +591,6 @@ replicateToOrders(orderData);");
             {
                 CreateRdbmsSchema(store);
 
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (statistics.LastProcessedEtag > 0)
-                        eventSlim.Set();
-                };
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order());
@@ -625,9 +617,8 @@ replicateToOrders(orderData);");
                }));
                 await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
-
-                Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
-                var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(10));
+                
+                var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(30));
                 if (condition == false)
                 {
                     var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
@@ -635,6 +626,13 @@ var nameArr = this.StepName.split('.');");
                     File.WriteAllText(tempFileName, sb.ToString());
                     throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
                 }
+                //else
+                //{
+                //    var msg = "aaaa";
+                //    var tempFileName = Path.GetTempFileName();
+                //    File.WriteAllText(tempFileName, sb.ToString());
+                //    throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
+                //}
             }
         }
 
