@@ -206,7 +206,7 @@ namespace Raven.Server
             Console.WriteLine("Showing stats, press ESC to close...");
             Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec       | docs (all dbs)");
             var i = 0;
-            while (true)
+            while (Console.KeyAvailable == false)
             {
                 var json = MemoryStatsHandler.MemoryStatsInternal();
                 var humaneProp = (json["Humane"] as DynamicJsonValue);
@@ -239,12 +239,16 @@ namespace Raven.Server
 
                 Console.Write($"| {allDocs,14:#,#.#;;0}      ");
 
-                for (int j = 0; j < 5; j++)
+                for (int j = 0; j < 5 && Console.KeyAvailable == false; j++)
                 {
                     Thread.Sleep(100);
                 }
             }
-         
+
+            Console.ReadKey(true);
+            Console.WriteLine();
+            Console.WriteLine("Stats halted");
+
         }
     }
 }
