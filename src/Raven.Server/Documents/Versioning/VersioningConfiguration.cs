@@ -8,21 +8,15 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.Versioning
 {
-#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class VersioningConfiguration
-#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public VersioningConfigurationCollection Default { get; set; }
 
         public Dictionary<string, VersioningConfigurationCollection> Collections { get; set; }
 
-#pragma warning disable 659
-        public override bool Equals(object obj)
-#pragma warning restore 659
+     
+        protected bool Equals(VersioningConfiguration other)
         {
-            var other = obj as VersioningConfiguration;
-            if (other == null)
-                return false;
             if (other.Default.Equals(Default) == false)
                 return false;
             foreach (var keyValue in Collections)
@@ -39,6 +33,31 @@ namespace Raven.Server.Documents.Versioning
                     return false;
             }
             return true;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((VersioningConfiguration)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = Default?.GetHashCode() ?? 0;
+                if (Collections == null)
+                    return hash;
+
+                foreach (var collection in Collections)
+                {
+                    hash = hash ^ (collection.Key.GetHashCode() * 397);
+                    hash = hash ^ (collection.Value.GetHashCode() * 397);
+                }
+                return hash ;
+            }
         }
     }
 }

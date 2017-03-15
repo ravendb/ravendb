@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Jint.Parser.Ast;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Server.Operations;
@@ -36,7 +35,7 @@ namespace Raven.Server.Documents
 
         private void HandleDatabaseRecordChange(object sender, string changedDatabase)
         {
-            if (changedDatabase.ToLowerInvariant() != _database.Name.ToLowerInvariant())
+            if (string.Equals(changedDatabase, _database.Name, StringComparison.OrdinalIgnoreCase) == false)
                 return;
             VersioningStorage = VersioningStorage.LoadConfigurations(_database, _serverStore, VersioningStorage);
         }
@@ -46,7 +45,7 @@ namespace Raven.Server.Documents
         /// </summary>
         public void InitializeBundles()
         {
-			//TODO: read database document and init all bundles from it
+            //TODO: read database document and init all bundles from it
             VersioningStorage = VersioningStorage.LoadConfigurations(_database, _serverStore, VersioningStorage);
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))

@@ -1,8 +1,6 @@
 namespace Raven.Server.Documents.Versioning
 {
-#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class VersioningConfigurationCollection
-#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public long? MaxRevisions { get; set; }
 
@@ -10,20 +8,28 @@ namespace Raven.Server.Documents.Versioning
 
         public bool PurgeOnDelete { get; set; }
 
-#pragma warning disable 659
-        public override bool Equals(object obj)
-#pragma warning restore 659
+        protected bool Equals(VersioningConfigurationCollection other)
         {
-            var other = obj as VersioningConfigurationCollection;
-            if (other == null)
-                return false;
-            if (MaxRevisions != other.MaxRevisions)
-                return false;
-            if (Active != other.Active)
-                return false;
-            if (PurgeOnDelete != other.PurgeOnDelete)
-                return false;
-            return true;
+            return MaxRevisions == other.MaxRevisions && Active == other.Active && PurgeOnDelete == other.PurgeOnDelete;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((VersioningConfigurationCollection)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = MaxRevisions.GetHashCode();
+                hashCode = (hashCode * 397) ^ Active.GetHashCode();
+                hashCode = (hashCode * 397) ^ PurgeOnDelete.GetHashCode();
+                return hashCode;
+            }
         }
     }
 }

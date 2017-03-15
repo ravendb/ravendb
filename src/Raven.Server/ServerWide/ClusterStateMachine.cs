@@ -500,6 +500,15 @@ namespace Raven.Server.ServerWide
             return Tuple.Create(key, doc);
         }
 
+        public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name)
+        {
+            long etag;
+            var doc = Read(context, "db/"+ name.ToLowerInvariant(), out etag);
+            if (doc == null)
+                return null;
+            return JsonDeserializationCluster.DatabaseRecord(doc);
+        }
+
         public BlittableJsonReaderObject Read(TransactionOperationContext context, string name)
         {
             long etag;
@@ -564,8 +573,8 @@ namespace Raven.Server.ServerWide
         public DatabaseTopology Topology;
 
         public VersioningConfiguration VersioningConfiguration;
-	}
-	
+    }
+    
     public class DeleteDatabaseCommand
     {
         public string DatabaseName;
@@ -622,8 +631,8 @@ namespace Raven.Server.ServerWide
         public TransformerDefinition[] Transformers;
 
         public Dictionary<string, string> Settings;
-		
-		public VersioningConfiguration VersioningConfiguration;
+        
+        public VersioningConfiguration VersioningConfiguration;
     }
 
     public enum DeletionInProgressStatus
@@ -646,7 +655,7 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, AddDatabaseCommand> AddDatabaseCommand = GenerateJsonDeserializationRoutine<AddDatabaseCommand>();
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
-		
-		public static readonly Func<BlittableJsonReaderObject, EditVersioningCommand> EditVersioningCommand = GenerateJsonDeserializationRoutine<EditVersioningCommand>();
+        
+        public static readonly Func<BlittableJsonReaderObject, EditVersioningCommand> EditVersioningCommand = GenerateJsonDeserializationRoutine<EditVersioningCommand>();
     }
 }

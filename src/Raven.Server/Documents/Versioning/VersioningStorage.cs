@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Versioning
         private readonly VersioningConfiguration _versioningConfiguration;
 
         internal VersioningConfiguration VersioningConfiguration => _versioningConfiguration;
-		
+        
         // The documents schema is as follows
         // (lowered key, recored separator, etag, lowered key, recored separator, change vector, lazy string key, document)
         // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
@@ -107,12 +107,12 @@ namespace Raven.Server.Documents.Versioning
             using (serverStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
-                var dbDoc = serverStore.Cluster.Read(context, $"db/{database.Name.ToLowerInvariant()}");
+                var dbDoc = serverStore.Cluster.ReadDatabase(context, database.Name);
                 if (dbDoc == null)
                     return null;
                 try
                 {
-                    var versioningConfiguration = JsonDeserializationCluster.DatabaseRecord(dbDoc).VersioningConfiguration;
+                    var versioningConfiguration = dbDoc.VersioningConfiguration;
                     if (versioningConfiguration == null)
                         return null;
                     if (versioningConfiguration.Equals(versioningStorage?.VersioningConfiguration))
