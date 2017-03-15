@@ -7,7 +7,6 @@ class serverSmugglingItem {
     database: database;
     incremental = ko.observable<boolean>(true);
     stripReplicationInformation = ko.observable<boolean>(false);
-    shouldDisableVersioningBundle = ko.observable<boolean>(false);
     hasReplicationBundle: KnockoutComputed<boolean>;
     hasVersioningBundle: KnockoutComputed<boolean>;
 
@@ -21,8 +20,7 @@ class serverSmugglingItem {
         return {
             Name: this.database.name,
             Incremental: this.incremental(),
-            StripReplicationInformation: this.stripReplicationInformation(),
-            ShouldDisableVersioningBundle: this.shouldDisableVersioningBundle()
+            StripReplicationInformation: this.stripReplicationInformation()
         }
     }
     

@@ -833,7 +833,6 @@ interface serverSmugglingItemDto {
     Name: string;
     Incremental: boolean;
     StripReplicationInformation: boolean;
-    ShouldDisableVersioningBundle: boolean;
 }
 
 interface serverConnectionInfoDto {
