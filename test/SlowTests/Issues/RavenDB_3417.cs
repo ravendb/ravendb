@@ -3,26 +3,28 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
 
+using FastTests;
+using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3417 : RavenTest
+    public class RavenDB_3417 : RavenTestBase
     {
         [Fact]
         public void GetIndexingPerformanceStatisticsShouldWork()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                DeployNorthwind(store);
+                store.Admin.Send(new CreateSampleDataOperation());
 
                 WaitForIndexing(store);
 
-                var indexingPerformanceStatistics = store.DatabaseCommands.GetIndexingPerformanceStatistics();
+                var indexingPerformanceStatistics = store.Admin.Send(new GetIndexPerformanceStatisticsOperation());
 
-                Assert.Equal(4, indexingPerformanceStatistics.Length);
+                Assert.Equal(3, indexingPerformanceStatistics.Length);
 
                 foreach (var stats in indexingPerformanceStatistics)
                 {

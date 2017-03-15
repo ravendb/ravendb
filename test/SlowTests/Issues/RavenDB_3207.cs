@@ -3,18 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Embedded;
-using Raven.Tests.Common;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3207 : RavenTest
+    public class RavenDB_3207 : RavenTestBase
     {
-        public class Document
+        private class Document
         {
             public string Value { get; set; }
         }
@@ -24,12 +24,8 @@ namespace Raven.Tests.Issues
         {
             Action storeAndRead = () =>
             {
-                using (var store = new EmbeddableDocumentStore
+                using (var store = GetDocumentStore())
                 {
-                    RunInMemory = true
-                })
-                {
-                    store.Initialize();
                     using (var session = store.OpenSession())
                     {
                         session.Store(new Document { Value = "foo" }, "documents/1");

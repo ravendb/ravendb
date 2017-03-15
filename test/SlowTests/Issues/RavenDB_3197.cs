@@ -3,32 +3,25 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Database.Bundles.ScriptedIndexResults;
-using Raven.Database.Json;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
+
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    
-    public class RavenDB_3197 : RavenTest
+    public class RavenDB_3197 : RavenTestBase
     {
-
-        public class SimpleUser
+        private class SimpleUser
         {
             public string FirstName { get; set; }
             public string LastName { get; set; }
         }
 
-
-        [Fact]
+        [Fact(Skip = "RavenDB-6562")]
         public void ScriptPatchShouldGenerateNiceException()
         {
-            using (var store = NewDocumentStore())
+            /*
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -73,6 +66,7 @@ apply@main.js:2
 anonymous function@main.js:1", e.Message);
                 }
             }
+            */
         }
     }
 }

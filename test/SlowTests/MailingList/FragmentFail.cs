@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void Fragment_Length_Should_Not_Be_More_Then_128()
         {
             using (var store = GetDocumentStore())

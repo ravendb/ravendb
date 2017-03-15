@@ -3,22 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3232 : RavenTest
+    public class RavenDB_3232 : RavenTestBase
     {
-        public class Person
+        private class Person
         {
             public string Id { get; set; }
 
@@ -27,20 +27,22 @@ namespace Raven.Tests.Issues
             public string LastName { get; set; }
         }
 
-        public class TestIndex : AbstractIndexCreationTask<Person>
+        private class TestIndex : AbstractIndexCreationTask<Person>
         {
             public TestIndex()
             {
                 Map = persons => from person in persons select new { person.FirstName, person.LastName };
             }
         }
+
         [Fact]
         public void ShouldSimplyCreateIndex()
         {
-            using (var store = NewDocumentStore(runInMemory: false))
+            var path = NewDataPath();
+            using (var store = GetDocumentStore(path: path))
             {
                 // since index dones't exists just it should simply create it instead of using side-by-side.
-                new TestIndex().SideBySideExecute(store);
+                new TestIndex().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -59,14 +61,16 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ReplaceOfNonStaleIndex()
         {
-            using (var store = NewDocumentStore(runInMemory: false))
+            var path = NewDataPath();
+            using (var store = GetDocumentStore(path: path))
             {
-
                 var oldIndexDef = new IndexDefinition
                 {
-                    Map = "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}"
+                    Name = "TestIndex",
+                    Maps = { "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}" }
                 };
-                store.DatabaseCommands.PutIndex("TestIndex", oldIndexDef);
+
+                store.Admin.Send(new PutIndexesOperation(oldIndexDef));
 
                 using (var session = store.OpenSession())
                 {
@@ -75,11 +79,12 @@ namespace Raven.Tests.Issues
                 }
 
                 WaitForIndexing(store);
-                store.DocumentDatabase.StopBackgroundWorkers();
 
-                new TestIndex().SideBySideExecute(store);
+                store.Admin.Send(new StopIndexingOperation());
 
-                var e = Assert.Throws<InvalidOperationException>(() =>
+                new TestIndex().Execute(store);
+
+                var e = Assert.Throws<RavenException>(() =>
                 {
                     using (var session = store.OpenSession())
                     {
@@ -90,16 +95,9 @@ namespace Raven.Tests.Issues
 
                 Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
 
-                store.DocumentDatabase.SpinBackgroundWorkers();
+                store.Admin.Send(new StartIndexingOperation());
 
                 WaitForIndexing(store);
-
-                store
-                    .DatabaseCommands
-                    .Admin
-                    .StopIndexing();
-
-                store.SystemDatabase.IndexReplacer.ReplaceIndexes(store.SystemDatabase.IndexStorage.Indexes);
 
                 using (var session = store.OpenSession())
                 {
@@ -114,14 +112,16 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task ReplaceOfNonStaleIndexAsync()
         {
-            using (var store = NewDocumentStore(runInMemory: false))
+            var path = NewDataPath();
+            using (var store = GetDocumentStore(path: path))
             {
-
                 var oldIndexDef = new IndexDefinition
                 {
-                    Map = "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}"
+                    Name = "TestIndex",
+                    Maps = { "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}" }
                 };
-                await store.AsyncDatabaseCommands.PutIndexAsync("TestIndex", oldIndexDef).ConfigureAwait(false);
+
+                await store.Admin.SendAsync(new PutIndexesOperation(oldIndexDef));
 
                 using (var session = store.OpenSession())
                 {
@@ -130,11 +130,12 @@ namespace Raven.Tests.Issues
                 }
 
                 WaitForIndexing(store);
-                store.DocumentDatabase.StopBackgroundWorkers();
 
-                await new TestIndex().SideBySideExecuteAsync(store).ConfigureAwait(false);
+                await store.Admin.SendAsync(new StopIndexingOperation());
 
-                var e = Assert.Throws<InvalidOperationException>(() =>
+                await new TestIndex().ExecuteAsync(store);
+
+                var e = Assert.Throws<RavenException>(() =>
                 {
                     using (var session = store.OpenSession())
                     {
@@ -145,16 +146,9 @@ namespace Raven.Tests.Issues
 
                 Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
 
-                store.DocumentDatabase.SpinBackgroundWorkers();
+                await store.Admin.SendAsync(new StartIndexingOperation());
 
                 WaitForIndexing(store);
-
-                store
-                    .DatabaseCommands
-                    .Admin
-                    .StopIndexing();
-
-                store.SystemDatabase.IndexReplacer.ReplaceIndexes(store.SystemDatabase.IndexStorage.Indexes);
 
                 using (var session = store.OpenSession())
                 {
@@ -169,11 +163,12 @@ namespace Raven.Tests.Issues
         [Fact]
         public void SideBySideExecuteShouldNotCreateReplacementIndexIfIndexToReplaceIsIdentical()
         {
-            using (var store = NewDocumentStore(runInMemory: false))
+            var path = NewDataPath();
+            using (var store = GetDocumentStore(path: path))
             {
                 var indexName = new TestIndex().IndexName;
 
-                new TestIndex().SideBySideExecute(store);
+                new TestIndex().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -182,15 +177,11 @@ namespace Raven.Tests.Issues
                 }
 
                 WaitForIndexing(store);
-                store.DocumentDatabase.StopBackgroundWorkers();
-                store
-                    .DatabaseCommands
-                    .Admin
-                    .StopIndexing();
+                store.Admin.Send(new StopIndexingOperation());
 
-                new TestIndex().SideBySideExecute(store);
+                new TestIndex().Execute(store);
 
-                Assert.Null(store.DatabaseCommands.GetIndex(Constants.SideBySideIndexNamePrefix + indexName));
+                Assert.Null(store.Admin.Send(new GetIndexOperation(Constants.Documents.Indexing.SideBySideIndexNamePrefix + indexName)));
             }
         }
     }

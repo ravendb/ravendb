@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Patch
             _allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
         }
 
-        public virtual PatchResult Apply(DocumentsOperationContext context, Document document, PatchRequest patch)
+        public virtual PatchResult Apply(DocumentsOperationContext context, Document document, PatchRequest patch, bool debugMode = false)
         {
             if (document == null)
                 return null;
@@ -47,15 +47,20 @@ namespace Raven.Server.Documents.Patch
             if (string.IsNullOrEmpty(patch.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-            var scope = ApplySingleScript(context, document, patch, debugMode: false);
+            var scope = ApplySingleScript(context, document, patch, debugMode);
             var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Key); /* TODO: Should not use BlittableJsonDocumentBuilder.UsageMode.ToDisk? */
 
-            return new PatchResult
+            var result = new PatchResult
             {
                 Status = PatchStatus.Patched,
                 OriginalDocument = document.Data,
                 ModifiedDocument = modifiedDocument
             };
+
+            if (debugMode)
+                AddDebug(context, result, scope);
+
+            return result;
         }
 
         public PatchResult Apply(
@@ -122,15 +127,7 @@ namespace Raven.Server.Documents.Patch
             };
 
             if (debugMode)
-            {
-                var djv = new DynamicJsonValue
-                {
-                    ["Info"] = scope.DebugInfo,
-                    ["Actions"] = scope.DebugActions.GetDebugActions()
-                };
-
-                result.Debug = context.ReadObject(djv, "debug/actions");
-            }
+                AddDebug(context, result, scope);
 
             if (modifiedDocument == null)
             {
@@ -175,7 +172,7 @@ namespace Raven.Server.Documents.Patch
             };
         }
 
-        public struct SingleScriptRun
+        internal struct SingleScriptRun
         {
             private readonly PatchDocument _parent;
             private readonly PatchRequest _patch;
@@ -242,7 +239,7 @@ namespace Raven.Server.Documents.Patch
                     errorMsg += Environment.NewLine + "Stacktrace:" + Environment.NewLine + error.CallStack;
 
                 var targetEx = errorEx as TargetInvocationException;
-                if (targetEx != null && targetEx.InnerException != null)
+                if (targetEx?.InnerException != null)
                     throw new JavaScriptException(errorMsg, targetEx.InnerException);
 
                 var recursionEx = errorEx as RecursionDepthOverflowException;
@@ -255,7 +252,7 @@ namespace Raven.Server.Documents.Patch
 
         protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, PatchRequest patch, bool debugMode, PatcherOperationScope externalScope = null)
         {
-            var run = new SingleScriptRun(this, context, patch, debugMode,externalScope);
+            var run = new SingleScriptRun(this, context, patch, debugMode, externalScope);
             try
             {
                 run.Prepare(document?.Data?.Size ?? 0);
@@ -329,8 +326,8 @@ namespace Raven.Server.Documents.Patch
             jintEngine.ResetStatementsCount();
         }
 
-        protected string ExecutionString =
-            @"function ExecutePatchScript(docInner){{ return (function(doc){{ {0} }}).apply(docInner); }};";
+        protected string ExecutionString = @"function ExecutePatchScript(docInner){{ return (function(doc){{ {0} }}).apply(docInner); }};";
+
         private Engine CreateEngine(PatchRequest patch)
         {
             var scriptWithProperLines = patch.Script.NormalizeLineEnding();
@@ -436,6 +433,17 @@ namespace Raven.Server.Documents.Patch
                     return reader.ReadToEnd();
                 }
             }
+        }
+
+        private static void AddDebug(JsonOperationContext context, PatchResult result, PatcherOperationScope scope)
+        {
+            var djv = new DynamicJsonValue
+            {
+                ["Info"] = scope.DebugInfo,
+                ["Actions"] = scope.DebugActions.GetDebugActions()
+            };
+
+            result.Debug = context.ReadObject(djv, "debug/actions");
         }
     }
 }

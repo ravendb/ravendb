@@ -1,21 +1,20 @@
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3222 : RavenTest
+    public class RavenDB_3222 : RavenTestBase
     {
-        public class MySpatialEntity
+        private class MySpatialEntity
         {
             public string Name { get; set; }
             public string WKT { get; set; }
         }
 
-        public class SpatialIndexForTest : AbstractIndexCreationTask<MySpatialEntity>
+        private class SpatialIndexForTest : AbstractIndexCreationTask<MySpatialEntity>
         {
             public SpatialIndexForTest()
             {
@@ -30,10 +29,10 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-5988")]
         public void TDSQ()
         {
-            using (var store = NewRemoteDocumentStore(fiddler: true))
+            using (var store = GetDocumentStore())
             {
                 new SpatialIndexForTest().Execute(store);
 
