@@ -10,7 +10,10 @@ using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -23,7 +26,18 @@ namespace Raven.Server.Documents.Handlers
     public class AttachmentHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/attachments", "GET")]
-        public async Task Get()
+        public Task Get()
+        {
+            return GetAttachment(true);
+        }
+
+        [RavenAction("/databases/*/attachments", "POST")]
+        public Task GetPost()
+        {
+            return GetAttachment(false);
+        }
+
+        private async Task GetAttachment(bool isDocument)
         {
             var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -32,7 +46,25 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name);
+                AttachmentType type = AttachmentType.Document;
+                ChangeVectorEntry[] changeVector = null;
+                if (isDocument == false)
+                {
+                    var request = context.Read(RequestBodyStream(), "GetAttachment");
+
+                    string typeString;
+                    if (request.TryGet("Type", out typeString) == false ||
+                        Enum.TryParse(typeString, out type) == false)
+                        throw new ArgumentException("The 'Type' field in the body request is mandatory");
+
+                    BlittableJsonReaderArray changeVectorArray;
+                    if (request.TryGet("ChangeVector", out changeVectorArray) == false)
+                        throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
+
+                    changeVector = changeVectorArray.ToVector();
+                }
+
+                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);
                 if (attachment == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
