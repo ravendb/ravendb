@@ -6,6 +6,8 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\checkPrerequisites.ps1'
 . '.\scripts\restore.ps1'
 . '.\scripts\clean.ps1'
+. '.\scripts\arm.ps1'
+. '.\scripts\archive.ps1'
 . '.\scripts\package.ps1'
 . '.\scripts\buildProjects.ps1'
 . '.\scripts\getScriptDirectory.ps1'
@@ -13,7 +15,6 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\env.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
 . '.\scripts\nuget.ps1'
-. '.\scripts\dotnetForRpi.ps1'
 
 CheckPrerequisites
 
@@ -63,8 +64,8 @@ $SPECS = @(
     },
     @{
        "Name" = "raspberry-pi";
-       "Runtime" = "ubuntu.16.04-x64";
-       "PkgType" = "tar";
+       "Runtime" = "";
+       "PkgType" = "tar.bz2";
        "IsUnix" = $True;
     }
 );
@@ -90,6 +91,7 @@ BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
 Foreach ($spec in $SPECS) {
     $runtime = $spec.Runtime
     $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
+
     BuildServer $SERVER_SRC_DIR $specOutDir $runtime $spec.Name
 
     $specOutDirs = @{
