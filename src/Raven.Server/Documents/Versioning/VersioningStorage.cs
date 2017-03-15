@@ -143,28 +143,39 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags flags,
-            Func<Document> getExistingDocument, BlittableJsonReaderObject document, out VersioningConfigurationCollection configuration)
+        public bool ShouldVersionDocument(CollectionName collectionName,
+            NonPersistentDocumentFlags nonPersistentFlags,
+            Func<Document> getExistingDocument,
+            BlittableJsonReaderObject document,
+            ref DocumentFlags documentFlags,
+            out VersioningConfigurationCollection configuration)
         {
             configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
                 return false;
 
-            if ((flags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
-                return true;
-
-            var existingDocument = getExistingDocument();
-            if (existingDocument == null)
-                return true;
-
-            // compare the contents of the existing and the new document
-            if (existingDocument.IsMetadataEqualTo(document) && existingDocument.IsEqualTo(document))
+            try
             {
-                // no need to create a new revision, both documents have identical content
-                return false;
-            }
+                if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
+                    return true;
 
-            return true;
+                var existingDocument = getExistingDocument();
+                if (existingDocument == null)
+                    return true;
+
+                // compare the contents of the existing and the new document
+                if (existingDocument.IsMetadataEqualTo(document) && existingDocument.IsEqualTo(document))
+                {
+                    // no need to create a new revision, both documents have identical content
+                    return false;
+                }
+
+                return true;
+            }
+            finally
+            {
+                documentFlags |= DocumentFlags.Versioned;
+            }
         }
 
         public void PutFromDocument(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 

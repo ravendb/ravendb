@@ -2045,15 +2045,14 @@ namespace Raven.Server.Documents
                     if (_documentDatabase.BundleLoader.VersioningStorage != null)
                     {
                         VersioningConfigurationCollection configuration;
-                        var version = _documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(
+                        if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(
                             collectionName, 
                             nonPersistentFlags,
-                            () => oldValue.Pointer == null ? null : TableValueToDocument(context, ref oldValue),
+                            () => oldValue.Pointer != null ? TableValueToDocument(context, ref oldValue) : null,
                             document,
-                            out configuration);
-                        if (version)
+                            ref flags,
+                            out configuration))
                         {
-                            flags |= DocumentFlags.Versioned;
                             _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, configuration);
                         }
                     }
