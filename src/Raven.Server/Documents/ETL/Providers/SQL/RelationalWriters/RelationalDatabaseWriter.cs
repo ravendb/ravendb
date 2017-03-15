@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         private readonly DbConnection _connection;
         private readonly DbTransaction _tx;
 
-        private readonly List<Func<DbParameter, string, bool>> stringParserList;
+        private readonly List<Func<DbParameter, string, bool>> _stringParserList;
 
         private const int LongStatementWarnThresholdInMilliseconds = 3000;
 
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
             _tx = _connection.BeginTransaction();
 
-            stringParserList = GenerateStringParsers();
+            _stringParserList = GenerateStringParsers();
         }
 
         public static void TestConnection(string factoryName, string connectionString)
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                             continue;
                         var colParam = cmd.CreateParameter();
                         colParam.ParameterName = column.Key;
-                        SetParamValue(colParam, column, stringParserList);
+                        SetParamValue(colParam, column, _stringParserList);
                         cmd.Parameters.Add(colParam);
                         sb.Append(GetParameterName(column.Key)).Append(", ");
                     }
@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Insert took: {elapsedMilliseconds}ms, statement: {stmt}");
 
-                        var tableMetrics = _etl.MetricsCountersManager.GetTableMetrics(tableName);
+                        var tableMetrics = _etl.Metrics.GetTableMetrics(tableName);
                         tableMetrics.InsertActionsMeter.Mark(1);
 
                         if (elapsedMilliseconds > LongStatementWarnThresholdInMilliseconds)
@@ -312,7 +312,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Delete took: {elapsedMiliseconds}ms, statement: {stmt}");
 
-                        var tableMetrics = _etl.MetricsCountersManager.GetTableMetrics(tableName);
+                        var tableMetrics = _etl.Metrics.GetTableMetrics(tableName);
                         tableMetrics.DeleteActionsMeter.Mark(1);
 
                         if (elapsedMiliseconds > LongStatementWarnThresholdInMilliseconds)

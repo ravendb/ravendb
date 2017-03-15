@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public abstract IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context);
+        public abstract IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, out int batchSize);
 
         public abstract bool Load(IEnumerable<TTransformed> items);
 
@@ -70,6 +70,8 @@ namespace Raven.Server.Documents.ETL
         protected abstract void LoadLastProcessedEtag(DocumentsOperationContext context);
 
         protected abstract void StoreLastProcessedEtag(DocumentsOperationContext context);
+
+        protected abstract void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize);
 
         public void NotifyAboutWork()
         {
@@ -129,11 +131,11 @@ namespace Raven.Server.Documents.ETL
                 var startTime = Database.Time.GetUtcNow();
                 var duration = Stopwatch.StartNew();
 
-
                 // TODO arek
                 //if (Statistics.SuspendUntil.HasValue && Statistics.SuspendUntil.Value > Database.Time.GetUtcNow())
                 //    return;
 
+                var batchSize = 0;
                 var didWork = false;
 
                 try
@@ -147,7 +149,7 @@ namespace Raven.Server.Documents.ETL
 
                             var extracted = Extract(context);
 
-                            var transformed = Transform(extracted, context);
+                            var transformed = Transform(extracted, context, out batchSize);
 
                             didWork = Load(transformed);
                         }
@@ -174,21 +176,15 @@ namespace Raven.Server.Documents.ETL
                 {
                     duration.Stop();
 
-                    // TODO arek
-                    //MetricsCountersManager.BatchSizeMeter.Mark(countOfReplicatedItems);
-                    //MetricsCountersManager.UpdateReplicationPerformance(new SqlEtlPerformanceStats
-                    //{
-                    //    BatchSize = countOfReplicatedItems,
-                    //    Duration = spRepTime.Elapsed,
-                    //    Started = startTime
-                    //});
-                    
-                    // TODO arek
-
-                    if (didWork && CancellationToken.IsCancellationRequested == false)
+                    if (didWork)
                     {
-                        var afterReplicationCompleted = Database.SqlReplicationLoader.AfterReplicationCompleted;
-                        afterReplicationCompleted?.Invoke(Statistics);
+                        UpdateMetrics(startTime, duration, batchSize);
+
+                        if (CancellationToken.IsCancellationRequested == false)
+                        {
+                            var afterReplicationCompleted = Database.SqlReplicationLoader.AfterReplicationCompleted; // TODO arek
+                            afterReplicationCompleted?.Invoke(Statistics);
+                        }
                     }
                 }
 

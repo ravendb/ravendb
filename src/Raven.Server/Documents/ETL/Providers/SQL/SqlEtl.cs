@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         private PredefinedSqlConnection _predefinedSqlConnection;
 
-        public readonly SqlEtlMetricsCountersManager MetricsCountersManager = new SqlEtlMetricsCountersManager();
+        public readonly SqlEtlMetricsCountersManager Metrics = new SqlEtlMetricsCountersManager();
 
         public SqlEtl(DocumentDatabase database, SqlEtlConfiguration configuration) : base(database, configuration, SqlEtlTag)
         {
@@ -43,8 +44,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new TombstonesToSqlItems(tombstones);
         }
 
-        public override IEnumerable<SqlTableWithRecords> Transform(IEnumerable<ToSqlItem> items, DocumentsOperationContext context)
+        public override IEnumerable<SqlTableWithRecords> Transform(IEnumerable<ToSqlItem> items, DocumentsOperationContext context, out int batchSize)
         {
+            batchSize = 0;
+
             var patcher = new SqlPatchDocument(Database, context, SqlConfiguration);
 
             foreach (var toSqlItem in items)
@@ -52,12 +55,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 CancellationToken.ThrowIfCancellationRequested();
 
                 Statistics.LastProcessedEtag = toSqlItem.Etag; // TODO arek
-
+                
                 try
                 {
                     patcher.Transform(toSqlItem, context);
 
                     Statistics.TransformationSuccess();
+
+                    batchSize++;
 
                     if (CanContinueBatch() == false)
                         break;
@@ -312,7 +317,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     //    };
                     //}
 
-                    var transformed = etl.Transform(new[] { new ToSqlItem(document) }, context);
+                    int _;
+                    var transformed = etl.Transform(new[] { new ToSqlItem(document) }, context, out _);
 
                     return etl.Simulate(simulateSqlEtl, context, transformed);
                 }
@@ -330,6 +336,18 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                         details: new ExceptionDetails(e)).ToJson()
                 };
             }
+        }
+
+        protected override void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize)
+        {
+            Metrics.BatchSizeMeter.Mark(batchSize);
+
+            Metrics.UpdateReplicationPerformance(new SqlEtlPerformanceStats
+            {
+                BatchSize = batchSize,
+                Duration = duration.Elapsed,
+                Started = startTime
+            });
         }
     }
 }
