@@ -2016,7 +2016,6 @@ namespace Raven.Server.Documents
                 }
             }
 
-
             // delete a tombstone if it exists, if it known that it is a new key, no need, so we can skip it
             if (knownNewKey == false)
             {
@@ -2036,7 +2035,7 @@ namespace Raven.Server.Documents
 
                 if (changeVector == null)
                 {
-                    var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, 4) : null;
+                    var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsTable.ChangeVector) : null;
                     changeVector = SetDocumentChangeVectorForLocalChange(context,
                         loweredKey,
                         oldChangeVector, newEtag);
