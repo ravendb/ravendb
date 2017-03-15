@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
@@ -406,7 +407,7 @@ namespace Raven.Server.Documents.Versioning
             {
                 Slice prefixSlice;
                 using (_documentsStorage.AttachmentsStorage.GetAttachmentPrefix(context, result.LoweredKey.Buffer, result.LoweredKey.Size,
-                    AttachmentsStorage.AttachmentType.Revision, result.ChangeVector, out prefixSlice))
+                    AttachmentType.Revision, result.ChangeVector, out prefixSlice))
                 {
                     result.Attachments = _documentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice.Clone(context.Allocator));
                 }
