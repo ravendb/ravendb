@@ -18,6 +18,7 @@ namespace Raven.Server.Documents
     {
         private readonly Logger _logger;
 
+        private readonly ServerStore _serverStore;
         private readonly DocumentDatabase _database;
         public VersioningStorage VersioningStorage;
         public ExpiredDocumentsCleaner ExpiredDocumentsCleaner;
@@ -27,14 +28,21 @@ namespace Raven.Server.Documents
         {
             _database = database;
             _serverStore = serverStore;
-            _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
+            
             _database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
             _logger = LoggingSource.Instance.GetLogger<BundleLoader>(_database.Name);
+
+            if (_serverStore == null)
+                return;
+
+            _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
             InitializeBundles();
         }
 
         private void HandleDatabaseRecordChange(object sender, string changedDatabase)
         {
+            if (_serverStore == null)
+                return;
             if (string.Equals(changedDatabase, _database.Name, StringComparison.OrdinalIgnoreCase) == false)
                 return;
             VersioningStorage = VersioningStorage.LoadConfigurations(_database, _serverStore, VersioningStorage);
@@ -114,12 +122,12 @@ namespace Raven.Server.Documents
             {typeof(PeriodicExportRunner), "PeriodicExport"}
         };
 
-        private ServerStore _serverStore;
 
         public void Dispose()
         {
             _database.Changes.OnSystemDocumentChange -= HandleSystemDocumentChange;
-            _serverStore.Cluster.DatabaseChanged -= HandleDatabaseRecordChange;
+            if (_serverStore != null)
+                _serverStore.Cluster.DatabaseChanged -= HandleDatabaseRecordChange;
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(BundleLoader)}");
             exceptionAggregator.Execute(() =>
             {

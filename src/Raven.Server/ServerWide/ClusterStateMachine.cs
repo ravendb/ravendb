@@ -103,7 +103,7 @@ namespace Raven.Server.ServerWide
                     TEMP_DeleteValue(context, cmd, index, leader);
                     break;
                 case nameof(TEMP_SetDatabaseCommand):
-                    TEMP_PutValue(context, cmd, index, leader);
+                    TEMP_SetDatabaseValue(context, cmd, index, leader);
                     break;
             }
         }
@@ -244,7 +244,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private unsafe void TEMP_PutValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe void TEMP_SetDatabaseValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var setDb = JsonDeserializationCluster.TEMP_SetDatabaseCommand(cmd);
@@ -469,7 +469,6 @@ namespace Raven.Server.ServerWide
             base.Initialize(parent, context);
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
         }
-
 
         public IEnumerable<Tuple<string, BlittableJsonReaderObject>> ItemsStartingWith(TransactionOperationContext context, string prefix, int start, int take)
         {

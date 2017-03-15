@@ -11,13 +11,13 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            Parallel.For(0, 100, i =>
+            //Parallel.For(0, 100, i =>
             {
-                using (var a = new FastTests.Client.LoadIntoStream())
+                using (var a = new FastTests.Server.Documents.PeriodicExport.PeriodicExportTests())
                 {
-                    a.CanLoadByIdsIntoStreamUsingTransformer();
+                    a.CanSetupPeriodicExportWithVeryLargePeriods().Wait();
                 }
-            });
+            }
         }
     }
 }
