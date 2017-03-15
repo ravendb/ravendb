@@ -5,11 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -23,7 +21,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Sparrow.Platform;
 using Xunit;
 
-namespace SlowTests.Server.Documents.SqlReplication
+namespace SlowTests.Server.Documents.ETL.SQL
 {
     public class CanReplicate : RavenTestBase
     {
@@ -233,7 +231,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -281,7 +279,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -334,7 +332,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -388,7 +386,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -448,7 +446,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -496,7 +494,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -541,7 +539,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -593,14 +591,6 @@ replicateToOrders(orderData);");
             {
                 CreateRdbmsSchema(store);
 
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (statistics.LastProcessedEtag > 0)
-                        eventSlim.Set();
-                };
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order());
@@ -627,9 +617,8 @@ replicateToOrders(orderData);");
                }));
                 await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
-
-                Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
-                var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(10));
+                
+                var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(30));
                 if (condition == false)
                 {
                     var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
@@ -637,6 +626,13 @@ var nameArr = this.StepName.split('.');");
                     File.WriteAllText(tempFileName, sb.ToString());
                     throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
                 }
+                //else
+                //{
+                //    var msg = "aaaa";
+                //    var tempFileName = Path.GetTempFileName();
+                //    File.WriteAllText(tempFileName, sb.ToString());
+                //    throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
+                //}
             }
         }
 
@@ -697,16 +693,16 @@ var nameArr = this.StepName.split('.');");
                         }
                     }
                 });
-                await session.StoreAsync(new SqlReplicationConfiguration
+                await session.StoreAsync(new SqlEtlConfiguration
                 {
                     Id = Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix + "OrdersAndLines",
                     Name = "OrdersAndLines",
                     ConnectionStringName = "Ci1",
                     Collection = "Orders",
-                    SqlReplicationTables =
+                    SqlTables =
                     {
-                        new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
-                        new SqlReplicationTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
+                        new SqlEtlTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
+                        new SqlEtlTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
                     },
                     Script = script
                 });

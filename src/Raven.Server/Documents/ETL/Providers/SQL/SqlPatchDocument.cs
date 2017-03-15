@@ -10,22 +10,22 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    internal class SqlReplicationPatchDocument : PatchDocument
+    internal class SqlPatchDocument : PatchDocument
     {
         private const int DefaultSize = 50;
 
         private readonly DocumentsOperationContext _context;
-        private readonly SqlReplicationConfiguration _config;
+        private readonly SqlEtlConfiguration _config;
         private readonly PatchRequest _patchRequest;
         private ToSqlItem _current;
 
-        public SqlReplicationPatchDocument(DocumentDatabase database, DocumentsOperationContext context, SqlReplicationConfiguration config)
+        public SqlPatchDocument(DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
             : base(database)
         {
             _context = context;
             _config = config;
             _patchRequest = new PatchRequest { Script = _config.Script };
-            Tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlReplicationTables.Count);
+            Tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
         }
 
         public readonly Dictionary<string, SqlTableWithRecords> Tables;
@@ -38,9 +38,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             engine.Global.Delete("replicateTo", true);
             engine.Global.Delete("varchar", true);
             engine.Global.Delete("nVarchar", true);
-            foreach (var sqlReplicationTable in _config.SqlReplicationTables)
+            foreach (var table in _config.SqlTables)
             {
-                engine.Global.Delete("replicateTo" + sqlReplicationTable.TableName, true);
+                engine.Global.Delete("replicateTo" + table.TableName, true);
             }
         }
 
@@ -53,10 +53,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             engine.SetValue("documentId", _current);
             engine.SetValue("replicateTo", new Action<string, JsValue>((tableName, colsAsObject) => ReplicateToFunction(tableName, colsAsObject, scope)));
 
-            foreach (var sqlReplicationTable in _config.SqlReplicationTables)
+            foreach (var table in _config.SqlTables)
             {
-                var current = sqlReplicationTable;
-                engine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<JsValue>)(cols =>
+                var current = table;
+                engine.SetValue("replicateTo" + table.TableName, (Action<JsValue>)(cols =>
                 {
                     var tableName = current.TableName;
                     ReplicateToFunction(tableName, cols, scope);
@@ -76,13 +76,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             var dynamicJsonValue = scope.ToBlittable(colsAsObject.AsObject());
             var blittableJsonReaderObject = _context.ReadObject(dynamicJsonValue, tableName);
-            var columns = new List<SqlReplicationColumn>(blittableJsonReaderObject.Count);
+            var columns = new List<SqlColumn>(blittableJsonReaderObject.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
             for (var i = 0; i < blittableJsonReaderObject.Count; i++)
             {
                 blittableJsonReaderObject.GetPropertyByIndex(i, ref prop);
-                columns.Add(new SqlReplicationColumn
+                columns.Add(new SqlColumn
                 {
                     Key = prop.Name,
                     Value = prop.Value,
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (Tables.TryGetValue(tableName, out table) == false)
             {
                 Tables[tableName] =
-                    table = new SqlTableWithRecords(_config.SqlReplicationTables.Find(x => x.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)));
+                    table = new SqlTableWithRecords(_config.SqlTables.Find(x => x.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)));
             }
 
             return table;
@@ -110,19 +110,25 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public void Transform(ToSqlItem item, DocumentsOperationContext context)
         {
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (int i = 0; i < _config.SqlReplicationTables.Count; i++)
+            if (item.IsDelete == false)
             {
-                // first, delete all the rows that might already exist there
-                GetOrAdd(_config.SqlReplicationTables[i].TableName).Deletes.Add(item);
+                _current = item;
+
+                Apply(context, _current.Document, _patchRequest);
             }
 
-            if (item.IsDelete)
-                return;
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (int i = 0; i < _config.SqlTables.Count; i++)
+            {
+                // delete all the rows that might already exist there
 
-           _current = item;
+                var sqlTable = _config.SqlTables[i];
 
-            Apply(context, _current.Document, _patchRequest);
+                if (sqlTable.InsertOnlyMode)
+                    continue;
+
+                GetOrAdd(sqlTable.TableName).Deletes.Add(item);
+            }
         }
 
         private ValueTypeLengthTriple ToVarchar(string value, double? sizeAsDouble)

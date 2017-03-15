@@ -16,8 +16,10 @@ namespace Raven.Server.Documents.ETL
         private readonly EtlConfiguration _configuration;
         private readonly CancellationTokenSource _cts;
         private Thread _thread;
+        protected readonly CurrentEtlRun CurrentBatch = new CurrentEtlRun();
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
+        protected TimeSpan? FallbackTime;
         public readonly EtlStatistics Statistics;
         public readonly string Tag;
 
@@ -55,6 +57,7 @@ namespace Raven.Server.Documents.ETL
 
                     while (merged.MoveNext())
                     {
+                        CurrentBatch.NumberOfExtractedItems++;
                         yield return merged.Current;
                     }
                 }
@@ -63,13 +66,15 @@ namespace Raven.Server.Documents.ETL
 
         public abstract IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context);
 
-        public abstract bool Load(IEnumerable<TTransformed> items);
+        public abstract void Load(IEnumerable<TTransformed> items);
 
         public abstract bool CanContinueBatch();
 
         protected abstract void LoadLastProcessedEtag(DocumentsOperationContext context);
 
         protected abstract void StoreLastProcessedEtag(DocumentsOperationContext context);
+
+        protected abstract void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize);
 
         public void NotifyAboutWork()
         {
@@ -126,14 +131,17 @@ namespace Raven.Server.Documents.ETL
             {
                 _waitForChanges.Reset();
 
+                CurrentBatch.Reset();
+
                 var startTime = Database.Time.GetUtcNow();
                 var duration = Stopwatch.StartNew();
 
-
-                // TODO arek
-                //if (Statistics.SuspendUntil.HasValue && Statistics.SuspendUntil.Value > Database.Time.GetUtcNow())
-                //    return;
-
+                if (FallbackTime != null)
+                {
+                    Thread.Sleep(FallbackTime.Value);
+                    FallbackTime = null;
+                }
+                
                 var didWork = false;
 
                 try
@@ -149,7 +157,13 @@ namespace Raven.Server.Documents.ETL
 
                             var transformed = Transform(extracted, context);
 
-                            didWork = Load(transformed);
+                            Load(transformed);
+                            
+                            if (CurrentBatch.LastProcessedEtag > Statistics.LastProcessedEtag)
+                            {
+                                didWork = true;
+                                Statistics.LastProcessedEtag = CurrentBatch.LastProcessedEtag;
+                            }
                         }
 
                         if (didWork)
@@ -163,32 +177,31 @@ namespace Raven.Server.Documents.ETL
                             continue;
                         }
                     }
-
-                    
                 }
                 catch (OperationCanceledException)
                 {
                     return;
                 }
+                catch (Exception e)
+                {
+                    var message = $"Exception in ETL process named '{Name}'";
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{Tag} {message}", e);
+                }
                 finally
                 {
                     duration.Stop();
 
-                    // TODO arek
-                    //MetricsCountersManager.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
-                    //MetricsCountersManager.UpdateReplicationPerformance(new SqlReplicationPerformanceStats
-                    //{
-                    //    BatchSize = countOfReplicatedItems,
-                    //    Duration = spRepTime.Elapsed,
-                    //    Started = startTime
-                    //});
-                    
-                    // TODO arek
-
-                    if (didWork && CancellationToken.IsCancellationRequested == false)
+                    if (didWork)
                     {
-                        var afterReplicationCompleted = Database.SqlReplicationLoader.AfterReplicationCompleted;
-                        afterReplicationCompleted?.Invoke(Statistics);
+                        UpdateMetrics(startTime, duration, CurrentBatch.NumberOfExtractedItems);
+
+                        if (CancellationToken.IsCancellationRequested == false)
+                        {
+                            var afterReplicationCompleted = Database.SqlReplicationLoader.AfterReplicationCompleted; // TODO arek
+                            afterReplicationCompleted?.Invoke(Statistics);
+                        }
                     }
                 }
 

@@ -56,9 +56,9 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationDocument> ReplicationDocument = GenerateJsonDeserializationRoutine<ReplicationDocument>();
 
-        public static readonly Func<BlittableJsonReaderObject, SqlReplicationConfiguration> SqlReplicationConfiguration = GenerateJsonDeserializationRoutine<SqlReplicationConfiguration>();
-        public static readonly Func<BlittableJsonReaderObject, SqlReplicationStatus> SqlReplicationStatus = GenerateJsonDeserializationRoutine<SqlReplicationStatus>();
-        public static readonly Func<BlittableJsonReaderObject, SimulateSqlReplication> SimulateSqlReplication = GenerateJsonDeserializationRoutine<SimulateSqlReplication>();
+        public static readonly Func<BlittableJsonReaderObject, SqlEtlConfiguration> SqlReplicationConfiguration = GenerateJsonDeserializationRoutine<SqlEtlConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, SqlEtlStatus> SqlEtlStatus = GenerateJsonDeserializationRoutine<SqlEtlStatus>();
+        public static readonly Func<BlittableJsonReaderObject, SimulateSqlEtl> SimulateSqlReplication = GenerateJsonDeserializationRoutine<SimulateSqlEtl>();
         public static readonly Func<BlittableJsonReaderObject, PredefinedSqlConnection> PredefinedSqlConnection = GenerateJsonDeserializationRoutine<PredefinedSqlConnection>();
 
 

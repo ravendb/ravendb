@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading;
 using Raven.Client;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
-using Raven.Server.Documents.SqlReplication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
@@ -30,7 +29,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         private readonly DbConnection _connection;
         private readonly DbTransaction _tx;
 
-        private readonly List<Func<DbParameter, string, bool>> stringParserList;
+        private readonly List<Func<DbParameter, string, bool>> _stringParserList;
 
         private const int LongStatementWarnThresholdInMilliseconds = 3000;
 
@@ -54,8 +53,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             {
                 database.NotificationCenter.Add(AlertRaised.Create(
                     SqlEtl.SqlEtlTag,
-                    $"Sql Replication could not open connection to {_connection.ConnectionString}",
-                    AlertType.SqlReplication_ConnectionError,
+                    $"SQL ETL could not open connection to {_connection.ConnectionString}",
+                    AlertType.SqlEtl_ConnectionError,
                     NotificationSeverity.Error,
                     key: _connection.ConnectionString,
                     details: new ExceptionDetails(e)));
@@ -65,7 +64,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
             _tx = _connection.BeginTransaction();
 
-            stringParserList = GenerateStringParsers();
+            _stringParserList = GenerateStringParsers();
         }
 
         public static void TestConnection(string factoryName, string connectionString)
@@ -84,7 +83,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             }
         }
 
-        private DbProviderFactory GetDbProviderFactory(SqlReplicationConfiguration configuration)
+        private DbProviderFactory GetDbProviderFactory(SqlEtlConfiguration configuration)
         {
             DbProviderFactory providerFactory;
             try
@@ -101,7 +100,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 _database.NotificationCenter.Add(AlertRaised.Create(
                     SqlEtl.SqlEtlTag,
                     message,
-                    AlertType.SqlReplication_ProviderError,
+                    AlertType.SqlEtl_ProviderError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
 
@@ -168,7 +167,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                             continue;
                         var colParam = cmd.CreateParameter();
                         colParam.ParameterName = column.Key;
-                        SetParamValue(colParam, column, stringParserList);
+                        SetParamValue(colParam, column, _stringParserList);
                         cmd.Parameters.Add(colParam);
                         sb.Append(GetParameterName(column.Key)).Append(", ");
                     }
@@ -193,10 +192,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
+                        {
                             _logger.Info(
-                                "Failure to replicate changes to relational database for: " + _etl.Name + " (doc: " + itemToReplicate.DocumentKey + " ), will continue trying." +
-                                Environment.NewLine + cmd.CommandText, e);
-                       _etl.Statistics.RecordWriteError(e);
+                                $"Failed to replicate changes to relational database for: {_etl.Name} " +
+                                $"(doc: {itemToReplicate.DocumentKey}), will continue trying. {Environment.NewLine}{cmd.CommandText}", e);
+                        }
+
+                        _etl.Statistics.RecordLoadError(e);
                     }
                     finally
                     {
@@ -207,8 +209,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Insert took: {elapsedMilliseconds}ms, statement: {stmt}");
 
-                        var sqlReplicationTableMetrics = _etl.MetricsCountersManager.GetTableMetrics(tableName);
-                        sqlReplicationTableMetrics.SqlReplicationInsertActionsMeter.Mark(1);
+                        var tableMetrics = _etl.Metrics.GetTableMetrics(tableName);
+                        tableMetrics.InsertActionsMeter.Mark(1);
 
                         if (elapsedMilliseconds > LongStatementWarnThresholdInMilliseconds)
                         {
@@ -264,6 +266,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         .Append(_commandBuilder.QuoteIdentifier(pkName))
                         .Append(" IN (");
 
+                    var countOfDeletes = 0;
                     for (int j = i; j < Math.Min(i + maxParams, toDelete.Count); j++)
                     {
                         if (i != j)
@@ -280,6 +283,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         {
                             sb.Append("'").Append(SanitizeSqlValue(toDelete[j].DocumentKey)).Append("'");
                         }
+
+                        if (toDelete[j].IsDelete) // count only "real" deletions, not the ones because of insert
+                            countOfDeletes++;
                     }
                     sb.Append(")");
 
@@ -295,14 +301,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     try
                     {
                         cmd.ExecuteNonQuery();
-                        deleted++;
+
+                        deleted += countOfDeletes;
                     }
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info("Failure to replicate changes to relational database for: " + _etl.Name + ", will continue trying." + Environment.NewLine + cmd.CommandText, e);
 
-                        _etl.Statistics.RecordWriteError(e);
+                        _etl.Statistics.RecordLoadError(e);
                     }
                     finally
                     {
@@ -313,8 +320,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Delete took: {elapsedMiliseconds}ms, statement: {stmt}");
 
-                        var sqlReplicationTableMetrics = _etl.MetricsCountersManager.GetTableMetrics(tableName);
-                        sqlReplicationTableMetrics.SqlReplicationDeleteActionsMeter.Mark(1);
+                        var tableMetrics = _etl.Metrics.GetTableMetrics(tableName);
+                        tableMetrics.DeleteActionsMeter.Mark(1);
 
                         if (elapsedMiliseconds > LongStatementWarnThresholdInMilliseconds)
                         {
@@ -333,7 +340,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
 
-            _database.NotificationCenter.Add(AlertRaised.Create(_etl.Tag, message, AlertType.SqlReplication_SlowSql, NotificationSeverity.Warning));
+            _database.NotificationCenter.Add(AlertRaised.Create(_etl.Tag, message, AlertType.SqlEtl_SlowSql, NotificationSeverity.Warning));
         }
 
         private string GetTableNameString(string tableName)
@@ -390,7 +397,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             return stats;
         }
 
-        public static void SetParamValue(DbParameter colParam, SqlReplicationColumn column, List<Func<DbParameter, string, bool>> stringParsers)
+        public static void SetParamValue(DbParameter colParam, SqlColumn column, List<Func<DbParameter, string, bool>> stringParsers)
         {
             if (column.Value == null)
                 colParam.Value = DBNull.Value;

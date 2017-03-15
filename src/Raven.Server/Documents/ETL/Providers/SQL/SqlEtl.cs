@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
-using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
@@ -22,13 +22,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
     {
         public const string SqlEtlTag = "SQL ETL";
 
-        public SqlReplicationConfiguration SqlConfiguration { get; }
+        public SqlEtlConfiguration SqlConfiguration { get; }
 
         private PredefinedSqlConnection _predefinedSqlConnection;
 
-        public readonly SqlReplicationMetricsCountersManager MetricsCountersManager = new SqlReplicationMetricsCountersManager();
+        public readonly SqlEtlMetricsCountersManager Metrics = new SqlEtlMetricsCountersManager();
 
-        public SqlEtl(DocumentDatabase database, SqlReplicationConfiguration configuration) : base(database, configuration, SqlEtlTag)
+        public SqlEtl(DocumentDatabase database, SqlEtlConfiguration configuration) : base(database, configuration, SqlEtlTag)
         {
             SqlConfiguration = configuration;
         }
@@ -45,13 +45,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public override IEnumerable<SqlTableWithRecords> Transform(IEnumerable<ToSqlItem> items, DocumentsOperationContext context)
         {
-            var patcher = new SqlReplicationPatchDocument(Database, context, SqlConfiguration);
+            var patcher = new SqlPatchDocument(Database, context, SqlConfiguration);
 
             foreach (var toSqlItem in items)
             {
                 CancellationToken.ThrowIfCancellationRequested();
-
-                Statistics.LastProcessedEtag = toSqlItem.Etag; // TODO arek
 
                 try
                 {
@@ -59,101 +57,101 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                     Statistics.TransformationSuccess();
 
+                    CurrentBatch.LastProcessedEtag = toSqlItem.Etag;
+
                     if (CanContinueBatch() == false)
                         break;
                 }
                 catch (JavaScriptParseException e)
                 {
-                    Statistics.MarkTransformationScriptAsInvalid(SqlConfiguration.Script);
+                    var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not parse SQL ETL script for '{Name}'", e);
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations(message, e);
+
+                    var alert = AlertRaised.Create(
+                        Tag,
+                        message,
+                        AlertType.Etl_TransformationError,
+                        NotificationSeverity.Error,
+                        key: Name,
+                        details: new ExceptionDetails(e));
+
+                    Database.NotificationCenter.Add(alert);
+
+                    Stop();
 
                     break;
                 }
-                catch (Exception diffExceptionName)
+                catch (Exception e)
                 {
-                    Statistics.RecordScriptError(diffExceptionName);
+                    Statistics.RecordTransformationError(e);
 
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {toSqlItem.DocumentKey}", diffExceptionName);
+                        Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {toSqlItem.DocumentKey}", e);
                 }
             }
 
             return patcher.Tables.Values;
         }
 
-        public override bool Load(IEnumerable<SqlTableWithRecords> records)
+        public override void Load(IEnumerable<SqlTableWithRecords> records)
         {
-            var hadWork = false;
-
-            using (var writer = new RelationalDatabaseWriter(this, _predefinedSqlConnection, Database))
+            try
             {
-                foreach (var table in records)
+                using (var writer = new RelationalDatabaseWriter(this, _predefinedSqlConnection, Database))
                 {
-                    try
+                    foreach (var table in records)
                     {
-                        hadWork = true;
-
                         var stats = writer.Write(table, CancellationToken);
 
-                        HandleLoadStats(stats, table);
+                        LogStats(stats, table);
                     }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Failure to insert changes to relational database for '{Name}'", e);
 
-                        DateTime newTime;
-                        if (Statistics.LastErrorTime == null)
-                        {
-                            newTime = Database.Time.GetUtcNow().AddSeconds(5);
-                        }
-                        else
-                        {
-                            // double the fallback time (but don't cross 15 minutes)
-                            var totalSeconds = (SystemTime.UtcNow - Statistics.LastErrorTime.Value).TotalSeconds;
-                            newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60 * 15, Math.Max(5, totalSeconds * 2)));
-                        }
+                    writer.Commit();
+                }
+                
+                Statistics.LoadSuccess(CurrentBatch.NumberOfExtractedItems);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failure to insert changes to relational database for '{Name}'", e);
 
-                        Statistics.RecordWriteError(e, table.Inserts.Count + table.Deletes.Count, newTime);
-                    }
+                if (Statistics.LastErrorTime == null)
+                    FallbackTime = TimeSpan.FromSeconds(5);
+                else
+                {
+                    // double the fallback time (but don't cross 15 minutes)
+                    var secondsSinceLastError = (Database.Time.GetUtcNow() - Statistics.LastErrorTime.Value).TotalSeconds;
+
+                    FallbackTime = TimeSpan.FromSeconds(Math.Min(60 * 15, Math.Max(5, secondsSinceLastError * 2)));
                 }
 
-                writer.Commit();
+                CurrentBatch.Errored();
+
+                Statistics.RecordLoadError(e, CurrentBatch.NumberOfExtractedItems);
             }
-
-
-            return hadWork;
         }
 
-        private void HandleLoadStats(SqlWriteStats stats, SqlTableWithRecords table)
+        private void LogStats(SqlWriteStats stats, SqlTableWithRecords table)
         {
             if (table.Inserts.Count > 0)
             {
                 if (Logger.IsInfoEnabled)
                 {
-                    Logger.Info(
-                        $"[{Name}] Inserted {stats.InsertedRecordsCount} (out of {table.Inserts.Count}) records to '{table.TableName}' table " +
+                    Logger.Info($"[{Name}] Inserted {stats.InsertedRecordsCount} (out of {table.Inserts.Count}) records to '{table.TableName}' table " +
                         $"from the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentKey))}");
                 }
-
-                if (table.Inserts.Count == stats.InsertedRecordsCount)
-                    Statistics.CompleteSuccess(stats.InsertedRecordsCount); // TODO arek
-                else
-                    Statistics.Success(stats.InsertedRecordsCount); // TODO arek
             }
 
             if (table.Deletes.Count > 0)
             {
                 if (Logger.IsInfoEnabled)
                 {
-                    Logger.Info(
-                        $"[{Name}] Deleted {stats.DeletedRecordsCount} (out of {table.Deletes.Count}) records from '{table.TableName}' table " +
+                    Logger.Info($"[{Name}] Deleted {stats.DeletedRecordsCount} (out of {table.Deletes.Count}) records from '{table.TableName}' table " +
                         $"for the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentKey))}");
                 }
-
-                // TODO stats for deletes?
             }
         }
 
@@ -162,7 +160,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return true; // TODO
         }
 
-        public bool PrepareSqlReplicationConfig(BlittableJsonReaderObject connections, bool writeToLog = true)
+        public bool PrepareSqlEtlConfig(BlittableJsonReaderObject connections, bool writeToLog = true)
         {
             if (string.IsNullOrWhiteSpace(SqlConfiguration.ConnectionStringName) == false)
             {
@@ -177,8 +175,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 }
 
                 var message =
-                    $"Could not find connection string named '{SqlConfiguration.ConnectionStringName}' for sql replication config: " +
-                    $"{SqlConfiguration.Name}, ignoring sql replication setting.";
+                    $"Could not find connection string named '{SqlConfiguration.ConnectionStringName}' for SQL ETL config: " +
+                    $"{SqlConfiguration.Name}, ignoring SQL ETL setting.";
 
                 if (writeToLog)
                 {
@@ -186,13 +184,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                         Logger.Info(message);
                 }
 
-                Statistics.LastAlert = AlertRaised.Create(Tag, message, AlertType.SqlReplication_ConnectionStringMissing, NotificationSeverity.Error);
+                Statistics.LastAlert = AlertRaised.Create(Tag, message, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
 
                 return false;
             }
 
             var emptyConnectionStringMsg =
-                $"Connection string name cannot be empty for sql replication config: {SqlConfiguration.Name}, ignoring sql replication setting.";
+                $"Connection string name cannot be empty for SQL ETL config: {SqlConfiguration.Name}, ignoring SQL ETL setting.";
 
             if (writeToLog)
             {
@@ -200,22 +198,22 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Logger.Info(emptyConnectionStringMsg);
             }
 
-            Statistics.LastAlert = AlertRaised.Create(Tag, emptyConnectionStringMsg, AlertType.SqlReplication_ConnectionStringMissing, NotificationSeverity.Error);
+            Statistics.LastAlert = AlertRaised.Create(Tag, emptyConnectionStringMsg, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
 
             return false;
         }
 
         protected override void LoadLastProcessedEtag(DocumentsOperationContext context)
         {
-            var sqlReplicationStatus = Database.DocumentsStorage.Get(context, Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + Name);
-            if (sqlReplicationStatus == null)
+            var sqlEtlStatus = Database.DocumentsStorage.Get(context, Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + Name);
+            if (sqlEtlStatus == null)
             {
                 Statistics.LastProcessedEtag = 0;
             }
             else
             {
-                var replicationStatus = JsonDeserializationServer.SqlReplicationStatus(sqlReplicationStatus.Data);
-                Statistics.LastProcessedEtag = replicationStatus.LastProcessedEtag;
+                var etlStatus = JsonDeserializationServer.SqlEtlStatus(sqlEtlStatus.Data);
+                Statistics.LastProcessedEtag = etlStatus.LastProcessedEtag;
             }
         }
 
@@ -224,8 +222,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             var key = Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + Name;
             var document = context.ReadObject(new DynamicJsonValue
             {
-                [nameof(SqlReplicationStatus.Name)] = Name,
-                [nameof(SqlReplicationStatus.LastProcessedEtag)] = Statistics.LastProcessedEtag
+                [nameof(SqlEtlStatus.Name)] = Name,
+                [nameof(SqlEtlStatus.LastProcessedEtag)] = Statistics.LastProcessedEtag
             }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
             Database.DocumentsStorage.Put(context, key, null, document);
@@ -236,18 +234,18 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (string.IsNullOrWhiteSpace(SqlConfiguration.Name) == false)
                 return true;
 
-            var message = $"Could not find name for sql replication document {SqlConfiguration.Name}, ignoring";
+            var message = $"Could not find name for SQL ETL document {SqlConfiguration.Name}, ignoring";
 
             if (Logger.IsInfoEnabled)
                 Logger.Info(message);
 
-            Statistics.LastAlert = AlertRaised.Create(Tag, message, AlertType.SqlReplication_ConnectionStringMissing, NotificationSeverity.Error);
+            Statistics.LastAlert = AlertRaised.Create(Tag, message, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
             return false;
         }
 
-        public DynamicJsonValue Simulate(SimulateSqlReplication simulateSqlReplication, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
+        public DynamicJsonValue Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
         {
-            if (simulateSqlReplication.PerformRolledBackTransaction)
+            if (simulateSqlEtl.PerformRolledBackTransaction)
             {
                 var summaries = new List<TableQuerySummary>();
 
@@ -295,26 +293,26 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
-        public static DynamicJsonValue SimulateSqlReplicationSqlQueries(SimulateSqlReplication simulateSqlReplication, DocumentDatabase database, DocumentsOperationContext context)
+        public static DynamicJsonValue SimulateSqlEtl(SimulateSqlEtl simulateSqlEtl, DocumentDatabase database, DocumentsOperationContext context)
         {
             try
             {
-                var document = database.DocumentsStorage.Get(context, simulateSqlReplication.DocumentId);
+                var document = database.DocumentsStorage.Get(context, simulateSqlEtl.DocumentId);
 
-                using (var etl = new SqlEtl(database, simulateSqlReplication.Configuration))
+                using (var etl = new SqlEtl(database, simulateSqlEtl.Configuration))
                 {
                     // TODO arek
-                    //if (etl.PrepareSqlReplicationConfig(_connections, false) == false)
+                    //if (etl.PrepareSqlEtlConfig(_connections, false) == false)
                     //{
                     //    return new DynamicJsonValue
                     //    {
                     //        ["LastAlert"] = etl.Statistics.LastAlert,
                     //    };
                     //}
-
+                    
                     var transformed = etl.Transform(new[] { new ToSqlItem(document) }, context);
 
-                    return etl.Simulate(simulateSqlReplication, context, transformed);
+                    return etl.Simulate(simulateSqlEtl, context, transformed);
                 }
             }
             catch (Exception e)
@@ -323,13 +321,25 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 {
                     ["LastAlert"] =
                     AlertRaised.Create("SQL ETL",
-                        $"Last SQL replication operation for {simulateSqlReplication.Configuration.Name} was failed",
-                        AlertType.SqlReplication_Error,
+                        $"Simulate SQL ETL operation for {simulateSqlEtl.Configuration.Name} failed",
+                        AlertType.Etl_Error,
                         NotificationSeverity.Error,
-                        key: simulateSqlReplication.Configuration.Name,
+                        key: simulateSqlEtl.Configuration.Name,
                         details: new ExceptionDetails(e)).ToJson()
                 };
             }
+        }
+
+        protected override void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize)
+        {
+            Metrics.BatchSizeMeter.Mark(batchSize);
+
+            Metrics.UpdateReplicationPerformance(new SqlEtlPerformanceStats
+            {
+                BatchSize = batchSize,
+                Duration = duration.Elapsed,
+                Started = startTime
+            });
         }
     }
 }
