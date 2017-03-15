@@ -160,17 +160,6 @@ namespace Raven.Server.Documents.Versioning
                     if (disableVersioning)
                         return false;
                 }
-
-                bool enableVersioning;
-                if (metadata.TryGet(Constants.Documents.Versioning.EnableVersioning, out enableVersioning))
-                {
-                    DynamicJsonValue mutatedMetadata = metadata.Modifications;
-                    if (mutatedMetadata == null)
-                        metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
-                    mutatedMetadata.Remove(Constants.Documents.Versioning.EnableVersioning);
-                    if (enableVersioning)
-                        return true;
-                }
             }
 
             configuration = GetVersioningConfiguration(collectionName);
