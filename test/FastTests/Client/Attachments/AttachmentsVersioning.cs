@@ -5,9 +5,11 @@ using System.Linq;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.ServerWide.Context;
 
 namespace FastTests.Client.Attachments
 {
@@ -22,18 +24,13 @@ namespace FastTests.Client.Attachments
                 {
                     session.Store(new VersioningConfiguration
                     {
-                        Default = new VersioningConfigurationCollection
-                        {
-                            Active = true,
-                            MaxRevisions = 5,
-                        },
                         Collections = new Dictionary<string, VersioningConfigurationCollection>
                         {
                             ["Users"] = new VersioningConfigurationCollection
                             {
                                 Active = true,
                                 PurgeOnDelete = false,
-                                MaxRevisions = 123
+                                MaxRevisions = 4
                             }
                         }
                     }, Constants.Documents.Versioning.ConfigurationKey);
@@ -43,7 +40,7 @@ namespace FastTests.Client.Attachments
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.Store(new User {Name = "Fitzchak"}, "users/1");
                     session.SaveChanges();
                 }
 
@@ -80,31 +77,107 @@ namespace FastTests.Client.Attachments
                     Assert.Equal("", result.ContentType);
                     Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", result.Hash);
                 }
-                var statistics = store.Admin.Send(new GetStatisticsOperation());
-                Assert.Equal(3, statistics.CountOfAttachments);
-                Assert.Equal(4, statistics.CountOfRevisionDocuments.Value);
-                Assert.Equal(2, statistics.CountOfDocuments);
-                Assert.Equal(0, statistics.CountOfIndexes);
-
-                using (var session = store.OpenSession())
+                AssertRevisions(store, names, (session, revisions) =>
                 {
-                    var revisions = session.Advanced.GetRevisionsFor<User>("users/1");
-                    Assert.Equal(4, revisions.Count);
-                    var metadata1 = session.Advanced.GetMetadataFor(revisions[0]);
-                    Assert.Equal((DocumentFlags.Versioned | DocumentFlags.FromVersionStorage).ToString(), metadata1[Constants.Documents.Metadata.Flags]);
-                    Assert.False(metadata1.ContainsKey(Constants.Documents.Metadata.Attachments));
-
+                    AssertNoRevisionAttachment(revisions[0], session);
                     AssertRevisionAttachments(names, 1, revisions[1], session);
                     AssertRevisionAttachments(names, 2, revisions[2], session);
                     AssertRevisionAttachments(names, 3, revisions[3], session);
-                }
+                });
 
                 // Delete document should delete all the attachments
                 store.Commands().Delete("users/1", null);
-                statistics = store.Admin.Send(new GetStatisticsOperation());
-                Assert.Equal(3, statistics.CountOfAttachments);
-                Assert.Equal(4, statistics.CountOfRevisionDocuments.Value);
+                AssertRevisions(store, names, (session, revisions) =>
+                {
+                    AssertNoRevisionAttachment(revisions[0], session);
+                    AssertRevisionAttachments(names, 1, revisions[1], session);
+                    AssertRevisionAttachments(names, 2, revisions[2], session);
+                    AssertRevisionAttachments(names, 3, revisions[3], session);
+                }, expectedCountOfDocuments: 1);
+
+                // Create another revision which should delete old revision
+                using (var session = store.OpenSession()) // This will delete the revision #1 which is without attachment
+                {
+                    session.Store(new User {Name = "Fitzchak 2"}, "users/1");
+                    session.SaveChanges();
+                }
+                AssertRevisions(store, names, (session, revisions) =>
+                {
+                    AssertRevisionAttachments(names, 1, revisions[0], session);
+                    AssertRevisionAttachments(names, 2, revisions[1], session);
+                    AssertRevisionAttachments(names, 3, revisions[2], session);
+                    AssertNoRevisionAttachment(revisions[3], session);
+                });
+
+                using (var session = store.OpenSession()) // This will delete the revision #2 which is with attachment
+                {
+                    session.Store(new User { Name = "Fitzchak 3" }, "users/1");
+                    session.SaveChanges();
+                }
+                AssertRevisions(store, names, (session, revisions) =>
+                {
+                    AssertRevisionAttachments(names, 2, revisions[0], session);
+                    AssertRevisionAttachments(names, 3, revisions[1], session);
+                    AssertNoRevisionAttachment(revisions[2], session);
+                    AssertNoRevisionAttachment(revisions[3], session);
+                });
+
+                using (var session = store.OpenSession()) // This will delete the revision #3 which is with attachment
+                {
+                    session.Store(new User { Name = "Fitzchak 4" }, "users/1");
+                    session.SaveChanges();
+                }
+                AssertRevisions(store, names, (session, revisions) =>
+                {
+                    AssertRevisionAttachments(names, 3, revisions[0], session);
+                    AssertNoRevisionAttachment(revisions[1], session);
+                    AssertNoRevisionAttachment(revisions[2], session);
+                    AssertNoRevisionAttachment(revisions[3], session);
+                });
+
+                using (var session = store.OpenSession()) // This will delete the revision #4 which is with attachment
+                {
+                    session.Store(new User { Name = "Fitzchak 5" }, "users/1");
+                    session.SaveChanges();
+                }
+                AssertRevisions(store, names, (session, revisions) =>
+                {
+                    AssertNoRevisionAttachment(revisions[0], session);
+                    AssertNoRevisionAttachment(revisions[1], session);
+                    AssertNoRevisionAttachment(revisions[2], session);
+                    AssertNoRevisionAttachment(revisions[3], session);
+                }, expectedCountOfAttachments: 0);
+
+                var database = GetDocumentDatabaseInstanceFor(store).Result;
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (context.OpenReadTransaction())
+                {
+                    database.DocumentsStorage.AttachmentsStorage.AssertNoAttachments(context);
+                }
             }
+        }
+
+        private void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction, long expectedCountOfDocuments = 2, long expectedCountOfAttachments = 3)
+        {
+            var statistics = store.Admin.Send(new GetStatisticsOperation());
+            Assert.Equal(expectedCountOfAttachments, statistics.CountOfAttachments);
+            Assert.Equal(4, statistics.CountOfRevisionDocuments.Value);
+            Assert.Equal(expectedCountOfDocuments, statistics.CountOfDocuments);
+            Assert.Equal(0, statistics.CountOfIndexes);
+
+            using (var session = store.OpenSession())
+            {
+                var revisions = session.Advanced.GetRevisionsFor<User>("users/1");
+                Assert.Equal(4, revisions.Count);
+                assertAction(session, revisions);
+            }
+        }
+
+        private void AssertNoRevisionAttachment(User revision, IDocumentSession session)
+        {
+            var metadata = session.Advanced.GetMetadataFor(revision);
+            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.FromVersionStorage).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+            Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
         }
 
         private void AssertRevisionAttachments(string[] names, int expectedCount, User revision, IDocumentSession session)
