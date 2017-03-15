@@ -47,8 +47,17 @@ namespace Raven.Client.Documents.Session.Operations
                 var document = (BlittableJsonReaderObject)_result.Results[i];
                 var metadata = document.GetMetadata();
                 var id = metadata.GetId();
-
-                results.Add((T)_session.ConvertToEntity(typeof(T), id, document));
+                var etag = metadata.GetEtag();
+                var entity = (T)_session.ConvertToEntity(typeof(T), id, document);
+                results.Add(entity);
+                _session.DocumentsByEntity[entity] = new DocumentInfo
+                {
+                    Id = id,
+                    Document = document,
+                    Metadata = metadata,
+                    Entity = entity,
+                    ETag = etag
+                };
             }
 
             return results;
