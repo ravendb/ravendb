@@ -221,8 +221,6 @@ namespace Raven.Client
             {
                 public const string ConfigurationKey = "Raven/Versioning/Configuration";
 
-                public const string EnableVersioning = "Raven-Enable-Versioning";
-
                 public const string DisableVersioning = "Raven-Disable-Versioning";
             }
 
