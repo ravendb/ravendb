@@ -276,7 +276,7 @@ namespace Raven.Server.Documents
                 tree.AddStream(hash, stream, tag: key);
         }
 
-        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 0)
+        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)
         {
             if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
             {
@@ -339,6 +339,17 @@ namespace Raven.Server.Documents
                     var attachment = TableValueToAttachment(context, ref sr.Reader);
                     throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");
                 }
+            }
+        }
+
+        [Conditional("DEBUG")]
+        public void AssertNoAttachments(DocumentsOperationContext context)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], 0, 0))
+            {
+                var attachment = TableValueToAttachment(context, ref result.Reader);
+                throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");
             }
         }
 
@@ -557,7 +568,7 @@ namespace Raven.Server.Documents
             Slice hashSlice;
             using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out hashSlice))
             {
-                DeleteAttachmentStream(context, hashSlice, expectedCount: 1);
+                DeleteAttachmentStream(context, hashSlice);
 
                 // TODO: Create a tombstone of the delete for replication
                 table.Delete(tvr.Id);
@@ -586,7 +597,7 @@ namespace Raven.Server.Documents
                     {
                         // we are running just before the delete, so we may still have 1 entry there, the one just
                         // about to be deleted
-                        DeleteAttachmentStream(context, hashSlice, expectedCount: 1);
+                        DeleteAttachmentStream(context, hashSlice);
                     }
                 });
             }
