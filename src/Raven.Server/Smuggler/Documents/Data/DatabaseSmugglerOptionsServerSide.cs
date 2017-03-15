@@ -24,8 +24,6 @@ namespace Raven.Server.Smuggler.Documents.Data
                         result.IncludeExpired = bool.Parse(item.Value[0]);
                     else if (string.Equals(key, "removeAnalyzers", StringComparison.OrdinalIgnoreCase))
                         result.RemoveAnalyzers = bool.Parse(item.Value[0]);
-                    else if (string.Equals(key, "disableVersioningBundle", StringComparison.OrdinalIgnoreCase))
-                        result.DisableVersioningBundle = bool.Parse(item.Value[0]);
                     else if (string.Equals(key, "transformScript", StringComparison.OrdinalIgnoreCase))
                         result.TransformScript = Uri.UnescapeDataString(item.Value[0]);
                     else if (string.Equals(key, "maxStepsForTransformScript", StringComparison.OrdinalIgnoreCase))

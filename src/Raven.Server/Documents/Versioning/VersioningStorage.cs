@@ -144,27 +144,28 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public bool ShouldVersionDocument(CollectionName collectionName, BlittableJsonReaderObject document, out VersioningConfigurationCollection configuration)
+        public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags flags,
+            Func<Document> getExistingDocument, BlittableJsonReaderObject document, out VersioningConfigurationCollection configuration)
         {
-            configuration = null;
-            BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata))
-            {
-                bool disableVersioning;
-                if (metadata.TryGet(Constants.Documents.Versioning.DisableVersioning, out disableVersioning))
-                {
-                    DynamicJsonValue mutatedMetadata;
-                    Debug.Assert(metadata.Modifications == null);
+            configuration = GetVersioningConfiguration(collectionName);
+            if (configuration.Active == false)
+                return false;
 
-                    metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
-                    mutatedMetadata.Remove(Constants.Documents.Versioning.DisableVersioning);
-                    if (disableVersioning)
-                        return false;
-                }
+            if ((flags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
+                return true;
+
+            var existingDocument = getExistingDocument();
+            if (existingDocument == null)
+                return true;
+
+            // compare the contents of the existing and the new document
+            if (existingDocument.IsMetadataEqualTo(document) && existingDocument.IsEqualTo(document))
+            {
+                // no need to create a new revision, both documents have identical content
+                return false;
             }
 
-            configuration = GetVersioningConfiguration(collectionName);
-            return configuration.Active;
+            return true;
         }
 
         public void PutFromDocument(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 

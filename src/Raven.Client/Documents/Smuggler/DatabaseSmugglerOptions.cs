@@ -27,11 +27,6 @@ namespace Raven.Client.Documents.Smuggler
 
         public bool RemoveAnalyzers { get; set; }
 
-        /// <summary>
-        /// If true the import process will remove VersioningBundle from the document metadata
-        /// </summary>
-        public bool DisableVersioningBundle { get; set; }
-
         public string TransformScript { get; set; }
 
         public string FileName { get; set; }
@@ -60,9 +55,6 @@ namespace Raven.Client.Documents.Smuggler
 
             if (RemoveAnalyzers)
                 sb.Append("&removeAnalyzers=true");
-
-            if (DisableVersioningBundle)
-                sb.Append("&disableVersioningBundle=true");
 
             if (string.IsNullOrWhiteSpace(TransformScript) == false)
                 sb.Append($"&transformScript={Uri.EscapeDataString(TransformScript)}");

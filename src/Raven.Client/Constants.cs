@@ -220,8 +220,6 @@ namespace Raven.Client
             public class Versioning
             {
                 public const string ConfigurationKey = "Raven/Versioning/Configuration";
-
-                public const string DisableVersioning = "Raven-Disable-Versioning";
             }
 
             public class SqlReplication
