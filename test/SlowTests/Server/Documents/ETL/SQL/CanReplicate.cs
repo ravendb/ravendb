@@ -21,7 +21,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Sparrow.Platform;
 using Xunit;
 
-namespace SlowTests.Server.Documents.SqlReplication
+namespace SlowTests.Server.Documents.ETL.SQL
 {
     public class CanReplicate : RavenTestBase
     {
