@@ -6,7 +6,6 @@ class serverSmugglingItem {
 
     database: database;
     incremental = ko.observable<boolean>(true);
-    stripReplicationInformation = ko.observable<boolean>(false);
     hasReplicationBundle: KnockoutComputed<boolean>;
     hasVersioningBundle: KnockoutComputed<boolean>;
 
@@ -19,11 +18,9 @@ class serverSmugglingItem {
     toDto(): serverSmugglingItemDto {
         return {
             Name: this.database.name,
-            Incremental: this.incremental(),
-            StripReplicationInformation: this.stripReplicationInformation()
+            Incremental: this.incremental()
         }
     }
-    
 }
 
 export = serverSmugglingItem;

@@ -832,7 +832,6 @@ interface clusterNodeStatusDto {
 interface serverSmugglingItemDto {
     Name: string;
     Incremental: boolean;
-    StripReplicationInformation: boolean;
 }
 
 interface serverConnectionInfoDto {
