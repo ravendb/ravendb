@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context);
 
-        public abstract bool Load(IEnumerable<TTransformed> items);
+        public abstract void Load(IEnumerable<TTransformed> items);
 
         public abstract bool CanContinueBatch();
 
@@ -157,7 +157,9 @@ namespace Raven.Server.Documents.ETL
 
                             var transformed = Transform(extracted, context);
 
-                            didWork = Load(transformed);
+                            Load(transformed);
+
+                            didWork = NumberOfExtractedItemsInCurrentBatch > 0;
                         }
 
                         if (didWork)

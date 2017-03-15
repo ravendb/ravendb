@@ -110,6 +110,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public void Transform(ToSqlItem item, DocumentsOperationContext context)
         {
+            if (item.IsDelete == false)
+            {
+                _current = item;
+
+                Apply(context, _current.Document, _patchRequest);
+            }
+
             // ReSharper disable once ForCanBeConvertedToForeach
             for (int i = 0; i < _config.SqlTables.Count; i++)
             {
@@ -122,13 +129,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                 GetOrAdd(sqlTable.TableName).Deletes.Add(item);
             }
-
-            if (item.IsDelete)
-                return;
-
-           _current = item;
-
-            Apply(context, _current.Document, _patchRequest);
         }
 
         private ValueTypeLengthTriple ToVarchar(string value, double? sizeAsDouble)

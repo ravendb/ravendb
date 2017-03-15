@@ -95,18 +95,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return patcher.Tables.Values;
         }
 
-        public override bool Load(IEnumerable<SqlTableWithRecords> records)
+        public override void Load(IEnumerable<SqlTableWithRecords> records)
         {
-            var hadWork = false;
-
             try
             {
                 using (var writer = new RelationalDatabaseWriter(this, _predefinedSqlConnection, Database))
                 {
                     foreach (var table in records)
                     {
-                        hadWork = true;
-
                         var stats = writer.Write(table, CancellationToken);
 
                         LogStats(stats, table);
@@ -134,8 +130,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                 Statistics.RecordLoadError(e, NumberOfExtractedItemsInCurrentBatch);
             }
-
-            return hadWork;
         }
 
         private void LogStats(SqlWriteStats stats, SqlTableWithRecords table)
