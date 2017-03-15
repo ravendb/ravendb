@@ -131,6 +131,8 @@ namespace Raven.Server.Rachis
 
                     _engine.Timeout.Defer(_connection.Source);
 
+                    _engine.ReportLeaderTime(appendEntries.TimeAsLeader);
+
                 }
             }
         }

@@ -146,6 +146,8 @@ namespace Raven.Server.Rachis
                 [nameof(AppendEntries.PrevLogTerm)] = ae.PrevLogTerm,
                 [nameof(AppendEntries.Term)] = ae.Term,
                 [nameof(AppendEntries.TruncateLogBefore)] = ae.TruncateLogBefore,
+                [nameof(AppendEntries.TimeAsLeader)] = ae.TimeAsLeader,
+
             };
 
             if (ae.ForceElections)
