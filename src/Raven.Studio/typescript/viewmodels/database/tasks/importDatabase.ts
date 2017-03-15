@@ -91,10 +91,6 @@ class importDatabase extends viewModelBase {
                 commandTokens.push("--include-expired");
             }
 
-            if (model.shouldDisableVersioningBundle()) {
-                commandTokens.push("--disable-versioning-bundle")
-            }
-
             if (model.removeAnalyzers()) {
                 commandTokens.push("--remove-analyzers");
             }

@@ -93,20 +93,6 @@ class serverSmuggling extends viewModelBase {
             return checkbox.UnChecked;
         });
 
-        this.disableVersioningSelection = ko.computed(() => {
-            var dbs = this.selectedDatabases();
-            var versioningCount = dbs.filter(x => x.shouldDisableVersioningBundle()).length;
-            if (dbs.length === 0 || versioningCount === 0)
-                return checkbox.UnChecked;
-
-            var versioningBundleCount = dbs.filter(x => x.hasVersioningBundle()).length;
-            if (versioningBundleCount === versioningCount)
-                return checkbox.Checked;
-            if (versioningBundleCount > 0)
-                return checkbox.SomeChecked;
-            return checkbox.UnChecked;
-        });
-
         this.submitEnabled = ko.computed(() => {
             var progress = this.inProgress();
             var selection = this.selectedDatabases().length > 0;
@@ -152,9 +138,6 @@ class serverSmuggling extends viewModelBase {
                 if (item) {
                     self.selectedDatabases.push(item);
                     item.incremental(savedConfig.Incremental);
-                    if (item.hasVersioningBundle()) {
-                        item.shouldDisableVersioningBundle(savedConfig.ShouldDisableVersioningBundle);
-                    }
                     if (item.hasReplicationBundle()) {
                         item.stripReplicationInformation(savedConfig.StripReplicationInformation);
                     }
@@ -192,20 +175,6 @@ class serverSmuggling extends viewModelBase {
         for (var i = 0; i < databases.length; i++) {
             if (databases[i].hasReplicationBundle()) {
                 databases[i].stripReplicationInformation(!hasSelected);
-            }
-        }
-    }
-
-    toggleSelectAllDisableVersioning() {
-        var databases = this.selectedDatabases();
-        var versioningBundleCount = databases.filter(x => x.hasVersioningBundle()).length;
-        if (databases.length === 0 || versioningBundleCount === 0)
-            return;
-
-        var hasSelected = databases.filter(x => x.shouldDisableVersioningBundle()).length > 0;
-        for (var i = 0; i < databases.length; i++) {
-            if (databases[i].hasVersioningBundle()) {
-                databases[i].shouldDisableVersioningBundle(!hasSelected);
             }
         }
     }
