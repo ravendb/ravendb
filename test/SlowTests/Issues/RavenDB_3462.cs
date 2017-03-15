@@ -3,21 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Globalization;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3462 : RavenTest
+    public class RavenDB_3462 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-5988")]
         public void BoundingBoxIndexSparialSearch()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new EntitySpatialIndex().Execute(documentStore);
                 new EntitySpatialIndex2().Execute(documentStore);
@@ -67,54 +68,54 @@ namespace Raven.Tests.Issues
                 }
             }
         }
-    }
 
-    public class Entity
-    {
-        public string Id { get; set; }
-        public Geolocation Geolocation { get; set; }
-    }
-
-    public class Geolocation
-    {
-        public double Lon { get; set; }
-        public double Lat { get; set; }
-        public string WKT
+        private class Entity
         {
-            get
+            public string Id { get; set; }
+            public Geolocation Geolocation { get; set; }
+        }
+
+        private class Geolocation
+        {
+            public double Lon { get; set; }
+            public double Lat { get; set; }
+            public string WKT
             {
-                return string.Format("POINT({0} {1})",
-                    Lon.ToString(CultureInfo.InvariantCulture),
-                    Lat.ToString(CultureInfo.InvariantCulture));
+                get
+                {
+                    return string.Format("POINT({0} {1})",
+                        Lon.ToString(CultureInfo.InvariantCulture),
+                        Lat.ToString(CultureInfo.InvariantCulture));
+                }
             }
         }
-    }
 
-    public class EntitySpatialIndex : AbstractIndexCreationTask<Entity>
-    {
-        public EntitySpatialIndex()
+        private class EntitySpatialIndex : AbstractIndexCreationTask<Entity>
         {
-            Map = entities => entities.Select(entity => new
+            public EntitySpatialIndex()
             {
-                entity.Id,
-                Coordinates = entity.Geolocation.WKT
-            });
+                Map = entities => entities.Select(entity => new
+                {
+                    entity.Id,
+                    Coordinates = entity.Geolocation.WKT
+                });
 
-            Spatial("Coordinates", x => x.Cartesian.BoundingBoxIndex());
+                Spatial("Coordinates", x => x.Cartesian.BoundingBoxIndex());
+            }
         }
-    }
 
-    public class EntitySpatialIndex2 : AbstractIndexCreationTask<Entity>
-    {
-        public EntitySpatialIndex2()
+        private class EntitySpatialIndex2 : AbstractIndexCreationTask<Entity>
         {
-            Map = entities => entities.Select(e => new
+            public EntitySpatialIndex2()
             {
-                Id = e.Id,
-                __ = SpatialGenerate("Coordinates", e.Geolocation.Lat, e.Geolocation.Lon)
-            });
+                Map = entities => entities.Select(e => new
+                {
+                    Id = e.Id,
+                    __ = SpatialGenerate("Coordinates", e.Geolocation.Lat, e.Geolocation.Lon)
+                });
 
-            Spatial("Coordinates", x => x.Cartesian.BoundingBoxIndex());
+                Spatial("Coordinates", x => x.Cartesian.BoundingBoxIndex());
+            }
         }
     }
 }

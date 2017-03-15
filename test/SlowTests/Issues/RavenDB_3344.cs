@@ -3,21 +3,17 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
+
 using System.Linq;
-
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3344 : RavenTest
+    public class RavenDB_3344 : RavenTestBase
     {
         private class Index1 : AbstractIndexCreationTask<Person>
         {
@@ -34,10 +30,10 @@ namespace Raven.Tests.Issues
                                  let metadata = MetadataFor(person)
                                  from name in metadata.Value<string>("Names").Split(',')
                                  select new
-                                        {
-                                            CurrentName = person.Name,
-                                            PreviousName = person.Name
-                                        };
+                                 {
+                                     CurrentName = person.Name,
+                                     PreviousName = person.Name
+                                 };
 
                 StoreAllFields(FieldStorage.Yes);
             }
@@ -46,7 +42,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldWork()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Index1().Execute(store);
 

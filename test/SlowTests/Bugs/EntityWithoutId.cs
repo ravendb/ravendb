@@ -26,12 +26,12 @@ namespace SlowTests.Bugs
                     s.SaveChanges();
                 }
 
-                
+
                 using (var s = store.OpenSession())
                 {
                     for (int i = 0; i < 5; i++)
                     {
-                        Assert.Equal("Ayende #" + i, s.Load<User>("users/"+(i+1)).Name);
+                        Assert.Equal("Ayende #" + i, s.Load<User>("users/" + (i + 1)).Name);
                     }
                 }
             }
@@ -132,7 +132,8 @@ namespace SlowTests.Bugs
                 }
             }
         }
-        public class User
+
+        private class User
         {
             public string Name { get; set; }
         }
