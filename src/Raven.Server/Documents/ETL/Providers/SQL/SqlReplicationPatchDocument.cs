@@ -113,8 +113,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             // ReSharper disable once ForCanBeConvertedToForeach
             for (int i = 0; i < _config.SqlReplicationTables.Count; i++)
             {
-                // first, delete all the rows that might already exist there
-                GetOrAdd(_config.SqlReplicationTables[i].TableName).Deletes.Add(item);
+                // delete all the rows that might already exist there
+
+                var sqlTable = _config.SqlReplicationTables[i];
+
+                if (sqlTable.InsertOnlyMode)
+                    continue;
+
+                GetOrAdd(sqlTable.TableName).Deletes.Add(item);
             }
 
             if (item.IsDelete)
