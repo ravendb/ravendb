@@ -51,13 +51,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 CancellationToken.ThrowIfCancellationRequested();
 
-                Statistics.LastProcessedEtag = toSqlItem.Etag; // TODO arek
-
                 try
                 {
                     patcher.Transform(toSqlItem, context);
 
                     Statistics.TransformationSuccess();
+
+                    CurrentBatch.LastProcessedEtag = toSqlItem.Etag;
 
                     if (CanContinueBatch() == false)
                         break;
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     writer.Commit();
                 }
                 
-                Statistics.LoadSuccess(NumberOfExtractedItemsInCurrentBatch);
+                Statistics.LoadSuccess(CurrentBatch.NumberOfExtractedItems);
             }
             catch (Exception e)
             {
@@ -128,7 +128,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     FallbackTime = TimeSpan.FromSeconds(Math.Min(60 * 15, Math.Max(5, secondsSinceLastError * 2)));
                 }
 
-                Statistics.RecordLoadError(e, NumberOfExtractedItemsInCurrentBatch);
+                CurrentBatch.Errored();
+
+                Statistics.RecordLoadError(e, CurrentBatch.NumberOfExtractedItems);
             }
         }
 

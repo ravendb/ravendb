@@ -16,10 +16,10 @@ namespace Raven.Server.Documents.ETL
         private readonly EtlConfiguration _configuration;
         private readonly CancellationTokenSource _cts;
         private Thread _thread;
+        protected readonly CurrentEtlRun CurrentBatch = new CurrentEtlRun();
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
         protected TimeSpan? FallbackTime;
-        protected int NumberOfExtractedItemsInCurrentBatch;
         public readonly EtlStatistics Statistics;
         public readonly string Tag;
 
@@ -44,8 +44,6 @@ namespace Raven.Server.Documents.ETL
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context)
         {
-            NumberOfExtractedItemsInCurrentBatch = 0;
-
             var documents = Database.DocumentsStorage.GetDocumentsFrom(context, _configuration.Collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
             var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, _configuration.Collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
 
@@ -59,7 +57,7 @@ namespace Raven.Server.Documents.ETL
 
                     while (merged.MoveNext())
                     {
-                        NumberOfExtractedItemsInCurrentBatch++;
+                        CurrentBatch.NumberOfExtractedItems++;
                         yield return merged.Current;
                     }
                 }
@@ -133,6 +131,8 @@ namespace Raven.Server.Documents.ETL
             {
                 _waitForChanges.Reset();
 
+                CurrentBatch.Reset();
+
                 var startTime = Database.Time.GetUtcNow();
                 var duration = Stopwatch.StartNew();
 
@@ -158,8 +158,12 @@ namespace Raven.Server.Documents.ETL
                             var transformed = Transform(extracted, context);
 
                             Load(transformed);
-
-                            didWork = NumberOfExtractedItemsInCurrentBatch > 0;
+                            
+                            if (CurrentBatch.LastProcessedEtag > Statistics.LastProcessedEtag)
+                            {
+                                didWork = true;
+                                Statistics.LastProcessedEtag = CurrentBatch.LastProcessedEtag;
+                            }
                         }
 
                         if (didWork)
@@ -191,7 +195,7 @@ namespace Raven.Server.Documents.ETL
 
                     if (didWork)
                     {
-                        UpdateMetrics(startTime, duration, NumberOfExtractedItemsInCurrentBatch);
+                        UpdateMetrics(startTime, duration, CurrentBatch.NumberOfExtractedItems);
 
                         if (CancellationToken.IsCancellationRequested == false)
                         {
