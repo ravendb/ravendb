@@ -4,12 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -66,6 +68,59 @@ namespace SlowTests.Core.Streaming
                 }
 
                 Assert.Equal(200, count);
+            }
+        }
+
+        [Fact]
+        public void CanStreamQueryResultsWithQueryStatistics()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Users_ByName().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        session.Store(new User());
+                    }
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User, Users_ByName>();
+
+                    StreamQueryStatistics stats;
+                    var reader = session.Advanced.Stream(query, out stats);
+
+                    while (reader.MoveNext())
+                    {
+                        Assert.IsType<User>(reader.Current.Document);
+                    }
+
+                    Assert.Equal(stats.IndexName, "Users/ByName");
+                    Assert.Equal(stats.TotalResults, 100);
+                    Assert.Equal(stats.IndexTimestamp.Year, DateTime.Now.Year);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.DocumentQuery<User, Users_ByName>();
+                    StreamQueryStatistics stats;
+                    var reader = session.Advanced.Stream(query, out stats);
+
+                    while (reader.MoveNext())
+                    {
+                        Assert.IsType<User>(reader.Current.Document);
+                    }
+
+                    Assert.Equal(stats.IndexName, "Users/ByName");
+                    Assert.Equal(stats.TotalResults, 100);
+                    Assert.Equal(stats.IndexTimestamp.Year, DateTime.Now.Year);
+                }
             }
         }
 
