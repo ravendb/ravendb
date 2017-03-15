@@ -435,35 +435,37 @@ namespace Raven.Server.Documents
             var keyMem = context.Allocator.Allocate(size);
 
             Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize] = VersioningStorage.RecordSeperator;
+            var pos = lowerKeySize;
+            keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
 
             switch (type)
             {
                 case AttachmentType.Document:
-                    keyMem.Ptr[lowerKeySize + 1] = (byte)'d';
+                    keyMem.Ptr[pos++] = (byte)'d';
                     break;
                 case AttachmentType.Revision:
-                    keyMem.Ptr[lowerKeySize + 1] = (byte)'r';
+                    keyMem.Ptr[pos++] = (byte)'r';
                     break;
                 case AttachmentType.Conflict:
-                    keyMem.Ptr[lowerKeySize + 1] = (byte)'c';
+                    keyMem.Ptr[pos++] = (byte)'c';
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
-            keyMem.Ptr[lowerKeySize + 2] = VersioningStorage.RecordSeperator;
+            keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
 
             if (type != AttachmentType.Document)
             {
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-                    Memory.CopyInline(keyMem.Ptr + lowerKeySize + 3, (byte*)pChangeVector, changeVectorSize);
+                    Memory.CopyInline(keyMem.Ptr + pos, (byte*)pChangeVector, changeVectorSize);
                 }
-                keyMem.Ptr[lowerKeySize + 3 + changeVectorSize] = VersioningStorage.RecordSeperator;
+                pos += changeVectorSize;
+                keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
             }
 
             if (isPrefix == false)
-                Memory.CopyInline(keyMem.Ptr + lowerKeySize + 3 + changeVectorSize + 1, lowerName, lowerNameSize);
+                Memory.CopyInline(keyMem.Ptr + pos, lowerName, lowerNameSize);
 
             keySlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
