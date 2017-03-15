@@ -6,10 +6,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -97,6 +100,8 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
+                context.OpenReadTransaction();
+
                 var dbId = Constants.Documents.Prefix + name;
 
                 var etag = GetLongFromHeaders("ETag");
@@ -112,15 +117,30 @@ namespace Raven.Server.Web.System
                 {
                     throw new BadRequestException("Database document validation failed.", e);
                 }
+                var factor = Math.Max(1, GetIntValueQueryString("replication-factor") ?? 0);
+                var topology = new DatabaseTopology();
+
+                var clusterTopology = ServerStore.GetClusterTopology(context);
+
+                var allNodes = clusterTopology.Members.Keys
+                    .Concat(clusterTopology.Promotables.Keys)
+                    .Concat(clusterTopology.Watchers.Keys)
+                    .ToArray();
+
+                var offset = new Random().Next();
+
+                for (int i = 0; i < Math.Min(allNodes.Length, factor); i++)
+                {
+                    var selectedNode = allNodes[(i + offset) % allNodes.Length];
+                    topology.Members.Add(selectedNode);
+                }
+                var entityToBlittable = new EntityToBlittable(null);
+                var topologyJson = entityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
 
                 json.Modifications = new DynamicJsonValue(json)
                 {
-                    [nameof(DatabaseRecord.Topology)] = new DynamicJsonValue
-                    {
-                        [nameof(DatabaseTopology.Members)] = new DynamicJsonArray(new[] { ServerStore.NodeTag })
-                    }
+                    [nameof(DatabaseRecord.Topology)] = topologyJson
                 };
-
 
                 var newEtag = await ServerStore.TEMP_WriteDbAsync(context, dbId, json, etag);
 

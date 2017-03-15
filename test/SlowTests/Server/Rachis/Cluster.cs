@@ -28,7 +28,7 @@ namespace SlowTests.Server.Rachis
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument("test");
-                databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor: 2));
             }
     
             foreach (var server in Servers.Except(new [] {leader}))
