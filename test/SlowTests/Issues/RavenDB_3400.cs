@@ -1,18 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3400 :RavenTestBase
+    public class RavenDB_3400 : RavenTestBase
     {
         [Fact]
         public void To_Facet_Lazy_Async()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new PostsIndex().Execute(store);
                 new PostsTransformer().Execute(store);
@@ -22,7 +23,7 @@ namespace Raven.Tests.Issues
                     var post = new Post()
                     {
                         DateTime = DateTime.UtcNow,
-                        Comments = new List<Comment> {new Comment() {Text = "Test comment", Likes = new List<string> {"users/1", "users/2"}}}
+                        Comments = new List<Comment> { new Comment() { Text = "Test comment", Likes = new List<string> { "users/1", "users/2" } } }
                     };
                     documentSession.Store(post);
                     documentSession.SaveChanges();
@@ -40,8 +41,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-
-        public class PostsTransformer : AbstractTransformerCreationTask<PostsIndex.Result>
+        private class PostsTransformer : AbstractTransformerCreationTask<PostsIndex.Result>
         {
             public class Result
             {
@@ -71,7 +71,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class PostsIndex : AbstractIndexCreationTask<Post, PostsIndex.Result>
+        private class PostsIndex : AbstractIndexCreationTask<Post, PostsIndex.Result>
         {
             public class Result
             {
@@ -90,7 +90,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Post
+        private class Post
         {
             public string Id { get; set; }
             public DateTime DateTime { get; set; }
@@ -102,7 +102,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Comment
+        private class Comment
         {
             public string Text { get; set; }
             public IList<string> Likes { get; set; }
@@ -113,5 +113,4 @@ namespace Raven.Tests.Issues
             }
         }
     }
-
 }

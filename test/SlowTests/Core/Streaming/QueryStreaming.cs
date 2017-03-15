@@ -101,7 +101,7 @@ namespace SlowTests.Core.Streaming
 
                     var indexDefinition = indexDef.ToIndexDefinition(store.Conventions, true);
                     indexDefinition.Name = "MyClass/ByIndex";
-                    store.Admin.Send(new PutIndexesOperation(new []{indexDefinition} ));
+                    store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                     WaitForIndexing(store);
 
@@ -184,28 +184,26 @@ namespace SlowTests.Core.Streaming
             public FooIndex()
             {
                 Map = foos => from foo in foos
-                    select new { foo.Num };
+                              select new { foo.Num };
 
                 Sort(x => x.Num, SortOptions.Numeric);
             }
         }
-    }
 
-    public class Users_ByName : AbstractIndexCreationTask<User>
-    {
-        public Users_ByName()
+        private class Users_ByName : AbstractIndexCreationTask<User>
         {
-            Map = users => from u in users select new { Name = u.Name, LastName = u.LastName.Boost(10) };
+            public Users_ByName()
+            {
+                Map = users => from u in users select new { Name = u.Name, LastName = u.LastName.Boost(10) };
 
-            Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
 
-            IndexSuggestions.Add(x => x.Name);
+                IndexSuggestions.Add(x => x.Name);
 
-            Analyzers.Add(x => x.Name, typeof(Lucene.Net.Analysis.SimpleAnalyzer).FullName);
+                Analyzers.Add(x => x.Name, typeof(Lucene.Net.Analysis.SimpleAnalyzer).FullName);
 
-            Stores.Add(x => x.Name, FieldStorage.Yes);
+                Stores.Add(x => x.Name, FieldStorage.Yes);
+            }
         }
     }
-
-
 }

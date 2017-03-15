@@ -177,7 +177,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
         {
             var blogOne = new Blog
@@ -234,7 +234,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void CanPerformDynamicQueryWithHighlighting()
         {
             var blogOne = new Blog
@@ -294,7 +294,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void ExecutesQueryWithHighlightingsAgainstSimpleIndex()
         {
             using (var store = GetDocumentStore())
@@ -368,7 +368,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
         {
             using (var store = GetDocumentStore())
@@ -439,7 +439,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void ExecutesQueryWithHighlightingsAndProjections()
         {
             using (var store = GetDocumentStore())

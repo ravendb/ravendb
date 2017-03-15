@@ -32,7 +32,7 @@ namespace FastTests.Client
             }
         }
 
-        public class Document
+        private class Document
         {
             public int? FreshDays { get; set; }
             public int? GrossWeight { get; set; }

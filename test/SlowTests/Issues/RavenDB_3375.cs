@@ -1,23 +1,21 @@
-
 using System;
 using System.Linq;
-using System.Threading;
-using Raven.Client;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
-namespace Bug
+namespace SlowTests.Issues
 {
-    public class QueryEscapeTest
+    public class QueryEscapeTest : RavenTestBase
     {
-        public class Post
+        private class Post
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string[] Tags { get; set; }
         }
 
-        public class TagsIndex : AbstractIndexCreationTask<Post>
+        private class TagsIndex : AbstractIndexCreationTask<Post>
         {
             public TagsIndex()
             {
@@ -30,23 +28,20 @@ namespace Bug
         [Fact]
         public void CanQueryPhraseWithEscapedCharacters()
         {
-            using (var store = new EmbeddableDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.Configuration.RunInMemory = true;
-                store.Initialize();
-                store.DatabaseCommands.PutIndex("TagsIndex", new TagsIndex().CreateIndexDefinition());
+                store.Admin.Send(new PutIndexesOperation(new TagsIndex().CreateIndexDefinition()));
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Post
                     {
-                        Id = 1,
-                        Tags = new[] { "NoSpace:1", "Space :2"}
+                        Tags = new[] { "NoSpace:1", "Space :2" }
                     });
                     session.SaveChanges();
                 }
 
-                WaitForIndexes(store);
+                WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -65,16 +60,5 @@ namespace Bug
                 }
             }
         }
-
-        static void WaitForIndexes(IDocumentStore store)
-        {
-            do
-            {
-                var stats = store.DatabaseCommands.GetStatistics();
-                if (stats.StaleIndexes.Length == 0) return;
-                Thread.Sleep(100);
-            } while (true);
-        }
     }
 }
-

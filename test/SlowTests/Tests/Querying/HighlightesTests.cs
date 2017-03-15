@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Theory(Skip = "Missing feature: Highlighting")]
+        [Theory(Skip = "RavenDB-6558")]
         [InlineData("session")]
         public void SearchWithHighlightes(string q)
         {
