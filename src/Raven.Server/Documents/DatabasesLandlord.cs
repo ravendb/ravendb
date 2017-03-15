@@ -55,15 +55,13 @@ namespace Raven.Server.Documents
             using (_serverStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
-                var doc = _serverStore.Cluster.Read(context, "db/" + dbName.ToLowerInvariant());
-                if (doc == null)
+                var record = _serverStore.Cluster.ReadDatabase(context, dbName);
+                if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded 
                     UnloadDatabase(dbName, null);
                     return;
                 }
-
-                var record = JsonDeserializationCluster.DatabaseRecord(doc);
 
                 if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
                     return;

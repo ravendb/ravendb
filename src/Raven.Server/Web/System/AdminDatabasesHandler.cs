@@ -10,11 +10,13 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -86,29 +88,10 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            Task<DocumentDatabase> dbTask;
-            var online =
-                ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out dbTask) &&
-                dbTask != null && dbTask.IsCompleted;
             TransactionOperationContext context;
             string errorMessage;
-            if (
-                ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath,
-                    out errorMessage) == false)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                using (ServerStore.ContextPool.AllocateOperationContext(out context))
-                using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
-                {
-                    context.Write(writer,
-                        new DynamicJsonValue
-                        {
-                            ["Type"] = "Error",
-                            ["Message"] = errorMessage
-                        });
-                }
-                return;
-            }
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                throw new BadRequestException(errorMessage);
 
             ServerStore.EnsureNotPassive();
 
@@ -118,9 +101,28 @@ namespace Raven.Server.Web.System
 
                 var etag = GetLongFromHeaders("ETag");
 
-                var dbDoc = context.ReadForDisk(RequestBodyStream(), dbId);
+                var json = context.ReadForDisk(RequestBodyStream(), dbId);
+                var document = JsonDeserializationServer.DatabaseDocument(json);
 
-                var newEtag = await ServerStore.TEMP_WriteDbAsync(context, dbId, dbDoc, etag);
+                try
+                {
+                    DatabaseHelper.Validate(name, document);
+                }
+                catch (Exception e)
+                {
+                    throw new BadRequestException("Database document validation failed.", e);
+                }
+
+                json.Modifications = new DynamicJsonValue(json)
+                {
+                    [nameof(DatabaseRecord.Topology)] = new DynamicJsonValue
+                    {
+                        [nameof(DatabaseTopology.Members)] = new DynamicJsonArray(new[] { ServerStore.NodeTag })
+                    }
+                };
+
+
+                var newEtag = await ServerStore.TEMP_WriteDbAsync(context, dbId, json, etag);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 

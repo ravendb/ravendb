@@ -382,7 +382,7 @@ namespace Raven.Server.Documents
 
         public DynamicJsonValue GenerateDatabaseInfo()
         {
-            var envs = GetAllStoragesEnvironment();
+            var envs = GetAllStoragesEnvironment().ToList();
             if (envs.Any(x => x.Environment == null))
                 return null;
             Size size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));

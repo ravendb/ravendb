@@ -391,7 +391,10 @@ namespace Raven.Server.Rachis
         private readonly SortedList<long, int> _nodesPerIndex = new SortedList<long, int>();
 
         private bool _running;
+        private readonly Stopwatch _leadership = Stopwatch.StartNew();
         private int VotersMajority => (_voters.Count + 1) / 2 + 1;
+
+        public long LeaderShipDuration => _leadership.ElapsedMilliseconds;
 
         protected long GetLowestIndexInEntireCluster()
         {

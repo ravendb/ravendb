@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Session
                     {
                         Debug.Assert(_innerEnumerator == null);
 
-                        _innerEnumerator = CreateMultipleStreamResults<T>(_enumerator.Current).GetEnumerator();
+                        _innerEnumerator = CreateMultipleStreamResults(_enumerator.Current).GetEnumerator();
                         if (_innerEnumerator.MoveNext() == false)
                         {
                             _innerEnumerator.Dispose();
@@ -82,12 +82,12 @@ namespace Raven.Client.Documents.Session
                         return true;
                     }
 
-                    Current = CreateStreamResult<T>(_enumerator.Current);
+                    Current = CreateStreamResult(_enumerator.Current);
                     return true;
                 }
             }
 
-            private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json)
+            private StreamResult<T> CreateStreamResult(BlittableJsonReaderObject json)
             {
                 var metadata = json.GetMetadata();
                 var etag = metadata.GetEtag();
@@ -106,7 +106,7 @@ namespace Raven.Client.Documents.Session
                 return streamResult;
             }
 
-            private IEnumerable<StreamResult<T>> CreateMultipleStreamResults<T>(BlittableJsonReaderObject json)
+            private IEnumerable<StreamResult<T>> CreateMultipleStreamResults(BlittableJsonReaderObject json)
             {
                 BlittableJsonReaderArray values;
                 if (json.TryGet(Constants.Json.Fields.Values, out values) == false)

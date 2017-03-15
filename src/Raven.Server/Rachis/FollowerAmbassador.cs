@@ -152,7 +152,8 @@ namespace Raven.Server.Rachis
                                                 Term = _engine.CurrentTerm,
                                                 TruncateLogBefore = _leader.LowestIndexInEntireCluster,
                                                 PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
-                                                PrevLogIndex = _followerMatchIndex
+                                                PrevLogIndex = _followerMatchIndex,
+                                                TimeAsLeader = _leader.LeaderShipDuration
                                             };
                                         }
                                     }

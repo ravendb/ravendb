@@ -36,6 +36,7 @@
   },
   "buildOptions": {
     "allowUnsafe": true,
+    "warningsAsErrors": true,
     "define": [
       "PORTABLE"
     ],

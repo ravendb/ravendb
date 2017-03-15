@@ -192,7 +192,7 @@ namespace Raven.Client.Documents.Session
             return AddLazyOperation(lazyLoadOperation, onEval, token);
         }
 
-        Lazy<Task<List<T>>> IAsyncLazySessionOperations.MoreLikeThisAsync<T>(MoreLikeThisQuery query, CancellationToken token = new CancellationToken())
+        Lazy<Task<List<T>>> IAsyncLazySessionOperations.MoreLikeThisAsync<T>(MoreLikeThisQuery query, CancellationToken token)
         {
             var lazyOp = new LazyMoreLikeThisOperation<T>(this, query);
             return AddLazyOperation<List<T>>(lazyOp, null, token);
@@ -214,14 +214,14 @@ namespace Raven.Client.Documents.Session
             return AddLazyOperation<Dictionary<string, T>>(operation, null, token);
         }
 
-        Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null,
-            CancellationToken token = new CancellationToken())
+        Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval,
+            CancellationToken token)
         {
             return Lazily.LoadAsync(id, typeof(TTransformer), configure, onEval, token);
         }
 
-        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, Type transformerType, Action<ILoadConfiguration> configure = null, Action<T> onEval = null,
-            CancellationToken token = new CancellationToken())
+        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<T> onEval,
+            CancellationToken token)
         {
             var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
             var ids = new[] { id };

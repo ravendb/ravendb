@@ -32,6 +32,11 @@ namespace Sparrow
             return new FrozenAwaiter(_tcs, this).WaitAsync(timeout);
         }
 
+        public Task<bool> WaitAsync(int timeout)
+        {
+            return new FrozenAwaiter(_tcs, this).WaitAsync(timeout);
+        }
+
         public FrozenAwaiter GetFrozenAwaiter()
         {
             return new FrozenAwaiter(_tcs, this);
@@ -59,6 +64,17 @@ namespace Sparrow
             {
                 Debug.Assert(timeout != TimeSpan.MaxValue);
 
+                var waitAsync = _tcs.Task;
+                var result = await Task.WhenAny(waitAsync, Task.Delay(timeout, _parent._token));
+                if (_parent._token != CancellationToken.None)
+                    return result == waitAsync && !_parent._token.IsCancellationRequested;
+
+                return result == waitAsync;
+            }
+
+            [Pure]
+            public async Task<bool> WaitAsync(int timeout)
+            {
                 var waitAsync = _tcs.Task;
                 var result = await Task.WhenAny(waitAsync, Task.Delay(timeout, _parent._token));
                 if (_parent._token != CancellationToken.None)
