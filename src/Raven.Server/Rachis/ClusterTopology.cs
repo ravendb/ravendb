@@ -20,6 +20,8 @@ namespace Raven.Server.Rachis
             return Members.ContainsKey(node) || Promotables.ContainsKey(node) || Watchers.ContainsKey(node);
         }
 
+
+
         public ClusterTopology()
         {
             

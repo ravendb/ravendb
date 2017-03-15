@@ -21,6 +21,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
@@ -78,16 +79,15 @@ namespace Raven.Server.Documents
 
                     _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
                     
-                    //TODO: This is BAD BAD BAD thing to do since this is called on startup
-                    using (var cmd = context.ReadObject(new DynamicJsonValue
+                    ThreadPool.QueueUserWorkItem(x =>
+                    {
+                        SendRachisCommandToLeader((DynamicJsonValue)x);
+                    }, new DynamicJsonValue
                     {
                         ["Type"] = nameof(RemoveNodeFromDatabaseCommand),
                         [nameof(RemoveNodeFromDatabaseCommand.DatabaseName)] = dbName,
                         [nameof(RemoveNodeFromDatabaseCommand.NodeTag)] = _serverStore.NodeTag
-                    }, "remove-node"))
-                    {
-                        _serverStore.SendToLeaderAsync(cmd).Wait();
-                    }
+                    });
 
                     return;
                 }
@@ -116,6 +116,16 @@ namespace Raven.Server.Documents
             }
 
             // if deleted, unload / deleted and then notify leader that we removed it
+        }
+
+        private void SendRachisCommandToLeader(DynamicJsonValue x)
+        {
+            JsonOperationContext myContext;
+            using (_serverStore.ContextPool.AllocateOperationContext(out myContext))
+            using (var cmd = myContext.ReadObject(x, "rachis command"))
+            {
+                _serverStore.SendToLeaderAsync(cmd).Wait();
+            }
         }
 
         private void NotifyDatabaseAboutStateChange(string changedDatabase, Task<DocumentDatabase> done)
