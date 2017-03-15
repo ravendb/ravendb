@@ -8,6 +8,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
@@ -870,7 +871,7 @@ namespace Raven.Server.Documents
             if ((document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
                 Slice prefixSlice;
-                using (AttachmentsStorage.GetAttachmentPrefix(context, document.LoweredKey.Buffer, document.LoweredKey.Size, AttachmentsStorage.AttachmentType.Document, null, out prefixSlice))
+                using (AttachmentsStorage.GetAttachmentPrefix(context, document.LoweredKey.Buffer, document.LoweredKey.Size, AttachmentType.Document, null, out prefixSlice))
                 {
                     document.Attachments = AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice.Clone(context.Allocator));
                 }

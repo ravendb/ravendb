@@ -72,28 +72,31 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(string.Join(",", names.OrderBy(x => x)), metadata[Constants.Documents.Metadata.Attachments]);
                 }
 
-                var readBuffer = new byte[8];
-                for (var i = 0; i < names.Length; i++)
+                using (var session = store2.OpenSession())
                 {
-                    var name = names[i];
+                    var readBuffer = new byte[8];
+                    for (var i = 0; i < names.Length; i++)
+                    {
+                        var name = names[i];
+                        using (var attachmentStream = new MemoryStream(readBuffer))
+                        {
+                            var attachment = session.Advanced.GetAttachment("users/1", name, (result, stream) => stream.CopyTo(attachmentStream));
+                            Assert.Equal(2 + 2 * i, attachment.Etag);
+                            Assert.Equal(name, attachment.Name);
+                            Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
+                            if (i == 0)
+                                Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
+                            else if (i == 1)
+                                Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
+                            else if (i == 2)
+                                Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
+                        }
+                    }
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     {
-                        var attachment = store2.Operations.Send(new GetAttachmentOperation("users/1", name, (result, stream) => stream.CopyTo(attachmentStream)));
-                        Assert.Equal(2 + 2 * i, attachment.Etag);
-                        Assert.Equal(name, attachment.Name);
-                        Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
-                        if (i == 0)
-                            Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
-                        else if (i == 1)
-                            Assert.Equal(new byte[] { 10, 20, 30, 40, 50 }, readBuffer.Take(5));
-                        else if (i == 2)
-                            Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, readBuffer.Take(5));
+                        var notExistsAttachment = session.Advanced.GetAttachment("users/1", "not-there", (result, stream) => stream.CopyTo(attachmentStream));
+                        Assert.Null(notExistsAttachment);
                     }
-                }
-                using (var attachmentStream = new MemoryStream(readBuffer))
-                {
-                    var notExistsAttachment = store2.Operations.Send(new GetAttachmentOperation("users/1", "not-there", (result, stream) => stream.CopyTo(attachmentStream)));
-                    Assert.Null(notExistsAttachment);
                 }
 
                 var statistics = store2.Admin.Send(new GetStatisticsOperation());
