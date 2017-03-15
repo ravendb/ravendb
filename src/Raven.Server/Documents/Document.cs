@@ -138,9 +138,20 @@ namespace Raven.Server.Documents
 
             foreach (var property in properties)
             {
-                if (isMetadata && property[0] == '@' && 
-                    property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
+                if (property[0] == '@')
+                {
+                    switch (isMetadata)
+                    {
+                        case true:
+                            if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
+                                continue;
+                            break;
+                        default:
+                            if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
+                                continue;
+                            break;
+                    }
+                }
 
                 object myProperty;
                 object objProperty;
