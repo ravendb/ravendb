@@ -8,7 +8,8 @@
             BulkInsert,
             Subscription,
             Replication,
-            TopologyDiscovery
+            TopologyDiscovery,
+            Cluster
         }
 
         public string DatabaseName { get; set; }

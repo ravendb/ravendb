@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -49,6 +51,8 @@ namespace Raven.Server.Rachis
 
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
+
+        public abstract Task<Stream> ConenctToPeer(string url, string apiKey);
 
         public virtual void OnSnapshotInstalled(TransactionOperationContext context)
         {

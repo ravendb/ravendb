@@ -8,16 +8,10 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            Console.WriteLine(Process.GetCurrentProcess().Id);
-            Console.WriteLine();
-
-            Parallel.For(0, 100, i =>
+            using (var testclass = new SlowTests.Server.Rachis.Cluster())
             {
-                using (var a = new FastTests.Client.LoadIntoStream())
-                {
-                    a.CanLoadByIdsIntoStreamUsingTransformer();
-                }
-            });
+                testclass.test().Wait();
+            }
         }
     }
 }

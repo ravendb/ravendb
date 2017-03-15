@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -84,6 +86,11 @@ namespace Raven.Server.ServerWide
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
             return _engine.GetTopology(context);
+        }
+
+        public async Task AddNodeToClusterAsync(string nodeUrl)
+        {
+            await _engine.AddToClusterAsync(nodeUrl);
         }
 
         public void Initialize()
@@ -359,6 +366,21 @@ namespace Raven.Server.ServerWide
         {
             //TODO: actually implement this
             return _engine.PutAsync(cmd);
+        }
+
+        public Task WaitForTopology(Leader.TopologyModification state)
+        {            
+            return _engine.WaitForTopology(state);
+        }
+
+        public Task WaitForState(RachisConsensus.State state)
+        {
+            return _engine.WaitForState(state);
+        }
+
+        public void ClusterAcceptNewConnection(TcpClient client,Stream stream)
+        {
+            _engine.AcceptNewConnection(client, null, stream);
         }
     }
 }
