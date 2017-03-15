@@ -79,7 +79,7 @@ class editSqlReplication extends viewModelBase {
     loadSqlReplicationConnections(): JQueryPromise<any> {
         return new getSqlReplicationConnectionsCommand(this.activeDatabase())
             .execute()
-            .done((dto: Raven.Server.Documents.SqlReplication.SqlConnections) => {
+            .done((dto: Raven.Server.Documents.ETL.Providers.SQL.Connections.SqlConnections) => {
                 var connections = new sqlReplicationConnections(dto);
 
                 if (connections.predefinedConnections().length > 0) {

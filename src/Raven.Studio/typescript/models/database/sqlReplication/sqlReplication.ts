@@ -51,7 +51,7 @@ class sqlReplication extends document {
         return hasAny;
     });
 
-    constructor(dto: Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration) {
+    constructor(dto: Raven.Server.Documents.ETL.Providers.SQL.SqlReplicationConfiguration) {
         super(dto);
 
         this.name(dto.Name);
@@ -150,10 +150,10 @@ class sqlReplication extends document {
             SqlReplicationTables: [sqlReplicationTable.empty().toDto()],
             ForceSqlServerQueryRecompile: false,
             QuoteTables:true
-        } as Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration);
+        } as Raven.Server.Documents.ETL.Providers.SQL.SqlReplicationConfiguration);
     }
 
-    toDto(): Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration {
+    toDto(): Raven.Server.Documents.ETL.Providers.SQL.SqlReplicationConfiguration {
         //TODO:var meta = this.__metadata.toDto();
         //TODO: meta["@id"] = "Raven/SqlReplication/Configuration/" + this.name();
         return {

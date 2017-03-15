@@ -7,7 +7,7 @@ class getSqlReplicationConnectionsCommand extends getDocumentWithMetadataCommand
         super("Raven/SqlReplication/Connections", db);
     }
 
-    execute(): JQueryPromise<Raven.Server.Documents.SqlReplication.SqlConnections> {
+    execute(): JQueryPromise<Raven.Server.Documents.ETL.Providers.SQL.Connections.SqlConnections> {
         return super.execute();
     }
 }
