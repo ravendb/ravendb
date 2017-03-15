@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Search;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Commercial;
@@ -14,14 +15,13 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
+using Sparrow.Binary;
 using Sparrow.Json;
-using Voron;
-using Sparrow;
 using Sparrow.Json.Parsing;
+using Voron;
 using Sparrow.Logging;
 using Voron.Data.Tables;
 using Voron.Exceptions;
-using Bits = Sparrow.Binary.Bits;
 
 namespace Raven.Server.ServerWide
 {
@@ -122,6 +122,8 @@ namespace Raven.Server.ServerWide
                 options.Dispose();
                 throw;
             }
+
+            BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount;
 
             ContextPool = new TransactionContextPool(_env);
 
@@ -233,8 +235,8 @@ namespace Raven.Server.ServerWide
                         }
                         catch (ObjectDisposedException)
                         {
-                        //we are disposing, so don't care
-                    }
+                            //we are disposing, so don't care
+                        }
                     });
 
                 exceptionAggregator.Execute(() => _shutdownNotification.Dispose());

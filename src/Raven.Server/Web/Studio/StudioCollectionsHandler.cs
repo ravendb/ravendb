@@ -38,6 +38,7 @@ namespace Raven.Server.Web.Studio
             var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
             var collection = GetStringQueryString("collection", required: false);
             var bindings = GetStringValuesQueryString("binding", required: false);
+            var fullBindings = GetStringValuesQueryString("fullBinding", required: false);
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -47,7 +48,9 @@ namespace Raven.Server.Web.Studio
                 HashSet<LazyStringValue> availableColumns;
                 long totalResults;
                 long etag;
-                HashSet<string> propertiesToSend;
+                HashSet<string> propertiesPreviewToSend;
+                HashSet<string> fullPropertiesToSend = new HashSet<string>(fullBindings);
+                ;
 
                 // compute etag only - maybe we can respond with NotModified?
                 if (string.IsNullOrEmpty(collection))
@@ -76,13 +79,13 @@ namespace Raven.Server.Web.Studio
                 {
                     documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize).ToArray();
                     availableColumns = ExtractColumnNames(documents, context);
-                    propertiesToSend = bindings.Count > 0 ? new HashSet<string>(bindings) : new HashSet<string>();
+                    propertiesPreviewToSend = bindings.Count > 0 ? new HashSet<string>(bindings) : new HashSet<string>();
                 }
                 else
                 {
                     documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, collection, start, pageSize).ToArray();
                     availableColumns = ExtractColumnNames(documents, context);
-                    propertiesToSend = bindings.Count > 0 ? new HashSet<string>(bindings) : availableColumns.Take(ColumnsSamplingLimit).Select(x => x.ToString()).ToHashSet();
+                    propertiesPreviewToSend = bindings.Count > 0 ? new HashSet<string>(bindings) : availableColumns.Take(ColumnsSamplingLimit).Select(x => x.ToString()).ToHashSet();
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -102,7 +105,7 @@ namespace Raven.Server.Web.Studio
 
                             using (document.Data)
                             {
-                                WriteDocument(writer, context, document, propertiesToSend);
+                                WriteDocument(writer, context, document, propertiesPreviewToSend, fullPropertiesToSend);
                             }
                         }
 
@@ -126,7 +129,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        private void WriteDocument(BlittableJsonTextWriter writer, DocumentsOperationContext context, Document document, HashSet<string> propertiesToSend)
+        private void WriteDocument(BlittableJsonTextWriter writer, DocumentsOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)
         {
             if (_buffers == null)
                 _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
@@ -141,16 +144,17 @@ namespace Raven.Server.Web.Studio
             var objectsStubs = new HashSet<LazyStringValue>();
             var arraysStubs = new HashSet<LazyStringValue>();
             var trimmedValue = new HashSet<LazyStringValue>();
-            
+
             var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
             for (int i = 0; i < size; i++)
             {
                 document.Data.GetPropertyByIndex(_buffers.Properties[i], ref prop);
-                if (propertiesToSend.Contains(prop.Name))
+                var sendFull = fullPropertiesToSend.Contains(prop.Name);
+                if (sendFull || propertiesPreviewToSend.Contains(prop.Name))
                 {
-                    var strategy = FindWriteStrategy(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                    var strategy = sendFull ? ValueWriteStrategy.Passthrough : FindWriteStrategy(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
 
                     if (strategy == ValueWriteStrategy.Passthrough || strategy == ValueWriteStrategy.Trim)
                     {
@@ -184,17 +188,13 @@ namespace Raven.Server.Web.Studio
             if (first == false)
                 writer.WriteComma();
 
-
-            metadata.Modifications = new DynamicJsonValue
+            var newMetadata = new DynamicJsonValue(metadata)
             {
                 [ObjectStubsKey] = new DynamicJsonArray(objectsStubs),
                 [ArrayStubsKey] = new DynamicJsonArray(arraysStubs),
                 [TrimmedValueKey] = new DynamicJsonArray(trimmedValue)
             };
-
-            metadata = context.ReadObject(metadata, document.Key);
-
-            writer.WriteMetadata(document, metadata);
+            writer.WriteMetadata(document, context.ReadObject(newMetadata, document.Key));
 
             writer.WriteEndObject();
         }

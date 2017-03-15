@@ -96,14 +96,16 @@ namespace Raven.Server.Documents.Subscriptions
 
                 var bigEndianId = Bits.SwapBytes((ulong)id);
 
-                table.Insert(new TableValueBuilder
+                TableValueBuilder tableValueBuilder;
+                using (table.Allocate(out tableValueBuilder))
                 {
-                    bigEndianId,
-                    {criteria.BasePointer, criteria.Size},
-                    ackEtag,
-                    timeOfSendingLastBatch,
-                    timeOfLastClientActivity
-                });
+                    tableValueBuilder.Add(bigEndianId);
+                    tableValueBuilder.Add(criteria.BasePointer, criteria.Size);
+                    tableValueBuilder.Add(ackEtag);
+                    tableValueBuilder.Add(timeOfSendingLastBatch);
+                    tableValueBuilder.Add(timeOfLastClientActivity);
+                    table.Insert(tableValueBuilder);
+                }
                 tx.Commit();
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"New Subscription With ID {id} was created");
@@ -138,22 +140,23 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     var copy = context.GetMemory(oldCriteriaSize);
                     Memory.Copy(copy.Address, ptr, oldCriteriaSize);
-                    var tvb = new TableValueBuilder
-                    {
-                        {(byte*)&subscriptionId, sizeof (long)},
-                        {copy.Address, oldCriteriaSize},
-                        {(byte*)&lastEtag, sizeof (long)},
-                        {(byte*)&now, sizeof (long)}
-                    };
                     var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-                    TableValueReader existingSubscription;
-                    Slice subscriptionSlice;
-                    using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subscriptionSlice))
+                    TableValueBuilder tvb;
+                    using (table.Allocate(out tvb))
                     {
-                        if (table.ReadByKey(subscriptionSlice, out existingSubscription) == false)
-                            return;
+                        tvb.Add((byte*)&subscriptionId, sizeof(long));
+                        tvb.Add(copy.Address, oldCriteriaSize);
+                        tvb.Add((byte*)&lastEtag, sizeof(long));
+                        tvb.Add((byte*)&now, sizeof(long));
+                        TableValueReader existingSubscription;
+                        Slice subscriptionSlice;
+                        using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subscriptionSlice))
+                        {
+                            if (table.ReadByKey(subscriptionSlice, out existingSubscription) == false)
+                                return;
+                        }
+                        table.Update(existingSubscription.Id, tvb);
                     }
-                    table.Update(existingSubscription.Id, tvb);
                     tx.Commit();
                 }
             }

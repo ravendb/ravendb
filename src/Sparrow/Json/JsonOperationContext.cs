@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
@@ -36,12 +37,12 @@ namespace Sparrow.Json
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(string x, string y)
             {
-                return string.Compare(x, y, StringComparison.OrdinalIgnoreCase) == 0;
+                return x.Length == y.Length && string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int GetHashCode(string str)
-            {
+            {                
                 return str.GetHashCode();                
             }
         }
@@ -51,14 +52,13 @@ namespace Sparrow.Json
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
         private int _numberOfAllocatedStringsValues;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe LazyStringValue AllocateStringValue(string str, byte* ptr, int size)
         {
             if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
             {
                 var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
                 lazyStringValue.Renew(str,ptr, size);
-                lazyStringValue.AllocatedMemoryData = null;
-                lazyStringValue.IsDisposed = false;
                 return lazyStringValue;
             }
 
@@ -137,7 +137,7 @@ namespace Sparrow.Json
 
         private Stack<ManagedPinnedBuffer> _managedBuffers;
 
-        public UTF8Encoding Encoding;
+        public static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
         public CachedProperties CachedProperties;
 
@@ -147,10 +147,7 @@ namespace Sparrow.Json
         private readonly ObjectJsonParser _objectJsonParser;
         private readonly BlittableJsonDocumentBuilder _documentBuilder;
 
-        public int Generation
-        {
-            get { return _generation; }
-        }
+        public int Generation => _generation;
 
         public long AllocatedMemory => _arenaAllocator.TotalUsed;
 
@@ -165,7 +162,6 @@ namespace Sparrow.Json
             _longLivedSize = longLivedSize;
             _arenaAllocator = new ArenaMemoryAllocator(initialSize);
             _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(longLivedSize);
-            Encoding = new UTF8Encoding();
             CachedProperties = new CachedProperties(this);
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
@@ -296,27 +292,36 @@ namespace Sparrow.Json
             LazyStringValue value;
 
             var field = key.Value;
-            if (!_fieldNames.TryGetValue(field, out value))
-            {                
-                value = GetLazyString(key, longLived: true);
-                _fieldNames[field] = value;
+            if (_fieldNames.TryGetValue(field, out value))
+            {
+                //sanity check, in case the 'value' is manually disposed outside of this function
+                Debug.Assert(value.IsDisposed == false);
+                return value;
             }
+
+            value = GetLazyString(key, longLived: true);
+            _fieldNames[field] = value;
 
             //sanity check, in case the 'value' is manually disposed outside of this function
             Debug.Assert(value.IsDisposed == false);
             return value;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
             LazyStringValue value;
 
-            if (!_fieldNames.TryGetValue(field, out value))
+            if (_fieldNames.TryGetValue(field, out value))
             {
-                var key = new StringSegment(field, field.Length);
-                value = GetLazyString(key, longLived: true);
-                _fieldNames[field] = value;
+                // PERF: This is usually the most common scenario, so actually being contiguous improves the behavior.
+                Debug.Assert(value.IsDisposed == false);
+                return value;
             }
+
+            var key = new StringSegment(field, field.Length);
+            value = GetLazyString(key, longLived: true);
+            _fieldNames[field] = value;
 
             //sanity check, in case the 'value' is manually disposed outside of this function
             Debug.Assert(value.IsDisposed == false);

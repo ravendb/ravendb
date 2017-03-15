@@ -52,6 +52,7 @@ var paths = {
         "jquery/dist/jquery.js",
         'lodash/dist/lodash.js',
         'prism/prism.js',
+        'Sortable/Sortable.js',
         'prism/components/prism-javascript.js',
         "blockUI/jquery.blockUI.js",
         "knockout/dist/knockout.debug.js",

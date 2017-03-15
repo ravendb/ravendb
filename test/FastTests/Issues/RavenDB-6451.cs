@@ -1,20 +1,16 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using Microsoft.Extensions.DependencyModel;
-using Raven.Client.Documents.Exceptions;
 using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_6451
+    public class RavenDB_6451 : NoDisposalNeeded
     {
-        private HashSet<Assembly> _assemblies = new HashSet<Assembly>();
+        private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
 
         private IEnumerable<Assembly> GetAssemblies(Assembly assemblyToScan)
         {
@@ -50,10 +46,9 @@ namespace FastTests.Issues
             Assert.True(HasInvalidProperties(typeof(ClassWithNestedClassWithBlittable)));
 
             var referenceAssemblies = GetAssemblies(GetType().GetTypeInfo().Assembly);
-            var exceptionTypes =
-                (from type in referenceAssemblies.SelectMany(x => x.ExportedTypes)
-                    where typeof(Exception).IsAssignableFrom(type)
-                    select type).ToArray();
+            var exceptionTypes = (from type in referenceAssemblies.SelectMany(x => x.ExportedTypes)
+                                  where typeof(Exception).IsAssignableFrom(type)
+                                  select type).ToArray();
 
             foreach (var t in exceptionTypes)
             {
@@ -97,7 +92,7 @@ namespace FastTests.Issues
                 {
                     return true;
                 }
-            }        
+            }
 
             return false;
         }
@@ -107,8 +102,8 @@ namespace FastTests.Issues
             if (t.IsConstructedGenericType)
             {
                 var genericType = t.GetGenericTypeDefinition();
-                if(genericType.GetInterfaces().Any(x => x.IsConstructedGenericType && 
-                                                        x.GetGenericTypeDefinition() == typeof(IEnumerable<>)))                    
+                if (genericType.GetInterfaces().Any(x => x.IsConstructedGenericType &&
+                                                         x.GetGenericTypeDefinition() == typeof(IEnumerable<>)))
                     return true;
             }
             return false;

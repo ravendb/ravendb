@@ -2,13 +2,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 using Sparrow.Platform;
@@ -110,7 +113,7 @@ namespace Raven.Server.Config
 
         private static void AddEnvironmentVariables(IConfigurationBuilder configurationBuilder)
         {
-            foreach (DictionaryEntry  de in Environment.GetEnvironmentVariables())
+            foreach (DictionaryEntry de in Environment.GetEnvironmentVariables())
             {
                 var s = de.Key as string;
                 if (s == null)
@@ -154,12 +157,13 @@ namespace Raven.Server.Config
             PostInit();
 
             Initialized = true;
-            
+
             return this;
         }
 
         public void PostInit()
         {
+            CheckDirectoryPermissions();
         }
 
         public void CopyParentSettings(RavenConfiguration serverConfiguration)
@@ -168,6 +172,8 @@ namespace Raven.Server.Config
             Encryption.UseFips = serverConfiguration.Encryption.UseFips;
 
             Storage.ForceUsing32BitsPager = serverConfiguration.Storage.ForceUsing32BitsPager;
+
+            Queries.MaxClauseCount = serverConfiguration.Queries.MaxClauseCount;
         }
 
         public void SetSetting(string key, string value)
@@ -218,6 +224,66 @@ namespace Raven.Server.Config
         {
             _configBuilder.AddCommandLine(args);
             Settings = _configBuilder.Build();
+        }
+
+        private void CheckDirectoryPermissions()
+        {
+            if (Core.RunInMemory)
+                return;
+
+            Dictionary<string, KeyValuePair<string, string>> results = null;
+            foreach (var configurationProperty in typeof(RavenConfiguration).GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (configurationProperty.PropertyType.GetTypeInfo().IsSubclassOf(typeof(ConfigurationCategory)) == false)
+                    continue;
+
+                var categoryValue = configurationProperty.GetValue(this);
+
+                foreach (var categoryProperty in configurationProperty.PropertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+                {
+                    if (categoryProperty.PropertyType != typeof(PathSetting))
+                        continue;
+
+                    var pathSettingValue = categoryProperty.GetValue(categoryValue) as PathSetting;
+                    if (pathSettingValue == null)
+                        continue;
+
+                    var fileName = Guid.NewGuid().ToString("N");
+                    var path = pathSettingValue.ToFullPath();
+                    var fullPath = Path.Combine(path, fileName);
+                    var configurationKey = categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>()
+                        .OrderBy(x => x.Order)
+                        .First()
+                        .Key;
+
+                    try
+                    {
+                        if (Directory.Exists(path) == false)
+                            Directory.CreateDirectory(path);
+
+                        File.WriteAllText(fullPath, string.Empty);
+                        File.Delete(fullPath);
+                    }
+                    catch (Exception e)
+                    {
+                        if (results == null)
+                            results = new Dictionary<string, KeyValuePair<string, string>>();
+
+                        results[configurationKey] = new KeyValuePair<string, string>(path, e.Message);
+                    }
+                }
+            }
+
+            if (results == null || results.Count == 0)
+                return;
+
+            var sb = new StringBuilder("Could not access some of the specified paths. Please check if you have sufficient privileges to access following paths:");
+            sb.Append(Environment.NewLine);
+
+            foreach (var result in results)
+                sb.AppendLine($"Key: '{result.Key}' Path: '{result.Value.Key}' Error: '{result.Value.Value}'");
+
+            throw new InvalidOperationException(sb.ToString());
         }
     }
 }

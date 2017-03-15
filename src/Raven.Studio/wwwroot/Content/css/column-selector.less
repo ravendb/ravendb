@@ -1,0 +1,114 @@
+﻿.colselect-dropdown {
+    padding:0;
+}
+.columns-list-container {
+    padding: @grid-gutter-width/4;
+    height: 500px;
+    max-width: calc(100vw ~"-" @grid-gutter-width/3*4);
+    max-height: 55vh;
+    
+    display:flex;
+    flex-direction: column;
+
+
+    @media (min-width:@screen-sm) {
+        width: 500px;
+        max-height: 65vh;
+    }
+
+    @media (min-width:@screen-md) {
+        max-width: calc(100vw ~"-" @grid-gutter-width/3*7);
+    }
+
+    .checkbox {
+        padding-left: 30px;
+        margin: 0;
+
+        label {
+            &:before {
+                top: 0px;
+            }
+
+            &:after {
+                top: -4px;
+            }
+        }
+
+        input {
+            top: 3px;
+        }
+    }
+
+    .column-list {
+        .absolute-fill;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        background-color: @gray-darker;
+
+
+        li {
+            display: flex;
+            align-items: stretch;
+
+            .column-name {
+                flex-grow: 1;
+                padding: 0;
+            }
+
+            a {
+                padding: 5px 10px;
+                color: @gray-light;
+                transition: opacity .1s;
+                display: inline-block;
+
+                &:hover {
+                    background-color:@gray-dark;
+                    color:@gray-lighter;
+                }
+            }
+
+            .column-remove {
+                color:@brand-danger;
+                &:hover:not(.disabled) {
+                    color:@brand-danger-light;
+                    background-color:@brand-danger-dark;
+                }
+            }
+
+            .column-rearrange {
+                color:@gray;
+                cursor:move;
+            }
+
+            &:hover {
+                background-color: lighten(@gray-darker,3%);
+            }
+        }
+    }
+
+    .column-add-new {
+        
+        &:not(.active){
+            display:none;
+        }
+
+        .form {
+            display:flex;
+
+            .binding, .alias {
+                flex-grow:1;
+                margin-right:@grid-gutter-width/4;                
+            } 
+        }
+
+        .error-message {
+            margin-top:@grid-gutter-width/4;
+            margin-bottom:@grid-gutter-width/4;
+        }
+
+        hr {
+            margin:@grid-gutter-width/4 0;
+        }
+    }
+}

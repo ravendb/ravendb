@@ -18,7 +18,8 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
-using Raven.Server.Documents.SqlReplication;
+using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Sparrow.Platform;
 using Xunit;
 
@@ -524,6 +525,7 @@ replicateToOrders(orderData);");
                     await commands.DeleteAsync("orders/1", null);
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
+
                 AssertCounts(0, 0, store);
             }
         }
@@ -595,7 +597,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.LastReplicatedEtag > 0)
+                    if (statistics.LastProcessedEtag > 0)
                         eventSlim.Set();
                 };
 

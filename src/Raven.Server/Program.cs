@@ -116,6 +116,13 @@ namespace Raven.Server
                 ctrlCPressed = true;
             };
 
+            //stop dumping logs
+            LoggingSource.Instance.DisableConsoleLogging();
+            LoggingSource.Instance.SetupLogMode(LogMode.None,
+                Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
+
+            WriteServerStatsAndWaitForEsc(server);
+
             while (true)
             {
                 var lower = Console.ReadLine()?.ToLower();
@@ -199,7 +206,7 @@ namespace Raven.Server
             Console.WriteLine("Showing stats, press ESC to close...");
             Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec       | docs (all dbs)");
             var i = 0;
-            while (Console.KeyAvailable == false || Console.ReadKey(true).Key != ConsoleKey.Escape)
+            while (true)
             {
                 var json = MemoryStatsHandler.MemoryStatsInternal();
                 var humaneProp = (json["Humane"] as DynamicJsonValue);
@@ -232,13 +239,12 @@ namespace Raven.Server
 
                 Console.Write($"| {allDocs,14:#,#.#;;0}      ");
 
-                for (int j = 0; j < 5 && Console.KeyAvailable == false; j++)
+                for (int j = 0; j < 5; j++)
                 {
                     Thread.Sleep(100);
                 }
             }
-            Console.WriteLine();
-            Console.WriteLine("Stats halted");
+         
         }
     }
 }

@@ -35,7 +35,7 @@ namespace Raven.Server.Web.System
 
                 var dbId = Constants.Documents.Prefix + name;
                 long etag;
-                using(context.OpenReadTransaction())
+                using (context.OpenReadTransaction())
                 using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out etag))
                 {
                     if (dbDoc == null)
@@ -86,6 +86,10 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
+            Task<DocumentDatabase> dbTask;
+            var online =
+                ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out dbTask) &&
+                dbTask != null && dbTask.IsCompleted;
             TransactionOperationContext context;
             string errorMessage;
             if (

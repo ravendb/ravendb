@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,6 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Client.Util;
-using Raven.Client.Util.Sockets;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -212,7 +212,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         public async Task<BlittableJsonReaderObject> TryReadFromWebSocket(
            JsonOperationContext context,
-            RavenClientWebSocket webSocket,
+            ClientWebSocket webSocket,
            string debugTag,
            CancellationToken cancellationToken)
         {

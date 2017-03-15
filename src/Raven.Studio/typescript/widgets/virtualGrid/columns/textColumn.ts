@@ -15,13 +15,25 @@ class textColumn<T> implements virtualColumn {
         public width: string) {
     }
 
+    getCellValue(item: T) {
+        return _.isFunction(this.valueAccessor)
+            ? this.valueAccessor.bind(item)(item) // item is available as this, as well as first argument
+            : (item as any)[this.valueAccessor as string];
+    }
+
     renderCell(item: T, isSelected: boolean): string {
-        const preparedValue = this.prepareValue(item);
-        return `<div class="cell text-cell ${preparedValue.typeCssClass}" style="width: ${this.width}">${preparedValue.rawText}</div>`;
+        try {
+            const preparedValue = this.prepareValue(item);
+            return `<div class="cell text-cell ${preparedValue.typeCssClass}" style="width: ${this.width}">${preparedValue.rawText}</div>`;
+        } catch (error) {
+            //TODO: work on L&F of errors!
+            return `<div class="cell text-cell eval-error" style="width: ${this.width}">Error!</div>`;
+        }
+        
     }
 
     protected prepareValue(item: T): preparedValue {
-        const cellValue = _.isFunction(this.valueAccessor) ? this.valueAccessor(item) : (item as any)[this.valueAccessor as string];
+        const cellValue = this.getCellValue(item);
 
         if (_.isString(cellValue)) {
             const rawText = utils.escape(cellValue);

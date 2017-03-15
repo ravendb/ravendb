@@ -134,6 +134,7 @@ namespace SlowTests.Issues
         public void CanDefineMoreThanOneAdditionalStoragePath()
         {
             var serverConfiguration = new RavenConfiguration(null, ResourceType.Server);
+            serverConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
             serverConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StoragePath), "C:\\temp\\0");
             serverConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), "C:\\temp\\1;C:\\temp\\2");
             serverConfiguration.Initialize();

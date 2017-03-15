@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Xunit;
 
-namespace FastTests
+namespace FastTests.Client
 {
     public class FirstClassPatch : RavenTestBase
     {

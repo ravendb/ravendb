@@ -28,7 +28,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
-import columnsSelector = require("common/helpers/columnsSelector");
+import columnsSelector = require("viewmodels/partial/columnsSelector");
 
 type indexItem = {
     name: string;
@@ -85,7 +85,7 @@ class query extends viewModelBase {
     isInFilter: KnockoutComputed<boolean>;
     isStringFilter: KnockoutComputed<boolean>;
 
-    columnsSelector = ko.observable<columnsSelector<document>>();
+    columnsSelector = new columnsSelector<document>();
 
     uiTransformer = ko.observable<string>(); // represents UI value, which might not be yet applied to criteria 
     uiTransformerParameters = ko.observableArray<queryTransformerParameter>(); // represents UI value, which might not be yet applied to criteria 
@@ -347,13 +347,11 @@ class query extends viewModelBase {
             enableInlinePreview: true
         });
 
-        this.columnsSelector(new columnsSelector(grid,
+        this.columnsSelector.init(grid,
             (s, t, c) => this.fetcher()(s, t),
-            (w, r) => documentsProvider.findColumns(w, r), (results: pagedResult<document>) => [])); //TODO: extract columns
+            (w, r) => documentsProvider.findColumns(w, r), (results: pagedResult<document>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
 
         grid.headerVisible(true);
-
-        this.columnsSelector().initGrid();
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
@@ -361,7 +359,7 @@ class query extends viewModelBase {
 
         this.columnPreview.install("virtual-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
-                const value = _.isString(column.valueAccessor) ? (doc as any)[column.valueAccessor] : column.valueAccessor(doc);
+                const value = column.getCellValue(doc);
                 const json = JSON.stringify(value, null, 4);
                 const html = Prism.highlight(json, (Prism.languages as any).javascript);
                 onValue(html);
@@ -429,9 +427,7 @@ class query extends viewModelBase {
         this.uiTransformer(null);
         this.uiTransformerParameters([]);
 
-        if (this.columnsSelector()) {
-            this.columnsSelector().reset();    
-        }
+        this.columnsSelector.reset();    
         
         this.runQuery();
 
@@ -894,23 +890,6 @@ class query extends viewModelBase {
         var db = this.activeDatabase();
         var url = appUrl.forDatabaseQuery(db) + this.csvUrl();
         this.downloader.download(db, url);
-    }
-
-     selectColumns() {
-        eventsCollector.default.reportEvent("query", "select-columns");
-
-        var selectColumnsViewModel: selectColumns = new selectColumns(
-            this.currentColumnsParams().clone(),
-            this.contextName(),
-            this.activeDatabase(),
-            this.getQueryGrid().getColumnsNames());
-
-        app.showBootstrapDialog(selectColumnsViewModel);
-        selectColumnsViewModel.onExit().done((cols: customColumns) => {
-            this.currentColumnsParams(cols);
-
-            this.runQuery();
-        });
     }
 
      onIndexChanged(newIndexName: string) {

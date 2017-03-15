@@ -222,14 +222,13 @@
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>
                     
-                    
                     <div class="btn-group dropdown-right">
                         <button class="btn btn-default btn-sm dropdown-toggle" type="button"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <i class="icon-table"></i><span>Display</span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true, with: $root.columnsSelector">
-                            <div data-bind="compose: 'common/columnsSelector.html'"></div>
+                        <ul class="dropdown-menu colselect-dropdown slidein-style padding padding-sm" role="menu" data-bind="dropdownPanel: true">
+                            <div data-bind="compose: $root.columnsSelector"></div>
                         </ul>
                     </div>
                 </div>

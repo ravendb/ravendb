@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Server.Rachis;
@@ -22,13 +23,14 @@ namespace Tests.Infrastructure
     {
         protected bool PredictableSeeds;
 
-        protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount)
+        protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null)
         {
             var initialCount = RachisConsensuses.Count;
             var leaderIndex = _random.Next(0, nodeCount);
             for (var i = 0; i < nodeCount; i++)
             {
-                SetupServer(i == leaderIndex);
+                // ReSharper disable once ExplicitCallerInfoArgument
+                SetupServer(i == leaderIndex,caller: caller);
             }
             var leader = RachisConsensuses[leaderIndex + initialCount];
             for (var i = 0; i < nodeCount; i++)
@@ -91,11 +93,13 @@ namespace Tests.Infrastructure
             return nodes.FirstOrDefault(x => x.CurrentState == RachisConsensus.State.Leader);
         }
 
-        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0)
+        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, [CallerMemberName] string caller = null)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
-            var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port;
+              var ch = (char)(65 + (_count++));
+            var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/?" + caller + "#" + ch;
+
 
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
         
@@ -103,6 +107,7 @@ namespace Tests.Infrastructure
             var rachis = new RachisConsensus<CountingStateMachine>(seed);
             rachis.Initialize(new StorageEnvironment(server));
             if (bootstrap)
+        
                 rachis.Bootstarp(url);
             rachis.Url = url;
             _listeners.Add(tcpListener);

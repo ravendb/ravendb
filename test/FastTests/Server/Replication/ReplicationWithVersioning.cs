@@ -185,6 +185,11 @@ namespace FastTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
                 Assert.True(WaitForDocument(storeC, "marker"));
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Marker" }, "marker");
+                    await session.SaveChangesAsync();
+                }
                 Assert.True(WaitForDocument(storeB, "marker"));
 
                 Assert.Equal(1, WaitForValue(() => GetRevisions(storeC, "users/1").Count, 1));

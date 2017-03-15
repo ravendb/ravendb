@@ -29,7 +29,7 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
-import columnsSelector = require("common/helpers/columnsSelector");
+import columnsSelector = require("viewmodels/partial/columnsSelector");
 
 class documents extends viewModelBase {
 
@@ -50,7 +50,7 @@ class documents extends viewModelBase {
     private collectionToSelectName: string;
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
-    columnsSelector = ko.observable<columnsSelector<document>>();
+    columnsSelector = new columnsSelector<document>();
 
     private fullDocumentsProvider: documentPropertyProvider;
 
@@ -143,14 +143,14 @@ class documents extends viewModelBase {
 
     refresh() {
         eventsCollector.default.reportEvent("documents", "refresh");
-        this.columnsSelector().reset();
+        this.columnsSelector.reset();
         this.gridController().reset(true);
         this.tracker.setCurrentAsNotDirty();
     }
 
-    fetchDocs(skip: number, take: number, columns: string[]): JQueryPromise<pagedResultWithAvailableColumns<any>> {
+    fetchDocs(skip: number, take: number, previewColumns: string[], fullColumns: string[]): JQueryPromise<pagedResultWithAvailableColumns<any>> {
         this.isLoading(true);
-        return this.tracker.currentCollection().fetchDocuments(skip, take, columns)
+        return this.tracker.currentCollection().fetchDocuments(skip, take, previewColumns, fullColumns)
             .always(() => this.isLoading(false));
     }
 
@@ -166,7 +166,7 @@ class documents extends viewModelBase {
 
         grid.headerVisible(true);
 
-        this.columnsSelector(new columnsSelector<document>(grid, (s, t, c) => this.fetchDocs(s, t, c), (w, r) => {
+        this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols), (w, r) => {
             if (this.tracker.currentCollection().isAllDocuments) {
                 return [
                     new checkedColumn(true),
@@ -178,9 +178,7 @@ class documents extends viewModelBase {
             } else {
                 return documentsProvider.findColumns(w, r);
             }
-        }, (results: pagedResultWithAvailableColumns<document>) => results.availableColumns));
-
-        this.columnsSelector().initGrid();
+        }, (results: pagedResultWithAvailableColumns<document>) => results.availableColumns);
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
@@ -188,9 +186,12 @@ class documents extends viewModelBase {
 
         this.columnPreview.install(".documents-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
-                this.fullDocumentsProvider.resolvePropertyValue(doc, column.valueAccessor, (v: any) => {
+                this.fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
                     const json = JSON.stringify(v, null, 4);
                     const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    onValue(html);
+                }, error => {
+                    const html = Prism.highlight("Unable to generate column preview: " + error.toString(), (Prism.languages as any).javascript);
                     onValue(html);
                 });
             }
@@ -199,7 +200,7 @@ class documents extends viewModelBase {
 
     private onCollectionSelected(newCollection: collection) {
         this.updateUrl(appUrl.forDocuments(newCollection.name, this.activeDatabase()));
-        this.columnsSelector().reset();
+        this.columnsSelector.reset();
         this.gridController().reset();
         this.tracker.setCurrentAsNotDirty();
     }
@@ -398,31 +399,7 @@ class documents extends viewModelBase {
         });
     }
 
-    selectColumns() {
-        eventsCollector.default.reportEvent("documents", "select-columns");
-        // Fetch column widths from virtual table
-        var virtualTable = this.getDocumentsGrid();
-        var columnsNames = virtualTable.getColumnsNames();
-        var vtColumns = virtualTable.columns();
-        this.currentColumnsParams().columns().forEach((column: customColumnParams) => {
-            for (var i = 0; i < vtColumns.length; i++) {
-                if (column.binding() === vtColumns[i].binding) {
-                    column.width(vtColumns[i].width() | 0);
-                    break;
-                }
-            }
-        });
-
-        var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.contextName(), this.activeDatabase(), columnsNames);
-        app.showBootstrapDialog(selectColumnsViewModel);
-        selectColumnsViewModel.onExit().done((cols) => {
-            this.currentColumnsParams(cols);
-            this.currentCollection().bindings(this.currentColumnsParams().getBindings());
-            var pagedList = this.currentCollection().getDocuments();
-            pagedList.invalidateCache();
-            this.currentCollectionPagedItems(pagedList);
-        });
-    }
+   
 
     */
 }
