@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.ETL
         private Thread _thread;
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
+        protected TimeSpan? FallbackTime;
+        protected int NumberOfExtractedItemsInCurrentBatch;
         public readonly EtlStatistics Statistics;
         public readonly string Tag;
 
@@ -42,6 +44,8 @@ namespace Raven.Server.Documents.ETL
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context)
         {
+            NumberOfExtractedItemsInCurrentBatch = 0;
+
             var documents = Database.DocumentsStorage.GetDocumentsFrom(context, _configuration.Collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
             var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, _configuration.Collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
 
@@ -55,13 +59,14 @@ namespace Raven.Server.Documents.ETL
 
                     while (merged.MoveNext())
                     {
+                        NumberOfExtractedItemsInCurrentBatch++;
                         yield return merged.Current;
                     }
                 }
             }
         }
 
-        public abstract IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, out int batchSize);
+        public abstract IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context);
 
         public abstract bool Load(IEnumerable<TTransformed> items);
 
@@ -131,11 +136,12 @@ namespace Raven.Server.Documents.ETL
                 var startTime = Database.Time.GetUtcNow();
                 var duration = Stopwatch.StartNew();
 
-                // TODO arek
-                //if (Statistics.SuspendUntil.HasValue && Statistics.SuspendUntil.Value > Database.Time.GetUtcNow())
-                //    return;
-
-                var batchSize = 0;
+                if (FallbackTime != null)
+                {
+                    Thread.Sleep(FallbackTime.Value);
+                    FallbackTime = null;
+                }
+                
                 var didWork = false;
 
                 try
@@ -149,7 +155,7 @@ namespace Raven.Server.Documents.ETL
 
                             var extracted = Extract(context);
 
-                            var transformed = Transform(extracted, context, out batchSize);
+                            var transformed = Transform(extracted, context);
 
                             didWork = Load(transformed);
                         }
@@ -165,12 +171,17 @@ namespace Raven.Server.Documents.ETL
                             continue;
                         }
                     }
-
-                    
                 }
                 catch (OperationCanceledException)
                 {
                     return;
+                }
+                catch (Exception e)
+                {
+                    var message = $"Exception in ETL process named '{Name}'";
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{Tag} {message}", e);
                 }
                 finally
                 {
@@ -178,7 +189,7 @@ namespace Raven.Server.Documents.ETL
 
                     if (didWork)
                     {
-                        UpdateMetrics(startTime, duration, batchSize);
+                        UpdateMetrics(startTime, duration, NumberOfExtractedItemsInCurrentBatch);
 
                         if (CancellationToken.IsCancellationRequested == false)
                         {

@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
                         {
                             ["Name"] = replication.Name,
                             ["Statistics"] = replication.Statistics.ToBlittable(),
-                            ["Metrics"] = replication.MetricsCountersManager.ToSqlEtlMetricsData(),
+                            ["Metrics"] = replication.Metrics.ToSqlEtlMetricsData(),
                         };
                         context.Write(writer, json);
                     }

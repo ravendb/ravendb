@@ -231,7 +231,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -279,7 +279,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -332,7 +332,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -386,7 +386,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -446,7 +446,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -494,7 +494,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 
@@ -539,7 +539,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
                 };
 

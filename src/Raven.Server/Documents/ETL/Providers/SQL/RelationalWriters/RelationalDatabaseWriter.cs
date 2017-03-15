@@ -192,10 +192,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
+                        {
                             _logger.Info(
-                                "Failure to replicate changes to relational database for: " + _etl.Name + " (doc: " + itemToReplicate.DocumentKey + " ), will continue trying." +
-                                Environment.NewLine + cmd.CommandText, e);
-                       _etl.Statistics.RecordWriteError(e);
+                                $"Failed to replicate changes to relational database for: {_etl.Name} " +
+                                $"(doc: {itemToReplicate.DocumentKey}), will continue trying. {Environment.NewLine}{cmd.CommandText}", e);
+                        }
+
+                        _etl.Statistics.RecordLoadError(e);
                     }
                     finally
                     {
@@ -263,6 +266,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         .Append(_commandBuilder.QuoteIdentifier(pkName))
                         .Append(" IN (");
 
+                    var countOfDeletes = 0;
                     for (int j = i; j < Math.Min(i + maxParams, toDelete.Count); j++)
                     {
                         if (i != j)
@@ -279,6 +283,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         {
                             sb.Append("'").Append(SanitizeSqlValue(toDelete[j].DocumentKey)).Append("'");
                         }
+
+                        if (toDelete[j].IsDelete) // count only "real" deletions, not the ones because of insert
+                            countOfDeletes++;
                     }
                     sb.Append(")");
 
@@ -294,14 +301,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     try
                     {
                         cmd.ExecuteNonQuery();
-                        deleted++;
+
+                        deleted += countOfDeletes;
                     }
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info("Failure to replicate changes to relational database for: " + _etl.Name + ", will continue trying." + Environment.NewLine + cmd.CommandText, e);
 
-                        _etl.Statistics.RecordWriteError(e);
+                        _etl.Statistics.RecordLoadError(e);
                     }
                     finally
                     {

@@ -22,118 +22,91 @@ namespace Raven.Server.Documents.ETL
         public long LastProcessedEtag { get; set; }
 
         public DateTime? LastErrorTime { get; private set; }
-        public DateTime? SuspendUntil { get; private set; }
 
-        private int ScriptErrorCount { get; set; }
-        private int TransformationSuccessCount { get; set; }
-        private int WriteErrorCount { get; set; }
-        public int SuccessCount { get; private set; }
+        private int TransformationErrors { get; set; }
+
+        private int TransformationSuccesses { get; set; }
+
+        private int LoadErrors { get; set; }
+
+        public int LoadSuccesses { get; private set; }
 
         public AlertRaised LastAlert { get; set; }
 
         public void TransformationSuccess()
         {
-            TransformationSuccessCount++;
+            TransformationSuccesses++;
         }
 
-        public void MarkTransformationScriptAsInvalid(string script)
+        public void RecordTransformationError(Exception e)
         {
-            ScriptErrorCount = int.MaxValue;
-            LastErrorTime = SystemTime.UtcNow;
-            SuspendUntil = DateTime.MaxValue;
-
-            LastAlert = AlertRaised.Create(_processType,
-                $"[{_name}] Could not parse script",
-                AlertType.SqlEtl_ScriptError,
-                NotificationSeverity.Error,
-                key: _name,
-                details: new MessageDetails
-                {
-                    Message = $"Script:{Environment.NewLine}{script}"
-                });
-
-            _notificationCenter.Add(LastAlert);
-        }
-
-        public void RecordScriptError(Exception e)
-        {
-            ScriptErrorCount++;
+            TransformationErrors++;
 
             LastErrorTime = SystemTime.UtcNow;
 
             LastAlert = AlertRaised.Create(_processType,
                 $"[{_name}] Transformation script failed",
-                AlertType.SqlEtl_Error,
-                NotificationSeverity.Error,
+                AlertType.Etl_TransformationError,
+                NotificationSeverity.Warning,
                 key: _name,
                 details: new ExceptionDetails(e));
 
-            if (ScriptErrorCount < 100)
+            if (TransformationErrors < 100)
                 return;
 
-            if (ScriptErrorCount <= TransformationSuccessCount)
+            if (TransformationErrors <= TransformationSuccesses)
                 return;
+
+            var message = $"[{_name}] Transformation errors ratio too high. " +
+                          "Could not tolerate transformation script error ratio and stopped current ETL cycle";
 
             LastAlert = AlertRaised.Create(_processType,
-                $"[{_name}] Script error hit ratio too high. Could not tolerate script error ratio and stopped current replication cycle",
-                AlertType.SqlEtl_ScriptErrorRatio,
+                message,
+                AlertType.Etl_TransformationError,
                 NotificationSeverity.Error,
                 key: _name,
                 details: new ExceptionDetails(e));
 
             _notificationCenter.Add(LastAlert);
 
-            throw new InvalidOperationException("Could not tolerate script error ratio and stopped current transformation cycle for " + _name + Environment.NewLine + this);
+            throw new InvalidOperationException($"{message}. Current stats: {this}");
         }
 
-        public void RecordWriteError(Exception e, int count = 1, DateTime? suspendUntil = null)
+        public void RecordLoadError(Exception e, int count = 1)
         {
-            WriteErrorCount += count;
+            LoadErrors += count;
 
             LastErrorTime = SystemTime.UtcNow;
 
             LastAlert = AlertRaised.Create(_processType,
                 $"[{_name}] Write error: {e.Message}",
-                AlertType.SqlEtl_Error,
+                AlertType.Etl_LoadError,
                 NotificationSeverity.Error,
                 key: _name, details: new ExceptionDetails(e));
 
-            if (WriteErrorCount < 100)
+            if (LoadErrors < 100)
                 return;
 
-            if (WriteErrorCount <= SuccessCount)
+            if (LoadErrors <= LoadSuccesses)
                 return;
 
-            if (suspendUntil.HasValue)
-            {
-                SuspendUntil = suspendUntil.Value;
-                return;
-            }
+            var message = $"[{_name}] Write error hit ratio too high. Could not tolerate write error ratio and stopped current ETL cycle";
 
             LastAlert = AlertRaised.Create(_processType,
-                $"[{_name}] Write error hit ratio too high. Could not tolerate write error ratio and stopped current replication cycle",
-                AlertType.SqlEtl_WriteErrorRatio,
+                message,
+                AlertType.Etl_WriteErrorRatio,
                 NotificationSeverity.Error,
                 key: _name,
                 details: new ExceptionDetails(e));
 
             _notificationCenter.Add(LastAlert);
 
-            throw new InvalidOperationException("Could not tolerate write error ratio and stopped current replication cycle for " + _name + Environment.NewLine + this, e);
+            throw new InvalidOperationException($"{message}. Current stats: {this}", e);
         }
 
-        public void Success(int countOfItems)
+        public void LoadSuccess(int items)
         {
-            LastErrorTime = null;
-            SuspendUntil = null;
-            SuccessCount += countOfItems;
-        }
-
-        public void CompleteSuccess(int countOfItems)
-        {
-            Success(countOfItems);
-            WriteErrorCount /= 2;
-            ScriptErrorCount /= 2;
+            LoadSuccesses += items;
         }
 
         public DynamicJsonValue ToBlittable()
@@ -143,10 +116,22 @@ namespace Raven.Server.Documents.ETL
                 [nameof(LastAlert)] = LastAlert?.ToJson(),
                 [nameof(LastErrorTime)] = LastErrorTime,
                 [nameof(LastProcessedEtag)] = LastProcessedEtag,
-                [nameof(SuccessCount)] = SuccessCount,
-                [nameof(SuspendUntil)] = SuspendUntil,
+                [nameof(TransformationSuccesses)] = TransformationSuccesses,
+                [nameof(TransformationErrors)] = TransformationErrors,
+                [nameof(LoadSuccesses)] = LoadSuccesses,
+                [nameof(LoadErrors)] = LoadErrors,
             };
             return json;
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(LastProcessedEtag)}: {LastProcessedEtag}" +
+                   $"{nameof(LastErrorTime)}: {LastErrorTime}" +
+                   $"{nameof(TransformationSuccesses)}: {TransformationSuccesses}" +
+                   $"{nameof(TransformationErrors)}: {TransformationErrors}" +
+                   $"{nameof(LoadSuccesses)}: {LoadSuccesses}" +
+                   $"{nameof(LoadErrors)}: {LoadErrors}";
         }
     }
 }

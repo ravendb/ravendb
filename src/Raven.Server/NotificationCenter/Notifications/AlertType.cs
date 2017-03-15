@@ -3,14 +3,17 @@ namespace Raven.Server.NotificationCenter.Notifications
 {
     public enum AlertType
     {
+        Etl_Error,
+        Etl_TransformationError,
+        Etl_LoadError,
+
         SqlEtl_ConnectionError,
         SqlEtl_ProviderError,
         SqlEtl_SlowSql,
         SqlEtl_ConnectionStringMissing,
-        SqlEtl_Error,
-        SqlEtl_WriteErrorRatio,
-        SqlEtl_ScriptError,
-        SqlEtl_ScriptErrorRatio,
+        
+        Etl_WriteErrorRatio,
+        
         PeriodicExport,
         Replication,
         Server_NewVersionAvailable,

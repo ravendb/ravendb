@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
-using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
@@ -44,10 +43,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new TombstonesToSqlItems(tombstones);
         }
 
-        public override IEnumerable<SqlTableWithRecords> Transform(IEnumerable<ToSqlItem> items, DocumentsOperationContext context, out int batchSize)
+        public override IEnumerable<SqlTableWithRecords> Transform(IEnumerable<ToSqlItem> items, DocumentsOperationContext context)
         {
-            batchSize = 0;
-
             var patcher = new SqlPatchDocument(Database, context, SqlConfiguration);
 
             foreach (var toSqlItem in items)
@@ -55,33 +52,43 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 CancellationToken.ThrowIfCancellationRequested();
 
                 Statistics.LastProcessedEtag = toSqlItem.Etag; // TODO arek
-                
+
                 try
                 {
                     patcher.Transform(toSqlItem, context);
 
                     Statistics.TransformationSuccess();
 
-                    batchSize++;
-
                     if (CanContinueBatch() == false)
                         break;
                 }
                 catch (JavaScriptParseException e)
                 {
-                    Statistics.MarkTransformationScriptAsInvalid(SqlConfiguration.Script);
+                    var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not parse SQL ETL script for '{Name}'", e);
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations(message, e);
+
+                    var alert = AlertRaised.Create(
+                        Tag,
+                        message,
+                        AlertType.Etl_TransformationError,
+                        NotificationSeverity.Error,
+                        key: Name,
+                        details: new ExceptionDetails(e));
+
+                    Database.NotificationCenter.Add(alert);
+
+                    Stop();
 
                     break;
                 }
-                catch (Exception diffExceptionName)
+                catch (Exception e)
                 {
-                    Statistics.RecordScriptError(diffExceptionName);
+                    Statistics.RecordTransformationError(e);
 
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {toSqlItem.DocumentKey}", diffExceptionName);
+                        Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {toSqlItem.DocumentKey}", e);
                 }
             }
 
@@ -92,73 +99,63 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             var hadWork = false;
 
-            using (var writer = new RelationalDatabaseWriter(this, _predefinedSqlConnection, Database))
+            try
             {
-                foreach (var table in records)
+                using (var writer = new RelationalDatabaseWriter(this, _predefinedSqlConnection, Database))
                 {
-                    try
+                    foreach (var table in records)
                     {
                         hadWork = true;
 
                         var stats = writer.Write(table, CancellationToken);
 
-                        HandleLoadStats(stats, table);
+                        LogStats(stats, table);
                     }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Failure to insert changes to relational database for '{Name}'", e);
 
-                        DateTime newTime;
-                        if (Statistics.LastErrorTime == null)
-                        {
-                            newTime = Database.Time.GetUtcNow().AddSeconds(5);
-                        }
-                        else
-                        {
-                            // double the fallback time (but don't cross 15 minutes)
-                            var totalSeconds = (SystemTime.UtcNow - Statistics.LastErrorTime.Value).TotalSeconds;
-                            newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60 * 15, Math.Max(5, totalSeconds * 2)));
-                        }
+                    writer.Commit();
+                }
+                
+                Statistics.LoadSuccess(NumberOfExtractedItemsInCurrentBatch);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failure to insert changes to relational database for '{Name}'", e);
 
-                        Statistics.RecordWriteError(e, table.Inserts.Count + table.Deletes.Count, newTime);
-                    }
+                if (Statistics.LastErrorTime == null)
+                    FallbackTime = TimeSpan.FromSeconds(5);
+                else
+                {
+                    // double the fallback time (but don't cross 15 minutes)
+                    var secondsSinceLastError = (Database.Time.GetUtcNow() - Statistics.LastErrorTime.Value).TotalSeconds;
+
+                    FallbackTime = TimeSpan.FromSeconds(Math.Min(60 * 15, Math.Max(5, secondsSinceLastError * 2)));
                 }
 
-                writer.Commit();
+                Statistics.RecordLoadError(e, NumberOfExtractedItemsInCurrentBatch);
             }
-
 
             return hadWork;
         }
 
-        private void HandleLoadStats(SqlWriteStats stats, SqlTableWithRecords table)
+        private void LogStats(SqlWriteStats stats, SqlTableWithRecords table)
         {
             if (table.Inserts.Count > 0)
             {
                 if (Logger.IsInfoEnabled)
                 {
-                    Logger.Info(
-                        $"[{Name}] Inserted {stats.InsertedRecordsCount} (out of {table.Inserts.Count}) records to '{table.TableName}' table " +
+                    Logger.Info($"[{Name}] Inserted {stats.InsertedRecordsCount} (out of {table.Inserts.Count}) records to '{table.TableName}' table " +
                         $"from the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentKey))}");
                 }
-
-                if (table.Inserts.Count == stats.InsertedRecordsCount)
-                    Statistics.CompleteSuccess(stats.InsertedRecordsCount); // TODO arek
-                else
-                    Statistics.Success(stats.InsertedRecordsCount); // TODO arek
             }
 
             if (table.Deletes.Count > 0)
             {
                 if (Logger.IsInfoEnabled)
                 {
-                    Logger.Info(
-                        $"[{Name}] Deleted {stats.DeletedRecordsCount} (out of {table.Deletes.Count}) records from '{table.TableName}' table " +
+                    Logger.Info($"[{Name}] Deleted {stats.DeletedRecordsCount} (out of {table.Deletes.Count}) records from '{table.TableName}' table " +
                         $"for the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentKey))}");
                 }
-
-                // TODO stats for deletes?
             }
         }
 
@@ -316,9 +313,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     //        ["LastAlert"] = etl.Statistics.LastAlert,
                     //    };
                     //}
-
-                    int _;
-                    var transformed = etl.Transform(new[] { new ToSqlItem(document) }, context, out _);
+                    
+                    var transformed = etl.Transform(new[] { new ToSqlItem(document) }, context);
 
                     return etl.Simulate(simulateSqlEtl, context, transformed);
                 }
@@ -329,8 +325,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 {
                     ["LastAlert"] =
                     AlertRaised.Create("SQL ETL",
-                        $"Last SQL ETL operation for {simulateSqlEtl.Configuration.Name} was failed",
-                        AlertType.SqlEtl_Error,
+                        $"Simulate SQL ETL operation for {simulateSqlEtl.Configuration.Name} failed",
+                        AlertType.Etl_Error,
                         NotificationSeverity.Error,
                         key: simulateSqlEtl.Configuration.Name,
                         details: new ExceptionDetails(e)).ToJson()
