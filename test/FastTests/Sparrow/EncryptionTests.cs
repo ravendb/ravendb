@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Sparrow;
+using Sparrow.Platform;
 using Xunit;
 
 namespace FastTests.Sparrow
@@ -22,7 +23,8 @@ namespace FastTests.Sparrow
             var now = DateTime.Today;
             var additionalData = BitConverter.GetBytes(now.Ticks);
 
-            var crypt = Sodium.AeadChacha20Poly1305Encrypt(key, nonce, message, additionalData, mac);
+            var crypt = Sodium.AeadChacha20Poly1305Encrypt(key, nonce, message, additionalData, mac)
+
             
             var plain = Sodium.AeadChacha20Poly1305Decrypt(key, nonce, crypt, additionalData, mac);
 

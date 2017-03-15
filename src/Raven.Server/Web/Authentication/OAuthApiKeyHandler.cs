@@ -27,6 +27,9 @@ namespace Raven.Server.Web.Authentication
 
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<OAuthApiKeyHandler>("Raven/Server");
 
+        [RavenAction("/oauth/api-key", "GET", "/oauth/api-key-libSodium", NoAuthorizationRequired = true)]
+
+
         [RavenAction("/oauth/api-key", "GET", "/oauth/api-key", NoAuthorizationRequired = true)]
         public async Task OauthGetApiKey()
         {

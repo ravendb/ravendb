@@ -18,32 +18,55 @@ namespace Sparrow
                 throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
         }
 
-        [DllImport("libsodium.dll")]
-        private static extern int crypto_kdf_keybytes();
 
-        [DllImport("libsodium.dll")]
-        private static extern int sodium_init();
+        private static int crypto_kdf_keybytes()
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_kdf_keybytes();
+            return Platform.Win32.WinSodium.crypto_kdf_keybytes();
+        }
 
-        [DllImport("libsodium.dll")]
-        public static extern int randombytes_buf(
+        private static int sodium_init()
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.sodium_init();
+            return Platform.Win32.WinSodium.sodium_init();
+        }
+
+        public static int randombytes_buf(
             byte* buffer,
-            int size);
+            int size)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.randombytes_buf(buffer, size);
+            return Platform.Win32.WinSodium.randombytes_buf(buffer, size);
+        }
 
-        [DllImport("libsodium.dll")]
-        private static extern void crypto_kdf_keygen(
-            byte* masterkey);
+        private static void crypto_kdf_keygen(
+            byte* masterkey)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+            {
+                Platform.Posix.PosixSodium.crypto_kdf_keygen(masterkey);
+                return;
+            }
+            Platform.Win32.WinSodium.crypto_kdf_keygen(masterkey);
+        }
 
-        [DllImport("libsodium.dll")]
-        public static extern int crypto_kdf_derive_from_key(
+        public static int crypto_kdf_derive_from_key(
             byte* subkey,
             int subkeylen,
             long subkeyid,
             byte* ctx,
-            byte* key);
+            byte* key)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
+            return Platform.Win32.WinSodium.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
+        }
 
 
-        [DllImport("libsodium.dll")]
-        public static extern int crypto_aead_chacha20poly1305_encrypt_detached(
+        public static int crypto_aead_chacha20poly1305_encrypt_detached(
             byte* c,
             byte* mac,
             ulong* maclen_p,
@@ -53,11 +76,15 @@ namespace Sparrow
             ulong adlen,
             byte* nsec,
             byte* npub,
-            byte* k);
+            byte* k)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+            return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+        }
 
 
-        [DllImport("libsodium.dll")]
-        public static extern int crypto_aead_chacha20poly1305_decrypt_detached(
+        public static int crypto_aead_chacha20poly1305_decrypt_detached(
             byte* m,
             byte* nsec,
             byte* c,
@@ -66,7 +93,12 @@ namespace Sparrow
             byte* ad,
             ulong adlen,
             byte* npub,
-            byte* k);
+            byte* k)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+            return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+        }
 
         public static byte[] GenerateMasterKey()
         {
