@@ -29,6 +29,7 @@ import queryCriteria = require("models/database/query/queryCriteria");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import executeBulkDocsCommand = require("commands/database/documents/executeBulkDocsCommand");
+import popoverUtils = require("common/popoverUtils");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
 
@@ -41,7 +42,7 @@ class patch extends viewModelBase {
     patchDocument = ko.observable<patchDocument>(patchDocument.empty());
 
     indexNames = ko.observableArray<string>();
-    indexFields = ko.observableArray<string>(); //TODO: fetch me!
+    indexFields = ko.observableArray<string>();
     collections = ko.observableArray<collection>([]);
 
     isDocumentMode: KnockoutComputed<boolean>;
@@ -114,19 +115,27 @@ class patch extends viewModelBase {
     attached() {
         super.attached();
 
-        //TODO: put those on UI
+        const jsCode = Prism.highlight("this.NewProperty = this.OldProperty + myParameter;\r\n" +
+            "delete this.UnwantedProperty;\r\n" +
+            "this.Comments.RemoveWhere(function(comment){\r\n" +
+            "  return comment.Spam;\r\n" +
+            "});",
+            (Prism.languages as any).javascript);
 
-        $("#indexQueryLabel").popover({
+        $(".query-label small").popover({
             html: true,
             trigger: "hover",
-            container: '.form-horizontal', //TODO: verify
-            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>'
+            template: popoverUtils.longPopoverTemplate,
+            container: 'body',
+            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
         });
-        $("#patchScriptsLabel").popover({
+
+        $(".patch-title small").popover({
             html: true,
             trigger: "hover",
-            container: ".form-horizontal", //TODO: verify
-            content: '<p>Patch Scripts are written in JavaScript. Examples:</p><pre><span class="code-keyword">this</span>.NewProperty = <span class="code-keyword">this</span>.OldProperty + myParameter;<br/><span class="code-keyword">delete this</span>.UnwantedProperty;<br/><span class="code-keyword">this</span>.Comments.RemoveWhere(<span class="code-keyword">function</span>(comment){<br/>  <span class="code-keyword">return</span> comment.Spam;<br/>});</pre>'
+            container: "body",
+            template: popoverUtils.longPopoverTemplate,
+            content: `<p>Patch Scripts are written in JavaScript. <br />Examples: <pre>${jsCode}</pre></p>`
         });
     }
 

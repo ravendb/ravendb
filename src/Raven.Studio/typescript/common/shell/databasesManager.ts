@@ -82,6 +82,7 @@ class databasesManager {
             const currentActiveDatabase = this.activeDatabaseTracker.database();
             if (currentActiveDatabase != null && currentActiveDatabase.name === db.name) {
                 task.resolve({ can: true });
+                return;
             }
 
             if (db && !db.disabled()) {
