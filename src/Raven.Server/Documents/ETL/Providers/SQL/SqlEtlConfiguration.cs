@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlEtlConfiguration : EtlConfiguration
+    public class SqlEtlConfiguration : EtlProcessConfiguration
     {
         public SqlEtlConfiguration()
         {

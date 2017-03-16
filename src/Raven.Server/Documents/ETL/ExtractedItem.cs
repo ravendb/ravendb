@@ -2,6 +2,8 @@
 {
     public abstract class ExtractedItem
     {
-        public long Etag;
+        public long Etag { get; protected set; }
+
+        public bool IsDelete { get; protected set; }
     }
 }

@@ -4,17 +4,15 @@
     {
         public int NumberOfExtractedItems;
 
-        public long LastProcessedEtag;
+        public long LastTransformedEtag;
+
+        public long LastLoadedEtag;
 
         public void Reset()
         {
             NumberOfExtractedItems = 0;
-            LastProcessedEtag = 0;
-        }
-
-        public void Errored()
-        {
-            LastProcessedEtag = -1;
+            LastTransformedEtag = 0;
+            LastLoadedEtag = 0;
         }
     }
 }

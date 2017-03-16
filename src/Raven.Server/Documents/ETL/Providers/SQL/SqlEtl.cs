@@ -33,6 +33,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             SqlConfiguration = configuration;
         }
 
+        public SqlEtl(DocumentDatabase database, SqlEtlConfiguration configuration, PredefinedSqlConnection predefinedConnection)
+            : base(database, configuration, SqlEtlTag)
+        {
+            SqlConfiguration = configuration;
+            _predefinedSqlConnection = predefinedConnection;
+        }
+
         protected override IEnumerator<ToSqlItem> ConvertDocsEnumerator(IEnumerator<Document> docs)
         {
             return new DocumentsToSqlItems(docs);
@@ -56,31 +63,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     patcher.Transform(toSqlItem, context);
 
                     Statistics.TransformationSuccess();
-
-                    CurrentBatch.LastProcessedEtag = toSqlItem.Etag;
+                    
+                    CurrentBatch.LastTransformedEtag = toSqlItem.Etag;
 
                     if (CanContinueBatch() == false)
                         break;
                 }
                 catch (JavaScriptParseException e)
                 {
-                    var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
-
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations(message, e);
-
-                    var alert = AlertRaised.Create(
-                        Tag,
-                        message,
-                        AlertType.Etl_TransformationError,
-                        NotificationSeverity.Error,
-                        key: Name,
-                        details: new ExceptionDetails(e));
-
-                    Database.NotificationCenter.Add(alert);
-
-                    Stop();
-
+                    StopProcessOnScriptParseError(e);
                     break;
                 }
                 catch (Exception e)
@@ -95,42 +86,18 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return patcher.Tables.Values;
         }
 
-        public override void Load(IEnumerable<SqlTableWithRecords> records)
+        protected override void LoadInternal(IEnumerable<SqlTableWithRecords> records, JsonOperationContext context)
         {
-            try
+            using (var writer = new RelationalDatabaseWriter(this, _predefinedSqlConnection, Database))
             {
-                using (var writer = new RelationalDatabaseWriter(this, _predefinedSqlConnection, Database))
+                foreach (var table in records)
                 {
-                    foreach (var table in records)
-                    {
-                        var stats = writer.Write(table, CancellationToken);
+                    var stats = writer.Write(table, CancellationToken);
 
-                        LogStats(stats, table);
-                    }
-
-                    writer.Commit();
-                }
-                
-                Statistics.LoadSuccess(CurrentBatch.NumberOfExtractedItems);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failure to insert changes to relational database for '{Name}'", e);
-
-                if (Statistics.LastErrorTime == null)
-                    FallbackTime = TimeSpan.FromSeconds(5);
-                else
-                {
-                    // double the fallback time (but don't cross 15 minutes)
-                    var secondsSinceLastError = (Database.Time.GetUtcNow() - Statistics.LastErrorTime.Value).TotalSeconds;
-
-                    FallbackTime = TimeSpan.FromSeconds(Math.Min(60 * 15, Math.Max(5, secondsSinceLastError * 2)));
+                    LogStats(stats, table);
                 }
 
-                CurrentBatch.Errored();
-
-                Statistics.RecordLoadError(e, CurrentBatch.NumberOfExtractedItems);
+                writer.Commit();
             }
         }
 
@@ -152,6 +119,19 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Logger.Info($"[{Name}] Deleted {stats.DeletedRecordsCount} (out of {table.Deletes.Count}) records from '{table.TableName}' table " +
                         $"for the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentKey))}");
                 }
+            }
+        }
+
+        protected override void HandleFallback()
+        {
+            if (Statistics.LastErrorTime == null)
+                FallbackTime = TimeSpan.FromSeconds(5);
+            else
+            {
+                // double the fallback time (but don't cross 15 minutes)
+                var secondsSinceLastError = (Database.Time.GetUtcNow() - Statistics.LastErrorTime.Value).TotalSeconds;
+
+                FallbackTime = TimeSpan.FromSeconds(Math.Min(60 * 15, Math.Max(5, secondsSinceLastError * 2)));
             }
         }
 
@@ -201,32 +181,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             Statistics.LastAlert = AlertRaised.Create(Tag, emptyConnectionStringMsg, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
 
             return false;
-        }
-
-        protected override void LoadLastProcessedEtag(DocumentsOperationContext context)
-        {
-            var sqlEtlStatus = Database.DocumentsStorage.Get(context, Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + Name);
-            if (sqlEtlStatus == null)
-            {
-                Statistics.LastProcessedEtag = 0;
-            }
-            else
-            {
-                var etlStatus = JsonDeserializationServer.SqlEtlStatus(sqlEtlStatus.Data);
-                Statistics.LastProcessedEtag = etlStatus.LastProcessedEtag;
-            }
-        }
-
-        protected override void StoreLastProcessedEtag(DocumentsOperationContext context)
-        {
-            var key = Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + Name;
-            var document = context.ReadObject(new DynamicJsonValue
-            {
-                [nameof(SqlEtlStatus.Name)] = Name,
-                [nameof(SqlEtlStatus.LastProcessedEtag)] = Statistics.LastProcessedEtag
-            }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
-            Database.DocumentsStorage.Put(context, key, null, document);
         }
 
         public bool ValidateName()
