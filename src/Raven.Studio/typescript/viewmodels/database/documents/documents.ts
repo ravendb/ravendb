@@ -345,22 +345,10 @@ class documents extends viewModelBase {
     }
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
-    selectedDocumentsText: KnockoutComputed<string>;
     contextName = ko.observable<string>('');
 
     constructor() {
         super();
-
-        this.selectedDocumentsText = ko.computed(() => {
-            if (!!this.selectedDocumentIndices()) {
-                var documentsText = "document";
-                if (this.selectedDocumentIndices().length !== 1) {
-                    documentsText += "s";
-                }
-                return documentsText;
-            }
-            return "";
-        });
     }
 
     attached() {

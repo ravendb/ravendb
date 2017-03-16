@@ -289,7 +289,9 @@ class viewModelBase {
     }
 
     protected setupDisableReasons() {
-        $('.has-disable-reason').tooltip();
+        $('.has-disable-reason').tooltip({
+            container: "body"
+        });
     }
 
     private beforeUnloadListener: EventListener = (e: any): any => {
