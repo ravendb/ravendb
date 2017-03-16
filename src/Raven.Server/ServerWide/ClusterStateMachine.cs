@@ -199,14 +199,30 @@ namespace Raven.Server.ServerWide
 
                 int size;
                 var doc = new BlittableJsonReaderObject(reader.Read(2, out size), size, context);
-
-                doc.Modifications = new DynamicJsonValue(doc)
+                if (string.IsNullOrEmpty(delDb.FromNode) == false)
                 {
-                    [nameof(DatabaseRecord.DeletionInProgress)] =
+                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+                    if (databaseRecord.Topology.RelevantFor(delDb.FromNode) == false)
+                    {
+                        NotifyLeaderAboutError(index, leader, $"The database {databaseName} does not exists on node {delDb.FromNode}");
+                        return;
+                    }
+                    doc.Modifications = new DynamicJsonValue(doc)
+                    {
+                        [nameof(DatabaseRecord.Topology)] = databaseRecord.Topology.RemoveFrom(delDb.FromNode).ToJson()
+                    };
+                }
+                else
+                {
+                    doc.Modifications = new DynamicJsonValue(doc)
+                    {
+                        [nameof(DatabaseRecord.DeletionInProgress)] =
                         delDb.HardDelete
                             ? DeletionInProgressStatus.HardDelete
                             : DeletionInProgressStatus.SoftDelete
-                };
+                    };
+                }
+                
 
                 using (var updated = context.ReadObject(doc, databaseName))
                 {
@@ -639,6 +655,7 @@ namespace Raven.Server.ServerWide
     {
         public string DatabaseName;
         public bool HardDelete;
+        public string FromNode;
     }
 
     public class TEMP_SetDatabaseCommand
@@ -703,5 +720,7 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
 
         public static readonly Func<BlittableJsonReaderObject, EditVersioningCommand> EditVersioningCommand = GenerateJsonDeserializationRoutine<EditVersioningCommand>();
+
+        public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
     }
 }

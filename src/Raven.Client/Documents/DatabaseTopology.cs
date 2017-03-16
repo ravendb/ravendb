@@ -20,13 +20,21 @@ namespace Raven.Client.Documents
         }
 
         public DynamicJsonValue ToJson()
-        {            
+        {
             return new DynamicJsonValue
             {
                 [nameof(Members)] = new DynamicJsonArray(Members),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables),
                 [nameof(Watchers)] = new DynamicJsonArray(Watchers)
-            }; 
+            };
+        }
+
+        public DatabaseTopology RemoveFrom(string delDbFromNode)
+        {
+            Members.Remove(delDbFromNode);
+            Promotables.Remove(delDbFromNode);
+            Watchers.Remove(delDbFromNode);
+            return this;
         }
     }
 }

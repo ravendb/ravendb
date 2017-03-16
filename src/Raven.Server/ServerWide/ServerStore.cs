@@ -163,20 +163,21 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task DeleteDatabaseAsync(JsonOperationContext context, string db, bool hardDelete)
+        public async Task<long> DeleteDatabaseAsync(JsonOperationContext context, string db, bool hardDelete, string fromNode)
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(DeleteDatabaseCommand),
                 [nameof(DeleteDatabaseCommand.DatabaseName)] = db,
                 [nameof(DeleteDatabaseCommand.HardDelete)] = hardDelete,
+                [nameof(DeleteDatabaseCommand.FromNode)] = fromNode
             }, "del-cmd"))
             {
-                await SendToLeaderAsync(putCmd);
+                return await SendToLeaderAsync(putCmd);
             }
         }
 
-        public async Task PutValueInClusterAsync(JsonOperationContext context, string key, BlittableJsonReaderObject val)
+        public async Task<long> PutValueInClusterAsync(JsonOperationContext context, string key, BlittableJsonReaderObject val)
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
@@ -185,7 +186,7 @@ namespace Raven.Server.ServerWide
                 [nameof(PutValueCommand.Value)] = val,
             }, "put-cmd"))
             {
-                await SendToLeaderAsync(putCmd);
+                return await SendToLeaderAsync(putCmd);
             }
         }
 
@@ -357,12 +358,12 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public Task PutCommandAsync(BlittableJsonReaderObject cmd)
+        public Task<long> PutCommandAsync(BlittableJsonReaderObject cmd)
         {
             return _engine.PutAsync(cmd);
         }
 
-        public async Task SendToLeaderAsync(BlittableJsonReaderObject cmd)
+        public async Task<long> SendToLeaderAsync(BlittableJsonReaderObject cmd)
         {
             while (true)
             {
@@ -370,15 +371,13 @@ namespace Raven.Server.ServerWide
 
                 if (_engine.CurrentState == RachisConsensus.State.Leader)
                 {
-                    await _engine.PutAsync(cmd);
-                    return;
+                    return await _engine.PutAsync(cmd);
                 }
 
                 var engineLeaderTag = _engine.LeaderTag;// not actually working
                 try
                 {
-                    await SendToNodeAsync(engineLeaderTag, cmd);
-                    return;
+                    return await SendToNodeAsync(engineLeaderTag, cmd);
                 }
                 catch (Exception ex)
                 {
@@ -390,7 +389,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private async Task SendToNodeAsync(string engineLeaderTag, BlittableJsonReaderObject cmd)
+        private async Task<long> SendToNodeAsync(string engineLeaderTag, BlittableJsonReaderObject cmd)
         {
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -401,13 +400,14 @@ namespace Raven.Server.ServerWide
                 string leaderUrl;
                 if (clusterTopology.Members.TryGetValue(engineLeaderTag, out leaderUrl) == false)
                     throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
-
+                var command = new PutRaftCommand(context, cmd);
                 using (var shortTermExecuter = RequestExecutor.ShortTermSingleUse(leaderUrl, "Rachis.Server", clusterTopology.ApiKey))
-                    await shortTermExecuter.ExecuteAsync(new PutRaftCommand(context, cmd), context, ServerShutdown);
+                    await shortTermExecuter.ExecuteAsync(command, context, ServerShutdown);
+                return command.Result.ETag;
             }
         }
 
-        protected internal class PutRaftCommand : RavenCommand<object>
+        protected internal class PutRaftCommand : RavenCommand<PutRaftCommandResult>
         {
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _command;
@@ -440,7 +440,13 @@ namespace Raven.Server.ServerWide
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
+                Result = JsonDeserializationCluster.PutRaftCommandResult(response);
             }
+        }
+
+        public class PutRaftCommandResult
+        {
+            public long ETag { get; set; }
         }
 
         public Task WaitForTopology(Leader.TopologyModification state)
