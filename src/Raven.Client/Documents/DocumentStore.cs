@@ -123,7 +123,16 @@ namespace Raven.Client.Documents
 
             //return unused hilo keys
             if (_asyncMultiDbHiLo != null)
-                AsyncHelpers.RunSync(() => _asyncMultiDbHiLo.ReturnUnusedRange());
+            {
+                try
+                {
+                    AsyncHelpers.RunSync(() => _asyncMultiDbHiLo.ReturnUnusedRange());
+                }
+                catch
+                {
+                    // failed, because server is down.
+                }
+            }               
 
             Subscriptions?.Dispose();
 
