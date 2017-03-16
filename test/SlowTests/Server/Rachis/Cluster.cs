@@ -16,9 +16,8 @@ namespace SlowTests.Server.Rachis
     public class Cluster: ClusterTestBase
     {
         [Fact]
-        public async Task test()
+        public async Task CanCreateDatabaseWithReplicationFactorLowerThanTheClusterSize()
         {
-            NoTimeouts();
             var leader = await CreateRaftClusterAndGetLeader(3);            
             CreateDatabaseResult databaseResult;
             var replicationFactor = 2;
