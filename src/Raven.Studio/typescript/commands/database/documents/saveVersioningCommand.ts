@@ -11,7 +11,7 @@ class saveVersioningCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
 
-        var commands: bulkDocumentDto[] = [];
+        var commands: Raven.Server.Documents.Handlers.CommandData[] = [];
 
         this.versioningEntries.forEach((dto: versioningEntryDto) => {
             var entry: any = new document(dto);

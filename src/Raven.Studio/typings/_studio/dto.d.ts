@@ -254,3 +254,12 @@ interface pagedResult<T> {
 interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
     availableColumns: string[];
 }
+
+type patchOption = "Document" | "Collection" | "Index";
+
+interface patchDto extends documentDto {
+    PatchOnOption: patchOption;
+    Query: string;
+    Script: string;
+    SelectedItem: string;
+}

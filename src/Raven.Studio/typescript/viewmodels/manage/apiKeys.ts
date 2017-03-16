@@ -109,19 +109,19 @@ class apiKeys extends viewModelBase {
 
         new saveApiKeysCommand(this.apiKeys(), deletedApiKeys)
             .execute()
-            .done((result: bulkDocumentDto[]) => {
+            .done((result: Raven.Server.Documents.Handlers.CommandData[]) => {
                 this.updateKeys(result);
                 this.saveLoadedApiKeys(this.apiKeys());
                 this.dirtyFlag().reset();
             });
     }
 
-    updateKeys(serverKeys: bulkDocumentDto[]) {
+    updateKeys(serverKeys: Raven.Server.Documents.Handlers.CommandData[]) {
         this.apiKeys().forEach(key => {
             var serverKey = serverKeys.find(k => k.Key === key.getId());
             if (serverKey) {
                 key.__metadata.etag(serverKey.Etag);
-                key.__metadata.lastModified(serverKey.Metadata["@last-modified"]); 
+                //TODO: key.__metadata.lastModified(serverKey.Metadata["@last-modified"]); 
             }
         });
     }

@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class evalByCollectionCommand extends commandBase {
+class patchByCollectionCommand extends commandBase {
 
     constructor(private collectionName: string, private patchRequest: Raven.Server.Documents.Patch.PatchRequest, private db: database) {
         super();
@@ -23,4 +23,4 @@ class evalByCollectionCommand extends commandBase {
 
 }
 
-export = evalByCollectionCommand; 
+export = patchByCollectionCommand; 

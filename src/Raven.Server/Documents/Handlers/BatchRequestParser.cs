@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
             public PatchRequest PatchIfMissing;
-            public long? Etag;
+            public long? Etag { get; set; } //TODO: revert to field once https://github.com/cjlpowers/TypeScripter/pull/12 will be merged
         }
 
         [ThreadStatic]

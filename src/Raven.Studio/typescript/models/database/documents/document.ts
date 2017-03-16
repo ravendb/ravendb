@@ -50,18 +50,17 @@ class document implements documentBase {
         return dto;
     }
 
-    toBulkDoc(method: string): bulkDocumentDto {
+    toBulkDoc(method: Raven.Server.Documents.Handlers.CommandType): Raven.Server.Documents.Handlers.CommandData {
         const dto = this.toDto(true);
-        const bulkDoc: bulkDocumentDto = {
+        const bulkDoc = {
             Document: dto,
             Key: this.getId(),
-            Method: method,
-            AdditionalData: null
-        };
+            Method: method
+        } as Raven.Server.Documents.Handlers.CommandData;
 
         const meta = dto["@metadata"];
         if (meta) {
-            bulkDoc.Metadata = meta;
+            //TODO: bulkDoc.Metadata = meta;
 
             if (meta["@etag"]) {
                 bulkDoc.Etag = meta["@etag"];

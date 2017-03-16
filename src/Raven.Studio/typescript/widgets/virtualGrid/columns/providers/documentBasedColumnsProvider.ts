@@ -21,7 +21,7 @@ class documentBasedColumnsProvider {
 
     private static readonly minColumnWidth = 150;
 
-    private readonly showRowSelectionCheckbox: boolean;
+    showRowSelectionCheckbox: boolean;
     private readonly collectionNames: string[];
     private readonly db: database;
     private readonly enableInlinePreview: boolean;

@@ -187,19 +187,6 @@ interface storedPatchDto extends patchDto {
     Hash: number;
 }
 
-interface bulkDocumentDto {
-    Key: string;
-    Method: string;
-    AdditionalData?: any[];
-    Document?: documentDto; // Can be null when Method == "DELETE"
-    Metadata?: documentMetadataDto; // Can be null when Method == "DELETE"
-    Etag?: number; // Often is null on sending to server, non-null when returning from server.
-    PatchResult?: any;
-    Deleted?: any;
-    DebugMode?: boolean;
-    Patch?: scriptedPatchRequestDto;
-}
-
 interface scriptedPatchRequestDto {
     Script: string;
     Values: any;
@@ -342,19 +329,6 @@ interface customColumnParamsDto {
 
 interface customColumnsDto {
     Columns: Array<customColumnParamsDto>;
-}
-
-interface patchValueDto {
-    Key: string;
-    Value: string;
-}
-
-interface patchDto extends documentDto {
-    PatchOnOption: string;
-    Query: string;
-    Script: string;
-    SelectedItem: string;
-    Values: Array<patchValueDto>;
 }
 
 interface statusStorageOnDiskDto {

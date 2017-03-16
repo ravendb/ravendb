@@ -2,7 +2,6 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
@@ -46,7 +45,6 @@ type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<doc
 class query extends viewModelBase {
 
     static readonly ContainerSelector = "#queryContainer";
-    static readonly DynamicPrefix = "dynamic/";
     static readonly $body = $("body");
 
     static readonly SearchTypes: stringSearchType[] = ["Starts With", "Ends With", "Contains", "Exact"];
@@ -435,7 +433,7 @@ class query extends viewModelBase {
         const url = appUrl.forQuery(this.activeDatabase(), indexQuery);
         this.updateUrl(url);
 
-        this.fetchIndexFields(indexName);
+        queryUtil.fetchIndexFields(this.activeDatabase(), indexName, this.indexFields);
     }
 
     private resetFilterSettings() {
@@ -553,35 +551,6 @@ class query extends viewModelBase {
 
     openAddFilter() {
         this.addFilterVisible(true);
-    }
-
-    fetchIndexFields(indexName: string) {
-        this.indexFields([]);
-
-        // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
-        // Fields don't show for All Documents.
-        const isAllDocumentsDynamicQuery = indexName === "All Documents";
-        if (!isAllDocumentsDynamicQuery) {
-
-            //if index is not dynamic, get columns using index definition, else get it using first index result
-            if (indexName.startsWith(query.DynamicPrefix)) {
-                new collection(indexName.substr(query.DynamicPrefix.length), this.activeDatabase())
-                    .fetchDocuments(0, 1)
-                    .done(result => {
-                        if (result && result.items.length > 0) {
-                            const propertyNames = new document(result.items[0]).getDocumentPropertyNames();
-                            this.indexFields(propertyNames);
-                        }
-                    });
-            } else {
-                new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
-                    .execute()
-                    .done((fields) => {
-                        //TODO: self.isTestIndex(result.IsTestIndex);
-                        this.indexFields(fields);
-                    });
-            }
-        }
     }
 
     openQueryStats() {
@@ -810,7 +779,7 @@ class query extends viewModelBase {
     }
 
     queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        queryUtil.queryCompleter(this.indexFields, this.criteria().selectedIndex, query.DynamicPrefix, this.activeDatabase, editor, session, pos, prefix, callback);
+        queryUtil.queryCompleter(this.indexFields, this.criteria().selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
     }
 
 

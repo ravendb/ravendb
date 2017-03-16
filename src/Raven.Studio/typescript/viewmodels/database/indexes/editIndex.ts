@@ -169,7 +169,7 @@ class editIndex extends viewModelBase {
     }
 
     private fetchIndexes() {
-        const db = this.activeDatabase()
+        const db = this.activeDatabase();
         new getIndexNamesCommand(db)
             .execute()
             .done((indexesNames) => {

@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import patchDocument = require("models/database/patch/patchDocument");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class getPatchesCommand extends commandBase {
 
@@ -9,14 +10,15 @@ class getPatchesCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Array<patchDocument>> {
-        var args = {
+        const args = {
             startsWith: "Studio/Patch/",
             exclude: <string>null,
             start: 0,
             pageSize: 256
         };
 
-        return this.query("/docs", args, this.db, (dtos: queryResultDto<patchDto>) => dtos.Results.map(dto => new patchDocument(dto)));//TODO: use endpoints
+        return this.query(endpoints.databases.document.docs, args, this.db,
+            (dtos: queryResultDto<patchDto>) => dtos.Results.map(dto => new patchDocument(dto)));
     }
 }
 

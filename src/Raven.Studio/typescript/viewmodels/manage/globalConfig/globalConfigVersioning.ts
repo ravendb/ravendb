@@ -53,7 +53,7 @@ class globalConfigVersioning extends viewModelBase {
                 [],
                 this.versionings().map((v) => { return v.toDto(true); }).concat(this.toRemove.map((v) => { return v.toDto(true); })),
                 true).execute();
-            deleteTask.done((saveResult: bulkDocumentDto[]) => {
+            deleteTask.done((saveResult: Raven.Server.Documents.Handlers.CommandData[]) => {
                 this.activated(false);
                 this.versionings([]);
                 this.versioningsSaved(saveResult);
@@ -64,7 +64,7 @@ class globalConfigVersioning extends viewModelBase {
                 this.versionings().map((v) => { return v.toDto(true); }),
                 this.toRemove.map((v) => { return v.toDto(true); }),
                 true).execute();
-            saveTask.done((saveResult: bulkDocumentDto[]) => {
+            saveTask.done((saveResult: Raven.Server.Documents.Handlers.CommandData[]) => {
                 this.versioningsSaved(saveResult);
             });
         }
@@ -88,7 +88,7 @@ class globalConfigVersioning extends viewModelBase {
         this.activated(data.length > 0);
     }
 
-    versioningsSaved(saveResult: bulkDocumentDto[]) {
+    versioningsSaved(saveResult: Raven.Server.Documents.Handlers.CommandData[]) {
         for (var i = 0; i < this.versionings().length; i++) {
             this.versionings()[i].__metadata.etag = saveResult[i].Etag;
         }
