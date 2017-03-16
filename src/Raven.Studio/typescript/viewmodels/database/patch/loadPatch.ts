@@ -51,7 +51,7 @@ class loadPatch extends dialogViewModelBase {
 
     setSelectedPatch(patch: patchDocument) {
         this.patch(patch);
-        this.patchName(patch.name());
+        //TODO: this.patchName(patch.name());
     }
 }
 

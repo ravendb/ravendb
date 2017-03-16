@@ -78,6 +78,8 @@ namespace TypingsGenerator
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
             scripter.AddType(typeof(CollectionStatistics));
 
+            scripter.AddType(typeof(BatchRequestParser.CommandData));
+
             scripter.AddType(typeof(DatabaseDocument));
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(IndexDefinition));
