@@ -30,7 +30,7 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            _timer = new Timer(state => ExecuteCleanup(), null, TimeSpan.FromMinutes(1), _documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan);
+            _timer = new Timer(ExecuteCleanup, null, TimeSpan.FromMinutes(1), _documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan);
         }
 
         public void Subscribe(IDocumentTombstoneAware subscription)
@@ -49,20 +49,20 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal bool ExecuteCleanup()
+        internal void ExecuteCleanup(object state)
         {
             if (Monitor.TryEnter(_locker) == false)
-                return false;
+                return;
 
             try
             {
                 if (_disposed)
-                    return false;
+                    return;
 
                 var tombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
                 var storageEnvironment = _documentDatabase.DocumentsStorage.Environment;
                 if (storageEnvironment == null) // doc storage was disposed before us?
-                    return false;
+                    return;
                 using (var tx = storageEnvironment.ReadTransaction())
                 {
                     foreach (var tombstoneCollection in _documentDatabase
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents
                 }
 
                 if (tombstones.Count == 0)
-                    return true;
+                    return;
 
                 long minAllDocsEtag = long.MaxValue;
 
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents
                         using (var tx = storageEnvironment.WriteTransaction())
                         {
                             if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
-                                return true;
+                                return;
 
                             _documentDatabase.DocumentsStorage.DeleteTombstonesBefore(tombstone.Key, minTombstoneValue, tx);
 
@@ -132,7 +132,6 @@ namespace Raven.Server.Documents
             {
                 Monitor.Exit(_locker);
             }
-            return true;
         }
 
         public void Dispose()

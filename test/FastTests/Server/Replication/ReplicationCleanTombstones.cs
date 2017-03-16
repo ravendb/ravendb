@@ -29,10 +29,7 @@ namespace FastTests.Server.Replication
             {
                 session.Delete("foo/bar");
                 session.SaveChanges();
-                storage1.DocumentTombstoneCleaner.ExecuteCleanup();
-                while (storage1.DocumentTombstoneCleaner.ExecuteCleanup())
-                {
-                }
+                storage1.DocumentTombstoneCleaner.ExecuteCleanup(null);
             }
             Assert.Equal(1,WaitUntilHasTombstones(store1).Count);
         }
@@ -62,9 +59,7 @@ namespace FastTests.Server.Replication
 
             Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
             Assert.Equal(4, WaitForValue(() => storage1.DocumentReplicationLoader.MinimalEtagForReplication, 4));
-            while (storage1.DocumentTombstoneCleaner.ExecuteCleanup())
-            {
-            }
+            storage1.DocumentTombstoneCleaner.ExecuteCleanup(null);
             Assert.Equal(0, WaitUntilHasTombstones(store1,0).Count);
         }
     }
