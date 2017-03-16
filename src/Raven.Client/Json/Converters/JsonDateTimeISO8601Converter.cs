@@ -7,6 +7,12 @@ namespace Raven.Client.Json.Converters
 {
     internal class JsonDateTimeISO8601Converter : RavenJsonConverter
     {
+        public static JsonDateTimeISO8601Converter Instance = new JsonDateTimeISO8601Converter();
+
+        private JsonDateTimeISO8601Converter()
+        {
+        }
+
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             if (value is DateTime)

@@ -355,9 +355,10 @@ namespace Raven.Client.Documents.Conventions
             if (SaveEnumsAsIntegers == false)
                 jsonSerializer.Converters.Add(new StringEnumConverter());
 
-            jsonSerializer.Converters.Add(new JsonDateTimeISO8601Converter());
-            jsonSerializer.Converters.Add(new JsonLuceneDateTimeConverter());
-            jsonSerializer.Converters.Add(new JsonObjectConverter());
+            jsonSerializer.Converters.Add(JsonDateTimeISO8601Converter.Instance);
+            jsonSerializer.Converters.Add(JsonLuceneDateTimeConverter.Instance);
+            jsonSerializer.Converters.Add(JsonObjectConverter.Instance);
+            jsonSerializer.Converters.Add(JsonDictionaryDateTimeKeysConverter.Instance);
             // TODO: Iftah
             //var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
             //if (jsonSerializer.Converters.Count == 0)
