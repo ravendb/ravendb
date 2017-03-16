@@ -534,15 +534,16 @@ namespace Raven.Database.Storage
 
         public int GetDeletedIndexVersion(IndexDefinition definition)
         {
-            var currentIndexVersion = definition.IndexVersion ?? 0;
+            // we only need the deleted index version if exists
+            // no need to log an error
             int indexVersionFromTombstones;
             CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenReplicationIndexesTombstones, 
-                definition.Name, currentIndexVersion, definition.Name, out indexVersionFromTombstones);
+                definition.Name, int.MaxValue, definition.Name, out indexVersionFromTombstones);
 
             int indexVersionFromPendingDeletions;
             CheckIfIndexVersionIsEqualOrSmaller("Raven/Indexes/PendingDeletion", 
                 definition.IndexId.ToString(CultureInfo.InvariantCulture), 
-                currentIndexVersion, definition.Name, out indexVersionFromPendingDeletions);
+                int.MaxValue, definition.Name, out indexVersionFromPendingDeletions);
 
             return Math.Max(indexVersionFromTombstones, indexVersionFromPendingDeletions);
         }

@@ -271,6 +271,9 @@ namespace Raven.Database.Server.Controllers
 
             try
             {
+                // IndexVersion is used only for replication and since this endpoint is used
+                // only by the client api and the studio so we can set the index version to null
+                data.IndexVersion = null;
                 Database.Indexes.PutIndex(index, data);
                 return GetMessageWithObject(new { Index = index }, HttpStatusCode.Created);
             }
