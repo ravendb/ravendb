@@ -625,7 +625,7 @@ namespace Raven.Server.Rachis
                 clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
                       newVotes,
                       newPromotables,
-                      newPromotables,
+                      newNonVotes,
                       highestNodeId
                   );
 

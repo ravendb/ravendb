@@ -1,19 +1,27 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions.Security;
+using Raven.Client.Http.OAuth;
+using Raven.Client.Server.Commands;
+using Raven.Client.Server.Tcp;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -419,7 +427,7 @@ namespace Raven.Server.ServerWide
             Slice valueNameLowered;
             using (Slice.From(context.Allocator, dbKey, out valueName))
             using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out valueNameLowered))
-            {                
+            {
                 var doc = ReadInternal(context, out etag, valueNameLowered);
                 if (doc == null)
                 {
@@ -442,7 +450,7 @@ namespace Raven.Server.ServerWide
                     builder.Add(updated.BasePointer, updated.Size);
                     builder.Add(index);
                     items.Set(builder);
-                }                
+                }
             }
             NotifyDatabaseChanged(context, databaseName, index);
         }
@@ -502,7 +510,7 @@ namespace Raven.Server.ServerWide
         public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name)
         {
             long etag;
-            var doc = Read(context, "db/"+ name.ToLowerInvariant(), out etag);
+            var doc = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (doc == null)
                 return null;
             return JsonDeserializationCluster.DatabaseRecord(doc);
@@ -515,7 +523,7 @@ namespace Raven.Server.ServerWide
         }
 
         public BlittableJsonReaderObject Read(TransactionOperationContext context, string name, out long etag)
-        {            
+        {
 
             var dbKey = name.ToLowerInvariant();
             Slice key;
@@ -543,6 +551,59 @@ namespace Raven.Server.ServerWide
             Debug.Assert(size == sizeof(long));
 
             return doc;
+        }
+
+        public override async Task<Stream> ConenctToPeer(string url, string apiKey)
+        {
+            var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey);
+            var authenticator = new ApiKeyAuthenticator();
+
+            var tcpInfo = new Uri(info.Url);
+            var tcpClient = new TcpClient();
+            NetworkStream stream = null;
+            try
+            {
+                await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
+                stream = tcpClient.GetStream();
+
+                JsonOperationContext context;
+                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out context))
+                {
+                    var apiToken = await authenticator.GetAuthenticationTokenAsync(apiKey, url, context);
+                    var msg = new DynamicJsonValue
+                    {
+                        [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
+                        [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Cluster,
+                        [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = apiToken,
+                    };
+                    using (var writer = new BlittableJsonTextWriter(context, stream))
+                    using (var msgJson = context.ReadObject(msg, "message"))
+                    {
+                        context.Write(writer, msgJson);
+                    }
+                    using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
+                    {
+
+                        var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
+                        switch (reply.Status)
+                        {
+                            case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
+                                throw AuthorizationException.Forbidden("Server");
+                            case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
+                                break;
+                            default:
+                                throw AuthorizationException.Unauthorized(reply.Status, "Server");
+                        }
+                    }
+                }
+                return stream;
+            }
+            catch (Exception)
+            {
+                stream?.Dispose();
+                tcpClient.Dispose();
+                throw;
+            }
         }
     }
 
@@ -573,7 +634,7 @@ namespace Raven.Server.ServerWide
 
         public VersioningConfiguration VersioningConfiguration;
     }
-    
+
     public class DeleteDatabaseCommand
     {
         public string DatabaseName;
@@ -630,7 +691,7 @@ namespace Raven.Server.ServerWide
         public TransformerDefinition[] Transformers;
 
         public Dictionary<string, string> Settings;
-        
+
         public VersioningConfiguration VersioningConfiguration;
     }
 
@@ -654,7 +715,7 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, AddDatabaseCommand> AddDatabaseCommand = GenerateJsonDeserializationRoutine<AddDatabaseCommand>();
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, EditVersioningCommand> EditVersioningCommand = GenerateJsonDeserializationRoutine<EditVersioningCommand>();
     }
 }

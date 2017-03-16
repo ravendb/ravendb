@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -273,6 +274,14 @@ namespace Tests.Infrastructure
             public override bool ShouldSnapshot(Slice slice, RootObjectType type)
             {
                 return slice.ToString() == "values";
+            }
+
+            public override async Task<Stream> ConenctToPeer(string url, string apiKey)
+            {
+                var tcpInfo = new Uri(url);
+                var tcpClient = new TcpClient();
+                await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
+                return tcpClient.GetStream();
             }
         }
     }

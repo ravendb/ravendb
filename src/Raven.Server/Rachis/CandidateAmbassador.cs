@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis
@@ -67,7 +68,12 @@ namespace Raven.Server.Rachis
                     {
                         try
                         {
-                            _conenctToPeer = _engine.ConenctToPeer(_url, _apiKey);
+                            TransactionOperationContext context;
+                            using (_engine.ContextPool.AllocateOperationContext(out context))
+                            {
+                                _conenctToPeer = _engine.ConenctToPeer(_url, _apiKey, context).Result; 
+                            }
+
                             if (_candidate.Running == false)
                                 break; 
                         }
@@ -104,8 +110,9 @@ namespace Raven.Server.Rachis
                                     connection.Send(context, new RachisHello
                                     {
                                         TopologyId = topology.TopologyId,
-                                        DebugSourceIdentifier = _engine.GetDebugInformation(),
-                                        InitialMessageType = InitialMessageType.RequestVote
+                                        DebugSourceIdentifier = _engine.Tag,
+                                        DebugDestinationIdentifier = _tag,
+                                        InitialMessageType = InitialMessageType.RequestVote,
                                     });
 
                                     RequestVoteResponse rvr;

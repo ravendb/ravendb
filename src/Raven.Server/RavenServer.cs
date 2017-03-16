@@ -404,50 +404,14 @@ namespace Raven.Server
                         }
 
                         tcp.Operation = header.Operation;
-                        var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
-                        if (databaseLoadingTask == null)
+                        if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
                         {
-                            ThrowNoSuchDatabase(header);
-                            return;// never hit
+                            ServerStore.ClusterAcceptNewConnection(tcpClient, stream);
+                            tcp = null; //the cluster will dispose of the TcpClient
+                            return;
                         }
 
-                        var databaseLoadTimeout = ServerStore.DatabasesLandlord.DatabaseLoadTimeout;
-
-                        if (databaseLoadingTask.IsCompleted == false)
-                        {
-                            var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
-                            if (resultingTask != databaseLoadingTask)
-                                ThrowTimeoutOnDatabaseLoad(header);
-                        }
-
-                        tcp.DocumentDatabase = await databaseLoadingTask;
-
-                        tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
-
-                        switch (header.Operation)
-                        {
-                            case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
-                                BulkInsertConnection.Run(tcp);
-                                break;
-                            case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-                                SubscriptionConnection.SendSubscriptionDocuments(tcp);
-                                break;
-                            case TcpConnectionHeaderMessage.OperationTypes.Replication:
-                                var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;
-                                documentReplicationLoader.AcceptIncomingConnection(tcp);
-                                break;
-                            case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
-                                var responder = new TopologyRequestHandler();
-                                responder.AcceptIncomingConnectionAndRespond(tcp);
-                                break;
-                            default:
-                                throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
-                        }
-
-                        //since the responsers to TCP connections mostly continue to run
-                        //beyond this point, no sense to dispose the connection now, so set it to null.
-                        //this way the responders are responsible to dispose the connection and the context                    
-                        tcp = null;
+                        await DispatchDatabaseTcpConnection(tcp, header);
                     }
                     catch (Exception e)
                     {
@@ -484,6 +448,55 @@ namespace Raven.Server
                 }
 
             });
+        }
+
+        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
+        {
+            var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
+            if (databaseLoadingTask == null)
+            {
+                ThrowNoSuchDatabase(header);
+                return true;
+            }
+
+            var databaseLoadTimeout = ServerStore.DatabasesLandlord.DatabaseLoadTimeout;
+
+            if (databaseLoadingTask.IsCompleted == false)
+            {
+                var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
+                if (resultingTask != databaseLoadingTask)
+                    ThrowTimeoutOnDatabaseLoad(header);
+            }
+
+            tcp.DocumentDatabase = await databaseLoadingTask;
+
+            tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
+
+            switch (header.Operation)
+            {
+                case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
+                    BulkInsertConnection.Run(tcp);
+                    break;
+                case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+                    SubscriptionConnection.SendSubscriptionDocuments(tcp);
+                    break;
+                case TcpConnectionHeaderMessage.OperationTypes.Replication:
+                    var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;
+                    documentReplicationLoader.AcceptIncomingConnection(tcp);
+                    break;
+                case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
+                    var responder = new TopologyRequestHandler();
+                    responder.AcceptIncomingConnectionAndRespond(tcp);
+                    break;
+                default:
+                    throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
+            }
+
+            //since the responses to TCP connections mostly continue to run
+            //beyond this point, no sense to dispose the connection now, so set it to null.
+            //this way the responders are responsible to dispose the connection and the context                    
+            tcp = null;
+            return false;
         }
 
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
