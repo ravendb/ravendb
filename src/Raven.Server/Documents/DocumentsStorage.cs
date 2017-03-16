@@ -539,14 +539,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<ReplicationBatchDocumentItem> GetDocumentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchItem> GetDocumentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref result.Reader));
+                yield return ReplicationBatchItem.From(TableValueToDocument(context, ref result.Reader));
             }
         }
 
@@ -625,12 +625,12 @@ namespace Raven.Server.Documents
             return list;
         }
 
-        public IEnumerable<ReplicationBatchDocumentItem> GetConflictsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchItem> GetConflictsFrom(DocumentsOperationContext context, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchDocumentItem.From(TableValueToConflictDocument(context, ref tvr.Reader));
+                yield return ReplicationBatchItem.From(TableValueToConflictDocument(context, ref tvr.Reader));
             }
         }
 
@@ -766,7 +766,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<ReplicationBatchDocumentItem> GetTombstonesFrom(
+        public IEnumerable<ReplicationBatchItem> GetTombstonesFrom(
             DocumentsOperationContext context,
             long etag)
         {
@@ -775,7 +775,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchDocumentItem.From(TableValueToTombstone(context, ref result.Reader));
+                yield return ReplicationBatchItem.From(TableValueToTombstone(context, ref result.Reader));
             }
         }
 

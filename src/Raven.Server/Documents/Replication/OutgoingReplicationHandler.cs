@@ -431,7 +431,7 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
                         [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
-                        [nameof(ReplicationMessageHeader.ItemCount)] = 0
+                        [nameof(ReplicationMessageHeader.ItemsCount)] = 0
                     };
                     documentsContext.Write(writer, heartbeat);
                     writer.Flush();

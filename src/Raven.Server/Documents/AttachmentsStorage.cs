@@ -47,6 +47,7 @@ namespace Raven.Server.Documents
             Name = 2,
             ContentType = 3,
             Hash = 4,
+            TransactionMarker = 5,
         }
 
         static AttachmentsStorage()
@@ -84,13 +85,20 @@ namespace Raven.Server.Documents
             AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 32);
         }
 
-        public IEnumerable<ReplicationBatchDocumentItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
             foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], etag, 0))
             {
-                yield return ReplicationBatchDocumentItem.From(TableValueToAttachment(context, ref result.Reader));
+                var attachment = TableValueToAttachment(context, ref result.Reader);
+
+                var stream = GetAttachmentStream(context, attachment.Base64Hash);
+                if (stream == null)
+                    throw new FileNotFoundException($"Attachment's stream {attachment.Name} was not found. This should never happen.");
+                attachment.Stream = stream;
+
+                yield return ReplicationBatchItem.From(attachment);
             }
         }
 
@@ -141,11 +149,14 @@ namespace Raven.Server.Documents
                 TableValueBuilder tbv;
                 using (table.Allocate(out tbv))
                 {
+                    var transactionMarker = context.GetTransactionMarker();
+
                     tbv.Add(keySlice.Content.Ptr, keySlice.Size);
                     tbv.Add(Bits.SwapBytes(attachmenEtag));
                     tbv.Add(namePtr, nameSize);
                     tbv.Add(contentTypeSlice.Content.Ptr, contentTypeSlice.Size);
                     tbv.Add(hashSlice.Content.Ptr, hashSlice.Size);
+                    tbv.Add(transactionMarker);
 
                     TableValueReader oldValue;
                     if (table.ReadByKey(keySlice, out oldValue))
@@ -204,6 +215,14 @@ namespace Raven.Server.Documents
                 Hash = hash,
             };
         }
+        public void PutFromReplication(DocumentsOperationContext context, byte[] attachmentLoweredKey, string attachmentName, 
+            string attachmentContentType, byte[] attachmentBase64Hash, short attachmentTransactionMarker)
+        {
+            // Attachment etag should be generated before updating the document
+            var attachmenEtag = _documentsStorage.GenerateNextEtag();
+
+            /* TODO: Implement */
+        }
 
         public void RevisionAttachments(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, ChangeVectorEntry[] changeVector)
         {
@@ -258,11 +277,14 @@ namespace Raven.Server.Documents
                 TableValueBuilder tbv;
                 using (table.Allocate(out tbv))
                 {
+                    var transactionMarker = context.GetTransactionMarker();
+
                     tbv.Add(keySlice.Content.Ptr, keySlice.Size);
                     tbv.Add(Bits.SwapBytes(attachmenEtag));
                     tbv.Add(attachment.Item1);
                     tbv.Add(attachment.Item2);
                     tbv.Add(attachment.Item3);
+                    tbv.Add(transactionMarker);
                     table.Set(tbv);
                 }
             }
@@ -495,6 +517,9 @@ namespace Raven.Server.Documents
             result.ContentType = DocumentsStorage.TableValueToKey(context, (int)AttachmentsTable.ContentType, ref tvr);
 
             DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
+
+            int size;
+            result.TransactionMarker = *(short*)tvr.Read((int)AttachmentsTable.TransactionMarker, out size);
 
             return result;
         }
