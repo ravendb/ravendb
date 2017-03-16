@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Http;
+using Raven.Client.Json;
+using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -355,10 +360,84 @@ namespace Raven.Server.ServerWide
             return _engine.PutAsync(cmd);
         }
 
-        public Task SendToLeaderAsync(BlittableJsonReaderObject cmd)
+        public async Task SendToLeaderAsync(BlittableJsonReaderObject cmd)
         {
-            //TODO: actually implement this
-            return _engine.PutAsync(cmd);
+            while (true)
+            {
+                var logChange = _engine.WaitForHeartbeat();
+
+                if (_engine.CurrentState == RachisConsensus.State.Leader)
+                {
+                    await _engine.PutAsync(cmd);
+                    return;
+                }
+
+                var engineLeaderTag = _engine.LeaderTag;// not actually working
+                try
+                {
+                    await SendToNode(engineLeaderTag, cmd);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Tried to send message to leader, retrying",ex);
+                }
+
+                await logChange;
+            }
+        }
+
+        private async Task SendToNode(string engineLeaderTag, BlittableJsonReaderObject cmd)
+        {
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+
+                var clusterTopology = _engine.GetTopology(context);
+                var apiKey = clusterTopology.ApiKey;
+                var leaderUrl = clusterTopology.Members[engineLeaderTag];
+
+                using (var shortTermExecuter = RequestExecutor.ShortTermSingleUse(leaderUrl, null, apiKey))
+                    await shortTermExecuter.ExecuteAsync(new PutRaftCommand(context, cmd), context, ServerShutdown);
+            }
+        }
+
+        protected internal class PutRaftCommand : RavenCommand<object>
+        {
+            private readonly JsonOperationContext _context;
+            private readonly BlittableJsonReaderObject _command;
+            public override bool IsReadRequest => false;
+
+            public PutRaftCommand(JsonOperationContext context, BlittableJsonReaderObject command)
+            {
+                _context = context;
+                _command = context.ReadObject(command, "Raft command");
+            }
+
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/rachis/apply";
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(stream =>
+                    {
+                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        {
+                            writer.WriteObject(_command);
+                        }
+                    })
+                };
+
+                return request;
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+            }
         }
     }
 }
