@@ -406,7 +406,7 @@ namespace Raven.Server
                         tcp.Operation = header.Operation;
                         if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
                         {
-                            ServerStore.ClusterAcceptNewConnection(tcpClient, stream);
+                            ServerStore.ClusterAcceptNewConnection(tcpClient);
                             tcp = null; //the cluster will dispose of the TcpClient
                             return;
                         }

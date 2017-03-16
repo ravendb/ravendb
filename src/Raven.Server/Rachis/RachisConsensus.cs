@@ -141,8 +141,7 @@ namespace Raven.Server.Rachis
                 StartIndex = 0,
             });
         }
-        //TODO:Remove this before sending PR
-        public int ElectionTimeoutMs = 10000;// Debugger.IsAttached ? 3000 : 300;
+        public int ElectionTimeoutMs = Debugger.IsAttached ? 3000 : 300;
 
         private Leader _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>();
@@ -536,12 +535,12 @@ namespace Raven.Server.Rachis
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
         /// </summary>
-        public void AcceptNewConnection(TcpClient tcpClient, Action<RachisHello> sayHello = null, Stream stream = null)
+        public void AcceptNewConnection(TcpClient tcpClient, Action<RachisHello> sayHello = null)
         {
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(_tag, stream??tcpClient.GetStream());
+                remoteConnection = new RemoteConnection(_tag, tcpClient.GetStream());
                 try
                 {
                     RachisHello initialMessage;

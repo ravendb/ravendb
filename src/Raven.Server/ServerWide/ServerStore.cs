@@ -453,9 +453,9 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForState(state);
         }
 
-        public void ClusterAcceptNewConnection(TcpClient client,Stream stream)
+        public void ClusterAcceptNewConnection(TcpClient client)
         {
-            _engine.AcceptNewConnection(client, null, stream);
+            _engine.AcceptNewConnection(client, null);
         }
     }
 }
