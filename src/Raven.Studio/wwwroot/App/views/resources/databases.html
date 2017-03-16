@@ -7,7 +7,7 @@
         </div>
     </div>
 </div>
-<div class="databases flex-vertical absolute-fill" data-bind="if: databases().sortedDatabases().length, css: { 'databases_compact': compactView() }">
+<div class="databases flex-vertical absolute-fill" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length, css: { 'databases_compact': compactView() }">
     <div class="flex-header">
     <div class="databasesToolbar toolbar clearfix">
         <div class="form-inline">
