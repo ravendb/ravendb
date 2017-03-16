@@ -165,7 +165,7 @@ namespace Raven.Server.ServerWide
                 [nameof(DeleteDatabaseCommand.HardDelete)] = hardDelete,
             }, "del-cmd"))
             {
-                await PutAsync(putCmd);
+                await SendToLeaderAsync(putCmd);
             }
         }
 
@@ -178,7 +178,7 @@ namespace Raven.Server.ServerWide
                 [nameof(PutValueCommand.Value)] = val,
             }, "put-cmd"))
             {
-                await PutAsync(putCmd);
+                await SendToLeaderAsync(putCmd);
             }
         }
 
@@ -350,13 +350,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private Task PutAsync(BlittableJsonReaderObject cmd)
+        public Task PutCommandAsync(BlittableJsonReaderObject cmd)
         {
-            if (_engine.CurrentState != RachisConsensus.State.Leader && _engine.CurrentState != RachisConsensus.State.LeaderElect)
-            {
-                return SendToLeaderAsync(cmd);
-            }
-
             return _engine.PutAsync(cmd);
         }
 
@@ -375,7 +370,7 @@ namespace Raven.Server.ServerWide
                 var engineLeaderTag = _engine.LeaderTag;// not actually working
                 try
                 {
-                    await SendToNode(engineLeaderTag, cmd);
+                    await SendToNodeAsync(engineLeaderTag, cmd);
                     return;
                 }
                 catch (Exception ex)
@@ -388,7 +383,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private async Task SendToNode(string engineLeaderTag, BlittableJsonReaderObject cmd)
+        private async Task SendToNodeAsync(string engineLeaderTag, BlittableJsonReaderObject cmd)
         {
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -396,10 +391,11 @@ namespace Raven.Server.ServerWide
                 context.OpenReadTransaction();
 
                 var clusterTopology = _engine.GetTopology(context);
-                var apiKey = clusterTopology.ApiKey;
-                var leaderUrl = clusterTopology.Members[engineLeaderTag];
+                string leaderUrl;
+                if (clusterTopology.Members.TryGetValue(engineLeaderTag, out leaderUrl) == false)
+                    throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
-                using (var shortTermExecuter = RequestExecutor.ShortTermSingleUse(leaderUrl, null, apiKey))
+                using (var shortTermExecuter = RequestExecutor.ShortTermSingleUse(leaderUrl, "Rachis.Server", clusterTopology.ApiKey))
                     await shortTermExecuter.ExecuteAsync(new PutRaftCommand(context, cmd), context, ServerShutdown);
             }
         }
@@ -418,7 +414,7 @@ namespace Raven.Server.ServerWide
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/rachis/apply";
+                url = $"{node.Url}/rachis/send";
 
                 var request = new HttpRequestMessage
                 {

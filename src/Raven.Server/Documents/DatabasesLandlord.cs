@@ -78,16 +78,9 @@ namespace Raven.Server.Documents
                     }
 
                     _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
+
+                    NotifyLeaderAboutRemoval(dbName);
                     
-                    ThreadPool.QueueUserWorkItem(x =>
-                    {
-                        SendRachisCommandToLeader((DynamicJsonValue)x);
-                    }, new DynamicJsonValue
-                    {
-                        ["Type"] = nameof(RemoveNodeFromDatabaseCommand),
-                        [nameof(RemoveNodeFromDatabaseCommand.DatabaseName)] = dbName,
-                        [nameof(RemoveNodeFromDatabaseCommand.NodeTag)] = _serverStore.NodeTag
-                    });
 
                     return;
                 }
@@ -118,13 +111,29 @@ namespace Raven.Server.Documents
             // if deleted, unload / deleted and then notify leader that we removed it
         }
 
-        private void SendRachisCommandToLeader(DynamicJsonValue x)
+        private void NotifyLeaderAboutRemoval(string dbName)
         {
+            var cmd = new DynamicJsonValue
+            {
+                ["Type"] = nameof(RemoveNodeFromDatabaseCommand),
+                [nameof(RemoveNodeFromDatabaseCommand.DatabaseName)] = dbName,
+                [nameof(RemoveNodeFromDatabaseCommand.NodeTag)] = _serverStore.NodeTag
+            };
             JsonOperationContext myContext;
             using (_serverStore.ContextPool.AllocateOperationContext(out myContext))
-            using (var cmd = myContext.ReadObject(x, "rachis command"))
+            using (var json = myContext.ReadObject(cmd, "rachis command"))
             {
-                _serverStore.SendToLeaderAsync(cmd).Wait();
+                _serverStore.SendToLeaderAsync(json)
+                    .ContinueWith(t =>
+                    {
+                        if (t.Exception != null)
+                        {
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database {dbName}", t.Exception);
+                            }
+                        }
+                    });
             }
         }
 
