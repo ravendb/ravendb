@@ -136,9 +136,7 @@ namespace FastTests.Server.Documents.Tombstones
                             Assert.Equal(0, count);
                         }
 
-                        while (database.DocumentTombstoneCleaner.ExecuteCleanup())
-                        {
-                        }
+                        database.DocumentTombstoneCleaner.ExecuteCleanup(null);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -157,9 +155,7 @@ namespace FastTests.Server.Documents.Tombstones
                             Assert.Equal(1, count);
                         }
 
-                        while (database.DocumentTombstoneCleaner.ExecuteCleanup())
-                        {
-                        }
+                        database.DocumentTombstoneCleaner.ExecuteCleanup(null);
 
                         using (context.OpenReadTransaction())
                         {
@@ -188,9 +184,7 @@ namespace FastTests.Server.Documents.Tombstones
                             Assert.Equal(2, count);
                         }
 
-                        while (database.DocumentTombstoneCleaner.ExecuteCleanup())
-                        {
-                        }
+                        database.DocumentTombstoneCleaner.ExecuteCleanup(null);
 
                         using (context.OpenReadTransaction())
                         {
