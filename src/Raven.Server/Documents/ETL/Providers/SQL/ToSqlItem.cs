@@ -26,8 +26,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             IsDelete = true;
         }
 
-        public bool IsDelete { get; private set; }
-
         public Document Document { get; private set; }
 
         public string DocumentKey { get; private set; } // TODO arek - LazyStringValue

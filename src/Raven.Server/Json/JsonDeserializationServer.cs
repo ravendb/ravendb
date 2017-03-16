@@ -8,6 +8,7 @@ using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -56,11 +57,12 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationDocument> ReplicationDocument = GenerateJsonDeserializationRoutine<ReplicationDocument>();
 
+        public static readonly Func<BlittableJsonReaderObject, EtlConfiguration> EtlConfiguration = GenerateJsonDeserializationRoutine<EtlConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, EtlProcessStatus> EtlProcessStatus = GenerateJsonDeserializationRoutine<EtlProcessStatus>();
+
         public static readonly Func<BlittableJsonReaderObject, SqlEtlConfiguration> SqlReplicationConfiguration = GenerateJsonDeserializationRoutine<SqlEtlConfiguration>();
-        public static readonly Func<BlittableJsonReaderObject, SqlEtlStatus> SqlEtlStatus = GenerateJsonDeserializationRoutine<SqlEtlStatus>();
         public static readonly Func<BlittableJsonReaderObject, SimulateSqlEtl> SimulateSqlReplication = GenerateJsonDeserializationRoutine<SimulateSqlEtl>();
         public static readonly Func<BlittableJsonReaderObject, PredefinedSqlConnection> PredefinedSqlConnection = GenerateJsonDeserializationRoutine<PredefinedSqlConnection>();
-
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionCriteria> SubscriptionCriteria = GenerateJsonDeserializationRoutine<SubscriptionCriteria>();
 

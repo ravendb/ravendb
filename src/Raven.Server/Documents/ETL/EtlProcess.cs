@@ -2,18 +2,37 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Raven.Client;
+using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Server.Documents.ETL.Providers;
+using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlProcess<TExtracted, TTransformed> : IDisposable where TExtracted : ExtractedItem
+    public abstract class EtlProcess : IDisposable
+    {
+        public abstract void Start();
+
+        public abstract void Stop();
+
+        public abstract void Dispose();
+
+        public abstract void NotifyAboutWork();
+    }
+
+    public abstract class EtlProcess<TExtracted, TTransformed> : EtlProcess where TExtracted : ExtractedItem
     {
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
-        private readonly EtlConfiguration _configuration;
+        private readonly EtlProcessConfiguration _configuration;
         private readonly CancellationTokenSource _cts;
         private Thread _thread;
         protected readonly CurrentEtlRun CurrentBatch = new CurrentEtlRun();
@@ -23,7 +42,7 @@ namespace Raven.Server.Documents.ETL
         public readonly EtlStatistics Statistics;
         public readonly string Tag;
 
-        protected EtlProcess(DocumentDatabase database, EtlConfiguration configuration, string tag)
+        protected EtlProcess(DocumentDatabase database, EtlProcessConfiguration configuration, string tag)
         {
             _configuration = configuration;
             Tag = tag;
@@ -66,22 +85,66 @@ namespace Raven.Server.Documents.ETL
 
         public abstract IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context);
 
-        public abstract void Load(IEnumerable<TTransformed> items);
+        public void Load(IEnumerable<TTransformed> items, JsonOperationContext context)
+        {
+            try
+            {
+                LoadInternal(items, context);
+
+                CurrentBatch.LastLoadedEtag = CurrentBatch.LastTransformedEtag;
+
+                Statistics.LoadSuccess(CurrentBatch.NumberOfExtractedItems);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to load transformed data for '{Name}'", e);
+
+                HandleFallback();
+
+                Statistics.RecordLoadError(e, CurrentBatch.NumberOfExtractedItems);
+            }
+        }
+
+        protected virtual void HandleFallback()
+        {
+        }
+
+        protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
 
         public abstract bool CanContinueBatch();
 
-        protected abstract void LoadLastProcessedEtag(DocumentsOperationContext context);
+        protected void LoadLastProcessedEtag(DocumentsOperationContext context)
+        {
+            var doc = Database.DocumentsStorage.Get(context, Constants.Documents.ETL.RavenEtlProcessStatusPrefix + Name);
 
-        protected abstract void StoreLastProcessedEtag(DocumentsOperationContext context);
+            if (doc == null)
+                Statistics.LastProcessedEtag = 0;
+            else
+                Statistics.LastProcessedEtag = JsonDeserializationServer.EtlProcessStatus(doc.Data).LastProcessedEtag;
+        }
+
+        protected void StoreLastProcessedEtag(DocumentsOperationContext context)
+        {
+            var key = Constants.Documents.ETL.RavenEtlProcessStatusPrefix + Name;
+
+            var document = context.ReadObject(new DynamicJsonValue
+            {
+                [nameof(EtlProcessStatus.Name)] = Name,
+                [nameof(EtlProcessStatus.LastProcessedEtag)] = Statistics.LastProcessedEtag
+            }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+            Database.DocumentsStorage.Put(context, key, null, document);
+        }
 
         protected abstract void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize);
 
-        public void NotifyAboutWork()
+        public override void NotifyAboutWork()
         {
             _waitForChanges.Set();
         }
 
-        public void Start()
+        public override void Start()
         {
             if (_thread != null)
                 return;
@@ -108,7 +171,7 @@ namespace Raven.Server.Documents.ETL
             _thread.Start();
         }
 
-        public void Stop()
+        public override void Stop()
         {
             if (_thread == null)
                 return;
@@ -157,12 +220,12 @@ namespace Raven.Server.Documents.ETL
 
                             var transformed = Transform(extracted, context);
 
-                            Load(transformed);
+                            Load(transformed, context);
                             
-                            if (CurrentBatch.LastProcessedEtag > Statistics.LastProcessedEtag)
+                            if (CurrentBatch.LastLoadedEtag > Statistics.LastProcessedEtag)
                             {
                                 didWork = true;
-                                Statistics.LastProcessedEtag = CurrentBatch.LastProcessedEtag;
+                                Statistics.LastProcessedEtag = CurrentBatch.LastLoadedEtag;
                             }
                         }
 
@@ -201,6 +264,9 @@ namespace Raven.Server.Documents.ETL
                         {
                             var afterReplicationCompleted = Database.SqlReplicationLoader.AfterReplicationCompleted; // TODO arek
                             afterReplicationCompleted?.Invoke(Statistics);
+
+                            var batchCompleted = Database.EtlLoader.BatchCompleted;
+                            batchCompleted?.Invoke(Name, Statistics);
                         }
                     }
                 }
@@ -216,7 +282,27 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public void Dispose()
+        protected void StopProcessOnScriptParseError(JavaScriptParseException e)
+        {
+            var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
+
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations(message, e);
+
+            var alert = AlertRaised.Create(
+                Tag,
+                message,
+                AlertType.Etl_TransformationError,
+                NotificationSeverity.Error,
+                key: Name,
+                details: new ExceptionDetails(e));
+
+            Database.NotificationCenter.Add(alert);
+
+            Stop();
+        }
+
+        public override void Dispose()
         {
             if (CancellationToken.IsCancellationRequested)
                 return;

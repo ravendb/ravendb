@@ -222,6 +222,11 @@ namespace Raven.Client
                 public const string ConfigurationKey = "Raven/Versioning/Configuration";
             }
 
+            public class ETL
+            {
+                public const string RavenEtlProcessStatusPrefix = "Raven/Etl/Status/";
+            }
+
             public class SqlReplication
             {
                 public const string SqlReplicationConnections = "Raven/SqlReplication/Connections";
