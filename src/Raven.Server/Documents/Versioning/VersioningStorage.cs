@@ -162,7 +162,11 @@ namespace Raven.Server.Documents.Versioning
 
                 var existingDocument = getExistingDocument();
                 if (existingDocument == null)
-                    return true;
+                {
+                    // we are not going to create a revision if it's an import from v3
+                    // (since this import is going to import revisions as well)
+                    return (nonPersistentFlags & NonPersistentDocumentFlags.LegacyVersioned) != NonPersistentDocumentFlags.LegacyVersioned;
+                }
 
                 // compare the contents of the existing and the new document
                 if (existingDocument.IsMetadataEqualTo(document) && existingDocument.IsEqualTo(document))
