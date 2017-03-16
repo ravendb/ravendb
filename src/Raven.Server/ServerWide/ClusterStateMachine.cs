@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
@@ -61,7 +62,6 @@ namespace Raven.Server.ServerWide
 
         private readonly AsyncManualResetEvent _notifiedListeners = new AsyncManualResetEvent();
         private long _lastNotified;
-
 
         public async Task WaitForIndexNotification(long index)
         {
@@ -652,20 +652,6 @@ namespace Raven.Server.ServerWide
     {
         public string Name;
         public BlittableJsonReaderObject Value;
-    }
-
-    public class DatabaseTopology
-    {
-        public List<string> Members = new List<string>();
-        public List<string> Promotables = new List<string>();
-        public List<string> Watchers = new List<string>();
-
-        public bool RelevantFor(string nodeTag)
-        {
-            return Members.Contains(nodeTag) ||
-                   Promotables.Contains(nodeTag) ||
-                   Watchers.Contains(nodeTag);
-        }
     }
 
     public class RemoveNodeFromDatabaseCommand

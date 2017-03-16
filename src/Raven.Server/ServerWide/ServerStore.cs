@@ -457,5 +457,10 @@ namespace Raven.Server.ServerWide
         {
             _engine.AcceptNewConnection(client, null);
         }
+
+        public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value)
+        {
+            await _engine.WaitForCommitIndexChange(modification, value);
+        }
     }
 }

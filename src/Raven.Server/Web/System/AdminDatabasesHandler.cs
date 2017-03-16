@@ -11,6 +11,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -153,7 +154,8 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         ["ETag"] = newEtag,
-                        ["Key"] = dbId
+                        ["Key"] = dbId,
+                        [nameof(DatabaseRecord.Topology)] = topology.ToJson()
                     });
                     writer.Flush();
                 }
