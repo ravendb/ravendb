@@ -21,6 +21,7 @@ import configuration = require("configuration");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import eventsCollector = require("common/eventsCollector");
+import popoverUtils = require("common/popoverUtils");
 
 class editIndex extends viewModelBase { 
 
@@ -265,15 +266,29 @@ class editIndex extends viewModelBase {
         $("#map-title small").popover({
             html: true,
             trigger: 'hover',
-            content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> order <span class="code-keyword">in</span> docs.Orders<br/><span class="code-keyword">where</span> order.IsShipped<br/><span class="code-keyword">select new</span><br/>{</br>   order.Date, <br/>   order.Amount,<br/>   RegionId = order.Region.Id <br />}</pre>Each map function should project the same set of fields.',
+            template: popoverUtils.longPopoverTemplate,
+            container: "body",
+            content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/>' +
+                'Example:</br><pre><span class="token keyword">from</span> order <span class="token keyword">in</span>' +
+                ' docs.Orders<br/><span class="token keyword">where</span> order.IsShipped<br/>' +
+                '<span class="token keyword">select new</span><br/>{</br>   order.Date, <br/>   order.Amount,<br/>' +
+                '   RegionId = order.Region.Id <br />}</pre>Each map function should project the same set of fields.'
         });
     }
 
     addReduceHelpPopover() {
         $("#reduce-title small").popover({
             html: true,
+            container: "body",
+            template: popoverUtils.longPopoverTemplate,
             trigger: 'hover',
-            content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> result <span class="code-keyword">in</span> results<br/><span class="code-keyword">group</span> result <span class="code-keyword">by new</span> { result.RegionId, result.Date } into g<br/><span class="code-keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>The objects produced by the Reduce function should have the same fields as the inputs.',
+            content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents.<br />' +
+                'It uses LINQ query syntax.<br/>Example:</br><pre><span class="token keyword">from</span> result ' +
+                '<span class="token keyword">in</span> results<br/><span class="token keyword">group</span> result ' +
+                '<span class="token keyword">by new</span> { result.RegionId, result.Date } into g<br/>' +
+                '<span class="token keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  ' +
+                'RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>' +
+                'The objects produced by the Reduce function should have the same fields as the inputs.'
         });
     }
 

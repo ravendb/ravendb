@@ -28,6 +28,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
+import popoverUtils = require("common/popoverUtils");
 
 type indexItem = {
     name: string;
@@ -327,8 +328,9 @@ class query extends viewModelBase {
         $(".query-title small").popover({
             html: true,
             trigger: "hover",
-            container: "#queryContainer",
-            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+            template: popoverUtils.longPopoverTemplate,
+            container: "body",
+            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
         });
 
         this.registerDisposableHandler($(window), "storage", () => this.loadRecentQueries());

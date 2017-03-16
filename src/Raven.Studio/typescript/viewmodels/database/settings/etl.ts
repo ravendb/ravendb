@@ -114,6 +114,7 @@ class etl extends viewModelBase {
     }
 
     addScriptHelpPopover() {
+    //TODO: long popover?
         $(".scriptPopover").popover({
             html: true,
             trigger: 'hover',
@@ -121,7 +122,7 @@ class etl extends viewModelBase {
             content:
             '<p>Return <code>null</code> in transform script to skip document from replication. </p>' +
             '<p>Example: </p>' +
-            '<pre><span class="code-keyword">if</span> (<span class="code-keyword">this</span>.Region !== <span class="code-string">"Europe"</span>) { <br />   <span class="code-keyword">return null</span>; <br />}<br/><span class="code-keyword">this</span>.Currency = <span class="code-string">"EUR"</span>; </pre>'
+            '<pre><span class="token keyword">if</span> (<span class="token keyword">this</span>.Region !== <span class="token string">"Europe"</span>) { <br />   <span class="token keyword">return null</span>; <br />}<br/><span class="token keyword">this</span>.Currency = <span class="token string">"EUR"</span>; </pre>'
         });
     }
 

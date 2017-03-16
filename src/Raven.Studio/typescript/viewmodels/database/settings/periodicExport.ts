@@ -33,7 +33,9 @@ class periodicExport extends viewModelBase {
             html: true,
             trigger: "hover",
             container: "body",
-            content: content
+            content: content 
+
+            //TODO: long popover?
         });
 
         $("#azureDecryptFailureSpan").popover({
@@ -41,6 +43,8 @@ class periodicExport extends viewModelBase {
             trigger: "hover",
             container: "body",
             content: content
+
+            //TODO: long popover?
         });
     }
 
