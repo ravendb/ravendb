@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.IndexesTransformers,
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _parent._lastSentDocumentEtag,
                 [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = LastEtag,
-                [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count
+                [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count
             };
             _parent.WriteToServer(headerJson);
 

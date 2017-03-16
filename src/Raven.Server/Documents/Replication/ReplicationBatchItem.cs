@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -13,7 +14,7 @@ namespace Raven.Server.Documents.Replication
         public int Type;
     }
 
-    public class ReplicationBatchDocumentItem
+    public class ReplicationBatchItem
     {
         public LazyStringValue Key;
         public ChangeVectorEntry[] ChangeVector;
@@ -24,10 +25,11 @@ namespace Raven.Server.Documents.Replication
         public short TransactionMarker;
         public long LastModifiedTicks;
 
-        public static ReplicationBatchDocumentItem From(Document doc)
+        public static ReplicationBatchItem From(Document doc)
         {
-            return new ReplicationBatchDocumentItem
+            return new ReplicationBatchItem
             {
+                Type = ReplicationItemType.Document,
                 Etag = doc.Etag,
                 ChangeVector = doc.ChangeVector,
                 Data = doc.Data,
@@ -38,10 +40,11 @@ namespace Raven.Server.Documents.Replication
             };
         }
 
-        public static ReplicationBatchDocumentItem From(DocumentTombstone doc)
+        public static ReplicationBatchItem From(DocumentTombstone doc)
         {
-            return new ReplicationBatchDocumentItem
+            return new ReplicationBatchItem
             {
+                Type = ReplicationItemType.Document,
                 Etag = doc.Etag,
                 ChangeVector = doc.ChangeVector,
                 Collection = doc.Collection,
@@ -52,10 +55,11 @@ namespace Raven.Server.Documents.Replication
             };
         }
 
-        public static ReplicationBatchDocumentItem From(DocumentConflict doc)
+        public static ReplicationBatchItem From(DocumentConflict doc)
         {
-            return new ReplicationBatchDocumentItem
+            return new ReplicationBatchItem
             {
+                Type = ReplicationItemType.Document,
                 Etag = doc.Etag,
                 ChangeVector = doc.ChangeVector,
                 Collection = doc.Collection,
@@ -66,23 +70,32 @@ namespace Raven.Server.Documents.Replication
             };
         }
 
-        public static ReplicationBatchDocumentItem From(Attachment attachment)
+        public static ReplicationBatchItem From(Attachment attachment)
         {
-            return new ReplicationBatchDocumentItem
+            return new ReplicationBatchItem
             {
-                IsAttachmnet = true,
+                Type = ReplicationItemType.Attachment,
                 Key = attachment.LoweredKey,
                 Etag = attachment.Etag,
                 Name = attachment.Name,
                 ContentType = attachment.ContentType,
+                Base64Hash = attachment.Base64Hash,
                 Stream = attachment.Stream,
-                LastModifiedTicks = attachment.LastModified.Ticks,
+                TransactionMarker = attachment.TransactionMarker,
             };
         }
 
-        public bool IsAttachmnet { get; set; }
+        public ReplicationItemType Type { get; set; }
         public LazyStringValue Name { get; set; }
         public LazyStringValue ContentType { get; set; }
+        public Slice Base64Hash { get; set; }
         public Stream Stream { get; set; }
+
+        public enum ReplicationItemType : byte
+        {
+            Document = 1,
+            Attachment = 2,
+            AttachmentStream = 3,
+        }
     }
 }

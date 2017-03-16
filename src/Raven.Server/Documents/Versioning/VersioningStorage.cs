@@ -376,13 +376,13 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public IEnumerable<ReplicationBatchDocumentItem> GetRevisionsAfter(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchItem> GetRevisionsAfter(DocumentsOperationContext context, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
 
             foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref tvr.Reader));
+                yield return ReplicationBatchItem.From(TableValueToDocument(context, ref tvr.Reader));
             }
         }
 
