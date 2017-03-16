@@ -1,26 +1,21 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Json.Linq;
-using Raven.Tests.Helpers;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_3013 : RavenTestBase
     {
         [Fact]
         public void CanPersistLinqWhereIEnumerable()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
-                {					
+                {
                     var entity = new TestEntity
                     {
-                        Id = 1,
                         Property = new[] { "one", "two" }.Where(s => s.Length > 1)
                     };
 
@@ -30,7 +25,7 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var loadedEntity = session.Load<TestEntity>(1);
+                    var loadedEntity = session.Load<TestEntity>("TestEntities/1");
                     Assert.Contains("one", loadedEntity.Property);
                     Assert.Contains("two", loadedEntity.Property);
                 }
@@ -40,13 +35,12 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanPersistLinqSelectIEnumerable()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
                     var entity = new TestEntity2
                     {
-                        Id = 1,
                         Property = new[] { 1, 2 }.Select(x => x - 1)
                     };
 
@@ -56,25 +50,23 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var loadedEntity = session.Load<TestEntity2>(1);
+                    var loadedEntity = session.Load<TestEntity2>("TestEntity2s/1");
                     var array = loadedEntity.Property.ToList();
-
                     Assert.Equal(0, array[0]);
                     Assert.Equal(1, array[1]);
                 }
             }
         }
 
-        public class TestEntity
+        private class TestEntity
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public IEnumerable<string> Property { get; set; }
         }
 
-
-        public class TestEntity2
+        private class TestEntity2
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public IEnumerable<int> Property { get; set; }
         }
     }
