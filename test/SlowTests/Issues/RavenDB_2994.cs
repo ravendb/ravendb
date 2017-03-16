@@ -3,20 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Globalization;
 using System.Linq;
-
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq.Indexing;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2994 : RavenTest
+    public class RavenDB_2994 : RavenTestBase
     {
         private class Item
         {
@@ -51,10 +49,6 @@ namespace Raven.Tests.Issues
 
                 public decimal Decimal2 { get; set; }
 
-                public short Short1 { get; set; }
-
-                public short Short2 { get; set; }
-
                 public long Long1 { get; set; }
 
                 public long Long2 { get; set; }
@@ -64,19 +58,17 @@ namespace Raven.Tests.Issues
             {
                 Map = items => from item in items
                                select new
-                                      {
-                                          Int1 = item.ValueAsInt.ParseInt(),
-                                          Int2 = item.ValueAsInt.ParseInt(-1),
-                                          Double1 = item.ValueAsDouble.ParseDouble(),
-                                          Double2 = item.ValueAsDouble.ParseDouble(-1),
-                                          Decimal1 = item.ValueAsDecimal.ParseDecimal(),
-                                          Decimal2 = item.ValueAsDecimal.ParseDecimal(-1),
-                                          Short1 = item.ValueAsShort.ParseShort(),
-                                          Short2 = item.ValueAsShort.ParseShort(-1),
-                                          Long1 = item.ValueAsLong.ParseLong(),
-                                          Long2 = item.ValueAsLong.ParseLong(-1),
-                                          Id = item.Id
-                                      };
+                               {
+                                   Int1 = item.ValueAsInt.ParseInt(),
+                                   Int2 = item.ValueAsInt.ParseInt(-1),
+                                   Double1 = item.ValueAsDouble.ParseDouble(),
+                                   Double2 = item.ValueAsDouble.ParseDouble(-1),
+                                   Decimal1 = item.ValueAsDecimal.ParseDecimal(),
+                                   Decimal2 = item.ValueAsDecimal.ParseDecimal(-1),
+                                   Long1 = item.ValueAsLong.ParseLong(),
+                                   Long2 = item.ValueAsLong.ParseLong(-1),
+                                   Id = item.Id
+                               };
 
                 StoreAllFields(FieldStorage.Yes);
             }
@@ -85,7 +77,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void PraseIndexingExtensionsShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Items_Numbers().Execute(store);
 
@@ -137,9 +129,6 @@ namespace Raven.Tests.Issues
                     Assert.Equal(dbl, item1.Double1);
                     Assert.Equal(dbl, item1.Double2);
 
-                    Assert.Equal(s, item1.Short1);
-                    Assert.Equal(s, item1.Short2);
-
                     Assert.Equal(i, item1.Int1);
                     Assert.Equal(i, item1.Int2);
 
@@ -153,9 +142,6 @@ namespace Raven.Tests.Issues
 
                     Assert.Equal(default(double), item2.Double1);
                     Assert.Equal(-1, item2.Double2);
-
-                    Assert.Equal(default(short), item2.Short1);
-                    Assert.Equal(-1, item2.Short2);
 
                     Assert.Equal(default(int), item2.Int1);
                     Assert.Equal(-1, item2.Int2);

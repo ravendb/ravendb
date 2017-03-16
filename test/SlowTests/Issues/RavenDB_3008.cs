@@ -3,19 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Transformers;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3008 : RavenTest
+    public class RavenDB_3008 : RavenTestBase
     {
         private class Test
         {
@@ -50,11 +46,10 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void CanLoadResultsStartingWith(string requestedStorage)
+        [Fact]
+        public void CanLoadResultsStartingWith()
         {
-            using (var store = NewDocumentStore(requestedStorage: requestedStorage))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -69,7 +64,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                new TestResultTransformer().Execute(store.DatabaseCommands, store.Conventions);
+                new TestResultTransformer().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
