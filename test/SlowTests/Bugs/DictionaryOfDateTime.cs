@@ -14,7 +14,7 @@ namespace SlowTests.Bugs
         {
             public Dictionary<DateTime, int> Items { get; set; }
         }
-        
+
         [Fact]
         public void CanBeSerializedProperly()
         {
@@ -32,7 +32,7 @@ namespace SlowTests.Bugs
                 jsonSerializer.Serialize(stringWriter, item);
 
                 var s = stringWriter.GetStringBuilder().ToString();
-                Assert.Equal("{\"Items\":{\"2011-11-24T00:00:00\":1}}", s);
+                Assert.Equal("{\"Items\":{\"2011-11-24T00:00:00.0000000\":1}}", s);
             }
         }
 
