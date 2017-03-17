@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Threading;
-using FastTests;
-using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
@@ -10,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class BasicRavenEtlTests : RavenTestBase
+    public class BasicRavenEtlTests : EtlTestBase
     {
         [Fact]
         public void Simple_script()
@@ -18,15 +14,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                var database = GetDatabase(src.DefaultDatabase).Result;
-
-                var mre = new ManualResetEventSlim();
-                database.EtlLoader.BatchCompleted += (n, s) =>
-                {
-                    if (s.LoadSuccesses == 1)
-                        mre.Set();
-                };
-
                 SetupEtl(src, new EtlConfiguration
                 {
                     RavenTargets =
@@ -42,6 +29,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     }
                 });
 
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses == 1);
+
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
@@ -52,7 +41,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                mre.Wait(TimeSpan.FromMinutes(1));
+                etlDone.Wait(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -70,15 +59,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                var database = GetDatabase(src.DefaultDatabase).Result;
-
-                var mre = new ManualResetEventSlim();
-                database.EtlLoader.BatchCompleted += (n, s) =>
-                {
-                    if (s.LoadSuccesses == 1)
-                        mre.Set();
-                };
-
                 SetupEtl(src, new EtlConfiguration
                 {
                     RavenTargets =
@@ -93,6 +73,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         }
                 });
 
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses == 1);
+
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
@@ -103,7 +85,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                mre.Wait(TimeSpan.FromMinutes(1));
+                etlDone.Wait(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -112,16 +94,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);
                 }
-            }
-        }
-
-        private static void SetupEtl(DocumentStore src, EtlConfiguration configuration)
-        {
-            using (var session = src.OpenSession())
-            {
-                session.Store(configuration, Constants.Documents.ETL.RavenEtlDocument);
-
-                session.SaveChanges();
             }
         }
     }
