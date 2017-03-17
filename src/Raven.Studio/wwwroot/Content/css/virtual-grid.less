@@ -1,9 +1,15 @@
 ﻿.virtual-grid {
-    background-color: @gray-base;
+     background-color: @gray-darker;
+     padding: @grid-gutter-width/4;
 
     .viewport-scroller {
         position: relative;
         min-width: 100%;
+    }
+
+    .loading {
+        z-index:1;
+        pointer-events:none;
     }
 
     .column-container.flex-window-head {
