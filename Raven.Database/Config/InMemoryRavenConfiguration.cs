@@ -11,6 +11,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1046,7 +1047,7 @@ namespace Raven.Database.Config
         [JsonIgnore]
         public CompositionContainer Container
         {
-            get { return container ?? (container = new CompositionContainer(Catalog)); }
+            get { return container ?? (container = new CompositionContainer(Catalog, CompositionOptions.IsThreadSafe)); }
             set
             {
                 containerExternallySet = true;
