@@ -5,7 +5,7 @@ namespace Sparrow
 {
     public static unsafe class Memory
     {
-        public static readonly int CompareInlineVsCallThreshold = 128;
+        public const int CompareInlineVsCallThreshold = 256;
 
         public static int Compare(byte* p1, byte* p2, int size)
         {
@@ -23,11 +23,8 @@ namespace Sparrow
             // If we use an unmanaged bulk version with an inline compare the caller site does not get optimized properly.
             // If you know you will be comparing big memory chunks do not use the inline version. 
             int l = size;
-            if ( l > CompareInlineVsCallThreshold)
-            {
-                if (size >= 256)
-                    return UnmanagedMemory.Compare((byte*)p1, (byte*)p2, l);
-            }
+            if (l > CompareInlineVsCallThreshold)
+                goto UnmanagedCompare;
 
             byte* bpx = (byte*)p1, bpy = (byte*)p2;
             int last;
@@ -36,7 +33,7 @@ namespace Sparrow
                 if (*((long*)bpx) != *((long*)bpy))
                 {
                     last = 8;
-                    goto TAIL;
+                    goto Tail;
                 }
             }
 
@@ -45,7 +42,7 @@ namespace Sparrow
                 if (*((int*)bpx) != *((int*)bpy))
                 {
                     last = 4;
-                    goto TAIL;
+                    goto Tail;
                 }
                 bpx += 4;
                 bpy += 4;
@@ -56,7 +53,7 @@ namespace Sparrow
                 if (*((short*)bpx) != *((short*)bpy))
                 {
                     last = 2;
-                    goto TAIL;
+                    goto Tail;
                 }
 
                 bpx += 2;
@@ -70,7 +67,7 @@ namespace Sparrow
 
             return 0;
 
-            TAIL:
+            Tail:
             while (last > 0)
             {
                 if (*((byte*)bpx) != *((byte*)bpy))
@@ -82,6 +79,9 @@ namespace Sparrow
             }
 
             return 0;
+
+            UnmanagedCompare:
+            return UnmanagedMemory.Compare((byte*)p1, (byte*)p2, l);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -270,7 +270,7 @@ namespace Sparrow
             BulkCopy(dest, src, n);
         }
 
-        public unsafe static void Set(byte* dest, byte value, long n)
+        public static unsafe void Set(byte* dest, byte value, long n)
         {
             SetInline(dest, value, n);
         }
@@ -280,7 +280,7 @@ namespace Sparrow
         /// </summary>
         /// <remarks>This is a forced inline version, use with care.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void SetInline(byte* dest, byte value, long n)
+        public static unsafe void SetInline(byte* dest, byte value, long n)
         {
             if (n == 0) 
                 return;

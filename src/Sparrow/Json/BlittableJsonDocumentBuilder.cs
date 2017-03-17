@@ -454,6 +454,7 @@ namespace Sparrow.Json
             public BlittableJsonToken WrittenToken;
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe LazyStringValue CreateLazyStringValueFromParserState()
         {
             var lazyStringValueFromParserState = _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize);
