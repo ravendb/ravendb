@@ -10,25 +10,22 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    internal class SqlPatchDocument : PatchDocument
+    internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords>
     {
         private const int DefaultSize = 50;
-
-        private readonly DocumentsOperationContext _context;
+        
         private readonly SqlEtlConfiguration _config;
         private readonly PatchRequest _patchRequest;
         private ToSqlItem _current;
+        private readonly Dictionary<string, SqlTableWithRecords> _tables;
 
-        public SqlPatchDocument(DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
-            : base(database)
+        public SqlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
+            : base(database, context)
         {
-            _context = context;
             _config = config;
             _patchRequest = new PatchRequest { Script = _config.Script };
-            Tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
+            _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
         }
-
-        public readonly Dictionary<string, SqlTableWithRecords> Tables;
 
         protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
         {
@@ -75,7 +72,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 throw new ArgumentException("cols parameter is mandatory");
 
             var dynamicJsonValue = scope.ToBlittable(colsAsObject.AsObject());
-            var blittableJsonReaderObject = _context.ReadObject(dynamicJsonValue, tableName);
+            var blittableJsonReaderObject = Context.ReadObject(dynamicJsonValue, tableName);
             var columns = new List<SqlColumn>(blittableJsonReaderObject.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
@@ -96,39 +93,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             });
         }
 
-        public SqlTableWithRecords GetOrAdd(string tableName)
+        private SqlTableWithRecords GetOrAdd(string tableName)
         {
             SqlTableWithRecords table;
-            if (Tables.TryGetValue(tableName, out table) == false)
+            if (_tables.TryGetValue(tableName, out table) == false)
             {
-                Tables[tableName] =
+                _tables[tableName] =
                     table = new SqlTableWithRecords(_config.SqlTables.Find(x => x.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)));
             }
 
             return table;
-        }
-
-        public void Transform(ToSqlItem item, DocumentsOperationContext context)
-        {
-            if (item.IsDelete == false)
-            {
-                _current = item;
-
-                Apply(context, _current.Document, _patchRequest);
-            }
-
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (int i = 0; i < _config.SqlTables.Count; i++)
-            {
-                // delete all the rows that might already exist there
-
-                var sqlTable = _config.SqlTables[i];
-
-                if (sqlTable.InsertOnlyMode)
-                    continue;
-
-                GetOrAdd(sqlTable.TableName).Deletes.Add(item);
-            }
         }
 
         private ValueTypeLengthTriple ToVarchar(string value, double? sizeAsDouble)
@@ -149,6 +123,34 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 Value = value,
                 Size = sizeAsDouble.HasValue ? (int)sizeAsDouble.Value : DefaultSize
             };
+        }
+
+        public override IEnumerable<SqlTableWithRecords> GetTransformedResults()
+        {
+            return _tables.Values;
+        }
+         
+        public override void Transform(ToSqlItem item)
+        {
+            if (item.IsDelete == false)
+            {
+                _current = item;
+
+                Apply(Context, _current.Document, _patchRequest);
+            }
+
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (int i = 0; i < _config.SqlTables.Count; i++)
+            {
+                // delete all the rows that might already exist there
+
+                var sqlTable = _config.SqlTables[i];
+
+                if (sqlTable.InsertOnlyMode)
+                    continue;
+
+                GetOrAdd(sqlTable.TableName).Deletes.Add(item);
+            }
         }
 
         public class ValueTypeLengthTriple

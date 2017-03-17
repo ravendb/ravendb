@@ -49,40 +49,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new TombstonesToSqlItems(tombstones);
         }
 
-        public override IEnumerable<SqlTableWithRecords> Transform(IEnumerable<ToSqlItem> items, DocumentsOperationContext context)
+        protected override EtlTransformer<ToSqlItem, SqlTableWithRecords> GetTransformer(DocumentsOperationContext context)
         {
-            var patcher = new SqlPatchDocument(Database, context, SqlConfiguration);
-
-            foreach (var toSqlItem in items)
-            {
-                CancellationToken.ThrowIfCancellationRequested();
-
-                try
-                {
-                    patcher.Transform(toSqlItem, context);
-
-                    Statistics.TransformationSuccess();
-                    
-                    CurrentBatch.LastTransformedEtag = toSqlItem.Etag;
-
-                    if (CanContinueBatch() == false)
-                        break;
-                }
-                catch (JavaScriptParseException e)
-                {
-                    StopProcessOnScriptParseError(e);
-                    break;
-                }
-                catch (Exception e)
-                {
-                    Statistics.RecordTransformationError(e);
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {toSqlItem.DocumentKey}", e);
-                }
-            }
-
-            return patcher.Tables.Values;
+            return new SqlDocumentTransformer(Database, context, SqlConfiguration);
         }
 
         protected override void LoadInternal(IEnumerable<SqlTableWithRecords> records, JsonOperationContext context)
