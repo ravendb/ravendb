@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.NotificationCenter.Notifications;
@@ -34,7 +35,7 @@ namespace SlowTests.Server.Documents.ETL
                                     Collection = "Users"
                                 }
                             }
-                        }, "Raven/ETL");
+                        }, Constants.Documents.ETL.RavenEtlDocument);
 
                         session.SaveChanges();
                     }
@@ -79,7 +80,7 @@ namespace SlowTests.Server.Documents.ETL
                                     Collection = "People"
                                 }
                             }
-                        }, "Raven/ETL");
+                        }, Constants.Documents.ETL.RavenEtlDocument);
 
                         session.SaveChanges();
                     }

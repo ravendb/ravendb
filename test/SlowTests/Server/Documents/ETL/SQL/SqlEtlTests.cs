@@ -16,6 +16,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Sparrow.Platform;
@@ -112,7 +113,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
                 var eventSlim = new ManualResetEventSlim(false);
                 var database = await GetDatabase(store.DefaultDatabase);
                 int testCount = 5000;
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
+                database.EtlLoader.BatchCompleted += (name, statistics) =>
                 {
                     if (GetOrdersCount(store) == testCount)
                         eventSlim.Set();
@@ -229,7 +230,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
 
                 var eventSlim = new ManualResetEventSlim(false);
                 var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
+                database.EtlLoader.BatchCompleted += (name, statistics) =>
                 {
                     if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
@@ -277,7 +278,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
 
                 var eventSlim = new ManualResetEventSlim(false);
                 var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
+                database.EtlLoader.BatchCompleted += (name, statistics) =>
                 {
                     if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
@@ -330,7 +331,7 @@ replicateToOrders(orderData);");
 
                 var eventSlim = new ManualResetEventSlim(false);
                 var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
+                database.EtlLoader.BatchCompleted += (name, statistics) =>
                 {
                     if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
@@ -384,7 +385,7 @@ replicateToOrders(orderData);");
 
                 var eventSlim = new ManualResetEventSlim(false);
                 var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
+                database.EtlLoader.BatchCompleted += (name, statistics) =>
                 {
                     if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
@@ -444,7 +445,7 @@ replicateToOrders(orderData);");
 
                 var eventSlim = new ManualResetEventSlim(false);
                 var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
+                database.EtlLoader.BatchCompleted += (name, statistics) =>
                 {
                     if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
@@ -492,7 +493,7 @@ replicateToOrders(orderData);");
 
                 var eventSlim = new ManualResetEventSlim(false);
                 var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
+                database.EtlLoader.BatchCompleted += (name, statistics) =>
                 {
                     if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
@@ -537,7 +538,7 @@ replicateToOrders(orderData);");
 
                 var eventSlim = new ManualResetEventSlim(false);
                 var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
+                database.EtlLoader.BatchCompleted += (name, statistics) =>
                 {
                     if (statistics.LoadSuccesses != 0)
                         eventSlim.Set();
@@ -674,31 +675,33 @@ var nameArr = this.StepName.split('.');");
         {
             using (var session = store.OpenAsyncSession())
             {
-                await session.StoreAsync(new SqlConnections
+                await session.StoreAsync(new EtlConfiguration
                 {
-                    Id = Constants.Documents.SqlReplication.SqlReplicationConnections,
-                    Connections =
+                    SqlConnections =
                     {
                         ["Ci1"] = new PredefinedSqlConnection
                         {
                             ConnectionString = GetConnectionString(store),
                             FactoryName = "System.Data.SqlClient",
                         }
-                    }
-                });
-                await session.StoreAsync(new SqlEtlConfiguration
-                {
-                    Id = Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix + "OrdersAndLines",
-                    Name = "OrdersAndLines",
-                    ConnectionStringName = "Ci1",
-                    Collection = "Orders",
-                    SqlTables =
-                    {
-                        new SqlEtlTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
-                        new SqlEtlTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
                     },
-                    Script = script
-                });
+                    SqlTargets =
+                    {
+                        new SqlEtlConfiguration
+                        {
+                            Name = "OrdersAndLines",
+                            ConnectionStringName = "Ci1",
+                            Collection = "Orders",
+                            SqlTables =
+                            {
+                                new SqlEtlTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
+                                new SqlEtlTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
+                            },
+                            Script = script
+                        }
+                    }
+                }, Constants.Documents.ETL.RavenEtlDocument);
+                
                 await session.SaveChangesAsync();
             }
         }

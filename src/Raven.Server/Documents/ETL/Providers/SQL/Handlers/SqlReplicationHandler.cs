@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
         public Task GetStats()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.Name == name) as SqlEtl;
+            var replication = Database.EtlLoader.SqlTargets.FirstOrDefault(r => r.Name == name);
 
             if (replication == null)
             {
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
                 {
                     writer.WriteStartArray();
                     bool first = true;
-                    foreach (var replication in Database.SqlReplicationLoader.Replications)
+                    foreach (var replication in Database.EtlLoader.SqlTargets)
                     {
                         if (first == false)
                             writer.WriteComma();
@@ -134,29 +134,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
             }
 
             return Task.CompletedTask;
-        }
-
-        [RavenAction("/databases/*/sql-replication/reset", "POST", "/databases/{databaseName:string}/sql-replication/reset?name={sqlReplicationName:string}")]
-        public Task PostResetSqlReplication()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.Name == name);
-
-            if (replication == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
-            }
-
-            DocumentsOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                Database.DocumentsStorage.Delete(context, Constants.Documents.SqlReplication.RavenSqlReplicationStatusPrefix + name, null);
-                tx.Commit();
-            }
-
-            return NoContent();
         }
     }
 }
