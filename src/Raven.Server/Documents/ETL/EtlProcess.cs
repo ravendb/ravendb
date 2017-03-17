@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
-using Raven.Server.Documents.ETL.Providers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -20,6 +19,10 @@ namespace Raven.Server.Documents.ETL
 {
     public abstract class EtlProcess : IDisposable
     {
+        public string Tag { get; protected set; }
+
+        public abstract string Name { get; }
+
         public abstract void Start();
 
         public abstract void Stop();
@@ -40,14 +43,12 @@ namespace Raven.Server.Documents.ETL
         protected readonly DocumentDatabase Database;
         protected TimeSpan? FallbackTime;
         public readonly EtlStatistics Statistics;
-        public readonly string Tag;
 
         protected EtlProcess(DocumentDatabase database, EtlProcessConfiguration configuration, string tag)
         {
             _configuration = configuration;
-            Tag = tag;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
-
+            Tag = tag;
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             Database = database;
             Statistics = new EtlStatistics(tag, _configuration.Name, Database.NotificationCenter);
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents.ETL
 
         protected CancellationToken CancellationToken => _cts.Token;
 
-        public string Name => _configuration.Name;
+        public override string Name => _configuration.Name;
 
         protected abstract IEnumerator<TExtracted> ConvertDocsEnumerator(IEnumerator<Document> docs);
 

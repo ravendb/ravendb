@@ -20,6 +20,22 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public int? CommandTimeout { get; set; }
 
         public List<SqlEtlTable> SqlTables { get; set; }
+
+        public override bool Validate(out List<string> errors)
+        {
+            base.Validate(out errors);
+
+            if (string.IsNullOrEmpty(Script))
+                errors.Add($"{nameof(Script)} cannot be empty");
+
+            if (string.IsNullOrEmpty(ConnectionStringName))
+                errors.Add($"{nameof(ConnectionStringName)} cannot be empty");
+
+            if (SqlTables.Count == 0)
+                errors.Add($"{nameof(SqlTables)} cannot be empty");
+
+            return errors.Count == 0;
+        }
     }
 
     public class SqlEtlTable

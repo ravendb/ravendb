@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.ETL
 {
     public class EtlLoader
     {
+        private const string AlertTitle = "ETL loader";
+
         private EtlProcess[] _processes = new EtlProcess[0];
 
         private readonly DocumentDatabase _database;
@@ -45,27 +47,22 @@ namespace Raven.Server.Documents.ETL
                 return;
 
             var processes = new List<EtlProcess>();
+            var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var config in configuration.RavenTargets)
             {
-                processes.Add(new RavenEtl(_database, config));
+                if (ValidateConfiguration(config, uniqueNames) == false)
+                    continue;
+
+                var etlProcess = new RavenEtl(_database, config);
+
+                processes.Add(etlProcess);
             }
 
             foreach (var config in configuration.SqlTargets)
             {
-                if (string.IsNullOrEmpty(config.ConnectionStringName))
-                {
-                    var emptyConnectionStringMsg = $"Connection string name cannot be empty for SQL ETL config: {config.Name}, ignoring SQL ETL setting.";
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info(emptyConnectionStringMsg);
-
-                    var alert = AlertRaised.Create("ETL loader", emptyConnectionStringMsg, AlertType.Etl_Error, NotificationSeverity.Error);
-
-                    _database.NotificationCenter.Add(alert);
-
+                if (ValidateConfiguration(config, uniqueNames) == false)
                     continue;
-                }
 
                 PredefinedSqlConnection predefinedConnection;
                 if (configuration.SqlConnections.TryGetValue(config.ConnectionStringName, out predefinedConnection) == false)
@@ -77,7 +74,7 @@ namespace Raven.Server.Documents.ETL
                     if (Logger.IsInfoEnabled)
                         Logger.Info(message);
 
-                    var alert = AlertRaised.Create("ETL loader", message, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
+                    var alert = AlertRaised.Create(AlertTitle, message, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
 
                     _database.NotificationCenter.Add(alert);
 
@@ -96,6 +93,37 @@ namespace Raven.Server.Documents.ETL
             {
                 _processes[i].Start();
             }
+        }
+
+        private bool ValidateConfiguration(EtlProcessConfiguration config, HashSet<string> uniqueNames)
+        {
+            List<string> errors;
+            if (config.Validate(out errors) == false)
+            {
+                LogConfigurationError(config, errors);
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(config.Name) == false && uniqueNames.Add(config.Name) == false)
+            {
+                LogConfigurationError(config, new List<string> { $"'{config.Name}' name is already defined for different ETL process" });
+                return false;
+            }
+
+            return true;
+        }
+
+        private void LogConfigurationError(EtlProcessConfiguration config, List<string> errors)
+        {
+            var errorMessage = $"Invalid ETL configuration for: '{config.Name}'. " +
+                               $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.";
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info(errorMessage);
+
+            var alert = AlertRaised.Create(AlertTitle, errorMessage, AlertType.Etl_Error, NotificationSeverity.Error);
+
+            _database.NotificationCenter.Add(alert);
         }
 
         private EtlConfiguration LoadConfiguration()
