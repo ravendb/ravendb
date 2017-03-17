@@ -3,44 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
-using Raven.Abstractions.Replication;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
+
+using System;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_3760 : ReplicationBase
+    public class RavenDB_3760 : EtlTestBase
     {
         [Fact]
-        public void destination_with_specified_collections_is_not_considered_as_failover_target()
+        public void Can_use_metadata_in_transform_script()
         {
-            var destination = new ReplicationDestination
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
             {
-                SpecifiedCollections = new Dictionary<string, string>()
-                {
-                    {
-                        "Orders", null
-                    },
-                }
-            };
+                var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
 
-            Assert.False(destination.IgnoredClient);
-        }
-
-        [Fact]
-        public void can_use_metadata_in_transform_script()
-        {
-            using (var master = CreateStore())
-            using (var slave = CreateStore())
-            {
-                RunReplication(master, slave, specifiedCollections: new Dictionary<string, string>
-                {
-                    {
-                        "users", @"this.Name =  this['@metadata']['User']"
-                    }
-                });
+                SetupEtl(master, slave, "Users", @"this.Name =  this['@metadata']['User']");
 
                 using (var session = master.OpenSession())
                 {
@@ -55,7 +35,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForReplication(slave, "users/1");
+                etlDone.Wait(TimeSpan.FromSeconds(30));
 
                 using (var session = slave.OpenSession())
                 {
@@ -67,17 +47,14 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void null_returned_from_script_means_that_document_is_filtered_out()
+        public void Null_returned_from_script_means_that_document_is_filtered_out()
         {
-            using (var master = CreateStore())
-            using (var slave = CreateStore())
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
             {
-                RunReplication(master, slave, specifiedCollections: new Dictionary<string, string>
-                {
-                    {
-                        "users", @"if (this.Age % 2 == 0) return null; else this.Name = 'transformed'; return this;"
-                    }
-                });
+                var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                SetupEtl(master, slave, "users", @"if (this.Age % 2 == 0) return null; else this.Name = 'transformed'; return this;");
 
                 const int count = 10;
 
@@ -89,12 +66,12 @@ namespace Raven.Tests.Issues
                         {
                             Age = i
                         }, "users/" + i);
-                    } 
-                    
+                    }
+
                     session.SaveChanges();
                 }
 
-                WaitForReplication(slave, "users/" + (count - 1));
+                etlDone.Wait(TimeSpan.FromSeconds(30));
 
                 using (var session = slave.OpenSession())
                 {
@@ -102,7 +79,7 @@ namespace Raven.Tests.Issues
                     {
                         var user = session.Load<User>("users/" + i);
 
-                        if (i%2 == 0)
+                        if (i % 2 == 0)
                         {
                             Assert.Null(user);
                         }
@@ -116,17 +93,14 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void null_script_means_no_transformation_nor_filtering_withing_specified_collection()
+        public void Null_script_means_no_transformation_nor_filtering_within_specified_collection()
         {
-            using (var master = CreateStore())
-            using (var slave = CreateStore())
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
             {
-                RunReplication(master, slave, specifiedCollections: new Dictionary<string, string>
-                {
-                    {
-                        "users", null
-                    }
-                });
+                var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                SetupEtl(master, slave, "Users", null);
 
                 using (var session = master.OpenSession())
                 {
@@ -143,7 +117,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForReplication(slave, "users/1");
+                etlDone.Wait(TimeSpan.FromSeconds(30));
 
                 using (var session = slave.OpenSession())
                 {

@@ -3,34 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
+
+using System;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_3639 : ReplicationBase
+    public class RavenDB_3639 : EtlTestBase
     {
-        protected override void SetupDestination(ReplicationDestination replicationDestination)
-        {
-            replicationDestination.SpecifiedCollections = new Dictionary<string, string>
-            {
-                {
-                    "users", @"this.Name = 'patched ' + this.Name;"
-                }
-            };
-        }
-
         [Fact]
-        public void replicated_docs_are_transformed_according_to_provided_collection_specific_scripts()
+        public void Docs_are_transformed_according_to_provided_collection_specific_scripts()
         {
-            using (var master = CreateStore())
-            using (var slave = CreateStore())
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
             {
-                RunReplication(master, slave);
+                var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                SetupEtl(master, slave, "users", @"this.Name = 'patched ' + this.Name;");
 
                 using (var session = master.OpenSession())
                 {
@@ -47,7 +37,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForReplication(slave, "users/1");
+                etlDone.Wait(TimeSpan.FromSeconds(30));
 
                 using (var session = slave.OpenSession())
                 {
