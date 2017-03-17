@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FastTests;
 using FastTests.Issues;
 using Raven.Client;
@@ -43,7 +44,7 @@ namespace SlowTests.Issues
                     store.Operations.Send(new PatchCollectionOperation("stuffs", new PatchRequest
                     {
                         Script = "this.Key = this.Key + 1;"
-                    })).WaitForCompletion();
+                    })).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     using (var reader = session.Advanced.Stream<Stuff>(startsWith: "stuffs/"))
                     {

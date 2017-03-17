@@ -1,16 +1,14 @@
 using System.Linq;
 using System.Threading.Tasks;
-
-using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
-
+using FastTests;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_2879 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Id
             {
@@ -25,7 +23,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Users_FullName : AbstractTransformerCreationTask<User>
+        private class Users_FullName : AbstractTransformerCreationTask<User>
         {
             public class Result
             {
@@ -56,7 +54,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task CanGetDocumentIdFromTransformer()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Users_FullName().Execute(store);
 

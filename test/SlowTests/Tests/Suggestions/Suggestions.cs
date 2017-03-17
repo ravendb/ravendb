@@ -50,7 +50,7 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void ExactMatch()
         {
             using (var store = GetDocumentStore())
@@ -69,7 +69,7 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void UsingLinq()
         {
             using (var store = GetDocumentStore())
@@ -86,7 +86,7 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void UsingLinq_with_typo_with_options_multiple_fields()
         {
             using (var store = GetDocumentStore())
@@ -104,7 +104,7 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void UsingLinq_with_typo_multiple_fields_in_reverse_order()
         {
             using (var store = GetDocumentStore())
@@ -122,7 +122,7 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void UsingLinq_WithOptions()
         {
             using (var store = GetDocumentStore())
@@ -139,7 +139,7 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void WithTypo()
         {
             using (var store = GetDocumentStore())

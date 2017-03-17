@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -148,12 +149,12 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var operation1 = session.Advanced.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
-                    operation1.WaitForCompletion();
+                    operation1.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     WaitForIndexing(store);
 
                     var operation2 = session.Advanced.DeleteByIndex<Person, Person_ByAge>(x => x.Age < 35);
-                    operation2.WaitForCompletion();
+                    operation2.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     session.SaveChanges();
                 }

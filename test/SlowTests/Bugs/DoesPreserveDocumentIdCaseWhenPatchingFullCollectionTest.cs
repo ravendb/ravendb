@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -53,7 +54,7 @@ namespace SlowTests.Bugs
 
                 WaitForIndexing(store);
 
-                store.Operations.Send(new PatchByIndexOperation("test", new IndexQuery(store.Conventions), new PatchRequest { Script = script } , new QueryOperationOptions())).WaitForCompletion();
+                store.Operations.Send(new PatchByIndexOperation("test", new IndexQuery(store.Conventions), new PatchRequest { Script = script } , new QueryOperationOptions())).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())
                 {

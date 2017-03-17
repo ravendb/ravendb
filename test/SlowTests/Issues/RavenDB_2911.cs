@@ -1,4 +1,6 @@
+using System;
 using System.Linq;
+using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -47,8 +49,11 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var indexWithErrors = store.Admin.Send(new GetIndexStatisticsOperation("Index/with/errors"));
-                Assert.Equal(true, indexWithErrors.IsInvalidIndex); //precaution
+                Assert.True(SpinWait.SpinUntil(() =>
+                {
+                    var indexWithErrors = store.Admin.Send(new GetIndexStatisticsOperation("Index/with/errors"));
+                    return indexWithErrors.IsInvalidIndex;
+                }, TimeSpan.FromSeconds(10))); //precaution
 
                 using (var session = store.OpenSession())
                 {
