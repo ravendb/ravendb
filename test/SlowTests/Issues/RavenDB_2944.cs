@@ -3,29 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
-
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Database.Config;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2944 : RavenTest
+    public class RavenDB_2944 : RavenTestBase
     {
         private const int MaxNumberOfItemsToProcessInTestIndexes = 256;
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
-        {
-            configuration.Settings[Constants.MaxNumberOfItemsToProcessInTestIndexes] = MaxNumberOfItemsToProcessInTestIndexes.ToString(CultureInfo.InvariantCulture);
-        }
+        //protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        //{
+        //    configuration.Settings[Constants.MaxNumberOfItemsToProcessInTestIndexes] = MaxNumberOfItemsToProcessInTestIndexes.ToString(CultureInfo.InvariantCulture);
+        //}
 
         private class Order
         {
@@ -78,12 +76,12 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6572")]
         public void CanCreateTestMapIndexes()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                DeployNorthwind(store);
+                store.Admin.Send(new CreateSampleDataOperation());
 
                 WaitForIndexing(store);
 
@@ -108,12 +106,12 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6572")]
         public void CanCreateTestMapReduceIndexes()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                DeployNorthwind(store);
+                store.Admin.Send(new CreateSampleDataOperation());
 
                 WaitForIndexing(store);
 
@@ -135,8 +133,6 @@ namespace Raven.Tests.Issues
 
                     Thread.Sleep(100);
                 }
-
-                WaitForUserToContinueTheTest();
 
                 throw new InvalidOperationException("Should not happen.");
             }
