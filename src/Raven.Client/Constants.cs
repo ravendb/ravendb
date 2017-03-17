@@ -225,13 +225,7 @@ namespace Raven.Client
             public class ETL
             {
                 public const string RavenEtlProcessStatusPrefix = "Raven/Etl/Status/";
-            }
-
-            public class SqlReplication
-            {
-                public const string SqlReplicationConnections = "Raven/SqlReplication/Connections";
-                public const string SqlReplicationConfigurationPrefix = "Raven/SqlReplication/Configuration/";
-                public const string RavenSqlReplicationStatusPrefix = "Raven/SqlReplication/Status/";
+                public const string RavenEtlDocument = "Raven/ETL";
             }
 
             public class PeriodicExport

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
@@ -33,6 +35,8 @@ namespace Raven.Server.Documents.ETL
             // configuration stored in a system document under Raven/ETL key - temporary
             _database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
         }
+
+        public IEnumerable<SqlEtl> SqlTargets => _processes.OfType<SqlEtl>();
 
         public void Initialize()
         {
@@ -132,7 +136,7 @@ namespace Raven.Server.Documents.ETL
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var etlConfigDocument = _database.DocumentsStorage.Get(context, "Raven/ETL");
+                var etlConfigDocument = _database.DocumentsStorage.Get(context, Constants.Documents.ETL.RavenEtlDocument);
 
                 if (etlConfigDocument == null)
                     return null;
@@ -152,10 +156,8 @@ namespace Raven.Server.Documents.ETL
 
         private void HandleSystemDocumentChange(DocumentChange change)
         {
-            if (change.Key.Equals("Raven/ETL", StringComparison.OrdinalIgnoreCase) == false)
+            if (change.Key.Equals(Constants.Documents.ETL.RavenEtlDocument, StringComparison.OrdinalIgnoreCase) == false)
                 return;
-            // TODO arek
-            //var configuration = LoadConfiguration();
 
             foreach (var replication in _processes)
                 replication.Dispose();

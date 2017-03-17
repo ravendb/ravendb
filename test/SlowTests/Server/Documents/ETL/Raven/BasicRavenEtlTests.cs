@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -118,7 +119,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
             using (var session = src.OpenSession())
             {
-                session.Store(configuration, "Raven/ETL");
+                session.Store(configuration, Constants.Documents.ETL.RavenEtlDocument);
 
                 session.SaveChanges();
             }
