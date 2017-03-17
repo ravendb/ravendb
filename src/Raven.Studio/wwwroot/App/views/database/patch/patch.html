@@ -4,10 +4,12 @@
             <div class="clearfix">
                 <h2 class="pull-left-sm">Patch target</h2>
                 <div class="pull-right-sm form-inline">
-                    <div class="input-group patch-save">
-                        <input class="form-control" placeholder="Patch name">
+                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationElement: patchSaveName">
+                        <input class="form-control" placeholder="Patch name" data-bind="textInput: patchSaveName">
                         <span class="input-group-btn">
-                            <button class="btn btn-success btn-prerelease" disabled="disabled" data-class="active" type="button"><i class="icon-save"></i> <span>Save...</span></button>
+                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }">
+                                <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>
+                            </button>
                         </span>
                     </div>
                     <div class="dropdown dropdown-right loadpatch" data-bind="template: { name: 'saved-patches-dialog' }">
