@@ -10,7 +10,7 @@ namespace Tryouts
         {
             using (var testclass = new SlowTests.Server.Rachis.Cluster())
             {
-                testclass.test().Wait();
+                testclass.CanCreateDatabaseWithReplicationFactorLowerThanTheClusterSize().Wait();
             }
         }
     }

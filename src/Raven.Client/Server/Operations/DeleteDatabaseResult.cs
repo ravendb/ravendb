@@ -11,6 +11,5 @@ namespace Raven.Client.Server.Operations
     public class DeleteDatabaseResult
     {
         public long ETag { get; set; }
-        //public BlittableJsonReaderObject Results { get; set; }
     }
 }

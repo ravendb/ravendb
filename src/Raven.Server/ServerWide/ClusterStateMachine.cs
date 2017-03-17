@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
@@ -28,6 +29,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
+using Voron.Util;
 
 namespace Raven.Server.ServerWide
 {
@@ -198,53 +200,55 @@ namespace Raven.Server.ServerWide
                 }
 
                 int size;
+                var deletionInProgressStatus = delDb.HardDelete
+                    ? DeletionInProgressStatus.HardDelete
+                    : DeletionInProgressStatus.SoftDelete;
                 var doc = new BlittableJsonReaderObject(reader.Read(2, out size), size, context);
+                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+                if (databaseRecord.DeletionInProgress == null)
+                    databaseRecord.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
+
+
                 if (string.IsNullOrEmpty(delDb.FromNode) == false)
                 {
-                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                     if (databaseRecord.Topology.RelevantFor(delDb.FromNode) == false)
                     {
                         NotifyLeaderAboutError(index, leader, $"The database {databaseName} does not exists on node {delDb.FromNode}");
                         return;
                     }
-                    doc.Modifications = new DynamicJsonValue(doc)
-                    {
-                        [nameof(DatabaseRecord.Topology)] = databaseRecord.Topology.RemoveFrom(delDb.FromNode).ToJson()
-                    };
+                    databaseRecord.Topology.RemoveFromTopology(delDb.FromNode);
+
+                    databaseRecord.DeletionInProgress[delDb.FromNode] = deletionInProgressStatus;
                 }
                 else
                 {
-                    doc.Modifications = new DynamicJsonValue(doc)
-                    {
-                        [nameof(DatabaseRecord.DeletionInProgress)] =
-                        delDb.HardDelete
-                            ? DeletionInProgressStatus.HardDelete
-                            : DeletionInProgressStatus.SoftDelete
-                    };
-                }
-                
+                    var allNodes = databaseRecord.Topology.Members
+                        .Concat(databaseRecord.Topology.Promotables)
+                        .Concat(databaseRecord.Topology.Watchers);
 
-                using (var updated = context.ReadObject(doc, databaseName))
-                {
-                    TableValueBuilder builder;
-                    using (items.Allocate(out builder))
+                    foreach (var allNode in allNodes)
                     {
-                        builder.Add(loweredKey);
-                        builder.Add(key);
-                        builder.Add(updated.BasePointer, updated.Size);
-                        builder.Add(index);
-
-                        items.Set(builder);
+                        databaseRecord.DeletionInProgress[allNode] = deletionInProgressStatus;
                     }
+
+                    databaseRecord.Topology = new DatabaseTopology();
                 }
 
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+                var entityToBlittable = new EntityToBlittable(null);
+                
+                TableValueBuilder builder;
+                using(var updated = entityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
+                using (items.Allocate(out builder))
                 {
-                    Task.Run(() =>
-                    {
-                        DatabaseChanged?.Invoke(this, databaseName);
-                    });
-                };
+                    builder.Add(loweredKey);
+                    builder.Add(key);
+                    builder.Add(updated.BasePointer, updated.Size);
+                    builder.Add(index);
+
+                    items.Set(builder);
+                }
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction => { Task.Run(() => { DatabaseChanged?.Invoke(this, databaseName); }); };
             }
         }
 
@@ -683,7 +687,7 @@ namespace Raven.Server.ServerWide
 
         public bool Disabled;
 
-        public DeletionInProgressStatus DeletionInProgress;
+        public Dictionary<string,DeletionInProgressStatus> DeletionInProgress;
 
         public string DataDirectory;
 

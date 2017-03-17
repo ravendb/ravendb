@@ -156,7 +156,7 @@ namespace FastTests.Server.Documents.Versioning
             var product = new User { Name = "Hibernating" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(store);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(product);

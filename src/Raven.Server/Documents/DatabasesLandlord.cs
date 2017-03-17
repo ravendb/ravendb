@@ -70,11 +70,14 @@ namespace Raven.Server.Documents
                 //TODO: Need to change DeletionInProgress to a Dictionary<nodeName,DeletionInProgress> so we can know 
                 //TODO: If a database is been deleted on a specific node and not completely 
 
-                if (record.DeletionInProgress != DeletionInProgressStatus.No)
+                DeletionInProgressStatus deletionInProgress;
+                if (record.DeletionInProgress != null && 
+                    record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                    deletionInProgress != DeletionInProgressStatus.No)
                 {
                     UnloadDatabase(dbName, null);
 
-                    if (record.DeletionInProgress == DeletionInProgressStatus.HardDelete)
+                    if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                     {
                         var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true);
                         DatabaseHelper.DeleteDatabaseFiles(configuration);
@@ -368,11 +371,14 @@ namespace Raven.Server.Documents
                 if (databaseRecord.Disabled)
                     throw new DatabaseDisabledException(databaseName + " has been disabled");
 
-                if(databaseRecord.DeletionInProgress != DeletionInProgressStatus.No)
-                    throw new DatabaseDisabledException(databaseName + " is currently being deleted");
+                DeletionInProgressStatus deletionInProgress;
+                if (databaseRecord.DeletionInProgress != null &&
+                    databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                    deletionInProgress != DeletionInProgressStatus.No)
+                    throw new DatabaseDisabledException(databaseName + " is currently being deleted on " + _serverStore.NodeTag);
 
                 if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false)
-                    // TODO: need to handle this properly
+                    // TODO: need to handle this properly, need to redirect to somewhere it is on
                     throw new InvalidOperationException(databaseName + " is not relevant for " + _serverStore.NodeTag);
                 return CreateConfiguration(databaseName, databaseRecord);
 

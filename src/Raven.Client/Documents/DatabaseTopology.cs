@@ -29,12 +29,11 @@ namespace Raven.Client.Documents
             };
         }
 
-        public DatabaseTopology RemoveFrom(string delDbFromNode)
+        public void RemoveFromTopology(string delDbFromNode)
         {
             Members.Remove(delDbFromNode);
             Promotables.Remove(delDbFromNode);
             Watchers.Remove(delDbFromNode);
-            return this;
         }
     }
 }
