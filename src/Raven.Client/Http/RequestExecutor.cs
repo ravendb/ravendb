@@ -50,7 +50,7 @@ namespace Raven.Client.Http
         private Timer _updateCurrentTokenTimer;
         private readonly Timer _updateFailingNodesStatus;
 
-        public RequestExecutor(string url, string databaseName, string apiKey)
+        private RequestExecutor(string url, string databaseName, string apiKey, bool requiresTopologyUpdates)
         {
             _apiKey = apiKey;
             _topology = new Topology
@@ -70,26 +70,36 @@ namespace Raven.Client.Http
             };
 
             ContextPool = new JsonContextPool();
+
+            if (requiresTopologyUpdates == false)
+                return;
+
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
             _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1),
                 TimeSpan.FromMinutes(1));
 
             JsonOperationContext context;
-            ContextPool.AllocateOperationContext(out context);
-
-            var node = _topology.LeaderNode;
-            var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
-
-            var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
-            if (cachedTopology != null && cachedTopology.Etag > _topology.Etag)
+            using (ContextPool.AllocateOperationContext(out context))
             {
-                _topology = cachedTopology;
+                var node = _topology.LeaderNode;
+                var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
+
+                var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
+                if (cachedTopology != null && cachedTopology.Etag > _topology.Etag)
+                {
+                    _topology = cachedTopology;
+                }
             }
         }
 
-        public static RequestExecutor ShortTermSingleUse(string url, string databaseName, string apiKey)
+        public static RequestExecutor Create(string url, string databaseName, string apiKey)
         {
-            return new ShortTermSingleUseRequestExecutor(url, databaseName, apiKey);
+            return new RequestExecutor(url, databaseName, apiKey, requiresTopologyUpdates: true);
+        }
+
+        public static RequestExecutor CreateForSingleNode(string url, string databaseName, string apiKey)
+        {
+            return new RequestExecutor(url, databaseName, apiKey, requiresTopologyUpdates: false);
         }
 
         protected virtual void UpdateTopologyCallback(object _)
@@ -666,22 +676,6 @@ namespace Raven.Client.Http
                 throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
 
             return GlobalHttpClient.Value;
-        }
-
-        private class ShortTermSingleUseRequestExecutor : RequestExecutor
-        {
-            public ShortTermSingleUseRequestExecutor(string url, string databaseName, string apiKey)
-                : base(url, databaseName, apiKey)
-            {
-            }
-
-            protected override void UpdateTopologyCallback(object _)
-            {
-            }
-
-            protected override void UpdateFailingNodesStatusCallback(object _)
-            {
-            }
         }
     }
 }

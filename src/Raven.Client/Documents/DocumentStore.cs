@@ -180,7 +180,7 @@ namespace Raven.Client.Documents
             if (databaseName == null)
                 databaseName = DefaultDatabase;
 
-            var lazy = _requestExecuters.GetOrAdd(databaseName, dbName => new Lazy<RequestExecutor>(() => new RequestExecutor(Url, dbName, ApiKey)));
+            var lazy = _requestExecuters.GetOrAdd(databaseName, dbName => new Lazy<RequestExecutor>(() => RequestExecutor.Create(Url, dbName, ApiKey)));
             return lazy.Value;
         }
 
