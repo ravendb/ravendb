@@ -51,14 +51,14 @@ class sqlReplication extends document {
         return hasAny;
     });
 
-    constructor(dto: Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration) {
+    constructor(dto: Raven.Server.Documents.ETL.Providers.SQL.SqlEtlConfiguration) {
         super(dto);
 
         this.name(dto.Name);
         this.disabled(dto.Disabled);
         this.collection(dto.Collection);
         this.parameterizeDeletesDisabled(dto.ParameterizeDeletesDisabled);
-        this.sqlReplicationTables(dto.SqlReplicationTables.map(tab => new sqlReplicationTable(tab)));
+        this.sqlReplicationTables(dto.SqlTables.map(tab => new sqlReplicationTable(tab)));
         this.script(dto.Script);
         this.forceSqlServerQueryRecompile(!!dto.ForceSqlServerQueryRecompile? dto.ForceSqlServerQueryRecompile:false);
         this.quoteTables(("PerformTableQuatation" in dto) ? dto.QuoteTables : ("QuoteTables" in dto ? dto.QuoteTables : true));
@@ -147,13 +147,13 @@ class sqlReplication extends document {
             PredefinedConnectionStringSettingName:null,
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
-            SqlReplicationTables: [sqlReplicationTable.empty().toDto()],
+            SqlTables: [sqlReplicationTable.empty().toDto()],
             ForceSqlServerQueryRecompile: false,
-            QuoteTables:true
-        } as Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration);
+            QuoteTables: true
+        } as Raven.Server.Documents.ETL.Providers.SQL.SqlEtlConfiguration);
     }
 
-    toDto(): Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration {
+    toDto(): Raven.Server.Documents.ETL.Providers.SQL.SqlEtlConfiguration {
         //TODO:var meta = this.__metadata.toDto();
         //TODO: meta["@id"] = "Raven/SqlReplication/Configuration/" + this.name();
         return {
@@ -171,7 +171,7 @@ class sqlReplication extends document {
             //TODO: ConnectionStringSettingName: this.prepareConnectionString(this.CONNECTION_STRING_SETTING_NAME),
             ForceSqlServerQueryRecompile: this.forceSqlServerQueryRecompile(),
             QuoteTables: this.quoteTables(),
-            SqlReplicationTables: this.sqlReplicationTables().map(tab => tab.toDto())
+            SqlTables: this.sqlReplicationTables().map(tab => tab.toDto())
         };
     }
 

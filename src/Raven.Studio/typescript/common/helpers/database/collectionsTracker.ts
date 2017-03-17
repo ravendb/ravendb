@@ -7,8 +7,8 @@ class collectionsTracker {
 
     collections = ko.observableArray<collection>();
     currentCollection = ko.observable<collection>();
-    private db: database;
-    private resultEtagProvider: () => string;
+    private readonly db: database;
+    private readonly resultEtagProvider: () => string;
 
     constructor(db: database, resultEtagProvider: () => string) {
         this.db = db;

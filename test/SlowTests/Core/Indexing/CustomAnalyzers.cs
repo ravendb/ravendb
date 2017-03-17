@@ -60,7 +60,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void CreateAndQuerySimpleIndexWithCustomAnalyzersAndFieldOptions()
         {
             using (var store = GetDocumentStore())

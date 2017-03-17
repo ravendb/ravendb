@@ -64,8 +64,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     var configuration = JsonDeserializationServer.SqlReplicationConfiguration(document.Data);
                     var sqlReplication = new SqlEtl(Database, configuration);
                     replications.Add(sqlReplication);
-                    if (sqlReplication.ValidateName() == false ||
-                        sqlReplication.PrepareSqlReplicationConfig(_connections) == false)
+                    if (sqlReplication.PrepareSqlEtlConfig(_connections) == false)
                         return;
                     sqlReplication.Start();
                 }

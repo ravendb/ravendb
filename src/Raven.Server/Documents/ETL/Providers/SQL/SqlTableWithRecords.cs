@@ -2,9 +2,9 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlTableWithRecords : SqlReplicationTable
+    public class SqlTableWithRecords : SqlEtlTable
     {
-        public SqlTableWithRecords(SqlReplicationTable table)
+        public SqlTableWithRecords(SqlEtlTable table)
         {
             TableName = table.TableName;
             DocumentKeyColumn = table.DocumentKeyColumn;

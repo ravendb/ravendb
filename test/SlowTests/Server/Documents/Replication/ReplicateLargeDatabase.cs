@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
-using FastTests;
-using FastTests.Client;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Http;
 using Raven.Server.Documents.Replication;
-using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.Replication
@@ -27,8 +19,8 @@ namespace SlowTests.Server.Documents.Replication
             CreateSampleDatabase(out store1);
             CreateSampleDatabase(out store2);
 
-            SetupReplication(store1,store2);
-            Assert.Equal(1,WaitForValue(()=>GetReplicationStats(store2).IncomingStats.Count,1));
+            SetupReplication(store1, store2);
+            Assert.Equal(1, WaitForValue(() => GetReplicationStats(store2).IncomingStats.Count, 1));
             var stats = GetReplicationStats(store2);
             Assert.True(stats.IncomingStats.Any(o =>
             {
@@ -47,37 +39,9 @@ namespace SlowTests.Server.Documents.Replication
             CallCreateSampleDatabaseEndpoint(store);
         }
 
-        public bool CallCreateSampleDatabaseEndpoint(DocumentStore store)
+        public void CallCreateSampleDatabaseEndpoint(DocumentStore store)
         {
-            using (var commands = store.Commands())
-            {
-                var command = new CreateSampleDatabaseEndpoint();
-
-                commands.RequestExecutor.Execute(command, commands.Context);
-
-                return command.Result;
-            }
+            store.Admin.Send(new CreateSampleDataOperation());
         }
-
-        private class CreateSampleDatabaseEndpoint : RavenCommand<bool>
-        {
-            public override bool IsReadRequest => true;
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
-            {
-                url = $"{node.Url}/databases/{node.Database}/studio/sample-data";
-
-                ResponseType = RavenCommandResponseType.Object;
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post
-                };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                Result = true;
-            }
-        }
-
     }
 }

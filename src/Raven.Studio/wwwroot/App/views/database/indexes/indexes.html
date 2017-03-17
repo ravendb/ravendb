@@ -8,6 +8,9 @@
             </div>
         </div>
     </div>
+
+    <div class="flex-vertical absolute-fill">
+    <div class="flex-header">
     <div class="clearfix toolbar" data-bind="if: sortedGroups().length">
         <div class="pull-left">
             <div class="form-inline">
@@ -106,6 +109,8 @@
             </button>
         </div>
     </div>
+    </div>
+    <div class="flex-content scroll">
     <div data-bind="foreach: sortedGroups">
         <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
         <div data-bind="foreach: indexes, visible: !groupHidden()">
@@ -177,6 +182,8 @@
                 </div>
             </div>
         </div>
+    </div>
+    </div>
     </div>
 </div>
 
@@ -276,7 +283,7 @@
 <script type="text/html" id="lock-mode-template">
     <span class="properties-label">Mode:</span>
     <div class="btn-group properties-value">
-        <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown"
+        <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                 data-bind="css: { 'btn-spinner': _.includes($root.spinners.localLockChanges(), name) }, enable: $root.globalIndexingStatus() === 'Running' && 
                 !_.includes($root.spinners.localLockChanges(), name)">
             <span data-bind="visible: lockMode() === 'Unlock'">

@@ -1,19 +1,303 @@
-<div id="patchContainer" class="no-outline" tabindex="0">
+<div class="flex-window stretch patch">
+    <div class="flex-window-head">
+        <div id="patch-target" class="collapse in">
+            <div class="clearfix">
+                <h2 class="pull-left-sm">Patch target</h2>
+                <div class="pull-right-sm form-inline">
+                    <div class="input-group patch-save">
+                        <input class="form-control" placeholder="Patch name">
+                        <span class="input-group-btn">
+                            <button class="btn btn-success btn-prerelease" disabled="disabled" data-class="active" type="button"><i class="icon-save"></i> <span>Save...</span></button>
+                        </span>
+                    </div>
+                    <div class="dropdown dropdown-right loadpatch" data-bind="template: { name: 'saved-patches-dialog' }">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-horizontal">
+                <div class="row">
+                    <label class="control-label col-sm-3 col-lg-2">Type</label>
+
+                    <div class="col-sm-9 col-lg-4 margin-bottom">
+                        <div class="dropdown btn-block">
+                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                <span data-bind="text: patchDocument().patchOnOption"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: patchDocument().constructor.allPatchOptions">
+                                <li><a href="#" data-bind="text: $data, click: _.partial($parent.usePatchOption, $data)"></a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row" data-bind="visible: isDocumentMode, with: patchDocument">
+                    <label class="control-label col-sm-3 col-lg-2">Document ID</label>
+
+                    <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: selectedItem">
+                        <input type="text" id="selectedItem" data-bind="textInput: selectedItem" class="form-control" />
+                        <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#selectedItem', foreach: $root.documentIdSearchResults">
+                            <li role="presentation" data-bind="click: $parent.selectedItem.bind($parent, $data)">
+                                <a role="menuitem" tabindex="-1" href="#">
+                                    <span data-bind="text: $data"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="row" data-bind="visible: isIndexMode()">
+                    <label class="control-label col-sm-3 col-lg-2">Index</label>
+
+                    <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: patchDocument().selectedItem">
+                        <div class="dropdown btn-block">
+                            <button class="btn btn-block form-control dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                <span data-bind="text: patchDocument().selectedItem() || 'Select index...'"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: indexNames">
+                                <li><a href="#" data-bind="text: $data, click: _.partial($parent.useIndex, $data)"></a></li>
+                            </ul>
+                        </div>
+                        <span class="help-block" data-bind="validationMessage: patchDocument().selectedItem"></span>
+                    </div>
+                </div>
+                
+                <div class="row" data-bind="visible: isCollectionMode()">
+                    <label class="control-label col-sm-3 col-lg-2">Collection</label>
+
+                    <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: patchDocument().selectedItem">
+                        <div class="dropdown btn-block">
+                            <button class="btn btn-block form-control dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                <span data-bind="text: patchDocument().selectedItem() || 'Select collection...'"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: collections">
+                                <li><a href="#" data-bind="text: name, click: _.partial($parent.useCollection, $data)"></a></li>
+                            </ul>
+                        </div>
+                        <span class="help-block" data-bind="validationMessage: patchDocument().selectedItem"></span>
+                    </div>
+                </div>
+
+                <div class="row" data-bind="visible: !isDocumentMode()">
+                    <div class="col-sm-9 col-lg-4 col-sm-offset-3 col-lg-offset-2 margin-bottom">
+                        <div class="checkbox">
+                            <input id="checkbox2" class="styled" type="checkbox" data-bind="checked: patchDocument().patchAll">
+                            <label for="checkbox2">
+                                <span data-bind="visible: isCollectionMode">Patch all in collection</span>
+                                <span data-bind="visible: isIndexMode()">Patch all documents matching query</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" data-bind="visible: isIndexMode">
+                    <label class="control-label col-sm-3 col-lg-2 query-label">Query <small><i class="icon-info"></i></small></label>
+
+                    <div class="col-sm-9 col-lg-10 margin-bottom">
+                        <div class="patch-container">
+                            <div class="patch-main">
+                                <pre class="form-control editor query-source"
+                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 100, maxHeight: 100, typeName:'query', lang:'ace/mode/lucene', completer:queryCompleter, completerHostObject: $root }"></pre>
+                            </div>
+                            <div class="query-controls">
+                                <button class="btn btn-default btn-block text-center" data-bind="click: runQuery">
+                                    <i class="icon-search"></i><span>Run</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="visible: !isDocumentMode()">
+                    <label class="control-label col-sm-3 col-lg-2">Matching documents</label>
+                    <div class="col-sm-9 col-lg-10" style="height: 300px">
+                        <virtual-grid class="resizable" params="controller: $root.gridController"></virtual-grid>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="patch-script">
+            <h2 class="patch-title">Patch script <small><i class="icon-info"></i></small></h2>
+
+            <div class="patch-container">
+                <div class="patch-main">
+                    <pre class="form-control patch-source" data-bind="aceEditor: { code: patchDocument().script, lang:'ace/mode/javascript' }" style="height: 160px;"></pre>
+                    
+                    <div data-bind="validationElement: patchDocument().script">
+                        <div class="help-block" data-bind="validationMessage: patchDocument().script"></div>
+                    </div>
+                </div>
+                <div class="patch-controls">
+                    <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runPatch">
+                        <i class="icon-play2 icon-lg"></i><br />
+                        <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
+                    </button>
+                    <button class="btn btn-default btn-block text-center btn-prerelease margin-top" disabled="disabled">
+                        <i class="icon-rocket"></i><span>Test</span>
+                    </button>
+                </div>
+                <div class="test-controls">
+                    <button class="btn btn-primary btn-block text-center">
+                        <i class="icon-rocket"></i><span>Test</span>
+                    </button>
+                    <button class="btn btn-default statistics btn-block text-center">
+                        <i class="icon-stats"></i><span>Statistics (?)</span>
+                    </button>
+                    <div class="flex-separator"></div>
+                    <button class="btn btn-success btn-block text-center test-close" data-target="body" data-class="show-test">
+                        <i class="icon-check"></i><span>Apply</span>
+                    </button>
+                    <button class="btn btn-default btn-block text-center test-close" data-target="body" data-class="show-test">
+                        <i class="icon-cancel"></i><span>Close</span>
+                    </button>
+                </div>
+            </div>
+            <div id="test-container" class="collapse" data-bind="template: { name: 'test-component' }">
+            </div>
+        </div>
+    </div>
+</div>
+<div class="backdrop btn-toggle" data-target="body" data-class="show-test"></div><!-- TODO: -->
+
+<script type="text/html" id="test-component">
+    <div class="panel">
+        <div class="padding">
+            <div class="row margin-bottom">
+                <label class="control-label col-xs-12 col-sm-4 col-lg-3 col-xl-2">Document ID</label>
+                <div class="col-sm-8 col-lg-6 col-xl-4 col-lg-offset-3  col-xl-offset-0">
+                    <div class="input-group">
+                        <input class="form-control" placeholder="Search for...">
+                        <span class="input-group-btn">
+                            <button class="btn btn-default" type="button"><i class="icon-import"></i> <span>Load</span></button>
+                        </span>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-xl-5"><small class="text-info"><i class="icon-info"></i> You can also paste your own document JSON to test</small></div>
+            </div>
+            <div class="row">
+                <div class="col-sm-6">
+                    <h3>Before</h3>
+                    <textarea rows="10" class="form-control"></textarea>
+                </div>
+                <div class="col-sm-6">
+                    <h3>After</h3>
+                    <textarea rows="10" class="form-control"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" id="saved-patches-dialog">
+    <button class="btn btn-default btn-prerelease dropdown-toggle" disabled="disabled" type="button" id="dropdownLoadPatch" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+        <i class="icon-folder"></i> <span>Load patch</span>
+        <span class="caret"></span>
+    </button>
+    <div class="dropdown-menu slidein-style" aria-labelledby="dropdownLoadPatch">
+        <div class="loadpatch-dropdown show-preview">
+            <div class="patch-preview-container">
+                <h3>Patch preview - <strong>test2</strong></h3>
+                <div class="pre-container">
+                    <pre>
+<code>
+       XmlDocument xml = new XmlDocument();
+xml.LoadXml(myXmlString); // suppose that myXmlString contains "<Names>...</Names>"
+XmlNodeList xnList = xml.SelectNodes("/Names/Name");
+foreach (XmlNode xn in xnList)
+{
+  string firstName = xn["FirstName"].InnerText;
+  string lastName = xn["LastName"].InnerText;
+  Console.WriteLine("Name: {0} {1}", firstName, lastName);
+}
+               XmlDocument xml = new XmlDocument();
+xml.LoadXml(myXmlString); // suppose that myXmlString contains "<Names>...</Names>"
+XmlNodeList xnList = xml.SelectNodes("/Names/Name");
+foreach (XmlNode xn in xnList)
+{
+  string firstName = xn["FirstName"].InnerText;
+  string lastName = xn["LastName"].InnerText;
+  Console.WriteLine("Name: {0} {1}", firstName, lastName);
+}
+               XmlDocument xml = new XmlDocument();
+xml.LoadXml(myXmlString); // suppose that myXmlString contains "<Names>...</Names>"
+XmlNodeList xnList = xml.SelectNodes("/Names/Name");
+foreach (XmlNode xn in xnList)
+{
+  string firstName = xn["FirstName"].InnerText;
+  string lastName = xn["LastName"].InnerText;
+  Console.WriteLine("Name: {0} {1}", firstName, lastName);
+}
+</code>
+</pre>
+                </div>
+            </div>
+            <div class="patch-list-container flex-vertical">
+                <div class="flex-header">
+                    <h3>Select patch</h3>
+                    <input type="search" class="form-control input-sm patch-filter" placeholder="filter">
+                </div>
+                <div class="flex-content scroll">
+                    <ul class="patch-list">
+                        <li>
+                            <a href="#" class="patch-link">
+                                <span class="name">test2</span>
+                                <span class="modified">2017-01-02</span>
+                            </a>
+                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
+                        </li>
+                        <li>
+                            <a href="#" class="patch-link">
+                                <span class="name">test2</span>
+                                <span class="modified">2017-01-02</span>
+                            </a>
+                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
+                        </li>
+                        <li>
+                            <a href="#" class="patch-link">
+                                <span class="name">test2</span>
+                                <span class="modified">2017-01-02</span>
+                            </a>
+                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
+                        </li>
+                        <li>
+                            <a href="#" class="patch-link">
+                                <span class="name">test2</span>
+                                <span class="modified">2017-01-02</span>
+                            </a>
+                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
+                        </li>
+                        <li>
+                            <a href="#" class="patch-link">
+                                <span class="name">test2</span>
+                                <span class="modified">2017-01-02</span>
+                            </a>
+                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
+                        </li>
+                        <li>
+                            <a href="#" class="patch-link">
+                                <span class="name">test2</span>
+                                <span class="modified">2017-01-02</span>
+                            </a>
+                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="flex-footer">
+                    <div class="text-right">
+                        <button class="btn btn-success btn-sm">Load</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+<!-- TODO  div id="patchContainer" class="no-outline" tabindex="0">
 
     <div data-bind="compose: 'common/sectionUnderDevelopment.html'"></div>
 
     <div class="btn-toolbar" role="toolbar">
-        <div class="btn-group" data-bind="with: patchDocument">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.isPatchingInProgress()">
-                <span data-bind="text: patchOnOption"></span>
-                <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu" role="menu">
-                <!-- ko foreach: patchOptions -->
-                <li data-bind="click: $root.setSelectedPatchOnOption.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
-                <!-- /ko -->
-            </ul>
-        </div>
         <div class="btn-group">
             <button data-bind="enable: savedPatches().length && !$root.isPatchingInProgress()" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Load a saved patch"> Load <span class="caret"></span></button>
             <ul class="dropdown-menu" role="menu" data-bind="foreach: savedPatches">
@@ -27,105 +311,11 @@
         </div>
 
         <div class="btn-group">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="visible: recentPatches().length > 0, disable: $root.isPatchingInProgress()">
-                Recent Patches <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu" role="menu" data-bind="foreach: recentPatches">
-                <li>
-                    <a href="#" data-bind="click: $root.useRecentPatch.bind($root, $data), attr: { title: Script }">
-                        <span data-bind="text: PatchOnOption"></span>
-                        <span data-bind="visible: SelectedItem">
-                            <span class="text-muted">|</span>
-                            <span data-bind="text: SelectedItem"></span>
-                        </span>
-                        <span data-bind="visible: Query">
-                            <span class="text-muted">|</span>
-                            <span data-bind="text: Query"></span>
-                        </span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-
-        <div class="btn-group">
-            <!-- TODO: enable: isExecuteAllowed() && !$root.isPatchingInProgress() && !$root.isMapReduceIndexSelected() -->
+            <!-- TODO: enable: isExecuteAllowed() && !$root.isPatchingInProgress() && !$root.isMapReduceIndexSelected() --
             <button class="btn btn-default btn-prerelease" disabled title="Test the patch script on the selected document (Alt+T)" data-bind="click: testPatch" accesskey="T"> Test</button>
-        </div>
-
-        <div class="btn-group" data-bind="visible: patchDocument() && patchDocument().isDocumentPatch()">
-            <button class="btn btn-primary" title="Execute Patch (Alt+P)" accesskey="P" data-bind="click: executePatchOnSingle, enable: isExecuteAllowed() && !$root.isPatchingInProgress()">
-                 Patch
-            </button>
-        </div>
-        <div class="btn-group" data-bind="visible: (!!patchDocument()) && (patchDocument().isCollectionPatch() || patchDocument().isIndexPatch())">
-            <button class="btn btn-primary" title="Patch the selected documents (Alt+S)" accesskey="S" data-bind="click: executePatchOnSelected, enable: isExecuteAllowed() && !$root.isPatchingInProgress() && !$root.isMapReduceIndexSelected()">
-                 Patch Selected
-            </button>
-            <button class="btn btn-primary" title="Patch all matching documents (Alt+A)" data-bind="click: executePatchOnAll, enable: patchDocument().script() && !$root.isPatchingInProgress()" accesskey="A">
-                 Patch All
-            </button>
-        </div>
-        <button data-bind="visible: patchOperationId(), enable: !patchKillInProgress(), click: $root.killPatch.bind($root)" class="btn btn-primary btn-group">
-            <i data-bind="visible: !patchKillInProgress()" class="fa fa-fw fa-bolt"></i>
-            <i data-bind="visible: patchKillInProgress()" class="fa fa-fa fa-spin fa-spinner"></i> Stop patch
-        </button>
-
-        <div class="btn-group text-height-fix padd-left-10" data-bind="visible: runningPatchesCount()">
-            <a data-bind="attr: { href: runningTasksUrl() }"><i class="fa fa-spin fa-spinner"></i> <span data-bind="text: runningPatchesText()"></span></a>
         </div>
     </div>
     <br />
-    <div class="row">
-        <div class="col-md-12">
-            <div class="progress" data-bind="css: { active: isPatchingInProgress() }, visible: showPatchingProgress() && (!!patchDocument()) && (patchDocument().isDocumentPatch() == false)">
-                <div class="progress-bar progress-bar-striped" role="progressbar" aria-valuemin="0" aria-valuemax="100"
-                     data-bind="style: {width: patchingProgressPercentage}, aria-valuenow: patchingProgress, css: { 'progress-bar-success' : patchSuccess(), 'progress-bar-danger': patchFailure() }">
-                </div>
-                <div class="text-center center-progress-text"><span data-bind="text: patchingProgressText"></span></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="form-inline">
-
-        <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isDocumentPatch()">
-            <label for="documentToPatch" class="padd-right-10">Document to Patch:</label>
-            <span data-bind="with: patchDocument">
-                <input id="documentToPatch" accesskey="I" type="text" class="form-control" data-bind="value: selectedItem, valueUpdate: 'afterkeydown', event: { keyup: $root.loadDocumentToTest.bind($root, $element.value) }, enable: !$root.isPatchingInProgress()" />
-            </span>
-        </div>
-        <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isCollectionPatch()">
-            <label for="collectionToPatch" class="padd-right-10">Collection to Patch:</label>
-            <div class="btn-group" data-bind="with: patchDocument">
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.isPatchingInProgress()">
-                    <span data-bind="text: selectedItem"></span>
-                    <span class="caret" data-bind="visible: $root.collections().length > 1"></span>
-                </button>
-                <ul id="collectionToPatch" class="dropdown-menu" role="menu">
-                    <!-- ko foreach: $root.collectionToSelect -->
-                    <li data-bind="click: $root.setSelectedCollection.bind($root, $data)"><a href="#" data-bind="text: $data.name"></a></li>
-                    <!-- /ko -->
-                </ul>
-            </div>
-        </div>
-        <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isIndexPatch()">
-            <label for="indexToPatch" class="padd-right-10">Index to Patch:</label>
-            <div class="btn-group" data-bind="with: patchDocument">
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.isPatchingInProgress()">
-                    <span data-bind="text: selectedItem"></span>
-                    <span class="caret" data-bind="visible: $root.indices().length > 1"></span>
-                </button>
-                <ul id="indexToPatch" class="dropdown-menu" role="menu">
-                    <!-- ko foreach: $root.indicesToSelect -->
-                    <li data-bind="click: $root.useIndex.bind($root, $data.name)"><a href="#" data-bind="text: name"></a></li>
-                    <!-- /ko -->
-                </ul>
-                <span class="text-height-fix padd-left-10" data-bind="visible: $root.isMapReduceIndexSelected()">
-                    <i class="fa fa-warning text-warning"></i> <span class="text-muted">'Test' and 'Patch selected' are not available for MapReduce indexes.</span>
-                </span>
-            </div>
-        </div>
-    </div>
     <div class="form-horizontal">
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isIndexPatch()">
             <div class="col-md-9">
@@ -135,13 +325,8 @@
                             Query
                             <small><i class="icon-info"></i></small>
                         </span>
-                        <a target="_blank" class="control-label-additional-link" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
+                        <a target="_blank" class="control-label-additional-link" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>--Lucene Docs</a>
                     </label>
-                </div>
-                <div>
-                    <div data-bind="with: patchDocument">
-                        <pre id="queryEditor" class="form-control editor" data-bind="aceEditor: { code: $root.queryText, readOnly: $root.isPatchingInProgress(), typeName:'queryText', allowResize: true, minHeight: 160, maxHeight: 200, completer:$root.queryCompleter, lang:'ace/mode/lucene', completerHostObject:$root}, valueUpdate: 'afterkeydown'"></pre>
-                    </div>
                 </div>
             </div>
         </div>
@@ -155,58 +340,8 @@
                         </span>
                     </label>
                 </div>
-                <div>
-                    <div class="row">
-                        <div class="col-md-12" data-bind="with: patchDocument">
-                            <pre class="form-control" data-bind="aceEditor: { code: script, lang:'ace/mode/javascript', readOnly: $root.isPatchingInProgress() }" style="height: 160px;"></pre>
-                        </div>
-                    </div>
-                </div>
             </div>
-            <div class="col-md-3">
-                <div>
-                    <label>Parameters</label>
-                </div>
-                <div data-bind="with: patchDocument">
-                    <table class="table table-striped table-hover" data-bind="visible: parameters().length > 0">
-                        <thead>
-                            <tr>
-                                <td width="35%">Name</td>
-                                <td>Value</td>
-                                <td></td>
-                            </tr>
-                        </thead>
-                        <tbody data-bind="foreach: parameters">
-                            <tr>
-                                <td>
-                                    <input id="parametersName" type="text" class="form-control" data-bind="value: key, disable: $root.isPatchingInProgress()" />
-                                </td>
-                                <td>
-                                    <input id="parametersValue" type="text" class="form-control" data-bind="value: value, disable: $root.isPatchingInProgress()" />
-                                </td>
-                                <td>
-                                    <button type="button" class="close" data-bind="click: $parent.removeParameter.bind($parent, $data), disable: $root.isPatchingInProgress()" title="Remove this parameter">
-                                        <i class="icon-cancel"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <button type="button" class="btn btn-default" data-bind="click: createParameter, disable: $root.isPatchingInProgress()" title="Add a parameter">
-                        <i class="icon-plus"></i> Add parameter
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div id="matchingDocumentsContainer" class="form-group" data-bind="visible: showDocumentsPreview">
-            <div class="col-md-12">
-                <div>
-                    <label>Matching Documents</label>
-                </div>
-                <div id="matchingDocumentsGrid" style="width: 100%; height: 300px">
-                    <virtual-grid class="resizable" params="controller: $root.gridController"></virtual-grid>
-                </div>
-            </div>
+            
         </div>
         <div class="form-group patch-preview-flag" data-bind="with: $root" id="beforeAfterContainer">
             <div class="col-md-6">
@@ -247,21 +382,21 @@
                         <li><a href="#patchDebug" role="tab" data-toggle="tab">Output <span data-bind="text: outputLog().length" class="badge"></span></a></li>
                     </ul>
 
-                    <!-- Tab panes -->
+                    <!-- Tab panes --
                     <div class="tab-content">
                         <div class="tab-pane active jsContent" id="patchPut" data-bind="foreach: putDocuments">
                             <pre data-bind="html: $data"></pre>
                         </div>
                         <div class="tab-pane" id="patchLoad" data-bind="visible: loadedDocuments().length">
                             <pre>
-<!-- ko foreach: loadedDocuments --><span data-bind="text: $data"></span>
-<!-- /ko -->
+<!-- ko foreach: loadedDocuments --<span data-bind="text: $data"></span>
+<!-- /ko --
 </pre>
                         </div>
                         <div class="tab-pane" id="patchDebug" data-bind="visible: outputLog().length">
                             <pre>
-<!-- ko foreach: outputLog --><span data-bind="text: $data"></span>
-<!-- /ko -->
+<!-- ko foreach: outputLog --<span data-bind="text: $data"></span>
+<!-- /ko --
 </pre>
                         </div>
                     </div>
@@ -270,3 +405,4 @@
         </div>
     </div>
 </div>
+-->

@@ -188,14 +188,24 @@ namespace Raven.Server.Web.Studio
             if (first == false)
                 writer.WriteComma();
 
-            var newMetadata = new DynamicJsonValue(metadata)
+            var extraMetadataProperties = new DynamicJsonValue
             {
                 [ObjectStubsKey] = new DynamicJsonArray(objectsStubs),
                 [ArrayStubsKey] = new DynamicJsonArray(arraysStubs),
                 [TrimmedValueKey] = new DynamicJsonArray(trimmedValue)
             };
-            writer.WriteMetadata(document, context.ReadObject(newMetadata, document.Key));
 
+            if (metadata != null)
+            {
+                metadata.Modifications = extraMetadataProperties;
+                metadata = context.ReadObject(metadata, document.Key);
+            }
+            else
+            {
+                metadata = context.ReadObject(extraMetadataProperties, document.Key);
+            }
+
+            writer.WriteMetadata(document, metadata);
             writer.WriteEndObject();
         }
 

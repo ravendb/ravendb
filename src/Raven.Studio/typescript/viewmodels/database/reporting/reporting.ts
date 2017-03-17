@@ -6,6 +6,7 @@ import facet = require("models/database/query/facet");
 import queryFacetsCommand = require("commands/database/query/queryFacetsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import eventsCollector = require("common/eventsCollector");
+import popoverUtils = require("common/popoverUtils");
 
 class reporting extends viewModelBase {
     selectedIndexName = ko.observable<string>();
@@ -83,8 +84,9 @@ class reporting extends viewModelBase {
         $("#filterQueryLabel").popover({
             html: true,
             trigger: "hover",
-            container: ".form-horizontal",
-            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+            template: popoverUtils.longPopoverTemplate,
+            container: "body",
+            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
         });
     }
 

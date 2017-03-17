@@ -217,7 +217,8 @@ namespace Raven.Client.Documents.Session
             DocumentInfo documentInfo;
             string id;
 
-            if (DocumentsByEntity.TryGetValue(instance, out documentInfo)) return documentInfo;
+            if (DocumentsByEntity.TryGetValue(instance, out documentInfo))
+                return documentInfo;
 
             if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id) == false && (instance is IDynamicMetaObjectProvider == false || GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id) == false))
                 throw new InvalidOperationException("Could not find the document id for " + instance);
@@ -968,15 +969,6 @@ more responsive application.
         public void Defer(ICommandData[] commands)
         {
             _deferedCommands.AddRange(commands);
-        }
-
-        /// <summary>
-        /// Version this entity when it is saved.  Use when Versioning bundle configured to ExcludeUnlessExplicit.
-        /// </summary>
-        /// <param name="entity">The entity.</param>
-        public void ExplicitlyVersion(object entity)
-        {
-            GetMetadataFor(entity)[Constants.Documents.Versioning.EnableVersioning] = "true";
         }
 
         private void Dispose(bool isDisposing)

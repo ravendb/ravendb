@@ -174,7 +174,8 @@ gulp.task('z_release:package', function () {
 
 gulp.task('z_release:durandal', function () {
     var extraModules = [
-        'transitions/fadeIn'
+        'transitions/fadeIn',
+        'ace/ace'
     ];
 
     var aceFileNames = fs.readdirSync(PATHS.aceDir)

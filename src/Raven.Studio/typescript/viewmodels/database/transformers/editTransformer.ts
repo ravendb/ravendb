@@ -14,6 +14,7 @@ import eventsCollector = require("common/eventsCollector");
 import renameTransformerCommand = require("commands/database/transformers/renameTransformerCommand");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
+import popoverUtils = require("common/popoverUtils");
 
 class editTransformer extends viewModelBase {
 
@@ -152,8 +153,11 @@ class editTransformer extends viewModelBase {
     private addTransformerHelpPopover() {
         $("#transform-title small").popover({
             html: true,
+            container: "body",
+            template: popoverUtils.longPopoverTemplate,
             trigger: "hover",
-            content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> result <span class="code-keyword">in</span> results <br/> <span class="code-keyword">let</span> category = LoadDocument(result.Category) <br/> <span class="code-keyword">select new</span> { <br/>    result.Name, <br/>    result.PricePerUnit, <br/>    Category = category.Name, <br/>    CategoryDescription = category.Description <br/>}</pre>',
+            content: 'The Transform function allows you to change the shape<br /> of individual result documents before the server returns them. <br />It uses C# LINQ query syntax. <br />' +
+                'Example: <pre><span class="token keyword">from</span> result <span class="token keyword">in</span> results <br/> <span class="token keyword">let</span> category = LoadDocument(result.Category) <br/> <span class="token keyword">select new</span> { <br/>    result.Name, <br/>    result.PricePerUnit, <br/>    Category = category.Name, <br/>    CategoryDescription = category.Description <br/>}</pre>',
         });
     }
 

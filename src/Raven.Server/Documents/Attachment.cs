@@ -10,10 +10,10 @@ namespace Raven.Server.Documents
         public long StorageId;
         public LazyStringValue LoweredKey;
         public long Etag;
-        public DateTime LastModified;
         public LazyStringValue Name;
         public LazyStringValue ContentType;
         public Slice Base64Hash;
         public Stream Stream;
+        public short TransactionMarker;
     }
 }

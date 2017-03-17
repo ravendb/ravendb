@@ -15,7 +15,7 @@ class sqlReplicationConnections {
 
     predefinedConnections = ko.observableArray<predefinedConnection>();
 
-    constructor(dto: Raven.Server.Documents.SqlReplication.SqlConnections) {
+    constructor(dto: Raven.Server.Documents.ETL.Providers.SQL.Connections.SqlConnections) {
 
         //TODO: this.__metadata = dto["metadata"];
         if (dto) {
@@ -32,14 +32,14 @@ class sqlReplicationConnections {
         return new sqlReplicationConnections({
             Connections: {},
             Id: null
-        } as Raven.Server.Documents.SqlReplication.SqlConnections);
+        } as Raven.Server.Documents.ETL.Providers.SQL.Connections.SqlConnections);
     }
    
-    toDto(): Raven.Server.Documents.SqlReplication.SqlConnections {
+    toDto(): Raven.Server.Documents.ETL.Providers.SQL.Connections.SqlConnections {
         //TODO: var meta = this.__metadata.toDto();
         //TODO: meta["@id"] = "Raven/SqlReplication/Connections/";
         const connectionsMap = {} as System.Collections.Generic.
-            Dictionary<string, Raven.Server.Documents.SqlReplication.PredefinedSqlConnection>;
+            Dictionary<string, Raven.Server.Documents.ETL.Providers.SQL.Connections.PredefinedSqlConnection>;
 
         this.predefinedConnections().forEach(c => {
             connectionsMap[c.name()] = c.toDto();

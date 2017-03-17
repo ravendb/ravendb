@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Server.Json;
 using Sparrow.Extensions;
@@ -58,7 +59,6 @@ namespace Raven.Server.Documents.Queries
             if (_anyWrites)
                 return;
 
-            WriteHeaders();
             StartResponse();
 
             _anyWrites = true;
@@ -75,18 +75,35 @@ namespace Raven.Server.Documents.Queries
             EndResponse();
         }
 
-        private void WriteHeaders()
+        private void WriteStreamQueryStatistics()
         {
-            _response.Headers.Add("Raven-Result-Etag", ResultEtag.ToString());
-            _response.Headers.Add("Raven-Is-Stale", IsStale ? "true" : "false");
-            _response.Headers.Add("Raven-Index", IndexName);
-            _response.Headers.Add("Raven-Total-Results", TotalResults.ToInvariantString());
-            _response.Headers.Add("Raven-Index-Timestamp", IndexTimestamp.GetDefaultRavenFormat(isUtc: true));
+            _writer.WritePropertyName(nameof(StreamQueryStatistics.ResultEtag));
+            _writer.WriteInteger(ResultEtag);
+            _writer.WriteComma();
+
+            _writer.WritePropertyName(nameof(StreamQueryStatistics.IsStale));
+            _writer.WriteBool(IsStale);
+            _writer.WriteComma();
+
+            _writer.WritePropertyName(nameof(StreamQueryStatistics.IndexName));
+            _writer.WriteString(IndexName);
+            _writer.WriteComma();
+
+            _writer.WritePropertyName(nameof(StreamQueryStatistics.TotalResults));
+            _writer.WriteInteger(TotalResults);
+            _writer.WriteComma();
+
+            _writer.WritePropertyName(nameof(StreamQueryStatistics.IndexTimestamp));
+            _writer.WriteString(IndexTimestamp.GetDefaultRavenFormat(isUtc: true));
+            _writer.WriteComma();
         }
 
         private void StartResponse()
         {
             _writer.WriteStartObject();
+
+            WriteStreamQueryStatistics();
+
             _writer.WritePropertyName("Results");
             _writer.WriteStartArray();
         }

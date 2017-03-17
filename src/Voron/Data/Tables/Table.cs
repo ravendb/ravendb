@@ -1003,13 +1003,12 @@ namespace Voron.Data.Tables
         {
             var pk = _schema.Key;
             var tree = GetTree(pk);
-            var prefix = startSlice.Clone(_tx.Allocator);
             TableValueHolder tableValueHolder = null;
             while (true)
             {
                 using (var it = tree.Iterate(false))
                 {
-                    it.RequiredPrefix = prefix;
+                    it.RequiredPrefix = startSlice.Clone(_tx.Allocator);
                     if (it.Seek(it.RequiredPrefix) == false)
                         return;
 

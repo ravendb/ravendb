@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Replication
         {
             _connectionOptions = options;
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
-            
+
             _database = options.DocumentDatabase;
             _tcpClient = options.TcpClient;
             _stream = options.Stream;
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Replication
             IsIncomingReplicationThread = true;
             try
             {
-                
+
                 using (_connectionOptions.ConnectionProcessingInProgress())
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead(
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Replication
                                     }
                                 }
                                 // we reset it after every time we send to the remote server
-                                // because that is when we know that it is up to date with our 
+                                // because that is when we know that it is up to date with our
                                 // status, so no need to send again
                                 _replicationFromAnotherSource.Reset();
                             }
@@ -194,9 +194,9 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void HandleSingleReplicationBatch(
-            DocumentsOperationContext documentsContext, 
-            TransactionOperationContext configurationContext, 
-            BlittableJsonReaderObject message, 
+            DocumentsOperationContext documentsContext,
+            TransactionOperationContext configurationContext,
+            BlittableJsonReaderObject message,
             BlittableJsonTextWriter writer)
         {
             message.BlittableValidation();
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Replication
                         out _lastIndexOrTransformerEtag))
                     throw new InvalidOperationException(
                         "Expected LastIndexOrTransformerEtag property in the replication message, but didn't find it..");
-                
+
                 switch (messageType)
                 {
                     case ReplicationMessageType.Documents:
@@ -237,7 +237,7 @@ namespace Raven.Server.Documents.Replication
             }
             catch (ObjectDisposedException)
             {
-                //we are shutting down replication, this is ok                                
+                //we are shutting down replication, this is ok
             }
             catch (EndOfStreamException e)
             {
@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.Replication
         private void HandleReceivedIndexOrTransformerBatch(TransactionOperationContext configurationContext, BlittableJsonReaderObject message, long lastIndexOrTransformerEtag)
         {
             int itemCount;
-            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemCount))
                 throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
             var replicatedIndexTransformerCount = itemCount;
 
@@ -290,7 +290,12 @@ namespace Raven.Server.Documents.Replication
         private void HandleReceivedDocumentBatch(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message, long lastDocumentEtag)
         {
             int itemCount;
-            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemCount))
+                throw new InvalidDataException(
+                    "Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
+
+            int attachmentStreamCount;
+            if (!message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out attachmentStreamCount))
                 throw new InvalidDataException(
                     "Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
 
@@ -307,7 +312,8 @@ namespace Raven.Server.Documents.Replication
                 RecievedTime = DateTime.UtcNow,
                 Source = FromToString,
                 RecievedEtag = lastDocumentEtag,
-                DocumentsCount = itemCount
+                ItemsCount = itemCount,
+                AttachmentStreamsCount = attachmentStreamCount,
             };
             ReceiveSingleDocumentsBatch(documentsContext, itemCount, lastDocumentEtag);
             IncomingStats.DoneReplicateTime = DateTime.UtcNow;
@@ -317,7 +323,7 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe void ReceiveSingleIndexAndTransformersBatch(
             TransactionOperationContext configurationContext,
-            int itemCount, 
+            int itemCount,
             long lastEtag)
         {
             var sw = Stopwatch.StartNew();
@@ -373,7 +379,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             //note : PutIndexOrTransformer() is deleting conflicts and merges chnage vectors
                             //of the conflicts. This can be seen in IndexesEtagsStorage::WriteEntry()
-                            case ReplicationUtils.ConflictStatus.Update:                                
+                            case ReplicationUtils.ConflictStatus.Update:
                                 PutIndexOrTransformer(configurationContext, item, definition);
                                 break;
                             case ReplicationUtils.ConflictStatus.Conflict:
@@ -431,12 +437,12 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void HandleConflictForIndexOrTransformer(
-            ReplicationIndexOrTransformerPositions item, 
-            BlittableJsonReaderObject definition, 
+            ReplicationIndexOrTransformerPositions item,
+            BlittableJsonReaderObject definition,
             ChangeVectorEntry[] conflictingVector,
-            RavenTransaction tx, 
+            RavenTransaction tx,
             TransactionOperationContext configurationContext)
-        {            
+        {
             switch (item.Type)
             {
                 case IndexEntryType.Index:
@@ -464,7 +470,7 @@ namespace Raven.Server.Documents.Replication
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void PutIndexOrTransformer(
             TransactionOperationContext configurationContext,
-            ReplicationIndexOrTransformerPositions item, 
+            ReplicationIndexOrTransformerPositions item,
             BlittableJsonReaderObject definition)
         {
             switch (item.Type)
@@ -647,7 +653,7 @@ namespace Raven.Server.Documents.Replication
             _connectionOptions.PinnedBuffer.Used += size;
             return result;
         }
-        
+
         private unsafe void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedDocsCount, long lastEtag)
         {
             if (_log.IsInfoEnabled)
@@ -697,7 +703,7 @@ namespace Raven.Server.Documents.Replication
             throw new ArgumentOutOfRangeException(
                 $"Reading past the size of buffer! TotalSize {totalSize} but position is {doc.Position} & size is {doc.DocumentSize}!");
         }
-        
+
         private void ReadChangeVector(ReplicationIndexOrTransformerPositions index, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
         {
             for (int i = 0; i < index.ChangeVector.Length; i++)
@@ -712,7 +718,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, TransactionOperationContext configurationContext, BlittableJsonTextWriter writer, long lastDocumentEtag, long lastIndexOrTransformerEtag, string handledMessageType)
-        {            
+        {
             var documentChangeVectorAsDynamicJson = new DynamicJsonArray();
             ChangeVectorEntry[] databaseChangeVector;
 
@@ -764,7 +770,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.ResolverId)] = defaultResolver?.ResolvingDatabaseId,
                 [nameof(ReplicationMessageReply.ResolverVersion)] = defaultResolver?.Version
             };
-           
+
             documentsContext.Write(writer, heartbeat);
 
             writer.Flush();
@@ -776,6 +782,8 @@ namespace Raven.Server.Documents.Replication
 
         private ChangeVectorEntry[] _tempReplicatedChangeVector = new ChangeVectorEntry[0];
         private readonly List<ReplicationDocumentsPositions> _replicatedDocs = new List<ReplicationDocumentsPositions>();
+        private readonly List<ReplicationAttachment> _replicatedAttachments = new List<ReplicationAttachment>();
+        private readonly List<ReplicationDocumentsPositions> _replicatedAttachmentStreams = new List<ReplicationDocumentsPositions>();
         private readonly List<ReplicationIndexOrTransformerPositions> _replicatedIndexesAndTransformers = new List<ReplicationIndexOrTransformerPositions>();
         private long _lastDocumentEtag;
         private long _lastIndexOrTransformerEtag;
@@ -794,6 +802,15 @@ namespace Raven.Server.Documents.Replication
             public DocumentFlags Flags;
         }
 
+        public struct ReplicationAttachment
+        {
+            public short TransactionMarker;
+            public byte[] LoweredKey;
+            public string Name;
+            public string ContentType;
+            public byte[] Base64Hash;
+        }
+
         public struct ReplicationIndexOrTransformerPositions
         {
             public string Id;
@@ -810,17 +827,54 @@ namespace Raven.Server.Documents.Replication
         private unsafe void ReadDocumentsFromSource(ref UnmanagedWriteBuffer writeBuffer, int replicatedDocs)
         {
             _replicatedDocs.Clear();
+            _replicatedAttachments.Clear();
             for (int x = 0; x < replicatedDocs; x++)
             {
+                var type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte));
+                if (type == ReplicationBatchItem.ReplicationItemType.Attachment)
+                {
+                    var attachment = new ReplicationAttachment
+                    {
+                        TransactionMarker = *(short*)ReadExactly(sizeof(short)),
+                    };
+
+                    var loweredKeySize = *(int*)ReadExactly(sizeof(int));
+                    attachment.LoweredKey = new byte[loweredKeySize];
+                    fixed (byte* pLoweredKey = attachment.LoweredKey)
+                    {
+                        Memory.Copy(pLoweredKey, ReadExactly(loweredKeySize), loweredKeySize);
+                    }
+
+                    var nameSize = *(int*)ReadExactly(sizeof(int));
+                    attachment.Name = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
+
+                    var contentTypeSize = *(int*)ReadExactly(sizeof(int));
+                    attachment.ContentType = Encoding.UTF8.GetString(ReadExactly(contentTypeSize), contentTypeSize);
+
+                    var base64HashSize = *ReadExactly(sizeof(byte));
+                    attachment.Base64Hash = new byte[base64HashSize];
+                    fixed (byte* pBase64HashSize = attachment.Base64Hash)
+                    {
+                        Memory.Copy(pBase64HashSize, ReadExactly(base64HashSize), base64HashSize);
+                    }
+
+                    _replicatedAttachments.Add(attachment);
+                    return;
+                }
+
+                if (type == ReplicationBatchItem.ReplicationItemType.AttachmentStream)
+                {
+                    // TODO;
+                    return;
+                }
+
                 var curDoc = new ReplicationDocumentsPositions
                 {
-                    Position = writeBuffer.SizeInBytes
+                    Position = writeBuffer.SizeInBytes,
+                    ChangeVectorCount = *(int*)ReadExactly(sizeof(int))
                 };
 
-                curDoc.ChangeVectorCount = *(int*) ReadExactly(sizeof(int));
-
-                
-                writeBuffer.Write(ReadExactly(sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount), sizeof(ChangeVectorEntry)*curDoc.ChangeVectorCount);
+                writeBuffer.Write(ReadExactly(sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount), sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount);
 
                 curDoc.TransactionMarker = *(short*)ReadExactly(sizeof(short));
 
@@ -829,13 +883,12 @@ namespace Raven.Server.Documents.Replication
                 curDoc.Flags = *(DocumentFlags*)ReadExactly(sizeof(DocumentFlags));
 
                 var keySize = *(int*)ReadExactly(sizeof(int));
-                
                 curDoc.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
 
                 var documentSize = curDoc.DocumentSize = *(int*)ReadExactly(sizeof(int));
                 if (documentSize != -1) //if -1, then this is a tombstone
                 {
-                    ReadExactly(documentSize,ref writeBuffer);
+                    ReadExactly(documentSize, ref writeBuffer);
                 }
                 else
                 {
@@ -932,7 +985,7 @@ namespace Raven.Server.Documents.Replication
 
             return status;
         }
-        
+
         public unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly IncomingReplicationHandler _incoming;
@@ -942,7 +995,7 @@ namespace Raven.Server.Documents.Replication
             private long _lastEtag;
             private byte* _buffer;
             private int _totalSize;
-          
+
             public MergedDocumentReplicationCommand(IncomingReplicationHandler incoming, byte* buffer, int totalSize, long lastEtag)
             {
                 _incoming = incoming;
@@ -1046,19 +1099,27 @@ namespace Raven.Server.Documents.Replication
                         document?.Dispose();
                     }
                 }
+
+                foreach (var attachment in _incoming._replicatedAttachments)
+                {
+                    if (_incoming._log.IsInfoEnabled)
+                        _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {attachment.Name}, with key = {Encoding.UTF8.GetString(attachment.LoweredKey)}");
+                    // TODO: Fix this code, it isn't a good idea AT ALL
+                    database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, attachment.LoweredKey, attachment.Name, attachment.ContentType,
+                        attachment.Base64Hash, attachment.TransactionMarker);
+                }
+
                 database.DocumentsStorage.SetDatabaseChangeVector(context,
                     maxReceivedChangeVectorByDatabase);
                 database.DocumentsStorage.SetLastReplicateEtagFrom(context, _incoming.ConnectionInfo.SourceDatabaseId,
                     _lastEtag);
             }
 
-            private void ReadChangeVector(ReplicationDocumentsPositions doc, 
+            private void ReadChangeVector(ReplicationDocumentsPositions doc,
                 byte* buffer, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
             {
                 if (_changeVector.Length != doc.ChangeVectorCount)
-                {
                     _changeVector = new ChangeVectorEntry[doc.ChangeVectorCount];
-                }
 
                 for (int i = 0; i < doc.ChangeVectorCount; i++)
                 {
