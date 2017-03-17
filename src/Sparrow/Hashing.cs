@@ -48,7 +48,7 @@ namespace Sparrow
         }
     }
 
-    public unsafe static partial class Hashing
+    public static unsafe partial class Hashing
     {
         #region XXHash32 & XXHash64
 
@@ -62,11 +62,11 @@ namespace Sparrow
 
         internal static class XXHash32Constants
         {
-            internal static uint PRIME32_1 = 2654435761U;
-            internal static uint PRIME32_2 = 2246822519U;
-            internal static uint PRIME32_3 = 3266489917U;
-            internal static uint PRIME32_4 = 668265263U;
-            internal static uint PRIME32_5 = 374761393U;
+            internal const uint PRIME32_1 = 2654435761U;
+            internal const uint PRIME32_2 = 2246822519U;
+            internal const uint PRIME32_3 = 3266489917U;
+            internal const uint PRIME32_4 = 668265263U;
+            internal const uint PRIME32_5 = 374761393U;
         }
 
         /// <summary>

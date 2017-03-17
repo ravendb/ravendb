@@ -16,7 +16,7 @@ namespace Sparrow.Json
         {
             if (x == y) return true;
             if (x == null || y == null) return false;
-            return x.CompareTo(y) == 0;
+            return x.Equals(y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -24,7 +24,10 @@ namespace Sparrow.Json
         {
             unsafe
             {
-                return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
+                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
+                if (IntPtr.Size == 4)
+                    return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
+                return (int)Hashing.XXHash64.CalculateInline(obj.Buffer, (ulong)obj.Size);
             }
         }
     }
@@ -44,12 +47,16 @@ namespace Sparrow.Json
         {
             unsafe
             {
-                return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
+                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
+                if (IntPtr.Size == 4)
+                    return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
+                return (int)Hashing.XXHash64.CalculateInline(obj.Buffer, (ulong)obj.Size);
             }
         }
     }
 
-    public unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
+    // PERF: Sealed because in CoreCLR 2.0 it will devirtualize virtual calls methods like GetHashCode.
+    public sealed unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable
     {
         private readonly JsonOperationContext _context;
@@ -98,20 +105,46 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(string other)
         {
-            return CompareTo(other) == 0;
+#if DEBUG
+            if (this.IsDisposed)
+                this.ThrowAlreadyDisposed();
+#endif
+
+            if (_string != null)
+                return string.Equals(_string, other, StringComparison.Ordinal);
+
+            var sizeInBytes = JsonOperationContext.Encoding.GetMaxByteCount(other.Length);          
+
+            if (_lazyStringTempComparisonBuffer == null || _lazyStringTempComparisonBuffer.Length < other.Length)
+                _lazyStringTempComparisonBuffer = new byte[Bits.NextPowerOf2(sizeInBytes)];
+
+            fixed (char* pOther = other)
+            fixed (byte* pBuffer = _lazyStringTempComparisonBuffer)
+            {
+                var tmpSize = JsonOperationContext.Encoding.GetBytes(pOther, other.Length, pBuffer, sizeInBytes);
+                if (this.Size != tmpSize)
+                    return false;
+
+                return Memory.CompareInline(Buffer, pBuffer, tmpSize) == 0;                
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(LazyStringValue other)
         {
-            return CompareTo(other) == 0;
+#if DEBUG
+            if (this.IsDisposed)
+                this.ThrowAlreadyDisposed();
+#endif
+
+            if (other.Size != this.Size)
+                return false;
+
+            return Memory.CompareInline(Buffer, other.Buffer, this.Size) == 0;
         }
 
         public int CompareTo(string other)
         {
-            if (IsDisposed)
-                ThrowAlreadyDisposed();
-
             if (_string != null)
                 return string.Compare(_string, other, StringComparison.Ordinal);
 
@@ -131,9 +164,6 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareTo(LazyStringValue other)
         {
-            if (IsDisposed)
-                ThrowAlreadyDisposed();
-
             if (other.Buffer == Buffer && other.Size == Size)
                 return 0;
             return Compare(other.Buffer, other.Size);
@@ -142,8 +172,10 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(byte* other, int otherSize)
         {
-            if (IsDisposed)
-                ThrowAlreadyDisposed();
+#if DEBUG
+            if (this.IsDisposed)
+                this.ThrowAlreadyDisposed();
+#endif
 
             var result = Memory.CompareInline(Buffer, other, Math.Min(Size, otherSize));
             return result == 0 ? Size - otherSize : result;
@@ -221,7 +253,10 @@ namespace Sparrow.Json
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 #endif
-            return (int)Hashing.XXHash32.CalculateInline(Buffer, Size);
+            if (IntPtr.Size == 4)
+                return (int)Hashing.XXHash32.CalculateInline(Buffer, Size);
+            else
+                return (int)Hashing.XXHash64.CalculateInline(Buffer, (ulong)Size);
         }
         
         public override string ToString()

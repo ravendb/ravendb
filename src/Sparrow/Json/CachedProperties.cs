@@ -100,41 +100,51 @@ namespace Sparrow.Json
             _context = context;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PropertyName GetProperty(LazyStringValue propName)
         {
             PropertyName prop;
-            if (_propertyNameToId.TryGetValue(propName, out prop) == false)
+            if (_propertyNameToId.TryGetValue(propName, out prop))
             {
-                var propIndex = _docPropNames.Count;
-                propName = _context.GetLazyStringForFieldWithCaching(propName);
-                prop = new PropertyName(_propertyNameCounter++)
-                {
-                    Comparer = propName,
-                    GlobalSortOrder = -1,
-                    PropertyId = propIndex
-                };
+                // PERF: This is the most common scenario, we need it to come first. 
+                if (prop.PropertyId < PropertiesDiscovered)
+                    return prop;
 
-                _docPropNames.Add(prop);
-                _propertiesSortOrder.Add(prop, prop);
-                _propertyNameToId[propName] = prop; 
-                _propertiesNeedSorting = true;
-                if (_docPropNames.Count > PropertiesDiscovered+1)
-                {
-                    prop = SwapPropertyIds(prop);
-                }
-                PropertiesDiscovered++;
-            }
-            else if (prop.PropertyId >= PropertiesDiscovered)
-            {
                 if (prop.PropertyId != PropertiesDiscovered)
                 {
                     prop = SwapPropertyIds(prop);
                 }
                 PropertiesDiscovered++;
+                return prop;
             }
+
+            return UnlikelyGetProperty(propName);
+        }
+
+        private PropertyName UnlikelyGetProperty(LazyStringValue propName)
+        {
+            var propIndex = _docPropNames.Count;
+            propName = _context.GetLazyStringForFieldWithCaching(propName);
+            var prop = new PropertyName(_propertyNameCounter++)
+            {
+                Comparer = propName,
+                GlobalSortOrder = -1,
+                PropertyId = propIndex
+            };
+
+            _docPropNames.Add(prop);
+            _propertiesSortOrder.Add(prop, prop);
+            _propertyNameToId[propName] = prop;
+            _propertiesNeedSorting = true;
+            if (_docPropNames.Count > PropertiesDiscovered + 1)
+            {
+                prop = SwapPropertyIds(prop);
+            }
+            PropertiesDiscovered++;
             return prop;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private PropertyName SwapPropertyIds(PropertyName prop)
         {
             // this property doesn't match the order that we previously saw the properties.
@@ -143,13 +153,19 @@ namespace Sparrow.Json
             // we'll assume the later and move the property around, this is safe to 
             // do because we ignore the properties showing up after the PropertiesDiscovered
 
-            var old = _docPropNames[PropertiesDiscovered];
-            _docPropNames[PropertiesDiscovered] = _docPropNames[prop.PropertyId];
-            old.PropertyId = _docPropNames[PropertiesDiscovered].PropertyId;
-            _docPropNames[old.PropertyId] = old;
-            prop = _docPropNames[PropertiesDiscovered];
-            prop.PropertyId = PropertiesDiscovered;
-            return prop;
+            int xPropertyId = PropertiesDiscovered;
+            int yPropertyId = prop.PropertyId;
+
+            var x = _docPropNames[xPropertyId];           
+            var y = _docPropNames[yPropertyId];
+
+            x.PropertyId = yPropertyId;
+            y.PropertyId = xPropertyId;
+
+            _docPropNames[xPropertyId] = y;
+            _docPropNames[yPropertyId] = x;
+
+            return y;
         }
 
         public void Sort(FastList<BlittableJsonDocumentBuilder.PropertyTag> properties)
