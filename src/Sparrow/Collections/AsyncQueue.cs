@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -39,6 +40,28 @@ namespace Sparrow.Collections
             }
             return Tuple.Create(true, result);
         }
-        
+
+        public async Task<Tuple<bool, TValue>> TryDequeueOfTypeAsync<TValue>(TimeSpan timeout) where TValue : T
+        {
+            var sp = Stopwatch.StartNew();
+            while (true)
+            {
+                T result;
+                while (_inner.TryDequeue(out result) == false)
+                {
+                    var wait = timeout - sp.Elapsed;
+
+                    if (wait < TimeSpan.Zero)
+                        wait = TimeSpan.Zero;
+
+                    if (await _event.WaitAsync(wait) == false)
+                        return Tuple.Create(false, default(TValue));
+                    _event.Reset();
+                }
+
+                if (result is TValue)
+                    return Tuple.Create(true, (TValue)result);
+            }
+        }
     }
 }

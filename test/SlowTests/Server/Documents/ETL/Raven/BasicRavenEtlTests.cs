@@ -27,11 +27,11 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    session.Store(new EtlConfiguration()
+                    session.Store(new EtlConfiguration
                     {
                         RavenTargets =
                         {
-                            new RavenEtlConfiguration()
+                            new RavenEtlConfiguration
                             {
                                 Name = "basic test",
                                 Url = dest.Url,

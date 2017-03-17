@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
@@ -180,20 +179,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             Statistics.LastAlert = AlertRaised.Create(Tag, emptyConnectionStringMsg, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
 
-            return false;
-        }
-
-        public bool ValidateName()
-        {
-            if (string.IsNullOrWhiteSpace(SqlConfiguration.Name) == false)
-                return true;
-
-            var message = $"Could not find name for SQL ETL document {SqlConfiguration.Name}, ignoring";
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info(message);
-
-            Statistics.LastAlert = AlertRaised.Create(Tag, message, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
             return false;
         }
 

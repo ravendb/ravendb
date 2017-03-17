@@ -26,8 +26,6 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                database.NotificationCenter.Options.PreventFromRunningBackgroundWorkers = true;
-
                 var actions = new AsyncQueue<Notification>();
                 var writer = new TestWebSockerWriter();
 
@@ -45,8 +43,6 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                database.NotificationCenter.Options.PreventFromRunningBackgroundWorkers = true;
-
                 var alert = GetSampleAlert();
 
                 Assert.True(alert.IsPersistent);
@@ -85,8 +81,6 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                database.NotificationCenter.Options.PreventFromRunningBackgroundWorkers = true;
-
                 var alert1 = GetSampleAlert();
 
                 database.NotificationCenter.Add(alert1);
