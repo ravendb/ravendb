@@ -1,29 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections;
-using Sparrow.Global;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public class BlittableJsonDocumentBuilder : IDisposable
+    public sealed class BlittableJsonDocumentBuilder : IDisposable
     {
         private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
 
-        protected readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
+        private readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
 
-        protected readonly JsonOperationContext _context;
+        private readonly JsonOperationContext _context;
         private UsageMode _mode;
         private readonly IJsonParser _reader;
         private readonly IBlittableDocumentModifier _modifier;
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
 
-        protected WriteToken _writeToken;
+        private WriteToken _writeToken;
         private  string _debugTag;
 
         private readonly ListCache<PropertyTag> _propertiesCache = new ListCache<PropertyTag>();
@@ -104,7 +101,7 @@ namespace Sparrow.Json
             _writer.ResetAndRenew();
         }
 
-        public virtual void ReadArrayDocument()
+        public void ReadArrayDocument()
         {
             _continuationState.Push(new BuildingState
             {
@@ -112,7 +109,7 @@ namespace Sparrow.Json
             });
         }
 
-        public virtual void ReadObjectDocument()
+        public void ReadObjectDocument()
         {
             _continuationState.Push(new BuildingState
             {
@@ -120,7 +117,7 @@ namespace Sparrow.Json
             });
         }
 
-        public virtual void ReadNestedObject()
+        public void ReadNestedObject()
         {
             _continuationState.Push(new BuildingState
             {
@@ -136,7 +133,7 @@ namespace Sparrow.Json
             _writer.Dispose();
         }
 
-        public virtual bool Read()
+        public bool Read()
         {
             if (_continuationState.Count == 0)
                 return false; //nothing to do
@@ -467,31 +464,7 @@ namespace Sparrow.Json
             return lazyStringValueFromParserState;
         }
 
-        protected static int SetOffsetSizeFlag(ref BlittableJsonToken objectToken, long distanceFromFirstProperty)
-        {
-            int positionSize;
-            if (distanceFromFirstProperty <= byte.MaxValue)
-            {
-                positionSize = sizeof(byte);
-                objectToken |= BlittableJsonToken.OffsetSizeByte;
-            }
-            else
-            {
-                if (distanceFromFirstProperty <= ushort.MaxValue)
-                {
-                    positionSize = sizeof(short);
-                    objectToken |= BlittableJsonToken.OffsetSizeShort;
-                }
-                else
-                {
-                    positionSize = sizeof(int);
-                    objectToken |= BlittableJsonToken.OffsetSizeInt;
-                }
-            }
-            return positionSize;
-        }
-
-        public virtual void FinalizeDocument()
+        public void FinalizeDocument()
         {
             var documentToken = _writeToken.WrittenToken;
             var rootOffset = _writeToken.ValuePos;
