@@ -1,7 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 import document = require("models/database/documents/document");
-import documentMetadata = require("models/database/documents/documentMetadata");
 
 class patchDocument extends document {
 
@@ -12,7 +11,7 @@ class patchDocument extends document {
     query = ko.observable<string>();
     script = ko.observable<string>();
 
-    patchAll = ko.observable<boolean>(false); //TODO: save in dto
+    patchAll = ko.observable<boolean>(false);
 
     selectedIndex: KnockoutComputed<string>;
 
@@ -41,32 +40,18 @@ class patchDocument extends document {
         });
     }
 
-    /* TODO:
-  
     toDto(): patchDto {
-        var meta = this.__metadata.toDto();
+        const meta = this.__metadata.toDto();
         return {
             '@metadata': meta,
             PatchOnOption: this.patchOnOption(),
             Query: this.query(),
             Script: this.script(),
-            SelectedItem: this.selectedItem(),
-            Values: this.parameters().map(val => val.toDto())
+            SelectedItem: this.selectedItem()
         };
     }
 
-    isDocumentPatch(): boolean {
-        return this.patchOnOption() === "Document";
-    }
-
-    isCollectionPatch(): boolean {
-        return this.patchOnOption() === "Collection";
-    }
-
-    isIndexPatch(): boolean {
-        return this.patchOnOption() === "Index";
-    }
-
+    /* TODO:
     name(): string {
         return this.__metadata.id.replace('Studio/Patch/', '');
     }

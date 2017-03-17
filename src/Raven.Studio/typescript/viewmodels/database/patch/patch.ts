@@ -13,7 +13,6 @@ import appUrl = require("common/appUrl");
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
-import savePatch = require('viewmodels/database/patch/savePatch');
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import patchByQueryCommand = require("commands/database/patch/patchByQueryCommand");
 import patchByCollectionCommand = require("commands/database/patch/patchByCollectionCommand");
@@ -21,7 +20,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
-import killOperationComamnd = require('commands/operations/killOperationCommand');
 import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
 import genUtils = require("common/generalUtils");
@@ -34,6 +32,13 @@ import popoverUtils = require("common/popoverUtils");
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
 
 class patch extends viewModelBase {
+
+    inSaveMode = ko.observable<boolean>();
+    patchSaveName = ko.observable<string>();
+
+    spinners = {
+        save: ko.observable<boolean>(false)
+    }
 
     gridController = ko.observable<virtualGridController<document>>(); //TODO: column preview, custom columns?
     private documentsProvider: documentBasedColumnsProvider;
@@ -53,6 +58,13 @@ class patch extends viewModelBase {
 
     runPatchValidationGroup: KnockoutValidationGroup;
     runQueryValidationGroup: KnockoutValidationGroup;
+    savePatchValidationGroup: KnockoutValidationGroup;
+
+    private hideSavePatchHandler = (e: Event) => {
+        if ($(e.target).closest(".patch-save").length === 0) {
+            this.inSaveMode(false);
+        }
+    }
 
     //TODO: implement: Data has changed. Your results may contain duplicates or non-current entries
 
@@ -77,12 +89,20 @@ class patch extends viewModelBase {
             required: true
         });
 
+        this.patchSaveName.extend({
+            required: true
+        });
+
         this.runPatchValidationGroup = ko.validatedObservable({
             script: doc.script,
             selectedItem: doc.selectedItem
         });
         this.runQueryValidationGroup = ko.validatedObservable({
             selectedItem: doc.selectedItem
+        });
+
+        this.savePatchValidationGroup = ko.validatedObservable({
+            patchSaveName: this.patchSaveName
         });
     }
 
@@ -100,6 +120,15 @@ class patch extends viewModelBase {
         this.patchDocument().patchAll.subscribe((patchAll) => {
             this.documentsProvider.showRowSelectionCheckbox = !patchAll;
             this.gridController().reset(true);
+        });
+
+        this.inSaveMode.subscribe(enabled => {
+            if (enabled) {
+                window.addEventListener("click", this.hideSavePatchHandler, true);
+            } else {
+                this.savePatchValidationGroup.errors.showAllMessages(false);
+                window.removeEventListener("click", this.hideSavePatchHandler, true);
+            }
         });
     }
 
@@ -166,6 +195,10 @@ class patch extends viewModelBase {
         patchDoc.patchOnOption(option);
         patchDoc.selectedItem(null);
         patchDoc.patchAll(option === "Index" || option === "Collection");
+
+        if (option !== "Index") {
+            patchDoc.query(null);
+        }
 
         this.runPatchValidationGroup.errors.showAllMessages(false);
     }
@@ -238,6 +271,28 @@ class patch extends viewModelBase {
                     this.patchOnDocuments(selectedIds);
                 }
             }
+        }
+    }
+
+    savePatch() {
+        if (this.inSaveMode()) {
+            eventsCollector.default.reportEvent("patch", "save");
+
+            if (this.isValid(this.savePatchValidationGroup)) {
+                this.spinners.save(true);
+                new savePatchCommand(this.patchSaveName(), this.patchDocument(), this.activeDatabase())
+                    .execute()
+                    .always(() => this.spinners.save(false))
+                    .done(() => {
+                        this.inSaveMode(false);
+                        this.patchSaveName("");
+                        this.savePatchValidationGroup.errors.showAllMessages(false);
+
+                        //TODO: reload all patches
+                    });
+            }
+        } else {
+            this.inSaveMode(true);
         }
     }
 
@@ -516,19 +571,6 @@ class patch extends viewModelBase {
         this.putDocuments([]);
         this.loadedDocuments([]);
         this.outputLog([]);
-    }
-
-
-    savePatch() {
-        eventsCollector.default.reportEvent("patch", "save");
-
-        var savePatchViewModel: savePatch = new savePatch();
-        app.showBootstrapDialog(savePatchViewModel);
-        savePatchViewModel.onExit().done((patchName) => {
-            new savePatchCommand(patchName, this.patchDocument(), this.activeDatabase())
-                .execute()
-                .done(() => this.fetchAllPatches());
-        });
     }
 
     private usePatch(patch: patchDocument) {
