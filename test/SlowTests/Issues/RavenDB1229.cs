@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                         Query = "Tag:Animals"
                     }));
 
-                    op.WaitForCompletion();
+                    op.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     Assert.False(true, "Should have thrown");
                 }
