@@ -14,7 +14,7 @@ namespace Raven.Server.Utils
         private const string SuffixStart = "{0}/";
         private static readonly char[] PrefixSeparatorChar = { PrefixSeparator };
         private static readonly char[] SuffixSeparatorChar = { SuffixSeparator };
-        private static Func<object, StringSegment, string> ValueHandler;
+        private static Func<object, StringSegment, string> _valueHandler;
 
         public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath,
             HashSet<string> includedIds)
@@ -33,7 +33,7 @@ namespace Raven.Server.Utils
                      !addition.Value.SubSegment(0, 4).Equals(SuffixStart)))
                     return;
                 pathSegment = includePath.SubSegment(0, indexOfSuffixStart);
-                ValueHandler = HandleSuffixValue;
+                _valueHandler = HandleSuffixValue;
             }
             else if (indexOfPrefixStart != -1)
             {
@@ -41,7 +41,7 @@ namespace Raven.Server.Utils
                 if (!includePath[includePath.Length - 1].Equals(')'))
                     return;
                 pathSegment = includePath.SubSegment(0, indexOfPrefixStart);
-                ValueHandler = HandlePrefixValue;
+                _valueHandler = HandlePrefixValue;
             }
             else
             {
@@ -51,7 +51,26 @@ namespace Raven.Server.Utils
             object value;
             StringSegment leftPath;
             if (BlittableJsonTraverser.Default.TryRead(docReader, pathSegment, out value, out leftPath) == false)
+            {
+                var json = value as BlittableJsonReaderObject;
+                if (json != null)
+                {
+                    var isKey = leftPath == "$Keys"; // include on dictionary.Keys or dictionary.Values
+                    if (isKey || leftPath == "$Values")
+                    {
+                        var property = new BlittableJsonReaderObject.PropertyDetails();
+                        foreach (var propertyIndex in json.GetPropertiesByInsertionOrder())
+                        {
+                            json.GetPropertyByIndex(propertyIndex, ref property);
+                            var val = isKey ? property.Name : property.Value;
+                            if (val != null)
+                                includedIds.Add(val.ToString());
+                        }
+                    }
+                }
+
                 return;
+            }
 
             var collectionOfIds = value as IEnumerable;
 
@@ -61,7 +80,7 @@ namespace Raven.Server.Utils
                 {
                     if (addition != null)
                     {
-                        var includedId = ValueHandler(item, addition.Value);
+                        var includedId = _valueHandler(item, addition.Value);
                         if (includedId != null)
                             includedIds.Add(includedId);
                     }
@@ -72,7 +91,7 @@ namespace Raven.Server.Utils
             {
                 if (addition != null)
                 {
-                    var includedId = ValueHandler(value, addition.Value);
+                    var includedId = _valueHandler(value, addition.Value);
                     if (includedId != null)
                         includedIds.Add(includedId);
                 }
