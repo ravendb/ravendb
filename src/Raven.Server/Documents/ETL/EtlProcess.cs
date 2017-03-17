@@ -84,7 +84,59 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public abstract IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context);
+        protected abstract EtlTransformer<TExtracted, TTransformed> GetTransformer(DocumentsOperationContext context);
+
+        public IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context)
+        {
+            var transformer = GetTransformer(context);
+
+            foreach (var item in items)
+            {
+                CancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    transformer.Transform(item);
+
+                    Statistics.TransformationSuccess();
+
+                    CurrentBatch.LastTransformedEtag = item.Etag;
+
+                    if (CanContinueBatch() == false)
+                        break;
+                }
+                catch (JavaScriptParseException e)
+                {
+                    var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
+
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations(message, e);
+
+                    var alert = AlertRaised.Create(
+                        Tag,
+                        message,
+                        AlertType.Etl_TransformationError,
+                        NotificationSeverity.Error,
+                        key: Name,
+                        details: new ExceptionDetails(e));
+
+                    Database.NotificationCenter.Add(alert);
+
+                    Stop();
+
+                    break;
+                }
+                catch (Exception e)
+                {
+                    Statistics.RecordTransformationError(e);
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentKey}", e);
+                }
+            }
+
+            return transformer.GetTransformedResults();
+        }
 
         public void Load(IEnumerable<TTransformed> items, JsonOperationContext context)
         {
@@ -281,26 +333,6 @@ namespace Raven.Server.Documents.ETL
                     return;
                 }
             }
-        }
-
-        protected void StopProcessOnScriptParseError(JavaScriptParseException e)
-        {
-            var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
-
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations(message, e);
-
-            var alert = AlertRaised.Create(
-                Tag,
-                message,
-                AlertType.Etl_TransformationError,
-                NotificationSeverity.Error,
-                key: Name,
-                details: new ExceptionDetails(e));
-
-            Database.NotificationCenter.Add(alert);
-
-            Stop();
         }
 
         public override void Dispose()

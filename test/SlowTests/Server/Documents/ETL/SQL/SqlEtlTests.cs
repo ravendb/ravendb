@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="CanReplicate.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="SqlEtlTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -23,7 +23,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
-    public class CanReplicate : RavenTestBase
+    public class SqlEtlTests : RavenTestBase
     {
         private static readonly Lazy<string> _masterDatabaseConnection = new Lazy<string>(() =>
         {
@@ -626,13 +626,6 @@ var nameArr = this.StepName.split('.');");
                     File.WriteAllText(tempFileName, sb.ToString());
                     throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
                 }
-                //else
-                //{
-                //    var msg = "aaaa";
-                //    var tempFileName = Path.GetTempFileName();
-                //    File.WriteAllText(tempFileName, sb.ToString());
-                //    throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
-                //}
             }
         }
 
