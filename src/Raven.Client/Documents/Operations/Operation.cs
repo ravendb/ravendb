@@ -113,7 +113,13 @@ namespace Raven.Client.Documents.Operations
         {
         }
 
-        public async Task<IOperationResult> WaitForCompletionAsync(TimeSpan? timeout = null)
+        public Task<IOperationResult> WaitForCompletionAsync(TimeSpan? timeout = null)
+        {
+            return WaitForCompletionAsync<IOperationResult>(timeout);
+        }
+
+        public async Task<TResult> WaitForCompletionAsync<TResult>(TimeSpan? timeout = null)
+            where TResult : IOperationResult
         {
             using (_requestExecutor.ContextPool.AllocateOperationContext(out _context))
             {
@@ -125,13 +131,19 @@ namespace Raven.Client.Documents.Operations
                 if (completed == false)
                     throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
 
-                return await _result.Task.ConfigureAwait(false);
+                return (TResult)await _result.Task.ConfigureAwait(false);
             }
         }
 
         public IOperationResult WaitForCompletion(TimeSpan? timeout = null)
         {
-            return AsyncHelpers.RunSync(() => WaitForCompletionAsync(timeout));
+            return WaitForCompletion<IOperationResult>(timeout);
+        }
+
+        public TResult WaitForCompletion<TResult>(TimeSpan? timeout = null)
+            where TResult : IOperationResult
+        {
+            return AsyncHelpers.RunSync(() => WaitForCompletionAsync<TResult>(timeout));
         }
     }
 }
