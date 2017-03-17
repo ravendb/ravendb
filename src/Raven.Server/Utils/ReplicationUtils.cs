@@ -221,7 +221,7 @@ namespace Raven.Server.Utils
         public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string apiKey)
         {
             JsonOperationContext context;
-            using (var requestExecuter = RequestExecutor.ShortTermSingleUse(url, databaseName, apiKey))
+            using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, databaseName, apiKey))
             using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand();
@@ -234,7 +234,7 @@ namespace Raven.Server.Utils
         public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string apiKey)
         {
             JsonOperationContext context;
-            using (var requestExecuter = RequestExecutor.ShortTermSingleUse(url, databaseName, apiKey))
+            using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, databaseName, apiKey))
             using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand();
