@@ -1104,7 +1104,9 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (_incoming._log.IsInfoEnabled)
                         _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {attachment.Name}, with key = {Encoding.UTF8.GetString(attachment.LoweredKey)}");
-                    database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, ref attachment);
+                    // TODO: Fix this code, it isn't a good idea AT ALL
+                    database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, attachment.LoweredKey, attachment.Name, attachment.ContentType,
+                        attachment.Base64Hash, attachment.TransactionMarker);
                 }
 
                 database.DocumentsStorage.SetDatabaseChangeVector(context,
