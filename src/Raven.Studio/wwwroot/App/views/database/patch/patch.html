@@ -5,7 +5,7 @@
                 <h2 class="pull-left-sm">Patch target</h2>
                 <div class="pull-right-sm form-inline">
                     <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationElement: patchSaveName">
-                        <input class="form-control" placeholder="Patch name" data-bind="textInput: patchSaveName">
+                        <input class="form-control"  style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
                         <span class="input-group-btn">
                             <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }">
                                 <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>
@@ -192,102 +192,42 @@
 </script>
 
 <script type="text/html" id="saved-patches-dialog">
-    <button class="btn btn-default btn-prerelease dropdown-toggle" disabled="disabled" type="button" id="dropdownLoadPatch" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadPatch" data-toggle="dropdown" data-bind="enable: savedPatches.hasAnySavedPatch">
         <i class="icon-folder"></i> <span>Load patch</span>
         <span class="caret"></span>
     </button>
-    <div class="dropdown-menu slidein-style" aria-labelledby="dropdownLoadPatch">
+    <div class="dropdown-menu slidein-style" aria-labelledby="dropdownLoadPatch" data-bind="dropdownPanel: true, with: savedPatches">
         <div class="loadpatch-dropdown show-preview">
             <div class="patch-preview-container">
-                <h3>Patch preview - <strong>test2</strong></h3>
+                <h3>
+                    Patch preview <span data-bind="visible: previewItem()">-</span> <strong data-bind="text: previewItem() ? previewItem().name() : ''"></strong>
+                </h3>
+                
                 <div class="pre-container">
                     <pre>
-<code>
-       XmlDocument xml = new XmlDocument();
-xml.LoadXml(myXmlString); // suppose that myXmlString contains "<Names>...</Names>"
-XmlNodeList xnList = xml.SelectNodes("/Names/Name");
-foreach (XmlNode xn in xnList)
-{
-  string firstName = xn["FirstName"].InnerText;
-  string lastName = xn["LastName"].InnerText;
-  Console.WriteLine("Name: {0} {1}", firstName, lastName);
-}
-               XmlDocument xml = new XmlDocument();
-xml.LoadXml(myXmlString); // suppose that myXmlString contains "<Names>...</Names>"
-XmlNodeList xnList = xml.SelectNodes("/Names/Name");
-foreach (XmlNode xn in xnList)
-{
-  string firstName = xn["FirstName"].InnerText;
-  string lastName = xn["LastName"].InnerText;
-  Console.WriteLine("Name: {0} {1}", firstName, lastName);
-}
-               XmlDocument xml = new XmlDocument();
-xml.LoadXml(myXmlString); // suppose that myXmlString contains "<Names>...</Names>"
-XmlNodeList xnList = xml.SelectNodes("/Names/Name");
-foreach (XmlNode xn in xnList)
-{
-  string firstName = xn["FirstName"].InnerText;
-  string lastName = xn["LastName"].InnerText;
-  Console.WriteLine("Name: {0} {1}", firstName, lastName);
-}
-</code>
+<code data-bind="html: previewCode"></code>
 </pre>
                 </div>
             </div>
             <div class="patch-list-container flex-vertical">
                 <div class="flex-header">
                     <h3>Select patch</h3>
-                    <input type="search" class="form-control input-sm patch-filter" placeholder="filter">
+                    <input type="search" class="form-control input-sm patch-filter" data-bind="textInput: filters.searchText" placeholder="filter">
                 </div>
                 <div class="flex-content scroll">
-                    <ul class="patch-list">
+                    <ul class="patch-list" data-bind="foreach: filteredPatches">
                         <li>
-                            <a href="#" class="patch-link">
-                                <span class="name">test2</span>
-                                <span class="modified">2017-01-02</span>
+                            <a href="#" class="patch-link" data-bind="click: $parent.previewPatch">
+                                <span class="name" data-bind="text: name()"></span>
+                                <span class="modified" data-bind="text: modificationDate()"></span>
                             </a>
-                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
-                        </li>
-                        <li>
-                            <a href="#" class="patch-link">
-                                <span class="name">test2</span>
-                                <span class="modified">2017-01-02</span>
-                            </a>
-                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
-                        </li>
-                        <li>
-                            <a href="#" class="patch-link">
-                                <span class="name">test2</span>
-                                <span class="modified">2017-01-02</span>
-                            </a>
-                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
-                        </li>
-                        <li>
-                            <a href="#" class="patch-link">
-                                <span class="name">test2</span>
-                                <span class="modified">2017-01-02</span>
-                            </a>
-                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
-                        </li>
-                        <li>
-                            <a href="#" class="patch-link">
-                                <span class="name">test2</span>
-                                <span class="modified">2017-01-02</span>
-                            </a>
-                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
-                        </li>
-                        <li>
-                            <a href="#" class="patch-link">
-                                <span class="name">test2</span>
-                                <span class="modified">2017-01-02</span>
-                            </a>
-                            <a href="#" class="patch-remove"><i class="icon-trash"></i></a>
+                            <a href="#" data-bind="click: $parent.removePatch" class="patch-remove"><i class="icon-trash"></i></a>
                         </li>
                     </ul>
                 </div>
                 <div class="flex-footer">
                     <div class="text-right">
-                        <button class="btn btn-success btn-sm">Load</button>
+                        <button class="btn btn-success btn-sm close-panel" data-bind="click: usePatch, enable: previewItem()">Load</button>
                     </div>
                 </div>
             </div>
@@ -295,56 +235,17 @@ foreach (XmlNode xn in xnList)
     </div>
 </script>
 
-<!-- TODO  div id="patchContainer" class="no-outline" tabindex="0">
+<!-- TODO  
 
-    <div data-bind="compose: 'common/sectionUnderDevelopment.html'"></div>
 
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
-            <button data-bind="enable: savedPatches().length && !$root.isPatchingInProgress()" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Load a saved patch"> Load <span class="caret"></span></button>
-            <ul class="dropdown-menu" role="menu" data-bind="foreach: savedPatches">
-                <li>
-                    <a href="#" data-bind="click: $root.usePatch.bind($root, $data)">
-                        <span data-bind="text: name()"></span>
-                    </a>
-                </li>
-            </ul>
-            <button class="btn btn-default" title="Save the current patch" data-bind="click: savePatch, enable: patchDocument().script() && !$root.isPatchingInProgress()"><i class="icon-save"></i> <span>Save</span></button>
-        </div>
-
-        <div class="btn-group">
-            <!-- TODO: enable: isExecuteAllowed() && !$root.isPatchingInProgress() && !$root.isMapReduceIndexSelected() --
             <button class="btn btn-default btn-prerelease" disabled title="Test the patch script on the selected document (Alt+T)" data-bind="click: testPatch" accesskey="T"> Test</button>
         </div>
     </div>
     <br />
     <div class="form-horizontal">
-        <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isIndexPatch()">
-            <div class="col-md-9">
-                <div>
-                    <label id="indexQueryLabelContainer" data-placement="auto right" data-original-title="Index Query" data-trigger="hover">
-                        <span id="indexQueryLabel" class="help-cursor">
-                            Query
-                            <small><i class="icon-info"></i></small>
-                        </span>
-                        <a target="_blank" class="control-label-additional-link" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>--Lucene Docs</a>
-                    </label>
-                </div>
-            </div>
-        </div>
-        <div class="form-group">
-            <div class="col-md-9">
-                <div>
-                    <label id="patchScriptsLabelContainer" data-placement="auto right" data-original-title="Patch Scripts" data-trigger="hover">
-                        <span id="patchScriptsLabel" class="help-cursor">
-                            Patch Scripts
-                            <small><i class="icon-info"></i></small>
-                        </span>
-                    </label>
-                </div>
-            </div>
-            
-        </div>
+      
         <div class="form-group patch-preview-flag" data-bind="with: $root" id="beforeAfterContainer">
             <div class="col-md-6">
                 <div>

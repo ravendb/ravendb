@@ -85,6 +85,26 @@ class extensions {
         }
     }
 
+    private static interceptModalsInDropdownPanels(element: HTMLElement) {
+        const $toggle = $(element).parent();
+
+        const onModalClicked = (e: JQueryEventObject) => {
+            // both dropdown and modal are visible, don't hide dropdown when backdrop or modal clicked
+            e.stopPropagation();
+        }
+
+        const onModalShown = () => {
+            $(".modal").click(onModalClicked);
+        };
+
+        $toggle.on('shown.bs.dropdown', () => {
+            $(document).on("shown.bs.modal", onModalShown);
+        });
+        $toggle.on('hidden.bs.dropdown', () => {
+            $(document).off("shown.bs.modal", onModalShown);
+        });
+    }
+
     private static installBindingHandlers() {
       
         ko.bindingHandlers["scrollTo"] = {
@@ -145,7 +165,7 @@ class extensions {
             update: ko.bindingHandlers.value.update
         };
 
-        ko.bindingHandlers["customValidity"] = {
+        ko.bindingHandlers["customValidity"] = { //TODO: remove it and use knockout validation
             update: (element, valueAccessor) => {
                 var errorMessage = ko.unwrap(valueAccessor()); //unwrap to get subscription
                 element.setCustomValidity(errorMessage);
@@ -154,6 +174,8 @@ class extensions {
 
         ko.bindingHandlers["dropdownPanel"] = {
             init: (element) => {
+                extensions.interceptModalsInDropdownPanels(element);
+
                 $(element).on('click', e => {
                     const $target = $(e.target);
 
@@ -181,23 +203,6 @@ class extensions {
                 });
             }
         }
-
-        ko.bindingHandlers["bsChecked"] = {
-            init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
-                var value = valueAccessor();
-                var newValueAccessor = () => {
-                    return {
-                        change() {
-                            value(element.value);
-                        }
-                    }
-                };
-                if ($(element).val() === ko.unwrap(valueAccessor())) {
-                    $(element).closest(".btn").button("toggle");
-                }
-                ko.bindingHandlers.event.init(element, newValueAccessor, allBindingsAccessor, viewModel, bindingContext);
-            }
-        };
 
         var key = "_my_init_key_";
         ko.bindingHandlers["updateHighlighting"] = {

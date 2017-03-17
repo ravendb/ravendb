@@ -51,19 +51,23 @@ class patchDocument extends document {
         };
     }
 
-    /* TODO:
     name(): string {
         return this.__metadata.id.replace('Studio/Patch/', '');
     }
 
-    resetMetadata() {
-        this.__metadata = new documentMetadata();
-        this.__metadata.collection = 'PatchDocuments';
+    modificationDate(): string {
+        return this.__metadata.lastModifiedFullDate();
     }
 
-    clone() {
-        return new patchDocument(this.toDto());
-    }*/
+    copyFrom(incoming: patchDocument) {
+        this.patchOnOption(incoming.patchOnOption());
+        this.selectedItem(incoming.selectedItem());
+        this.__metadata = incoming.__metadata;
+        this.query(incoming.query());
+        this.script(incoming.script());
+        this.patchAll(true);
+        this.__metadata.etag(0);
+    }
 }
 
 export = patchDocument;
