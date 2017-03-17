@@ -67,6 +67,9 @@ namespace Raven.Server.Documents
                 if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
                     return;
 
+                //TODO: Need to change DeletionInProgress to a Dictionary<nodeName,DeletionInProgress> so we can know 
+                //TODO: If a database is been deleted on a specific node and not completely 
+
                 if (record.DeletionInProgress != DeletionInProgressStatus.No)
                 {
                     UnloadDatabase(dbName, null);

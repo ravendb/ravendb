@@ -162,70 +162,93 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
-        public Task DeleteQueryString()
+        [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}&from-node={nodeToDelete:string|optional(null)}")]
+        public async Task DeleteQueryString()
         {
             var names = GetStringValuesQueryString("name");
+            var fromNode = GetStringValuesQueryString("from-node", required: false).Single();
+            var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
+            if (string.IsNullOrEmpty(fromNode) == false)
+            {
+                TransactionOperationContext context;
+                using (ServerStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    context.OpenReadTransaction();
+                    var databaseName = names.Single();
+                    if (ServerStore.Cluster.ReadDatabase(context, $"db/{databaseName}")?.Topology.RelevantFor(fromNode) == false)
+                    {
+                        throw new InvalidOperationException($"Database={databaseName} doesn't reside in node={fromNode} so it can't be deleted from it");
+                    }
+                    var newEtag = await ServerStore.DeleteDatabaseAsync(context, names.Single(), isHardDelete, fromNode);
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-            return DeleteDatabases(names);
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["ETag"] = newEtag
+                        });
+                        writer.Flush();
+                    }
+                }
+            }
+            //return DeleteDatabases(names);
         }
 
         private Task DeleteDatabases(StringValues names)
         {
+          /*  var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
+
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                var results = new List<DynamicJsonValue>();
+                foreach (var name in names)
+                {
+                    var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, ignoreDisabledDatabase: true);
+                    if (configuration == null)
+                    {
+                        results.Add(new DatabaseDeleteResult
+                        {
+                            Name = name,
+                            Deleted = false,
+                            Reason = "database not found"
+                        }.ToJson());
+
+                        continue;
+                    }
+
+                    try
+                    {
+                        DeleteDatabase(name, context, isHardDelete, configuration);
+
+                        results.Add(new DatabaseDeleteResult
+                        {
+                            Name = name,
+                            Deleted = true
+                        }.ToJson());
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Add(new DatabaseDeleteResult
+                        {
+                            Name = name,
+                            Deleted = false,
+                            Reason = ex.Message
+                        }.ToJson());
+                    }
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteArray(context, results, (w, c, result) =>
+                    {
+                        c.Write(w, result);
+                    });
+                }
+            }
+*/
             return Task.CompletedTask;
-            //throw new NotSupportedException();
-            //var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
-
-            //TransactionOperationContext context;
-            //using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            //{
-            //    var results = new List<DynamicJsonValue>();
-            //    foreach (var name in names)
-            //    {
-            //        var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, ignoreDisabledDatabase: true);
-            //        if (configuration == null)
-            //        {
-            //            results.Add(new DatabaseDeleteResult
-            //            {
-            //                Name = name,
-            //                Deleted = false,
-            //                Reason = "database not found"
-            //            }.ToJson());
-
-            //            continue;
-            //        }
-
-            //        try
-            //        {
-            //            DeleteDatabase(name, context, isHardDelete, configuration);
-
-            //            results.Add(new DatabaseDeleteResult
-            //            {
-            //                Name = name,
-            //                Deleted = true
-            //            }.ToJson());
-            //        }
-            //        catch (Exception ex)
-            //        {
-            //            results.Add(new DatabaseDeleteResult
-            //            {
-            //                Name = name,
-            //                Deleted = false,
-            //                Reason = ex.Message
-            //            }.ToJson());
-            //        }
-            //    }
-
-            //    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            //    {
-            //        writer.WriteArray(context, results, (w, c, result) =>
-            //        {
-            //            c.Write(w, result);
-            //        });
-            //    }
-            //}
-
-            //return Task.CompletedTask;
         }
 
         private void DeleteDatabase(string name, TransactionOperationContext context, bool isHardDelete, RavenConfiguration configuration)
