@@ -23,10 +23,10 @@ class checkedColumn implements virtualColumn {
 
     renderCell(item: Object, isSelected: boolean): string {
         if (isSelected) {
-            return `<div class="cell checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox" checked /><label></label></div>`;
+            return `<div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox" checked /><label></label></div></div>`;
         }
 
-        return `<div class="cell checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox" /><label></label></div>`;
+        return `<div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox" /><label></label></div></div>`;
     }
 }
 

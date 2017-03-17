@@ -215,8 +215,11 @@
             top: 3px;
             margin-left: -23px;
             border: 1px solid @gray;
-            background-color: @gray;
+            background-color:transparent;
+            cursor: pointer;
             .transition(~"border 0.15s ease-in-out, color 0.15s ease-in-out, background-color 0.15s ease-in-out");
+
+
         }
 
         &::after {
@@ -228,9 +231,9 @@
             top: 0;
             margin-left: -24px;
             padding-left: 3px;
-            padding-top: 0px;
-            font-size: 15px;
-            color: @gray-light;
+            padding-top: 1px;
+            font-size: 14px;
+            color: @gray-lighter;
         }
     }
 
@@ -244,8 +247,8 @@
         }
 
         &:checked + label::before {
-            border-color:@gray-light;
-            background-color: transparent;
+            border-color:@gray;
+            background-color:@gray;
         }
 
 
@@ -257,11 +260,11 @@
         &:indeterminate + label::after {
             display: block;
             content: " ";
-            width: 11px;
+            width: 12px;
             height: 3px;
-            background-color: #555555;
+            background-color: @gray-light;
             border-radius: 2px;
-            margin-left: -19px;
+            margin-left: -20px;
             margin-top: 12px;
         }
 
@@ -275,27 +278,31 @@
         }
     }
     &.checkbox-table-selector {
-        padding-top: 0px;
-        height: 27px;
         min-height: 0;
-        width: 20px;
-        padding: 0;
+        padding:0;
+        margin:0;
 
         input {
-            margin-left:0;
-            position: absolute;
-            top:0;
-            left:0;
             cursor: pointer;
+            margin-left: 0;
         }
         label {
+            padding-left:0;
+            position:absolute;
+            left:0;
+
             &:after {
                 margin-left: 0;
             }
             &:before {
-                margin-left: 0;
-                cursor: pointer;
+                margin-top: 5px; 
+                margin-left: 0;                
             }
+        }
+
+        input[type="checkbox"]:indeterminate + label::after {
+            margin-left: 4px;
+            margin-top: 16px;
         }
     }
 
