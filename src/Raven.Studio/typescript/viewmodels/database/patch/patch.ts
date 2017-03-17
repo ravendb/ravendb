@@ -8,6 +8,7 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import jsonUtil = require("common/jsonUtil");
+import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");
@@ -28,8 +29,80 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import executeBulkDocsCommand = require("commands/database/documents/executeBulkDocsCommand");
 import popoverUtils = require("common/popoverUtils");
+import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
+
+class patchList {
+
+    previewItem = ko.observable<patchDocument>();
+
+    private allPatches = ko.observableArray<patchDocument>([]);
+
+    private readonly useHandler: (patch: patchDocument) => void;
+    private readonly removeHandler: (patch: patchDocument) => void;
+
+    hasAnySavedPatch = ko.pureComputed(() => this.allPatches().length > 0);
+
+    previewCode = ko.pureComputed(() => {
+        const item = this.previewItem();
+        if (!item) {
+            return "";
+        }
+
+        return Prism.highlight(item.script(), (Prism.languages as any).javascript);
+    });
+
+    constructor(useHandler: (patch: patchDocument) => void, removeHandler: (patch: patchDocument) => void) {
+        _.bindAll(this, ...["previewPatch", "removePatch", "usePatch"] as Array<keyof this>);
+        this.useHandler = useHandler;
+        this.removeHandler = removeHandler;
+    }
+
+    filteredPatches = ko.pureComputed(() => {
+        let text = this.filters.searchText();
+
+        if (!text) {
+            return this.allPatches();
+        }
+
+        text = text.toLowerCase();
+
+        return this.allPatches().filter(x => x.name().toLowerCase().includes(text));
+    });
+
+    filters = {
+        searchText: ko.observable<string>()
+    }
+
+    previewPatch(item: patchDocument) {
+        this.previewItem(item);
+    }
+
+    usePatch() {
+        this.useHandler(this.previewItem());
+    }
+
+    removePatch(item: patchDocument) {
+        if (this.previewItem() === item) {
+            this.previewItem(null);
+        }
+        this.removeHandler(item);
+    }
+
+    loadAll(db: database) {
+        return new getPatchesCommand(db)
+            .execute()
+            .done((patches: patchDocument[]) => {
+                this.allPatches(patches);
+
+                if (this.filteredPatches().length) {
+                    this.previewItem(this.filteredPatches()[0]);
+                }
+            });
+    }
+}
+
 
 class patch extends viewModelBase {
 
@@ -59,6 +132,8 @@ class patch extends viewModelBase {
     runPatchValidationGroup: KnockoutValidationGroup;
     runQueryValidationGroup: KnockoutValidationGroup;
     savePatchValidationGroup: KnockoutValidationGroup;
+
+    savedPatches = new patchList(item => this.usePatch(item), item => this.removePatch(item));
 
     private hideSavePatchHandler = (e: Event) => {
         if ($(e.target).closest(".patch-save").length === 0) {
@@ -123,11 +198,14 @@ class patch extends viewModelBase {
         });
 
         this.inSaveMode.subscribe(enabled => {
+            const $input = $(".patch-save .form-control");
             if (enabled) {
+                $input.show();
                 window.addEventListener("click", this.hideSavePatchHandler, true);
             } else {
                 this.savePatchValidationGroup.errors.showAllMessages(false);
                 window.removeEventListener("click", this.hideSavePatchHandler, true);
+                setTimeout(() => $input.hide(), 200);
             }
         });
     }
@@ -136,9 +214,7 @@ class patch extends viewModelBase {
         super.activate(recentPatchHash);
         this.updateHelpLink("QGGJR5");
 
-        //TODO: fetch all patches
-
-        return $.when<any>(this.fetchAllCollections(), this.fetchAllIndexes());
+        return $.when<any>(this.fetchAllCollections(), this.fetchAllIndexes(), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     attached() {
@@ -226,6 +302,25 @@ class patch extends viewModelBase {
         queryUtil.queryCompleter(this.indexFields, this.patchDocument().selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
     }
 
+    usePatch(item: patchDocument) {
+        this.patchDocument().copyFrom(item);
+    }
+
+    removePatch(item: patchDocument) {
+        this.confirmationMessage("Patch", `Are you sure you want to delete patch '${item.name()}'?`, ["Cancel", "Delete"])
+            .done(result => {
+                if (result.can) {
+                    new deleteDocumentsCommand([item.getId()], this.activeDatabase())
+                        .execute()
+                        .done(() => {
+                            messagePublisher.reportSuccess("Deleted patch " + item.name());
+                            this.savedPatches.loadAll(this.activeDatabase());
+                        })
+                        .fail(response => messagePublisher.reportError("Failed to delete " + item.name(), response.responseText, response.statusText));
+                }
+            });
+    }
+
     runQuery(): void {
         if (this.isValid(this.runQueryValidationGroup)) {
             const selectedIndex = this.patchDocument().selectedItem();
@@ -287,12 +382,13 @@ class patch extends viewModelBase {
                         this.inSaveMode(false);
                         this.patchSaveName("");
                         this.savePatchValidationGroup.errors.showAllMessages(false);
-
-                        //TODO: reload all patches
+                        this.savedPatches.loadAll(this.activeDatabase());
                     });
             }
         } else {
-            this.inSaveMode(true);
+            if (this.isValid(this.runPatchValidationGroup)) {
+                this.inSaveMode(true);    
+            }
         }
     }
 
@@ -538,12 +634,6 @@ class patch extends viewModelBase {
         if (recentPatchHash) {
             this.selectInitialPatch(recentPatchHash);
         }
-    }
-
-    private fetchAllPatches() {
-        new getPatchesCommand(this.activeDatabase())
-            .execute()
-            .done((patches: patchDocument[]) => this.savedPatches(patches));
     }
 
     detached() {
