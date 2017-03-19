@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Tests.Infrastructure;
 using Xunit;
@@ -45,7 +46,7 @@ namespace SlowTests.Server.Rachis
             Assert.True(numberOfInstances == replicationFactor, $"Expected replicationFactor={replicationFactor} but got {numberOfInstances}");
         }
 
-        [Fact (Skip = "Need to fix the way we delete a database from a single node")]
+        [Fact(Skip = "Need to fix topology cache, we are accessing the same node every time")]
         public async Task CanDeleteDatabaseFromASpecificNodeInTheCluster()
         {
             NoTimeouts();
@@ -70,11 +71,12 @@ namespace SlowTests.Server.Rachis
                 serverTagToBeDeleted = databaseResult.Topology.Members.First();
                 deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete:true,fromNode: serverTagToBeDeleted));
             }
-            
+
             int numberOfInstances = 0;
             foreach (var server in Servers)
             {
-                await server.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, deleteResult.ETag);
+                //TODO: this is failing because fetching topology from cache is probably fetching from the same location
+                await server.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.ETag);
                 using (var store = new DocumentStore() { Url = server.WebUrls[0], DefaultDatabase = databaseName }.Initialize())
                 {
                     if (store.Admin.Server.Send(new GetDatabaseNamesOperation(0, 100)).Contains(databaseName))

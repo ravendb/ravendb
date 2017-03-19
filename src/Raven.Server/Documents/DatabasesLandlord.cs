@@ -64,12 +64,6 @@ namespace Raven.Server.Documents
                     return;
                 }
 
-                if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
-                    return;
-
-                //TODO: Need to change DeletionInProgress to a Dictionary<nodeName,DeletionInProgress> so we can know 
-                //TODO: If a database is been deleted on a specific node and not completely 
-
                 DeletionInProgressStatus deletionInProgress;
                 if (record.DeletionInProgress != null && 
                     record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
@@ -79,7 +73,7 @@ namespace Raven.Server.Documents
 
                     if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                     {
-                        var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true);
+                        var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true);
                         DatabaseHelper.DeleteDatabaseFiles(configuration);
                     }
 
@@ -90,6 +84,9 @@ namespace Raven.Server.Documents
 
                     return;
                 }
+
+                if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
+                    return;
 
                 if (record.Disabled)
                 {
@@ -348,7 +345,7 @@ namespace Raven.Server.Documents
             serverStore.DatabaseInfoCache.Delete(database.Name);
         }
 
-        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false)
+        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false)
         {
             if (databaseName.IsNullOrWhiteSpace())
                 throw new ArgumentNullException(nameof(databaseName), "Database name cannot be empty");
@@ -368,16 +365,18 @@ namespace Raven.Server.Documents
 
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
 
-                if (databaseRecord.Disabled)
+                if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
                     throw new DatabaseDisabledException(databaseName + " has been disabled");
 
                 DeletionInProgressStatus deletionInProgress;
-                if (databaseRecord.DeletionInProgress != null &&
-                    databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
-                    deletionInProgress != DeletionInProgressStatus.No)
+                var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
+                                            databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                                            deletionInProgress != DeletionInProgressStatus.No;
+                if (ignoreBeenDeleted == false && databaseIsBeenDeleted)
                     throw new DatabaseDisabledException(databaseName + " is currently being deleted on " + _serverStore.NodeTag);
 
-                if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false)
+                if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
+                    databaseIsBeenDeleted == false)
                     // TODO: need to handle this properly, need to redirect to somewhere it is on
                     throw new InvalidOperationException(databaseName + " is not relevant for " + _serverStore.NodeTag);
                 return CreateConfiguration(databaseName, databaseRecord);

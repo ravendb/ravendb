@@ -19,6 +19,26 @@ namespace Raven.Client.Documents
                    Watchers.Contains(nodeTag);
         }
 
+        public IEnumerable<string> AllNodes
+        {
+            get
+
+            {
+                foreach (var member in Members)
+                {
+                    yield return member;
+                }
+                foreach (var member in Promotables)
+                {
+                    yield return member;
+                }
+                foreach (var member in Watchers)
+                {
+                    yield return member;
+                }
+            }
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
