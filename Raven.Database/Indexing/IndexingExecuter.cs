@@ -1055,15 +1055,23 @@ namespace Raven.Database.Indexing
                         var doc = filteredDoc.Doc;
                         var json = filteredDoc.Json;
 
-                        if (defaultPrefetchingBehavior.FilterDocuments(doc) == false
-                            || doc.Etag.CompareTo(indexToWorkOn.LastIndexedEtag) <= 0)
-                            continue;
-
-                        // did we already indexed this document in this index?
-
                         var etag = doc.Etag;
                         if (etag == null)
                             continue;
+
+                        // did we already indexed this document in this index?
+                        if (defaultPrefetchingBehavior.FilterDocuments(doc) == false
+                            || etag.CompareTo(indexToWorkOn.LastIndexedEtag) <= 0)
+                        {
+                            if (Log.IsDebugEnabled)
+                            {
+                                var skipReason = defaultPrefetchingBehavior.FilterDocuments(doc) == false ?
+                                    "document was deleted" : 
+                                    $"document was already indexed (etag: {doc.Etag}, last indexed: {indexToWorkOn.LastIndexedEtag})";
+                                Log.Debug($"Skipping indexing of document {doc.Key}, Reason: {skipReason}");
+                            }
+                            continue;
+                        }
 
                         // is the Raven-Entity-Name a match for the things the index executes on?
                         if (viewGenerator.ForEntityNames.Count != 0 &&
