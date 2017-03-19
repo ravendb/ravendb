@@ -441,12 +441,7 @@ namespace Raven.Server
                     {
                         _tcpLogger.Info("Failure when processing tcp connection", e);
                     }
-                }
-                finally
-                {
-                    tcp?.Dispose();
-                }
-
+                }               
             });
         }
 
