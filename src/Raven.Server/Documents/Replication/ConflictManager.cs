@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Replication
 
         public void HandleConflictForDocument(
             DocumentsOperationContext documentsContext,
-            IncomingReplicationHandler.ReplicationDocumentsPositions docPosition,
+            IncomingReplicationHandler.ReplicationItem docPosition,
             BlittableJsonReaderObject doc,
             ChangeVectorEntry[] changeVector,
             ChangeVectorEntry[] otherChangeVector
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Replication
 
         private bool TryResovleConflictByScript(
             DocumentsOperationContext documentsContext,
-            IncomingReplicationHandler.ReplicationDocumentsPositions docPosition,
+            IncomingReplicationHandler.ReplicationItem docPosition,
             ChangeVectorEntry[] incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Replication
 
         private bool TryResolveUsingDefaultResolver(
             DocumentsOperationContext context,
-            IncomingReplicationHandler.ReplicationDocumentsPositions docPosition,
+            IncomingReplicationHandler.ReplicationItem docPosition,
             ChangeVectorEntry[] incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Replication
                 localDocumentTuple.Item2 != null);
         }
 
-        private void HandleHiloConflict(DocumentsOperationContext context, IncomingReplicationHandler.ReplicationDocumentsPositions docPosition,
+        private void HandleHiloConflict(DocumentsOperationContext context, IncomingReplicationHandler.ReplicationItem docPosition,
             BlittableJsonReaderObject doc)
         {
             long highestMax;
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Replication
             _database.DocumentsStorage.Put(context, docPosition.Id, null, resolvedHiLoDoc);
         }
 
-        private static void InvalidConflictWhenThereIsNone(IncomingReplicationHandler.ReplicationDocumentsPositions docPosition)
+        private static void InvalidConflictWhenThereIsNone(IncomingReplicationHandler.ReplicationItem docPosition)
         {
             throw new InvalidDataException(
                 $"Conflict detected on {docPosition.Id} but there are no conflicts / docs / tombstones for this document");

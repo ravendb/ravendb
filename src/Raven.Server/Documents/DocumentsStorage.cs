@@ -1794,7 +1794,7 @@ namespace Raven.Server.Documents
 
         public void AddConflict(
             DocumentsOperationContext context,
-            IncomingReplicationHandler.ReplicationDocumentsPositions docPositions,
+            IncomingReplicationHandler.ReplicationItem docPositions,
             BlittableJsonReaderObject incomingDoc,
             ChangeVectorEntry[] incomingChangeVector,
             string incomingTombstoneCollection)
