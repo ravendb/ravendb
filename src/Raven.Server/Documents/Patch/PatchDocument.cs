@@ -8,6 +8,7 @@ using Jint.Parser;
 using Jint.Runtime;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Json;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -147,7 +148,7 @@ namespace Raven.Server.Documents.Patch
             }
             else
             {
-                if (document.Data.Equals(modifiedDocument) == false)
+                if (BlittableOperation.FastCompare(documentKey, document.Data, modifiedDocument) == false) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
                 {
                     putResult = _database.DocumentsStorage.Put(context, document.Key, document.Etag, modifiedDocument);
                     result.Status = PatchStatus.Patched;
