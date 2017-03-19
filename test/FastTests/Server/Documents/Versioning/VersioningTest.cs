@@ -43,8 +43,8 @@ namespace FastTests.Server.Documents.Versioning
                         },
                     }
                 };
-                var entityToBlittable = new EntityToBlittable(null);
-                await serverStore.PutEditVersioningCommandAsync(context, database, entityToBlittable.ConvertEntityToBlittable(versioningDoc, DocumentConventions.Default, context));                               
+
+                await serverStore.PutEditVersioningCommandAsync(context, database, EntityToBlittable.ConvertEntityToBlittable(versioningDoc, DocumentConventions.Default, context));                               
             }           
         }
     }

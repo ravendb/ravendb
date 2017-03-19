@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConventions conventions, JsonOperationContext context, DocumentInfo documentInfo = null)
+        public static BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConventions conventions, JsonOperationContext context, DocumentInfo documentInfo = null)
         {
             using (var writer = new BlittableJsonWriter(context, documentInfo))
             {
