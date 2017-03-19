@@ -592,6 +592,32 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void ReadExactly(long size, FileStream file)
+        {
+            while (size > 0)
+            {
+                var available = _connectionOptions.PinnedBuffer.Valid - _connectionOptions.PinnedBuffer.Used;
+                if (available == 0)
+                {
+                    var read = _connectionOptions.Stream.Read(_connectionOptions.PinnedBuffer.Buffer.Array,
+                      _connectionOptions.PinnedBuffer.Buffer.Offset,
+                      _connectionOptions.PinnedBuffer.Buffer.Count);
+                    if (read == 0)
+                        throw new EndOfStreamException();
+
+                    _connectionOptions.PinnedBuffer.Valid = read;
+                    _connectionOptions.PinnedBuffer.Used = 0;
+                    continue;
+                }
+                var min = (int)Math.Min(size, available);
+                file.Write(_connectionOptions.PinnedBuffer.Buffer.Array, 
+                    _connectionOptions.PinnedBuffer.Buffer.Offset + _connectionOptions.PinnedBuffer.Used, 
+                    min);
+                _connectionOptions.PinnedBuffer.Used += min;
+                size -= min;
+            }
+        }
+
         private unsafe void ReadExactly(int size, ref UnmanagedWriteBuffer into)
         {
             while(size > 0)
@@ -938,23 +964,8 @@ namespace Raven.Server.Documents.Replication
 
                 var streamLength = *(long*)ReadExactly(sizeof(long));
                 attachment.FileDispose = _database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachment.File);
-
-                JsonOperationContext.ManagedPinnedBuffer buffer;
-                using (context.GetManagedBuffer(out buffer))
-                {
-                    while (streamLength != 0)
-                    {
-                        var count = _connectionOptions.Stream.Read(buffer.Buffer.Array,
-                            buffer.Buffer.Offset,
-                            (int)Math.Min(buffer.Buffer.Count, streamLength));
-                        if (count == 0)
-                            break;
-
-                        attachment.File.Write(buffer.Buffer.Array, buffer.Buffer.Offset, count);
-                        streamLength -= count;
-                    }
-                }
-
+                ReadExactly(streamLength, attachment.File);
+                
                 attachment.File.Position = 0;
                 _replicatedAttachmentStreams.Add(attachment);
             }

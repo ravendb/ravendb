@@ -468,8 +468,7 @@ namespace Raven.Server.Documents.Replication
                 long readPos = 0;
                 while (readPos < item.Stream.Length)
                 {
-                    var partialStreamLength = (int)Math.Min(item.Stream.Length - readPos, int.MaxValue);
-                    var sizeToCopy = Math.Min(partialStreamLength, _tempBuffer.Length - tempBufferPos);
+                    var sizeToCopy = (int)Math.Min(item.Stream.Length - readPos, _tempBuffer.Length - tempBufferPos);
                     if (sizeToCopy == 0) // buffer is full, need to flush it
                     {
                         _stream.Write(_tempBuffer, 0, tempBufferPos);
