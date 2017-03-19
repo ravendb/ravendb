@@ -10,7 +10,7 @@ using Xunit;
 
 namespace FastTests.Sparrow
 {
-    public class EncryptionTests
+    public class EncryptionTests : NoDisposalNeeded
     {
         [Fact(Skip = "Need to fix dll loading")]
         public void EncryptAndDecryptWithAdditionalData()
