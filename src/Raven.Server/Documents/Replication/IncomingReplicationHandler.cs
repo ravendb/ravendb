@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Replication
                 switch (messageType)
                 {
                     case ReplicationMessageType.Documents:
-                        HandleReceivedDocumentBatch(documentsContext, message, _lastDocumentEtag);
+                        HandleReceivedDocumentsAndAttachmentsBatch(documentsContext, message, _lastDocumentEtag);
                         break;
                     case ReplicationMessageType.IndexesTransformers:
                         HandleReceivedIndexOrTransformerBatch(configurationContext, message, _lastIndexOrTransformerEtag);
@@ -275,10 +275,10 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleReceivedIndexOrTransformerBatch(TransactionOperationContext configurationContext, BlittableJsonReaderObject message, long lastIndexOrTransformerEtag)
         {
-            int itemCount;
-            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemCount))
-                throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
-            var replicatedIndexTransformerCount = itemCount;
+            int itemsCount;
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemsCount))
+                throw new InvalidDataException("Expected the 'ItemsCount' field, but had no numeric field of this value, this is likely a bug");
+            var replicatedIndexTransformerCount = itemsCount;
 
             if (replicatedIndexTransformerCount <= 0)
                 return;
@@ -287,17 +287,17 @@ namespace Raven.Server.Documents.Replication
             OnIndexesAndTransformersReceived(this);
         }
 
-        private void HandleReceivedDocumentBatch(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message, long lastDocumentEtag)
+        private void HandleReceivedDocumentsAndAttachmentsBatch(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message, long lastDocumentEtag)
         {
-            int itemCount;
-            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemCount))
+            int itemsCount;
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemsCount))
                 throw new InvalidDataException(
-                    "Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
+                    "Expected the 'ItemsCount' field, but had no numeric field of this value, this is likely a bug");
 
             int attachmentStreamCount;
             if (!message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out attachmentStreamCount))
                 throw new InvalidDataException(
-                    "Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
+                    "Expected the 'AttachmentStreamsCount' field, but had no numeric field of this value, this is likely a bug");
 
             string resovlerId;
             int? resolverVersion;
@@ -312,10 +312,10 @@ namespace Raven.Server.Documents.Replication
                 RecievedTime = DateTime.UtcNow,
                 Source = FromToString,
                 RecievedEtag = lastDocumentEtag,
-                ItemsCount = itemCount,
+                ItemsCount = itemsCount,
                 AttachmentStreamsCount = attachmentStreamCount,
             };
-            ReceiveSingleDocumentsBatch(documentsContext, itemCount, lastDocumentEtag);
+            ReceiveSingleDocumentsBatch(documentsContext, itemsCount, lastDocumentEtag);
             IncomingStats.DoneReplicateTime = DateTime.UtcNow;
             _parent.RepliactionStats.Add(IncomingStats);
             OnDocumentsReceived(this);
@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe void ReceiveSingleIndexAndTransformersBatch(
             TransactionOperationContext configurationContext,
-            int itemCount,
+            int itemsCount,
             long lastEtag)
         {
             var sw = Stopwatch.StartNew();
@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.Replication
             // this will read the indexes to memory from the network
             try
             {
-                ReadIndexesTransformersFromSource(ref writeBuffer, itemCount);
+                ReadIndexesTransformersFromSource(ref writeBuffer, itemsCount);
             }
             catch (Exception e)
             {
@@ -350,7 +350,7 @@ namespace Raven.Server.Documents.Replication
 
                 if (_log.IsInfoEnabled)
                     _log.Info(
-                        $"Replication connection {FromToString}: received {itemCount:#,#;;0} indexes and transformers with size {totalSize/1024:#,#;;0} kb to database in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        $"Replication connection {FromToString}: received {itemsCount:#,#;;0} indexes and transformers with size {totalSize/1024:#,#;;0} kb to database in {sw.ElapsedMilliseconds:#,#;;0} ms.");
                 var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
                 using (var tx = configurationContext.OpenReadTransaction())
                 {
@@ -554,10 +554,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void ReadIndexesTransformersFromSource(ref UnmanagedWriteBuffer writeBuffer, int itemCount)
+        private unsafe void ReadIndexesTransformersFromSource(ref UnmanagedWriteBuffer writeBuffer, int itemsCount)
         {
             _replicatedIndexesAndTransformers.Clear();
-            for (int x = 0; x < itemCount; x++)
+            for (int x = 0; x < itemsCount; x++)
             {
                 var curItem = new ReplicationIndexOrTransformerPositions
                 {
@@ -1104,9 +1104,8 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (_incoming._log.IsInfoEnabled)
                         _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {attachment.Name}, with key = {Encoding.UTF8.GetString(attachment.LoweredKey)}");
-                    // TODO: Fix this code, it isn't a good idea AT ALL
-                    database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, attachment.LoweredKey, attachment.Name, attachment.ContentType,
-                        attachment.Base64Hash, attachment.TransactionMarker);
+                    database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, attachment.LoweredKey, attachment.Name, 
+                        attachment.ContentType, attachment.Base64Hash, attachment.TransactionMarker);
                 }
 
                 database.DocumentsStorage.SetDatabaseChangeVector(context,
