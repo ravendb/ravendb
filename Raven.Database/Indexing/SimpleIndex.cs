@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -97,6 +96,11 @@ namespace Raven.Database.Indexing
                         {
                             using (StopwatchScope.For(deleteExistingDocumentsDuration))
                             {
+                                if (logIndexing.IsDebugEnabled)
+                                {
+                                    logIndexing.Debug($"Removing document id: '{documentId}' from index {PublicName}");
+                                }
+
                                 indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
                             }
                         }
@@ -168,6 +172,17 @@ namespace Raven.Database.Indexing
                                 // ReSharper disable once RedundantBoolCompare --> code clarity
                                 if (indexingResult.NewDocId == null || indexingResult.ShouldSkip != false)
                                 {
+                                    if (logIndexing.IsDebugEnabled)
+                                    {
+                                        var skipReason = indexingResult.NewDocId == null ?
+                                            "document id is null" :
+                                            $"number of indexed fields is {indexingResult.Fields.Count}";
+
+                                        logIndexing.Debug($"Skipping indexing of document id: '{indexingResult.NewDocId}'" +
+                                                          $"for index '{PublicName}', " +
+                                                          $"Reason: {skipReason}, Document: {partition.Current}");
+                                    }
+                                        
                                     continue;
                                 }
                                 if (currentDocId != indexingResult.NewDocId)
