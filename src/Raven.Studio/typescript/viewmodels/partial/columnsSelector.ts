@@ -151,7 +151,7 @@ class columnsSelector<T> {
         this.defaultColumnsProvider = defaultColumnsProvider;
         this.availableColumnsProvider = availableColumnsProvider;
 
-        //TODO: restore custom colums (if any)
+        //TODO: restore custom colums (if any) - optionally introduce option to disallow customization - make sure it works properly with required columns
 
         this.grid.init((s, t) => this.onFetch(s, t), (w, r) => this.provideColumns(w, r));
     }

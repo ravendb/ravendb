@@ -30,8 +30,14 @@ import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/provi
 import executeBulkDocsCommand = require("commands/database/documents/executeBulkDocsCommand");
 import popoverUtils = require("common/popoverUtils");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import columnsSelector = require("viewmodels/partial/columnsSelector");
+import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
-type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
+
+type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
 class patchList {
 
@@ -115,6 +121,9 @@ class patch extends viewModelBase {
 
     gridController = ko.observable<virtualGridController<document>>(); //TODO: column preview, custom columns?
     private documentsProvider: documentBasedColumnsProvider;
+    private columnPreview = new columnPreviewPlugin<document>();
+    columnsSelector = new columnsSelector<document>(); //TODO: refesh on selected item changed
+    private fullDocumentsProvider: documentPropertyProvider;
     private fetcher = ko.observable<fetcherType>();
 
     patchDocument = ko.observable<patchDocument>(patchDocument.empty());
@@ -193,7 +202,10 @@ class patch extends viewModelBase {
         });
 
         this.patchDocument().patchAll.subscribe((patchAll) => {
-            this.documentsProvider.showRowSelectionCheckbox = !patchAll;
+            this.documentsProvider.showRowSelectionCheckbox = !patchAll; //TODO: should we have to always set to true?
+
+            //TODO: if has custom layout just toggle checkbox? 
+
             this.gridController().reset(true);
         });
 
@@ -213,6 +225,8 @@ class patch extends viewModelBase {
     activate(recentPatchHash?: string) {
         super.activate(recentPatchHash);
         this.updateHelpLink("QGGJR5");
+
+        this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
         return $.when<any>(this.fetchAllCollections(), this.fetchAllIndexes(), this.savedPatches.loadAll(this.activeDatabase()));
     }
@@ -259,7 +273,39 @@ class patch extends viewModelBase {
         });
 
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetcher() ? this.fetcher()(s, t) : fakeFetcher(s, t), (w, r) => this.documentsProvider.findColumns(w, r));
+
+        const allColumnsProvider = (results: pagedResultWithAvailableColumns<document>) => {
+            const selectedItem = this.patchDocument().selectedItem();
+            if (!selectedItem || this.patchDocument().patchOnOption() === "Document" || !this.fetcher()) {
+                return [];
+            }
+
+            switch (this.patchDocument().patchOnOption()) {
+                case "Document":
+                    return [];
+                case "Index":
+                    return documentBasedColumnsProvider.extractUniquePropertyNames(results);
+                case "Collection":
+                    return results.availableColumns;
+            }
+        }
+
+        this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetcher() ? this.fetcher()(s, t, previewCols, fullCols) : fakeFetcher(s, t, [], []),
+            (w, r) => this.documentsProvider.findColumns(w, r),
+            allColumnsProvider);
+
+        this.columnPreview.install(".patch-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+            if (column instanceof textColumn) {
+                this.fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
+                    const json = JSON.stringify(v, null, 4);
+                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    onValue(html);
+                }, error => {
+                    const html = Prism.highlight("Unable to generate column preview: " + error.toString(), (Prism.languages as any).javascript);
+                    onValue(html);
+                });
+            }
+        });
 
         this.fetcher.subscribe(() => grid.reset());
     }
@@ -268,8 +314,8 @@ class patch extends viewModelBase {
         this.fetcher(null);
 
         const patchDoc = this.patchDocument();
-        patchDoc.patchOnOption(option);
         patchDoc.selectedItem(null);
+        patchDoc.patchOnOption(option);
         patchDoc.patchAll(option === "Index" || option === "Collection");
 
         if (option !== "Index") {
@@ -284,13 +330,17 @@ class patch extends viewModelBase {
         patchDoc.selectedItem(indexName);
         patchDoc.patchAll(true);
 
+        this.columnsSelector.reset();
+
         queryUtil.fetchIndexFields(this.activeDatabase(), indexName, this.indexFields);
 
         this.runQuery();
     }
 
     useCollection(collectionToUse: collection) {
-        const fetcher = (skip: number, take: number) => collectionToUse.fetchDocuments(skip, take);
+        this.columnsSelector.reset();
+
+        const fetcher = (skip: number, take: number, previewCols: string[], fullCols: string[]) => collectionToUse.fetchDocuments(skip, take, previewCols, fullCols);
         this.fetcher(fetcher);
 
         const patchDoc = this.patchDocument();
@@ -303,7 +353,23 @@ class patch extends viewModelBase {
     }
 
     usePatch(item: patchDocument) {
-        this.patchDocument().copyFrom(item);
+        const patchDoc = this.patchDocument();
+
+        //TODO: handle case when saved patch has collection which no longer exist, or index which is not available
+
+        patchDoc.copyFrom(item);
+
+        switch (patchDoc.patchOnOption()) {
+            case "Index":
+                this.useIndex(patchDoc.selectedItem());
+                break;
+            case "Collection":
+                const matchedCollection = this.collections().find(x => x.name === patchDoc.selectedItem());
+                if (matchedCollection) {
+                    this.useCollection(matchedCollection);
+                }
+                break;
+        }
     }
 
     removePatch(item: patchDocument) {
@@ -497,14 +563,10 @@ class patch extends viewModelBase {
 
     beforePatch: KnockoutComputed<string>;
     beforePatchDoc = ko.observable<string>();
-    beforePatchMeta = ko.observable<string>();
-    beforePatchDocMode = ko.observable<boolean>(true);
     beforePatchEditor: AceAjax.Editor;
 
     afterPatch = ko.observable<string>();
     afterPatchDoc = ko.observable<string>();
-    afterPatchMeta = ko.observable<string>();
-    afterPatchDocMode = ko.observable<boolean>(true);
     afterPatchEditor: AceAjax.Editor;
 
     loadedDocuments = ko.observableArray<string>();
@@ -551,41 +613,6 @@ class patch extends viewModelBase {
             },
             owner: this
         });
-
-        // Refetch the index fields whenever the selected index name changes.
-        this.selectedIndex
-            .subscribe(indexName => {
-                if (indexName) {
-                    this.fetchIndexFields(indexName);
-                }
-            });
-
-        this.indicesToSelect = ko.computed(() => {
-            var indicies = this.indices();
-            var patchDocument = this.patchDocument();
-            if (indicies.length === 0 || !patchDocument)
-                return [];
-
-            return indicies.filter(x => x.name !== patchDocument.selectedItem());
-        });
-
-        this.collectionToSelect = ko.computed(() => {
-            var collections = this.collections();
-            var patchDocument = this.patchDocument();
-            if (collections.length === 0 || !patchDocument)
-                return [];
-
-            return collections.filter((x: collection) => x.name !== patchDocument.selectedItem());
-        });
-
-        this.showDocumentsPreview = ko.computed(() => {
-            if (!this.patchDocument()) {
-                return false;
-            }
-            var indexPath = this.patchDocument().isIndexPatch();
-            var collectionPath = this.patchDocument().isCollectionPatch();
-            return indexPath || collectionPath;
-        });
     }
 
     compositionComplete() {
@@ -601,7 +628,6 @@ class patch extends viewModelBase {
             this.afterPatchEditor = ko.utils.domData.get(afterPatchEditorElement[0], "aceEditor");
         }
        
-
         grid.selection.subscribe(selection => {
             if (selection.count === 1) {
                 var document = selection.included[0];
@@ -617,7 +643,6 @@ class patch extends viewModelBase {
     }
 
     activate(recentPatchHash?: string) {
-
         this.isExecuteAllowed = ko.computed(() => !!this.patchDocument().script() && !!this.beforePatchDoc());
         this.keyOfTestedDocument = ko.computed(() => {
             switch (this.patchDocument().patchOnOption()) {
@@ -628,8 +653,6 @@ class patch extends viewModelBase {
                     return this.patchDocument().selectedItem();
             }
         });
-
-        this.fetchAllPatches();
 
         if (recentPatchHash) {
             this.selectInitialPatch(recentPatchHash);
@@ -661,31 +684,6 @@ class patch extends viewModelBase {
         this.putDocuments([]);
         this.loadedDocuments([]);
         this.outputLog([]);
-    }
-
-    private usePatch(patch: patchDocument) {
-        this.clearDocumentPreview();
-        var selectedItem = patch.selectedItem();
-        patch = patch.clone();
-        patch.resetMetadata();
-        this.patchDocument(patch);
-        switch (this.patchDocument().patchOnOption()) {
-            case "Collection":
-                this.fetchAllCollections().then(() => {
-                    this.setSelectedCollection(this.collections().filter(coll => (coll.name === selectedItem))[0]);
-                });
-                break;
-            case "Index":
-                this.fetchAllIndexes().then(() => {
-                    this.setSelectedIndex(selectedItem);
-                    this.queryText(patch.query());
-                    this.runQuery();
-                });
-                break;
-            case "Document":
-                this.loadDocumentToTest(patch.selectedItem());
-                break;
-        }
     }
 
     testPatch() {
@@ -730,39 +728,7 @@ class patch extends viewModelBase {
         this.putDocuments((actions.PutDocument || []).map(doc => jsonUtil.syntaxHighlight(doc)));
     }
 
-    private updateDocumentsList() {
-        switch (this.patchDocument().patchOnOption()) {
-            case "Collection":
-                this.fetchAllCollections().then(() => {
-                    this.setSelectedCollection(this.collections().filter(coll => (coll.name === this.patchDocument().selectedItem()))[0]);
-                });
-                break;
-            case "Index":
-                this.useIndex(this.patchDocument().selectedItem());
-                break;
-        }
-    }
-
-    activateBeforeDoc() {
-        this.beforePatchDocMode(true);
-    }
-
-    activateBeforeMeta() {
-        this.beforePatchDocMode(false);
-    }
-
-    activateAfterDoc() {
-        this.afterPatchDocMode(true);
-    }
-
-    activateAfterMeta() {
-        this.afterPatchDocMode(false);
-    }
-
-    selectedIndex = ko.observable<string>();
     isTestIndex = ko.observable<boolean>(false);
-
-   
     }*/
 }
 

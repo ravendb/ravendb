@@ -112,9 +112,22 @@
                     </div>
                 </div>
                 <div data-bind="visible: !isDocumentMode()">
+                    <div class="clearfix">
+                        <div class="pull-right">
+                            <div class="btn-group dropdown-right">
+                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                    <i class="icon-table"></i><span>Display</span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+                                    <div data-bind="compose: $root.columnsSelector"></div>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                     <label class="control-label col-sm-3 col-lg-2">Matching documents</label>
                     <div class="col-sm-9 col-lg-10" style="height: 300px">
-                        <virtual-grid class="resizable" params="controller: $root.gridController"></virtual-grid>
+                        <virtual-grid class="resizable patch-grid" params="controller: $root.gridController"></virtual-grid>
                     </div>
                 </div>
             </div>
@@ -161,7 +174,9 @@
     </div>
 </div>
 <div class="backdrop btn-toggle" data-target="body" data-class="show-test"></div><!-- TODO: -->
-
+<div class="tooltip" style="opacity: 0">
+    <pre><code></code></pre>
+</div>
 <script type="text/html" id="test-component">
     <div class="panel">
         <div class="padding">
