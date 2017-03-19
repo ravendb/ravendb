@@ -925,7 +925,7 @@ namespace Raven.Server.Documents.Replication
 
                 curDoc.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
 
-                curDoc.Flags = *(DocumentFlags*)ReadExactly(sizeof(DocumentFlags));
+                curDoc.Flags = *(DocumentFlags*)ReadExactly(sizeof(DocumentFlags)) | DocumentFlags.FromReplication;
 
                 var keySize = *(int*)ReadExactly(sizeof(int));
                 curDoc.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
@@ -1073,8 +1073,30 @@ namespace Raven.Server.Documents.Replication
 
             public override void Execute(DocumentsOperationContext context)
             {
-                var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
                 var database = _incoming._database;
+
+                // Write the attachment first, so they'll have a lower etan than the documents
+                foreach (var attachment in _incoming._replicatedAttachments)
+                {
+                    using (attachment)
+                    {
+                        if (_incoming._log.IsInfoEnabled)
+                            _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {attachment.Name}, with key = {attachment.Key}");
+                        database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, attachment.Key, attachment.Name,
+                            attachment.ContentType, attachment.Base64Hash, attachment.TransactionMarker);
+                    }
+                }
+                foreach (var attachmentStream in _incoming._replicatedAttachmentStreams)
+                {
+                    using (attachmentStream)
+                    {
+                        if (_incoming._log.IsInfoEnabled)
+                            _incoming._log.Info($"Got incoming attachment stream, doing PUT on attachment stream = {attachmentStream.Base64Hash}");
+                        database.DocumentsStorage.AttachmentsStorage.PutStreamFromReplication(context, attachmentStream.Base64Hash, attachmentStream.File);
+                    }
+                }
+
+                var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
                 foreach (var changeVectorEntry in database.DocumentsStorage.GetDatabaseChangeVector(context))
                 {
                     maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
@@ -1126,7 +1148,7 @@ namespace Raven.Server.Documents.Replication
                                             $"Conflict check resolved to Update operation, doing PUT on doc = {docPosition.Id}, with change vector = {_changeVector.Format()}");
                                     database.DocumentsStorage.Put(context, docPosition.Id, null, document,
                                         docPosition.LastModifiedTicks,
-                                        _changeVector, DocumentFlags.FromReplication);
+                                        _changeVector, docPosition.Flags);
                                 }
                                 else
                                 {
@@ -1164,27 +1186,6 @@ namespace Raven.Server.Documents.Replication
                     finally
                     {
                         document?.Dispose();
-                    }
-                }
-
-                foreach (var attachment in _incoming._replicatedAttachments)
-                {
-                    using (attachment)
-                    {
-                        if (_incoming._log.IsInfoEnabled)
-                            _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {attachment.Name}, with key = {attachment.Key}");
-                        database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, attachment.Key, attachment.Name,
-                            attachment.ContentType, attachment.Base64Hash, attachment.TransactionMarker);
-                    }
-                }
-
-                foreach (var attachmentStream in _incoming._replicatedAttachmentStreams)
-                {
-                    using (attachmentStream)
-                    {
-                        if (_incoming._log.IsInfoEnabled)
-                            _incoming._log.Info($"Got incoming attachment stream, doing PUT on attachment stream = {attachmentStream.Base64Hash}");
-                        database.DocumentsStorage.AttachmentsStorage.PutStreamFromReplication(context, attachmentStream.Base64Hash, attachmentStream.File);
                     }
                 }
 
