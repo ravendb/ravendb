@@ -127,7 +127,7 @@ namespace FastTests
 
                 configuration.Initialize();
                 configuration.DebugLog.LogMode = LogMode.None;
-                if (customSettings.ContainsKey("Raven/ServerUrl") == false)
+                if (customSettings == null || customSettings.ContainsKey("Raven/ServerUrl") == false)
                 {
                     configuration.Core.ServerUrl = "http://127.0.0.1:0";
                 }

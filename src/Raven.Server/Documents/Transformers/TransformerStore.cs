@@ -8,8 +8,11 @@ using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Transformers;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Versioning;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Transformers
@@ -19,6 +22,7 @@ namespace Raven.Server.Documents.Transformers
         private readonly Logger _log;
 
         private readonly DocumentDatabase _documentDatabase;
+        private readonly ServerStore _serverStore;
 
         private readonly CollectionOfTransformers _transformers = new CollectionOfTransformers();
 
@@ -31,11 +35,13 @@ namespace Raven.Server.Documents.Transformers
 
         private PathSetting _path;
 
-        public TransformerStore(DocumentDatabase documentDatabase, object indexAndTransformerLocker)
+        public TransformerStore(DocumentDatabase documentDatabase, ServerStore serverStore, object indexAndTransformerLocker)
         {
             _documentDatabase = documentDatabase;
+            _serverStore = serverStore;
             _log = LoggingSource.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
             _indexAndTransformerLocker = indexAndTransformerLocker;
+            _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
         }
 
         public Task InitializeAsync()
@@ -59,6 +65,74 @@ namespace Raven.Server.Documents.Transformers
                 _initialized = true;
 
                 return Task.Factory.StartNew(OpenTransformers, TaskCreationOptions.LongRunning);
+            }
+        }
+
+        private void HandleDatabaseRecordChange(object sender, string changedDatabase)
+        {
+            lock (_indexAndTransformerLocker)
+            {
+                if (_serverStore == null)
+                    return;
+                if (string.Equals(changedDatabase, _documentDatabase.Name, StringComparison.OrdinalIgnoreCase) == false)
+                    return;
+            
+                var transformersToDelete = new List<string>();
+                var transformersToUpdate = new List<string>();
+
+                TransactionOperationContext context;
+                using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    context.OpenReadTransaction();
+                    var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
+                    if (databaseRecord == null)
+                        return;
+                    try
+                    {
+                        foreach (var existingTransformer in _transformers)
+                        {
+                            if (databaseRecord.Transformers.ContainsKey(existingTransformer.Name) ==false)
+                            {
+                                transformersToDelete.Add(existingTransformer.Name);
+                            }
+                        }
+
+                        foreach (var transformerInRecord in databaseRecord.Transformers)
+                        {
+                            Transformer existingTransformer;
+                            _transformers.TryGetByName(transformerInRecord.Key, out existingTransformer);
+
+                            if (existingTransformer != null && 
+                                transformerInRecord.Value.TransfomerId == existingTransformer.TransformerId  &&  
+                                transformerInRecord.Value.Equals(existingTransformer.Definition) )
+                            {
+                                continue;
+                            }
+
+                            if (existingTransformer != null)
+                                DeleteTransformer(existingTransformer.TransformerId);
+
+                            CreateTransformer(transformerInRecord.Value);
+                        }
+
+                        foreach (var transformerToDelete in transformersToDelete)
+                        {
+                            DeleteTransformer(transformerToDelete);
+                        }
+                    
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Versioning configuration changed");
+                    }
+                    catch (Exception e)
+                    {
+                        //TODO: This should generate an alert, so admin will know that something is very bad
+                        //TODO: Or this should throw and we should have a config flag to ignore the error
+                        if (_log.IsOperationsEnabled)
+                            _log.Operations(
+                                $"Cannot enable versioning for documents as the versioning configuration in the database record is missing or not valid: {databaseRecord}",
+                                e);
+                    }
+                }
             }
         }
 
@@ -115,38 +189,24 @@ namespace Raven.Server.Documents.Transformers
                         throw new AggregateException("Could not load some of the transformers", exceptions);
                 }
             }
+
+            HandleDatabaseRecordChange(null, _documentDatabase.Name);
         }
 
-        public int CreateTransformer(TransformerDefinition definition)
+        public void CreateTransformer(TransformerDefinition definition)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
-
-            lock (_indexAndTransformerLocker)
+            
+            var index = _documentDatabase.IndexStore.GetIndex(definition.Name);
+            if (index != null)
             {
-                var index = _documentDatabase.IndexStore.GetIndex(definition.Name);
-                if (index != null)
-                {
-                    throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exist");
-                }
-                Transformer existingTransformer;
-                var lockMode = ValidateTransformerDefinition(definition.Name, out existingTransformer);
-                if (lockMode == TransformerLockMode.LockedIgnore)
-                    return existingTransformer.TransformerId;
-
-                if (existingTransformer != null)
-                {
-                    if (existingTransformer.Definition.Equals(definition))
-                        return existingTransformer.TransformerId; // no op for the same transformer
-
-                    DeleteTransformer(existingTransformer.TransformerId);
-                }
-
-                var transformerId = _transformers.GetNextIndexId();
-                var transformer = Transformer.CreateNew(transformerId, definition, _documentDatabase.Configuration.Indexing, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name));
-
-                return CreateTransformerInternal(transformer, transformerId);
+                throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exist");
             }
+                
+            var transformer = Transformer.CreateNew(definition, _documentDatabase.Configuration.Indexing, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name));
+            CreateTransformerInternal(transformer);
+            
         }
 
         public Transformer GetTransformer(int id)
@@ -221,10 +281,10 @@ namespace Raven.Server.Documents.Transformers
             }
         }
 
-        private int CreateTransformerInternal(Transformer transformer, int transformerId)
+        private void CreateTransformerInternal(Transformer transformer)
         {
             Debug.Assert(transformer != null);
-            Debug.Assert(transformerId > 0);
+            Debug.Assert(transformer.TransformerId > 0);
 
             var etag = _documentDatabase.IndexMetadataPersistence.OnTransformerCreated(transformer);
             _transformers.Add(transformer);
@@ -234,16 +294,6 @@ namespace Raven.Server.Documents.Transformers
                 Type = TransformerChangeTypes.TransformerAdded,
                 Etag = etag
             });
-
-            return transformerId;
-        }
-
-        private TransformerLockMode ValidateTransformerDefinition(string name, out Transformer existingTransformer)
-        {
-            if (_transformers.TryGetByName(name, out existingTransformer) == false)
-                return TransformerLockMode.Unlock;
-
-            return existingTransformer.Definition.LockMode;
         }
 
         public void Dispose()
@@ -252,35 +302,7 @@ namespace Raven.Server.Documents.Transformers
 
         public void Rename(string oldTransformerName, string newTransformerName)
         {
-            Transformer transformer;
-            if (_transformers.TryGetByName(oldTransformerName, out transformer) == false)
-                throw new InvalidOperationException($"Index {oldTransformerName} does not exist");
-
-            lock (_indexAndTransformerLocker)
-            {
-                var index = _documentDatabase.IndexStore.GetIndex(newTransformerName);
-                if (index != null)
-                {
-                    throw new IndexOrTransformerAlreadyExistException(
-                        $"Cannot rename transformer to {newTransformerName} because an index having the same name already exists");
-                }
-
-                Transformer _;
-                if (_transformers.TryGetByName(newTransformerName, out _))
-                {
-                    throw new IndexOrTransformerAlreadyExistException(
-                        $"Cannot rename transformer to {newTransformerName} because a transformer having the same name already exists");
-                }
-
-                transformer.Rename(newTransformerName);
-                _transformers.RenameTransformer(transformer, oldTransformerName, newTransformerName);
-            }
-
-            _documentDatabase.Changes.RaiseNotifications(new TransformerChange
-            {
-                Name = oldTransformerName,
-                Type = TransformerChangeTypes.TransformerRenamed
-            });
+            throw new NotImplementedException();
         }
     }
 }

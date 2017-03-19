@@ -16,7 +16,7 @@ namespace FastTests.Server.Documents.Transformers
             var path = NewDataPath();
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                var transformerId1 = database.TransformerStore.CreateTransformer(new TransformerDefinition
+                database.TransformerStore.CreateTransformer(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
                     LockMode = TransformerLockMode.LockedIgnore,
@@ -24,17 +24,13 @@ namespace FastTests.Server.Documents.Transformers
                     Name = "Transformer1"
                 });
 
-                Assert.Equal(1, transformerId1);
-
-                var transformerId2 = database.TransformerStore.CreateTransformer(new TransformerDefinition
+                database.TransformerStore.CreateTransformer(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Email })",
                     LockMode = TransformerLockMode.Unlock,
                     Temporary = false,
                     Name = "Transformer2"
                 });
-
-                Assert.Equal(2, transformerId2);
             }
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true))
@@ -73,15 +69,13 @@ namespace FastTests.Server.Documents.Transformers
             var path = NewDataPath();
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                var transformerId1 = database.TransformerStore.CreateTransformer(new TransformerDefinition
+                database.TransformerStore.CreateTransformer(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
                     LockMode = TransformerLockMode.LockedIgnore,
                     Temporary = true,
                     Name = "Transformer1"
                 });
-
-                Assert.Equal(1, transformerId1);
             }
 
             var encodedName = Convert.ToBase64String(Encoding.UTF8.GetBytes("Transformer1"));
@@ -115,16 +109,14 @@ namespace FastTests.Server.Documents.Transformers
             var path = NewDataPath();
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                var transformerId1 = database.TransformerStore.CreateTransformer(new TransformerDefinition
+                database.TransformerStore.CreateTransformer(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
                     LockMode = TransformerLockMode.LockedIgnore,
                     Temporary = true,
                     Name = "Transformer1"
                 });
-
-                Assert.Equal(1, transformerId1);
-
+                
                 var encodedName = Convert.ToBase64String(Encoding.UTF8.GetBytes("Transformer1"));
 
                 Assert.Equal(1, database.TransformerStore.GetTransformers().Count());

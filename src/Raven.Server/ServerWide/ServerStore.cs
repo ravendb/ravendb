@@ -210,7 +210,7 @@ namespace Raven.Server.ServerWide
             {
                 ["Type"] = nameof(EditVersioningCommand),
                 [nameof(EditVersioningCommand.Configuration)] = val,
-                [nameof(EditVersioningCommand.Name)] = databaseName,
+                [nameof(EditVersioningCommand.DatabaseName)] = databaseName,
             }, "edit-versioning-cmd"))
             {
                 var index = await _engine.PutAsync(editVersioningCmd);
@@ -412,6 +412,7 @@ namespace Raven.Server.ServerWide
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _command;
             public override bool IsReadRequest => false;
+            public long CommandIndex { get; private set; }
 
             public PutRaftCommand(JsonOperationContext context, BlittableJsonReaderObject command)
             {
