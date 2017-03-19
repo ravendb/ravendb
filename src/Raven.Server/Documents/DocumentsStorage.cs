@@ -2687,7 +2687,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public PutOperationResults UpdateDocumentAfterAttachmentChange(
+        public void UpdateDocumentAfterAttachmentChange(
             DocumentsOperationContext context,
             string documentId,
             TableValueReader tvr)
@@ -2703,7 +2703,7 @@ namespace Raven.Server.Documents
 
                 int size;
                 var data = new BlittableJsonReaderObject(copyTvr.Read((int)DocumentsTable.Data, out size), size, context);
-                return Put(context, documentId, null, data, null, null, DocumentFlags.HasAttachments);
+                Put(context, documentId, null, data, null, null, DocumentFlags.HasAttachments);
             }
             finally
             {

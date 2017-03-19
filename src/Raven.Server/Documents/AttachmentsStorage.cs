@@ -4,13 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -193,17 +193,7 @@ namespace Raven.Server.Documents
 
                 // Update the document with an etag which is bigger than the attachmenEtag
                 // We need to call this after we already put the attachment, so it can version also this attachment
-                var putResult = _documentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId, tvr);
-
-                context.Transaction.AddAfterCommitNotification(new AttachmentChange
-                {
-                    Etag = attachmenEtag,
-                    CollectionName = putResult.Collection.Name,
-                    Key = documentId,
-                    Name = name,
-                    Type = DocumentChangeTypes.PutAttachment,
-                    IsSystemDocument = putResult.Collection.IsSystem,
-                });
+                _documentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId, tvr);
             }
 
             return new AttachmentResult
@@ -215,13 +205,46 @@ namespace Raven.Server.Documents
                 Hash = hash,
             };
         }
-        public void PutFromReplication(DocumentsOperationContext context, byte[] attachmentLoweredKey, string attachmentName, 
-            string attachmentContentType, byte[] attachmentBase64Hash, short attachmentTransactionMarker)
+
+        public void PutFromReplication(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, 
+            Slice base64Hash, short transactionMarker)
         {
             // Attachment etag should be generated before updating the document
             var attachmenEtag = _documentsStorage.GenerateNextEtag();
 
-            /* TODO: Implement */
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            TableValueBuilder tbv;
+            using (table.Allocate(out tbv))
+            {
+                tbv.Add(key.Content.Ptr, key.Size);
+                tbv.Add(Bits.SwapBytes(attachmenEtag));
+                tbv.Add(name.Content.Ptr, name.Size);
+                tbv.Add(contentType.Content.Ptr, contentType.Size);
+                tbv.Add(base64Hash.Content.Ptr, base64Hash.Size);
+                tbv.Add(transactionMarker);
+
+                table.Set(tbv);
+            }
+
+            _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
+        }
+
+        public void PutStreamFromReplication(DocumentsOperationContext context, Slice base64Hash, Stream stream)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+            var existingStream = tree.ReadStream(base64Hash);
+            if (existingStream == null)
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                var result = table.SeekOneForwardFrom(AttachmentsSchema.Indexes[AttachmentsHashSlice], base64Hash);
+                Slice keySlice;
+                using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.LoweredDocumentIdAndLoweredNameAndType, ref result.Reader, out keySlice))
+                {
+                    tree.AddStream(base64Hash, stream, tag: keySlice);
+                }
+            }
+
+            _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
         }
 
         public void RevisionAttachments(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, ChangeVectorEntry[] changeVector)
@@ -599,16 +622,7 @@ namespace Raven.Server.Documents
                 table.Delete(tvr.Id);
             }
 
-            var putResult = _documentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId, docTvr);
-            context.Transaction.AddAfterCommitNotification(new AttachmentChange
-            {
-                Etag = putResult.Etag,
-                CollectionName = putResult.Collection.Name,
-                Key = documentId,
-                Name = name,
-                Type = DocumentChangeTypes.Delete,
-                IsSystemDocument = putResult.Collection.IsSystem,
-            });
+            _documentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId, docTvr);
         }
 
         private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice)
@@ -644,6 +658,36 @@ namespace Raven.Server.Documents
             using (GetAttachmentPrefix(context, loweredKey.Content.Ptr, loweredKey.Size, AttachmentType.Document, null, out prefixSlice))
             {
                 DeleteAttachmentsOfDocumentInternal(context, prefixSlice);
+            }
+        }
+
+        public ReleaseTempFile GetTempFile(out FileStream file, bool fromReplication = false)
+        {
+            var name = $"attachment.{Guid.NewGuid():N}.put";
+            if (fromReplication)
+                name = "replication-" + name;
+            var tempPath = Path.Combine(_documentsStorage.Environment.Options.DataPager.Options.TempPath, name);
+            file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
+            return new ReleaseTempFile(tempPath, file);
+        }
+
+        public struct ReleaseTempFile : IDisposable
+        {
+            private readonly string _tempFile;
+            private readonly FileStream _file;
+
+            public ReleaseTempFile(string tempFile, FileStream file)
+            {
+                _tempFile = tempFile;
+                _file = file;
+            }
+
+            public void Dispose()
+            {
+                _file.Dispose();
+
+                // Linux does not clean the file, so we should clean it manually
+                IOExtensions.DeleteFile(_tempFile);
             }
         }
     }

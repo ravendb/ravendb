@@ -129,9 +129,8 @@ namespace Raven.Server.Documents.Handlers
                 var contentType = GetStringQueryString("contentType", false) ?? "";
 
                 AttachmentResult result;
-
-                var tempPath = Path.Combine(Database.DocumentsStorage.Environment.Options.DataPager.Options.TempPath, $"attachment.{Guid.NewGuid():N}.put");
-                using (var file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan))
+                FileStream file;
+                using (Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out file))
                 {
                     JsonOperationContext.ManagedPinnedBuffer buffer;
                     using (context.GetManagedBuffer(out buffer))
@@ -177,8 +176,6 @@ namespace Raven.Server.Documents.Handlers
                         result = cmd.Result;
                     }
                 }
-                // Linux does not clean the file, so we should clean it manually
-                IOExtensions.DeleteFile(tempPath);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 

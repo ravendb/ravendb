@@ -17,14 +17,6 @@ namespace Raven.Client.Documents.Changes
         public Guid OperationId { get; set; }
     }
 
-    public class AttachmentChange : DocumentChange
-    {
-        /// <summary>
-        /// The attachment name.
-        /// </summary>
-        public string Name { get; set; }
-    }
-
     public class DocumentChange : DatabaseChange
     {
         private string _key;
@@ -95,8 +87,6 @@ namespace Raven.Client.Documents.Changes
         DeleteOnTombstoneReplication = 32,
         Conflict = 64,
         Common = Put | Delete,
-        PutAttachment = 128,
-        DeleteAttachment = 256,
     }
 
     [Flags]

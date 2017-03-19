@@ -16,12 +16,12 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Utils;
 using Voron;
+using Memory = Sparrow.Memory;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -315,7 +315,7 @@ namespace Raven.Server.Documents.Replication
                 ItemsCount = itemsCount,
                 AttachmentStreamsCount = attachmentStreamCount,
             };
-            ReceiveSingleDocumentsBatch(documentsContext, itemsCount, lastDocumentEtag);
+            ReceiveSingleDocumentsBatch(documentsContext, itemsCount, attachmentStreamCount, lastDocumentEtag);
             IncomingStats.DoneReplicateTime = DateTime.UtcNow;
             _parent.RepliactionStats.Add(IncomingStats);
             OnDocumentsReceived(this);
@@ -654,11 +654,12 @@ namespace Raven.Server.Documents.Replication
             return result;
         }
 
-        private unsafe void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedDocsCount, long lastEtag)
+        private unsafe void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedItemsCount, 
+            int attachmentStreamCount, long lastEtag)
         {
             if (_log.IsInfoEnabled)
             {
-                _log.Info($"Receiving replication batch with {replicatedDocsCount} documents starting with {lastEtag} from {ConnectionInfo}");
+                _log.Info($"Receiving replication batch with {replicatedItemsCount} documents starting with {lastEtag} from {ConnectionInfo}");
             }
 
             var sw = Stopwatch.StartNew();
@@ -667,14 +668,15 @@ namespace Raven.Server.Documents.Replication
             {
                 // this will read the documents to memory from the network
                 // without holding the write tx open
-                ReadDocumentsFromSource(ref writeBuffer, replicatedDocsCount);
+                ReadDocumentsFromSource(ref writeBuffer, replicatedItemsCount, documentsContext);
+                ReadAttachmentStreamsFromSource(ref writeBuffer, attachmentStreamCount, documentsContext);
                 byte* buffer;
                 int totalSize;
                 writeBuffer.EnsureSingleChunk(out buffer, out totalSize);
 
                 if (_log.IsInfoEnabled)
                     _log.Info(
-                        $"Replication connection {FromToString}: received {replicatedDocsCount:#,#;;0} documents with size {totalSize / 1024:#,#;;0} kb to database in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        $"Replication connection {FromToString}: received {replicatedItemsCount:#,#;;0} documents with size {totalSize / 1024:#,#;;0} kb to database in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
                 var replicationCommand = new MergedDocumentReplicationCommand(this, buffer, totalSize, lastEtag);
                 _database.TxMerger.Enqueue(replicationCommand).Wait();
@@ -683,7 +685,7 @@ namespace Raven.Server.Documents.Replication
 
                 if (_log.IsInfoEnabled)
                     _log.Info(
-                        $"Replication connection {FromToString}: received and written {replicatedDocsCount:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastEtag}.");
+                        $"Replication connection {FromToString}: received and written {replicatedItemsCount:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastEtag}.");
             }
             catch (Exception e)
             {
@@ -783,7 +785,7 @@ namespace Raven.Server.Documents.Replication
         private ChangeVectorEntry[] _tempReplicatedChangeVector = new ChangeVectorEntry[0];
         private readonly List<ReplicationDocumentsPositions> _replicatedDocs = new List<ReplicationDocumentsPositions>();
         private readonly List<ReplicationAttachment> _replicatedAttachments = new List<ReplicationAttachment>();
-        private readonly List<ReplicationDocumentsPositions> _replicatedAttachmentStreams = new List<ReplicationDocumentsPositions>();
+        private readonly List<ReplicationAttachmentStream> _replicatedAttachmentStreams = new List<ReplicationAttachmentStream>();
         private readonly List<ReplicationIndexOrTransformerPositions> _replicatedIndexesAndTransformers = new List<ReplicationIndexOrTransformerPositions>();
         private long _lastDocumentEtag;
         private long _lastIndexOrTransformerEtag;
@@ -802,13 +804,44 @@ namespace Raven.Server.Documents.Replication
             public DocumentFlags Flags;
         }
 
-        public struct ReplicationAttachment
+        public struct ReplicationAttachment : IDisposable
         {
             public short TransactionMarker;
-            public byte[] LoweredKey;
-            public string Name;
-            public string ContentType;
-            public byte[] Base64Hash;
+
+            public Slice Key;
+            public IDisposable KeyDispose;
+
+            public Slice Name;
+            public IDisposable NameDispose;
+
+            public Slice ContentType;
+            public IDisposable ContentTypeDispose;
+
+            public Slice Base64Hash;
+            public IDisposable Base64HashDispose;
+
+            public void Dispose()
+            {
+                KeyDispose.Dispose();
+                NameDispose.Dispose();
+                ContentTypeDispose.Dispose();
+                Base64HashDispose.Dispose();
+            }
+        }
+
+        public struct ReplicationAttachmentStream : IDisposable
+        {
+            public Slice Base64Hash;
+            public IDisposable Base64HashDispose;
+
+            public FileStream File;
+            public IDisposable FileDispose;
+
+            public void Dispose()
+            {
+                Base64HashDispose.Dispose();
+                FileDispose.Dispose();
+            }
         }
 
         public struct ReplicationIndexOrTransformerPositions
@@ -824,7 +857,7 @@ namespace Raven.Server.Documents.Replication
             public string Name;
         }
 
-        private unsafe void ReadDocumentsFromSource(ref UnmanagedWriteBuffer writeBuffer, int replicatedDocs)
+        private unsafe void ReadDocumentsFromSource(ref UnmanagedWriteBuffer writeBuffer, int replicatedDocs, DocumentsOperationContext context)
         {
             _replicatedDocs.Clear();
             _replicatedAttachments.Clear();
@@ -839,33 +872,19 @@ namespace Raven.Server.Documents.Replication
                     };
 
                     var loweredKeySize = *(int*)ReadExactly(sizeof(int));
-                    attachment.LoweredKey = new byte[loweredKeySize];
-                    fixed (byte* pLoweredKey = attachment.LoweredKey)
-                    {
-                        Memory.Copy(pLoweredKey, ReadExactly(loweredKeySize), loweredKeySize);
-                    }
+                    attachment.KeyDispose = Slice.From(context.Allocator, ReadExactly(loweredKeySize), loweredKeySize, out attachment.Key);
 
                     var nameSize = *(int*)ReadExactly(sizeof(int));
-                    attachment.Name = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
+                    attachment.NameDispose = Slice.From(context.Allocator, ReadExactly(nameSize), nameSize, out attachment.Name);
 
                     var contentTypeSize = *(int*)ReadExactly(sizeof(int));
-                    attachment.ContentType = Encoding.UTF8.GetString(ReadExactly(contentTypeSize), contentTypeSize);
+                    attachment.ContentTypeDispose = Slice.From(context.Allocator, ReadExactly(contentTypeSize), contentTypeSize, out attachment.ContentType);
 
                     var base64HashSize = *ReadExactly(sizeof(byte));
-                    attachment.Base64Hash = new byte[base64HashSize];
-                    fixed (byte* pBase64HashSize = attachment.Base64Hash)
-                    {
-                        Memory.Copy(pBase64HashSize, ReadExactly(base64HashSize), base64HashSize);
-                    }
+                    attachment.Base64HashDispose = Slice.From(context.Allocator, ReadExactly(base64HashSize), base64HashSize, out attachment.Base64Hash);
 
                     _replicatedAttachments.Add(attachment);
-                    return;
-                }
-
-                if (type == ReplicationBatchItem.ReplicationItemType.AttachmentStream)
-                {
-                    // TODO;
-                    return;
+                    continue;
                 }
 
                 var curDoc = new ReplicationDocumentsPositions
@@ -901,6 +920,43 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 _replicatedDocs.Add(curDoc);
+            }
+        }
+
+        private unsafe void ReadAttachmentStreamsFromSource(ref UnmanagedWriteBuffer writeBuffer, int attachmentStreamCount, DocumentsOperationContext context)
+        {
+            _replicatedAttachmentStreams.Clear();
+            for (int x = 0; x < attachmentStreamCount; x++)
+            {
+                var type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte));
+                Debug.Assert(type == ReplicationBatchItem.ReplicationItemType.AttachmentStream);
+
+                var attachment = new ReplicationAttachmentStream();
+
+                var base64HashSize = *ReadExactly(sizeof(byte));
+                attachment.Base64HashDispose = Slice.From(context.Allocator, ReadExactly(base64HashSize), base64HashSize, out attachment.Base64Hash);
+
+                var streamLength = *(long*)ReadExactly(sizeof(long));
+                attachment.FileDispose = _database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachment.File);
+
+                JsonOperationContext.ManagedPinnedBuffer buffer;
+                using (context.GetManagedBuffer(out buffer))
+                {
+                    while (streamLength != 0)
+                    {
+                        var count = _connectionOptions.Stream.Read(buffer.Buffer.Array,
+                            buffer.Buffer.Offset,
+                            (int)Math.Min(buffer.Buffer.Count, streamLength));
+                        if (count == 0)
+                            break;
+
+                        attachment.File.Write(buffer.Buffer.Array, buffer.Buffer.Offset, count);
+                        streamLength -= count;
+                    }
+                }
+
+                attachment.File.Position = 0;
+                _replicatedAttachmentStreams.Add(attachment);
             }
         }
 
@@ -1102,10 +1158,23 @@ namespace Raven.Server.Documents.Replication
 
                 foreach (var attachment in _incoming._replicatedAttachments)
                 {
-                    if (_incoming._log.IsInfoEnabled)
-                        _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {attachment.Name}, with key = {Encoding.UTF8.GetString(attachment.LoweredKey)}");
-                    database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, attachment.LoweredKey, attachment.Name, 
-                        attachment.ContentType, attachment.Base64Hash, attachment.TransactionMarker);
+                    using (attachment)
+                    {
+                        if (_incoming._log.IsInfoEnabled)
+                            _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {attachment.Name}, with key = {attachment.Key}");
+                        database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, attachment.Key, attachment.Name,
+                            attachment.ContentType, attachment.Base64Hash, attachment.TransactionMarker);
+                    }
+                }
+
+                foreach (var attachmentStream in _incoming._replicatedAttachmentStreams)
+                {
+                    using (attachmentStream)
+                    {
+                        if (_incoming._log.IsInfoEnabled)
+                            _incoming._log.Info($"Got incoming attachment stream, doing PUT on attachment stream = {attachmentStream.Base64Hash}");
+                        database.DocumentsStorage.AttachmentsStorage.PutStreamFromReplication(context, attachmentStream.Base64Hash, attachmentStream.File);
+                    }
                 }
 
                 database.DocumentsStorage.SetDatabaseChangeVector(context,

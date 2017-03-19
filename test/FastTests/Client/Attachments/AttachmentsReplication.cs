@@ -10,7 +10,7 @@ namespace FastTests.Client.Attachments
 {
     public class AttachmentsReplication : ReplicationTestsBase
     {
-        [Fact(Skip = "Work in progres")]
+        [Fact]
         public void PutAttachments()
         {
             using (var store1 = GetDocumentStore())
