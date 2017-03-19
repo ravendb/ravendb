@@ -9,7 +9,7 @@ class saveApiKeysCommand extends executeBulkDocsCommand {
         super(newApiKeysBulkDocs.concat(deletedApiKeysBulkDocs), null);
     }
 
-    execute(): JQueryPromise<bulkDocumentDto[]> {
+    execute(): JQueryPromise<Raven.Server.Documents.Handlers.CommandData[]> {
         this.reportInfo("Saving API keys...");
 
         return super.execute()

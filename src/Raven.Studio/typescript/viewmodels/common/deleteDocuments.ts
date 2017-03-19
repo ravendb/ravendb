@@ -1,8 +1,8 @@
 import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
-import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
+import messagePublisher = require("common/messagePublisher");
 
 class deleteDocuments extends dialogViewModelBase {
 
@@ -23,10 +23,21 @@ class deleteDocuments extends dialogViewModelBase {
     deleteDocs() {
         const deletedDocIds = this.documents().map(i => i.getId());
 
+        const docCount = deletedDocIds.length;
+        const docsDescription = docCount === 1 ? this.documents()[0].Key : docCount + " docs";
+
         new deleteDocumentsCommand(deletedDocIds, this.db)
             .execute()
-            .done(() => this.deletionTask.resolve())
-            .fail(response => this.deletionTask.reject(response));
+            .done(() => {
+                messagePublisher.reportSuccess("Deleted " + docsDescription);
+                this.deletionTask.resolve();
+            })
+            .fail(response => {
+                messagePublisher.reportError("Failed to delete " + docsDescription,
+                    response.responseText,
+                    response.statusText);
+                this.deletionTask.reject(response);
+            });
 
         this.deletionStarted = true;
         dialog.close(this, true);

@@ -4,6 +4,7 @@ using Jint.Native;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents
@@ -57,7 +58,9 @@ namespace Raven.Server.Smuggler.Documents
                 return new Document
                 {
                     Data = newDocument,
-                    Key = document.Key
+                    Key = document.Key,
+                    Flags = document.Flags,
+                    NonPersistentFlags = document.NonPersistentFlags
                 };
             }
         }

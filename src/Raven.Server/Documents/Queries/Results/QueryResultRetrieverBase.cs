@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldType.IsJson == false)
                 return stringValue;
 
-            var bytes = _context.Encoding.GetBytes(stringValue);
+            var bytes = JsonOperationContext.Encoding.GetBytes(stringValue);
             var ms = new MemoryStream(bytes);
             return _context.ReadForMemory(ms, field.Name);
         }

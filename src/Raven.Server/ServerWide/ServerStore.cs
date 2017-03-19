@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Search;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Commercial;
@@ -13,13 +14,12 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
-using Sparrow;
 using Sparrow.Logging;
 using Voron.Data.Tables;
 using Voron.Exceptions;
-using Bits = Sparrow.Binary.Bits;
 
 namespace Raven.Server.ServerWide
 {
@@ -79,11 +79,14 @@ namespace Raven.Server.ServerWide
 
         public ServerStore(RavenConfiguration configuration)
         {
-            var resourceName = "ServerStore";
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
 
-            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            Configuration = configuration;
+            var resourceName = "ServerStore";
             _logger = LoggingSource.Instance.GetLogger<ServerStore>(resourceName);
+
+            Configuration = configuration;
+
             DatabasesLandlord = new DatabasesLandlord(this);
 
             _notificationsStorage = new NotificationsStorage(resourceName);
@@ -93,7 +96,6 @@ namespace Raven.Server.ServerWide
             DatabaseInfoCache = new DatabaseInfoCache();
 
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
-
         }
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
@@ -141,8 +143,7 @@ namespace Raven.Server.ServerWide
                 using (var tx = _env.ReadTransaction())
                 {
                     var table = tx.OpenTable(_itemsSchema, "Items");
-                    var itemsFromBackwards = table.SeekBackwardFrom(_itemsSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
-                    var reader = itemsFromBackwards.FirstOrDefault();
+                    var reader = table.ReadLast(_itemsSchema.FixedSizeIndexes[EtagIndexName]);
                     if (reader == null)
                         _lastEtag = 0;
                     else
@@ -160,6 +161,8 @@ namespace Raven.Server.ServerWide
                 throw;
             }
 
+            BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount;
+
             ContextPool = new TransactionContextPool(_env);
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
@@ -171,9 +174,7 @@ namespace Raven.Server.ServerWide
         public long ReadLastEtag(TransactionOperationContext ctx)
         {
             var table = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-            var itemsFromBackwards = table.SeekBackwardFrom(_itemsSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
-            var reader = itemsFromBackwards.FirstOrDefault();
-
+            var reader = table.ReadLast(_itemsSchema.FixedSizeIndexes[EtagIndexName]);
             if (reader == null)
                 return 0;
 
@@ -256,7 +257,7 @@ namespace Raven.Server.ServerWide
             Slice loweredPrefix;
             using (Slice.From(ctx.Allocator, prefix.ToLowerInvariant(), out loweredPrefix))
             {
-                foreach (var result in items.SeekByPrimaryKeyStartingWith(loweredPrefix, Slices.Empty, start))
+                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, start))
                 {
                     if (take-- <= 0)
                         yield break;
@@ -361,8 +362,8 @@ namespace Raven.Server.ServerWide
                         }
                         catch (ObjectDisposedException)
                         {
-                        //we are disposing, so don't care
-                    }
+                            //we are disposing, so don't care
+                        }
                     });
 
                 exceptionAggregator.Execute(() => _shutdownNotification.Dispose());

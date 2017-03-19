@@ -1,7 +1,7 @@
 <div class="modal-dialog" role="document">
     <div class="modal-content">
         <div class="modal-header">
-            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+            <button type="button" class="close" data-bind="click: close, clickBubble: false" aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
             <h4 class="modal-title" data-bind="text: title"></h4>
@@ -10,7 +10,7 @@
             <p class="confirmationMessage" data-bind="text: confirmationMessage"></p>
         </div>
         <div class="modal-footer" data-bind="foreach: options">
-            <button type="button" class="btn" data-bind="text: $data, click: $root.onOptionClicked.bind($root), css: { 'btn-default': $index() !== $root.options.length - 1, 'btn-primary': $index() === $root.options.length - 1 }"></button>
+            <button type="button" class="btn" data-bind="text: $data, click: $root.onOptionClicked.bind($root), clickBubble: false, css: { 'btn-default': $index() !== $root.options.length - 1, 'btn-primary': $index() === $root.options.length - 1 }"></button>
         </div>
     </div>
 </div>

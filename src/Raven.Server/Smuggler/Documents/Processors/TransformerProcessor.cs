@@ -9,20 +9,23 @@ namespace Raven.Server.Smuggler.Documents.Processors
 {
     public class TransformerProcessor
     {
-        public static TransformerDefinition ReadTransformerDefinition(BlittableJsonReaderObject reader, long buildVersion)
+        public static TransformerDefinition ReadTransformerDefinition(BlittableJsonReaderObject reader, BuildVersionType buildVersionType)
         {
-            if (buildVersion == 0) // pre 4.0 support
-                return ReadLegacyTransformerDefinition(reader);
-
-            if (buildVersion >= 40000 && buildVersion <= 44999 || buildVersion == 40)
-                return JsonDeserializationServer.TransformerDefinition(reader);
-
-            throw new NotSupportedException($"We do not support importing transformers from '{buildVersion}' build.");
+            switch (buildVersionType)
+            {
+                case BuildVersionType.V3:
+                    // pre 4.0 support
+                    return ReadLegacyTransformerDefinition(reader);
+                case BuildVersionType.V4:
+                    return JsonDeserializationServer.TransformerDefinition(reader);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(buildVersionType), buildVersionType, null);
+            }   
         }
 
-        public static void Import(BlittableJsonReaderObject transformerDefinitionDoc, DocumentDatabase database, long buildVersion)
+        public static void Import(BlittableJsonReaderObject transformerDefinitionDoc, DocumentDatabase database, BuildVersionType buildType)
         {
-            var transformerDefinition = ReadTransformerDefinition(transformerDefinitionDoc, buildVersion);
+            var transformerDefinition = ReadTransformerDefinition(transformerDefinitionDoc, buildType);
             database.TransformerStore.CreateTransformer(transformerDefinition);
         }
 

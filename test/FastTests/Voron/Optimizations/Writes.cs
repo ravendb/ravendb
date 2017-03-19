@@ -5,15 +5,77 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using System.Text;
+using Raven.Server.Config;
+using Raven.Server.Config.Settings;
+using Raven.Server.Documents;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Xunit;
-using Voron;
-using Voron.Data;
+using Voron.Data.Tables;
 using Voron.Debugging;
 
 namespace FastTests.Voron.Optimizations
 {
     public class Writes : StorageTest
     {
+        [Fact]
+        public void EarlyLockRelease()
+        {
+            var configuration = new RavenConfiguration("foo", ResourceType.Database);
+            configuration.Initialize();
+
+            configuration.Core.RunInMemory = true;
+            configuration.Core.DataDirectory = new PathSetting(Path.GetTempPath() + @"\elr");
+
+            var documentDatabase = new DocumentDatabase("foo", configuration, null);
+            documentDatabase.Initialize();
+
+            var tableSchema = new TableSchema();
+
+            DocumentsOperationContext context;
+            using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                var tx1 = context.OpenWriteTransaction();
+                var b = context.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes("{}")), "adi");
+
+                documentDatabase.DocumentsStorage.Put(context, "1", null, b);
+                documentDatabase.DocumentsStorage.Put(context, "2", null, b);
+
+                var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction();
+                context.Transaction = tx2;
+
+                documentDatabase.DocumentsStorage.Put(context, "1", null, b);
+                documentDatabase.DocumentsStorage.Put(context, "2", null, b);
+
+                tx1.EndAsyncCommit();
+                tx1.Dispose();
+
+                tx2.InnerTransaction.OpenTable(tableSchema, "Collection.Tombstones.@empty");
+                var tx3 = tx2.BeginAsyncCommitAndStartNewTransaction();
+                context.Transaction = tx3;
+
+                tx3.InnerTransaction.OpenTable(tableSchema, "Collection.Tombstones.@empty");
+                tx2.EndAsyncCommit();
+                tx2.Dispose();
+
+                tx3.Commit();
+                tx3.Dispose();
+            }
+
+            using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                var tx1 = context.OpenWriteTransaction();
+                var b = context.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes("{}")), "adi2");
+
+                documentDatabase.DocumentsStorage.Put(context, "1", null, b);
+                documentDatabase.DocumentsStorage.Put(context, "2", null, b);
+
+                tx1.Commit();
+
+            }
+        }
+
         [Fact]
         public void SinglePageModificationDoNotCauseCopyingAllIntermediatePages()
         {

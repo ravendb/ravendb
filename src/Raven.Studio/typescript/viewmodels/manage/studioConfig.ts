@@ -1,10 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/resources/database");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import appUrl = require("common/appUrl");
 import documentClass = require("models/database/documents/document");
 import serverBuildReminder = require("common/storage/serverBuildReminder");
-import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
 import accessHelper = require("viewmodels/shell/accessHelper");
@@ -152,7 +149,7 @@ class studioConfig extends viewModelBase {
     saveStudioConfig(newDocument: documentClass) {
         /* TODO:return new saveDocumentCommand(this.documentId, newDocument, null)
             .execute()
-            .done((saveResult: bulkDocumentDto[]) => {
+            .done((saveResult: Raven.Server.Documents.Handlers.CommandData[]) => {
                 this.configDocument(newDocument);
                 this.configDocument().__metadata['etag'] = saveResult[0].Etag;
             });*/

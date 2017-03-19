@@ -1,19 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import replicationsSetup = require("models/database/replication/replicationsSetup");
-import replicationDestination = require("models/database/replication/replicationDestination");
-import collection = require("models/database/documents/collection");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getReplicationsCommand = require("commands/database/replication/getReplicationsCommand");
-import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
-import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import replicateIndexesCommand = require("commands/database/replication/replicateIndexesCommand");
-import replicateTransformersCommand = require("commands/database/replication/replicateTransformersCommand");
-import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
-import collectionsStats = require("models/database/documents/collectionsStats");
-import appUrl = require("common/appUrl");
-import database = require("models/resources/database");
-import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
-import eventsCollector = require("common/eventsCollector");
 
 class etl extends viewModelBase {
     /*TODO
@@ -129,6 +114,7 @@ class etl extends viewModelBase {
     }
 
     addScriptHelpPopover() {
+    //TODO: long popover?
         $(".scriptPopover").popover({
             html: true,
             trigger: 'hover',
@@ -136,7 +122,7 @@ class etl extends viewModelBase {
             content:
             '<p>Return <code>null</code> in transform script to skip document from replication. </p>' +
             '<p>Example: </p>' +
-            '<pre><span class="code-keyword">if</span> (<span class="code-keyword">this</span>.Region !== <span class="code-string">"Europe"</span>) { <br />   <span class="code-keyword">return null</span>; <br />}<br/><span class="code-keyword">this</span>.Currency = <span class="code-string">"EUR"</span>; </pre>'
+            '<pre><span class="token keyword">if</span> (<span class="token keyword">this</span>.Region !== <span class="token string">"Europe"</span>) { <br />   <span class="token keyword">return null</span>; <br />}<br/><span class="token keyword">this</span>.Currency = <span class="token string">"EUR"</span>; </pre>'
         });
     }
 

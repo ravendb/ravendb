@@ -1,3 +1,6 @@
+/// Sortable
+declare var Sortable: any;
+
 ///
 /// JSZip
 ///

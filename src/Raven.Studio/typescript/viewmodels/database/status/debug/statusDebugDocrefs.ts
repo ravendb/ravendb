@@ -1,7 +1,4 @@
-import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDocRefsCommand = require("commands/database/debug/getDocRefsCommand");
-import eventsCollector = require("common/eventsCollector");
 
 class statusDebugDocrefs extends viewModelBase {
 

@@ -15,19 +15,31 @@ class textColumn<T> implements virtualColumn {
         public width: string) {
     }
 
+    getCellValue(item: T) {
+        return _.isFunction(this.valueAccessor)
+            ? this.valueAccessor.bind(item)(item) // item is available as this, as well as first argument
+            : (item as any)[this.valueAccessor as string];
+    }
+
     renderCell(item: T, isSelected: boolean): string {
-        const preparedValue = this.prepareValue(item);
-        return `<div class="cell text-cell ${preparedValue.typeCssClass}" style="width: ${this.width}">${preparedValue.rawText}</div>`;
+        try {
+            const preparedValue = this.prepareValue(item);
+            return `<div class="cell text-cell ${preparedValue.typeCssClass}" style="width: ${this.width}">${preparedValue.rawText}</div>`;
+        } catch (error) {
+            //TODO: work on L&F of errors!
+            return `<div class="cell text-cell eval-error" style="width: ${this.width}">Error!</div>`;
+        }
+        
     }
 
     protected prepareValue(item: T): preparedValue {
-        const cellValue = _.isFunction(this.valueAccessor) ? this.valueAccessor(item) : (item as any)[this.valueAccessor as string];
+        const cellValue = this.getCellValue(item);
 
         if (_.isString(cellValue)) {
             const rawText = utils.escape(cellValue);
             return {
                 rawText: rawText,
-                typeCssClass: "token-string"
+                typeCssClass: "token string"
             };
         }
 
@@ -35,7 +47,7 @@ class textColumn<T> implements virtualColumn {
             const value = cellValue.toLocaleString();
             return {
                 rawText: value,
-                typeCssClass: "token-number"
+                typeCssClass: "token number"
             };
         }
 
@@ -43,21 +55,21 @@ class textColumn<T> implements virtualColumn {
             const value = !!cellValue;
             return {
                 rawText: value ? 'true' : 'false',
-                typeCssClass: "token-boolean"
+                typeCssClass: "token boolean"
             }
         }
 
         if (_.isNull(cellValue)) {
             return {
                 rawText: "null",
-                typeCssClass: "token-null"
+                typeCssClass: "token null"
             }
         }
 
         if (_.isUndefined(cellValue)) {
             return {
                 rawText: "",
-                typeCssClass: "token-undefined"
+                typeCssClass: "token undefined"
             }
         }
 
@@ -66,7 +78,7 @@ class textColumn<T> implements virtualColumn {
 
             return {
                 rawText: "[ ... ]",
-                typeCssClass: "token-array"
+                typeCssClass: "token array"
             }
         }
 
@@ -75,7 +87,7 @@ class textColumn<T> implements virtualColumn {
 
             return {
                 rawText: "{ ... }",
-                typeCssClass: "token-object"
+                typeCssClass: "token object"
             }
         }
 

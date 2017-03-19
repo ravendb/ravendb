@@ -3,10 +3,6 @@ import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
-import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
-import router = require("plugins/router");
-import appUrl = require("common/appUrl");
-import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class copyIndexDialog extends dialogViewModelBase {

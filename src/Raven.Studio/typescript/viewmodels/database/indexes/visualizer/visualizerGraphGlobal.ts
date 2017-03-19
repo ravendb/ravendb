@@ -1,4 +1,3 @@
-import app = require("durandal/app");
 import graphHelper = require("common/helpers/graph/graphHelper");
 
 import d3 = require('d3');

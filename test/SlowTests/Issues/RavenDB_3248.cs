@@ -46,17 +46,19 @@ namespace SlowTests.Issues
             }
 
         }
-    }
-    public class RavenDB_3248_TestObject_ByName : AbstractIndexCreationTask<RavenDB_3248_TestObject>
-    {
-        public RavenDB_3248_TestObject_ByName()
+
+        private class RavenDB_3248_TestObject_ByName : AbstractIndexCreationTask<RavenDB_3248_TestObject>
         {
-            Map = users => from u in users select new { u.Name };
+            public RavenDB_3248_TestObject_ByName()
+            {
+                Map = users => from u in users select new { u.Name };
+            }
         }
-    }
-    public class RavenDB_3248_TestObject
-    {
-        public string Name { get; set; }
+
+        private class RavenDB_3248_TestObject
+        {
+            public string Name { get; set; }
+        }
     }
 }
 

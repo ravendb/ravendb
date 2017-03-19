@@ -255,6 +255,12 @@ namespace Raven.Server
                 return;
             }
 
+            if (exception is BadRequestException)
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return;
+            }
+
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
     }

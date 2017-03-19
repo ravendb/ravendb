@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import appUrl = require("common/appUrl");
 
 class getStatusDebugConfigCommand extends commandBase {
 

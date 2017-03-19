@@ -1,18 +1,12 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getIndexMergeSuggestionsCommand = require("commands/database/debug/getIndexMergeSuggestionsCommand");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
 import indexMergeSuggestion = require("models/database/index/indexMergeSuggestion");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import changeSubscription = require('common/changeSubscription');
-import moment = require("moment");
 import dialog = require("plugins/dialog");
-import changesContext = require("common/changesContext");
-import optional = require("common/optional");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import eventsCollector = require("common/eventsCollector");
-import genUtils = require("common/generalUtils");
 
 class indexMergeSuggestions extends viewModelBase {
     

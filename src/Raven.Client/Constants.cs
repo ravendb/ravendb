@@ -80,6 +80,8 @@ namespace Raven.Client
 
             public const string SystemDatabase = "<system>";
 
+            public const int MaxDatabaseNameLength = 128;
+
             public class Metadata
             {
                 private Metadata()
@@ -218,17 +220,12 @@ namespace Raven.Client
             public class Versioning
             {
                 public const string ConfigurationKey = "Raven/Versioning/Configuration";
-
-                public const string EnableVersioning = "Raven-Enable-Versioning";
-
-                public const string DisableVersioning = "Raven-Disable-Versioning";
             }
 
-            public class SqlReplication
+            public class ETL
             {
-                public const string SqlReplicationConnections = "Raven/SqlReplication/Connections";
-                public const string SqlReplicationConfigurationPrefix = "Raven/SqlReplication/Configuration/";
-                public const string RavenSqlReplicationStatusPrefix = "Raven/SqlReplication/Status/";
+                public const string RavenEtlProcessStatusPrefix = "Raven/Etl/Status/";
+                public const string RavenEtlDocument = "Raven/ETL";
             }
 
             public class PeriodicExport

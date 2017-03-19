@@ -1,22 +1,14 @@
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.BulkInsert;
 using Raven.Client.Documents.Identity;
-using Raven.Client.Documents.Session;
-using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Util;
-using Raven.Client.Util.Sockets;
-using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.BulkInsert
 {

@@ -34,7 +34,7 @@
                 <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }"><i class="icon-edit"></i><span>Edit index</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: termsUrl }" title="Navigate to index terms"><i class="icon-indexing"></i><span>Index terms</span></a>
-                <span class="has-disable-reason" data-placement="bottom" data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
+                <span class="has-disable-reason" data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
                     <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span></a>
                 </span>
                 <div class="pull-right-sm">
@@ -213,7 +213,7 @@
                                 </div>
                             </div>
 
-                            <button class="btn btn-success pull-right" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
+                            <button class="btn btn-success pull-right close-panel" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
                         </ul>
                     </div>
                     <!-- TODO: csv enabled for: isStaticIndexSelected -->
@@ -221,15 +221,15 @@
                     <button class="btn btn-default statistics" data-bind="click: openQueryStats">
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>
-
+                    
                     <div class="btn-group dropdown-right">
-                        <button class="btn btn-default btn-sm dropdown-toggle btn-prerelease" disabled="disabled" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <button class="btn btn-default btn-sm dropdown-toggle" type="button"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <i class="icon-table"></i><span>Display</span>
                             <span class="caret"></span>
                         </button>
-                        <div class="dropdown-menu settings-menu">
-                            TODO:
-                        </div>
+                        <ul class="dropdown-menu colselect-dropdown slidein-style padding padding-sm" role="menu" data-bind="dropdownPanel: true">
+                            <div data-bind="compose: $root.columnsSelector"></div>
+                        </ul>
                     </div>
                 </div>
             </div>

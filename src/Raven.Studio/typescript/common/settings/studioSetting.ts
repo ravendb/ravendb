@@ -17,6 +17,7 @@ abstract class studioSetting<T> {
     deserialize(json: any) {
         if (_.isUndefined(json)) {
             this.value = this.defaultValue;
+            return;
         }
         this.value = JSON.parse(json);
     }

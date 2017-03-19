@@ -1,10 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
 import database = require("models/resources/database");
-import appUrl = require("common/appUrl");
 import d3 = require("d3");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-import messagePublisher = require("common/messagePublisher");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 
 class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.Client.Documents.Indexes.IndexPerformanceStats[]> {

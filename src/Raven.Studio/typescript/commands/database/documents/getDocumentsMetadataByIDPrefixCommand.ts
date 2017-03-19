@@ -16,7 +16,7 @@ class getDocumentsMetadataByIDPrefixCommand extends commandBase {
             'metadata-only': true
         };
         const url = endpoints.databases.document.docs + this.urlEncodeArgs(args);
-        return this.query<Array<metadataAwareDto>>(url, args, this.db, x => x.Results);
+        return this.query<Array<metadataAwareDto>>(url, null, this.db, x => x.Results);
     }
 }
 

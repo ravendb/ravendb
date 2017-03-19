@@ -17,6 +17,16 @@ namespace Raven.Server.Documents
         FromReplication = 0x40,
         Reserved3 = 0x80,
 
-        HasAttachments = 0x100,
+        HasAttachments = 0x100
+    }
+
+    [Flags]
+    public enum NonPersistentDocumentFlags
+    {
+        None = 0,
+
+        LegacyRevision = 0x1,
+        LegacyVersioned = 0x2,
+        FromSmuggler = 0x4
     }
 }

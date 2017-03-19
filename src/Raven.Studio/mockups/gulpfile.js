@@ -95,7 +95,6 @@ gulp.task('partials', ['fixed-random-seed'], function () {
 
 gulp.task('less', function () {
     return gulp.src([
-        '../wwwroot/Content/css/bootstrap/bootstrap.less',
         '../wwwroot/Content/css/styles.less'
     ], { base: '../wwwroot/Content' })
         .pipe(addErrorHandling(less()))

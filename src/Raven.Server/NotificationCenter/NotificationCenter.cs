@@ -21,7 +21,7 @@ namespace Raven.Server.NotificationCenter
         private readonly string _resourceName;
         private readonly CancellationToken _shutdown;
         private PostponedNotificationsSender _postponedNotifications;
-        
+
         public NotificationCenter(NotificationsStorage notificationsStorage, string resourceName, CancellationToken shutdown)
         {
             _notificationsStorage = notificationsStorage;
@@ -31,16 +31,13 @@ namespace Raven.Server.NotificationCenter
 
         public void Initialize(DocumentDatabase database = null)
         {
-            if (Options.PreventFromRunningBackgroundWorkers == false)
-            {
-                _postponedNotifications = new PostponedNotificationsSender(_resourceName, _notificationsStorage,
+            _postponedNotifications = new PostponedNotificationsSender(_resourceName, _notificationsStorage,
                     _watchers, _shutdown);
 
-                _backgroundWorkers.Add(_postponedNotifications);
-                
-                if (database != null)
-                    _backgroundWorkers.Add(new DatabaseStatsSender(database, this));
-        }
+            _backgroundWorkers.Add(_postponedNotifications);
+
+            if (database != null)
+                _backgroundWorkers.Add(new DatabaseStatsSender(database, this));
         }
 
         public NotificationCenterOptions Options { get; } = new NotificationCenterOptions();
@@ -71,11 +68,11 @@ namespace Raven.Server.NotificationCenter
 
             lock (_watchersLock)
             {
-            _watchers.TryAdd(watcher);
-            
+                _watchers.TryAdd(watcher);
+
                 if (_watchers.Count == 1)
                     StartBackgroundWorkers();
-        }
+            }
 
             return new DisposableAction(() =>
             {
@@ -170,11 +167,11 @@ namespace Raven.Server.NotificationCenter
             foreach (var worker in _backgroundWorkers)
             {
                 worker.Dispose();
-                                }
-                            }
+            }
+        }
 
         public class ConnectedWatcher
-                {
+        {
             public AsyncQueue<Notification> NotificationsQueue;
 
             public IWebsocketWriter Writer;

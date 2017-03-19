@@ -1,5 +1,4 @@
 import database = require("models/resources/database");
-import document = require("models/database/documents/document");
 import commandBase = require("commands/commandBase");
 
 //TODO: we probably won't need this class
@@ -12,7 +11,7 @@ class saveVersioningCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
 
-        var commands: bulkDocumentDto[] = [];
+        var commands: Raven.Server.Documents.Handlers.CommandData[] = [];
 
         this.versioningEntries.forEach((dto: versioningEntryDto) => {
             var entry: any = new document(dto);

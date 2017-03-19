@@ -1,6 +1,5 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import router = require("plugins/router");
 
 class queryStatsDialog extends dialogViewModelBase {
 

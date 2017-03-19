@@ -1,5 +1,4 @@
 ﻿import appUrl = require("common/appUrl");
-import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 

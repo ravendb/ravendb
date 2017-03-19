@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Raven.Client;
 
 namespace Raven.Server.Web.System
 {
@@ -43,9 +44,14 @@ namespace Raven.Server.Web.System
 
         public static bool IsValidResourceName(string name, string dataDirectory, out string errorMessage)
         {
-            if (string.IsNullOrEmpty(name))
+            if (string.IsNullOrWhiteSpace(name))
             {
                 errorMessage = "An empty name is forbidden for use!";
+                return false;
+            }
+            if (name.Length > Constants.Documents.MaxDatabaseNameLength)
+            {
+                errorMessage = $"The name '{name}' exceeds '{Constants.Documents.MaxDatabaseNameLength}' characters!";
                 return false;
             }
             if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)

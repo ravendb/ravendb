@@ -1,12 +1,8 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
-import savePeriodicExportSetupCommand = require("commands/maintenance/savePeriodicExportSetupCommand");
 import document = require("models/database/documents/document");
 import periodicExportSetup = require("models/database/documents/periodicExportSetup");
 import appUrl = require("common/appUrl");
-import configurationSettings = require("models/database/globalConfig/configurationSettings");
-import getConfigurationSettingsCommand = require("commands/database/globalConfig/getConfigurationSettingsCommand");
-import deleteLocalPeriodicExportSetupCommand = require("commands/database/globalConfig/deleteLocalPeriodicExportSetupCommand");
 import database = require("models/resources/database");
 import getPeriodicExportSetupCommand = require("commands/database/documents/getPeriodicExportSetupCommand");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
@@ -37,7 +33,9 @@ class periodicExport extends viewModelBase {
             html: true,
             trigger: "hover",
             container: "body",
-            content: content
+            content: content 
+
+            //TODO: long popover?
         });
 
         $("#azureDecryptFailureSpan").popover({
@@ -45,6 +43,8 @@ class periodicExport extends viewModelBase {
             trigger: "hover",
             container: "body",
             content: content
+
+            //TODO: long popover?
         });
     }
 

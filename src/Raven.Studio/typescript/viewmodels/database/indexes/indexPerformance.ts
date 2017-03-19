@@ -1,5 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import app = require("durandal/app");
 import fileDownloader = require("common/fileDownloader");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import d3 = require("d3");

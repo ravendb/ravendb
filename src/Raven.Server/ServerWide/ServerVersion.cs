@@ -1,10 +1,12 @@
 ﻿using Raven.Client.Properties;
+using Raven.Server.Smuggler.Documents.Processors;
 
 namespace Raven.Server.ServerWide
 {
     public class ServerVersion
     {
         private static int? _buildVersion;
+        private static BuildVersionType? _buildType;
         private static string _commitHash;
         private static string _version;
         private static string _fullVersion;
@@ -14,6 +16,8 @@ namespace Raven.Server.ServerWide
 
         public static int Build =>  
             _buildVersion ?? (_buildVersion = RavenVersionAttribute.Instance.BuildVersion).Value;
+        public static BuildVersionType BuildType =>
+            _buildType ?? (_buildType = BuildVersion.Type(Build)).Value;
         public static string CommitHash => 
             _commitHash ?? (_commitHash = RavenVersionAttribute.Instance.CommitHash);
         public static string FullVersion => 

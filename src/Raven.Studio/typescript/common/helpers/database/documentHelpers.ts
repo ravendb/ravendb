@@ -23,7 +23,8 @@ class documentHelpers {
             }
             else if (typeof curField == "object" && !!curField) {
                 for (let curInnerField in curField) {
-                    documentNodesFlattenedList.push(curField[curInnerField]);
+                    var item = curField[curInnerField];
+                    documentNodesFlattenedList.push(item);
                 }
             }
         }

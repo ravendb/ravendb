@@ -180,16 +180,43 @@ namespace Raven.Server.Documents.Queries
 
         public Task<IOperationResult> ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, onProgress, key => _database.DocumentsStorage.Delete(context, key, null), token);
+            return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
+            {
+                var result = _database.DocumentsStorage.Delete(context, key, null);
+                if (retrieveDetails && result != null)
+                {
+                    return new BulkOperationResult.DeleteDetails
+                    {
+                        Id = key,
+                        Etag = result.Value.Etag
+                    };
+                }
+
+                return null;
+            }, token);
         }
 
         public Task<IOperationResult> ExecutePatchQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, onProgress, key => _database.Patch.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
+            return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
+            {
+                var result = _database.Patch.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false);
+                if (retrieveDetails && result != null)
+                {
+                    return new BulkOperationResult.PatchDetails
+                    {
+                        Id = key,
+                        Etag = result.Etag,
+                        Status = result.Status
+                    };
+                }
+
+                return null;
+            }, token);
         }
 
         private async Task<IOperationResult> ExecuteOperation(string indexName, IndexQueryServerSide query, QueryOperationOptions options,
-            DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Action<string> action, OperationCancelToken token)
+            DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, bool, IBulkOperationDetails> func, OperationCancelToken token)
         {
             var index = GetIndex(indexName);
 
@@ -220,7 +247,7 @@ namespace Raven.Server.Documents.Queries
                 context.CloseTransaction();
             }
 
-          
+
             var progress = new DeterminateProgress
             {
                 Total = resultKeys.Count,
@@ -228,6 +255,8 @@ namespace Raven.Server.Documents.Queries
             };
 
             onProgress(progress);
+
+            var result = new BulkOperationResult();
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
             {
@@ -251,7 +280,9 @@ namespace Raven.Server.Documents.Queries
                         tx = context.OpenWriteTransaction();
                     }
 
-                    action(document);
+                    var details = func(document, options.RetrieveDetails);
+                    if (options.RetrieveDetails)
+                        result.Details.Add(details);
 
                     operationsInCurrentBatch++;
                     progress.Processed++;
@@ -278,10 +309,8 @@ namespace Raven.Server.Documents.Queries
                 tx?.Commit();
             }
 
-            return new BulkOperationResult
-            {
-                Total = progress.Total
-            };
+            result.Total = progress.Total;
+            return result;
         }
 
         private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query, QueryOperationOptions options)

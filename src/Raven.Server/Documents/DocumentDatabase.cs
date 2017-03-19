@@ -9,11 +9,12 @@ using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this, _indexAndTransformerLocker);
             TransformerStore = new TransformerStore(this, _indexAndTransformerLocker);
-            SqlReplicationLoader = new SqlReplicationLoader(this);
+            EtlLoader = new EtlLoader(this);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this);
@@ -126,9 +127,9 @@ namespace Raven.Server.Documents
 
         public IndexesEtagsStorage IndexMetadataPersistence => ConfigurationStorage.IndexesEtagsStorage;
 
-        public SqlReplicationLoader SqlReplicationLoader { get; private set; }
-
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
+
+        public EtlLoader EtlLoader { get; private set; }
 
         public ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
@@ -212,7 +213,7 @@ namespace Raven.Server.Documents
 
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
-            SqlReplicationLoader.Initialize();
+            EtlLoader.Initialize();
 
             DocumentTombstoneCleaner.Initialize();
             BundleLoader = new BundleLoader(this);
@@ -335,8 +336,8 @@ namespace Raven.Server.Documents
 
                 exceptionAggregator.Execute(() =>
                 {
-                    SqlReplicationLoader?.Dispose();
-                    SqlReplicationLoader = null;
+                    EtlLoader?.Dispose();
+                    EtlLoader = null;
                 });
 
                 exceptionAggregator.Execute(() =>

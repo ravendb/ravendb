@@ -1,6 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
-
-import document = require("models/database/documents/document");
 import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
@@ -9,8 +7,8 @@ class collectionsTracker {
 
     collections = ko.observableArray<collection>();
     currentCollection = ko.observable<collection>();
-    private db: database;
-    private resultEtagProvider: () => string;
+    private readonly db: database;
+    private readonly resultEtagProvider: () => string;
 
     constructor(db: database, resultEtagProvider: () => string) {
         this.db = db;

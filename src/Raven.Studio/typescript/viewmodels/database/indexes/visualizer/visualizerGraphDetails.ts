@@ -1,8 +1,6 @@
-import app = require("durandal/app");
 import graphHelper = require("common/helpers/graph/graphHelper");
 
 import d3 = require('d3');
-import rbush = require("rbush");
 
 abstract class reduceValuesFormatter {
     static formatData(data: any) {

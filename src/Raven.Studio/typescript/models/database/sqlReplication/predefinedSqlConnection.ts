@@ -15,7 +15,7 @@ class predefinedSqlConnection {
 
     
 
-    constructor(name: string, dto: Raven.Server.Documents.SqlReplication.PredefinedSqlConnection) {
+    constructor(name: string, dto: Raven.Server.Documents.ETL.Providers.SQL.Connections.PredefinedSqlConnection) {
         this.name(name);
         this.factoryName(dto.FactoryName);
         this.connectionString(dto.ConnectionString);
@@ -29,7 +29,7 @@ class predefinedSqlConnection {
         });
     }
 
-    toDto(): Raven.Server.Documents.SqlReplication.PredefinedSqlConnection {
+    toDto(): Raven.Server.Documents.ETL.Providers.SQL.Connections.PredefinedSqlConnection {
         return {
             FactoryName: this.factoryName(),
             ConnectionString: this.connectionString()

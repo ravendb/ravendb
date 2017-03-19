@@ -1,7 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-import utils = require("widgets/virtualGrid/virtualGridUtils");
 import document = require("models/database/documents/document");
 import virtualRow = require("widgets/virtualGrid/virtualRow");
 

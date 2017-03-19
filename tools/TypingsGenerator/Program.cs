@@ -13,11 +13,14 @@ using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.ETL.Providers.SQL.Connections;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Versioning;
-using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Web.System;
@@ -74,6 +77,8 @@ namespace TypingsGenerator
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
             scripter.AddType(typeof(CollectionStatistics));
+
+            scripter.AddType(typeof(BatchRequestParser.CommandData));
 
             scripter.AddType(typeof(DatabaseDocument));
             scripter.AddType(typeof(DatabaseStatistics));
@@ -132,9 +137,9 @@ namespace TypingsGenerator
 
             // sql replication 
             scripter.AddType(typeof(SqlConnections));
-            scripter.AddType(typeof(SqlReplicationConfiguration));
-            scripter.AddType(typeof(SqlReplicationStatistics));
-            scripter.AddType(typeof(SimulateSqlReplication));
+            scripter.AddType(typeof(SqlEtlConfiguration));
+            scripter.AddType(typeof(EtlStatistics));
+            scripter.AddType(typeof(SimulateSqlEtl));
 
             // periodic export
             scripter.AddType(typeof(PeriodicExportConfiguration));

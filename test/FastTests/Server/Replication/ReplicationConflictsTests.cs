@@ -10,6 +10,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter;
+using Raven.Server.Utils;
 using Xunit;
 using Constants = Raven.Client.Constants;
 
@@ -47,7 +48,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 },
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.AlreadyMerged, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.AlreadyMerged, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -69,7 +70,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 30 },
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Update, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Update, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -91,7 +92,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 2 },
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Conflict, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -113,7 +114,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Conflict, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -136,7 +137,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 40 }
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Update, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Update, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -153,7 +154,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[1], Etag = 10 }
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Conflict, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -176,7 +177,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 }
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.AlreadyMerged, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.AlreadyMerged, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -199,7 +200,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 300 }
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Conflict, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
 

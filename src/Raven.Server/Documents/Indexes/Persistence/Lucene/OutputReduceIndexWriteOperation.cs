@@ -5,9 +5,8 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -39,13 +38,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (Exception e)
             {
-                DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(
-                    "Save Reduce Index Output",
-                    "Failed to save output documnts of reduce index to disk",
-                    AlertType.ErrorSavingReduceOutputDocuments,
-                    NotificationSeverity.Error,
-                    key: _indexName,
-                    details: new ExceptionDetails(e)));
+                throw new IndexWriteException("Failed to save output reduce documents to disk", e);
             }
         }
 

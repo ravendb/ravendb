@@ -2,7 +2,6 @@ import durandalRouter = require("plugins/router");
 import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
-import shell = require('viewmodels/shell');
 import accessHelper = require("viewmodels/shell/accessHelper");
 
 class status extends viewModelBase {

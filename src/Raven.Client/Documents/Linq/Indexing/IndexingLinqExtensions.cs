@@ -90,22 +90,6 @@ namespace Raven.Client.Documents.Linq.Indexing
         }
 
         /// <summary>
-        /// Safely parses string value to short, when failed default(short) is returned.
-        /// </summary>
-        public static string ParseShort(this object item)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
-
-        /// <summary>
-        /// Safely parses string value to short, when failed defaultValue is returned.
-        /// </summary>
-        public static string ParseShort(this object item, short defaultValue)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
-
-        /// <summary>
         /// Safely parses string value to long, when failed default(long) is returned.
         /// </summary>
         public static string ParseLong(this object item)
