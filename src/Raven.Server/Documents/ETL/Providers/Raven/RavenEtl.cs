@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override void LoadInternal(IEnumerable<ICommandData> commands, JsonOperationContext context)
         {
-            using (var requestExecutor = RequestExecutor.ShortTermSingleUse(EtlConfiguration.Url, EtlConfiguration.Database, EtlConfiguration.ApiKey)) // TODO arek - consider caching it somewhere
+            using (var requestExecutor = RequestExecutor.CreateForSingleNode(EtlConfiguration.Url, EtlConfiguration.Database, EtlConfiguration.ApiKey)) // TODO arek - consider caching it somewhere
             {
                 var batchCommand = new BatchCommand(new DocumentConventions(), context, commands as List<ICommandData>);
 

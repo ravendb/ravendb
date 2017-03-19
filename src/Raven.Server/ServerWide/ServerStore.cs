@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -22,13 +18,11 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
-using Sparrow.Binary;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
-using Voron.Data.Tables;
-using Voron.Exceptions;
 
 namespace Raven.Server.ServerWide
 {
@@ -47,7 +41,7 @@ namespace Raven.Server.ServerWide
 
         private readonly NotificationsStorage _notificationsStorage;
 
-
+        private RequestExecutor _clusterRequestExecutor;
 
         public readonly RavenConfiguration Configuration;
         private readonly RavenServer _ravenServer;
@@ -75,7 +69,6 @@ namespace Raven.Server.ServerWide
             DatabaseInfoCache = new DatabaseInfoCache();
 
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
-
         }
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
@@ -401,11 +394,21 @@ namespace Raven.Server.ServerWide
                 if (clusterTopology.Members.TryGetValue(engineLeaderTag, out leaderUrl) == false)
                     throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
                 var command = new PutRaftCommand(context, cmd);
-                using (var shortTermExecuter = RequestExecutor.ShortTermSingleUse(leaderUrl, "Rachis.Server", clusterTopology.ApiKey))
-                    await shortTermExecuter.ExecuteAsync(command, context, ServerShutdown);
+
+                if (_clusterRequestExecutor == null)
+                    _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);
+                else if (_clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false ||
+                         _clusterRequestExecutor.ApiKey.Equals(clusterTopology.ApiKey) == false)
+                {
+                    _clusterRequestExecutor.Dispose();
+                    _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);                    
+                }
+
+                await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);
+
                 return command.Result.ETag;
             }
-        }
+        }        
 
         protected internal class PutRaftCommand : RavenCommand<PutRaftCommandResult>
         {
@@ -450,7 +453,7 @@ namespace Raven.Server.ServerWide
         }
 
         public Task WaitForTopology(Leader.TopologyModification state)
-        {            
+        {                        
             return _engine.WaitForTopology(state);
         }
 
@@ -461,7 +464,7 @@ namespace Raven.Server.ServerWide
 
         public void ClusterAcceptNewConnection(TcpClient client)
         {
-            _engine.AcceptNewConnection(client, null);
+            _engine.AcceptNewConnection(client);
         }
 
         public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value)
