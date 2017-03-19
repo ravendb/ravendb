@@ -2,234 +2,159 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net.WebSockets;
+using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Extensions;
-using Raven.Client.Http.OAuth;
 using Raven.Client.Server.Operations.ApiKeys;
-using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Web.Authentication
 {
     public class OAuthApiKeyHandler : RequestHandler
     {
-        private const string DebugTag = "/oauth/api-key";
-        private const int MaxOAuthContentLength = 1500;
-        private static readonly TimeSpan MaxChallengeAge = TimeSpan.FromMinutes(10);
-
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<OAuthApiKeyHandler>("Raven/Server");
-
-        [RavenAction("/oauth/api-key", "GET", "/oauth/api-key", NoAuthorizationRequired = true)]
-        public async Task OauthGetApiKey()
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<OAuthApiKeyHandler>("Raven/Server");
+        
+        // https://download.libsodium.org/libsodium/content/public-key_cryptography/sealed_boxes.html
+        [RavenAction("/oauth/api-key", "POST", "/oauth/api-key body{string}", NoAuthorizationRequired = true)]
+        public unsafe Task OauthGetApiKey()
         {
-            try
+            var apiKeyName = GetStringQueryString("apiKey");
+            string secret;
+            AccessToken accessToken;
+            byte[] hash, publicKey;
+
+            JsonOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+                try
                 {
-                    try
+                    accessToken = BuildAccessTokenAndGetApiKeySecret(apiKeyName, out secret);
+                }
+                catch (AuthenticationException ex)
+                {
+                    GenerateError(ex.Message, context, (int)HttpStatusCode.Forbidden);
+                    return Task.CompletedTask;
+                }
+                catch (Exception ex)
+                {
+                    GenerateError(ex.Message, context, (int)HttpStatusCode.InternalServerError);
+                    return Task.CompletedTask;
+                }
+
+                JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
+                using (context.GetManagedBuffer(out pinnedBuffer))
+                using (var hashJson = context.ParseToMemory(RequestBodyStream(), "apikey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
+                {
+                    hashJson.BlittableValidation();
+
+                    object hashString;
+                    if (hashJson.TryGetMember("hash", out hashString) == false)
+                        throw new InvalidDataException("Missing 'hash' property in the POST request body");
+
+                    object pkString;
+                    if (hashJson.TryGetMember("public-key", out pkString) == false)
+                        throw new InvalidDataException("Missing 'public-key' property in the POST request body");
+
+                    hash = Convert.FromBase64String(((LazyStringValue)hashString).ToString());
+                    publicKey = Convert.FromBase64String(((LazyStringValue)pkString).ToString());
+                }
+            }
+
+            var verifiedHash = new byte[Sodium.crypto_generichash_bytes_max()];
+            if (hash.Length != verifiedHash.Length)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to authenticate api key. Hash length is invalid. Actual : {hash.Length}, Expected: {Sodium.crypto_generichash_bytes_max()}");
+                GenerateError($"Hash length is invalid. Actual : {hash.Length}, Expected : {Sodium.crypto_generichash_bytes_max()}", 
+                    context, (int)HttpStatusCode.Forbidden);
+                return Task.CompletedTask;
+            }
+
+            fixed (byte* pk = publicKey)
+            fixed (byte* h = hash)
+            fixed (byte* vh = verifiedHash)
+            fixed (byte* pSecret = Encoding.UTF8.GetBytes(secret))
+            {
+                Sodium.crypto_generichash(
+                    vh,
+                    (IntPtr)verifiedHash.Length,
+                    pSecret,
+                    (ulong)secret.Length,
+                    pk, (IntPtr)publicKey.Length
+                );
+
+                if (Sodium.sodium_memcmp(h, vh, (IntPtr)verifiedHash.Length) != 0)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Failed to authenticate api key with hash length=" + verifiedHash.Length + ". ApiKey=" + apiKeyName);
+                    GenerateError("Unable to authenticate api key. Cannot verify hash", context, (int)HttpStatusCode.Forbidden);
+                    return Task.CompletedTask;
+                }
+
+                var token = Encoding.UTF8.GetBytes(accessToken.Token);
+                var cryptedToken = new byte[Sodium.crypto_box_sealbytes() + token.Length];
+                fixed (byte* output = cryptedToken)
+                fixed (byte* pToken = token)
+                {
+                    if (Sodium.crypto_box_seal(output,
+                        pToken,
+                        (ulong)token.Length,
+                        pk) != 0)
                     {
-                        JsonOperationContext context;
-                        using (ServerStore.ContextPool.AllocateOperationContext(out context))
-                        {
-                            await SendInitialChallenge(webSocket);
-                            var accessToken = await ProcessToken(context, webSocket);
-                            if (accessToken == null)
-                            {
-                                await SendError(webSocket, "Unable to authenticate api key", typeof(AuthenticationException));
-                                return;
-                            }
-
-                            AccessToken old;
-                            if (Server.AccessTokensByName.TryGetValue(accessToken.Name, out old))
-                            {
-                                AccessToken value;
-                                Server.AccessTokensByName.TryRemove(old.Name, out value);
-                            }
-
-                            Server.AccessTokensById[accessToken.Token] = accessToken;
-                            Server.AccessTokensByName[accessToken.Name] = accessToken;
-
-                            await SendResponse(webSocket, new DynamicJsonValue
-                            {
-                                ["CurrentToken"] = accessToken.Token
-                            });
-
-                            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed by server",
-                                ServerStore.ServerShutdown);
-                        }
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Failed to authenticate api key. Cannot crypt token with length of " + (ulong)token.Length);
+                        GenerateError("Unable to authenticate api key. Cannot crypt token", context, (int)HttpStatusCode.Forbidden);
+                        return Task.CompletedTask;
                     }
-                    catch (Exception e)
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                    AccessToken old;
+                    if (Server.AccessTokensByName.TryGetValue(accessToken.Name, out old))
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Failed to authenticate api key", e);
-                        await SendError(webSocket, e.ToString(), typeof(AuthenticationException));
+                        AccessToken value;
+                        Server.AccessTokensByName.TryRemove(old.Name, out value);
+                    }
+
+                    Server.AccessTokensById[accessToken.Token] = accessToken;
+                    Server.AccessTokensByName[accessToken.Name] = accessToken;
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("cryptedToken");
+                        writer.WriteString(Convert.ToBase64String(cryptedToken));
+                        writer.WriteEndObject();
+                        writer.Flush();
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Got exception while handling /oauth/api-key endpoint", ex);
-            }
+            return Task.CompletedTask;
         }
 
-        private async Task SendInitialChallenge(WebSocket webSocket)
+        private void GenerateError(string error, JsonOperationContext context, int statusCode)
         {
-            var challengeData = new Dictionary<string, string>
+            HttpContext.Response.StatusCode = statusCode;
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                {OAuthHelper.Keys.ChallengeTimestamp, OAuthServerHelper.DateTimeToString(SystemTime.UtcNow)},
-                {
-                    OAuthHelper.Keys.ChallengeSalt,
-                    OAuthHelper.BytesToString(OAuthServerHelper.RandomBytes(OAuthHelper.Keys.ChallengeSaltLength))
-                }
-            };
-
-            var json = new DynamicJsonValue
-            {
-                [nameof(AuthenticatorChallenge.RSAExponent)] = OAuthServerHelper.RSAExponent,
-                [nameof(AuthenticatorChallenge.RSAModulus)] = OAuthServerHelper.RSAModulus,
-                [nameof(AuthenticatorChallenge.Challenge)] =
-                    OAuthServerHelper.EncryptSymmetric(OAuthHelper.DictionaryToString(challengeData))
-            };
-
-            await SendResponse(webSocket, json).ConfigureAwait(false);
-        }
-
-        private string ExtractChallengeResponse(BlittableJsonReaderObject reader)
-        {
-            string requestContents;
-            if (reader.TryGet("ChallengeResponse", out requestContents) == false)
-            {
-                throw new InvalidOperationException("Missing 'ChallengeResponse' property");
-            }
-
-            if (requestContents.Length > MaxOAuthContentLength)
-            {
-                throw new InvalidOperationException(
-                    "Cannot respond with token to content length " + requestContents.Length + " bigger then " + MaxOAuthContentLength);
-            }
-
-            if (requestContents.Length == 0)
-            {
-                throw new InvalidOperationException("Got zero length requestContent in 'ChallengeResponse' message");
-            }
-            return requestContents;
-        }
-
-
-        private async Task<AccessToken> ProcessToken(JsonOperationContext context, WebSocket webSocket)
-        {
-            using (var reader = await context.ReadFromWebSocket(webSocket, DebugTag, ServerStore.ServerShutdown))
-            {
-                var requestContents = ExtractChallengeResponse(reader);
-
-                var encryptedData = ExtractEncryptedData(requestContents);
-
-                var challengeDictionary = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptAsymmetric(encryptedData));
-
-                var apiKeyName = challengeDictionary.GetOrDefault(OAuthHelper.Keys.APIKeyName);
-                var challenge = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge);
-                var response = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Response);
-
-                if (string.IsNullOrEmpty(apiKeyName) || string.IsNullOrEmpty(challenge) || string.IsNullOrEmpty(response))
-                {
-                    throw new InvalidOperationException(
-                        "Got null or empty apiKeyName/challenge/response in 'ChallengeResponse' message");
-                }
-
-                var challengeData = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptSymmetric(challenge));
-
-                var timestampStr = challengeData.GetOrDefault(OAuthHelper.Keys.ChallengeTimestamp);
-
-                if (string.IsNullOrEmpty(timestampStr))
-                {
-                    throw new InvalidOperationException("Got null or empty encryptedData in 'ChallengeResponse' message");
-                }
-
-                ThrowIfTimestampNotVerified(timestampStr);
-
-                string secret;
-                var accessToken = BuildAccessTokenAndGetApiKeySecret(apiKeyName, out secret);
-
-                var expectedResponse = OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, secret));
-
-                if (response != expectedResponse)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Failure to authenticate api key {apiKeyName}");
-                    return null;
-                }
-                return accessToken;
+                writer.WriteStartObject();
+                writer.WritePropertyName("Error");
+                writer.WriteString(error);
+                writer.WriteEndObject();
+                writer.Flush();
             }
         }
 
-        private void ThrowIfTimestampNotVerified(string timestampStr)
-        {
-            var challengeTimestamp = OAuthServerHelper.ParseDateTime(timestampStr);
-            if (challengeTimestamp + MaxChallengeAge < SystemTime.UtcNow || challengeTimestamp > SystemTime.UtcNow)
-            {
-                throw new InvalidOperationException(
-                    "The challenge is either too old or from the future in 'ChallengeResponse' message" +
-                    $"challengeTimestamp={challengeTimestamp}, MaxChallengeAge={MaxChallengeAge}, SystemTime.UtcNow={SystemTime.UtcNow}");
-            }
-        }
-
-        private string ExtractEncryptedData(string requestContents)
-        {
-            var requestContentsDictionary = OAuthHelper.ParseDictionary(requestContents);
-
-            var rsaExponent = requestContentsDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent);
-            var rsaModulus = requestContentsDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus);
-
-            if (rsaExponent == null || rsaModulus == null ||
-                !rsaExponent.SequenceEqual(OAuthServerHelper.RSAExponent) ||
-                !rsaModulus.SequenceEqual(OAuthServerHelper.RSAModulus))
-            {
-                throw new InvalidOperationException("Got invalid Exponent/Modulus in requestContent in 'ChallengeResponse' message");
-            }
-
-            var encryptedData = requestContentsDictionary.GetOrDefault(OAuthHelper.Keys.EncryptedData);
-            if (string.IsNullOrEmpty(encryptedData))
-            {
-                throw new InvalidOperationException("Got null or empty encryptedData in 'ChallengeResponse' message");
-            }
-
-            return encryptedData;
-        }
-
-        private async Task SendError(WebSocket webSocket, string errorMsg, Type type)
-        {
-            if (webSocket.State != WebSocketState.Open)
-                return;
-            var json = new DynamicJsonValue
-            {
-                ["Error"] = errorMsg,
-                ["ExceptionType"] = type.Name
-            };
-            try
-            {
-                await SendResponse(webSocket, json).ConfigureAwait(false);
-                await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Server side error",
-                    ServerStore.ServerShutdown);
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Error sending error to client using web socket", e);
-            }
-        }
 
         private AccessToken BuildAccessTokenAndGetApiKeySecret(string apiKeyName, out string secret)
         {
-
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
@@ -239,14 +164,14 @@ namespace Raven.Server.Web.Authentication
 
                 if (apiDoc == null)
                 {
-                    throw new InvalidOperationException($"Could not find api key: {apiKeyName}");
+                    throw new AuthenticationException($"Could not find api key: {apiKeyName}");
                 }
 
                 bool apiKeyDefinitionEnabled;
                 if (apiDoc.TryGet("Enabled", out apiKeyDefinitionEnabled) == false ||
                     apiKeyDefinitionEnabled == false)
                 {
-                    throw new InvalidOperationException($"The api key {apiKeyName} has been disabled");
+                    throw new AuthenticationException($"The api key {apiKeyName} has been disabled");
                 }
 
                 if (apiDoc.TryGet("Secret", out secret) == false)
@@ -289,31 +214,6 @@ namespace Raven.Server.Web.Authentication
                     Issued = Stopwatch.GetTimestamp()
                 };
 
-            }
-        }
-
-        private async Task SendResponse(WebSocket webSocket, DynamicJsonValue json)
-        {
-            JsonOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            {
-                try
-                {
-                    using (var ms = new MemoryStream())
-                    {
-                        using (var writer = new BlittableJsonTextWriter(context, ms))
-                            context.Write(writer, json);
-
-                        ArraySegment<byte> bytes;
-                        ms.TryGetBuffer(out bytes);
-                        await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, ServerStore.ServerShutdown);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Failed to send json response to the client", ex);
-                }
             }
         }
     }
