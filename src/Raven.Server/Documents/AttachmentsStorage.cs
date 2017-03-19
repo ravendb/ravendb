@@ -189,7 +189,6 @@ namespace Raven.Server.Documents
                 PutAttachmentStream(context, keySlice, hashSlice, stream);
 
                 _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
-                _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
 
                 // Update the document with an etag which is bigger than the attachmenEtag
                 // We need to call this after we already put the attachment, so it can version also this attachment
@@ -227,24 +226,6 @@ namespace Raven.Server.Documents
             }
 
             _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
-        }
-
-        public void PutStreamFromReplication(DocumentsOperationContext context, Slice base64Hash, Stream stream)
-        {
-            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-            var existingStream = tree.ReadStream(base64Hash);
-            if (existingStream == null)
-            {
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                var result = table.SeekOneForwardFrom(AttachmentsSchema.Indexes[AttachmentsHashSlice], base64Hash);
-                Slice keySlice;
-                using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.LoweredDocumentIdAndLoweredNameAndType, ref result.Reader, out keySlice))
-                {
-                    tree.AddStream(base64Hash, stream, tag: keySlice);
-                }
-            }
-
-            _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
         }
 
         public void RevisionAttachments(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, ChangeVectorEntry[] changeVector)
@@ -313,12 +294,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void PutAttachmentStream(DocumentsOperationContext context, Slice key, Slice hash, Stream stream)
+        public void PutAttachmentStream(DocumentsOperationContext context, Slice key, Slice base64Hash, Stream stream)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-            var existingStream = tree.ReadStream(hash);
+            var existingStream = tree.ReadStream(base64Hash);
             if (existingStream == null)
-                tree.AddStream(hash, stream, tag: key);
+                tree.AddStream(base64Hash, stream, tag: key);
+
+            _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
         }
 
         private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)

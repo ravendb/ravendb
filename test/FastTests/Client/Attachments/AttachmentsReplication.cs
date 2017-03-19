@@ -10,7 +10,7 @@ namespace FastTests.Client.Attachments
 {
     public class AttachmentsReplication : ReplicationTestsBase
     {
-        [Fact]
+        [Fact(Skip = "WIP")]
         public void PutAttachments()
         {
             using (var store1 = GetDocumentStore())
@@ -56,12 +56,13 @@ namespace FastTests.Client.Attachments
                     Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", result.Hash);
                 }
 
-                using (var session = store1.OpenSession())
+                SetupReplication(store1, store2);
+                Assert.True(WaitForDocument(store2, "users/1"));
+                using (var session = store1.OpenSession()) // Wait for another replicaiton batch
                 {
                     session.Store(new User { Name = "Marker" }, "marker");
                     session.SaveChanges();
                 }
-                SetupReplication(store1, store2);
                 Assert.True(WaitForDocument(store2, "marker"));
 
                 using (var session = store2.OpenSession())
