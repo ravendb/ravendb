@@ -99,12 +99,10 @@ class virtualGrid<T> {
         //TODO: bind only if resizable form
         this.$gridElement.on("mousedown.columnResize", ".column", (e) => {
             this.handleResize(e);
+        });
 
-            // Stop propagation of the event so the text selection doesn't fire up
-            if (e.stopPropagation) e.stopPropagation();
-            if (e.preventDefault) e.preventDefault();
-            e.cancelBubble = true;
-            e.returnValue = false;
+        this.$gridElement.on("mousedown.columnResize", ".cell", (e) => {
+            this.handleResize(e);
         });
 
         this.shiftSelection = new shiftSelectionPreview(this.gridId, () => this.virtualRows, (s, e) => this.checkIfAllRecordsInRangeAreLoaded(s, e));
@@ -124,15 +122,22 @@ class virtualGrid<T> {
     }
 
     private handleResize(e: JQueryEventObject) {
+        // Stop propagation of the event so the text selection doesn't fire up
+        if (e.stopPropagation) e.stopPropagation();
+        if (e.preventDefault) e.preventDefault();
+        e.cancelBubble = true;
+        e.returnValue = false;
+
         const $document = $(document);
-        const columnToResize = ko.dataFor(e.target) as virtualColumn;
+        const targetColumnIdx = $(e.target).index();
+        const columnIndex = targetColumnIdx - 1;
+        const columnToResize = this.columns()[columnIndex];
         const startX = e.pageX;
         const columnWidthInPixels = virtualGridUtils.widthToPixels(columnToResize);
-        const columnIndex = this.columns.indexOf(columnToResize);
 
         // since resize handles are pseudo html elements, we get invalid target
         // check click location to distinguish between handle and title click
-        if (e.offsetX < columnWidthInPixels - 12) {
+        if (e.offsetX > 8) {
             return;
         }
 
