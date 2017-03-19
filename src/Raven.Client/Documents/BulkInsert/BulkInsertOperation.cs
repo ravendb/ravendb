@@ -9,6 +9,7 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Server;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.BulkInsert
 {
@@ -114,12 +115,32 @@ namespace Raven.Client.Documents.BulkInsert
                 await ThrowAnswerFromServer();
             }
             await _previousOperation.ConfigureAwait(false);
+
+            var tag = _store.Conventions.GetCollectionName(entity);
+            var clrType = _store.Conventions.GetClrTypeName(entity.GetType());
+        
             _stream.SetLength(0);
             _jsonWriter.WriteStartObject();
-            _jsonWriter.WritePropertyName(id);
+            _jsonWriter.WritePropertyName(Constants.Documents.BulkInsert.Content);
             _jsonWriter.Flush();
             _documentConventions.SerializeEntityToJsonStream(entity, _entityWriter);            
             _entityWriter.Flush();
+            _jsonWriter.WriteComma();
+            _jsonWriter.WritePropertyName(Constants.Documents.Metadata.Key);
+            _jsonWriter.WriteStartObject();
+            _jsonWriter.WritePropertyName(Constants.Documents.Metadata.Id);
+            _jsonWriter.WriteString(id);
+            if (tag != null)
+            {
+                _jsonWriter.WritePropertyName(Constants.Documents.Metadata.Collection);
+                _jsonWriter.WriteString(tag);
+            }
+            if (clrType != null)
+            {
+                _jsonWriter.WritePropertyName(Constants.Documents.Metadata.RavenClrType);
+                _jsonWriter.WriteString(clrType);
+            }
+            _jsonWriter.WriteEndObject();
             _jsonWriter.WriteEndObject();
             _jsonWriter.Flush();
 

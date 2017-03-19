@@ -138,13 +138,13 @@ namespace Raven.Server.Documents.Handlers
                         if (obj == null)
                             break;
                         totalSize += obj.Size;
-                        BlittableJsonReaderObject.PropertyDetails prop = new BlittableJsonReaderObject.PropertyDetails();
-                        obj.GetPropertyByIndex(0, ref prop);
-                        var data = prop.Value as BlittableJsonReaderObject;
-                        data = context.ReadObject(data, prop.Name);
+
+                        LazyStringValue id;
+                        var data = BuildObjectFromBulkInsertOp(context,obj,out id);
+                        
                         var doc = new Document
                         {
-                            Key = prop.Name,
+                            Key = id,
                             Data = data
                         };
                         list.Add(doc);
@@ -171,6 +171,36 @@ namespace Raven.Server.Documents.Handlers
                     await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Bulk-insert", Server.ServerStore.ServerShutdown);
                 }
             }
+        }
+
+        private static BlittableJsonReaderObject BuildObjectFromBulkInsertOp(JsonOperationContext ctx, BlittableJsonReaderObject obj,out LazyStringValue id)
+        {
+            BlittableJsonReaderObject content;
+            BlittableJsonReaderObject metadata;
+
+            obj.TryGet(Constants.Documents.BulkInsert.Content, out content);
+            obj.TryGet(Constants.Documents.Metadata.Key, out metadata);
+
+            string collection;
+            string clrType;
+
+            metadata.TryGet(Constants.Documents.Metadata.Id, out id);
+            metadata.TryGet(Constants.Documents.Metadata.Collection, out collection);
+            metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out clrType);
+            content.Modifications = new DynamicJsonValue(content)
+            {
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Id] = id
+                }
+            };
+            var modifiedMetadata = (DynamicJsonValue)content.Modifications[Constants.Documents.Metadata.Key];
+            if (collection != null)
+                modifiedMetadata[Constants.Documents.Metadata.Collection] = collection;
+            if(clrType != null)
+                modifiedMetadata[Constants.Documents.Metadata.RavenClrType] = clrType;
+
+            return ctx.ReadObject(content,id);
         }
 
         private async Task FlushBatchAsync(List<Document> list)
