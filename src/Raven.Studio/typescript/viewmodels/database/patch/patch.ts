@@ -8,12 +8,12 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import jsonUtil = require("common/jsonUtil");
+import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
-import savePatch = require('viewmodels/database/patch/savePatch');
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import patchByQueryCommand = require("commands/database/patch/patchByQueryCommand");
 import patchByCollectionCommand = require("commands/database/patch/patchByCollectionCommand");
@@ -21,7 +21,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
-import killOperationComamnd = require('commands/operations/killOperationCommand');
 import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
 import genUtils = require("common/generalUtils");
@@ -30,13 +29,101 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import executeBulkDocsCommand = require("commands/database/documents/executeBulkDocsCommand");
 import popoverUtils = require("common/popoverUtils");
+import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import columnsSelector = require("viewmodels/partial/columnsSelector");
+import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
-type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
+
+type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
+
+class patchList {
+
+    previewItem = ko.observable<patchDocument>();
+
+    private allPatches = ko.observableArray<patchDocument>([]);
+
+    private readonly useHandler: (patch: patchDocument) => void;
+    private readonly removeHandler: (patch: patchDocument) => void;
+
+    hasAnySavedPatch = ko.pureComputed(() => this.allPatches().length > 0);
+
+    previewCode = ko.pureComputed(() => {
+        const item = this.previewItem();
+        if (!item) {
+            return "";
+        }
+
+        return Prism.highlight(item.script(), (Prism.languages as any).javascript);
+    });
+
+    constructor(useHandler: (patch: patchDocument) => void, removeHandler: (patch: patchDocument) => void) {
+        _.bindAll(this, ...["previewPatch", "removePatch", "usePatch"] as Array<keyof this>);
+        this.useHandler = useHandler;
+        this.removeHandler = removeHandler;
+    }
+
+    filteredPatches = ko.pureComputed(() => {
+        let text = this.filters.searchText();
+
+        if (!text) {
+            return this.allPatches();
+        }
+
+        text = text.toLowerCase();
+
+        return this.allPatches().filter(x => x.name().toLowerCase().includes(text));
+    });
+
+    filters = {
+        searchText: ko.observable<string>()
+    }
+
+    previewPatch(item: patchDocument) {
+        this.previewItem(item);
+    }
+
+    usePatch() {
+        this.useHandler(this.previewItem());
+    }
+
+    removePatch(item: patchDocument) {
+        if (this.previewItem() === item) {
+            this.previewItem(null);
+        }
+        this.removeHandler(item);
+    }
+
+    loadAll(db: database) {
+        return new getPatchesCommand(db)
+            .execute()
+            .done((patches: patchDocument[]) => {
+                this.allPatches(patches);
+
+                if (this.filteredPatches().length) {
+                    this.previewItem(this.filteredPatches()[0]);
+                }
+            });
+    }
+}
+
 
 class patch extends viewModelBase {
 
+    inSaveMode = ko.observable<boolean>();
+    patchSaveName = ko.observable<string>();
+
+    spinners = {
+        save: ko.observable<boolean>(false)
+    }
+
     gridController = ko.observable<virtualGridController<document>>(); //TODO: column preview, custom columns?
     private documentsProvider: documentBasedColumnsProvider;
+    private columnPreview = new columnPreviewPlugin<document>();
+    columnsSelector = new columnsSelector<document>(); //TODO: refesh on selected item changed
+    private fullDocumentsProvider: documentPropertyProvider;
     private fetcher = ko.observable<fetcherType>();
 
     patchDocument = ko.observable<patchDocument>(patchDocument.empty());
@@ -53,6 +140,15 @@ class patch extends viewModelBase {
 
     runPatchValidationGroup: KnockoutValidationGroup;
     runQueryValidationGroup: KnockoutValidationGroup;
+    savePatchValidationGroup: KnockoutValidationGroup;
+
+    savedPatches = new patchList(item => this.usePatch(item), item => this.removePatch(item));
+
+    private hideSavePatchHandler = (e: Event) => {
+        if ($(e.target).closest(".patch-save").length === 0) {
+            this.inSaveMode(false);
+        }
+    }
 
     //TODO: implement: Data has changed. Your results may contain duplicates or non-current entries
 
@@ -77,12 +173,20 @@ class patch extends viewModelBase {
             required: true
         });
 
+        this.patchSaveName.extend({
+            required: true
+        });
+
         this.runPatchValidationGroup = ko.validatedObservable({
             script: doc.script,
             selectedItem: doc.selectedItem
         });
         this.runQueryValidationGroup = ko.validatedObservable({
             selectedItem: doc.selectedItem
+        });
+
+        this.savePatchValidationGroup = ko.validatedObservable({
+            patchSaveName: this.patchSaveName
         });
     }
 
@@ -98,8 +202,23 @@ class patch extends viewModelBase {
         });
 
         this.patchDocument().patchAll.subscribe((patchAll) => {
-            this.documentsProvider.showRowSelectionCheckbox = !patchAll;
+            this.documentsProvider.showRowSelectionCheckbox = !patchAll; //TODO: should we have to always set to true?
+
+            //TODO: if has custom layout just toggle checkbox? 
+
             this.gridController().reset(true);
+        });
+
+        this.inSaveMode.subscribe(enabled => {
+            const $input = $(".patch-save .form-control");
+            if (enabled) {
+                $input.show();
+                window.addEventListener("click", this.hideSavePatchHandler, true);
+            } else {
+                this.savePatchValidationGroup.errors.showAllMessages(false);
+                window.removeEventListener("click", this.hideSavePatchHandler, true);
+                setTimeout(() => $input.hide(), 200);
+            }
         });
     }
 
@@ -107,9 +226,9 @@ class patch extends viewModelBase {
         super.activate(recentPatchHash);
         this.updateHelpLink("QGGJR5");
 
-        //TODO: fetch all patches
+        this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
-        return $.when<any>(this.fetchAllCollections(), this.fetchAllIndexes());
+        return $.when<any>(this.fetchAllCollections(), this.fetchAllIndexes(), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     attached() {
@@ -154,7 +273,39 @@ class patch extends viewModelBase {
         });
 
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetcher() ? this.fetcher()(s, t) : fakeFetcher(s, t), (w, r) => this.documentsProvider.findColumns(w, r));
+
+        const allColumnsProvider = (results: pagedResultWithAvailableColumns<document>) => {
+            const selectedItem = this.patchDocument().selectedItem();
+            if (!selectedItem || this.patchDocument().patchOnOption() === "Document" || !this.fetcher()) {
+                return [];
+            }
+
+            switch (this.patchDocument().patchOnOption()) {
+                case "Document":
+                    return [];
+                case "Index":
+                    return documentBasedColumnsProvider.extractUniquePropertyNames(results);
+                case "Collection":
+                    return results.availableColumns;
+            }
+        }
+
+        this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetcher() ? this.fetcher()(s, t, previewCols, fullCols) : fakeFetcher(s, t, [], []),
+            (w, r) => this.documentsProvider.findColumns(w, r),
+            allColumnsProvider);
+
+        this.columnPreview.install(".patch-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+            if (column instanceof textColumn) {
+                this.fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
+                    const json = JSON.stringify(v, null, 4);
+                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    onValue(html);
+                }, error => {
+                    const html = Prism.highlight("Unable to generate column preview: " + error.toString(), (Prism.languages as any).javascript);
+                    onValue(html);
+                });
+            }
+        });
 
         this.fetcher.subscribe(() => grid.reset());
     }
@@ -163,9 +314,13 @@ class patch extends viewModelBase {
         this.fetcher(null);
 
         const patchDoc = this.patchDocument();
-        patchDoc.patchOnOption(option);
         patchDoc.selectedItem(null);
+        patchDoc.patchOnOption(option);
         patchDoc.patchAll(option === "Index" || option === "Collection");
+
+        if (option !== "Index") {
+            patchDoc.query(null);
+        }
 
         this.runPatchValidationGroup.errors.showAllMessages(false);
     }
@@ -175,13 +330,17 @@ class patch extends viewModelBase {
         patchDoc.selectedItem(indexName);
         patchDoc.patchAll(true);
 
+        this.columnsSelector.reset();
+
         queryUtil.fetchIndexFields(this.activeDatabase(), indexName, this.indexFields);
 
         this.runQuery();
     }
 
     useCollection(collectionToUse: collection) {
-        const fetcher = (skip: number, take: number) => collectionToUse.fetchDocuments(skip, take);
+        this.columnsSelector.reset();
+
+        const fetcher = (skip: number, take: number, previewCols: string[], fullCols: string[]) => collectionToUse.fetchDocuments(skip, take, previewCols, fullCols);
         this.fetcher(fetcher);
 
         const patchDoc = this.patchDocument();
@@ -191,6 +350,41 @@ class patch extends viewModelBase {
 
     queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
         queryUtil.queryCompleter(this.indexFields, this.patchDocument().selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
+    }
+
+    usePatch(item: patchDocument) {
+        const patchDoc = this.patchDocument();
+
+        //TODO: handle case when saved patch has collection which no longer exist, or index which is not available
+
+        patchDoc.copyFrom(item);
+
+        switch (patchDoc.patchOnOption()) {
+            case "Index":
+                this.useIndex(patchDoc.selectedItem());
+                break;
+            case "Collection":
+                const matchedCollection = this.collections().find(x => x.name === patchDoc.selectedItem());
+                if (matchedCollection) {
+                    this.useCollection(matchedCollection);
+                }
+                break;
+        }
+    }
+
+    removePatch(item: patchDocument) {
+        this.confirmationMessage("Patch", `Are you sure you want to delete patch '${item.name()}'?`, ["Cancel", "Delete"])
+            .done(result => {
+                if (result.can) {
+                    new deleteDocumentsCommand([item.getId()], this.activeDatabase())
+                        .execute()
+                        .done(() => {
+                            messagePublisher.reportSuccess("Deleted patch " + item.name());
+                            this.savedPatches.loadAll(this.activeDatabase());
+                        })
+                        .fail(response => messagePublisher.reportError("Failed to delete " + item.name(), response.responseText, response.statusText));
+                }
+            });
     }
 
     runQuery(): void {
@@ -237,6 +431,29 @@ class patch extends viewModelBase {
                     const selectedIds = this.gridController().getSelectedItems().map(x => x.getId());
                     this.patchOnDocuments(selectedIds);
                 }
+            }
+        }
+    }
+
+    savePatch() {
+        if (this.inSaveMode()) {
+            eventsCollector.default.reportEvent("patch", "save");
+
+            if (this.isValid(this.savePatchValidationGroup)) {
+                this.spinners.save(true);
+                new savePatchCommand(this.patchSaveName(), this.patchDocument(), this.activeDatabase())
+                    .execute()
+                    .always(() => this.spinners.save(false))
+                    .done(() => {
+                        this.inSaveMode(false);
+                        this.patchSaveName("");
+                        this.savePatchValidationGroup.errors.showAllMessages(false);
+                        this.savedPatches.loadAll(this.activeDatabase());
+                    });
+            }
+        } else {
+            if (this.isValid(this.runPatchValidationGroup)) {
+                this.inSaveMode(true);    
             }
         }
     }
@@ -346,14 +563,10 @@ class patch extends viewModelBase {
 
     beforePatch: KnockoutComputed<string>;
     beforePatchDoc = ko.observable<string>();
-    beforePatchMeta = ko.observable<string>();
-    beforePatchDocMode = ko.observable<boolean>(true);
     beforePatchEditor: AceAjax.Editor;
 
     afterPatch = ko.observable<string>();
     afterPatchDoc = ko.observable<string>();
-    afterPatchMeta = ko.observable<string>();
-    afterPatchDocMode = ko.observable<boolean>(true);
     afterPatchEditor: AceAjax.Editor;
 
     loadedDocuments = ko.observableArray<string>();
@@ -400,41 +613,6 @@ class patch extends viewModelBase {
             },
             owner: this
         });
-
-        // Refetch the index fields whenever the selected index name changes.
-        this.selectedIndex
-            .subscribe(indexName => {
-                if (indexName) {
-                    this.fetchIndexFields(indexName);
-                }
-            });
-
-        this.indicesToSelect = ko.computed(() => {
-            var indicies = this.indices();
-            var patchDocument = this.patchDocument();
-            if (indicies.length === 0 || !patchDocument)
-                return [];
-
-            return indicies.filter(x => x.name !== patchDocument.selectedItem());
-        });
-
-        this.collectionToSelect = ko.computed(() => {
-            var collections = this.collections();
-            var patchDocument = this.patchDocument();
-            if (collections.length === 0 || !patchDocument)
-                return [];
-
-            return collections.filter((x: collection) => x.name !== patchDocument.selectedItem());
-        });
-
-        this.showDocumentsPreview = ko.computed(() => {
-            if (!this.patchDocument()) {
-                return false;
-            }
-            var indexPath = this.patchDocument().isIndexPatch();
-            var collectionPath = this.patchDocument().isCollectionPatch();
-            return indexPath || collectionPath;
-        });
     }
 
     compositionComplete() {
@@ -450,7 +628,6 @@ class patch extends viewModelBase {
             this.afterPatchEditor = ko.utils.domData.get(afterPatchEditorElement[0], "aceEditor");
         }
        
-
         grid.selection.subscribe(selection => {
             if (selection.count === 1) {
                 var document = selection.included[0];
@@ -466,7 +643,6 @@ class patch extends viewModelBase {
     }
 
     activate(recentPatchHash?: string) {
-
         this.isExecuteAllowed = ko.computed(() => !!this.patchDocument().script() && !!this.beforePatchDoc());
         this.keyOfTestedDocument = ko.computed(() => {
             switch (this.patchDocument().patchOnOption()) {
@@ -478,17 +654,9 @@ class patch extends viewModelBase {
             }
         });
 
-        this.fetchAllPatches();
-
         if (recentPatchHash) {
             this.selectInitialPatch(recentPatchHash);
         }
-    }
-
-    private fetchAllPatches() {
-        new getPatchesCommand(this.activeDatabase())
-            .execute()
-            .done((patches: patchDocument[]) => this.savedPatches(patches));
     }
 
     detached() {
@@ -516,44 +684,6 @@ class patch extends viewModelBase {
         this.putDocuments([]);
         this.loadedDocuments([]);
         this.outputLog([]);
-    }
-
-
-    savePatch() {
-        eventsCollector.default.reportEvent("patch", "save");
-
-        var savePatchViewModel: savePatch = new savePatch();
-        app.showBootstrapDialog(savePatchViewModel);
-        savePatchViewModel.onExit().done((patchName) => {
-            new savePatchCommand(patchName, this.patchDocument(), this.activeDatabase())
-                .execute()
-                .done(() => this.fetchAllPatches());
-        });
-    }
-
-    private usePatch(patch: patchDocument) {
-        this.clearDocumentPreview();
-        var selectedItem = patch.selectedItem();
-        patch = patch.clone();
-        patch.resetMetadata();
-        this.patchDocument(patch);
-        switch (this.patchDocument().patchOnOption()) {
-            case "Collection":
-                this.fetchAllCollections().then(() => {
-                    this.setSelectedCollection(this.collections().filter(coll => (coll.name === selectedItem))[0]);
-                });
-                break;
-            case "Index":
-                this.fetchAllIndexes().then(() => {
-                    this.setSelectedIndex(selectedItem);
-                    this.queryText(patch.query());
-                    this.runQuery();
-                });
-                break;
-            case "Document":
-                this.loadDocumentToTest(patch.selectedItem());
-                break;
-        }
     }
 
     testPatch() {
@@ -598,39 +728,7 @@ class patch extends viewModelBase {
         this.putDocuments((actions.PutDocument || []).map(doc => jsonUtil.syntaxHighlight(doc)));
     }
 
-    private updateDocumentsList() {
-        switch (this.patchDocument().patchOnOption()) {
-            case "Collection":
-                this.fetchAllCollections().then(() => {
-                    this.setSelectedCollection(this.collections().filter(coll => (coll.name === this.patchDocument().selectedItem()))[0]);
-                });
-                break;
-            case "Index":
-                this.useIndex(this.patchDocument().selectedItem());
-                break;
-        }
-    }
-
-    activateBeforeDoc() {
-        this.beforePatchDocMode(true);
-    }
-
-    activateBeforeMeta() {
-        this.beforePatchDocMode(false);
-    }
-
-    activateAfterDoc() {
-        this.afterPatchDocMode(true);
-    }
-
-    activateAfterMeta() {
-        this.afterPatchDocMode(false);
-    }
-
-    selectedIndex = ko.observable<string>();
     isTestIndex = ko.observable<boolean>(false);
-
-   
     }*/
 }
 

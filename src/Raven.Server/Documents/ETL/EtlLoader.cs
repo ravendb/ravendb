@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
@@ -34,6 +36,10 @@ namespace Raven.Server.Documents.ETL
             _database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
         }
 
+        public IEnumerable<SqlEtl> SqlTargets => _processes.OfType<SqlEtl>();
+
+        public EtlConfiguration CurrentConfiguration { get; private set; }
+
         public void Initialize()
         {
             LoadProcesses();
@@ -41,15 +47,15 @@ namespace Raven.Server.Documents.ETL
 
         private void LoadProcesses()
         {
-            var configuration = LoadConfiguration();
+            LoadConfiguration();
 
-            if (configuration == null)
+            if (CurrentConfiguration == null)
                 return;
 
             var processes = new List<EtlProcess>();
             var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var config in configuration.RavenTargets)
+            foreach (var config in CurrentConfiguration.RavenTargets)
             {
                 if (ValidateConfiguration(config, uniqueNames) == false)
                     continue;
@@ -59,13 +65,13 @@ namespace Raven.Server.Documents.ETL
                 processes.Add(etlProcess);
             }
 
-            foreach (var config in configuration.SqlTargets)
+            foreach (var config in CurrentConfiguration.SqlTargets)
             {
                 if (ValidateConfiguration(config, uniqueNames) == false)
                     continue;
 
                 PredefinedSqlConnection predefinedConnection;
-                if (configuration.SqlConnections.TryGetValue(config.ConnectionStringName, out predefinedConnection) == false)
+                if (CurrentConfiguration.SqlConnections.TryGetValue(config.ConnectionStringName, out predefinedConnection) == false)
                 {
                     var message =
                         $"Could not find connection string named '{config.ConnectionStringName}' for SQL ETL config: " +
@@ -126,18 +132,21 @@ namespace Raven.Server.Documents.ETL
             _database.NotificationCenter.Add(alert);
         }
 
-        private EtlConfiguration LoadConfiguration()
+        private void LoadConfiguration()
         {
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var etlConfigDocument = _database.DocumentsStorage.Get(context, "Raven/ETL");
+                var etlConfigDocument = _database.DocumentsStorage.Get(context, Constants.Documents.ETL.RavenEtlDocument);
 
                 if (etlConfigDocument == null)
-                    return null;
+                {
+                    CurrentConfiguration = null;
+                    return;
+                }
 
-                return JsonDeserializationServer.EtlConfiguration(etlConfigDocument.Data);
+                CurrentConfiguration = JsonDeserializationServer.EtlConfiguration(etlConfigDocument.Data);
             }
         }
 
@@ -152,10 +161,8 @@ namespace Raven.Server.Documents.ETL
 
         private void HandleSystemDocumentChange(DocumentChange change)
         {
-            if (change.Key.Equals("Raven/ETL", StringComparison.OrdinalIgnoreCase) == false)
+            if (change.Key.Equals(Constants.Documents.ETL.RavenEtlDocument, StringComparison.OrdinalIgnoreCase) == false)
                 return;
-            // TODO arek
-            //var configuration = LoadConfiguration();
 
             foreach (var replication in _processes)
                 replication.Dispose();

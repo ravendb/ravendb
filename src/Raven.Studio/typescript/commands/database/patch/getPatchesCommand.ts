@@ -14,7 +14,7 @@ class getPatchesCommand extends commandBase {
             startsWith: "Studio/Patch/",
             exclude: <string>null,
             start: 0,
-            pageSize: 256
+            pageSize: 1024
         };
 
         return this.query(endpoints.databases.document.docs, args, this.db,

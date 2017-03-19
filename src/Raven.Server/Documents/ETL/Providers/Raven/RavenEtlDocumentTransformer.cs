@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Jint.Native;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -29,13 +32,41 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 if (_transformationScript != null)
                 {
-                    var result = Apply(Context, item.Document, _transformationScript);
+                    var scope = ApplySingleScript(Context, item.Document, _transformationScript, false);
 
-                    _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentKey, null, result.ModifiedDocument));
+                    var actualResult = scope.ActualPatchResult;
+
+                    var filteredOut = false;
+
+                    if (actualResult.IsBoolean() && actualResult.AsBoolean() == false)
+                        filteredOut = true;
+                    else if (actualResult.IsNull())
+                        filteredOut = true;
+
+                    if (filteredOut)
+                        return;
+
+                    JsValue result = null;
+
+                    if (actualResult.IsObject())
+                        result = actualResult;
+                    else if (actualResult.IsUndefined())
+                        result = scope.PatchObject.AsObject();
+                    else
+                        ThrowOnUnexpectedTransformationResultType(actualResult);
+
+                    var transformResult = Context.ReadObject(scope.ToBlittable(result.AsObject()), item.DocumentKey);
+
+                    _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentKey, null, transformResult));
                 }
                 else
                     _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentKey, null, item.Document.Data));
             }
+        }
+
+        private static void ThrowOnUnexpectedTransformationResultType(JsValue actualResult)
+        {
+            throw new InvalidOperationException($"Unexpected type of the transformation script result: {actualResult.Type}");
         }
     }
 }

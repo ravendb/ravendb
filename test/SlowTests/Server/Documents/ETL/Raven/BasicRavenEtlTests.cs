@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Threading;
-using FastTests;
-using Raven.Client.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
@@ -9,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class BasicRavenEtlTests : RavenTestBase
+    public class BasicRavenEtlTests : EtlTestBase
     {
         [Fact]
         public void Simple_script()
@@ -17,15 +14,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                var database = GetDatabase(src.DefaultDatabase).Result;
-
-                var mre = new ManualResetEventSlim();
-                database.EtlLoader.BatchCompleted += (n, s) =>
-                {
-                    if (s.LoadSuccesses == 1)
-                        mre.Set();
-                };
-
                 SetupEtl(src, new EtlConfiguration
                 {
                     RavenTargets =
@@ -41,6 +29,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     }
                 });
 
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses == 1);
+
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
@@ -51,7 +41,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                mre.Wait(TimeSpan.FromMinutes(1));
+                etlDone.Wait(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -69,15 +59,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                var database = GetDatabase(src.DefaultDatabase).Result;
-
-                var mre = new ManualResetEventSlim();
-                database.EtlLoader.BatchCompleted += (n, s) =>
-                {
-                    if (s.LoadSuccesses == 1)
-                        mre.Set();
-                };
-
                 SetupEtl(src, new EtlConfiguration
                 {
                     RavenTargets =
@@ -92,6 +73,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         }
                 });
 
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses == 1);
+
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
@@ -102,7 +85,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                mre.Wait(TimeSpan.FromMinutes(1));
+                etlDone.Wait(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -114,14 +97,75 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        private static void SetupEtl(DocumentStore src, EtlConfiguration configuration)
+        [Fact]
+        public void Filtering_with_null_and_false_and_transformation_to_different_object_with_load_document()
         {
-            using (var session = src.OpenSession())
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
             {
-                session.Store(configuration, "Raven/ETL");
+                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                session.SaveChanges();
+                SetupEtl(src, dest, "users", @"
+if (this.Age % 4 == 0) 
+    return null; 
+else if (this.Age % 2 == 0) 
+    return false;
+else 
+    return {Name: this.Name + ' ' + this.LastName, Address:LoadDocument(this.AddressId)};
+");
+
+                const int count = 30;
+
+                using (var session = src.OpenSession())
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        session.Store(new User
+                        {
+                            Age = i,
+                            Name = "James",
+                            LastName = "Smith",
+                            AddressId = $"addresses/{i}"
+                        }, "users/" + i);
+
+                        session.Store(new Address
+                        {
+                            City = "New York"
+                        }, $"addresses/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    var loaded = 0;
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        var user = session.Load<UserWithAddress>("users/" + i);
+                        
+                        if (i % 2 == 0)
+                        {
+                            Assert.Null(user);
+                        }
+                        else
+                        {
+                            Assert.Equal("New York", user.Address.City);
+                            loaded++;
+                        }
+                    }
+
+                    Assert.Equal(15, loaded);
+                }
             }
+        }
+
+        private class UserWithAddress : User
+        {
+            public Address Address { get; set; }
         }
     }
 }

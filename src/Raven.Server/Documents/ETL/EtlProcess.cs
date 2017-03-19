@@ -315,9 +315,6 @@ namespace Raven.Server.Documents.ETL
 
                         if (CancellationToken.IsCancellationRequested == false)
                         {
-                            var afterReplicationCompleted = Database.SqlReplicationLoader.AfterReplicationCompleted; // TODO arek
-                            afterReplicationCompleted?.Invoke(Statistics);
-
                             var batchCompleted = Database.EtlLoader.BatchCompleted;
                             batchCompleted?.Invoke(Name, Statistics);
                         }

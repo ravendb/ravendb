@@ -4,8 +4,6 @@ namespace Raven.Server.Documents.ETL
 {
     public class EtlProcessConfiguration
     {
-        public string Id { get; set; } // TODO arek - to remove
-
         public string Name { get; set; }
 
         public bool Disabled { get; set; }

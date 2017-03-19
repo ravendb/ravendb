@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.NotificationCenter.Notifications;
@@ -9,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class EtlLoaderTests : RavenTestBase
+    public class EtlLoaderTests : EtlTestBase
     {
         [Fact]
         public async Task Raises_alert_if_process_has_invalid_name()
@@ -21,11 +20,9 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    using (var session = store.OpenSession())
+                    SetupEtl(store, new EtlConfiguration
                     {
-                        session.Store(new EtlConfiguration
-                        {
-                            RavenTargets =
+                        RavenTargets =
                             {
                                 new RavenEtlConfiguration
                                 {
@@ -34,10 +31,7 @@ namespace SlowTests.Server.Documents.ETL
                                     Collection = "Users"
                                 }
                             }
-                        }, "Raven/ETL");
-
-                        session.SaveChanges();
-                    }
+                    });
                     
                     var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.FromSeconds(30));
 
@@ -58,11 +52,9 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    using (var session = store.OpenSession())
+                    SetupEtl(store, new EtlConfiguration
                     {
-                        session.Store(new EtlConfiguration
-                        {
-                            RavenTargets =
+                        RavenTargets =
                             {
                                 new RavenEtlConfiguration
                                 {
@@ -79,10 +71,7 @@ namespace SlowTests.Server.Documents.ETL
                                     Collection = "People"
                                 }
                             }
-                        }, "Raven/ETL");
-
-                        session.SaveChanges();
-                    }
+                    });
 
                     var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.FromSeconds(30));
 

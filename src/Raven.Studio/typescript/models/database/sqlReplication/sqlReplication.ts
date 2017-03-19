@@ -158,7 +158,7 @@ class sqlReplication extends document {
         //TODO: meta["@id"] = "Raven/SqlReplication/Configuration/" + this.name();
         return {
             //TODO: '@metadata': meta,
-            Id: null,
+            //TODO: Id: null as any,
             Name: this.name(),
             Disabled: this.disabled(),
             ParameterizeDeletesDisabled: this.parameterizeDeletesDisabled(),

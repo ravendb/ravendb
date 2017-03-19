@@ -10,9 +10,8 @@ class savePatchCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Saving Patch.");
         return new saveDocumentCommand("Studio/Patch/" + this.patchName, this.patchDocument, this.db, false).execute()
-            .done(() => this.reportSuccess("Saved Patch."))
+            .done(() => this.reportSuccess("Patch saved"))
             .fail((response: JQueryXHR) => this.reportError("Failed to save Patch.", response.responseText, response.statusText));
     }
         

@@ -13,9 +13,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Sparrow.Platform;
@@ -23,7 +23,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
-    public class SqlEtlTests : RavenTestBase
+    public class SqlEtlTests : EtlTestBase
     {
         private static readonly Lazy<string> _masterDatabaseConnection = new Lazy<string>(() =>
         {
@@ -108,15 +108,8 @@ for (var i = 0; i < this.OrderLines.length; i++) {
             using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
-
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
+                
                 int testCount = 5000;
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (GetOrdersCount(store) == testCount)
-                        eventSlim.Set();
-                };
 
                 using (var bulkInsert = store.BulkInsert())
                 {
@@ -129,14 +122,15 @@ for (var i = 0; i < this.OrderLines.length; i++) {
                                 new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},
                                 new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
                             }
-
                         });
                     }
                 }
 
-                await SetupSqlReplication(store, defaultScript);
+                var etlDone = WaitForEtl(store, (n, s) => GetOrdersCount(store) == testCount);
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                SetupSqlEtl(store, defaultScript);
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
 
                 Assert.Equal(testCount, GetOrdersCount(store));
             }
@@ -227,14 +221,6 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
             {
                 CreateRdbmsSchema(store);
 
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (statistics.LoadSuccesses != 0)
-                        eventSlim.Set();
-                };
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order
@@ -248,9 +234,11 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
                     await session.SaveChangesAsync();
                 }
 
-                await SetupSqlReplication(store, defaultScript);
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                SetupSqlEtl(store, defaultScript);
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
 
                 using (var con = new SqlConnection())
                 {
@@ -275,14 +263,6 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
             {
                 CreateRdbmsSchema(store);
 
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (statistics.LoadSuccesses != 0)
-                        eventSlim.Set();
-                };
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order
@@ -295,15 +275,16 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
                     });
                     await session.SaveChangesAsync();
                 }
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                await SetupSqlReplication(store, @"var orderData = {
+                SetupSqlEtl(store, @"var orderData = {
     Id: documentId,
     OrderLinesCount: this.OrderLines_Missing.length,
     TotalCost: 0
 };
 replicateToOrders(orderData);");
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                etlDone.Wait(TimeSpan.FromMinutes(5));
 
                 using (var con = new SqlConnection())
                 {
@@ -328,13 +309,6 @@ replicateToOrders(orderData);");
             {
                 CreateRdbmsSchema(store);
 
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (statistics.LoadSuccesses != 0)
-                        eventSlim.Set();
-                };
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -350,14 +324,16 @@ replicateToOrders(orderData);");
                     await session.SaveChangesAsync();
                 }
 
-                await SetupSqlReplication(store, @"var orderData = {
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                SetupSqlEtl(store, @"var orderData = {
     Id: documentId,
     City: this.Address.City,
     TotalCost: 0
 };
 replicateToOrders(orderData);");
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                etlDone.Wait(TimeSpan.FromMinutes(5));
 
                 using (var con = new SqlConnection())
                 {
@@ -382,14 +358,6 @@ replicateToOrders(orderData);");
             {
                 CreateRdbmsSchema(store);
 
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (statistics.LoadSuccesses != 0)
-                        eventSlim.Set();
-                };
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order
@@ -402,20 +370,22 @@ replicateToOrders(orderData);");
                     await session.SaveChangesAsync();
                 }
 
-                await SetupSqlReplication(store, "if(this.OrderLines.length > 0) { \r\n" + defaultScript + " \r\n}");
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                SetupSqlEtl(store, "if(this.OrderLines.length > 0) { \r\n" + defaultScript + " \r\n}");
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
 
                 AssertCounts(1, 1, store);
 
-                eventSlim.Reset();
+                etlDone.Reset();
                 using (var session = store.OpenAsyncSession())
                 {
                     var order = await session.LoadAsync<Order>("orders/1");
                     order.OrderLines.Clear();
                     await session.SaveChangesAsync();
                 }
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                etlDone.Wait(TimeSpan.FromMinutes(5));
                 AssertCounts(0, 0, store);
             }
         }
@@ -442,14 +412,6 @@ replicateToOrders(orderData);");
             {
                 CreateRdbmsSchema(store);
 
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (statistics.LoadSuccesses != 0)
-                        eventSlim.Set();
-                };
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order
@@ -463,13 +425,15 @@ replicateToOrders(orderData);");
                     await session.SaveChangesAsync();
                 }
 
-                await SetupSqlReplication(store, defaultScript);
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                SetupSqlEtl(store, defaultScript);
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
 
                 AssertCounts(1, 2, store);
 
-                eventSlim.Reset();
+                etlDone.Reset();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -478,7 +442,7 @@ replicateToOrders(orderData);");
                     await session.SaveChangesAsync();
                 }
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                etlDone.Wait(TimeSpan.FromMinutes(5));
                 AssertCounts(1, 0, store);
             }
         }
@@ -490,14 +454,6 @@ replicateToOrders(orderData);");
             {
                 CreateRdbmsSchema(store);
 
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (statistics.LoadSuccesses != 0)
-                        eventSlim.Set();
-                };
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order
@@ -511,18 +467,20 @@ replicateToOrders(orderData);");
                     await session.SaveChangesAsync();
                 }
 
-                await SetupSqlReplication(store, defaultScript);
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                SetupSqlEtl(store, defaultScript);
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
 
                 AssertCounts(1, 2, store);
 
-                eventSlim.Reset();
+                etlDone.Reset();
 
                 using (var commands = store.Commands())
                     await commands.DeleteAsync("orders/1", null);
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                etlDone.Wait(TimeSpan.FromMinutes(5));
 
                 AssertCounts(0, 0, store);
             }
@@ -534,14 +492,6 @@ replicateToOrders(orderData);");
             using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
-
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (statistics.LoadSuccesses != 0)
-                        eventSlim.Set();
-                };
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -557,13 +507,15 @@ replicateToOrders(orderData);");
                     await session.SaveChangesAsync();
                 }
 
-                await SetupSqlReplication(store, defaultScript, insertOnly: true);
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                SetupSqlEtl(store, defaultScript, insertOnly: true);
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
 
                 AssertCounts(1, 2, store);
 
-                eventSlim.Reset();
+                etlDone.Reset();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -577,7 +529,7 @@ replicateToOrders(orderData);");
                     await session.SaveChangesAsync();
                 }
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                etlDone.Wait(TimeSpan.FromMinutes(5));
                 // we end up with duplicates
                 AssertCounts(2, 5, store);
             }
@@ -615,7 +567,7 @@ replicateToOrders(orderData);");
 
                    }
                }));
-                await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
+                SetupSqlEtl(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
                 
                 var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(30));
@@ -670,37 +622,34 @@ var nameArr = this.StepName.split('.');");
             }
         }
 
-        protected static async Task SetupSqlReplication(DocumentStore store, string script, bool insertOnly = false)
+        protected static void SetupSqlEtl(DocumentStore store, string script, bool insertOnly = false)
         {
-            using (var session = store.OpenAsyncSession())
+            SetupEtl(store, new EtlConfiguration
             {
-                await session.StoreAsync(new SqlConnections
-                {
-                    Id = Constants.Documents.SqlReplication.SqlReplicationConnections,
-                    Connections =
+                SqlConnections =
                     {
                         ["Ci1"] = new PredefinedSqlConnection
                         {
                             ConnectionString = GetConnectionString(store),
                             FactoryName = "System.Data.SqlClient",
                         }
-                    }
-                });
-                await session.StoreAsync(new SqlEtlConfiguration
-                {
-                    Id = Constants.Documents.SqlReplication.SqlReplicationConfigurationPrefix + "OrdersAndLines",
-                    Name = "OrdersAndLines",
-                    ConnectionStringName = "Ci1",
-                    Collection = "Orders",
-                    SqlTables =
-                    {
-                        new SqlEtlTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
-                        new SqlEtlTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
                     },
-                    Script = script
-                });
-                await session.SaveChangesAsync();
-            }
+                SqlTargets =
+                    {
+                        new SqlEtlConfiguration
+                        {
+                            Name = "OrdersAndLines",
+                            ConnectionStringName = "Ci1",
+                            Collection = "Orders",
+                            SqlTables =
+                            {
+                                new SqlEtlTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
+                                new SqlEtlTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
+                            },
+                            Script = script
+                        }
+                    }
+            });
         }
 
         private static string GetConnectionString(DocumentStore store)

@@ -39,7 +39,7 @@ class textColumn<T> implements virtualColumn {
             const rawText = utils.escape(cellValue);
             return {
                 rawText: rawText,
-                typeCssClass: "token-string"
+                typeCssClass: "token string"
             };
         }
 
@@ -47,7 +47,7 @@ class textColumn<T> implements virtualColumn {
             const value = cellValue.toLocaleString();
             return {
                 rawText: value,
-                typeCssClass: "token-number"
+                typeCssClass: "token number"
             };
         }
 
@@ -55,21 +55,21 @@ class textColumn<T> implements virtualColumn {
             const value = !!cellValue;
             return {
                 rawText: value ? 'true' : 'false',
-                typeCssClass: "token-boolean"
+                typeCssClass: "token boolean"
             }
         }
 
         if (_.isNull(cellValue)) {
             return {
                 rawText: "null",
-                typeCssClass: "token-null"
+                typeCssClass: "token null"
             }
         }
 
         if (_.isUndefined(cellValue)) {
             return {
                 rawText: "",
-                typeCssClass: "token-undefined"
+                typeCssClass: "token undefined"
             }
         }
 
@@ -78,7 +78,7 @@ class textColumn<T> implements virtualColumn {
 
             return {
                 rawText: "[ ... ]",
-                typeCssClass: "token-array"
+                typeCssClass: "token array"
             }
         }
 
@@ -87,7 +87,7 @@ class textColumn<T> implements virtualColumn {
 
             return {
                 rawText: "{ ... }",
-                typeCssClass: "token-object"
+                typeCssClass: "token object"
             }
         }
 

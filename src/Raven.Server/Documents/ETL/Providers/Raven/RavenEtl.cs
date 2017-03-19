@@ -14,9 +14,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
     {
         public const string RavenEtlTag = "Raven ETL";
 
+        private readonly RequestExecutor _requestExecutor;
+
         public RavenEtl(DocumentDatabase database, RavenEtlConfiguration configuration) : base(database, configuration, RavenEtlTag)
         {
             EtlConfiguration = configuration;
+            _requestExecutor = RequestExecutor.CreateForSingleNode(EtlConfiguration.Url, EtlConfiguration.Database, EtlConfiguration.ApiKey);
         }
 
         public RavenEtlConfiguration EtlConfiguration { get; }
@@ -38,12 +41,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override void LoadInternal(IEnumerable<ICommandData> commands, JsonOperationContext context)
         {
-            using (var requestExecutor = RequestExecutor.CreateForSingleNode(EtlConfiguration.Url, EtlConfiguration.Database, EtlConfiguration.ApiKey)) // TODO arek - consider caching it somewhere
-            {
-                var batchCommand = new BatchCommand(new DocumentConventions(), context, commands as List<ICommandData>);
+            var batchCommand = new BatchCommand(new DocumentConventions(), context, commands as List<ICommandData>);
 
-                requestExecutor.Execute(batchCommand, context);
-            }
+            _requestExecutor.Execute(batchCommand, context);
         }
 
         public override bool CanContinueBatch()
@@ -54,6 +54,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         protected override void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize)
         {
             // TODO arek
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            _requestExecutor?.Dispose();
         }
     }
 }

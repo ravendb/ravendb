@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
@@ -26,11 +25,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         private PredefinedSqlConnection _predefinedSqlConnection;
 
         public readonly SqlEtlMetricsCountersManager Metrics = new SqlEtlMetricsCountersManager();
-
-        public SqlEtl(DocumentDatabase database, SqlEtlConfiguration configuration) : base(database, configuration, SqlEtlTag)
-        {
-            SqlConfiguration = configuration;
-        }
 
         public SqlEtl(DocumentDatabase database, SqlEtlConfiguration configuration, PredefinedSqlConnection predefinedConnection)
             : base(database, configuration, SqlEtlTag)
@@ -108,49 +102,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return true; // TODO
         }
 
-        public bool PrepareSqlEtlConfig(BlittableJsonReaderObject connections, bool writeToLog = true)
-        {
-            if (string.IsNullOrWhiteSpace(SqlConfiguration.ConnectionStringName) == false)
-            {
-                object connection;
-                if (connections.TryGetMember(SqlConfiguration.ConnectionStringName, out connection))
-                {
-                    _predefinedSqlConnection = JsonDeserializationServer.PredefinedSqlConnection(connection as BlittableJsonReaderObject);
-                    if (_predefinedSqlConnection != null)
-                    {
-                        return true;
-                    }
-                }
-
-                var message =
-                    $"Could not find connection string named '{SqlConfiguration.ConnectionStringName}' for SQL ETL config: " +
-                    $"{SqlConfiguration.Name}, ignoring SQL ETL setting.";
-
-                if (writeToLog)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info(message);
-                }
-
-                Statistics.LastAlert = AlertRaised.Create(Tag, message, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
-
-                return false;
-            }
-
-            var emptyConnectionStringMsg =
-                $"Connection string name cannot be empty for SQL ETL config: {SqlConfiguration.Name}, ignoring SQL ETL setting.";
-
-            if (writeToLog)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(emptyConnectionStringMsg);
-            }
-
-            Statistics.LastAlert = AlertRaised.Create(Tag, emptyConnectionStringMsg, AlertType.SqlEtl_ConnectionStringMissing, NotificationSeverity.Error);
-
-            return false;
-        }
-
         public DynamicJsonValue Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
         {
             if (simulateSqlEtl.PerformRolledBackTransaction)
@@ -207,17 +158,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 var document = database.DocumentsStorage.Get(context, simulateSqlEtl.DocumentId);
 
-                using (var etl = new SqlEtl(database, simulateSqlEtl.Configuration))
+                PredefinedSqlConnection predefinedConnection;
+                var connectionStringName = simulateSqlEtl.Configuration.ConnectionStringName;
+
+                if (database.EtlLoader.CurrentConfiguration.SqlConnections.TryGetValue(connectionStringName, out predefinedConnection) == false)
                 {
-                    // TODO arek
-                    //if (etl.PrepareSqlEtlConfig(_connections, false) == false)
-                    //{
-                    //    return new DynamicJsonValue
-                    //    {
-                    //        ["LastAlert"] = etl.Statistics.LastAlert,
-                    //    };
-                    //}
-                    
+                    throw new InvalidOperationException($"Could not find connection string named '{connectionStringName}' in ETL config");
+                }
+
+                using (var etl = new SqlEtl(database, simulateSqlEtl.Configuration, predefinedConnection))
+                {
                     var transformed = etl.Transform(new[] { new ToSqlItem(document) }, context);
 
                     return etl.Simulate(simulateSqlEtl, context, transformed);
