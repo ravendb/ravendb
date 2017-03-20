@@ -646,8 +646,7 @@ namespace Sparrow.Json
         private unsafe int TryCompressValue(ref byte* buffer, int size, ref BlittableJsonToken token, UsageMode mode, int? initialCompressedSize, int maxGoodCompressionSize)
         {
             bool shouldCompress = initialCompressedSize.HasValue ||
-                                  (((mode & UsageMode.CompressStrings) == UsageMode.CompressStrings) && (size > 128))
-                                  ||
+                                  (((mode & UsageMode.CompressStrings) == UsageMode.CompressStrings) && (size > 128)) ||
                                   ((mode & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings) && (size <= 128);
 
             if (shouldCompress)

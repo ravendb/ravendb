@@ -335,7 +335,15 @@ namespace Sparrow.Json
                 }
                 else // WriteFull
                 {
-                    start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions, out stringToken, _mode, _state.CompressedSize);
+                    if (_state.EscapePositions.Count == 0 && _state.CompressedSize == null && (_mode & UsageMode.CompressSmallStrings) == 0 && _state.StringSize < 128)
+                    {
+                        start = _writer.WriteValue(_state.StringBuffer, _state.StringSize);
+                        stringToken = BlittableJsonToken.String;
+                    }
+                    else
+                    {
+                        start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions, out stringToken, _mode, _state.CompressedSize);
+                    }                        
                 }
                 _state.CompressedSize = null;
                 _writeToken = new WriteToken(start, stringToken);
