@@ -89,12 +89,12 @@ var orderData = {
     OrderLinesCount: this.OrderLines.length,
     TotalCost: 0
 };
-replicateToOrders(orderData);
+loadToOrders(orderData);
 
 for (var i = 0; i < this.OrderLines.length; i++) {
     var line = this.OrderLines[i];
     orderData.TotalCost += line.Cost;
-    replicateToOrderLines({
+    loadToOrderLines({
         OrderId: documentId,
         Qty: line.Quantity,
         Product: line.Product,
@@ -282,7 +282,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
     OrderLinesCount: this.OrderLines_Missing.length,
     TotalCost: 0
 };
-replicateToOrders(orderData);");
+loadToOrders(orderData);");
 
                 etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -331,7 +331,7 @@ replicateToOrders(orderData);");
     City: this.Address.City,
     TotalCost: 0
 };
-replicateToOrders(orderData);");
+loadToOrders(orderData);");
 
                 etlDone.Wait(TimeSpan.FromMinutes(5));
 

@@ -32,12 +32,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             base.RemoveEngineCustomizations(engine, scope);
 
             engine.Global.Delete("documentId", true);
-            engine.Global.Delete("replicateTo", true);
+            engine.Global.Delete("loadTo", true);
             engine.Global.Delete("varchar", true);
             engine.Global.Delete("nVarchar", true);
             foreach (var table in _config.SqlTables)
             {
-                engine.Global.Delete("replicateTo" + table.TableName, true);
+                engine.Global.Delete("loadTo" + table.TableName, true);
             }
         }
 
@@ -48,15 +48,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             Debug.Assert(_current != null);
 
             engine.SetValue("documentId", _current);
-            engine.SetValue("replicateTo", new Action<string, JsValue>((tableName, colsAsObject) => ReplicateToFunction(tableName, colsAsObject, scope)));
+            engine.SetValue("loadTo", new Action<string, JsValue>((tableName, colsAsObject) => LoadToFunction(tableName, colsAsObject, scope)));
 
             foreach (var table in _config.SqlTables)
             {
                 var current = table;
-                engine.SetValue("replicateTo" + table.TableName, (Action<JsValue>)(cols =>
+                engine.SetValue("loadTo" + table.TableName, (Action<JsValue>)(cols =>
                 {
                     var tableName = current.TableName;
-                    ReplicateToFunction(tableName, cols, scope);
+                    LoadToFunction(tableName, cols, scope);
                 }));
             }
 
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             engine.SetValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
         }
 
-        private void ReplicateToFunction(string tableName, JsValue colsAsObject, PatcherOperationScope scope)
+        private void LoadToFunction(string tableName, JsValue colsAsObject, PatcherOperationScope scope)
         {
             if (tableName == null)
                 throw new ArgumentException("tableName parameter is mandatory");
