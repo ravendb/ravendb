@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks =
             new ConcurrentQueue<TaskCompletionSource<object>>();
 
-        public Task ResolveConflictsTask = Task.CompletedTask;
+        public Task ResolveConflictsTask;
 
         public DocumentReplicationLoader(DocumentDatabase database)
         {
@@ -519,6 +519,7 @@ namespace Raven.Server.Documents.Replication
 
             if (_database.DocumentsStorage.ConflictsCount > 0)
             {
+                ResolveConflictsTask?.Wait();
                 ResolveConflictsTask = Task.Run(() =>
                 {
                     try
@@ -529,6 +530,10 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (_log.IsInfoEnabled)
                             _log.Info("Failed to run automatic conflict resolution", e);
+                    }
+                    finally
+                    {
+                        ResolveConflictsTask = null;
                     }
                 });
             }
