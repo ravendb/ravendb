@@ -298,7 +298,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    _database.DocumentsStorage.Put(context, key, null, document.Data, flags: document.Flags);
+                    _database.DocumentsStorage.Put(context, key, null, document.Data, nonPersistentFlags: document.NonPersistentFlags);
                 }
             }
 

@@ -36,7 +36,6 @@ class documents extends viewModelBase {
     static readonly copyLimit = 100;
     static readonly allDocumentCollectionName = "__all_docs";
 
-    isLoading = ko.observable<boolean>(false);
     inSpecificCollection: KnockoutComputed<boolean>;
     deleteEnabled: KnockoutComputed<boolean>;
     private selectedItemsCount: KnockoutComputed<number>;
@@ -149,9 +148,7 @@ class documents extends viewModelBase {
     }
 
     fetchDocs(skip: number, take: number, previewColumns: string[], fullColumns: string[]): JQueryPromise<pagedResultWithAvailableColumns<any>> {
-        this.isLoading(true);
-        return this.tracker.currentCollection().fetchDocuments(skip, take, previewColumns, fullColumns)
-            .always(() => this.isLoading(false));
+        return this.tracker.currentCollection().fetchDocuments(skip, take, previewColumns, fullColumns);
     }
 
     compositionComplete() {
@@ -345,22 +342,10 @@ class documents extends viewModelBase {
     }
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
-    selectedDocumentsText: KnockoutComputed<string>;
     contextName = ko.observable<string>('');
 
     constructor() {
         super();
-
-        this.selectedDocumentsText = ko.computed(() => {
-            if (!!this.selectedDocumentIndices()) {
-                var documentsText = "document";
-                if (this.selectedDocumentIndices().length !== 1) {
-                    documentsText += "s";
-                }
-                return documentsText;
-            }
-            return "";
-        });
     }
 
     attached() {

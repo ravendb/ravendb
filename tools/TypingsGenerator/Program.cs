@@ -78,6 +78,8 @@ namespace TypingsGenerator
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
             scripter.AddType(typeof(CollectionStatistics));
 
+            scripter.AddType(typeof(BatchRequestParser.CommandData));
+
             scripter.AddType(typeof(DatabaseDocument));
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(IndexDefinition));
@@ -135,9 +137,9 @@ namespace TypingsGenerator
 
             // sql replication 
             scripter.AddType(typeof(SqlConnections));
-            scripter.AddType(typeof(SqlReplicationConfiguration));
+            scripter.AddType(typeof(SqlEtlConfiguration));
             scripter.AddType(typeof(EtlStatistics));
-            scripter.AddType(typeof(SimulateSqlReplication));
+            scripter.AddType(typeof(SimulateSqlEtl));
 
             // periodic export
             scripter.AddType(typeof(PeriodicExportConfiguration));

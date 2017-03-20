@@ -73,6 +73,17 @@ namespace Sparrow.Json.Parsing
             builder.FinalizeDocument();
         }
 
+        public static long ReadLong(JsonOperationContext context, Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
+            if (Read(stream, parser, state, buffer) == false)
+                ThrowInvalidJson();
+
+            if (state.CurrentTokenType != JsonParserToken.Integer)
+                ThrowInvalidJson();
+
+            return state.Long;
+        }
+
         public static async Task ReadObjectAsync(BlittableJsonDocumentBuilder builder, Stream stream, UnmanagedJsonParser parser, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             builder.ReadNestedObject();

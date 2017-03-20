@@ -127,33 +127,45 @@ namespace Raven.Server.Documents
             return ComparePropertiesExceptionStartingWithAt(Data, obj);
         }
 
-        private static bool ComparePropertiesExceptionStartingWithAt(BlittableJsonReaderObject myMetadata,
-            BlittableJsonReaderObject objMetadata, bool isMetadata = false)
+        private static bool ComparePropertiesExceptionStartingWithAt(BlittableJsonReaderObject myObject,
+            BlittableJsonReaderObject otherObject, bool isMetadata = false)
         {
-            var properties = new HashSet<string>(myMetadata.GetPropertyNames());
-            foreach (var propertyName in objMetadata.GetPropertyNames())
+            var properties = new HashSet<string>(myObject.GetPropertyNames());
+            foreach (var propertyName in otherObject.GetPropertyNames())
             {
                 properties.Add(propertyName);
             }
 
             foreach (var property in properties)
             {
-                if (isMetadata && property[0] == '@' && 
-                    property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
+                if (property[0] == '@')
+                {
+                    switch (isMetadata)
+                    {
+                        case true:
+                            if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
+                                continue;
+                            break;
+                        default:
+                            if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
+                                continue;
+                            break;
+                    }
+                }
 
                 object myProperty;
-                object objProperty;
+                object otherPropery;
 
-                if (myMetadata.TryGetMember(property, out myProperty) == false)
+                if (myObject.TryGetMember(property, out myProperty) == false)
                     return false;
 
-                if (objMetadata.TryGetMember(property, out objProperty) == false)
+                if (otherObject.TryGetMember(property, out otherPropery) == false)
                     return false;
 
-                if (Equals(myProperty, objProperty) == false)
+                if (Equals(myProperty, otherPropery) == false)
                     return false;
             }
+
             return true;
         }
     }

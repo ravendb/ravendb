@@ -94,12 +94,6 @@ namespace Raven.Client.Documents.Session
         void Evict<T>(T entity);
 
         /// <summary>
-        ///     Version this entity when it is saved.  Use when Versioning bundle configured to ExcludeUnlessExplicit.
-        /// </summary>
-        /// <param name="entity">Entity to version..</param>
-        void ExplicitlyVersion(object entity);
-
-        /// <summary>
         ///     Gets the document id for the specified entity.
         /// </summary>
         /// <remarks>

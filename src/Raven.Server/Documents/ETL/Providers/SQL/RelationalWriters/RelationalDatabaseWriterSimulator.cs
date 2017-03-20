@@ -6,17 +6,16 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
-using Raven.Server.Documents.SqlReplication;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
     public class RelationalDatabaseWriterSimulator : RelationalDatabaseWriterBase
     {
-        private readonly SqlReplicationConfiguration _configuration;
+        private readonly SqlEtlConfiguration _configuration;
         private readonly DbProviderFactory _providerFactory;
         private readonly DbCommandBuilder _commandBuilder;
 
-        public RelationalDatabaseWriterSimulator(PredefinedSqlConnection predefinedSqlConnection, SqlReplicationConfiguration configuration) 
+        public RelationalDatabaseWriterSimulator(PredefinedSqlConnection predefinedSqlConnection, SqlEtlConfiguration configuration) 
             : base(predefinedSqlConnection)
         {
             _configuration = configuration;
@@ -26,13 +25,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         public IEnumerable<string> SimulateExecuteCommandText(SqlTableWithRecords records, CancellationToken token)
         {
-            foreach (var sqlReplicationTable in _configuration.SqlReplicationTables)
+            foreach (var table in _configuration.SqlTables)
             {
-                if (sqlReplicationTable.InsertOnlyMode)
+                if (table.InsertOnlyMode)
                     continue;
 
                 // first, delete all the rows that might already exist there
-                foreach (string deleteQuery in GenerateDeleteItemsCommandText(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, _configuration.ParameterizeDeletesDisabled,
+                foreach (string deleteQuery in GenerateDeleteItemsCommandText(table.TableName, table.DocumentKeyColumn, _configuration.ParameterizeDeletesDisabled,
                     records.Inserts, token))
                 {
                     yield return deleteQuery;

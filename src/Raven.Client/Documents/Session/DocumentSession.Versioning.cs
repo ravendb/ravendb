@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Session
 
             var command = operation.CreateRequest();
             RequestExecutor.Execute(command, Context);
-
+            operation.SetResult(command.Result);
             return operation.Complete<T>();
         }
     }

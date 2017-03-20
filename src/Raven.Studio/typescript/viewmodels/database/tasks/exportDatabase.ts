@@ -17,7 +17,7 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import eventsCollector = require("common/eventsCollector");
-
+import popoverUtils = require("common/popoverUtils");
 import generalUtils = require("common/generalUtils");
 
 class exportDatabase extends viewModelBase {
@@ -93,12 +93,17 @@ class exportDatabase extends viewModelBase {
 
         this.exportCommand = ko.pureComputed<string>(() => {
             //TODO: review for smuggler.exe!
+            const db = this.activeDatabase();
+            if (!db) {
+                return "";
+            }
+
             const targetServer = appUrl.forServer();
             const model = this.model;
             const outputFilename = generalUtils.escapeForShell(model.exportFileName());
             const commandTokens = ["Raven.Smuggler", "out", targetServer, outputFilename];
 
-            const databaseName = this.activeDatabase().name;
+            const databaseName = db.name;
             commandTokens.push("--database=" + generalUtils.escapeForShell(databaseName));
 
             const types: Array<string> = [];
@@ -149,10 +154,13 @@ class exportDatabase extends viewModelBase {
     attached() {
         super.attached();
 
-        $("#transformScriptPopover").popover({
+        $(".use-transform-script small").popover({
             html: true,
             trigger: "hover",
-            content: "Transform scripts are written in JavaScript. <br /><br/>Example:<pre><span class=\"code-keyword\">function</span>(doc) {<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return null</span>;<br /><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return</span> doc;<br />}</pre>"
+            template: popoverUtils.longPopoverTemplate,
+            container: "body",
+            content: "Transform scripts are written in JavaScript. <br/>" +
+                "Example:<pre><span class=\"token keyword\">function</span>(doc) {<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return null</span>;<br /><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return</span> doc;<br />}</pre>"
         });
     }
 

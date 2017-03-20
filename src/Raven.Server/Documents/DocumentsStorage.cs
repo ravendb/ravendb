@@ -8,6 +8,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
@@ -76,6 +77,7 @@ namespace Raven.Server.Documents
             Collection = 5,
             LastModified = 6,
         }
+
         private enum TombstoneTable
         {
             LoweredKey = 0,
@@ -537,14 +539,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<ReplicationBatchDocumentItem> GetDocumentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchItem> GetDocumentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchDocumentItem.From(TableValueToDocument(context, ref result.Reader));
+                yield return ReplicationBatchItem.From(TableValueToDocument(context, ref result.Reader));
             }
         }
 
@@ -623,12 +625,12 @@ namespace Raven.Server.Documents
             return list;
         }
 
-        public IEnumerable<ReplicationBatchDocumentItem> GetConflictsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchItem> GetConflictsFrom(DocumentsOperationContext context, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchDocumentItem.From(TableValueToConflictDocument(context, ref tvr.Reader));
+                yield return ReplicationBatchItem.From(TableValueToConflictDocument(context, ref tvr.Reader));
             }
         }
 
@@ -764,7 +766,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<ReplicationBatchDocumentItem> GetTombstonesFrom(
+        public IEnumerable<ReplicationBatchItem> GetTombstonesFrom(
             DocumentsOperationContext context,
             long etag)
         {
@@ -773,7 +775,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchDocumentItem.From(TableValueToTombstone(context, ref result.Reader));
+                yield return ReplicationBatchItem.From(TableValueToTombstone(context, ref result.Reader));
             }
         }
 
@@ -870,7 +872,7 @@ namespace Raven.Server.Documents
             if ((document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
                 Slice prefixSlice;
-                using (AttachmentsStorage.GetAttachmentPrefix(context, document.LoweredKey.Buffer, document.LoweredKey.Size, AttachmentsStorage.AttachmentType.Document, null, out prefixSlice))
+                using (AttachmentsStorage.GetAttachmentPrefix(context, document.LoweredKey.Buffer, document.LoweredKey.Size, AttachmentType.Document, null, out prefixSlice))
                 {
                     document.Attachments = AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice.Clone(context.Allocator));
                 }
@@ -1450,8 +1452,6 @@ namespace Raven.Server.Documents
             }
         }
 
-
-
         public DocumentConflict GetConflictForChangeVector(
             DocumentsOperationContext context,
             string key,
@@ -1665,7 +1665,6 @@ namespace Raven.Server.Documents
             LazyStringValue collection,
             bool hasLocalTombstone)
         {
-
             if (ValidatedResolveByScriptInput(scriptResolver, conflicts, collection) == false)
             {
                 return false;
@@ -1943,7 +1942,8 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
             ChangeVectorEntry[] changeVector = null,
-            DocumentFlags flags = DocumentFlags.None)
+            DocumentFlags flags = DocumentFlags.None,
+            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
             if (context.Transaction == null)
             {
@@ -2016,7 +2016,6 @@ namespace Raven.Server.Documents
                 }
             }
 
-
             // delete a tombstone if it exists, if it known that it is a new key, no need, so we can skip it
             if (knownNewKey == false)
             {
@@ -2036,7 +2035,7 @@ namespace Raven.Server.Documents
 
                 if (changeVector == null)
                 {
-                    var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, 4) : null;
+                    var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsTable.ChangeVector) : null;
                     changeVector = SetDocumentChangeVectorForLocalChange(context,
                         loweredKey,
                         oldChangeVector, newEtag);
@@ -2047,10 +2046,14 @@ namespace Raven.Server.Documents
                     if (_documentDatabase.BundleLoader.VersioningStorage != null)
                     {
                         VersioningConfigurationCollection configuration;
-                        var version = _documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, document, out configuration);
-                        if (version)
+                        if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(
+                            collectionName, 
+                            nonPersistentFlags,
+                            () => oldValue.Pointer != null ? TableValueToDocument(context, ref oldValue) : null,
+                            document,
+                            ref flags,
+                            out configuration))
                         {
-                            flags |= DocumentFlags.Versioned;
                             _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, configuration);
                         }
                     }

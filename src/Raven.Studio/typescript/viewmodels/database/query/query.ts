@@ -2,7 +2,6 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
@@ -29,6 +28,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
+import popoverUtils = require("common/popoverUtils");
 
 type indexItem = {
     name: string;
@@ -46,7 +46,6 @@ type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<doc
 class query extends viewModelBase {
 
     static readonly ContainerSelector = "#queryContainer";
-    static readonly DynamicPrefix = "dynamic/";
     static readonly $body = $("body");
 
     static readonly SearchTypes: stringSearchType[] = ["Starts With", "Ends With", "Contains", "Exact"];
@@ -329,8 +328,9 @@ class query extends viewModelBase {
         $(".query-title small").popover({
             html: true,
             trigger: "hover",
-            container: "#queryContainer",
-            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+            template: popoverUtils.longPopoverTemplate,
+            container: "body",
+            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
         });
 
         this.registerDisposableHandler($(window), "storage", () => this.loadRecentQueries());
@@ -435,7 +435,7 @@ class query extends viewModelBase {
         const url = appUrl.forQuery(this.activeDatabase(), indexQuery);
         this.updateUrl(url);
 
-        this.fetchIndexFields(indexName);
+        queryUtil.fetchIndexFields(this.activeDatabase(), indexName, this.indexFields);
     }
 
     private resetFilterSettings() {
@@ -553,35 +553,6 @@ class query extends viewModelBase {
 
     openAddFilter() {
         this.addFilterVisible(true);
-    }
-
-    fetchIndexFields(indexName: string) {
-        this.indexFields([]);
-
-        // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
-        // Fields don't show for All Documents.
-        const isAllDocumentsDynamicQuery = indexName === "All Documents";
-        if (!isAllDocumentsDynamicQuery) {
-
-            //if index is not dynamic, get columns using index definition, else get it using first index result
-            if (indexName.startsWith(query.DynamicPrefix)) {
-                new collection(indexName.substr(query.DynamicPrefix.length), this.activeDatabase())
-                    .fetchDocuments(0, 1)
-                    .done(result => {
-                        if (result && result.items.length > 0) {
-                            const propertyNames = new document(result.items[0]).getDocumentPropertyNames();
-                            this.indexFields(propertyNames);
-                        }
-                    });
-            } else {
-                new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
-                    .execute()
-                    .done((fields) => {
-                        //TODO: self.isTestIndex(result.IsTestIndex);
-                        this.indexFields(fields);
-                    });
-            }
-        }
     }
 
     openQueryStats() {
@@ -810,7 +781,7 @@ class query extends viewModelBase {
     }
 
     queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        queryUtil.queryCompleter(this.indexFields, this.criteria().selectedIndex, query.DynamicPrefix, this.activeDatabase, editor, session, pos, prefix, callback);
+        queryUtil.queryCompleter(this.indexFields, this.criteria().selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
     }
 
 

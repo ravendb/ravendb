@@ -87,7 +87,8 @@ namespace Raven.Server.Documents.Replication
             public string Message;
             public DateTime StartSendingTime;
             public DateTime EndSendingTime;
-            public int DocumentsCount;
+            public int ItemsCount;
+            public int AttachmentStreamsCount;
             public long SentEtagMin;
             public long SentEtagMax;
             public string Exception;
@@ -96,15 +97,16 @@ namespace Raven.Server.Documents.Replication
             {
                 return new DynamicJsonValue
                 {
-                    ["Destination"] = Destination,
-                    ["Status"] = Status,
-                    ["Message"] = Message,
-                    ["StartSendingTime"] = StartSendingTime,
-                    ["EndSendingTime"] = EndSendingTime,
-                    ["DocumentsCount"] = DocumentsCount,
-                    ["SentEtagMin"] = SentEtagMin,
-                    ["SentEtagMax"] = SentEtagMax,
-                    ["Exception"] = Exception
+                    [nameof(Destination)] = Destination,
+                    [nameof(Status)] = Status,
+                    [nameof(Message)] = Message,
+                    [nameof(StartSendingTime)] = StartSendingTime,
+                    [nameof(EndSendingTime)] = EndSendingTime,
+                    [nameof(ItemsCount)] = ItemsCount,
+                    [nameof(AttachmentStreamsCount)] = AttachmentStreamsCount,
+                    [nameof(SentEtagMin)] = SentEtagMin,
+                    [nameof(SentEtagMax)] = SentEtagMax,
+                    [nameof(Exception)] = Exception,
                 };
             }
         }
@@ -116,7 +118,8 @@ namespace Raven.Server.Documents.Replication
             public string Message;
             public DateTime RecievedTime;
             public DateTime DoneReplicateTime;
-            public int DocumentsCount;
+            public int ItemsCount;
+            public int AttachmentStreamsCount;
             public long RecievedEtag;
             public string Exception;
 
@@ -124,14 +127,15 @@ namespace Raven.Server.Documents.Replication
             {
                 return new DynamicJsonValue
                 {
-                    ["Source"] = Source,
-                    ["Status"] = Status,
-                    ["Message"] = Message,
-                    ["RecievedTime"] = RecievedTime,
+                    [nameof(Source)] = Source,
+                    [nameof(Status)] = Status,
+                    [nameof(Message)] = Message,
+                    [nameof(RecievedTime)] = RecievedTime,
                     ["CompletedTime"] = DoneReplicateTime,
-                    ["DocumentsCount"] = DocumentsCount,
-                    ["RecievedEtag"] = RecievedEtag,
-                    ["Exception"] = Exception
+                    [nameof(ItemsCount)] = ItemsCount,
+                    [nameof(AttachmentStreamsCount)] = AttachmentStreamsCount,
+                    [nameof(RecievedEtag)] = RecievedEtag,
+                    [nameof(Exception)] = Exception,
                 };
             }
         }

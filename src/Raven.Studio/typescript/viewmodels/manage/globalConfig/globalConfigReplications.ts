@@ -79,6 +79,7 @@ class globalConfigReplications extends viewModelBase {
 
     bindPopover() {
         $(".dbNameHint").popover({
+    //TODO: long version?
             html: true,
             container: "body",
             trigger: "hover",

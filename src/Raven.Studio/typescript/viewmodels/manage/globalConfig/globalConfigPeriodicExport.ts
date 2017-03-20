@@ -51,6 +51,7 @@ class globalConfigPeriodicExport extends viewModelBase {
     }
 
     bindPopover() {
+    //TODO: long popover?
         $("#onDiskHint").popover({
             html: true,
             container: "body",

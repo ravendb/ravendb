@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
@@ -15,6 +16,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Logging;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
@@ -45,6 +47,7 @@ namespace Raven.Server.Documents
             Name = 2,
             ContentType = 3,
             Hash = 4,
+            TransactionMarker = 5,
         }
 
         static AttachmentsStorage()
@@ -82,13 +85,20 @@ namespace Raven.Server.Documents
             AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 32);
         }
 
-        public IEnumerable<ReplicationBatchDocumentItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
             foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], etag, 0))
             {
-                yield return ReplicationBatchDocumentItem.From(TableValueToAttachment(context, ref result.Reader));
+                var attachment = TableValueToAttachment(context, ref result.Reader);
+
+                var stream = GetAttachmentStream(context, attachment.Base64Hash);
+                if (stream == null)
+                    throw new FileNotFoundException($"Attachment's stream {attachment.Name} was not found. This should never happen.");
+                attachment.Stream = stream;
+
+                yield return ReplicationBatchItem.From(attachment);
             }
         }
 
@@ -139,11 +149,14 @@ namespace Raven.Server.Documents
                 TableValueBuilder tbv;
                 using (table.Allocate(out tbv))
                 {
+                    var transactionMarker = context.GetTransactionMarker();
+
                     tbv.Add(keySlice.Content.Ptr, keySlice.Size);
                     tbv.Add(Bits.SwapBytes(attachmenEtag));
                     tbv.Add(namePtr, nameSize);
                     tbv.Add(contentTypeSlice.Content.Ptr, contentTypeSlice.Size);
                     tbv.Add(hashSlice.Content.Ptr, hashSlice.Size);
+                    tbv.Add(transactionMarker);
 
                     TableValueReader oldValue;
                     if (table.ReadByKey(keySlice, out oldValue))
@@ -202,6 +215,14 @@ namespace Raven.Server.Documents
                 Hash = hash,
             };
         }
+        public void PutFromReplication(DocumentsOperationContext context, byte[] attachmentLoweredKey, string attachmentName, 
+            string attachmentContentType, byte[] attachmentBase64Hash, short attachmentTransactionMarker)
+        {
+            // Attachment etag should be generated before updating the document
+            var attachmenEtag = _documentsStorage.GenerateNextEtag();
+
+            /* TODO: Implement */
+        }
 
         public void RevisionAttachments(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, ChangeVectorEntry[] changeVector)
         {
@@ -209,18 +230,44 @@ namespace Raven.Server.Documents
             using (GetAttachmentPrefix(context, lowerKey, lowerKeySize, AttachmentType.Document, null, out prefixSlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                var currentAttachments = new List<Tuple<Slice, Slice, Slice>>();
                 foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
-                    PutRevisionAttachment(context, lowerKey, lowerKeySize, changeVector, ref sr.Reader);
+                    Slice name, contentType, base64Hash;
+
+                    int size;
+                    var ptr = sr.Reader.Read((int)AttachmentsTable.Name, out size);
+                    Slice.From(context.Allocator, ptr, size, out name);
+
+                    ptr = sr.Reader.Read((int)AttachmentsTable.ContentType, out size);
+                    Slice.From(context.Allocator, ptr, size, out contentType);
+
+                    ptr = sr.Reader.Read((int)AttachmentsTable.Hash, out size);
+                    Slice.From(context.Allocator, ptr, size, out base64Hash);
+
+                    currentAttachments.Add(new Tuple<Slice, Slice, Slice>(name, contentType, base64Hash));
+                }
+                foreach (var attachment in currentAttachments)
+                {
+                    PutRevisionAttachment(context, lowerKey, lowerKeySize, changeVector, attachment);
+                    attachment.Item1.Release(context.Allocator);
+                    attachment.Item2.Release(context.Allocator);
+                    attachment.Item3.Release(context.Allocator);
                 }
             }
         }
 
-        public void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, 
-            ChangeVectorEntry[] changeVector, ref TableValueReader tvr)
+        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, 
+            ChangeVectorEntry[] changeVector, Tuple<Slice, Slice, Slice> attachment)
         {
             var attachmenEtag = _documentsStorage.GenerateNextEtag();
-            var name = DocumentsStorage.TableValueToKey(context, (int)AttachmentsTable.Name, ref tvr);
+
+            int size;
+            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
+            byte offset;
+            var ptr = attachment.Item1.Content.Ptr;
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            var name = context.AllocateStringValue(null, ptr + offset, size).ToString();
 
             Slice lowerName, keySlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, name, out lowerName))
@@ -230,12 +277,14 @@ namespace Raven.Server.Documents
                 TableValueBuilder tbv;
                 using (table.Allocate(out tbv))
                 {
+                    var transactionMarker = context.GetTransactionMarker();
+
                     tbv.Add(keySlice.Content.Ptr, keySlice.Size);
                     tbv.Add(Bits.SwapBytes(attachmenEtag));
-                    tbv.Add(name.Buffer, name.Size);
-                    int size;
-                    tbv.Add(tvr.Read((int)AttachmentsTable.ContentType, out size), size);
-                    tbv.Add(tvr.Read((int)AttachmentsTable.Hash, out size), size);
+                    tbv.Add(attachment.Item1);
+                    tbv.Add(attachment.Item2);
+                    tbv.Add(attachment.Item3);
+                    tbv.Add(transactionMarker);
                     table.Set(tbv);
                 }
             }
@@ -249,7 +298,7 @@ namespace Raven.Server.Documents
                 tree.AddStream(hash, stream, tag: key);
         }
 
-        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 0)
+        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)
         {
             if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
             {
@@ -315,14 +364,19 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool IsAttachmentDeleted(ref TableValueReader reader)
+        [Conditional("DEBUG")]
+        public void AssertNoAttachments(DocumentsOperationContext context)
         {
-            int size;
-            reader.Read((int)AttachmentsTable.Name, out size);
-            return size == 0;
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], 0, 0))
+            {
+                var attachment = TableValueToAttachment(context, ref result.Reader);
+                throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");
+            }
         }
 
-        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name)
+        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, 
+            AttachmentType type, ChangeVectorEntry[] changeVector)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument is null or whitespace", nameof(documentId));
@@ -330,11 +384,14 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Argument is null or whitespace", nameof(name));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
+            if (type != AttachmentType.Document && changeVector == null)
+                throw new ArgumentException($"Change Vector cannot be null for attachment type {type}", nameof(changeVector));
 
             Slice lowerKey, lowerName, keySlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, documentId, out lowerKey))
             using (DocumentKeyWorker.GetSliceFromKey(context, name, out lowerName))
-            using (GetAttachmentKey(context, lowerKey.Content.Ptr, lowerKey.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, null, out keySlice))
+            using (GetAttachmentKey(context, lowerKey.Content.Ptr, lowerKey.Size, lowerName.Content.Ptr, lowerName.Size,
+                type, changeVector, out keySlice))
             {
                 var attachment = GetAttachment(context, keySlice);
                 if (attachment == null)
@@ -368,21 +425,15 @@ namespace Raven.Server.Documents
 
         /*
         // Document key: {lowerDocumentId|d|lowerName}
-        // Conflict key: {lowerDocumentId|c|lowerName}
+        // Conflict key: {lowerDocumentId|c|changeVector|lowerName}
         // Revision key: {lowerDocumentId|r|changeVector|lowerName}
         // 
         // TODO: We'll solve conflicts using the hash value in the table value reader. No need to put it also in the key.
         //
         // Document prefix: {lowerDocumentId|d|}
-        // Conflict prefix: {lowerDocumentId|c|}
+        // Conflict prefix: {lowerDocumentId|c|changeVector|}
         // Revision prefix: {lowerDocumentId|r|changeVector|}
         */
-        public enum AttachmentType : byte
-        {
-            Document = 1,
-            Revision = 2,
-            Conflict = 3
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReleaseMemory GetAttachmentKey(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize,
@@ -395,7 +446,7 @@ namespace Raven.Server.Documents
         public ReleaseMemory GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize,
             AttachmentType type, ChangeVectorEntry[] changeVector, out Slice prefixSlice)
         {
-            return GetAttachmentKeyInternal(context, lowerKey, lowerKeySize, null, 0, false, type, changeVector, out prefixSlice);
+            return GetAttachmentKeyInternal(context, lowerKey, lowerKeySize, null, 0, true, type, changeVector, out prefixSlice);
         }
 
         private ReleaseMemory GetAttachmentKeyInternal(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize,
@@ -404,7 +455,7 @@ namespace Raven.Server.Documents
             var changeVectorSize = 0;
 
             var size = lowerKeySize + 3;
-            if (type == AttachmentType.Revision)
+            if (type != AttachmentType.Document)
             {
                 changeVectorSize = sizeof(ChangeVectorEntry) * changeVector.Length;
                 size += changeVectorSize + 1;
@@ -417,35 +468,37 @@ namespace Raven.Server.Documents
             var keyMem = context.Allocator.Allocate(size);
 
             Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize] = VersioningStorage.RecordSeperator;
+            var pos = lowerKeySize;
+            keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
 
             switch (type)
             {
                 case AttachmentType.Document:
-                    keyMem.Ptr[lowerKeySize + 1] = (byte)'d';
+                    keyMem.Ptr[pos++] = (byte)'d';
                     break;
                 case AttachmentType.Revision:
-                    keyMem.Ptr[lowerKeySize + 1] = (byte)'r';
+                    keyMem.Ptr[pos++] = (byte)'r';
                     break;
                 case AttachmentType.Conflict:
-                    keyMem.Ptr[lowerKeySize + 1] = (byte)'c';
+                    keyMem.Ptr[pos++] = (byte)'c';
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
-            keyMem.Ptr[lowerKeySize + 2] = VersioningStorage.RecordSeperator;
+            keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
 
-            if (type == AttachmentType.Revision)
+            if (type != AttachmentType.Document)
             {
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-                    Memory.CopyInline(keyMem.Ptr + lowerKeySize + 3, (byte*)pChangeVector, changeVectorSize);
+                    Memory.CopyInline(keyMem.Ptr + pos, (byte*)pChangeVector, changeVectorSize);
                 }
-                keyMem.Ptr[lowerKeySize + 3 + changeVectorSize] = VersioningStorage.RecordSeperator;
+                pos += changeVectorSize;
+                keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
             }
 
             if (isPrefix == false)
-                Memory.CopyInline(keyMem.Ptr + lowerKeySize + 3 + changeVectorSize, lowerName, lowerNameSize);
+                Memory.CopyInline(keyMem.Ptr + pos, lowerName, lowerNameSize);
 
             keySlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
@@ -453,10 +506,6 @@ namespace Raven.Server.Documents
 
         private Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)
         {
-            var isDeleted = IsAttachmentDeleted(ref tvr);
-            if (isDeleted)
-                return null;
-
             var result = new Attachment
             {
                 StorageId = tvr.Id
@@ -468,6 +517,9 @@ namespace Raven.Server.Documents
             result.ContentType = DocumentsStorage.TableValueToKey(context, (int)AttachmentsTable.ContentType, ref tvr);
 
             DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
+
+            int size;
+            result.TransactionMarker = *(short*)tvr.Read((int)AttachmentsTable.TransactionMarker, out size);
 
             return result;
         }
@@ -541,7 +593,7 @@ namespace Raven.Server.Documents
             Slice hashSlice;
             using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out hashSlice))
             {
-                DeleteAttachmentStream(context, hashSlice, expectedCount: 1);
+                DeleteAttachmentStream(context, hashSlice);
 
                 // TODO: Create a tombstone of the delete for replication
                 table.Delete(tvr.Id);
@@ -570,7 +622,7 @@ namespace Raven.Server.Documents
                     {
                         // we are running just before the delete, so we may still have 1 entry there, the one just
                         // about to be deleted
-                        DeleteAttachmentStream(context, hashSlice, expectedCount: 1);
+                        DeleteAttachmentStream(context, hashSlice);
                     }
                 });
             }

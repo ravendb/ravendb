@@ -1,18 +1,19 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-import patchParam = require("models/database/patch/patchParam");
 import document = require("models/database/documents/document");
-import documentMetadata = require("models/database/documents/documentMetadata");
 
 class patchDocument extends document {
 
-    patchOnOption = ko.observable<string>();
+    static readonly allPatchOptions: Array<patchOption> = ["Document", "Collection", "Index"];
+
+    patchOnOption = ko.observable<patchOption>();
     selectedItem = ko.observable<string>();
     query = ko.observable<string>();
     script = ko.observable<string>();
-    parameters = ko.observableArray<patchParam>();
-    allPatchOptions = ["Document", "Collection", "Index"];
-    patchOptions: KnockoutComputed<string[]>;
+
+    patchAll = ko.observable<boolean>(false);
+
+    selectedIndex: KnockoutComputed<string>;
 
     constructor(dto: patchDto) {
         super(dto);
@@ -20,13 +21,14 @@ class patchDocument extends document {
         this.query(dto.Query);
         this.script(dto.Script);
         this.selectedItem(dto.SelectedItem);
-        this.parameters(dto.Values.map(val => new patchParam(val)));
 
-        this.patchOptions = ko.computed(() => this.allPatchOptions.filter(x => x !== this.patchOnOption()));
+        this.selectedIndex = ko.pureComputed(() => {
+            return this.patchOnOption() === "Index" ? this.selectedItem() : null;
+        });
     }
 
     static empty() {
-        var meta: any = {};
+        const meta: any = {};
         meta['@collection'] = 'PatchDocuments';
         return new patchDocument({
             '@metadata': meta,
@@ -39,48 +41,32 @@ class patchDocument extends document {
     }
 
     toDto(): patchDto {
-        var meta = this.__metadata.toDto();
+        const meta = this.__metadata.toDto();
         return {
             '@metadata': meta,
             PatchOnOption: this.patchOnOption(),
             Query: this.query(),
             Script: this.script(),
-            SelectedItem: this.selectedItem(),
-            Values: this.parameters().map(val => val.toDto())
+            SelectedItem: this.selectedItem()
         };
-    }
-
-    isDocumentPatch(): boolean {
-        return this.patchOnOption() === "Document";
-    }
-
-    isCollectionPatch(): boolean {
-        return this.patchOnOption() === "Collection";
-    }
-
-    isIndexPatch(): boolean {
-        return this.patchOnOption() === "Index";
-    }
-
-    createParameter() {
-        this.parameters.push(patchParam.empty());
-    }
-
-    removeParameter(key: patchParam) {
-        this.parameters.remove(key);
     }
 
     name(): string {
         return this.__metadata.id.replace('Studio/Patch/', '');
     }
 
-    resetMetadata() {
-        this.__metadata = new documentMetadata();
-        this.__metadata.collection = 'PatchDocuments';
+    modificationDate(): string {
+        return this.__metadata.lastModifiedFullDate();
     }
 
-    clone() {
-        return new patchDocument(this.toDto());
+    copyFrom(incoming: patchDocument) {
+        this.patchOnOption(incoming.patchOnOption());
+        this.selectedItem(incoming.selectedItem());
+        this.__metadata = incoming.__metadata;
+        this.query(incoming.query());
+        this.script(incoming.script());
+        this.patchAll(true);
+        this.__metadata.etag(0);
     }
 }
 

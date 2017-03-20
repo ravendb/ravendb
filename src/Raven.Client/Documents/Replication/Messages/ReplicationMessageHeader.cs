@@ -8,7 +8,9 @@
 
         public long LastIndexOrTransformerEtag { get; set; }
 
-        public int ItemCount { get; set; }
+        public int ItemsCount { get; set; }
+
+        public int AttachmentStreamsCount { get; set; }
 
         public string ResolverId { get; set; }
 

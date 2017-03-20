@@ -18,11 +18,9 @@ class serverSmuggling extends viewModelBase {
 
     hasDatabases: KnockoutComputed<boolean>;
     noIncremental: KnockoutComputed<boolean>;
-    noStripReplication: KnockoutComputed<boolean>;
     noDisableVersioning: KnockoutComputed<boolean>;
     databasesSelection: KnockoutComputed<checkbox>;
     incrementalSelection: KnockoutComputed<checkbox>;
-    stripReplicationSelection: KnockoutComputed<checkbox>;
     disableVersioningSelection: KnockoutComputed<checkbox>;
 
     showJsonRequest = ko.observable<boolean>(false);
@@ -44,12 +42,6 @@ class serverSmuggling extends viewModelBase {
         this.hasDatabases = ko.computed(() => this.databases().length > 0);
 
         this.noIncremental = ko.computed(() => this.selectedDatabases().length === 0);
-
-        this.noStripReplication = ko.computed(() => {
-            var dbs = this.selectedDatabases();
-            var replicationCount = dbs.filter(x => x.hasReplicationBundle()).length;
-            return dbs.length === 0 || replicationCount === 0;
-        });
 
         this.noDisableVersioning = ko.computed(() => {
             var dbs = this.selectedDatabases();
@@ -75,34 +67,6 @@ class serverSmuggling extends viewModelBase {
             if (incrementalCount === databases.length)
                 return checkbox.Checked;
             if (incrementalCount > 0)
-                return checkbox.SomeChecked;
-            return checkbox.UnChecked;
-        });
-
-        this.stripReplicationSelection = ko.computed(() => {
-            var dbs = this.selectedDatabases();
-            var replicationCount = dbs.filter(x => x.stripReplicationInformation()).length;
-            if (dbs.length === 0 || replicationCount === 0)
-                return checkbox.UnChecked;
-
-            var replicationBundleCount = dbs.filter(x => x.hasReplicationBundle()).length;
-            if (replicationBundleCount === replicationCount)
-                return checkbox.Checked;
-            if (replicationBundleCount > 0)
-                return checkbox.SomeChecked;
-            return checkbox.UnChecked;
-        });
-
-        this.disableVersioningSelection = ko.computed(() => {
-            var dbs = this.selectedDatabases();
-            var versioningCount = dbs.filter(x => x.shouldDisableVersioningBundle()).length;
-            if (dbs.length === 0 || versioningCount === 0)
-                return checkbox.UnChecked;
-
-            var versioningBundleCount = dbs.filter(x => x.hasVersioningBundle()).length;
-            if (versioningBundleCount === versioningCount)
-                return checkbox.Checked;
-            if (versioningBundleCount > 0)
                 return checkbox.SomeChecked;
             return checkbox.UnChecked;
         });
@@ -152,12 +116,6 @@ class serverSmuggling extends viewModelBase {
                 if (item) {
                     self.selectedDatabases.push(item);
                     item.incremental(savedConfig.Incremental);
-                    if (item.hasVersioningBundle()) {
-                        item.shouldDisableVersioningBundle(savedConfig.ShouldDisableVersioningBundle);
-                    }
-                    if (item.hasReplicationBundle()) {
-                        item.stripReplicationInformation(savedConfig.StripReplicationInformation);
-                    }
                 }
             });
         }
@@ -179,34 +137,6 @@ class serverSmuggling extends viewModelBase {
         var hasSelected = databases.filter(x => x.incremental()).length > 0;
         for (var i = 0; i < databases.length; i++) {
             databases[i].incremental(!hasSelected);
-        }
-    }
-
-    toggleSelectAllStripReplication() {
-        var databases = this.selectedDatabases();
-        var replicationBundleCount = databases.filter(x => x.hasReplicationBundle()).length;
-        if (databases.length === 0 || replicationBundleCount === 0)
-            return;
-
-        var hasSelected = databases.filter(x => x.stripReplicationInformation()).length > 0;
-        for (var i = 0; i < databases.length; i++) {
-            if (databases[i].hasReplicationBundle()) {
-                databases[i].stripReplicationInformation(!hasSelected);
-            }
-        }
-    }
-
-    toggleSelectAllDisableVersioning() {
-        var databases = this.selectedDatabases();
-        var versioningBundleCount = databases.filter(x => x.hasVersioningBundle()).length;
-        if (databases.length === 0 || versioningBundleCount === 0)
-            return;
-
-        var hasSelected = databases.filter(x => x.shouldDisableVersioningBundle()).length > 0;
-        for (var i = 0; i < databases.length; i++) {
-            if (databases[i].hasVersioningBundle()) {
-                databases[i].shouldDisableVersioningBundle(!hasSelected);
-            }
         }
     }
 

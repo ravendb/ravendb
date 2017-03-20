@@ -9,7 +9,6 @@ import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
-import recentPatchesStorage = require("common/storage/recentPatchesStorage");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
 import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
 
@@ -28,7 +27,6 @@ class databasesManager {
 
     onDatabaseDeletedCallbacks = [
         (q, n) => mergedIndexesStorage.onDatabaseDeleted(q, n),
-        (q, n) => recentPatchesStorage.onDatabaseDeleted(q, n),
         (q, n) => recentQueriesStorage.onDatabaseDeleted(q, n),
         (q, n) => starredDocumentsStorage.onDatabaseDeleted(q, n)
     ] as Array<(qualifier: string, name: string) => void>;
@@ -84,6 +82,7 @@ class databasesManager {
             const currentActiveDatabase = this.activeDatabaseTracker.database();
             if (currentActiveDatabase != null && currentActiveDatabase.name === db.name) {
                 task.resolve({ can: true });
+                return;
             }
 
             if (db && !db.disabled()) {

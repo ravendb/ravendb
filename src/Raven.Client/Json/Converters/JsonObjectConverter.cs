@@ -7,6 +7,12 @@ namespace Raven.Client.Json.Converters
 {
     internal class JsonObjectConverter : RavenJsonConverter
     {
+        public static JsonObjectConverter Instance = new JsonObjectConverter();
+
+        private JsonObjectConverter()
+        {
+        }
+
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             throw new NotSupportedException($"We only support deserialization to '{nameof(JsonObject)}' or '{nameof(JsonObject.Metadata)}'.");

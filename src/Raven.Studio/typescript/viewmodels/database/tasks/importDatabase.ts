@@ -12,6 +12,7 @@ import getNextOperationId = require("commands/database/studio/getNextOperationId
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import EVENTS = require("common/constants/events");
 import generalUtils = require("common/generalUtils");
+import popoverUtils = require("common/popoverUtils");
 
 class importDatabase extends viewModelBase {
 
@@ -55,57 +56,58 @@ class importDatabase extends viewModelBase {
         });
 
         //TODO: change input file name to be full document path
-        
+
         this.importCommand = ko.pureComputed(() =>
             //TODO: review for smuggler.exe!
-        {
-            const targetServer = appUrl.forServer();
-            const model = this.model;
-            const inputFilename = this.importedFileName() ? generalUtils.escapeForShell(this.importedFileName()) : "";
-            const commandTokens = ["Raven.Smuggler", "in", targetServer, inputFilename];
+             {
+                const db = this.activeDatabase();
+                if (!db) {
+                    return "";
+                }
 
-            const databaseName = this.activeDatabase().name;
-            commandTokens.push("--database=" + generalUtils.escapeForShell(databaseName));
+                const targetServer = appUrl.forServer();
+                const model = this.model;
+                const inputFilename = this.importedFileName() ? generalUtils.escapeForShell(this.importedFileName()) : "";
+                const commandTokens = ["Raven.Smuggler", "in", targetServer, inputFilename];
 
-            const types: Array<string> = [];
-            if (model.includeDocuments()) {
-                types.push("Documents");
-            }
-            if (model.includeRevisionDocuments()) {
-                types.push("RevisionDocuments");
-            }
-            if (model.includeIndexes()) {
-                types.push("Indexes");
-            }
-            if (model.includeTransformers()) {
-                types.push("Transformers");
-            }
-            if (model.includeIdentities()) {
-                types.push("Identities");
-            }
-            if (types.length > 0) {
-                commandTokens.push("--operate-on-types=" + types.join(","));
-            } 
+                const databaseName = db.name;
+                commandTokens.push("--database=" + generalUtils.escapeForShell(databaseName));
 
-            if (model.includeExpiredDocuments()) {
-                commandTokens.push("--include-expired");
-            }
+                const types: Array<string> = [];
+                if (model.includeDocuments()) {
+                    types.push("Documents");
+                }
+                if (model.includeRevisionDocuments()) {
+                    types.push("RevisionDocuments");
+                }
+                if (model.includeIndexes()) {
+                    types.push("Indexes");
+                }
+                if (model.includeTransformers()) {
+                    types.push("Transformers");
+                }
+                if (model.includeIdentities()) {
+                    types.push("Identities");
+                }
+                if (types.length > 0) {
+                    commandTokens.push("--operate-on-types=" + types.join(","));
+                }
 
-            if (model.shouldDisableVersioningBundle()) {
-                commandTokens.push("--disable-versioning-bundle")
-            }
+                if (model.includeExpiredDocuments()) {
+                    commandTokens.push("--include-expired");
+                }
 
-            if (model.removeAnalyzers()) {
-                commandTokens.push("--remove-analyzers");
-            }
+                if (model.removeAnalyzers()) {
+                    commandTokens.push("--remove-analyzers");
+                }
 
-            if (model.transformScript() && this.showTransformScript()) {
-                commandTokens.push("--transform=" + generalUtils.escapeForShell(model.transformScript()));
-            }
+                if (model.transformScript() && this.showTransformScript()) {
+                    commandTokens.push("--transform=" + generalUtils.escapeForShell(model.transformScript()));
+                }
 
-            return commandTokens.join(" ");
-        });
-        
+                return commandTokens.join(" ");
+            });
+
 
         this.setupValidation();
     }
@@ -122,10 +124,13 @@ class importDatabase extends viewModelBase {
 
     attached() {
         super.attached();
-        $("#transformScriptPopover").popover({
+        $(".use-transform-script small").popover({
             html: true,
             trigger: "hover",
-            content: "Transform scripts are written in JavaScript. <br /><br/>Example:<pre><span class=\"code-keyword\">function</span>(doc) {<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return null</span>;<br /><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return</span> doc;<br />}</pre>"
+            template: popoverUtils.longPopoverTemplate,
+            container: "body",
+            content: "Transform scripts are written in JavaScript. <br/>" +
+                "Example:<pre><span class=\"token keyword\">function</span>(doc) {<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return null</span>;<br /><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return</span> doc;<br />}</pre>"
         });
         this.updateHelpLink("YD9M1R");
     }
@@ -178,7 +183,7 @@ class importDatabase extends viewModelBase {
 
         eventsCollector.default.reportEvent("database", "import");
         this.isUploading(true);
-        
+
         const fileInput = document.querySelector(importDatabase.filePickerTag) as HTMLInputElement;
         const db = this.activeDatabase();
 

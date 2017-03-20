@@ -2,31 +2,53 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Raven.Client;
+using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlProcess<TExtracted, TTransformed> : IDisposable where TExtracted : ExtractedItem
+    public abstract class EtlProcess : IDisposable
+    {
+        public string Tag { get; protected set; }
+
+        public abstract string Name { get; }
+
+        public abstract void Start();
+
+        public abstract void Stop();
+
+        public abstract void Dispose();
+
+        public abstract void NotifyAboutWork();
+    }
+
+    public abstract class EtlProcess<TExtracted, TTransformed> : EtlProcess where TExtracted : ExtractedItem
     {
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
-        private readonly EtlConfiguration _configuration;
+        private readonly EtlProcessConfiguration _configuration;
         private readonly CancellationTokenSource _cts;
         private Thread _thread;
+        protected readonly CurrentEtlRun CurrentBatch = new CurrentEtlRun();
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
+        protected TimeSpan? FallbackTime;
         public readonly EtlStatistics Statistics;
-        public readonly string Tag;
 
-        protected EtlProcess(DocumentDatabase database, EtlConfiguration configuration, string tag)
+        protected EtlProcess(DocumentDatabase database, EtlProcessConfiguration configuration, string tag)
         {
             _configuration = configuration;
-            Tag = tag;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
-
+            Tag = tag;
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             Database = database;
             Statistics = new EtlStatistics(tag, _configuration.Name, Database.NotificationCenter);
@@ -34,7 +56,7 @@ namespace Raven.Server.Documents.ETL
 
         protected CancellationToken CancellationToken => _cts.Token;
 
-        public string Name => _configuration.Name;
+        public override string Name => _configuration.Name;
 
         protected abstract IEnumerator<TExtracted> ConvertDocsEnumerator(IEnumerator<Document> docs);
 
@@ -55,28 +77,127 @@ namespace Raven.Server.Documents.ETL
 
                     while (merged.MoveNext())
                     {
+                        CurrentBatch.NumberOfExtractedItems++;
                         yield return merged.Current;
                     }
                 }
             }
         }
 
-        public abstract IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context);
+        protected abstract EtlTransformer<TExtracted, TTransformed> GetTransformer(DocumentsOperationContext context);
 
-        public abstract bool Load(IEnumerable<TTransformed> items);
+        public IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context)
+        {
+            var transformer = GetTransformer(context);
+
+            foreach (var item in items)
+            {
+                CancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    transformer.Transform(item);
+
+                    Statistics.TransformationSuccess();
+
+                    CurrentBatch.LastTransformedEtag = item.Etag;
+
+                    if (CanContinueBatch() == false)
+                        break;
+                }
+                catch (JavaScriptParseException e)
+                {
+                    var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
+
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations(message, e);
+
+                    var alert = AlertRaised.Create(
+                        Tag,
+                        message,
+                        AlertType.Etl_TransformationError,
+                        NotificationSeverity.Error,
+                        key: Name,
+                        details: new ExceptionDetails(e));
+
+                    Database.NotificationCenter.Add(alert);
+
+                    Stop();
+
+                    break;
+                }
+                catch (Exception e)
+                {
+                    Statistics.RecordTransformationError(e);
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentKey}", e);
+                }
+            }
+
+            return transformer.GetTransformedResults();
+        }
+
+        public void Load(IEnumerable<TTransformed> items, JsonOperationContext context)
+        {
+            try
+            {
+                LoadInternal(items, context);
+
+                CurrentBatch.LastLoadedEtag = CurrentBatch.LastTransformedEtag;
+
+                Statistics.LoadSuccess(CurrentBatch.NumberOfExtractedItems);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to load transformed data for '{Name}'", e);
+
+                HandleFallback();
+
+                Statistics.RecordLoadError(e, CurrentBatch.NumberOfExtractedItems);
+            }
+        }
+
+        protected virtual void HandleFallback()
+        {
+        }
+
+        protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
 
         public abstract bool CanContinueBatch();
 
-        protected abstract void LoadLastProcessedEtag(DocumentsOperationContext context);
+        protected void LoadLastProcessedEtag(DocumentsOperationContext context)
+        {
+            var doc = Database.DocumentsStorage.Get(context, Constants.Documents.ETL.RavenEtlProcessStatusPrefix + Name);
 
-        protected abstract void StoreLastProcessedEtag(DocumentsOperationContext context);
+            if (doc == null)
+                Statistics.LastProcessedEtag = 0;
+            else
+                Statistics.LastProcessedEtag = JsonDeserializationServer.EtlProcessStatus(doc.Data).LastProcessedEtag;
+        }
 
-        public void NotifyAboutWork()
+        protected void StoreLastProcessedEtag(DocumentsOperationContext context)
+        {
+            var key = Constants.Documents.ETL.RavenEtlProcessStatusPrefix + Name;
+
+            var document = context.ReadObject(new DynamicJsonValue
+            {
+                [nameof(EtlProcessStatus.Name)] = Name,
+                [nameof(EtlProcessStatus.LastProcessedEtag)] = Statistics.LastProcessedEtag
+            }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+            Database.DocumentsStorage.Put(context, key, null, document);
+        }
+
+        protected abstract void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize);
+
+        public override void NotifyAboutWork()
         {
             _waitForChanges.Set();
         }
 
-        public void Start()
+        public override void Start()
         {
             if (_thread != null)
                 return;
@@ -103,7 +224,7 @@ namespace Raven.Server.Documents.ETL
             _thread.Start();
         }
 
-        public void Stop()
+        public override void Stop()
         {
             if (_thread == null)
                 return;
@@ -126,14 +247,17 @@ namespace Raven.Server.Documents.ETL
             {
                 _waitForChanges.Reset();
 
+                CurrentBatch.Reset();
+
                 var startTime = Database.Time.GetUtcNow();
                 var duration = Stopwatch.StartNew();
 
-
-                // TODO arek
-                //if (Statistics.SuspendUntil.HasValue && Statistics.SuspendUntil.Value > Database.Time.GetUtcNow())
-                //    return;
-
+                if (FallbackTime != null)
+                {
+                    Thread.Sleep(FallbackTime.Value);
+                    FallbackTime = null;
+                }
+                
                 var didWork = false;
 
                 try
@@ -149,7 +273,13 @@ namespace Raven.Server.Documents.ETL
 
                             var transformed = Transform(extracted, context);
 
-                            didWork = Load(transformed);
+                            Load(transformed, context);
+                            
+                            if (CurrentBatch.LastLoadedEtag > Statistics.LastProcessedEtag)
+                            {
+                                didWork = true;
+                                Statistics.LastProcessedEtag = CurrentBatch.LastLoadedEtag;
+                            }
                         }
 
                         if (didWork)
@@ -163,32 +293,31 @@ namespace Raven.Server.Documents.ETL
                             continue;
                         }
                     }
-
-                    
                 }
                 catch (OperationCanceledException)
                 {
                     return;
                 }
+                catch (Exception e)
+                {
+                    var message = $"Exception in ETL process named '{Name}'";
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{Tag} {message}", e);
+                }
                 finally
                 {
                     duration.Stop();
 
-                    // TODO arek
-                    //MetricsCountersManager.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
-                    //MetricsCountersManager.UpdateReplicationPerformance(new SqlReplicationPerformanceStats
-                    //{
-                    //    BatchSize = countOfReplicatedItems,
-                    //    Duration = spRepTime.Elapsed,
-                    //    Started = startTime
-                    //});
-                    
-                    // TODO arek
-
-                    if (didWork && CancellationToken.IsCancellationRequested == false)
+                    if (didWork)
                     {
-                        var afterReplicationCompleted = Database.SqlReplicationLoader.AfterReplicationCompleted;
-                        afterReplicationCompleted?.Invoke(Statistics);
+                        UpdateMetrics(startTime, duration, CurrentBatch.NumberOfExtractedItems);
+
+                        if (CancellationToken.IsCancellationRequested == false)
+                        {
+                            var batchCompleted = Database.EtlLoader.BatchCompleted;
+                            batchCompleted?.Invoke(Name, Statistics);
+                        }
                     }
                 }
 
@@ -203,7 +332,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             if (CancellationToken.IsCancellationRequested)
                 return;

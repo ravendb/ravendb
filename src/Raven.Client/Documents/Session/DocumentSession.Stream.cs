@@ -21,32 +21,58 @@ namespace Raven.Client.Documents.Session
             return Stream(docQuery);
         }
 
+        public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats)
+        {
+            var queryProvider = (IRavenQueryProvider)query.Provider;
+            var docQuery = queryProvider.ToDocumentQuery<T>(query.Expression);
+            return Stream(docQuery, out streamQueryStats);
+        }
+
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
         {
-            var documentQuery = (DocumentQuery<T>)query;
-            var projectionFields = documentQuery.ProjectionFields;
-            var indexQuery = query.GetIndexQuery();
-
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(query.IndexName, indexQuery);
+            var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
+
             RequestExecutor.Execute(command, Context);
             using (var result = streamOperation.SetResult(command.Result))
             {
-                while (result.MoveNext())
+                return YieldResults(query, result, command.UsedTransformer);
+            }
+        }
+
+        public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats)
+        {
+            var stats = new StreamQueryStatistics();
+            var streamOperation = new StreamOperation(this, stats);
+            var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
+
+            RequestExecutor.Execute(command, Context);
+            using (var result = streamOperation.SetResult(command.Result))
+            {
+                streamQueryStats = stats;
+
+                return YieldResults(query, result, command.UsedTransformer);
+            }
+        }
+
+        private IEnumerator<StreamResult<T>> YieldResults<T>(IDocumentQuery<T> query, IEnumerator<BlittableJsonReaderObject> enumerator, bool usedTransformer)
+        {
+            var projections = ((DocumentQuery<T>)query).ProjectionFields;
+
+            while (enumerator.MoveNext())
+            {
+                var json = enumerator.Current;
+                query.InvokeAfterStreamExecuted(json);
+
+                if (usedTransformer)
                 {
-                    var json = result.Current;
-                    query.InvokeAfterStreamExecuted(json);
+                    foreach (var streamResult in CreateMultipleStreamResults<T>(json))
+                        yield return streamResult;
 
-                    if (command.UsedTransformer)
-                    {
-                        foreach (var streamResult in CreateMultipleStreamResults<T>(json))
-                            yield return streamResult;
-
-                        continue;
-                    }
-
-                    yield return CreateStreamResult<T>(json, projectionFields);
+                    continue;
                 }
+
+                yield return CreateStreamResult<T>(json, projections);
             }
         }
 
