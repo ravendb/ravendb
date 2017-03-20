@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -112,8 +111,6 @@ namespace FastTests
 
         private readonly object _getNewServerSync = new object();
 
-        private static readonly ConcurrentQueue<int> _ports = new ConcurrentQueue<int>();
-
         protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null)
         {
             lock (_getNewServerSync)
@@ -130,20 +127,9 @@ namespace FastTests
 
                 configuration.Initialize();
                 configuration.DebugLog.LogMode = LogMode.None;
-
-                if (_ports.Count == 0)
+                if (customSettings == null || customSettings.ContainsKey("Raven/ServerUrl") == false)
                 {
-                    for (int i = 0; i < 1000; i++)
-                    {
-                        _ports.Enqueue(8090 + i);
-                    }
-                }
-
-                if (customSettings?.ContainsKey("Raven/ServerUrl") == false)
-                {
-                    int port;
-                    _ports.TryDequeue(out port);
-                    configuration.Core.ServerUrl = "http://127.0.0.1:" + port;
+                    configuration.Core.ServerUrl = "http://127.0.0.1:0";
                 }
                 configuration.Server.Name = ServerName;
                 configuration.Core.RunInMemory = true;
@@ -159,7 +145,7 @@ namespace FastTests
                 // TODO: Make sure to properly handle this when this is resolved:
                 // TODO: https://github.com/dotnet/corefx/issues/5205
                 // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
-                server.AfterDisposal += () => _ports.Enqueue(new Uri(server.Configuration.Core.ServerUrl).Port);
+
                 return server;
             }
         }
