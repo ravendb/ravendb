@@ -568,7 +568,7 @@ namespace Raven.Server.Documents.Handlers
                     PatchResult patchResult;
                     using (context.OpenWriteTransaction())
                     {
-                        patchResult = Database.Patch.Apply(context, id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode: isDebugOnly);
+                        patchResult = Database.Patcher.Apply(context, id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode: isDebugOnly);
 
                         if (isTestOnly == false)
                         {

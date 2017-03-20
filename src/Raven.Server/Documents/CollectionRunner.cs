@@ -28,7 +28,7 @@ namespace Raven.Server.Documents
 
         public IOperationResult ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.Patch.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
+            return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.Patcher.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
         }
 
         protected IOperationResult ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,

@@ -3,26 +3,29 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2607 : RavenTest
+    public class RavenDB_2607 : RavenTestBase
     {
-        public class CompaniesIndex : AbstractIndexCreationTask<Company>
+        private class CompaniesIndex : AbstractIndexCreationTask<Company>
         {
             public CompaniesIndex()
             {
                 Map = companies => from c in companies
-                    select new
-                    {
-                        c.Name
-                    };
+                                   select new
+                                   {
+                                       c.Name
+                                   };
             }
         }
 
@@ -31,16 +34,16 @@ namespace Raven.Tests.Issues
             public UsersIndex()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name
-                    };
+                               select new
+                               {
+                                   user.Name
+                               };
             }
         }
 
         public class Foo
         {
-            public string Name { get; set; } 
+            public string Name { get; set; }
         }
 
         public class UsersAndCompaniesIndex : AbstractMultiMapIndexCreationTask<Foo>
@@ -48,23 +51,23 @@ namespace Raven.Tests.Issues
             public UsersAndCompaniesIndex()
             {
                 AddMap<Company>(companies => from c in companies
-                    select new
-                    {
-                        c.Name
-                    });
-
-                AddMap<User>(users => from user in users
                                              select new
                                              {
-                                                 user.Name
+                                                 c.Name
                                              });
+
+                AddMap<User>(users => from user in users
+                                      select new
+                                      {
+                                          user.Name
+                                      });
             }
         }
 
         [Fact]
         public void AddingUnrelevantDocumentForIndexShouldNotMarkItAsStale()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var companiesIndex = new CompaniesIndex();
                 var usersIndex = new UsersIndex();
@@ -76,12 +79,12 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Company()
+                    session.Store(new Company
                     {
                         Name = "A"
                     });
 
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "A"
                     });
@@ -91,11 +94,11 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.DatabaseCommands.Admin.StopIndexing();
+                store.Admin.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Company()
+                    session.Store(new Company
                     {
                         Name = "B"
                     });
@@ -103,34 +106,32 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var databaseStatistics = store.DatabaseCommands.GetStatistics();
+                var databaseStatistics = store.Admin.Send(new GetStatisticsOperation());
 
-                Assert.Equal(3, databaseStatistics.StaleIndexes.Length);
+                Assert.Equal(2, databaseStatistics.StaleIndexes.Length);
                 Assert.Contains(companiesIndex.IndexName, databaseStatistics.StaleIndexes);
                 Assert.Contains(usersAndCompaniesIndex.IndexName, databaseStatistics.StaleIndexes);
-                Assert.Contains(new RavenDocumentsByEntityName().IndexName, databaseStatistics.StaleIndexes);
 
-                var queryResult = store.DatabaseCommands.Query(usersIndex.IndexName, new IndexQuery());
+                using (var commands = store.Commands())
+                {
+                    var queryResult = commands.Query(usersIndex.IndexName, new IndexQuery(store.Conventions));
 
-                Assert.False(queryResult.IsStale);
-                Assert.True(queryResult.Results.Count > 0);
+                    Assert.False(queryResult.IsStale);
+                    Assert.True(queryResult.Results.Length > 0);
 
+                    queryResult = commands.Query(companiesIndex.IndexName, new IndexQuery(store.Conventions));
+                    Assert.True(queryResult.IsStale);
 
-                queryResult = store.DatabaseCommands.Query(companiesIndex.IndexName, new IndexQuery());
-                Assert.True(queryResult.IsStale);
-
-                queryResult = store.DatabaseCommands.Query(usersAndCompaniesIndex.IndexName, new IndexQuery());
-                Assert.True(queryResult.IsStale);
-
-                queryResult = store.DatabaseCommands.Query(new RavenDocumentsByEntityName().IndexName, new IndexQuery());
-                Assert.True(queryResult.IsStale);
+                    queryResult = commands.Query(usersAndCompaniesIndex.IndexName, new IndexQuery(store.Conventions));
+                    Assert.True(queryResult.IsStale);
+                }
             }
         }
 
         [Fact]
         public void MustNotShowThatIndexIsNonStale_BulkInsertCase()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var companiesIndex = new CompaniesIndex();
                 var usersIndex = new UsersIndex();
@@ -142,12 +143,12 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Company()
+                    session.Store(new Company
                     {
                         Name = "A"
                     });
 
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "A"
                     });

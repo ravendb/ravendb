@@ -20,7 +20,7 @@ using JavaScriptException = Raven.Client.Documents.Exceptions.Patching.JavaScrip
 
 namespace Raven.Server.Documents.Patch
 {
-    public class PatchDocument
+    public abstract class DocumentPatcherBase
     {
         protected static Logger _logger;
         private const int MaxRecursionDepth = 128;
@@ -32,10 +32,10 @@ namespace Raven.Server.Documents.Patch
 
         protected readonly DocumentDatabase _database;
 
-        public PatchDocument(DocumentDatabase database)
+        protected DocumentPatcherBase(DocumentDatabase database)
         {
             _database = database;
-            _logger = LoggingSource.Instance.GetLogger<PatchDocument>(database.Name);
+            _logger = LoggingSource.Instance.GetLogger<DocumentPatcherBase>(database.Name);
             _maxSteps = database.Configuration.Patching.MaxStepsForScript;
             _additionalStepsPerSize = database.Configuration.Patching.AdditionalStepsForScriptBasedOnDocumentSize;
             _allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
@@ -49,20 +49,25 @@ namespace Raven.Server.Documents.Patch
             if (string.IsNullOrEmpty(patch.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-            var scope = ApplySingleScript(context, document, patch, debugMode);
-            var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Key); /* TODO: Should not use BlittableJsonDocumentBuilder.UsageMode.ToDisk? */
-
-            var result = new PatchResult
+            using (var scope = CreateOperationScope(context, debugMode))
             {
-                Status = PatchStatus.Patched,
-                OriginalDocument = document.Data,
-                ModifiedDocument = modifiedDocument
-            };
+                ApplySingleScript(context, document.Key, document, patch, scope);
 
-            if (debugMode)
-                AddDebug(context, result, scope);
+                var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Key);
+                /* TODO: Should not use BlittableJsonDocumentBuilder.UsageMode.ToDisk? */
 
-            return result;
+                var result = new PatchResult
+                {
+                    Status = PatchStatus.Patched,
+                    OriginalDocument = document.Data,
+                    ModifiedDocument = modifiedDocument
+                };
+
+                if (debugMode)
+                    AddDebug(context, result, scope);
+
+                return result;
+            }
         }
 
         public PatchResult Apply(
@@ -124,149 +129,76 @@ namespace Raven.Server.Documents.Patch
                 document = new Document { Data = data };
             }
 
-            var scope = ApplySingleScript(context, document, patchRequest, debugMode, docId:documentKey);
-            var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), documentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
-            var result = new PatchResult
+            using (var scope = CreateOperationScope(context, debugMode))
             {
-                Status = PatchStatus.NotModified,
-                OriginalDocument = originalDocument?.Data,
-                ModifiedDocument = modifiedDocument
-            };
+                ApplySingleScript(context, documentKey, document, patchRequest, scope);
 
-            if (debugMode)
-                AddDebug(context, result, scope);
+                var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), documentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-            if (modifiedDocument == null)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"After applying patch, modifiedDocument is null and document is null? {originalDocument == null}");
+                var result = new PatchResult
+                {
+                    Status = PatchStatus.NotModified,
+                    OriginalDocument = originalDocument?.Data,
+                    ModifiedDocument = modifiedDocument
+                };
 
-                result.Status = PatchStatus.Skipped;
+                if (debugMode)
+                    AddDebug(context, result, scope);
+
+
+                if (modifiedDocument == null)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"After applying patch, modifiedDocument is null and document is null? {originalDocument == null}");
+
+                    result.Status = PatchStatus.Skipped;
+                    return result;
+                }
+
+                var putResult = new DocumentsStorage.PutOperationResults();
+
+                if (originalDocument == null)
+                {
+                    putResult = _database.DocumentsStorage.Put(context, documentKey, null, modifiedDocument);
+                    result.Status = PatchStatus.Created;
+                }
+                else
+                {
+                    if (BlittableOperation.FastCompare(documentKey, originalDocument.Data, modifiedDocument) == false) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
+                    {
+                        putResult = _database.DocumentsStorage.Put(context, originalDocument.Key, originalDocument.Etag, modifiedDocument);
+                        result.Status = PatchStatus.Patched;
+                    }
+                }
+
+                if (putResult.Etag != 0)
+                {
+                    result.Etag = putResult.Etag;
+                    result.Collection = putResult.Collection.Name;
+                }
+
                 return result;
             }
-
-            var putResult = new DocumentsStorage.PutOperationResults();
-
-            if (originalDocument == null)
-            {
-                putResult = _database.DocumentsStorage.Put(context, documentKey, null, modifiedDocument);
-                result.Status = PatchStatus.Created;
-            }
-            else
-            {
-                if (BlittableOperation.FastCompare(documentKey, originalDocument.Data, modifiedDocument) == false) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
-                {
-                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Key, originalDocument.Etag, modifiedDocument);
-                    result.Status = PatchStatus.Patched;
-                }
-            }
-
-            if (putResult.Etag != 0)
-            {
-                result.Etag = putResult.Etag;
-                result.Collection = putResult.Collection.Name;
-            }
-
-            return result;
         }
 
-        protected PatcherOperationScope GenerateDefaultOperationScope(DocumentsOperationContext context, bool debugMode)
+        protected PatcherOperationScope CreateOperationScope(DocumentsOperationContext context, bool debugMode)
         {
             return new PatcherOperationScope(_database, context, debugMode)
             {
                 AdditionalStepsPerSize = _additionalStepsPerSize,
-                MaxSteps = _maxSteps
+                MaxSteps = _maxSteps,
+                CustomFunctions = _database.Patcher.CustomFunctions
             };
         }
 
-        internal struct SingleScriptRun
+        protected void ApplySingleScript(DocumentsOperationContext context, string documentId, Document document, PatchRequest patch, PatcherOperationScope scope)
         {
-            private readonly PatchDocument _parent;
-            private readonly PatchRequest _patch;
-            public Engine JintEngine;
-            public PatcherOperationScope Scope;
-
-            public SingleScriptRun(PatchDocument parent, DocumentsOperationContext context, PatchRequest patch, bool debugMode, PatcherOperationScope externalScope = null)
-            {
-                _parent = parent;
-                _patch = patch;
-                Scope = externalScope ?? parent.GenerateDefaultOperationScope(context, debugMode);
-
-                try
-                {
-                    JintEngine = ScriptsCache.GetEngine(parent.CreateEngine, patch, Scope.CustomFunctions);
-                }
-                catch (NotSupportedException e)
-                {
-                    throw new JavaScriptParseException("Could not parse script", e);
-                }
-                catch (Jint.Runtime.JavaScriptException e)
-                {
-                    throw new JavaScriptParseException("Could not parse script", e);
-                }
-                catch (Exception e)
-                {
-                    throw new JavaScriptParseException("Could not parse: " + Environment.NewLine + patch.Script, e);
-                }
-            }
-
-            public void Prepare(int size)
-            {
-                _parent.PrepareEngine(_patch, Scope, JintEngine, size);
-            }
-
-            public void Execute()
-            {
-                Scope.ActualPatchResult = JintEngine.Invoke("ExecutePatchScript", Scope.PatchObject);
-
-                _parent.CleanupEngine(_patch, JintEngine, Scope);
-
-                _parent.OutputLog(JintEngine, Scope);
-                if (Scope.DebugMode)
-                    Scope.DebugInfo.Add(string.Format("Statements executed: {0}", JintEngine.StatementsCount));
-            }
-
-            public void HandleError(Exception errorEx)
-            {
-                if (errorEx is ConcurrencyException)
-                    return;
-
-                JintEngine.ResetStatementsCount();
-
-                _parent.OutputLog(JintEngine, Scope);
-                var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + _patch.Script + Environment.NewLine;
-                var error = errorEx as Jint.Runtime.JavaScriptException;
-                if (error != null)
-                    errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Error);
-                if (Scope.DebugInfo.Items.Count != 0)
-                    errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
-                                string.Join(Environment.NewLine, Scope.DebugInfo.Items);
-
-                if (error != null)
-                    errorMsg += Environment.NewLine + "Stacktrace:" + Environment.NewLine + error.CallStack;
-
-                var targetEx = errorEx as TargetInvocationException;
-                if (targetEx?.InnerException != null)
-                    throw new JavaScriptException(errorMsg, targetEx.InnerException);
-
-                var recursionEx = errorEx as RecursionDepthOverflowException;
-                if (recursionEx != null)
-                    errorMsg += Environment.NewLine + "Max recursion depth is limited to: " + MaxRecursionDepth;
-
-                throw new JavaScriptException(errorMsg, errorEx);
-            }
-        }
-
-        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, PatchRequest patch, bool debugMode, PatcherOperationScope externalScope = null, string docId = null)
-        {
-            var run = new SingleScriptRun(this, context, patch, debugMode, externalScope);
+            var run = new SingleScriptRun(this, patch, scope);
             try
             {
                 run.Prepare(document?.Data?.Size ?? 0);
-                SetupInputs(document, run.Scope, run.JintEngine, document?.Key?? docId);
+                SetupInputs(documentId, document, scope, run.JintEngine);
                 run.Execute();
-                return run.Scope;
             }
             catch (Exception errorEx)
             {
@@ -275,22 +207,22 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        protected void SetupInputs(Document document, PatcherOperationScope scope, Engine jintEngine, string docId)
+        protected void SetupInputs(string documentId, Document document, PatcherOperationScope scope, Engine engine)
         {
-            jintEngine.SetValue("__document_id", docId);
-            scope.PatchObject = scope.ToJsObject(jintEngine, document);
+            engine.SetValue("__document_id", document.Key ?? documentId);
+            scope.PatchObject = scope.ToJsObject(engine, document);
         }
 
-        private void CleanupEngine(PatchRequest patch, Engine jintEngine, PatcherOperationScope scope)
+        private void CleanupEngine(PatchRequest patch, Engine engine, PatcherOperationScope scope)
         {
             if (patch.Values != null)
             {
                 foreach (var name in patch.Values.GetPropertyNames())
-                    jintEngine.Global.Delete(name, true);
+                    engine.Global.Delete(name, true);
             }
 
-            jintEngine.Global.Delete("__document_id", true);
-            RemoveEngineCustomizations(jintEngine, scope);
+            engine.Global.Delete("__document_id", true);
+            RemoveEngineCustomizations(engine, scope);
         }
 
         private void PrepareEngine(PatchRequest patch, PatcherOperationScope scope, Engine jintEngine, int documentSize)
@@ -433,7 +365,7 @@ namespace Raven.Server.Documents.Patch
 
         private static string GetFromResources(string resourceName)
         {
-            var assembly = typeof(PatchDocument).GetTypeInfo().Assembly;
+            var assembly = typeof(DocumentPatcherBase).GetTypeInfo().Assembly;
             using (var stream = assembly.GetManifestResourceStream(resourceName))
             {
                 using (var reader = new StreamReader(stream))
@@ -453,5 +385,85 @@ namespace Raven.Server.Documents.Patch
 
             result.Debug = context.ReadObject(djv, "debug/actions");
         }
+
+        internal struct SingleScriptRun
+        {
+            public Engine JintEngine;
+
+            private readonly DocumentPatcherBase _parent;
+            private readonly PatchRequest _patch;
+            private readonly PatcherOperationScope _scope;
+
+            public SingleScriptRun(DocumentPatcherBase parent, PatchRequest patch, PatcherOperationScope scope)
+            {
+                _parent = parent;
+                _patch = patch;
+                _scope = scope;
+
+                try
+                {
+                    JintEngine = ScriptsCache.GetEngine(parent.CreateEngine, patch, _scope.CustomFunctions);
+                }
+                catch (NotSupportedException e)
+                {
+                    throw new JavaScriptParseException("Could not parse script", e);
+                }
+                catch (Jint.Runtime.JavaScriptException e)
+                {
+                    throw new JavaScriptParseException("Could not parse script", e);
+                }
+                catch (Exception e)
+                {
+                    throw new JavaScriptParseException("Could not parse: " + Environment.NewLine + patch.Script, e);
+                }
+            }
+
+            public void Prepare(int size)
+            {
+                _parent.PrepareEngine(_patch, _scope, JintEngine, size);
+            }
+
+            public void Execute()
+            {
+                _scope.ActualPatchResult = JintEngine.Invoke("ExecutePatchScript", _scope.PatchObject);
+
+                _parent.CleanupEngine(_patch, JintEngine, _scope);
+
+                _parent.OutputLog(JintEngine, _scope);
+                if (_scope.DebugMode)
+                    _scope.DebugInfo.Add(string.Format("Statements executed: {0}", JintEngine.StatementsCount));
+            }
+
+            public void HandleError(Exception errorEx)
+            {
+                if (errorEx is ConcurrencyException)
+                    return;
+
+                JintEngine.ResetStatementsCount();
+
+                _parent.OutputLog(JintEngine, _scope);
+                var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + _patch.Script + Environment.NewLine;
+                var error = errorEx as Jint.Runtime.JavaScriptException;
+                if (error != null)
+                    errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Error);
+                if (_scope.DebugInfo.Items.Count != 0)
+                    errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
+                                string.Join(Environment.NewLine, _scope.DebugInfo.Items);
+
+                if (error != null)
+                    errorMsg += Environment.NewLine + "Stacktrace:" + Environment.NewLine + error.CallStack;
+
+                var targetEx = errorEx as TargetInvocationException;
+                if (targetEx?.InnerException != null)
+                    throw new JavaScriptException(errorMsg, targetEx.InnerException);
+
+                var recursionEx = errorEx as RecursionDepthOverflowException;
+                if (recursionEx != null)
+                    errorMsg += Environment.NewLine + "Max recursion depth is limited to: " + MaxRecursionDepth;
+
+                throw new JavaScriptException(errorMsg, errorEx);
+            }
+        }
+
     }
 }
