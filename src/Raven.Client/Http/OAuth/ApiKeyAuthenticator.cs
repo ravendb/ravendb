@@ -73,11 +73,11 @@ namespace Raven.Client.Http.OAuth
                     throw new AuthenticationException("Bad response from server " + response.StatusCode);
                 }
 
-                var stream = response.Content.ReadAsStreamAsync();
+                var stream = await response.Content.ReadAsStreamAsync();
                
                 JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
                 using (context.GetManagedBuffer(out pinnedBuffer))
-                using (var tokenJson = context.ParseToMemory(stream.Result, "apikey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
+                using (var tokenJson = context.ParseToMemory(stream, "apikey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
                 {
                     tokenJson.BlittableValidation();
 
