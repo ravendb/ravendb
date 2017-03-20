@@ -452,7 +452,14 @@ namespace Raven.Server.ServerWide
 
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                 var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
-                updateCommand.UpdateDatabaseRecord(databaseRecord);
+                try
+                {
+                    updateCommand.UpdateDatabaseRecord(databaseRecord);
+                }
+                catch (Exception e)
+                {
+                    NotifyLeaderAboutError(index,leader,$"Cannot execute command of type {type} for database {databaseName} for reason: {e}");
+                }
                 
                 var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 

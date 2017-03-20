@@ -19,9 +19,11 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
@@ -43,7 +45,6 @@ namespace Raven.Server.Documents
         /// </summary>
         private readonly object _indexAndTransformerLocker = new object();
         private Task _indexStoreTask;
-        private Task _transformerStoreTask;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
@@ -213,7 +214,13 @@ namespace Raven.Server.Documents
             ConfigurationStorage.InitializeNotificationsStorage();
 
             _indexStoreTask = IndexStore.InitializeAsync();
-            _transformerStoreTask = TransformerStore.InitializeAsync();
+            TransactionOperationContext context;
+            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+                var record = _serverStore.Cluster.ReadDatabase(context, Name);
+                TransformerStore.Initialize(record);
+            }
             Patcher.Initialize();
             EtlLoader.Initialize();
 
@@ -228,16 +235,7 @@ namespace Raven.Server.Documents
             {
                 _indexStoreTask = null;
             }
-
-            try
-            {
-                _transformerStoreTask.Wait(DatabaseShutdown);
-            }
-            finally
-            {
-                _transformerStoreTask = null;
-            }
-
+            
             SubscriptionStorage.Initialize();
 
             //Index Metadata Store shares Voron env and context pool with documents storage, 
@@ -300,15 +298,6 @@ namespace Raven.Server.Documents
                     {
                         _indexStoreTask.Wait(DatabaseShutdown);
                         _indexStoreTask = null;
-                    });
-                }
-
-                if (_transformerStoreTask != null)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _transformerStoreTask.Wait(DatabaseShutdown);
-                        _transformerStoreTask = null;
                     });
                 }
 

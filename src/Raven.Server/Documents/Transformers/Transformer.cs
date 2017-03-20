@@ -1,14 +1,10 @@
 ﻿using System;
-using System.IO;
-using System.Text;
-using Newtonsoft.Json;
+using System.Linq;
 using Raven.Client.Documents.Transformers;
-using Raven.Server.Config.Categories;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -16,14 +12,9 @@ namespace Raven.Server.Documents.Transformers
 {
     public class Transformer
     {
-        public const string FileExtension = ".transformer";
-
         private readonly TransformerBase _transformer;
         private readonly Logger _log;
-
         private readonly object _locker = new object();
-
-        private IndexingConfiguration _configuration;
 
         protected Transformer(TransformerDefinition definition, TransformerBase transformer, Logger log)
         {
@@ -72,7 +63,6 @@ namespace Raven.Server.Documents.Transformers
                 try
                 {
                     Definition.LockMode = mode;
-                    Persist();
                 }
                 catch (Exception)
                 {
@@ -82,110 +72,29 @@ namespace Raven.Server.Documents.Transformers
             }
         }
 
-        private void Initialize(IndexingConfiguration configuration, bool persist)
-        {
-            lock (_locker)
-            {
-                _configuration = configuration;
-
-                if (persist)
-                    Persist();
-            }
-        }
-
-        private void Persist()
-        {
-            if (_configuration.RunInMemory)
-                return;
-
-            File.WriteAllText(GetPath(TransformerId, Name, _configuration).FullPath, JsonConvert.SerializeObject(Definition, Formatting.Indented));
-        }
-
-        public static Transformer CreateNew(TransformerDefinition definition,
-            IndexingConfiguration configuration, Logger log)
+        public static Transformer CreateNew(TransformerDefinition definition, Logger log)
         {
             var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(definition);
             var transformer = new Transformer(definition, compiledTransformer, log);
-            transformer.Initialize(configuration, persist: true);
-
             return transformer;
         }
 
-        public static Transformer Open(int transformerId, string fullPath, IndexingConfiguration configuration, Logger log)
+        public static Transformer Open(int transformerId, Logger log, DatabaseRecord record)
         {
-            if (File.Exists(fullPath) == false)
-                throw new InvalidOperationException($"Could not find transformer file at '{fullPath}'.");
+            var transformerDefinitions = record.Transformers.Values.Where(x=>x.TransfomerId == transformerId).ToList();
+            
+            if (transformerDefinitions.Count == 0)
+                throw new InvalidOperationException($"Could not read transformer definition for id {transformerId}");
 
-            var transformerDefinitionAsText = File.ReadAllText(fullPath);
-            var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(transformerDefinitionAsText);
-
-            if (transformerDefinition == null)
-                throw new InvalidOperationException($"Could not read transformer definition from '{fullPath}'.");
-
+            var transformerDefinition = transformerDefinitions.First();
             var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(transformerDefinition);
             var transformer = new Transformer(transformerDefinition, compiledTransformer, log);
-            transformer.Initialize(configuration, persist: false);
-
             return transformer;
-        }
-
-        private static PathSetting GetPath(int transformerId, string name, IndexingConfiguration configuration)
-        {
-            return
-                configuration.StoragePath.Combine(Path.Combine("Transformers",
-                    $"{transformerId}.{Convert.ToBase64String(Encoding.UTF8.GetBytes(name))}{FileExtension}"));
         }
 
         public virtual TransformationScope OpenTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext context, bool nested = false)
         {
             return new TransformationScope(_transformer, parameters, include, documentsStorage, transformerStore, context, nested);
-        }
-
-        public static bool TryReadIdFromFile(string name, out int transformerId)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                transformerId = -1;
-                return false;
-            }
-
-            var indexOfDot = name.IndexOf(".", StringComparison.OrdinalIgnoreCase);
-            name = name.Substring(0, indexOfDot);
-
-            return int.TryParse(name, out transformerId);
-        }
-
-        public static string TryReadNameFromFile(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return null;
-
-            var parts = name.Split('.');
-            if (parts.Length != 3)
-                return null;
-
-            var encodedName = parts[1];
-
-            try
-            {
-                return Encoding.UTF8.GetString(Convert.FromBase64String(encodedName));
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public void Delete()
-        {
-            if (_configuration.RunInMemory)
-                return;
-
-            var path = GetPath(TransformerId, Name, _configuration);
-            if (File.Exists(path.FullPath) == false)
-                return;
-
-            File.Delete(path.FullPath);
         }
     }
 }

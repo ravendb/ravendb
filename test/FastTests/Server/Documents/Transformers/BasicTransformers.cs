@@ -78,12 +78,6 @@ namespace FastTests.Server.Documents.Transformers
                 });
             }
 
-            var encodedName = Convert.ToBase64String(Encoding.UTF8.GetBytes("Transformer1"));
-            var transformerFilePath = Path.Combine(path, "Indexes", "Transformers", $"1.{encodedName}{Transformer.FileExtension}");
-            Assert.True(File.Exists(transformerFilePath));
-
-            File.WriteAllText(transformerFilePath, string.Empty);
-
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false))
             {
                 var transformers = database
