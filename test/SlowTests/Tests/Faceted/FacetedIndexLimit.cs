@@ -200,29 +200,20 @@ namespace SlowTests.Tests.Faceted
                         Assert.Equal(inMemoryCount, facet.Hits);
                     }
 
-                    try
+                    if (manufacturer.RemainingHits == 2)
                     {
-                        if (manufacturer.RemainingHits == 2)
-                        {
-                            WaitForUserToContinueTheTest(store, debug: false);
-                        }
-                        Assert.Equal(3, manufacturer.RemainingTermsCount);
-                        Assert.Equal(3, manufacturer.RemainingTerms.Count());
-                        Assert.Equal(camerasByHits[2], manufacturer.RemainingTerms[0]);
-                        Assert.Equal(camerasByHits[3], manufacturer.RemainingTerms[1]);
-                        Assert.Equal(camerasByHits[4], manufacturer.RemainingTerms[2]);
-
-                        Assert.Equal(_data.Count(),
-                                     manufacturer.Values[0].Hits +
-                                     manufacturer.Values[1].Hits +
-                                     manufacturer.RemainingHits);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
                         WaitForUserToContinueTheTest(store, debug: false);
-                        throw;
                     }
+                    Assert.Equal(3, manufacturer.RemainingTermsCount);
+                    Assert.Equal(3, manufacturer.RemainingTerms.Count());
+                    Assert.Equal(camerasByHits[2], manufacturer.RemainingTerms[0]);
+                    Assert.Equal(camerasByHits[3], manufacturer.RemainingTerms[1]);
+                    Assert.Equal(camerasByHits[4], manufacturer.RemainingTerms[2]);
+
+                    Assert.Equal(_data.Count(),
+                        manufacturer.Values[0].Hits +
+                        manufacturer.Values[1].Hits +
+                        manufacturer.RemainingHits);
                 }
             }
         }

@@ -235,7 +235,7 @@ namespace Tests.Infrastructure
 
             foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
             {
-                mustBeSuccessfulTask.Wait();
+                Assert.True(mustBeSuccessfulTask.Wait(250));
             }
         }
 

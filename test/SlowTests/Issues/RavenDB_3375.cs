@@ -47,13 +47,11 @@ namespace SlowTests.Issues
                 {
                     var query1 = session.Advanced.DocumentQuery<Post>("TagsIndex");
                     query1 = query1.WhereEquals("Tag", "NoSpace:1", false);
-                    Console.WriteLine(query1.ToString()); // Tag:[["NoSpace\:1"]]
                     var posts = query1.ToArray();
                     Assert.Equal(1, posts.Length); // Passes
 
                     var query2 = session.Advanced.DocumentQuery<Post>("TagsIndex")
                                         .WhereEquals("Tag", "Space :2", false);
-                    Console.WriteLine(query2.ToString()); // Tag:[["Space \:2"]]
                     var posts2 = query2.ToArray();
                     Assert.Equal(1, posts2.Length); // Fails
 
