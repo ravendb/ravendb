@@ -25,46 +25,32 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             _config = config;
             _patchRequest = new PatchRequest { Script = _config.Script };
             _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
+            
+            LoadToDestinations = new string[config.SqlTables.Count];
+
+            for (var i = 0; i < config.SqlTables.Count; i++)
+            {
+                LoadToDestinations[i] = config.SqlTables[i].TableName;
+            }
         }
 
         protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
         {
             base.RemoveEngineCustomizations(engine, scope);
-
-            engine.Global.Delete("documentId", true);
-            engine.Global.Delete("loadTo", true);
+            
             engine.Global.Delete("varchar", true);
             engine.Global.Delete("nVarchar", true);
-            foreach (var table in _config.SqlTables)
-            {
-                engine.Global.Delete("loadTo" + table.TableName, true);
-            }
         }
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
             base.CustomizeEngine(engine, scope);
 
-            Debug.Assert(_current != null);
-
-            engine.SetValue("documentId", _current);
-            engine.SetValue("loadTo", new Action<string, JsValue>((tableName, colsAsObject) => LoadToFunction(tableName, colsAsObject, scope)));
-
-            foreach (var table in _config.SqlTables)
-            {
-                var current = table;
-                engine.SetValue("loadTo" + table.TableName, (Action<JsValue>)(cols =>
-                {
-                    var tableName = current.TableName;
-                    LoadToFunction(tableName, cols, scope);
-                }));
-            }
-
             engine.SetValue("varchar", (Func<string, double?, ValueTypeLengthTriple>)(ToVarchar));
             engine.SetValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
         }
 
-        private void LoadToFunction(string tableName, JsValue colsAsObject, PatcherOperationScope scope)
+        protected override void LoadToFunction(string tableName, JsValue colsAsObject, PatcherOperationScope scope)
         {
             if (tableName == null)
                 throw new ArgumentException("tableName parameter is mandatory");
