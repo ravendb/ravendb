@@ -46,6 +46,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             Debug.Assert(commands != null);
 
+            if (commands.Count == 0)
+                return;
+
             BatchOptions options = null;
             if (EtlConfiguration.LoadRequestTimeoutInSec != null)
             {

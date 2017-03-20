@@ -9,16 +9,16 @@ namespace Raven.Server.Documents.ETL
 {
     public abstract class EtlTransformer<TExtracted, TTransformed> : DocumentPatcherBase
     {
-        protected const string LoadTo = "loadTo";
+        internal const string LoadTo = "loadTo";
 
         protected readonly DocumentsOperationContext Context;
-
-        protected string[] LoadToDestinations = new string[0];
 
         protected EtlTransformer(DocumentDatabase database, DocumentsOperationContext context) : base(database)
         {
             Context = context;
         }
+
+        protected abstract string[] LoadToDestinations { get; }
 
         protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
         {
