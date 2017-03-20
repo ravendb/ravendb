@@ -22,38 +22,39 @@ namespace SlowTests.Server.Rachis
             var leader = await CreateRaftClusterAndGetLeader(3);            
             CreateDatabaseResult databaseResult;
             var replicationFactor = 2;
+            var databaseName = "test";
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = "test"
+                DefaultDatabase = databaseName
             }.Initialize())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("test");
+                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
             }
             int numberOfInstances = 0;
             foreach (var server in Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {                
-                await server.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, databaseResult.ETag ?? 0);
-                using (var store = new DocumentStore() { Url = server.WebUrls[0] , DefaultDatabase = "test" }.Initialize())
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? 0);
+                try
                 {
-                    if (store.Admin.Server.Send(new GetDatabaseNamesOperation(0, 100)).Contains("test"))
-                    {
-                        numberOfInstances++;
-                    }
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    numberOfInstances++;
+                }
+                catch
+                {
+
                 }
             }
             Assert.True(numberOfInstances == replicationFactor, $"Expected replicationFactor={replicationFactor} but got {numberOfInstances}");
         }
 
-        [Fact(Skip = "Need to fix topology cache, we are accessing the same node every time")]
+        [Fact]
         public async Task CanDeleteDatabaseFromASpecificNodeInTheCluster()
         {
             NoTimeouts();
             var leader = await CreateRaftClusterAndGetLeader(3);
-            CreateDatabaseResult databaseResult;
             DeleteDatabaseResult deleteResult;
-            string serverTagToBeDeleted;
             var databaseName = "test";
             var replicationFactor = 2;
             using (var store = new DocumentStore()
@@ -63,26 +64,26 @@ namespace SlowTests.Server.Rachis
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-                databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
                 foreach (var server in Servers)
                 {
                     await server.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, databaseResult.ETag??0);
                 }
-                serverTagToBeDeleted = databaseResult.Topology.Members.First();
+                var serverTagToBeDeleted = databaseResult.Topology.Members.First();
                 deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete:true,fromNode: serverTagToBeDeleted));
             }
-
             int numberOfInstances = 0;
             foreach (var server in Servers)
             {
-                //TODO: this is failing because fetching topology from cache is probably fetching from the same location
-                await server.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.ETag);
-                using (var store = new DocumentStore() { Url = server.WebUrls[0], DefaultDatabase = databaseName }.Initialize())
+                await server.ServerStore.Cluster.WaitForIndexNotification(deleteResult.ETag);
+                try
                 {
-                    if (store.Admin.Server.Send(new GetDatabaseNamesOperation(0, 100)).Contains(databaseName))
-                    {
-                        numberOfInstances++;
-                    }
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    numberOfInstances++;
+                }
+                catch
+                {
+                    
                 }
             }
             Assert.True(numberOfInstances == replicationFactor - 1, $"Expected replicationFactor={replicationFactor - 1} but got {numberOfInstances}");

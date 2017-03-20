@@ -77,73 +77,6 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/databases/topology", "GET", "/admin/databases/topology?&name={databaseName:string}")]
-        public Task GetTopology()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            {
-                var dbId = Constants.Documents.Prefix + name;
-                long etag;
-                using (context.OpenReadTransaction())
-                using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out etag))
-                {
-                    if (dbBlit == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
-                        {
-                            context.Write(writer,
-                                new DynamicJsonValue
-                                {
-                                    ["Type"] = "Error",
-                                    ["Message"] = "Database " + name + " wasn't found"
-                                });
-                        }
-                        return Task.CompletedTask;
-                    }
-
-                    UnprotectSecuredSettingsOfDatabaseDocument(dbBlit);
-                    var clusterTopology = ServerStore.GetClusterTopology(context);
-                    var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        GenerateTopology(context, writer, dbRecord, clusterTopology, etag);
-                    }
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        private void GenerateTopology(JsonOperationContext context, BlittableJsonTextWriter writer, DatabaseRecord dbRecord, ClusterTopology clusterTopology, long etag = 0)
-        {
-            context.Write(writer, new DynamicJsonValue
-            {
-                [nameof(Topology.LeaderNode)] = new DynamicJsonValue
-                {
-                    //TODO:this should return the senator but for now so it will work I'm returning the "primary" node
-                    [nameof(ServerNode.Url)] = Server.Configuration.Core.ServerUrl,
-                    [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
-                },
-                [nameof(Topology.Nodes)] = new DynamicJsonArray(dbRecord.Topology.AllNodes.Select(x => new DynamicJsonValue
-                {
-                    [nameof(ServerNode.Url)] = clusterTopology.GetUrlFormTag(x),
-                    [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
-                })),
-                [nameof(Topology.ReadBehavior)] =
-                ReadBehavior.LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
-                [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
-                [nameof(Topology.SLA)] = new DynamicJsonValue
-                {
-                    [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
-                },
-                [nameof(Topology.Etag)] = etag,
-            });
-        }
-
         private void UnprotectSecuredSettingsOfDatabaseDocument(BlittableJsonReaderObject obj)
         {
             //TODO: implement this
@@ -207,6 +140,7 @@ namespace Raven.Server.Web.System
 
                 json.Modifications = new DynamicJsonValue(json)
                 {
+                    [nameof(DatabaseRecord.DatabaseName)] = name,
                     [nameof(DatabaseRecord.Topology)] = topologyJson
                 };
 

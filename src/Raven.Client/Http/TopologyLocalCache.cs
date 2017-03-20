@@ -78,20 +78,26 @@ namespace Raven.Client.Http
                     writer.WriteStartObject();
                     writer.WritePropertyName(context.GetLazyString(nameof(Topology.LeaderNode)));
                     WriteNode(writer, topology.LeaderNode, context);
-
+                    writer.WriteComma();
                     writer.WritePropertyName(context.GetLazyString(nameof(Topology.Nodes)));
                     writer.WriteStartArray();
-                    foreach (var node in topology.Nodes)
+                    for (var index = 0; index < topology.Nodes.Count; index++)
                     {
+                        var node = topology.Nodes[index];
+                        if(index != 0)
+                            writer.WriteComma();
                         WriteNode(writer, node, context);
                     }
                     writer.WriteEndArray();
+                    writer.WriteComma();
 
                     writer.WritePropertyName(context.GetLazyString(nameof(Topology.ReadBehavior)));
                     writer.WriteString(context.GetLazyString(topology.ReadBehavior.ToString()));
+                    writer.WriteComma();
 
                     writer.WritePropertyName(context.GetLazyString(nameof(Topology.WriteBehavior)));
                     writer.WriteString(context.GetLazyString(topology.WriteBehavior.ToString()));
+                    writer.WriteComma();
 
                     writer.WritePropertyName(context.GetLazyString(nameof(Topology.SLA)));
                     writer.WriteStartObject();

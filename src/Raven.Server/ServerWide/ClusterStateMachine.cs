@@ -176,13 +176,7 @@ namespace Raven.Server.ServerWide
                     items.Set(builder);
                 }
 
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
-                {
-                    Task.Run(() =>
-                    {
-                        DatabaseChanged?.Invoke(this, databaseName);
-                    });
-                };
+                NotifyDatabaseChanged(context, databaseName, index);
             }
         }
 
@@ -315,14 +309,7 @@ namespace Raven.Server.ServerWide
                 builder.Add(index);
 
                 items.Set(builder);
-
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
-                {
-                    Task.Run(() =>
-                    {
-                        DatabaseChanged?.Invoke(this, setDb.Name.Replace("db/", ""));
-                    });
-                };
+                NotifyDatabaseChanged(context, setDb.Name, index);
             }
         }
 
