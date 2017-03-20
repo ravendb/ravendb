@@ -20,7 +20,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_2514 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6498")]
         public void CanKillBulkInsert()
         {
             const int bulkInsertSize = 2000;
