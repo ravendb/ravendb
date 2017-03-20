@@ -41,7 +41,11 @@ namespace Raven.Server.Documents.Transformers
             _serverStore = serverStore;
             _log = LoggingSource.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
             _indexAndTransformerLocker = indexAndTransformerLocker;
-            _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
+
+            if (_serverStore != null)
+            {
+                _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
+            }
         }
 
         public Task InitializeAsync()
@@ -77,8 +81,7 @@ namespace Raven.Server.Documents.Transformers
                 if (string.Equals(changedDatabase, _documentDatabase.Name, StringComparison.OrdinalIgnoreCase) == false)
                     return;
             
-                var transformersToDelete = new List<string>();
-                var transformersToUpdate = new List<string>();
+                var transformersToDelete = new List<string>();                
 
                 TransactionOperationContext context;
                 using (_serverStore.ContextPool.AllocateOperationContext(out context))

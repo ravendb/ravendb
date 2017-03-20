@@ -658,7 +658,14 @@ namespace Raven.Server.Documents.Replication
                 _sendingThread?.Join();
             }
 
-            _cts.Dispose();
+            try
+            {
+                _cts.Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+                //was already disposed? we don't care, we are disposing
+            }
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
