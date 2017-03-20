@@ -23,9 +23,11 @@
         "Web/Studio/EmbeddedData/*.cs",
         "Commercial/RavenDB.public.json"
       ]
+    },
+    "copyToOutput": {
+      "include": [ "../../libs/libsodium.dll", "../../libs/libsodium.so" ]
     }
   },
-
   "configurations": {
     "Release": {
       "buildOptions": {

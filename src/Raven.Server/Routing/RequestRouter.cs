@@ -136,6 +136,8 @@ namespace Raven.Server.Routing
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
                 {
+                    DrainRequest(ctx, context);
+
                     ctx.Write(writer,
                         new DynamicJsonValue
                         {
@@ -153,6 +155,8 @@ namespace Raven.Server.Routing
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
                 {
+                    DrainRequest(ctx, context);
+
                     ctx.Write(writer,
                         new DynamicJsonValue
                         {
@@ -169,6 +173,8 @@ namespace Raven.Server.Routing
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
                 {
+                    DrainRequest(ctx, context);
+
                     ctx.Write(writer,
                         new DynamicJsonValue
                         {
@@ -199,6 +205,8 @@ namespace Raven.Server.Routing
                     using (var ctx = JsonOperationContext.ShortTermSingleUse())
                     using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
                     {
+                        DrainRequest(ctx, context);
+
                         ctx.Write(writer,
                             new DynamicJsonValue
                             {
@@ -214,6 +222,8 @@ namespace Raven.Server.Routing
                         using (var ctx = JsonOperationContext.ShortTermSingleUse())
                         using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
                         {
+                            DrainRequest(ctx, context);
+
                             ctx.Write(writer,
                                 new DynamicJsonValue
                                 {
@@ -229,6 +239,21 @@ namespace Raven.Server.Routing
                     return true;
                 default:
                     throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);
+            }
+        }
+
+        private void DrainRequest(JsonOperationContext ctx, HttpContext context)
+        {
+            JsonOperationContext.ManagedPinnedBuffer buffer;
+            using (ctx.GetManagedBuffer(out buffer))
+            {
+                var requestBody = context.Request.Body;
+                while (true)
+                {
+                    var read = requestBody.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
+                    if (read == 0)
+                        break;
+                }
             }
         }
     }
