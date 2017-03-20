@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Replication
 
             SampledAt = DateTime.UtcNow;
             ConflictsCount = loader.ConflictResolver.ConflictsCount;
-            ConflictResolverStatus = loader.ConflictResolver.ResolveConflictsTask?.Status.ToString();
+            ConflictResolverStatus = loader.ConflictResolver.ResolveConflictsTask.Status.ToString();
             var outgoingReplicationHandlers = loader.OutgoingHandlers ?? Enumerable.Empty<OutgoingReplicationHandler>();
 
             foreach (var o in outgoingReplicationHandlers)

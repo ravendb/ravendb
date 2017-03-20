@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly DocumentReplicationLoader _documentReplicationLoader;
 
-        public Task ResolveConflictsTask;
+        public Task ResolveConflictsTask = Task.CompletedTask;
 
         public ResolveConflictOnReplicationConfigurationChange(DocumentReplicationLoader documentReplicationLoader, Logger log)
         {
@@ -32,7 +32,15 @@ namespace Raven.Server.Documents.Replication
 
             if (_database.DocumentsStorage.ConflictsCount > 0)
             {
-                ResolveConflictsTask?.Wait();
+                try
+                {
+                    ResolveConflictsTask.Wait();
+                }
+                catch (Exception e)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Failed to wait for a previous task of automatic conflict resolution", e);
+                }
                 ResolveConflictsTask = Task.Run(() =>
                 {
                     try
@@ -43,10 +51,6 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (_log.IsInfoEnabled)
                             _log.Info("Failed to run automatic conflict resolution", e);
-                    }
-                    finally
-                    {
-                        ResolveConflictsTask = null;
                     }
                 });
             }

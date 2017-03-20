@@ -2128,7 +2128,7 @@ namespace Raven.Server.Documents
                         ThrowConcurrentException(key, expectedEtag, oldEtag);
 
                     int oldSize;
-                    var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
+                    var oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);
                     var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
                     if (oldCollectionName != collectionName)
                         ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
