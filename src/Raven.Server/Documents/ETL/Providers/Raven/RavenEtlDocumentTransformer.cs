@@ -4,14 +4,13 @@ using Jint.Native;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
     public class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData>
     {
         private readonly List<ICommandData> _commands = new List<ICommandData>();
-        private readonly PatchRequest _transformationScript = null;
+        private readonly PatchRequest _transformationScript;
 
         public RavenEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, RavenEtlConfiguration configuration) : base(database, context)
         {
@@ -32,32 +31,35 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 if (_transformationScript != null)
                 {
-                    var scope = ApplySingleScript(Context, item.Document, _transformationScript, false);
+                    using (var scope = CreateOperationScope(Context, debugMode: false))
+                    {
+                        ApplySingleScript(Context, item.DocumentKey, item.Document, _transformationScript, scope);
 
-                    var actualResult = scope.ActualPatchResult;
+                        var actualResult = scope.ActualPatchResult;
 
-                    var filteredOut = false;
+                        var filteredOut = false;
 
-                    if (actualResult.IsBoolean() && actualResult.AsBoolean() == false)
-                        filteredOut = true;
-                    else if (actualResult.IsNull())
-                        filteredOut = true;
+                        if (actualResult.IsBoolean() && actualResult.AsBoolean() == false)
+                            filteredOut = true;
+                        else if (actualResult.IsNull())
+                            filteredOut = true;
 
-                    if (filteredOut)
-                        return;
+                        if (filteredOut)
+                            return;
 
-                    JsValue result = null;
+                        JsValue result = null;
 
-                    if (actualResult.IsObject())
-                        result = actualResult;
-                    else if (actualResult.IsUndefined())
-                        result = scope.PatchObject.AsObject();
-                    else
-                        ThrowOnUnexpectedTransformationResultType(actualResult);
+                        if (actualResult.IsObject())
+                            result = actualResult;
+                        else if (actualResult.IsUndefined())
+                            result = scope.PatchObject.AsObject();
+                        else
+                            ThrowOnUnexpectedTransformationResultType(actualResult);
 
-                    var transformResult = Context.ReadObject(scope.ToBlittable(result.AsObject()), item.DocumentKey);
+                        var transformResult = Context.ReadObject(scope.ToBlittable(result.AsObject()), item.DocumentKey);
 
-                    _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentKey, null, transformResult));
+                        _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentKey, null, transformResult));
+                    }
                 }
                 else
                     _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentKey, null, item.Document.Data));

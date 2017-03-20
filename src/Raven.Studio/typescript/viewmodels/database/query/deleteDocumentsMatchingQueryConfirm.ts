@@ -1,6 +1,5 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import deleteDocsMatchingQueryCommand = require("commands/database/documents/deleteDocsMatchingQueryCommand");
 import database = require("models/resources/database");
 
 class deleteDocumentsMatchingQueryConfirm extends dialogViewModelBase {
@@ -13,8 +12,7 @@ class deleteDocumentsMatchingQueryConfirm extends dialogViewModelBase {
     }
 
     deleteDocs() {
-        new deleteDocsMatchingQueryCommand(this.indexName, this.queryText, this.db).execute();
-        dialog.close(this);
+        dialog.close(this, true);
     }
 }
 

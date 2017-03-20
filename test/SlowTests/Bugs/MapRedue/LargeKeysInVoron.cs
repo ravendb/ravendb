@@ -107,10 +107,6 @@ namespace SlowTests.Bugs.MapRedue
                 var indexes = db.IndexStore.GetIndexes();
                 var errorsCount = indexes.Sum(index => index.GetErrors().Count);
 
-                foreach (var index in indexes)
-                    foreach (var error in index.GetErrors())
-                       Console.WriteLine(error.ToString());
-                   
                 Assert.Equal(errorsCount, 0);
             }
         }

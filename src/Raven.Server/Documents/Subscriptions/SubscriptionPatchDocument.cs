@@ -1,15 +1,12 @@
-﻿using System;
-using Jint;
-using Jint.Native;
-using Jint.Native.Function;
-using Jint.Runtime.Environments;
+﻿using Jint;
+using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionPatchDocument : PatchDocument
+    public class SubscriptionPatchDocument : DocumentPatcherBase
     {
         private readonly PatchRequest _patchRequest;
 
@@ -28,28 +25,29 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool MatchCriteria(DocumentsOperationContext context, Document document, out BlittableJsonReaderObject transformResult)
         {
-            var patchingScope = GenerateDefaultOperationScope(context, false);
-
             transformResult = null;
 
-            var externalScope = new PatcherOperationScope(this._database,context);
-            var actualPatchResult = ApplySingleScript(context, document, _patchRequest, false, externalScope).ActualPatchResult;
-
-            if (actualPatchResult.IsBoolean())
-                return actualPatchResult.AsBoolean();
-
-            if (actualPatchResult.IsObject())
+            using (var scope = CreateOperationScope(context, debugMode: false))
             {
-                var transformedDynamic = externalScope.ToBlittable(actualPatchResult.AsObject());
-                transformResult = context.ReadObject(transformedDynamic, document.Key);
-                return true;
+                ApplySingleScript(context, document.Key, document, _patchRequest, scope);
+
+                var result = scope.ActualPatchResult;
+
+                if (result.IsBoolean())
+                    return result.AsBoolean();
+
+                if (result.IsObject())
+                {
+                    var transformedDynamic = scope.ToBlittable(result.AsObject());
+                    transformResult = context.ReadObject(transformedDynamic, document.Key);
+                    return true;
+                }
+
+                if (result.IsNull())
+                    return false; // todo: check if that is the value that we want here
+
+                throw new JavaScriptException($"Could not proccess script {_patchRequest.Script}. It\'s return value {result.Type}, instead of bool, object or null");
             }
-
-            if (actualPatchResult.IsNull())
-                return false; // todo: check if that is the value that we want here
-
-            throw new ArgumentException(
-                $"Could not proccess script {_patchRequest.Script}. It\'s return value {actualPatchResult.Type}, instead of bool, object or null");
         }
     }
 }

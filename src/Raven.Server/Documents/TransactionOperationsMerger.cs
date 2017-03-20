@@ -539,6 +539,15 @@ namespace Raven.Server.Documents
             _waitHandle.Set();
             _txMergingThread?.Join();
             _waitHandle.Dispose();
+
+            MergedTransactionCommand result;
+            while (_operations.TryDequeue(out result))
+            {
+                if (ThreadPool.QueueUserWorkItem(state => ((MergedTransactionCommand)state).TaskCompletionSource.TrySetCanceled(), result) == false)
+                {
+                    result.TaskCompletionSource.TrySetCanceled();
+                }
+            }
         }
 
     }

@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Queries
         {
             return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
             {
-                var result = _database.Patch.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false);
+                var result = _database.Patcher.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false);
                 if (retrieveDetails && result != null)
                 {
                     return new BulkOperationResult.PatchDetails
