@@ -702,6 +702,7 @@ namespace Sparrow.Json
             return Bits.CeilLog2(size);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe byte* GetCompressionBuffer(int minSize)
         {
             // enlarge buffer if needed

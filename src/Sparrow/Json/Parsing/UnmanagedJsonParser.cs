@@ -137,15 +137,17 @@ namespace Sparrow.Json.Parsing
                     return false;
             }
 
+            byte b;
             byte* currentBuffer = _inputBuffer;
-
+            uint bufferSize = _bufSize;
+            uint pos = _pos;
             while (true)
             {
-                if (_pos >=  _bufSize)
-                    return false;
+                if (pos >= bufferSize)
+                    goto ReturnFalse;
 
-                byte b = currentBuffer[_pos];
-                _pos++;
+                b = currentBuffer[pos];
+                pos++;
                 _charPos++;
 
                 if (b == ':' || b == ',')
@@ -166,30 +168,33 @@ namespace Sparrow.Json.Parsing
                 if (b == '{')
                 {
                     state.CurrentTokenType = JsonParserToken.StartObject;
-                    return true;
+                    goto ReturnTrue;
                 }
+
                 if (b == '}')
                 {
                     state.CurrentTokenType = JsonParserToken.EndObject;
-                    return true;
+                    goto ReturnTrue;
                 }
                 if (b == '[')
                 {
                     state.CurrentTokenType = JsonParserToken.StartArray;
-                    return true;
+                    goto ReturnTrue;
                 }
                 if (b == ']')
                 {
                     state.CurrentTokenType = JsonParserToken.EndArray;
-                    return true;
+                    goto ReturnTrue;
                 }
 
                 bool couldRead;
-                if (ReadUnlikely(b, out couldRead))
-                    return couldRead;
-
+                if (!ReadUnlikely(b, ref pos, out couldRead))
                 continue; // We can only continue here, if there is a failure to parse, we will throw inside ReadUnlikely.
 
+                if ( couldRead)
+                    goto ReturnTrue;
+                goto ReturnFalse;
+            }
 
                 ParseString:
                 {
@@ -198,13 +203,13 @@ namespace Sparrow.Json.Parsing
                     _prevEscapePosition = 0;
                     _currentQuote = b;
                     state.CurrentTokenType = JsonParserToken.String;
-                    if (ParseString() == false)
+                if (ParseString(ref pos) == false)
                     {
                         state.Continuation = JsonParserTokenContinuation.PartialString;
-                        return false;
+                    goto ReturnFalse;
                     }
                     _unmanagedWriteBuffer.EnsureSingleChunk(state);
-                    return true;
+                goto ReturnTrue;
                 }
 
                 ParseNumber:
@@ -218,37 +223,44 @@ namespace Sparrow.Json.Parsing
                     _isExponent = false;
 
                     // ParseNumber need to call _charPos++ & _pos++, so we'll reset them for the first char
-                    _pos--;
+                pos--;
                     _charPos--;
 
-                    if (ParseNumber(ref state.Long) == false)
+                    if (ParseNumber(ref state.Long, ref pos) == false)
                     {
                         _state.Continuation = JsonParserTokenContinuation.PartialNumber;
-                        return false;
+                    goto ReturnFalse;
                     }
 
                     if (_state.CurrentTokenType == JsonParserToken.Float)
                         _unmanagedWriteBuffer.EnsureSingleChunk(_state);
-                    return true;
+                goto ReturnTrue;
                 }
 
                 Error:
                 ThrowCannotHaveCharInThisPosition(b);
-            }
-        }
 
-        private bool ReadUnlikely(byte b, out bool couldRead)
+            ReturnTrue:
+            _pos = pos;
+            return true;
+
+            ReturnFalse:
+            _pos = pos;
+            return false;
+            }
+
+        private bool ReadUnlikely(byte b, ref uint pos, out bool couldRead)
         {
             couldRead = false;
             switch (b)
             {
                 case (byte)'\r':
                 {
-                    if (_pos >= _bufSize)
+                    if (pos >= _bufSize)
                     {
                         return true;
                     }
-                    if (_inputBuffer[_pos] == (byte)'\n')
+                    if (_inputBuffer[pos] == (byte)'\n')
                     {
                         return false;
                     }
@@ -276,7 +288,7 @@ namespace Sparrow.Json.Parsing
                     _expectedTokenBuffer = NaN;
                     _expectedTokenBufferPosition = 1;
                     _expectedTokenString = "NaN";
-                    if (EnsureRestOfToken() == false)
+                    if (EnsureRestOfToken(ref pos) == false)
                     {
                         _state.Continuation = JsonParserTokenContinuation.PartialNaN;
                         {
@@ -297,7 +309,7 @@ namespace Sparrow.Json.Parsing
                     _expectedTokenBuffer = BlittableJsonTextWriter.NullBuffer;
                     _expectedTokenBufferPosition = 1;
                     _expectedTokenString = "null";
-                    if (EnsureRestOfToken() == false)
+                    if (EnsureRestOfToken(ref pos) == false)
                     {
                         _state.Continuation = JsonParserTokenContinuation.PartialNull;
                         {
@@ -316,7 +328,7 @@ namespace Sparrow.Json.Parsing
                     _expectedTokenBuffer = BlittableJsonTextWriter.TrueBuffer;
                     _expectedTokenBufferPosition = 1;
                     _expectedTokenString = "true";
-                    if (EnsureRestOfToken() == false)
+                    if (EnsureRestOfToken(ref pos) == false)
                     {
                         _state.Continuation = JsonParserTokenContinuation.PartialTrue;
                         {
@@ -335,7 +347,7 @@ namespace Sparrow.Json.Parsing
                     _expectedTokenBuffer = BlittableJsonTextWriter.FalseBuffer;
                     _expectedTokenBufferPosition = 1;
                     _expectedTokenString = "false";
-                    if (EnsureRestOfToken() == false)
+                    if (EnsureRestOfToken(ref pos) == false)
                     {
                         _state.Continuation = JsonParserTokenContinuation.PartialFalse;
                         {
@@ -371,7 +383,7 @@ namespace Sparrow.Json.Parsing
                 _expectedTokenBuffer = Utf8Preamble;
                 _expectedTokenBufferPosition = 1;
                 _expectedTokenString = "UTF8 Preamble";
-                if (EnsureRestOfToken() == false)
+                if (EnsureRestOfToken(ref _pos) == false)
                 {
                     _state.Continuation = JsonParserTokenContinuation.PartialPreamble;
                     return false;
@@ -391,7 +403,7 @@ namespace Sparrow.Json.Parsing
             {
                 case JsonParserTokenContinuation.PartialNaN:
                 {
-                    if (EnsureRestOfToken() == false)
+                    if (EnsureRestOfToken(ref _pos) == false)
                         return true;
 
                     _state.Continuation = JsonParserTokenContinuation.None;
@@ -403,7 +415,7 @@ namespace Sparrow.Json.Parsing
                 }
                 case JsonParserTokenContinuation.PartialNumber:
                 {
-                    if (ParseNumber(ref _state.Long) == false)
+                    if (ParseNumber(ref _state.Long, ref _pos) == false)
                         return true;
 
                     if (_state.CurrentTokenType == JsonParserToken.Float)
@@ -417,7 +429,7 @@ namespace Sparrow.Json.Parsing
                 }
                 case JsonParserTokenContinuation.PartialPreamble:
                 {
-                    if (EnsureRestOfToken() == false)
+                    if (EnsureRestOfToken(ref _pos) == false)
                         return true;
 
                     _state.Continuation = JsonParserTokenContinuation.None;
@@ -426,7 +438,7 @@ namespace Sparrow.Json.Parsing
                 }
                 case JsonParserTokenContinuation.PartialString:
                 {
-                    if (ParseString() == false)
+                    if (ParseString(ref _pos) == false)
                         return true;
 
                     _unmanagedWriteBuffer.EnsureSingleChunk(_state);
@@ -439,7 +451,7 @@ namespace Sparrow.Json.Parsing
                 }
                 case JsonParserTokenContinuation.PartialFalse:
                 {
-                    if (EnsureRestOfToken() == false)
+                    if (EnsureRestOfToken(ref _pos) == false)
                         return true;
 
                     _state.CurrentTokenType = JsonParserToken.False;
@@ -451,7 +463,7 @@ namespace Sparrow.Json.Parsing
                 }
                 case JsonParserTokenContinuation.PartialTrue:
                 {
-                    if (EnsureRestOfToken() == false)
+                     if (EnsureRestOfToken(ref _pos) == false)
                         return true;
 
                     _state.CurrentTokenType = JsonParserToken.True;
@@ -462,7 +474,7 @@ namespace Sparrow.Json.Parsing
                 }
                 case JsonParserTokenContinuation.PartialNull:
                 {
-                    if (EnsureRestOfToken() == false)
+                    if (EnsureRestOfToken(ref _pos) == false)
                         return true;
 
                     _state.CurrentTokenType = JsonParserToken.Null;
@@ -480,18 +492,21 @@ namespace Sparrow.Json.Parsing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ParseNumber(ref long value)
+        private bool ParseNumber(ref long value, ref uint pos)
         {
             JsonParserState state = _state;
-            byte* currentBuffer = _inputBuffer;
 
+            uint bufferSize = _bufSize;
+            byte* inputBuffer = _inputBuffer;
             while (true)
             {
-                if (_pos >= _bufSize)
+                if (pos >= bufferSize)
                     goto NotANumber;
+
                 _charPos++;
 
-                byte b = currentBuffer[_pos++];
+                byte b = inputBuffer[pos];
+                pos++;
                 if (b >= '0' && b <= '9')
                 {
                     // PERF: This is a fast loop for the most common characters found on numbers.
@@ -510,7 +525,7 @@ namespace Sparrow.Json.Parsing
 
                         state.CurrentTokenType = _isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
 
-                        _pos--; _charPos--;// need to re-read this char
+                        pos--; _charPos--;// need to re-read this char
 
                         goto IsANumber;
                     }
@@ -521,7 +536,7 @@ namespace Sparrow.Json.Parsing
             
                 if (ParseNumberTable[b] == ParseNumberAction.ParseUnlikely)
                 {
-                    if (ParseNumberUnlikely(b, ref value, state))
+                    if (ParseNumberUnlikely(b, ref pos, ref value, state))
                         goto IsANumber;
 
                     _unmanagedWriteBuffer.WriteByte(b);
@@ -539,7 +554,7 @@ namespace Sparrow.Json.Parsing
             return false; // Will never execute.
         }
 
-        private bool ParseNumberUnlikely(byte b, ref long value, JsonParserState state)
+        private bool ParseNumberUnlikely(byte b, ref uint pos, ref long value, JsonParserState state)
         {
             switch (b)
             {
@@ -591,7 +606,7 @@ namespace Sparrow.Json.Parsing
 
                         state.CurrentTokenType = _isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
 
-                        _pos--;
+                        pos--;
                         _charPos--; // need to re-read this char
 
                         return true;
@@ -610,14 +625,19 @@ namespace Sparrow.Json.Parsing
             ThrowException(message);
         }
 
-        public bool EnsureRestOfToken()
+        private bool EnsureRestOfToken(ref uint pos)
         {
-            for (int i = _expectedTokenBufferPosition; i < _expectedTokenBuffer.Length; i++)
+            uint bufferSize = _bufSize;
+            byte* inputBuffer = _inputBuffer;
+            byte[] expectedTokenBuffer = _expectedTokenBuffer;
+            for (int i = _expectedTokenBufferPosition; i < expectedTokenBuffer.Length; i++)
             {
-                if (_pos >= _bufSize)
+                if (pos >= bufferSize)
                     return false;
-                if (_inputBuffer[_pos++] != _expectedTokenBuffer[i])
+
+                if (inputBuffer[pos++] != expectedTokenBuffer[i])
                     ThrowException("Invalid token found, expected: " + _expectedTokenString);
+
                 _expectedTokenBufferPosition++;
                 _charPos++;
             }
@@ -629,18 +649,21 @@ namespace Sparrow.Json.Parsing
         private static readonly byte[] ParseStringTable;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ParseString()
+        private bool ParseString(ref uint currentPos)
         {
             byte* currentBuffer = _inputBuffer;
             byte[] parseStringTable = ParseStringTable;
 
+            uint bufferSize = _bufSize;
+
             while (true)
             {
-                _currentStrStart = (int)_pos;
+                _currentStrStart = (int)currentPos;
 
-                while (_pos < _bufSize)
+                while (currentPos < bufferSize)
                 {
-                    byte b = currentBuffer[_pos++];
+                    byte b = currentBuffer[currentPos];
+                    currentPos++;
                     _charPos++;
 
                     if (_escapeMode == false)
@@ -649,14 +672,14 @@ namespace Sparrow.Json.Parsing
                         if (b != _currentQuote && b != (byte) '\\')
                             continue;
 
-                        _unmanagedWriteBuffer.Write(currentBuffer + _currentStrStart, (int)_pos - _currentStrStart - 1 /* don't include the escape or the last quote */);
+                        _unmanagedWriteBuffer.Write(currentBuffer + _currentStrStart, (int)currentPos - _currentStrStart - 1 /* don't include the escape or the last quote */);
 
                         if (b == _currentQuote)
-                            return true;
+                            goto ReturnTrue;
 
                         // Then it is '\\'
                         _escapeMode = true;
-                        _currentStrStart = (int)_pos;                        
+                        _currentStrStart = (int)currentPos;                        
                     }
                     else
                     {
@@ -682,21 +705,21 @@ namespace Sparrow.Json.Parsing
                         }
                         else if (b == (byte)'\r')
                         {
-                            if (_pos >= _bufSize)
-                                return false;
+                            if (currentPos >= bufferSize)
+                                goto ReturnFalse;
 
                             _line++;
                             _charPos = 1;
-                            if (_pos >= _bufSize)
-                                return false;
+                            if (currentPos >= bufferSize)
+                                goto ReturnFalse;
 
-                            if (currentBuffer[_pos] == (byte)'\n')
-                                _pos++; // consume the \,\r,\n
+                            if (currentBuffer[currentPos] == (byte)'\n')
+                                currentPos++; // consume the \,\r,\n
                         }
                         else if (b == (byte)'u')
                         {
-                            if (ParseUnicodeValue() == false)
-                                return false;
+                            if (ParseUnicodeValue(ref currentPos) == false)
+                                goto ReturnFalse;
                         }
                         else
                         {
@@ -706,11 +729,18 @@ namespace Sparrow.Json.Parsing
                 }
 
                 // copy the buffer to the native code, then refill
-                _unmanagedWriteBuffer.Write(currentBuffer + _currentStrStart, (int)_pos - _currentStrStart);
+                _unmanagedWriteBuffer.Write(currentBuffer + _currentStrStart, (int)currentPos - _currentStrStart);
 
-                if (_pos >= _bufSize)
-                    return false;
+                if (currentPos >= bufferSize)
+                    goto ReturnFalse;
             }
+
+
+            ReturnTrue:
+            return true;
+
+            ReturnFalse:
+            return false;
         }
 
         private static void ThrowInvalidEscapeChar(byte b)
@@ -719,17 +749,22 @@ namespace Sparrow.Json.Parsing
         }
 
 
-        private bool ParseUnicodeValue()
+        private bool ParseUnicodeValue(ref uint pos)
         {
             byte b;
             int val = 0;
+
+            byte* inputBuffer = _inputBuffer;
+            uint bufferSize = _bufSize;
             for (int i = 0; i < 4; i++)
             {
-                if (_pos >= _bufSize)
+                if (pos >= bufferSize)
                     return false;
 
-                b = _inputBuffer[_pos++];
+                b = inputBuffer[pos];
+                pos++;
                 _currentStrStart++;
+
                 if (b >= (byte)'0' && b <= (byte)'9')
                 {
                     val = (val << 4) | (b - (byte)'0');
