@@ -177,7 +177,8 @@ loadToUsers(
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 SetupEtl(src, dest, "users", @"
-loadToPeople({Name: this.Name + ' ' + this.LastName })
+loadToUsers(this);
+loadToPeople({Name: this.Name + ' ' + this.LastName });
 loadToAddresses(LoadDocument(this.AddressId));
 ");
                 const int count = 5;
@@ -209,6 +210,11 @@ loadToAddresses(LoadDocument(this.AddressId));
                 {
                     for (var i = 1; i <= count; i++)
                     {
+                        var user = session.Load<User>("users/1");
+                        Assert.NotNull(user);
+                        Assert.Equal("James", user.Name);
+                        Assert.Equal("Smith", user.LastName);
+
                         var person = session.Load<Person>($"users/{i}/people/1");
                         Assert.NotNull(person);
                         Assert.Equal("James Smith", person.Name);
