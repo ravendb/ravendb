@@ -507,6 +507,41 @@ namespace Sparrow.Json
             }
         }
 
+        public async Task<BlittableJsonReaderObject> ParseToMemoryAsync(WebSocket webSocket, string debugTag,
+           BlittableJsonDocumentBuilder.UsageMode mode,
+           ManagedPinnedBuffer bytes,
+           CancellationToken token = default(CancellationToken)
+           )
+        {
+            _jsonParserState.Reset();
+            using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
+            using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState))
+            {
+                CachedProperties.NewDocument();
+                builder.ReadObjectDocument();
+                while (true)
+                {
+                    if (bytes.Valid == bytes.Used)
+                    {
+                        var read = await webSocket.ReceiveAsync(bytes.Buffer, token);
+                        if (read.Count == 0)
+                            throw new EndOfStreamException("Stream ended without reaching end of json content");
+                        bytes.Valid = read.Count;
+                        bytes.Used = 0;
+                    }
+                    parser.SetBuffer(bytes);
+                    var result = builder.Read();
+                    bytes.Used += parser.BufferOffset;
+                    if (result)
+                        break;
+                }
+                builder.FinalizeDocument();
+
+                var reader = builder.CreateReader();
+                return reader;
+            }
+        }
+
         private async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             ManagedPinnedBuffer bytes;

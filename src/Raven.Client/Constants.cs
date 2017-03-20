@@ -113,6 +113,15 @@ namespace Raven.Client
                 public const string HasValue = "HasValue";
             }
 
+            public class BulkInsert
+            {
+                private BulkInsert()
+                {
+                }
+
+                public const string Content = "Content";
+            }
+
             public class Indexing
             {
                 private Indexing()
@@ -187,7 +196,7 @@ namespace Raven.Client
                     public const double MilesToKm = 1.60934;
                 }
             }
-
+            
             public class Querying
             {
                 private Querying()
