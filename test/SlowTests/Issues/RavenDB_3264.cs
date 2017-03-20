@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                         Data = context.ReadObject(new DynamicJsonValue(), "keys/1")
                     };
 
-                    var patcher = new PatchDocument(database);
+                    var patcher = new DocumentPatcher(database);
                     var result = patcher.Apply(context, document, patch, debugMode: true);
                     dynamic debug = new DynamicBlittableJson(result.Debug);
                     dynamic array = (DynamicArray)debug.Info;

@@ -4,7 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
+using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Server.Documents.Patch;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -17,41 +25,49 @@ namespace SlowTests.Issues
             public string LastName { get; set; }
         }
 
-        [Fact(Skip = "RavenDB-6562")]
-        public void ScriptPatchShouldGenerateNiceException()
+        [Fact]
+        public async Task ScriptPatchShouldGenerateNiceException()
         {
-            /*
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new SimpleUser { FirstName = "John", LastName = "Smith"});
+                    session.Store(new SimpleUser { FirstName = "John", LastName = "Smith" });
                     session.SaveChanges();
                 }
 
-                store
-                    .DatabaseCommands
-                    .Put(
-                        Constants.RavenJavascriptFunctions,
-                        null,
-                        RavenJObject.FromObject(new { Functions =
-@"exports.a = function(value) { return  b(value); };
+                using (var commands = store.Commands())
+                {
+                    commands
+                        .Put(
+                            Constants.Json.CustomFunctionsKey,
+                            null,
+                            new
+                            {
+                                Functions =
+                                @"exports.a = function(value) { return  b(value); };
 exports.b = function(v) { return c(v); }
 exports.c = function(v) { throw 'oops'; }
 "
-                        }),
-                        new RavenJObject());
+                            });
+                }
 
-                WaitForIndexing(store);
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                Assert.True(SpinWait.SpinUntil(() => database.Patcher.CustomFunctions != null, TimeSpan.FromSeconds(10)));
 
-                var patcher = new ScriptedJsonPatcher(store.SystemDatabase);
-                using (var scope = new ScriptedIndexResultsJsonPatcherScope(store.SystemDatabase, new HashSet<string>()))
+                DocumentsOperationContext context;
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (context.OpenWriteTransaction())
                 {
-                    var e = Assert.Throws<InvalidOperationException>(() => patcher.Apply(scope, new RavenJObject(), new ScriptedPatchRequest
+                    var e = Assert.Throws<JavaScriptException>(() =>
                     {
-                        Script = @"var s = 1234; 
+                        database.Patcher.Apply(context, "simpleUsers/1", null, new PatchRequest
+                        {
+                            Script = @"var s = 1234; 
 a(s);"
-                    }));
+                        }, null, skipPatchIfEtagMismatch: false, debugMode: false);
+                    });
+
                     Assert.Equal(@"Unable to execute JavaScript: 
 var s = 1234; 
 a(s);
@@ -66,7 +82,6 @@ apply@main.js:2
 anonymous function@main.js:1", e.Message);
                 }
             }
-            */
         }
     }
 }

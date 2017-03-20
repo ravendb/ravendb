@@ -7,6 +7,8 @@ namespace Raven.Client
     {
         public class Json
         {
+            public const string CustomFunctionsKey = "Raven/Javascript/Functions";
+
             private Json()
             {
             }
