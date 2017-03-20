@@ -837,16 +837,16 @@ namespace Raven.Server.Documents.Replication
             #region Attachment
 
             public Slice Key;
-            public IDisposable KeyDispose;
+            public ByteStringContext.InternalScope KeyDispose;
 
             public Slice Name;
-            public IDisposable NameDispose;
+            public ByteStringContext.InternalScope NameDispose;
 
             public Slice ContentType;
-            public IDisposable ContentTypeDispose;
+            public ByteStringContext.InternalScope ContentTypeDispose;
 
             public Slice Base64Hash;
-            public IDisposable Base64HashDispose;
+            public ByteStringContext.InternalScope Base64HashDispose;
 
             #endregion
 
@@ -908,10 +908,12 @@ namespace Raven.Server.Documents.Replication
                     item.KeyDispose = Slice.From(context.Allocator, ReadExactly(loweredKeySize), loweredKeySize, out item.Key);
 
                     var nameSize = *(int*)ReadExactly(sizeof(int));
-                    item.NameDispose = Slice.From(context.Allocator, ReadExactly(nameSize), nameSize, out item.Name);
+                    var name = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
+                    item.NameDispose = DocumentKeyWorker.GetStringPreserveCase(context, name, out item.Name);
 
                     var contentTypeSize = *(int*)ReadExactly(sizeof(int));
-                    item.ContentTypeDispose = Slice.From(context.Allocator, ReadExactly(contentTypeSize), contentTypeSize, out item.ContentType);
+                    var contentType = Encoding.UTF8.GetString(ReadExactly(contentTypeSize), contentTypeSize);
+                    item.ContentTypeDispose = DocumentKeyWorker.GetStringPreserveCase(context, contentType, out item.ContentType);
 
                     var base64HashSize = *ReadExactly(sizeof(byte));
                     item.Base64HashDispose = Slice.From(context.Allocator, ReadExactly(base64HashSize), base64HashSize, out item.Base64Hash);

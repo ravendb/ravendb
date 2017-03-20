@@ -10,17 +10,19 @@ namespace FastTests.Client.Attachments
 {
     public class AttachmentsReplication : ReplicationTestsBase
     {
-        [Fact(Skip = "WIP")]
+        [Fact]
         public void PutAttachments()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
+                SetupReplication(store1, store2);
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User { Name = "Fitzchak" }, "users/1");
                     session.SaveChanges();
                 }
+                Assert.True(WaitForDocument(store2, "users/1"));
 
                 var names = new[]
                 {
@@ -31,7 +33,7 @@ namespace FastTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.Equal(2, result.Etag);
+                    Assert.Equal(4, result.Etag);
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
@@ -40,7 +42,7 @@ namespace FastTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.Equal(4, result.Etag);
+                    Assert.Equal(6, result.Etag);
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -49,16 +51,14 @@ namespace FastTests.Client.Attachments
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                    Assert.Equal(6, result.Etag);
+                    Assert.Equal(8, result.Etag);
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
                     Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", result.Hash);
                 }
 
-                SetupReplication(store1, store2);
-                Assert.True(WaitForDocument(store2, "users/1"));
-                using (var session = store1.OpenSession()) // Wait for another replicaiton batch
+                using (var session = store1.OpenSession())
                 {
                     session.Store(new User { Name = "Marker" }, "marker");
                     session.SaveChanges();
@@ -69,7 +69,7 @@ namespace FastTests.Client.Attachments
                 {
                     var user = session.Load<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
-                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    Assert.Equal((DocumentFlags.HasAttachments | DocumentFlags.FromReplication).ToString(), metadata[Constants.Documents.Metadata.Flags]);
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
                     Assert.Equal(3, attachments.Length);
                     var orderedNames = names.OrderBy(x => x).ToArray();
@@ -96,7 +96,7 @@ namespace FastTests.Client.Attachments
 
                 var statistics = store2.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(3, statistics.CountOfAttachments);
-                Assert.Equal(1, statistics.CountOfDocuments);
+                Assert.Equal(2, statistics.CountOfDocuments);
                 Assert.Equal(0, statistics.CountOfIndexes);
 
                 using (var session = store2.OpenSession())
