@@ -24,7 +24,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                             Url = dest.Url,
                             Database = dest.DefaultDatabase,
                             Collection = "Users",
-                            Script = "this.Name = 'James Doe';"
+                            Script = @"this.Name = 'James Doe';
+                                       loadToUsers(this);"
                         }
                     }
                 });
@@ -98,7 +99,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Fact]
-        public void Filtering_with_null_and_false_and_transformation_to_different_object_with_load_document()
+        public void Filtering_and_transformation_with_load_document()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -107,13 +108,16 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 SetupEtl(src, dest, "users", @"
 if (this.Age % 4 == 0) 
-    return null; 
+    return;
 else if (this.Age % 2 == 0) 
-    return false;
-else 
-    return {Name: this.Name + ' ' + this.LastName, Address:LoadDocument(this.AddressId)};
-");
+    return;
 
+loadToUsers(
+    {
+        Name: this.Name + ' ' + this.LastName, 
+        Address: LoadDocument(this.AddressId)
+    });
+");
                 const int count = 30;
 
                 using (var session = src.OpenSession())
