@@ -3,19 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Suggestion;
+using Tests.Infrastructure;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2670 : RavenTest
+    public class RavenDB_2670 : RavenTestBase
     {
         private class Product
         {
@@ -29,7 +28,7 @@ namespace Raven.Tests.Issues
 
             public string QuantityPerUnit { get; set; }
 
-            public decimal PricePerUnit{ get; set; }
+            public decimal PricePerUnit { get; set; }
 
             public int UnitsInStock { get; set; }
 
@@ -55,30 +54,30 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6573")]
         public void MaxSuggestionsShouldWork()
         {
-            using (var store = NewRemoteDocumentStore(runInMemory: false))
+            using (var store = GetDocumentStore())
             {
-                DeployNorthwind(store, "Northwind");
+                store.Admin.Send(new CreateSampleDataOperation());
 
-                new Products_ByName().Execute(store.DatabaseCommands.ForDatabase("Northwind"), store.Conventions);
+                new Products_ByName().Execute(store);
 
-                WaitForIndexing(store, database: "Northwind");
+                WaitForIndexing(store);
 
-                using (var session = store.OpenSession("Northwind"))
+                using (var session = store.OpenSession())
                 {
                     var result = session
                         .Query<Product, Products_ByName>()
                         .Suggest(new SuggestionQuery
-                                 {
-                                     Field = "Name", 
-                                     Term = "<<chaig tof>>", 
-                                     Accuracy = 0.4f, 
-                                     MaxSuggestions = 5, 
-                                     Distance = StringDistanceTypes.JaroWinkler, 
-                                     Popularity = true
-                                 });
+                        {
+                            Field = "Name",
+                            Term = "<<chaig tof>>",
+                            Accuracy = 0.4f,
+                            MaxSuggestions = 5,
+                            Distance = StringDistanceTypes.JaroWinkler,
+                            Popularity = true
+                        });
 
                     Assert.True(result.Suggestions.Length <= 5);
                 }

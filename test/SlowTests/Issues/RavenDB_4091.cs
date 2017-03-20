@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -49,7 +50,7 @@ namespace SlowTests.Issues
                     progresses.Add(progress);
                 };
 
-                operation.WaitForCompletion();
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 Assert.NotEmpty(progresses);
 
@@ -79,7 +80,7 @@ namespace SlowTests.Issues
                     progresses.Add(progress);
                 };
 
-                operation.WaitForCompletion();
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 Assert.NotEmpty(progresses);
 

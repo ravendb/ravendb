@@ -14,7 +14,7 @@ namespace SlowTests.SlowTests.Issues
 {
     public class RavenDB_2660 : RavenTestBase
     {
-        public class UsersByName : AbstractIndexCreationTask<User>
+        private class UsersByName : AbstractIndexCreationTask<User>
         {
             public UsersByName()
             {
@@ -22,7 +22,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        public class PeopleByName : AbstractMultiMapIndexCreationTask<Person>
+        private class PeopleByName : AbstractMultiMapIndexCreationTask<Person>
         {
             public PeopleByName()
             {

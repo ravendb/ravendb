@@ -163,7 +163,7 @@ namespace SlowTests.Bugs.MapRedue
 
         private void RemoveAllDocuments(DocumentStore store)
         {
-            store.Operations.Send(new DeleteCollectionOperation("Documents")).WaitForCompletion();
+            store.Operations.Send(new DeleteCollectionOperation("Documents")).WaitForCompletion(TimeSpan.FromSeconds(15));
         }
 
         private void InserDocumentIntoDb(IDocumentSession aSession, String aDocumentId, Byte aVersionCount)

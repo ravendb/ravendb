@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
@@ -9,11 +10,28 @@ namespace Raven.Client.Json
 {
     public class BlittableOperation
     {
+        private static readonly Lazy<JsonOperationContext> Context = new Lazy<JsonOperationContext>(JsonOperationContext.ShortTermSingleUse);
+
+        private static readonly LazyStringValue LastModified;
+        private static readonly LazyStringValue Collection;
+        private static readonly LazyStringValue ChangeVector;
+        private static readonly LazyStringValue Etag;
+        private static readonly LazyStringValue Id;
+
+        static BlittableOperation()
+        {
+            LastModified = Context.Value.GetLazyString(Constants.Documents.Metadata.LastModified);
+            Collection = Context.Value.GetLazyString(Constants.Documents.Metadata.Collection);
+            ChangeVector = Context.Value.GetLazyString(Constants.Documents.Metadata.ChangeVector);
+            Etag = Context.Value.GetLazyString(Constants.Documents.Metadata.Etag);
+            Id = Context.Value.GetLazyString(Constants.Documents.Metadata.Id);
+        }
+
         public bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
         {
-            var docChanges = new List<DocumentsChanges>();
+            var docChanges = changes != null ? new List<DocumentsChanges>() : null;
 
-            if (!documentInfo.IsNewDocument && documentInfo.Document != null)
+            if (documentInfo.IsNewDocument == false && documentInfo.Document != null)
                 return CompareBlittable(documentInfo.Id, documentInfo.Document, newObj, changes, docChanges);
 
             if (changes == null)
@@ -21,6 +39,75 @@ namespace Raven.Client.Json
 
             NewChange(null, null, null, docChanges, DocumentsChanges.ChangeType.DocumentAdded);
             changes[documentInfo.Id] = docChanges.ToArray();
+            return true;
+        }
+
+
+        public static bool FastCompare(string id, BlittableJsonReaderObject original, BlittableJsonReaderObject modified)
+        {
+            if (ReferenceEquals(original, modified))
+                return true;
+
+            if (original == null || modified == null)
+                return false;
+
+            BlittableJsonReaderObject.AssertNoModifications(original, id, assertChildren: false);
+            BlittableJsonReaderObject.AssertNoModifications(modified, id, assertChildren: false);
+
+            var modifiedToCheck = new HashSet<int>(modified.GetPropertiesByInsertionOrder());
+
+            if (FastCompareInternal(id, original, original.GetPropertiesByInsertionOrder(), modified, modifiedToCheck) == false)
+                return false;
+
+            return modifiedToCheck.Count == 0 || FastCompareInternal(id, modified, modifiedToCheck, original, null);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool FastCompareInternal(string id, BlittableJsonReaderObject original, IEnumerable<int> originalToCheck, BlittableJsonReaderObject modified, HashSet<int> modifiedToCheck)
+        {
+            var originalProperty = new BlittableJsonReaderObject.PropertyDetails();
+            var modifiedProperty = new BlittableJsonReaderObject.PropertyDetails();
+
+            foreach (var originalIndex in originalToCheck)
+            {
+                original.GetPropertyByIndex(originalIndex, ref originalProperty);
+
+                if (originalProperty.Name.Equals(LastModified) ||
+                    originalProperty.Name.Equals(Collection) ||
+                    originalProperty.Name.Equals(ChangeVector) ||
+                    originalProperty.Name.Equals(Etag) ||
+                    originalProperty.Name.Equals(Id))
+                    continue;
+
+                var modifiedIndex = modified.GetPropertyIndex(originalProperty.Name);
+                if (modifiedIndex == -1)
+                    return false;
+
+                modifiedToCheck?.Remove(modifiedIndex);
+
+                modified.GetPropertyByIndex(modifiedIndex, ref modifiedProperty);
+
+                if (originalProperty.Value == null && modifiedProperty.Value == null)
+                    continue;
+
+                if (originalProperty.Value == null || modifiedProperty.Value == null)
+                    return false;
+
+                var originalJson = originalProperty.Value as BlittableJsonReaderObject;
+                var modifiedJson = modifiedProperty.Value as BlittableJsonReaderObject;
+
+                if (originalJson != null && modifiedJson != null)
+                {
+                    if (FastCompare(id, originalJson, modifiedJson))
+                        continue;
+
+                    return false;
+                }
+
+                if (originalProperty.Value.Equals(modifiedProperty.Value) == false)
+                    return false;
+            }
+
             return true;
         }
 
@@ -52,11 +139,11 @@ namespace Raven.Client.Json
             {
                 newBlittable.GetPropertyByIndex(propId, ref newProp);
 
-                if (newProp.Name.Equals(Constants.Documents.Metadata.LastModified) ||
-                    newProp.Name.Equals(Constants.Documents.Metadata.Collection) ||
-                    newProp.Name.Equals(Constants.Documents.Metadata.ChangeVector) ||
-                    newProp.Name.Equals(Constants.Documents.Metadata.Etag) ||
-                    newProp.Name.Equals(Constants.Documents.Metadata.Id))
+                if (newProp.Name.Equals(LastModified) ||
+                    newProp.Name.Equals(Collection) ||
+                    newProp.Name.Equals(ChangeVector) ||
+                    newProp.Name.Equals(Etag) ||
+                    newProp.Name.Equals(Id))
                     continue;
 
                 if (newFields.Contains(newProp.Name))
@@ -66,7 +153,6 @@ namespace Raven.Client.Json
                     NewChange(newProp.Name, newProp.Value, null, docChanges, DocumentsChanges.ChangeType.NewField);
                     continue;
                 }
-
 
                 var oldPropId = originalBlittable.GetPropertyIndex(newProp.Name);
                 originalBlittable.GetPropertyByIndex(oldPropId, ref oldProp);

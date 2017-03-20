@@ -14,7 +14,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_295 : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void CanUpdateSuggestions()
         {
             using (var store = GetDocumentStore())
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void CanUpdateSuggestions_AfterRestart()
         {
             var dataDir = NewDataPath();
