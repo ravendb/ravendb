@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
     public class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData>
     {
         private readonly RavenEtlConfiguration _configuration;
-        private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
+        
 
         private readonly List<ICommandData> _commands = new List<ICommandData>();
         private readonly PatchRequest _transformationScript;
@@ -25,23 +25,18 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             _configuration = configuration;
 
-            if (string.IsNullOrEmpty(configuration.Script) == false)
+            if (string.IsNullOrEmpty(configuration.Script))
             {
-                var match = LoadToMethodRegex.Matches(configuration.Script);
-
-                if (match.Count > 0)
-                {
-                    LoadToDestinations = new string[match.Count];
-
-                    for (var i = 0; i < match.Count; i++)
-                    {
-                        LoadToDestinations[i] = match[i].Value.Substring(LoadTo.Length);
-                    }
-                }
-
-                _transformationScript = new PatchRequest { Script = configuration.Script };
+                LoadToDestinations = new string[0];
+                return;
             }
+
+            _transformationScript = new PatchRequest { Script = configuration.Script };
+
+            LoadToDestinations = configuration.GetCollectionsFromScript(); 
         }
+
+        protected override string[] LoadToDestinations { get; }
 
         protected override void LoadToFunction(string collectionName, JsValue document, PatcherOperationScope scope)
         {
@@ -52,26 +47,27 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             var transformed = scope.ToBlittable(document.AsObject());
 
+            string customId = null;
             if (collectionName.Equals(_configuration.Collection, StringComparison.OrdinalIgnoreCase) == false)
             {
                 DynamicJsonValue metadata;
 
                 if (transformed[Constants.Documents.Metadata.Key] != null)
-                {
                     metadata = transformed[Constants.Documents.Metadata.Key] as DynamicJsonValue;
-                }
                 else
-                {
                     transformed[Constants.Documents.Metadata.Key] = metadata = new DynamicJsonValue();
-                }
+
+                customId = $"{_currentlyTransformed.DocumentKey}/{collectionName.ToLowerInvariant()}/";
 
                 metadata[Constants.Documents.Metadata.Collection] = collectionName;
-                metadata[Constants.Documents.Metadata.Id] = $"{_currentlyTransformed.DocumentKey}/{collectionName.ToLowerInvariant()}/";
+                metadata[Constants.Documents.Metadata.Id] = customId;
             }
 
-            var transformResult = Context.ReadObject(transformed, _currentlyTransformed.DocumentKey);
+            var id = customId ?? _currentlyTransformed.DocumentKey;
 
-            _commands.Add(new PutCommandDataWithBlittableJson(_currentlyTransformed.DocumentKey, null, transformResult));
+            var transformResult = Context.ReadObject(transformed, id);
+
+            _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
         }
 
         public override IEnumerable<ICommandData> GetTransformedResults()

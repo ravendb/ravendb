@@ -26,13 +26,17 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             _patchRequest = new PatchRequest { Script = _config.Script };
             _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
             
-            LoadToDestinations = new string[config.SqlTables.Count];
+            var tables = new string[config.SqlTables.Count];
 
             for (var i = 0; i < config.SqlTables.Count; i++)
             {
-                LoadToDestinations[i] = config.SqlTables[i].TableName;
+                tables[i] = config.SqlTables[i].TableName;
             }
+
+            LoadToDestinations = tables;
         }
+
+        protected override string[] LoadToDestinations { get; }
 
         protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
         {
