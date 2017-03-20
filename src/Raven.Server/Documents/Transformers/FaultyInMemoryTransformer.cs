@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Transformers
     internal class FaultyInMemoryTransformer : Transformer
     {
         public FaultyInMemoryTransformer(int transformerId, string name)
-            : base(transformerId, null, null, null)
+            : base(null, null, null)
         {
             TransformerId = transformerId;
             Name = name;

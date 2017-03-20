@@ -147,7 +147,7 @@ namespace Raven.Client.Documents.Smuggler
                     throw new ArgumentNullException(nameof(options));
 
                 _context = context;
-                _options = new EntityToBlittable(null).ConvertEntityToBlittable(options, conventions, _context);
+                _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, _context);
             }
 
             public override bool IsReadRequest => false;

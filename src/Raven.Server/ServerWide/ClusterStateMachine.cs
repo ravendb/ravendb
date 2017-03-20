@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
@@ -102,13 +103,15 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteValueCommand):
                     DeleteValue(context, cmd, index, leader);
                     break;
+                case nameof(PutTransformerCommand):
+                case nameof(SetTransformerLockModeCommand):
+                case nameof(DeleteTransformerCommand):
                 case nameof(EditVersioningCommand):
-                    EditVersioning(context, cmd, index, leader);
+                    UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(PutValueCommand):
                     PutValue(context, cmd, index, leader);
                     break;
-
                 case nameof(TEMP_DelDatabaseCommand):
                     TEMP_DeleteValue(context, cmd, index, leader);
                     break;
@@ -160,8 +163,7 @@ namespace Raven.Server.ServerWide
                     return;
                 }
 
-                var entityToBlittable = new EntityToBlittable(null);
-                var updated = entityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
+                var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
                 TableValueBuilder builder;
                 using (items.Allocate(out builder))
@@ -236,10 +238,10 @@ namespace Raven.Server.ServerWide
                     databaseRecord.Topology = new DatabaseTopology();
                 }
 
-                var entityToBlittable = new EntityToBlittable(null);
+                
                 
                 TableValueBuilder builder;
-                using(var updated = entityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
+                using(var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
                 using (items.Allocate(out builder))
                 {
                     builder.Add(loweredKey);
@@ -437,39 +439,44 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private unsafe void EditVersioning(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private static StringSegment _databaseName = new StringSegment("DatabaseName");
+
+        private unsafe void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
+            string databaseName;
+            if (cmd.TryGet(_databaseName, out databaseName) == false)
+                throw new ArgumentException("Update database command must contain a DatabaseName property");
+            
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var editVersioning = JsonDeserializationCluster.EditVersioningCommand(cmd);
-            var databaseName = editVersioning.Name;
             var dbKey = "db/" + databaseName;
 
-            long etag;
             Slice valueName;
             Slice valueNameLowered;
             using (Slice.From(context.Allocator, dbKey, out valueName))
             using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out valueNameLowered))
             {
+                long etag;
                 var doc = ReadInternal(context, out etag, valueNameLowered);
+
                 if (doc == null)
                 {
-                    NotifyLeaderAboutError(index, leader, $"Cannot edit versioning on {databaseName} because it does not exists");
+                    NotifyLeaderAboutError(index, leader, $"Cannot execute update command of type {type} for {databaseName} because it does not exists");
                     return;
                 }
-                var record = JsonDeserializationCluster.DatabaseRecord(doc);
 
-                record.VersioningConfiguration = editVersioning.Configuration;
-
-                var entityToBlittable = new EntityToBlittable(null);
-                var updated = entityToBlittable.ConvertEntityToBlittable(record, DocumentConventions.Default, context);
-
+                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+                var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
+                updateCommand.UpdateDatabaseRecord(databaseRecord);
+                
+                var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
                 TableValueBuilder builder;
                 using (items.Allocate(out builder))
                 {
                     builder.Add(valueNameLowered);
                     builder.Add(valueName);
-                    builder.Add(updated.BasePointer, updated.Size);
+                    
+                    builder.Add(updatedDatabaseBlittable.BasePointer, updatedDatabaseBlittable.Size);
                     builder.Add(index);
                     items.Set(builder);
                 }
@@ -640,10 +647,15 @@ namespace Raven.Server.ServerWide
         public string Name;
     }
 
-    public class EditVersioningCommand
+    public class EditVersioningCommand:IUpdateDatabaseCommand
     {
-        public string Name;
+        public string DatabaseName;
         public VersioningConfiguration Configuration;
+
+        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
+        {
+            databaseRecord.VersioningConfiguration = Configuration;
+        }
     }
 
     public class AddDatabaseCommand
@@ -695,13 +707,77 @@ namespace Raven.Server.ServerWide
 
         public DatabaseTopology Topology;
 
-        public IndexDefinition[] Indexes;
+        public Dictionary<string, IndexDefinition> Indexes;
 
-        public TransformerDefinition[] Transformers;
+        //todo: see how we can protect this
+        public Dictionary<string,TransformerDefinition> Transformers;
 
         public Dictionary<string, string> Settings;
 
         public VersioningConfiguration VersioningConfiguration;
+
+        // todo: see how we can protect this
+        public int LastTransformerId;
+
+        public void AddTransformer(TransformerDefinition definition)
+        {
+            if (Indexes != null && Indexes.Values.Any(x => x.Name == definition.Name))
+            {
+                throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exist");
+            }
+
+            TransformerDefinition existingTransformer;
+            var lockMode = TransformerLockMode.Unlock;
+            if (Transformers.TryGetValue(definition.Name, out existingTransformer))
+            {
+                if (existingTransformer.TransfomerId == definition.TransfomerId)
+                    throw new IndexOrTransformerAlreadyExistException($"Transformer with the same name {definition.Name} and id {existingTransformer.TransfomerId} already exists");
+                lockMode = existingTransformer.LockMode;
+            }
+
+            if (lockMode == TransformerLockMode.LockedIgnore)
+                throw new IndexOrTransformerAlreadyExistException($"Cannot edit existing transformer {definition.Name} with lock mode {lockMode}");
+
+            LastTransformerId++;
+            definition.TransfomerId = LastTransformerId;
+            Transformers[definition.Name] = definition;
+        }
+    }
+
+    public interface IUpdateDatabaseCommand
+    {
+        void UpdateDatabaseRecord(DatabaseRecord record);
+    }
+
+    public class PutTransformerCommand : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public TransformerDefinition TransformerDefinition;
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            record.AddTransformer(TransformerDefinition);
+        }
+    }
+
+    public class SetTransformerLockModeCommand : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public string TransformerName;
+        public TransformerLockMode LockMode;
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            record.Transformers[TransformerName].LockMode = LockMode;
+        }
+    }
+
+    public class DeleteTransformerCommand : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public string TransformerName;
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            record.Transformers.Remove(TransformerName);
+        }
     }
 
     public enum DeletionInProgressStatus
@@ -724,8 +800,14 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, AddDatabaseCommand> AddDatabaseCommand = GenerateJsonDeserializationRoutine<AddDatabaseCommand>();
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
-
-        public static readonly Func<BlittableJsonReaderObject, EditVersioningCommand> EditVersioningCommand = GenerateJsonDeserializationRoutine<EditVersioningCommand>();
+        
+        public static Dictionary<string, Func<BlittableJsonReaderObject, IUpdateDatabaseCommand>> UpdateDatabaseCommands = new Dictionary<string, Func<BlittableJsonReaderObject, IUpdateDatabaseCommand>>()
+        {
+            [nameof(EditVersioningCommand)] = GenerateJsonDeserializationRoutine<EditVersioningCommand>(),
+            [nameof(PutTransformerCommand)] = GenerateJsonDeserializationRoutine<PutTransformerCommand>(),
+            [nameof(DeleteTransformerCommand)] = GenerateJsonDeserializationRoutine<DeleteTransformerCommand>(),
+            [nameof(SetTransformerLockModeCommand)] = GenerateJsonDeserializationRoutine<SetTransformerLockModeCommand>()
+        };
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
     }

@@ -46,14 +46,14 @@ namespace Raven.Client.Server.Operations
                 _context = context;
                 _createDatabaseOperation = createDatabaseOperation;
                 _databaseName = databaseDocument.Id;
-                _databaseDocument = new EntityToBlittable(null).ConvertEntityToBlittable(databaseDocument, conventions, context);
+                _databaseDocument = EntityToBlittable.ConvertEntityToBlittable(databaseDocument, conventions, context);
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={_databaseName}";
-                if (_createDatabaseOperation._replicationFactor != 1)
-                    url += "&replication-factor=" + _createDatabaseOperation._replicationFactor;
+                
+                url += "&replication-factor=" + _createDatabaseOperation._replicationFactor;
 
                 var request = new HttpRequestMessage
                 {

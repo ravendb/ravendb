@@ -93,8 +93,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 stats.Update();
-                var entityToBlittable = new EntityToBlittable(null);
-                var json = entityToBlittable.ConvertEntityToBlittable(stats, new DocumentConventions(), context);
+                var json = EntityToBlittable.ConvertEntityToBlittable(stats, new DocumentConventions(), context);
                 context.Write(writer, json);             
             }
             return Task.CompletedTask;

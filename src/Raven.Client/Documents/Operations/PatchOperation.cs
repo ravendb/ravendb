@@ -75,7 +75,7 @@ namespace Raven.Client.Documents.Operations
                 _context = context;
                 _id = id;
                 _etag = etag;
-                _patch = new EntityToBlittable(null).ConvertEntityToBlittable(new
+                _patch = EntityToBlittable.ConvertEntityToBlittable(new
                 {
                     Patch = patch,
                     PatchIfMissing = patchIfMissing

@@ -168,7 +168,7 @@ namespace Raven.Client.Documents.BulkInsert
                         metadata[Constants.Documents.Metadata.Id] = doc.Item2;
 
                         documentInfo.Metadata = context.ReadObject(metadata, doc.Item2);
-                        var data = _entityToBlittable.ConvertEntityToBlittable(doc.Item1, _store.Conventions, context, documentInfo);
+                        var data = EntityToBlittable.ConvertEntityToBlittable(doc.Item1, _store.Conventions, context, documentInfo);
                         WriteVariableSizeInt(connection.Stream, data.Size);
                         WriteToStream(connection.Stream, data, pinnedBuffer);
 

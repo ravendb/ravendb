@@ -9,11 +9,10 @@ namespace Raven.Server.Documents.Transformers
     {
         private readonly ConcurrentDictionary<int, Transformer> _transformersById = new ConcurrentDictionary<int, Transformer>();
         private readonly ConcurrentDictionary<string, Transformer> _transformersByName = new ConcurrentDictionary<string, Transformer>(StringComparer.OrdinalIgnoreCase);
-        private int _nextTransformerId = 1;
+        
 
         public void Add(Transformer transformer)
         {
-            _nextTransformerId = Math.Max(transformer.TransformerId, _nextTransformerId) + 1;
             _transformersById[transformer.TransformerId] = transformer;
             _transformersByName[transformer.Name] = transformer;
         }
@@ -37,11 +36,6 @@ namespace Raven.Server.Documents.Transformers
             _transformersByName.TryRemove(index.Name, out index);
 
             return true;
-        }
-
-        public int GetNextIndexId()
-        {
-            return _nextTransformerId;
         }
 
         public IEnumerator<Transformer> GetEnumerator()

@@ -25,13 +25,9 @@ namespace Raven.Server.Documents.Transformers
 
         private IndexingConfiguration _configuration;
 
-        protected Transformer(int transformerId, TransformerDefinition definition, TransformerBase transformer, Logger log)
+        protected Transformer(TransformerDefinition definition, TransformerBase transformer, Logger log)
         {
             Definition = definition;
-
-            if (Definition != null) // FaultyInMemoryTransformer can have this
-                Definition.TransfomerId = transformerId;
-
             _transformer = transformer;
             _log = log;
         }
@@ -54,6 +50,10 @@ namespace Raven.Server.Documents.Transformers
 
         public readonly TransformerDefinition Definition;
 
+        /// <summary>
+        /// Do not use this function, for testing only
+        /// </summary>
+        /// <param name="mode"></param>
         public virtual void SetLock(TransformerLockMode mode)
         {
             if (Definition.LockMode == mode)
@@ -101,11 +101,11 @@ namespace Raven.Server.Documents.Transformers
             File.WriteAllText(GetPath(TransformerId, Name, _configuration).FullPath, JsonConvert.SerializeObject(Definition, Formatting.Indented));
         }
 
-        public static Transformer CreateNew(int transformerId, TransformerDefinition definition,
+        public static Transformer CreateNew(TransformerDefinition definition,
             IndexingConfiguration configuration, Logger log)
         {
             var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(definition);
-            var transformer = new Transformer(transformerId, definition, compiledTransformer, log);
+            var transformer = new Transformer(definition, compiledTransformer, log);
             transformer.Initialize(configuration, persist: true);
 
             return transformer;
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Transformers
                 throw new InvalidOperationException($"Could not read transformer definition from '{fullPath}'.");
 
             var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(transformerDefinition);
-            var transformer = new Transformer(transformerId, transformerDefinition, compiledTransformer, log);
+            var transformer = new Transformer(transformerDefinition, compiledTransformer, log);
             transformer.Initialize(configuration, persist: false);
 
             return transformer;
@@ -186,17 +186,6 @@ namespace Raven.Server.Documents.Transformers
                 return;
 
             File.Delete(path.FullPath);
-        }
-
-        public void Rename(string newName)
-        {
-            lock (_locker)
-            {
-                var oldName = Name;
-                Definition.Name = newName;
-                Persist();
-                IOExtensions.DeleteFile(GetPath(TransformerId, oldName, _configuration).FullPath);
-            }
         }
     }
 }

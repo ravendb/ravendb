@@ -202,8 +202,8 @@ namespace Raven.Server.Web.System
                     var selectedNode = allNodes[(i + offset) % allNodes.Length];
                     topology.Members.Add(selectedNode);
                 }
-                var entityToBlittable = new EntityToBlittable(null);
-                var topologyJson = entityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
+                
+                var topologyJson = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
 
                 json.Modifications = new DynamicJsonValue(json)
                 {

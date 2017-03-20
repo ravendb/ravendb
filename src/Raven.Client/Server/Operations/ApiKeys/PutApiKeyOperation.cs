@@ -48,7 +48,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
 
                 _context = context;
                 _name = name;
-                _apiKey = new EntityToBlittable(null).ConvertEntityToBlittable(apiKey, conventions, context);
+                _apiKey = EntityToBlittable.ConvertEntityToBlittable(apiKey, conventions, context);
             }
 
             public override bool IsReadRequest => false;

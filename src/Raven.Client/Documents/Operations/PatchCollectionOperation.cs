@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Operations
 
                 _context = context;
                 _collectionName = collectionName;
-                _patch = new EntityToBlittable(null).ConvertEntityToBlittable(patch, conventions, _context);
+                _patch = EntityToBlittable.ConvertEntityToBlittable(patch, conventions, _context);
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

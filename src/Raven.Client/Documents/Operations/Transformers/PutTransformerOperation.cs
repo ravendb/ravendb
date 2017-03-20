@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations.Transformers
 
                 _context = context;
                 _transformerName = transformerDefinition.Name;
-                _transformerDefinition = new EntityToBlittable(null).ConvertEntityToBlittable(transformerDefinition, conventions, _context);
+                _transformerDefinition = EntityToBlittable.ConvertEntityToBlittable(transformerDefinition, conventions, _context);
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

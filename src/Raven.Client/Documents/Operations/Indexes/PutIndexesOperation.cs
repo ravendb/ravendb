@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 {
                     if (indexesToAdd[i].Name == null)
                         throw new ArgumentNullException(nameof(IndexDefinition.Name));
-                    _indexToAdd[i] = new EntityToBlittable(null).ConvertEntityToBlittable(indexesToAdd[i], conventions, _context);
+                    _indexToAdd[i] = EntityToBlittable.ConvertEntityToBlittable(indexesToAdd[i], conventions, _context);
                 }
             }
 
