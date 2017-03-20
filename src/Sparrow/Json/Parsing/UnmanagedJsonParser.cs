@@ -120,25 +120,17 @@ namespace Sparrow.Json.Parsing
             _unmanagedWriteBuffer = _ctx.GetStream();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Read()
         {
             var state = _state;
-            if (state.Continuation != JsonParserTokenContinuation.None) // parse normally
-            {
-                bool read;
-                if (ContinueParsingValue(out read))
-                    return read;
-            }
+            if (state.Continuation != JsonParserTokenContinuation.None || _maybeBeforePreamble)
+                goto ReadContinuation;
 
-            state.Continuation = JsonParserTokenContinuation.None;
-            if (_maybeBeforePreamble)
-            {
-                if (ReadMaybeBeforePreamble() == false)
-                    return false;
-            }
+            MainLoop:
 
             byte b;
-            byte* currentBuffer = _inputBuffer;
+            byte* currentBuffer = _inputBuffer;            
             uint bufferSize = _bufSize;
             uint pos = _pos;
             while (true)
@@ -189,56 +181,56 @@ namespace Sparrow.Json.Parsing
 
                 bool couldRead;
                 if (!ReadUnlikely(b, ref pos, out couldRead))
-                continue; // We can only continue here, if there is a failure to parse, we will throw inside ReadUnlikely.
+                    continue; // We can only continue here, if there is a failure to parse, we will throw inside ReadUnlikely.
 
                 if ( couldRead)
                     goto ReturnTrue;
                 goto ReturnFalse;
             }
 
-                ParseString:
-                {
-                    state.EscapePositions.Clear();
-                    _unmanagedWriteBuffer.Clear();
-                    _prevEscapePosition = 0;
-                    _currentQuote = b;
-                    state.CurrentTokenType = JsonParserToken.String;
+            ParseString:
+            {
+                state.EscapePositions.Clear();
+                _unmanagedWriteBuffer.Clear();
+                _prevEscapePosition = 0;
+                _currentQuote = b;
+                state.CurrentTokenType = JsonParserToken.String;
                 if (ParseString(ref pos) == false)
-                    {
-                        state.Continuation = JsonParserTokenContinuation.PartialString;
-                    goto ReturnFalse;
-                    }
-                    _unmanagedWriteBuffer.EnsureSingleChunk(state);
-                goto ReturnTrue;
-                }
-
-                ParseNumber:
                 {
-                    _unmanagedWriteBuffer.Clear();
-                    state.EscapePositions.Clear();
-                    state.Long = 0;
-                    _zeroPrefix = b == '0';
-                    _isNegative = false;
-                    _isDouble = false;
-                    _isExponent = false;
+                    state.Continuation = JsonParserTokenContinuation.PartialString;
+                    goto ReturnFalse;
+                }
+                _unmanagedWriteBuffer.EnsureSingleChunk(state);
+                goto ReturnTrue;
+            }
 
-                    // ParseNumber need to call _charPos++ & _pos++, so we'll reset them for the first char
+            ParseNumber:
+            {
+                _unmanagedWriteBuffer.Clear();
+                state.EscapePositions.Clear();
+                state.Long = 0;
+                _zeroPrefix = b == '0';
+                _isNegative = false;
+                _isDouble = false;
+                _isExponent = false;
+
+                // ParseNumber need to call _charPos++ & _pos++, so we'll reset them for the first char
                 pos--;
-                    _charPos--;
+                _charPos--;
 
                     if (ParseNumber(ref state.Long, ref pos) == false)
-                    {
-                        _state.Continuation = JsonParserTokenContinuation.PartialNumber;
+                {
+                    state.Continuation = JsonParserTokenContinuation.PartialNumber;
                     goto ReturnFalse;
-                    }
-
-                    if (_state.CurrentTokenType == JsonParserToken.Float)
-                        _unmanagedWriteBuffer.EnsureSingleChunk(_state);
-                goto ReturnTrue;
                 }
 
-                Error:
-                ThrowCannotHaveCharInThisPosition(b);
+                if (state.CurrentTokenType == JsonParserToken.Float)
+                    _unmanagedWriteBuffer.EnsureSingleChunk(state);
+                goto ReturnTrue;
+            }
+
+            Error:
+            ThrowCannotHaveCharInThisPosition(b);
 
             ReturnTrue:
             _pos = pos;
@@ -247,7 +239,25 @@ namespace Sparrow.Json.Parsing
             ReturnFalse:
             _pos = pos;
             return false;
+
+
+            ReadContinuation: // PERF: This is a "manual procedure"
+            if (state.Continuation != JsonParserTokenContinuation.None) // parse normally
+            {
+                bool read;
+                if (ContinueParsingValue(out read))
+                    return read;
+        }
+
+            state.Continuation = JsonParserTokenContinuation.None;
+            if (_maybeBeforePreamble)
+            {
+                if (ReadMaybeBeforePreamble() == false)
+                    return false;
             }
+
+            goto MainLoop;
+        }
 
         private bool ReadUnlikely(byte b, ref uint pos, out bool couldRead)
         {

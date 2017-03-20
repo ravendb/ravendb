@@ -345,6 +345,11 @@ namespace Sparrow.Json
                 start = _writer.WriteValue(_state.Long);
                 _writeToken = new WriteToken(start, BlittableJsonToken.Integer);
             }
+            else if (current == JsonParserToken.StartObject)
+            {
+                _modifier?.StartObject();
+                _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
+            }
             else
             {
                 ReadJsonValueUnlikely<TWriteStrategy>(current);
@@ -356,10 +361,6 @@ namespace Sparrow.Json
             int start;
             switch (current)
             {
-                case JsonParserToken.StartObject:
-                    _modifier?.StartObject();
-                    _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
-                    return;
                 case JsonParserToken.StartArray:
                     _continuationState.Push(new BuildingState(ContinuationState.ReadArray));
                     return;
