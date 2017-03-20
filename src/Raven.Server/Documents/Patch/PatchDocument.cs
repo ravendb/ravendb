@@ -6,6 +6,7 @@ using Jint;
 using Jint.Native;
 using Jint.Parser;
 using Jint.Runtime;
+using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
@@ -82,10 +83,10 @@ namespace Raven.Server.Documents.Patch
             if (patchIfMissing != null && string.IsNullOrWhiteSpace(patchIfMissing.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty.");
 
-            var document = _database.DocumentsStorage.Get(context, documentKey);
+            var originalDocument = _database.DocumentsStorage.Get(context, documentKey);
             if (etag.HasValue)
             {
-                if (document == null && etag.Value != 0)
+                if (originalDocument == null && etag.Value != 0)
                 {
                     if (skipPatchIfEtagMismatch)
                         return new PatchResult { Status = PatchStatus.Skipped };
@@ -97,33 +98,39 @@ namespace Raven.Server.Documents.Patch
                     };
                 }
 
-                if (document != null && document.Etag != etag.Value)
+                if (originalDocument != null && originalDocument.Etag != etag.Value)
                 {
                     if (skipPatchIfEtagMismatch)
                         return new PatchResult { Status = PatchStatus.Skipped };
 
                     throw new ConcurrencyException($"Could not patch document '{documentKey}' because non current etag was used")
                     {
-                        ActualETag = document.Etag,
+                        ActualETag = originalDocument.Etag,
                         ExpectedETag = etag.Value,
                     };
                 }
             }
 
-            if (document == null && patchIfMissing == null)
+            if (originalDocument == null && patchIfMissing == null)
                 return new PatchResult { Status = PatchStatus.DocumentDoesNotExist };
 
             var patchRequest = patch;
-            if (document == null)
+            var document = originalDocument;
+            if (originalDocument == null)
+            {
                 patchRequest = patchIfMissing;
+                var djv = new DynamicJsonValue { [Constants.Documents.Metadata.Key] = { } };
+                var data = context.ReadObject(djv, documentKey);
+                document = new Document { Data = data };
+            }
 
-            var scope = ApplySingleScript(context, document, patchRequest, debugMode);
+            var scope = ApplySingleScript(context, document, patchRequest, debugMode, docId:documentKey);
             var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), documentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
             var result = new PatchResult
             {
                 Status = PatchStatus.NotModified,
-                OriginalDocument = document?.Data,
+                OriginalDocument = originalDocument?.Data,
                 ModifiedDocument = modifiedDocument
             };
 
@@ -133,7 +140,7 @@ namespace Raven.Server.Documents.Patch
             if (modifiedDocument == null)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"After applying patch, modifiedDocument is null and document is null? {document == null}");
+                    _logger.Info($"After applying patch, modifiedDocument is null and document is null? {originalDocument == null}");
 
                 result.Status = PatchStatus.Skipped;
                 return result;
@@ -141,16 +148,16 @@ namespace Raven.Server.Documents.Patch
 
             var putResult = new DocumentsStorage.PutOperationResults();
 
-            if (document == null)
+            if (originalDocument == null)
             {
                 putResult = _database.DocumentsStorage.Put(context, documentKey, null, modifiedDocument);
                 result.Status = PatchStatus.Created;
             }
             else
             {
-                if (BlittableOperation.FastCompare(documentKey, document.Data, modifiedDocument) == false) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
+                if (BlittableOperation.FastCompare(documentKey, originalDocument.Data, modifiedDocument) == false) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
                 {
-                    putResult = _database.DocumentsStorage.Put(context, document.Key, document.Etag, modifiedDocument);
+                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Key, originalDocument.Etag, modifiedDocument);
                     result.Status = PatchStatus.Patched;
                 }
             }
@@ -251,13 +258,13 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, PatchRequest patch, bool debugMode, PatcherOperationScope externalScope = null)
+        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, PatchRequest patch, bool debugMode, PatcherOperationScope externalScope = null, string docId = null)
         {
             var run = new SingleScriptRun(this, context, patch, debugMode, externalScope);
             try
             {
                 run.Prepare(document?.Data?.Size ?? 0);
-                SetupInputs(document, run.Scope, run.JintEngine);
+                SetupInputs(document, run.Scope, run.JintEngine, document?.Key?? docId);
                 run.Execute();
                 return run.Scope;
             }
@@ -268,9 +275,9 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        protected void SetupInputs(Document document, PatcherOperationScope scope, Engine jintEngine)
+        protected void SetupInputs(Document document, PatcherOperationScope scope, Engine jintEngine, string docId)
         {
-            jintEngine.SetValue("__document_id", document.Key);
+            jintEngine.SetValue("__document_id", docId);
             scope.PatchObject = scope.ToJsObject(jintEngine, document);
         }
 

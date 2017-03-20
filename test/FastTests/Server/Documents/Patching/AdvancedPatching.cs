@@ -995,5 +995,28 @@ this.Value = another.Value;
                 }
             }
         }
+
+        [Fact]
+        public void CanDoPatchIfMissing()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Operations.Send(new PatchOperation("CustomTypes/123", null,
+                    new PatchRequest
+                    {
+                        Script = "{}"
+                    }, patchIfMissing: new PatchRequest
+                    {
+                        Script = "this.Value = 12;"
+                    }));
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Load<CustomType>("CustomTypes/123");
+                    Assert.NotNull(result);
+                    Assert.Equal(12, result.Value);
+                }
+            }
+        }
     }
 }
