@@ -95,8 +95,7 @@ namespace Raven.Server.Documents.Replication
                                         break;
                                     }
 
-                                    var conflicts = _database.DocumentsStorage.GetAllConflictsBySameKeyAfter(context,
-                                            ref lastKey);
+                                    var conflicts = _database.DocumentsStorage.GetAllConflictsBySameKeyAfter(context, ref lastKey);
                                     if (conflicts.Count == 0)
                                         break;
                                     if (TryResolveConflict(context, conflicts, resolverStats) == false)

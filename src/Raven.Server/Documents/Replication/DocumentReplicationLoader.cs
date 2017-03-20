@@ -706,7 +706,9 @@ namespace Raven.Server.Documents.Replication
 
             Database.Changes.OnSystemDocumentChange -= OnSystemDocumentChange;
 
-            ea.Execute(() => ConflictResolver.ResolveConflictsTask.Wait());
+            var resolverTask = ConflictResolver.ResolveConflictsTask;
+            if (resolverTask != null)
+                ea.Execute(() => resolverTask.Wait());
 
             if (_log.IsInfoEnabled)
                 _log.Info("Closing and disposing document replication connections.");

@@ -70,12 +70,13 @@ namespace Raven.Server.Documents
         private enum ConflictsTable
         {
             LoweredKey = 0,
-            ChangeVector = 1,
-            OriginalKey = 2,
-            Data = 3,
-            Etag = 4,
-            Collection = 5,
-            LastModified = 6,
+            Separator = 1,
+            ChangeVector = 2,
+            OriginalKey = 3,
+            Data = 4,
+            Etag = 5,
+            Collection = 6,
+            LastModified = 7,
         }
 
         private enum TombstoneTable
@@ -157,7 +158,7 @@ namespace Raven.Server.Documents
             ConflictsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)ConflictsTable.LoweredKey,
-                Count = 2,
+                Count = 3,
                 IsGlobal = false,
                 Name = KeyAndChangeVectorSlice
             });
@@ -200,26 +201,26 @@ namespace Raven.Server.Documents
 
             TombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = 0,
+                StartIndex = (int)TombstoneTable.LoweredKey,
                 Count = 1,
                 IsGlobal = true,
                 Name = TombstonesSlice
             });
             TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = 1,
+                StartIndex = (int)TombstoneTable.Etag,
                 IsGlobal = false,
                 Name = CollectionEtagsSlice
             });
             TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = 1,
+                StartIndex = (int)TombstoneTable.Etag,
                 IsGlobal = true,
                 Name = AllTombstonesEtagsSlice
             });
             TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef()
             {
-                StartIndex = 2,
+                StartIndex = (int)TombstoneTable.DeletedEtag,
                 IsGlobal = false,
                 Name = DeletedEtagsSlice
             });
@@ -595,26 +596,43 @@ namespace Raven.Server.Documents
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ReleaseMemory GetConflictsKeyPrefix(DocumentsOperationContext context, Slice lowerKey, out Slice prefixSlice)
+        {
+            return GetConflictsKeyPrefix(context, lowerKey.Content.Ptr, lowerKey.Size, out prefixSlice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ReleaseMemory GetConflictsKeyPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice prefixSlice)
+        {
+            var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
+
+            Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
+            keyMem.Ptr[lowerKeySize] = VersioningStorage.RecordSeperator;
+
+            prefixSlice = new Slice(SliceOptions.Key, keyMem);
+            return new ReleaseMemory(keyMem, context);
+        }
+
         public List<DocumentConflict> GetAllConflictsBySameKeyAfter(DocumentsOperationContext context, ref Slice lastKey)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             var list = new List<DocumentConflict>();
             LazyStringValue firstKey = null;
-            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], lastKey, 0))
+            Slice prefixSlice;
+            using (GetConflictsKeyPrefix(context, lastKey, out prefixSlice))
             {
-                var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
-                if (lastKey.Content.Match(conflict.LoweredKey))
+                foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], prefixSlice, 0, true))
                 {
-                    // same key as we already seen, skip it
-                    break;
+                    var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
+
+                    if (firstKey == null)
+                        firstKey = conflict.LoweredKey;
+                    list.Add(conflict);
+
+                    if (firstKey.Equals(conflict.LoweredKey) == false)
+                        break;
                 }
-
-                if (firstKey == null)
-                    firstKey = conflict.LoweredKey;
-                list.Add(conflict);
-
-                if (firstKey.Equals(conflict.LoweredKey) == false)
-                    break;
             }
             if (list.Count > 0)
             {
@@ -1345,7 +1363,11 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    DeleteConflictsFor(context, loweredKey);
+                    Slice prefixSlice;
+                    using (GetConflictsKeyPrefix(context, loweredKey, out prefixSlice))
+                    {
+                        DeleteConflictsFor(context, prefixSlice);
+                    }
                 }
             }
 
@@ -1387,13 +1409,16 @@ namespace Raven.Server.Documents
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             long maxEtag = 0L;
-            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, startsWith: true))
+            Slice prefixSlice;
+            using (GetConflictsKeyPrefix(context, loweredKey, out prefixSlice))
             {
-                var etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr.Result.Reader);
-                if (maxEtag < etag)
-                    maxEtag = etag;
+                foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], prefixSlice, 0, true))
+                {
+                    var etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr.Result.Reader);
+                    if (maxEtag < etag)
+                        maxEtag = etag;
+                }
             }
-
             return maxEtag;
         }
 
@@ -1408,14 +1433,14 @@ namespace Raven.Server.Documents
             int keySize;
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            Slice keySlice;
-            using (Slice.External(context.Allocator, lowerKey, lowerSize, out keySlice))
+            Slice prefixSlice;
+            using (GetConflictsKeyPrefix(context, lowerKey, lowerSize, out prefixSlice))
             {
-                DeleteConflictsFor(context, keySlice);
+                DeleteConflictsFor(context, prefixSlice);
             }
         }
 
-        public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(DocumentsOperationContext context, Slice loweredKey)
+        public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(DocumentsOperationContext context, Slice prefix)
         {
             var list = new List<ChangeVectorEntry[]>();
             if (_conflictCount == 0)
@@ -1426,7 +1451,7 @@ namespace Raven.Server.Documents
             while (true)
             {
                 var more = false;
-                foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
+                foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], prefix, 0, true))
                 {
                     more = true;
 
@@ -1504,21 +1529,11 @@ namespace Raven.Server.Documents
             int keySize;
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            Slice loweredKeySlice;
-            using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKeySlice))
+            Slice prefixSlice;
+            using (GetConflictsKeyPrefix(context, lowerKey, lowerSize, out prefixSlice))
             {
-                foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKeySlice, 0, true))
+                foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], prefixSlice, 0, true))
                 {
-                    int conflictKeySize;
-                    var conflictKey = tvr.Result.Reader.Read((int)ConflictsTable.LoweredKey, out conflictKeySize);
-
-                    if (conflictKeySize != lowerSize)
-                        break;
-
-                    var compare = Memory.Compare(lowerKey, conflictKey, lowerSize);
-                    if (compare != 0)
-                        break;
-
                     var currentChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr.Result.Reader, (int)ConflictsTable.ChangeVector);
                     if (currentChangeVector.SequenceEqual(changeVector))
                     {
@@ -1561,15 +1576,15 @@ namespace Raven.Server.Documents
         {
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             var items = new List<DocumentConflict>();
-            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], loweredKey, 0, true))
+            Slice prefixSlice;
+            using (GetConflictsKeyPrefix(context, loweredKey, out prefixSlice))
             {
-                var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
-                if (loweredKey.Content.Match(conflict.LoweredKey) == false)
-                    break;
-
-                items.Add(conflict);
+                foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], prefixSlice, 0, true))
+                {
+                    var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
+                    items.Add(conflict);
+                }
             }
-
             return items;
         }
 
@@ -1826,6 +1841,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tbv))
                     {
                         tbv.Add(lowerKey, lowerSize);
+                        tbv.Add(VersioningStorage.RecordSeperator);
                         tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tbv.Add(keyPtr, keySize);
                         tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
@@ -2284,7 +2300,12 @@ namespace Raven.Server.Documents
             if (_conflictCount == 0)
                 return MergeVectorsWithoutConflicts(newEtag, existing);
 
-            var conflictChangeVectors = DeleteConflictsFor(context, loweredKey);
+            IReadOnlyList<ChangeVectorEntry[]> conflictChangeVectors;
+            Slice prefixSlice;
+            using (GetConflictsKeyPrefix(context, loweredKey, out prefixSlice))
+            {
+                conflictChangeVectors = DeleteConflictsFor(context, prefixSlice);
+            }
             if (conflictChangeVectors.Count == 0)
                 return MergeVectorsWithoutConflicts(newEtag, existing);
 
