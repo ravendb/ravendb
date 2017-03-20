@@ -122,6 +122,12 @@ class virtualGrid<T> {
     }
 
     private handleResize(e: JQueryEventObject) {
+        // since resize handles are pseudo html elements, we get invalid target
+        // check click location to distinguish between handle and title click
+        if (e.offsetX > 8) {
+            return;
+        }
+
         // Stop propagation of the event so the text selection doesn't fire up
         if (e.stopPropagation) e.stopPropagation();
         if (e.preventDefault) e.preventDefault();
@@ -131,15 +137,12 @@ class virtualGrid<T> {
         const $document = $(document);
         const targetColumnIdx = $(e.target).index();
         const columnIndex = targetColumnIdx - 1;
+        if (columnIndex < 0) {
+            return;
+        }
         const columnToResize = this.columns()[columnIndex];
         const startX = e.pageX;
         const columnWidthInPixels = virtualGridUtils.widthToPixels(columnToResize);
-
-        // since resize handles are pseudo html elements, we get invalid target
-        // check click location to distinguish between handle and title click
-        if (e.offsetX > 8) {
-            return;
-        }
 
         $document.on("mousemove.columnResize", e => {
             const dx = e.pageX - startX;
