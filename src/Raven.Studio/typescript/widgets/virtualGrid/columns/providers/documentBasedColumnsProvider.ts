@@ -77,6 +77,10 @@ class documentBasedColumnsProvider {
         results.items
             .map(i => _.keys(i).forEach(key => uniquePropertyNames.add(key)));
 
+        if (!_.every(results.items, (x: document) => x.__metadata && x.getId())) {
+            uniquePropertyNames.delete("__metadata");
+        }
+
         return Array.from(uniquePropertyNames);
     }
 

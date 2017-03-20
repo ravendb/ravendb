@@ -37,7 +37,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void DoWork()
         {
             using (var store = GetDocumentStore())

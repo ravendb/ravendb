@@ -360,9 +360,11 @@ class query extends viewModelBase {
         this.columnPreview.install("virtual-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
                 const value = column.getCellValue(doc);
-                const json = JSON.stringify(value, null, 4);
-                const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                onValue(html);
+                if (!_.isUndefined(value)) {
+                    const json = JSON.stringify(value, null, 4);
+                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    onValue(html);
+                }
             }
         });
     }

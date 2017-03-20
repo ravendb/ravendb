@@ -1,18 +1,14 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Security.Permissions;
-using System.Text;
 using System.Threading.Tasks;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2862 : RavenTest
+    public class RavenDB_2862 : RavenTestBase
     {
-        public class FullEntity
+        private class FullEntity
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -20,27 +16,27 @@ namespace Raven.Tests.Issues
             public string Addresss { get; set; }
         }
 
-        public class MinifiedEntity
+        private class MinifiedEntity
         {
             public string Name { get; set; }
         }
 
-        public class EntityTransformer : AbstractTransformerCreationTask<FullEntity>
+        private class EntityTransformer : AbstractTransformerCreationTask<FullEntity>
         {
             public EntityTransformer()
             {
                 TransformResults = results => from result in results
-                    select new MinifiedEntity
-                    {
-                        Name = result.Name
-                    };
+                                              select new MinifiedEntity
+                                              {
+                                                  Name = result.Name
+                                              };
             }
         }
 
         [Fact]
         public async Task AsyncLoadWithTransformer()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new EntityTransformer().Execute(store);
                 using (var session = store.OpenAsyncSession())
@@ -57,11 +53,9 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var result = await session.LoadAsync<EntityTransformer, MinifiedEntity>(string.Format("{0}/{1}", "FullEntities","John"));
+                    var result = await session.LoadAsync<EntityTransformer, MinifiedEntity>(string.Format("{0}/{1}", "FullEntities", "John"));
                     Assert.NotNull(result);
                 }
-
-
             }
         }
     }

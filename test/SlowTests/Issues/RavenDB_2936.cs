@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -55,14 +56,14 @@ namespace SlowTests.Issues
                         {
                             Script = @"this.LastName = 'Smith'"
                         }))
-                    .WaitForCompletion<BulkOperationResult>();
+                    .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(15));
 
                 Assert.Empty(result.Details);
 
                 WaitForIndexing(store);
 
                 result = store.Operations.Send(new DeleteByIndexOperation("Users/ByName", new IndexQuery(store.Conventions)))
-                    .WaitForCompletion<BulkOperationResult>();
+                    .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(15));
 
                 Assert.Empty(result.Details);
             }
@@ -107,14 +108,14 @@ namespace SlowTests.Issues
                     {
                         Script = @"this.LastName = 'Smith'"
                     }, new QueryOperationOptions { RetrieveDetails = true }))
-                    .WaitForCompletion<BulkOperationResult>();
+                    .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(15));
 
                 Assert.NotEmpty(result.Details);
 
                 WaitForIndexing(store);
 
                 result = store.Operations.Send(new DeleteByIndexOperation("Users/ByName", new IndexQuery(store.Conventions), new QueryOperationOptions { RetrieveDetails = true }))
-                    .WaitForCompletion<BulkOperationResult>();
+                    .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(15));
 
                 Assert.NotEmpty(result.Details);
             }

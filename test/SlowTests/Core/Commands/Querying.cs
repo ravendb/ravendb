@@ -325,7 +325,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void CanGetSuggestions()
         {
             using (var store = GetDocumentStore())
