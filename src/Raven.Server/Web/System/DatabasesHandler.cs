@@ -61,7 +61,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/topology", "GET", "/databases/topology?&name={databaseName:string}&url={url:string}")]
+        [RavenAction("/topology", "GET", "/topology?&name={databaseName:string}&url={url:string}")]
         public Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
