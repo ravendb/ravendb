@@ -26,9 +26,10 @@ namespace Raven.Server.Documents.ETL
 
             engine.Global.Delete(LoadTo, true);
 
-            foreach (var destination in LoadToDestinations)
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < LoadToDestinations.Length; i++)
             {
-                engine.Global.Delete(LoadTo + destination, true);
+                engine.Global.Delete(LoadTo + LoadToDestinations[i], true);
             }
         }
 
@@ -38,11 +39,13 @@ namespace Raven.Server.Documents.ETL
 
             engine.SetValue(LoadTo, new Action<string, JsValue>((tableName, colsAsObject) => LoadToFunction(tableName, colsAsObject, scope)));
 
-            foreach (var destination in LoadToDestinations)
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < LoadToDestinations.Length; i++)
             {
-                engine.SetValue(LoadTo + destination, (Action<JsValue>)(cols =>
+                var collection = LoadToDestinations[i];
+                engine.SetValue(LoadTo + collection, (Action<JsValue>)(cols =>
                 {
-                    LoadToFunction(destination, cols, scope);
+                    LoadToFunction(collection, cols, scope);
                 }));
             }
         }

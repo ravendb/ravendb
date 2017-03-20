@@ -33,8 +33,32 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             _transformationScript = new PatchRequest { Script = configuration.Script };
 
-            LoadToDestinations = configuration.GetCollectionsFromScript(); 
+            var collections = configuration.GetCollectionsFromScript();
+
+            if (collections.Length > 1)
+            {
+                IsLoadingToMultipleCollections = true;
+
+                IsLoadingToDefaultCollection = false;
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (var i = 0; i < collections.Length; i++)
+                {
+                    if (collections[i].Equals(configuration.Collection, StringComparison.OrdinalIgnoreCase))
+                    {
+                        IsLoadingToDefaultCollection = true;
+                        break;
+                    }
+                }
+            }
+            else if (collections.Length == 1 && collections[0].Equals(configuration.Script, StringComparison.OrdinalIgnoreCase) == false)
+                IsLoadingToDefaultCollection = false;
+
+            LoadToDestinations = collections;
         }
+
+        private bool IsLoadingToDefaultCollection { get; } = true;
+
+        private bool IsLoadingToMultipleCollections { get; }
 
         protected override string[] LoadToDestinations { get; }
 
@@ -48,7 +72,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             var transformed = scope.ToBlittable(document.AsObject());
 
             string customId = null;
-            if (collectionName.Equals(_configuration.Collection, StringComparison.OrdinalIgnoreCase) == false)
+            if (IsLoadingToDefaultCollection == false || collectionName.Equals(_configuration.Collection, StringComparison.OrdinalIgnoreCase) == false)
             {
                 DynamicJsonValue metadata;
 
@@ -78,7 +102,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public override void Transform(RavenEtlItem item)
         {
             if (item.IsDelete)
-                _commands.Add(new DeleteCommandData(item.DocumentKey, null));
+            {
+                if (IsLoadingToDefaultCollection)
+                    _commands.Add(new DeleteCommandData(item.DocumentKey, null));
+
+                if (IsLoadingToMultipleCollections)
+                {
+                    // TODO arek
+                }
+            }
             else
             {
                 if (_transformationScript != null)
