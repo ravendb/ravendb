@@ -16,11 +16,7 @@ namespace Sparrow
             var rc = sodium_init();
             if (rc == -1)
                 throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
-            if (rc != 0)
-            {
-                Console.WriteLine("sodium_init() returned non zero rc = " + rc);
-                Console.Out.Flush();
-            }
+            // TODO : we get here "+1".  need to investigate is it an error or not.
         }
 
 
