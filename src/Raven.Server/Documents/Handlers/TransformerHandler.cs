@@ -119,35 +119,36 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
-            
+
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var existingTransformer = Database.TransformerStore.GetTransformer(name);
-                long index = 0;
-                using (var deleteTransformerCommand = context.ReadObject(new DynamicJsonValue
+                var transformerBlittable = EntityToBlittable.ConvertEntityToBlittable(existingTransformer, DocumentConventions.Default, context);
+
+                var delVal = new DynamicJsonValue
                 {
                     ["Type"] = nameof(DeleteTransformerCommand),
                     [nameof(DeleteTransformerCommand.TransformerName)] = name,
                     [nameof(DeleteTransformerCommand.DatabaseName)] = Database.Name,
-                }, "delete-transformer-cmd"))
-                {
-                    index = await ServerStore.SendToLeaderAsync(deleteTransformerCommand);
-                }
-
-                var transformerBlittable = EntityToBlittable.ConvertEntityToBlittable(existingTransformer, DocumentConventions.Default, context);
-                
-                using (var putTransfomerCommand = context.ReadObject(new DynamicJsonValue
+                };
+                var putVal = new DynamicJsonValue
                 {
                     ["Type"] = nameof(PutTransformerCommand),
                     [nameof(PutTransformerCommand.TransformerDefinition)] = transformerBlittable,
                     [nameof(PutTransformerCommand.DatabaseName)] = Database.Name,
-                }, "put-transformer-cmd"))
-                {
-                    index = await ServerStore.SendToLeaderAsync(putTransfomerCommand);
-                }
+                };
 
-                await ServerStore.Cluster.WaitForIndexNotification(index);
+                using (var deleteTransformerCommand = context.ReadObject(delVal, "delete-transformer-cmd"))
+                using (var putTransfomerCommand = context.ReadObject(putVal, "put-transformer-cmd"))
+                {
+                    var del = ServerStore.SendToLeaderAsync(deleteTransformerCommand);
+                    var put = ServerStore.SendToLeaderAsync(putTransfomerCommand);
+                    await Task.WhenAll(del, put);
+                    var index = await put;
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
+                }
+               
                 NoContentStatus();
             }
         }
@@ -172,7 +173,7 @@ namespace Raven.Server.Documents.Handlers
                     var transformer = Database.TransformerStore.GetTransformer(name);
                     if (transformer == null)
                         TransformerDoesNotExistException.ThrowFor(name);
-                    
+
                     using (var setTranformerLockModeCommand = context.ReadObject(new DynamicJsonValue
                     {
                         ["Type"] = nameof(SetTransformerLockModeCommand),
@@ -193,12 +194,12 @@ namespace Raven.Server.Documents.Handlers
         public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            
+
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 // validating transformer definition
-                
+
                 long index = 0;
                 using (var deleteTransformerCommand = context.ReadObject(new DynamicJsonValue
                 {
