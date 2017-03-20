@@ -654,7 +654,6 @@ namespace Raven.Client.Http
                     return;
                 _disposed = true;
                 Cache.Dispose();
-                _authenticator.Dispose();
                 ContextPool.Dispose();
                 _updateCurrentTokenTimer?.Dispose();
                 _updateFailingNodesStatus?.Dispose();

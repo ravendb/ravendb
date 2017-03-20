@@ -63,5 +63,33 @@ namespace Sparrow.Platform.Win32
             ulong adlen,
             byte* npub,
             byte* k);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_box_seal(byte* b, byte* b1, ulong mlen, byte* pk);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_box_sealbytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_generichash(byte* @out, IntPtr outlen, byte* @in,
+                ulong inlen, byte* key, IntPtr keylen);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_generichash_bytes_max();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_box_keypair(byte* pk, byte* sk);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int sodium_memcmp(byte* b1, byte* b2, IntPtr len);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_box_secretkeybytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_box_publickeybytes();
     }
 }

@@ -1,23 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.WebSockets;
-using System.Threading;
+using System.Net;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Extensions;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json;
+using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Client.Http.OAuth
 {
-    internal class ApiKeyAuthenticator : IDisposable
+    internal class ApiKeyAuthenticator
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ApiKeyAuthenticator>("Client");
-        private readonly CancellationTokenSource _disposedToken = new CancellationTokenSource();
+        private static readonly HttpClient Client = new HttpClient();
 
         public async Task<string> GetAuthenticationTokenAsync(string apiKey, string url, JsonOperationContext context)
         {
@@ -29,135 +28,102 @@ namespace Raven.Client.Http.OAuth
 
         public async Task<string> AuthenticateAsync(string url, string apiKey, JsonOperationContext context)
         {
-            var uri = new Uri(url.ToWebSocketPath());
-
-            using (var webSocket = new ClientWebSocket())
+            try
             {
-                try
+                var apiKeyParts = ExtractApiKeyAndSecret(apiKey);
+                var apiKeyName = apiKeyParts[0].Trim();
+                var apiSecret = apiKeyParts[1].Trim();
+
+                var publicKey = new byte[Sodium.crypto_box_publickeybytes()];
+                var privateKey = new byte[Sodium.crypto_box_secretkeybytes()];
+                var hash = new byte[Sodium.crypto_generichash_bytes_max()];
+
+                unsafe
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Trying to connect using WebSocket to {uri} for authentication");
-                    try
+                    fixed (byte* pubKey = publicKey)
+                    fixed (byte* prvKey = privateKey)
+                    fixed (byte* h = hash)
+                    fixed (byte* pSecret = Encoding.UTF8.GetBytes(apiSecret))
                     {
-                        await webSocket.ConnectAsync(uri, _disposedToken.Token);
-                    }
-                    catch (WebSocketException webSocketException)
-                    {
-                        throw new InvalidOperationException($"Cannot connect using WebSocket to {uri} for authentication", webSocketException);
-                    }
+                        Sodium.crypto_box_keypair(pubKey, prvKey);
 
-                    AuthenticatorChallenge authenticatorChallenge;
-                    using (var result = await Receive(webSocket, context))
-                    {
-                        if (result == null)
-                            throw new InvalidDataException("Got null authtication challenge");
-                        authenticatorChallenge = JsonDeserializationClient.AuthenticatorChallenge(result);
-                    }
-                    var challenge = ComputeChallenge(authenticatorChallenge, apiKey);
-                    await Send(webSocket, context, "ChallengeResponse", challenge);
-
-                    string currentToken;
-                    using (var reader = await Receive(webSocket, context))
-                    {
-                        string error;
-                        if (reader.TryGet("Error", out error))
+                        if (Sodium.crypto_generichash(
+                                h,
+                                (IntPtr)hash.Length,
+                                pSecret,
+                                (ulong)(apiSecret.Length),
+                                pubKey,
+                                (IntPtr)publicKey.Length
+                            ) != 0)
                         {
-                            string exceptionType;
-                            if (reader.TryGet("ExceptionType", out exceptionType) == false || exceptionType == typeof(InvalidOperationException).Name)
-                                throw new InvalidOperationException("Server returned error: " + error);
-
-                            if (exceptionType == typeof(AuthenticationException).Name)
-                                throw new AuthenticationException(error);
+                            throw new AuthenticationException("Failed to generate hash for secret of apikey name=" + apiKeyName);
                         }
-
-                        string currentOauthToken;
-                        if (reader.TryGet("CurrentToken", out currentOauthToken) == false || currentOauthToken == null)
-                            throw new InvalidOperationException("Missing 'CurrentToken' in response message");
-
-                        currentToken = currentOauthToken;
                     }
-
-                    try
-                    {
-                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Close from client", _disposedToken.Token);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Failed to close the client", ex);
-                    }
-
-                    return currentToken;
                 }
-                catch (Exception ex)
+
+                var request = CreateRequest(hash, publicKey, context);
+                request.RequestUri = new Uri($"{url}?apiKey={apiKeyName}");
+                request.Headers.Add("Raven-Client-Version", RequestExecutor.ClientVersion);
+
+                var response = await Client.SendAsync(request);
+                if (response.StatusCode != HttpStatusCode.OK &&
+                    response.StatusCode != HttpStatusCode.Forbidden &&
+                    response.StatusCode != HttpStatusCode.InternalServerError)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to DoOAuthRequest to {url} with {apiKey}", ex);
-
-                    if (ex is AuthenticationException)
-                        throw;
-
-                    throw new AuthenticationException(ex.Message, ex);
+                    throw new AuthenticationException("Bad response from server " + response.StatusCode);
                 }
-            }
-        }
 
-        private async Task Send(ClientWebSocket webSocket, JsonOperationContext context, string command, string commandParameter)
-        {
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Sending WebSocket Authentication Command {command} - {commandParameter}");
-
-            var json = new DynamicJsonValue
-            {
-                [command] = commandParameter
-            };
-
-            using (var stream = new MemoryStream())
-            using (var writer = new BlittableJsonTextWriter(context, stream))
-            {
-                context.Write(writer, json);
-                writer.Flush();
-
-                ArraySegment<byte> bytes;
-                stream.TryGetBuffer(out bytes);
-                await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
-            }
-        }
-
-        private string ComputeChallenge(AuthenticatorChallenge challenge, string apiKey)
-        {
-            if (string.IsNullOrEmpty(challenge.RSAExponent) || string.IsNullOrEmpty(challenge.RSAModulus) || string.IsNullOrEmpty(challenge.Challenge))
-                throw new InvalidOperationException("Invalid authentication information");
-
-            var apiKeyParts = ExtractApiKeyAndSecret(apiKey);
-            var apiKeyName = apiKeyParts[0].Trim();
-            var apiSecret = apiKeyParts[1].Trim();
-
-            var data = OAuthHelper.DictionaryToString(new Dictionary<string, string>
-            {
-                {OAuthHelper.Keys.RSAExponent, challenge.RSAExponent},
-                {OAuthHelper.Keys.RSAModulus, challenge.RSAModulus},
+                var stream = await response.Content.ReadAsStreamAsync();
+               
+                JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
+                using (context.GetManagedBuffer(out pinnedBuffer))
+                using (var tokenJson = context.ParseToMemory(stream, "apikey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
                 {
-                    OAuthHelper.Keys.EncryptedData,
-                    OAuthHelper.EncryptAsymmetric(
-                        OAuthHelper.ParseBytes(challenge.RSAExponent),
-                        OAuthHelper.ParseBytes(challenge.RSAModulus),
-                        OAuthHelper.DictionaryToString(new Dictionary<string, string>
+                    tokenJson.BlittableValidation();
+
+                    object errorString;
+                    if (tokenJson.TryGetMember("Error", out errorString) == true)
+                        throw new AuthenticationException((LazyStringValue)errorString);
+
+                    object cryptedToken;
+                    if (tokenJson.TryGetMember("cryptedToken", out cryptedToken) == false)
+                        throw new InvalidDataException("Missing 'cryptedToken' property in the POST request body");
+
+                    var cryptTokenBytes = Convert.FromBase64String(((LazyStringValue)cryptedToken).ToString());
+
+                    var token = new byte[cryptTokenBytes.Length - Sodium.crypto_box_sealbytes()];
+                    unsafe
+                    {
+                        fixed (byte* pubKey = publicKey)
+                        fixed (byte* prvKey = privateKey)
+                        fixed (byte* input = cryptTokenBytes)
+                        fixed (byte* output = token)
                         {
-                            {OAuthHelper.Keys.APIKeyName, apiKeyName},
-                            {OAuthHelper.Keys.Challenge, challenge.Challenge},
-                            {OAuthHelper.Keys.Response, OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge.Challenge, apiSecret))}
-                        }))
-                }
-            });
+                            if (Sodium.crypto_box_seal_open(output, input, (ulong)cryptTokenBytes.Length, pubKey, prvKey) != 0)
+                                throw new AuthenticationException(
+                                    @"Unable to authenticate api key (message corrupted or not intended for this recipient");
 
-            return data;
+                            return Encoding.UTF8.GetString(token);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to DoOAuthRequest to {url} with {apiKey}", ex);
+
+                //if (ex is AuthenticationException)
+                //    throw;
+
+                //throw new AuthenticationException(ex.Message, ex);
+                throw;
+            }
         }
 
         private string[] ExtractApiKeyAndSecret(string apiKey)
         {
             var apiKeyParts = apiKey.Split(new[] { '/' }, StringSplitOptions.None);
-
             if (apiKeyParts.Length > 2)
             {
                 apiKeyParts[1] = string.Join("/", apiKeyParts.Skip(1));
@@ -169,60 +135,28 @@ namespace Raven.Client.Http.OAuth
             return apiKeyParts;
         }
 
-        private async Task<BlittableJsonReaderObject> Receive(ClientWebSocket webSocket, JsonOperationContext context)
+        public HttpRequestMessage CreateRequest(byte[] hash, byte[] publicKey, JsonOperationContext context)
         {
-            BlittableJsonDocumentBuilder builder = null;
-            try
+            return new HttpRequestMessage
             {
-                if (webSocket.State != WebSocketState.Open)
-                    throw new InvalidOperationException(
-                        $"Trying to 'ReceiveAsync' WebSocket while not in Open state. State is {webSocket.State}");
-
-                var state = new JsonParserState();
-                JsonOperationContext.ManagedPinnedBuffer buffer;
-                using (context.GetManagedBuffer(out buffer))
-                using (var parser = new UnmanagedJsonParser(context, state, "")) //TODO: FIXME
+                Method = HttpMethod.Post,
+                Content = new BlittableJsonContent(stream =>
                 {
-                    builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, nameof(ApiKeyAuthenticator) + "." + nameof(Receive), parser, state);
-                    builder.ReadObjectDocument();
-                    while (builder.Read() == false)
+                    using (var writer = new BlittableJsonTextWriter(context, stream))
                     {
-                        var result = await webSocket.ReceiveAsync(buffer.Buffer, _disposedToken.Token);
+                        var hashString = Convert.ToBase64String(hash);
+                        var pkString = Convert.ToBase64String(publicKey);
 
-                        if (result.MessageType == WebSocketMessageType.Close)
-                        {
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info("Client got close message from server and is closing connection");
-
-                            builder.Dispose();
-                            // actual socket close from dispose
-                            return null;
-                        }
-
-                        if (result.EndOfMessage == false)
-                        {
-                            throw new EndOfStreamException("Stream ended without reaching end of json content.");
-                        }
-
-                        parser.SetBuffer(buffer, 0, result.Count);
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("hash");
+                        writer.WriteString(hashString);
+                        writer.WriteComma();
+                        writer.WritePropertyName("public-key");
+                        writer.WriteString(pkString);
+                        writer.WriteEndObject();
                     }
-                    builder.FinalizeDocument();
-
-                    return builder.CreateReader();
-                }
-            }
-            catch (WebSocketException ex)
-            {
-                builder?.Dispose();
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Failed to receive a message, client was probably disconnected", ex);
-                throw;
-            }
-        }
-
-        public void Dispose()
-        {
-            _disposedToken.Cancel();
+                })
+            };
         }
     }
 }
