@@ -14,7 +14,7 @@ namespace Raven.Client.Server.Commands
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/topology?url={node.Url}";
+            url = $"{node.Url}/admin/databases/topology?&name={node.Database}";
             return new HttpRequestMessage
             {
                 Method = HttpMethod.Get,

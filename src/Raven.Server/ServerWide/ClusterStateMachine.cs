@@ -145,10 +145,12 @@ namespace Raven.Server.ServerWide
                     items.DeleteByKey(loweredKey);
                     return;
                 }
-
+                //TODO: Remove those 3 lines? i think it is already removed at this point
                 databaseRecord.Topology.Members.Remove(remove.NodeTag);
                 databaseRecord.Topology.Promotables.Remove(remove.NodeTag);
                 databaseRecord.Topology.Watchers.Remove(remove.NodeTag);
+
+                databaseRecord.DeletionInProgress.Remove(remove.NodeTag);
 
                 if (databaseRecord.Topology.Members.Count == 0 &&
                     databaseRecord.Topology.Promotables.Count == 0 &&
