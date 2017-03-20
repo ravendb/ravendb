@@ -168,6 +168,7 @@ namespace Sparrow.Json
             return y;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Sort(FastList<BlittableJsonDocumentBuilder.PropertyTag> properties)
         {
             var index = GetPropertiesHashedIndex(properties);
