@@ -389,10 +389,15 @@ namespace Raven.Database.Server.Controllers
             {
                 using (DocumentCacher.SkipSetDocumentsInDocumentCache())
                 {
-                    status.State["Batch"] = batchOperation(index, indexQuery, option, x =>
+                    var batchResult = batchOperation(index, indexQuery, option, x =>
                     {
                         status.MarkProgress(x);
                     });
+
+                    lock (status.State)
+                    {
+                        status.State["Batch"] = batchResult;
+                    }
                 }
 
             }).ContinueWith(t =>
