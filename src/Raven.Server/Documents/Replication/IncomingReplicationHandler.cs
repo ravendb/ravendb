@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Replication
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 
             var replicationDoc = _parent.ReplicationDocument;
-            var scripts = _parent.ScriptConflictResolversCache;
+            var scripts = _parent.ConflictResolver.ScriptConflictResolversCache;
             _conflictManager = new ConflictManager(_database, replicationDoc, scripts);
         }
 
