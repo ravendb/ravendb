@@ -72,7 +72,10 @@ namespace Raven.Client.Http
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
                     var json = await context.ReadForMemoryAsync(stream, "response/object");
-                    CacheResponse(cache, url, response, json);
+                    if (cache != null) //precaution
+                    {
+                        CacheResponse(cache, url, response, json);
+                    }
                     SetResponse(json, fromCache: false);
                     return;
                 }

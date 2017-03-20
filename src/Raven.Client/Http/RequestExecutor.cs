@@ -50,6 +50,8 @@ namespace Raven.Client.Http
         private Timer _updateCurrentTokenTimer;
         private readonly Timer _updateFailingNodesStatus;
 
+        public string Url => _topology.LeaderNode.Url;
+
         private RequestExecutor(string url, string databaseName, string apiKey, bool requiresTopologyUpdates)
         {
             _apiKey = apiKey;
@@ -92,6 +94,8 @@ namespace Raven.Client.Http
             }
         }
 
+        public string ApiKey => _apiKey;
+
         public static RequestExecutor Create(string url, string databaseName, string apiKey)
         {
             return new RequestExecutor(url, databaseName, apiKey, requiresTopologyUpdates: true);
@@ -112,7 +116,7 @@ namespace Raven.Client.Http
             if (_disposed)
                 return false;
             bool lookTaken = false;
-            Monitor.TryEnter(this,0, ref lookTaken);
+            Monitor.TryEnter(this, 0, ref lookTaken);
             try
             {
                 if (_disposed)
@@ -131,7 +135,7 @@ namespace Raven.Client.Http
                     var command = new GetTopologyCommand();
                     try
                     {
-                     
+
                         await ExecuteAsync(new ChoosenNode { Node = node }, context, command);
 
                         if (UpdateTopologyField(command.Result))
@@ -147,7 +151,7 @@ namespace Raven.Client.Http
                     }
                     finally
                     {
-                        if(_disposed == false)
+                        if (_disposed == false)
                             _updateTopologyTimer.Change(TimeSpan.FromMinutes(5), Timeout.InfiniteTimeSpan);
                     }
                 }
@@ -158,7 +162,7 @@ namespace Raven.Client.Http
             }
             finally
             {
-                if(lookTaken)
+                if (lookTaken)
                     Monitor.Exit(this);
             }
             return true;

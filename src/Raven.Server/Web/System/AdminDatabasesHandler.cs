@@ -185,7 +185,7 @@ namespace Raven.Server.Web.System
                 {
                     throw new BadRequestException("Database document validation failed.", e);
                 }
-                var factor = Math.Max(1, GetIntValueQueryString("replication-factor") ?? 0);
+                var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required:false) ?? 0);
                 var topology = new DatabaseTopology();
 
                 var clusterTopology = ServerStore.GetClusterTopology(context);
@@ -233,7 +233,7 @@ namespace Raven.Server.Web.System
         public async Task DeleteQueryString()
         {
             var names = GetStringValuesQueryString("name");
-            var fromNode = GetStringValuesQueryString("from-node", required: false).Single();
+            var fromNode = GetStringValuesQueryString("from-node", required: false).FirstOrDefault();
             var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
             if (string.IsNullOrEmpty(fromNode) == false)
             {
