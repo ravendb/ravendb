@@ -56,6 +56,8 @@ namespace Raven.Server
 
         private readonly LatestVersionCheck _latestVersionCheck;
 
+        public event Action AfterDisposal;    
+
         public RavenServer(RavenConfiguration configuration)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
@@ -441,12 +443,7 @@ namespace Raven.Server
                     {
                         _tcpLogger.Info("Failure when processing tcp connection", e);
                     }
-                }
-                finally
-                {
-                    tcp?.Dispose();
-                }
-
+                }               
             });
         }
 
@@ -632,6 +629,8 @@ namespace Raven.Server
                 ServerStore?.Dispose();
                 ServerMaintenanceTimer?.Dispose();
                 _latestVersionCheck?.Dispose();
+
+                AfterDisposal?.Invoke();
             }
         }
 

@@ -8,9 +8,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var testclass = new SlowTests.Server.Rachis.Cluster())
+            using (var testclass = new FastTests.Server.Replication.ReplicationConflictsTests())
             {
-                testclass.CanCreateDatabaseWithReplicationFactorLowerThanTheClusterSize().Wait();
+                testclass.Conflict_should_be_resolved_for_document_in_different_collections_after_saving_in_new_collection();
             }
         }
     }
