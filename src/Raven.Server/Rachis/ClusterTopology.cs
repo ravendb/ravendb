@@ -20,11 +20,30 @@ namespace Raven.Server.Rachis
             return Members.ContainsKey(node) || Promotables.ContainsKey(node) || Watchers.ContainsKey(node);
         }
 
+
+
         public ClusterTopology()
         {
             
         }
 
+        public string GetUrlFormTag(string tag)
+        {
+            string url;
+            if (Members.TryGetValue(tag, out url))
+            {
+                return url;
+            }
+            if (Promotables.TryGetValue(tag, out url))
+            {
+                return url;
+            }
+            if (Watchers.TryGetValue(tag, out url))
+            {
+                return url;
+            }
+            return null;
+        }
 
         public readonly string LastNodeId;
         public readonly string TopologyId;

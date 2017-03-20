@@ -11,7 +11,7 @@ namespace Raven.Server.Rachis
 {
     public class RemoteConnection : IDisposable
     {
-        private readonly string _destTag;
+        private string _destTag;
         private string _src;
         private readonly Stream _stream;
         private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
@@ -41,6 +41,7 @@ namespace Raven.Server.Rachis
             {
                 ["Type"] = nameof(RachisHello),
                 [nameof(RachisHello.DebugSourceIdentifier)] = helloMsg.DebugSourceIdentifier,
+                [nameof(RachisHello.DebugDestinationIdentifier)] = helloMsg.DebugDestinationIdentifier,
                 [nameof(RachisHello.InitialMessageType)] = helloMsg.InitialMessageType,
                 [nameof(RachisHello.TopologyId)] = helloMsg.TopologyId,
             });
@@ -329,6 +330,7 @@ namespace Raven.Server.Rachis
                 ValidateMessage(nameof(RachisHello), json);
                 var rachisHello = JsonDeserializationRachis<RachisHello>.Deserialize(json);
                 _src = rachisHello.DebugSourceIdentifier ?? "unknown";
+                _destTag = rachisHello.DebugDestinationIdentifier ?? _destTag;
                 _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{_src} > {_destTag}");
                 return rachisHello;
             }

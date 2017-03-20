@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Rachis
+﻿using Raven.Client.Server.Tcp;
+
+namespace Raven.Server.Rachis
 {
     /// <summary>
     /// Initial message sent when we open a connection to a remote server
@@ -14,8 +16,13 @@
         /// </summary>
         public string DebugSourceIdentifier;
         /// <summary>
+        /// Debug string that we use to identify the destination, meant to be human readable
+        /// </summary>
+        public string DebugDestinationIdentifier;
+        /// <summary>
         /// The purpose of this communication
         /// </summary>
         public InitialMessageType InitialMessageType;
+
     }
 }

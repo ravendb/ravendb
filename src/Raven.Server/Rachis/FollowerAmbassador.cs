@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
+using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -88,7 +89,11 @@ namespace Raven.Server.Rachis
                     {
                         try
                         {
-                            stream = _engine.ConenctToPeer(_url, _apiKey);
+                            TransactionOperationContext context;
+                            using (_engine.ContextPool.AllocateOperationContext(out context))
+                            {
+                                stream = _engine.ConenctToPeer(_url, _apiKey, context).Result;
+                            }
                         }
                         catch (Exception e)
                         {
@@ -483,7 +488,8 @@ namespace Raven.Server.Rachis
                 {
                     TopologyId = clusterTopology.TopologyId,
                     InitialMessageType = InitialMessageType.AppendEntries,
-                    DebugSourceIdentifier = _engine.GetDebugInformation()
+                    DebugDestinationIdentifier = _tag,
+                    DebugSourceIdentifier = _engine.Tag,
                 });
 
                 UpdateLastSend("Negotiation");

@@ -6,6 +6,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
+using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL;
@@ -25,6 +26,10 @@ namespace Raven.Server.Json
 {
     internal class JsonDeserializationServer : JsonDeserializationBase
     {
+
+        public static readonly Func<BlittableJsonReaderObject, TcpConnectionInfo> TcpConnectionInfo =
+            GenerateJsonDeserializationRoutine<TcpConnectionInfo>();
+
         public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryRequest> TopologyDiscoveryRequest =
             GenerateJsonDeserializationRoutine<TopologyDiscoveryRequest>();
 

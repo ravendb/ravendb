@@ -21,6 +21,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
@@ -63,34 +64,29 @@ namespace Raven.Server.Documents
                     return;
                 }
 
-                if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
-                    return;
-
-                if (record.DeletionInProgress != DeletionInProgressStatus.No)
+                DeletionInProgressStatus deletionInProgress;
+                if (record.DeletionInProgress != null && 
+                    record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                    deletionInProgress != DeletionInProgressStatus.No)
                 {
                     UnloadDatabase(dbName, null);
 
-                    if (record.DeletionInProgress == DeletionInProgressStatus.HardDelete)
+                    if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                     {
-                        var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true);
+                        var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true);
                         DatabaseHelper.DeleteDatabaseFiles(configuration);
                     }
 
                     _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
+
+                    NotifyLeaderAboutRemoval(dbName);
                     
-                    //TODO: This is BAD BAD BAD thing to do since this is called on startup
-                    using (var cmd = context.ReadObject(new DynamicJsonValue
-                    {
-                        ["Type"] = nameof(RemoveNodeFromDatabaseCommand),
-                        [nameof(RemoveNodeFromDatabaseCommand.DatabaseName)] = dbName,
-                        [nameof(RemoveNodeFromDatabaseCommand.NodeTag)] = _serverStore.NodeTag
-                    }, "remove-node"))
-                    {
-                        _serverStore.SendToLeaderAsync(cmd).Wait();
-                    }
 
                     return;
                 }
+
+                if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
+                    return;
 
                 if (record.Disabled)
                 {
@@ -116,6 +112,32 @@ namespace Raven.Server.Documents
             }
 
             // if deleted, unload / deleted and then notify leader that we removed it
+        }
+
+        private void NotifyLeaderAboutRemoval(string dbName)
+        {
+            var cmd = new DynamicJsonValue
+            {
+                ["Type"] = nameof(RemoveNodeFromDatabaseCommand),
+                [nameof(RemoveNodeFromDatabaseCommand.DatabaseName)] = dbName,
+                [nameof(RemoveNodeFromDatabaseCommand.NodeTag)] = _serverStore.NodeTag
+            };
+            JsonOperationContext myContext;
+            using (_serverStore.ContextPool.AllocateOperationContext(out myContext))
+            using (var json = myContext.ReadObject(cmd, "rachis command"))
+            {
+                _serverStore.SendToLeaderAsync(json)
+                    .ContinueWith(t =>
+                    {
+                        if (t.Exception != null)
+                        {
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database {dbName}", t.Exception);
+                            }
+                        }
+                    });
+            }
         }
 
         private void NotifyDatabaseAboutStateChange(string changedDatabase, Task<DocumentDatabase> done)
@@ -323,7 +345,7 @@ namespace Raven.Server.Documents
             serverStore.DatabaseInfoCache.Delete(database.Name);
         }
 
-        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false)
+        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false)
         {
             if (databaseName.IsNullOrWhiteSpace())
                 throw new ArgumentNullException(nameof(databaseName), "Database name cannot be empty");
@@ -343,14 +365,19 @@ namespace Raven.Server.Documents
 
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
 
-                if (databaseRecord.Disabled)
+                if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
                     throw new DatabaseDisabledException(databaseName + " has been disabled");
 
-                if(databaseRecord.DeletionInProgress != DeletionInProgressStatus.No)
-                    throw new DatabaseDisabledException(databaseName + " is currently being deleted");
+                DeletionInProgressStatus deletionInProgress;
+                var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
+                                            databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                                            deletionInProgress != DeletionInProgressStatus.No;
+                if (ignoreBeenDeleted == false && databaseIsBeenDeleted)
+                    throw new DatabaseDisabledException(databaseName + " is currently being deleted on " + _serverStore.NodeTag);
 
-                if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false)
-                    // TODO: need to handle this properly
+                if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
+                    databaseIsBeenDeleted == false)
+                    // TODO: need to handle this properly, need to redirect to somewhere it is on
                     throw new InvalidOperationException(databaseName + " is not relevant for " + _serverStore.NodeTag);
                 return CreateConfiguration(databaseName, databaseRecord);
 

@@ -8,15 +8,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            Console.WriteLine(Process.GetCurrentProcess().Id);
-            Console.WriteLine();
-
-            //Parallel.For(0, 100, i =>
+            using (var testclass = new SlowTests.Server.Rachis.Cluster())
             {
-                using (var a = new FastTests.Server.Documents.PeriodicExport.PeriodicExportTests())
-                {
-                    a.CanSetupPeriodicExportWithVeryLargePeriods().Wait();
-                }
+                testclass.CanCreateDatabaseWithReplicationFactorLowerThanTheClusterSize().Wait();
             }
         }
     }

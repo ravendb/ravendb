@@ -1,24 +1,35 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions.Security;
+using Raven.Client.Http.OAuth;
+using Raven.Client.Server.Commands;
+using Raven.Client.Server.Tcp;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
+using Voron.Util;
 
 namespace Raven.Server.ServerWide
 {
@@ -53,7 +64,6 @@ namespace Raven.Server.ServerWide
 
         private readonly AsyncManualResetEvent _notifiedListeners = new AsyncManualResetEvent();
         private long _lastNotified;
-
 
         public async Task WaitForIndexNotification(long index)
         {
@@ -135,10 +145,12 @@ namespace Raven.Server.ServerWide
                     items.DeleteByKey(loweredKey);
                     return;
                 }
-
+                //TODO: Remove those 3 lines? i think it is already removed at this point
                 databaseRecord.Topology.Members.Remove(remove.NodeTag);
                 databaseRecord.Topology.Promotables.Remove(remove.NodeTag);
                 databaseRecord.Topology.Watchers.Remove(remove.NodeTag);
+
+                databaseRecord.DeletionInProgress.Remove(remove.NodeTag);
 
                 if (databaseRecord.Topology.Members.Count == 0 &&
                     databaseRecord.Topology.Promotables.Count == 0 &&
@@ -190,37 +202,55 @@ namespace Raven.Server.ServerWide
                 }
 
                 int size;
+                var deletionInProgressStatus = delDb.HardDelete
+                    ? DeletionInProgressStatus.HardDelete
+                    : DeletionInProgressStatus.SoftDelete;
                 var doc = new BlittableJsonReaderObject(reader.Read(2, out size), size, context);
+                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+                if (databaseRecord.DeletionInProgress == null)
+                    databaseRecord.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
 
-                doc.Modifications = new DynamicJsonValue(doc)
-                {
-                    [nameof(DatabaseRecord.DeletionInProgress)] =
-                        delDb.HardDelete
-                            ? DeletionInProgressStatus.HardDelete
-                            : DeletionInProgressStatus.SoftDelete
-                };
 
-                using (var updated = context.ReadObject(doc, databaseName))
+                if (string.IsNullOrEmpty(delDb.FromNode) == false)
                 {
-                    TableValueBuilder builder;
-                    using (items.Allocate(out builder))
+                    if (databaseRecord.Topology.RelevantFor(delDb.FromNode) == false)
                     {
-                        builder.Add(loweredKey);
-                        builder.Add(key);
-                        builder.Add(updated.BasePointer, updated.Size);
-                        builder.Add(index);
-
-                        items.Set(builder);
+                        NotifyLeaderAboutError(index, leader, $"The database {databaseName} does not exists on node {delDb.FromNode}");
+                        return;
                     }
+                    databaseRecord.Topology.RemoveFromTopology(delDb.FromNode);
+
+                    databaseRecord.DeletionInProgress[delDb.FromNode] = deletionInProgressStatus;
+                }
+                else
+                {
+                    var allNodes = databaseRecord.Topology.Members
+                        .Concat(databaseRecord.Topology.Promotables)
+                        .Concat(databaseRecord.Topology.Watchers);
+
+                    foreach (var allNode in allNodes)
+                    {
+                        databaseRecord.DeletionInProgress[allNode] = deletionInProgressStatus;
+                    }
+
+                    databaseRecord.Topology = new DatabaseTopology();
                 }
 
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+                var entityToBlittable = new EntityToBlittable(null);
+                
+                TableValueBuilder builder;
+                using(var updated = entityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
+                using (items.Allocate(out builder))
                 {
-                    Task.Run(() =>
-                    {
-                        DatabaseChanged?.Invoke(this, databaseName);
-                    });
-                };
+                    builder.Add(loweredKey);
+                    builder.Add(key);
+                    builder.Add(updated.BasePointer, updated.Size);
+                    builder.Add(index);
+
+                    items.Set(builder);
+                }
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction => { Task.Run(() => { DatabaseChanged?.Invoke(this, databaseName); }); };
             }
         }
 
@@ -419,7 +449,7 @@ namespace Raven.Server.ServerWide
             Slice valueNameLowered;
             using (Slice.From(context.Allocator, dbKey, out valueName))
             using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out valueNameLowered))
-            {                
+            {
                 var doc = ReadInternal(context, out etag, valueNameLowered);
                 if (doc == null)
                 {
@@ -442,7 +472,7 @@ namespace Raven.Server.ServerWide
                     builder.Add(updated.BasePointer, updated.Size);
                     builder.Add(index);
                     items.Set(builder);
-                }                
+                }
             }
             NotifyDatabaseChanged(context, databaseName, index);
         }
@@ -502,7 +532,7 @@ namespace Raven.Server.ServerWide
         public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name)
         {
             long etag;
-            var doc = Read(context, "db/"+ name.ToLowerInvariant(), out etag);
+            var doc = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (doc == null)
                 return null;
             return JsonDeserializationCluster.DatabaseRecord(doc);
@@ -515,7 +545,7 @@ namespace Raven.Server.ServerWide
         }
 
         public BlittableJsonReaderObject Read(TransactionOperationContext context, string name, out long etag)
-        {            
+        {
 
             var dbKey = name.ToLowerInvariant();
             Slice key;
@@ -543,6 +573,59 @@ namespace Raven.Server.ServerWide
             Debug.Assert(size == sizeof(long));
 
             return doc;
+        }
+
+        public override async Task<Stream> ConenctToPeer(string url, string apiKey)
+        {
+            var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey);
+            var authenticator = new ApiKeyAuthenticator();
+
+            var tcpInfo = new Uri(info.Url);
+            var tcpClient = new TcpClient();
+            NetworkStream stream = null;
+            try
+            {
+                await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
+                stream = tcpClient.GetStream();
+
+                JsonOperationContext context;
+                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out context))
+                {
+                    var apiToken = await authenticator.GetAuthenticationTokenAsync(apiKey, url, context);
+                    var msg = new DynamicJsonValue
+                    {
+                        [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
+                        [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Cluster,
+                        [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = apiToken,
+                    };
+                    using (var writer = new BlittableJsonTextWriter(context, stream))
+                    using (var msgJson = context.ReadObject(msg, "message"))
+                    {
+                        context.Write(writer, msgJson);
+                    }
+                    using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
+                    {
+
+                        var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
+                        switch (reply.Status)
+                        {
+                            case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
+                                throw AuthorizationException.Forbidden("Server");
+                            case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
+                                break;
+                            default:
+                                throw AuthorizationException.Unauthorized(reply.Status, "Server");
+                        }
+                    }
+                }
+                return stream;
+            }
+            catch (Exception)
+            {
+                stream?.Dispose();
+                tcpClient.Dispose();
+                throw;
+            }
         }
     }
 
@@ -573,11 +656,12 @@ namespace Raven.Server.ServerWide
 
         public VersioningConfiguration VersioningConfiguration;
     }
-    
+
     public class DeleteDatabaseCommand
     {
         public string DatabaseName;
         public bool HardDelete;
+        public string FromNode;
     }
 
     public class TEMP_SetDatabaseCommand
@@ -593,20 +677,6 @@ namespace Raven.Server.ServerWide
         public BlittableJsonReaderObject Value;
     }
 
-    public class DatabaseTopology
-    {
-        public List<string> Members = new List<string>();
-        public List<string> Promotables = new List<string>();
-        public List<string> Watchers = new List<string>();
-
-        public bool RelevantFor(string nodeTag)
-        {
-            return Members.Contains(nodeTag) ||
-                   Promotables.Contains(nodeTag) ||
-                   Watchers.Contains(nodeTag);
-        }
-    }
-
     public class RemoveNodeFromDatabaseCommand
     {
         public string DatabaseName;
@@ -619,7 +689,7 @@ namespace Raven.Server.ServerWide
 
         public bool Disabled;
 
-        public DeletionInProgressStatus DeletionInProgress;
+        public Dictionary<string,DeletionInProgressStatus> DeletionInProgress;
 
         public string DataDirectory;
 
@@ -630,7 +700,7 @@ namespace Raven.Server.ServerWide
         public TransformerDefinition[] Transformers;
 
         public Dictionary<string, string> Settings;
-        
+
         public VersioningConfiguration VersioningConfiguration;
     }
 
@@ -654,7 +724,9 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, AddDatabaseCommand> AddDatabaseCommand = GenerateJsonDeserializationRoutine<AddDatabaseCommand>();
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, EditVersioningCommand> EditVersioningCommand = GenerateJsonDeserializationRoutine<EditVersioningCommand>();
+
+        public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
     }
 }

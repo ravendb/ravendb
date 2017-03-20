@@ -58,6 +58,11 @@ namespace Raven.Server.Rachis
             StateMachine.OnSnapshotInstalled(context);
         }
 
+        public override async Task<Stream> ConenctToPeer(string url, string apiKey, TransactionOperationContext context = null)
+        {
+            return await StateMachine.ConenctToPeer(url, apiKey);
+        }
+
         private class NullDisposable : IDisposable
         {
             public void Dispose()
@@ -136,7 +141,6 @@ namespace Raven.Server.Rachis
                 StartIndex = 0,
             });
         }
-
         public int ElectionTimeoutMs = Debugger.IsAttached ? 3000 : 300;
 
         private Leader _currentLeader;
@@ -246,10 +250,10 @@ namespace Raven.Server.Rachis
 
         public async Task WaitForTopology(Leader.TopologyModification modification, string nodeTag = null)
         {
-            var tag = nodeTag ?? _tag;
             while (true)
             {
                 var task = _topologyChanged.Task;
+                var tag = nodeTag ?? _tag;
                 TransactionOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))
                 using (context.OpenReadTransaction())
@@ -482,6 +486,7 @@ namespace Raven.Server.Rachis
                 [nameof(ClusterTopology.Members)] = ToDynamicJsonValue(topology.Members),
                 [nameof(ClusterTopology.Promotables)] = ToDynamicJsonValue(topology.Promotables),
                 [nameof(ClusterTopology.Watchers)] = ToDynamicJsonValue(topology.Watchers),
+                [nameof(ClusterTopology.LastNodeId)] = topology.LastNodeId
             };
 
             var topologyJson = context.ReadObject(djv, "topology");
@@ -526,11 +531,6 @@ namespace Raven.Server.Rachis
 
         }
 
-        public string GetDebugInformation()
-        {
-            return _tag;
-        }
-
         /// <summary>
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
@@ -563,6 +563,9 @@ namespace Raven.Server.Rachis
                             $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
                             $"Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
                     }
+
+                    if(_tag == "?")
+                        _tag = initialMessage.DebugDestinationIdentifier;
 
                     switch (initialMessage.InitialMessageType)
                     {
@@ -1098,13 +1101,7 @@ namespace Raven.Server.Rachis
             ContextPool?.Dispose();
         }
 
-        public Stream ConenctToPeer(string url, string apiKey)
-        {
-            var tcpInfo = new Uri(url);
-            var tcpClient = new TcpClient();
-            tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port).Wait();
-            return tcpClient.GetStream();
-        }
+        public abstract Task<Stream> ConenctToPeer(string url, string apiKey, TransactionOperationContext context = null);
 
         public void Bootstarp(string selfUrl)
         {

@@ -231,7 +231,8 @@ namespace FastTests.Smuggler
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await VersioningHelper.SetupVersioning(store1);
+                        await VersioningHelper.SetupVersioning(Server.ServerStore, store1.DefaultDatabase);
+
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });
