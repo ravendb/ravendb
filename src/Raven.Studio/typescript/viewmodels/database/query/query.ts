@@ -7,6 +7,9 @@ import messagePublisher = require("common/messagePublisher");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats"); 
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
+import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
+import deleteDocsMatchingQueryCommand = require("commands/database/documents/deleteDocsMatchingQueryCommand");
+import notificationCenter = require("common/notifications/notificationCenter");
 
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import database = require("models/resources/database");
@@ -786,31 +789,55 @@ class query extends viewModelBase {
         queryUtil.queryCompleter(this.indexFields, this.criteria().selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
     }
 
-
-    /* TODO
-
     deleteDocsMatchingQuery() {
         eventsCollector.default.reportEvent("query", "delete-documents");
         // Run the query so that we have an idea of what we'll be deleting.
-        var queryResult = this.runQuery();
-        queryResult
-            .fetch(0, 1)
-            .done((results: pagedResult<any>) => {
+        this.runQuery();
+        this.fetcher()(0, 1)
+            .done((results) => {
                 if (results.totalResultCount === 0) {
                     app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
                 } else {
-                    this.promptDeleteDocsMatchingQuery(results.totalResultCount);
+                    const usedIndex = this.queryStats().IndexName; // used to handle deletes on dynamic collections
+                    this.promptDeleteDocsMatchingQuery(results.totalResultCount, usedIndex);
                 }
             });
     }
 
-    promptDeleteDocsMatchingQuery(resultCount: number) {
-        var viewModel = new deleteDocumentsMatchingQueryConfirm(this.selectedIndex(), this.queryText(), resultCount, this.activeDatabase());
+    private promptDeleteDocsMatchingQuery(resultCount: number, index: string) {
+        const criteria = this.criteria();
+
+        const db = this.activeDatabase();
+        const viewModel = new deleteDocumentsMatchingQueryConfirm(criteria.selectedIndex(), criteria.queryText(), resultCount, db);
         app
             .showBootstrapDialog(viewModel)
-            .done(() => this.runQuery());
+            .done((result) => {
+                if (result) {
+                    new deleteDocsMatchingQueryCommand(index,
+                            criteria.queryText(),
+                            this.activeDatabase())
+                        .execute()
+                        .done((operationId: operationIdDto) => {
+                            this.monitorDeleteOperation(db, operationId.OperationId);
+                        });
+                }
+            });
     }
 
+    private monitorDeleteOperation(db: database, operationId: number) {
+        notificationCenter.instance.openDetailsForOperationById(db, operationId);
+
+        notificationCenter.instance.monitorOperation(db, operationId)
+            .done(() => {
+                messagePublisher.reportSuccess("Successfully deleted documents");
+                this.refresh();
+            })
+            .fail((exception: Raven.Client.Documents.Operations.OperationExceptionResult) => {
+                messagePublisher.reportError("Could not delete documents: " + exception.Message, exception.Error, null, false);
+            });
+    }
+
+    /* TODO
     extractQueryFields(): Array<queryFieldInfo> {
         var query = this.queryText();
         var luceneSimpleFieldRegex = /(\w+):\s*("((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|(\w+))/g;
