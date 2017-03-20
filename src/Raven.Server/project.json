@@ -39,6 +39,7 @@
 
   "dependencies": {
     "AsyncFriendlyStackTrace": "1.4.1",
+    "HtmlAgilityPack.NetCore": "1.5.0.1",
     "Jint": "2.10.99",
     "Lucene.Net": "3.0.4-*",
     "Lucene.Net.Contrib.Spatial.NTS": "3.0.4-*",
@@ -50,17 +51,17 @@
     "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.1.0",
     "Microsoft.Extensions.Configuration.Json": "1.1.0",
     "Microsoft.NETCore.App": "1.1.0",
-    "Sparrow": "4.0.0-*",
+    "Npgsql": "3.2.1",
+    "Portable.BouncyCastle": "1.8.1.2",
     "Raven.Client": "4.0.0-*",
+    "Sparrow": "4.0.0-*",
     "System.ComponentModel": "4.3.0",
     "System.Data.SqlClient": "4.3.0",
     "System.Reflection.Emit.Lightweight": "4.3.0",
     "System.Runtime.Loader": "4.3.0",
     "System.Security.Cryptography.Csp": "4.3.0",
     "System.Threading.Tasks.Parallel": "4.3.0",
-    "Voron": "4.0.0-*",
-    "Portable.BouncyCastle": "1.8.1.2",
-    "Npgsql": "3.2.1"
+    "Voron": "4.0.0-*"
   },
 
   "commands": {
