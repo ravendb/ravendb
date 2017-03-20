@@ -7,7 +7,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_4563 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-5981")]
+        [Fact]
         public void bulk_insert_throws_when_server_is_down()
         {
             DoNotReuseServer();
@@ -25,7 +25,7 @@ namespace SlowTests.Issues
                             {
                                 bulkInsert.Store(new Sample());
 
-                                if (j == 5000 && run == 1)
+                                if (j == 500 && run == 1)
                                 {
                                     Server.Dispose();
                                     Thread.Sleep(1000);
@@ -45,15 +45,13 @@ namespace SlowTests.Issues
                                 Assert.Equal(null, exp);
                                 break;
                             case 1:
-                                Assert.NotNull(exp.Message);
+                                Assert.Equal("Could not read from server, it status is faulted",exp.Message);
                                 break;
                             case 2:
-                                Assert.Equal("Could not get token for bulk insert", exp.Message);
-                                Assert.Equal("An error occurred while sending the request.", exp.InnerException.Message);
+                                Assert.Equal("Unable to connect to the remote server", exp.Message);
                                 break;
                             case 3:
-                                Assert.Equal("Could not get token for bulk insert", exp.Message);
-                                Assert.Equal("An error occurred while sending the request.", exp.InnerException.Message);
+                                Assert.Equal("Unable to connect to the remote server", exp.Message);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
