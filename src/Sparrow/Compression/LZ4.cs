@@ -4,6 +4,7 @@ using Sparrow.Global;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using System.Runtime.CompilerServices;
+using DotNetCross.Memory;
 
 namespace Sparrow.Compression
 {
@@ -336,8 +337,8 @@ namespace Sparrow.Compression
 
                         for (; matchLength >= 510; matchLength -= 510)
                         {
-                            *op++ = 255;
-                            *op++ = 255;
+                            *(ushort*)op = (255 << 8 | 255);
+                            op += sizeof(ushort);
                         }
 
                         if (matchLength >= 255)
@@ -413,7 +414,7 @@ namespace Sparrow.Compression
                     *op++ = (byte)(lastRun << ML_BITS);
                 }
 
-                UnmanagedMemory.Copy(op, anchor, lastRun);
+                Unsafe.CopyBlock(op, anchor, (uint)lastRun);
                 op += lastRun;
             }
 
@@ -665,7 +666,7 @@ namespace Sparrow.Compression
                             goto _output_error;   /* Error : input must be consumed */
                     }
 
-                    UnmanagedMemory.Copy(op, ip, length);
+                    Unsafe.CopyBlock(op, ip, (uint)length);
                     ip += length;
                     op += length;
                     break;     /* Necessarily EOF, due to parsing restrictions */
@@ -708,7 +709,7 @@ namespace Sparrow.Compression
                     if (length <= (int)(lowPrefix - match))
                     {
                         /* match can be copied as a single segment from external dictionary */
-                        match = dictEnd - (lowPrefix - match);
+                        match = dictEnd - (lowPrefix - match);                        
                         UnmanagedMemory.Move(op, match, length); // TODO: Check if move is required.
                         op += length;
                     }
@@ -716,7 +717,7 @@ namespace Sparrow.Compression
                     {
                         /* match encompass external dictionary and current segment */
                         int copySize = (int)(lowPrefix - match);
-                        UnmanagedMemory.Copy(op, dictEnd - copySize, copySize);
+                        Unsafe.CopyBlock(op, dictEnd - copySize, (uint)copySize);
                         op += copySize;
 
                         copySize = length - copySize;
@@ -729,7 +730,7 @@ namespace Sparrow.Compression
                         }
                         else
                         {
-                            UnmanagedMemory.Copy(op, lowPrefix, copySize);
+                            Unsafe.CopyBlock(op, lowPrefix, (uint)copySize);                            
                             op += copySize;
                         }
                     }
@@ -794,20 +795,20 @@ namespace Sparrow.Compression
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void WildCopy(byte* dest, byte* src, byte* destEnd)
-        {
+        {                  
             do
             {
                 ((ulong*)dest)[0] = ((ulong*)src)[0];
-                if (dest + sizeof(ulong) >= destEnd)
-                    return;
+                if (dest + 1 * sizeof(ulong) >= destEnd)
+                    goto Return;
 
                 ((ulong*)dest)[1] = ((ulong*)src)[1];
                 if (dest + 2 * sizeof(ulong) >= destEnd)
-                    return;
+                    goto Return;
 
                 ((ulong*)dest)[2] = ((ulong*)src)[2];
                 if (dest + 3 * sizeof(ulong) >= destEnd)
-                    return;
+                    goto Return;
 
                 ((ulong*)dest)[3] = ((ulong*)src)[3];
 
@@ -815,6 +816,9 @@ namespace Sparrow.Compression
                 src +=  4 * sizeof(ulong);
             }
             while (dest < destEnd);
+
+            Return:
+            return;
         }
     }
 }
