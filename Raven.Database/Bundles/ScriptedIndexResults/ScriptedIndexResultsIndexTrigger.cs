@@ -52,6 +52,8 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
             private readonly DocumentDatabase database;
             private readonly Abstractions.Data.ScriptedIndexResults scriptedIndexResults;
             private readonly HashSet<string> forEntityNames;
+            private readonly bool hasPutScript;
+            private readonly bool hasDeleteScript;
 
             private readonly ConcurrentDictionary<string, ConcurrentBag<RavenJObject>> created = new ConcurrentDictionary<string, ConcurrentBag<RavenJObject>>(StringComparer.InvariantCultureIgnoreCase);
             private readonly ConcurrentDictionary<string, ConcurrentBag<RavenJObject>> removed = new ConcurrentDictionary<string, ConcurrentBag<RavenJObject>>(StringComparer.InvariantCultureIgnoreCase);
@@ -61,6 +63,8 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 this.database = database;
                 this.scriptedIndexResults = scriptedIndexResults;
                 this.forEntityNames = forEntityNames;
+                hasPutScript = string.IsNullOrWhiteSpace(scriptedIndexResults.IndexScript) == false;
+                hasDeleteScript = string.IsNullOrWhiteSpace(scriptedIndexResults.DeleteScript) == false;
 
                 if (Log.IsDebugEnabled)
                     Log.Debug("Created ScriptedIndexResultsBatcher for {0}", scriptedIndexResults.Id);
@@ -70,6 +74,9 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
             public override void OnIndexEntryCreated(string entryKey, Document document)
             {
+                if (hasPutScript == false)
+                    return;
+
                 //precaution, should never happen
                 if (string.IsNullOrWhiteSpace(entryKey))
                     throw new ArgumentNullException("entryKey");
@@ -84,6 +91,9 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
             public override void OnIndexEntryDeleted(string entryKey, Document document = null)
             {
+                if (hasDeleteScript == false)
+                    return;
+
                 var bag = removed.GetOrAdd(entryKey, _ => new ConcurrentBag<RavenJObject>());
 
                 if (Log.IsDebugEnabled)
@@ -94,8 +104,11 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
             public override void Dispose()
             {
-                bool shouldRetry = false;
-                int retries = 128;
+                if (hasDeleteScript == false && hasPutScript == false)
+                    return;
+
+                var shouldRetry = false;
+                var retries = 128;
                 Random rand = null;
 
                 do
@@ -105,7 +118,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                         var patcher = new ScriptedJsonPatcher(database);
                         using (var scope = new ScriptedIndexResultsJsonPatcherScope(database, forEntityNames))
                         {
-                            if (string.IsNullOrEmpty(scriptedIndexResults.DeleteScript) == false)
+                            if (hasDeleteScript)
                             {
                                 foreach (var kvp in removed)
                                 {
@@ -142,7 +155,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                                 }
                             }
 
-                            if (string.IsNullOrEmpty(scriptedIndexResults.IndexScript) == false)
+                            if (hasPutScript)
                             {
                                 foreach (var kvp in created)
                                 {
