@@ -297,9 +297,11 @@ class patch extends viewModelBase {
         this.columnPreview.install(".patch-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
                 this.fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
-                    const json = JSON.stringify(v, null, 4);
-                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                    onValue(html);
+                    if (!_.isUndefined(v)) {
+                        const json = JSON.stringify(v, null, 4);
+                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                        onValue(html);    
+                    }
                 }, error => {
                     const html = Prism.highlight("Unable to generate column preview: " + error.toString(), (Prism.languages as any).javascript);
                     onValue(html);
