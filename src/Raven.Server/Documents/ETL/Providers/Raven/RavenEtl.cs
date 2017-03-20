@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -39,11 +40,37 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new RavenEtlDocumentTransformer(Database, context, EtlConfiguration);
         }
 
-        protected override void LoadInternal(IEnumerable<ICommandData> commands, JsonOperationContext context)
+        protected override void LoadInternal(IEnumerable<ICommandData> items, JsonOperationContext context)
         {
-            var batchCommand = new BatchCommand(new DocumentConventions(), context, commands as List<ICommandData>);
+            var commands = items as List<ICommandData>;
 
-            _requestExecutor.Execute(batchCommand, context);
+            Debug.Assert(commands != null);
+
+            BatchOptions options = null;
+            if (EtlConfiguration.LoadRequestTimeoutInSec != null)
+            {
+                options = new BatchOptions
+                {
+                    RequestTimeout = TimeSpan.FromSeconds(EtlConfiguration.LoadRequestTimeoutInSec.Value)
+                };
+            }
+
+            var batchCommand = new BatchCommand(new DocumentConventions(), context, commands, options);
+            
+            try
+            {
+                _requestExecutor.Execute(batchCommand, context, CancellationToken);
+            }
+            catch (OperationCanceledException e)
+            {
+                if (CancellationToken.IsCancellationRequested == false)
+                {
+                    throw new TimeoutException($"Load request applying the following {commands.Count} commands timed out: " +
+                                               $"{string.Join(", ", commands.Select(x => $"{x.Key} ({x.Method})"))}", e);
+                }
+
+                throw;
+            }
         }
 
         public override bool CanContinueBatch()
