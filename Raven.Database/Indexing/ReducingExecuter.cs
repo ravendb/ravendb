@@ -248,13 +248,13 @@ namespace Raven.Database.Indexing
                 bool retry = true;
                 while (retry && reduceParams.ReduceKeys.Count > 0)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     var reduceBatchAutoThrottlerId = Guid.NewGuid();
                     try
                     {
                         transactionalStorage.Batch(actions =>
                         {
-                            token.ThrowIfCancellationRequested();
-
                             actions.BeforeStorageCommit += storageCommitDuration.Start;
                             actions.AfterStorageCommit += storageCommitDuration.Stop;
 
@@ -277,6 +277,23 @@ namespace Raven.Database.Indexing
                                 }
                             }
 
+                            if (Log.IsDebugEnabled)
+                            {
+                                if (persistedResults.Count > 0)
+                                {
+                                    if (Log.IsDebugEnabled)
+                                        Log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
+                                            persistedResults.Count,
+                                            string.Join(", ", persistedResults.Select(x => x.ReduceKey).Distinct()),
+                                            index.Index.PublicName, level, batchTimeWatcher.Elapsed));
+                                }
+                                else
+                                {
+                                    if (Log.IsDebugEnabled)
+                                        Log.Debug("No reduce keys found for {0}", index.Index.PublicName);
+                                }
+                            }
+
                             if (persistedResults.Count == 0)
                             {
                                 retry = false;
@@ -287,25 +304,7 @@ namespace Raven.Database.Indexing
 
                             autoTuner.CurrentlyUsedBatchSizesInBytes.GetOrAdd(reduceBatchAutoThrottlerId, size);
 
-                            if (Log.IsDebugEnabled)
-                            {
-                                if (persistedResults.Count > 0)
-                                {
-                                    if (Log.IsDebugEnabled)
-                                    Log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
-                                        persistedResults.Count,
-                                        string.Join(", ", persistedResults.Select(x => x.ReduceKey).Distinct()),
-                                        index.Index.PublicName, level, batchTimeWatcher.Elapsed));
-                                }
-                                else
-                                {
-                                    if (Log.IsDebugEnabled)
-                                        Log.Debug("No reduce keys found for {0}", index.Index.PublicName);
-                                }									
-                            }
-
                             token.ThrowIfCancellationRequested();
-
 
                             var requiredReduceNextTimeSet = new HashSet<ReduceKeyAndBucket>(persistedResults.Select(x => new ReduceKeyAndBucket(x.Bucket, x.ReduceKey)), ReduceKeyAndBucketEqualityComparer.Instance);
 
